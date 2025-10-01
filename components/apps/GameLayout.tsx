@@ -222,7 +222,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           <button
             type="button"
             onClick={resume}
-            className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus-ring focus-ring-strong"
             autoFocus
           >
             Resume
@@ -233,28 +233,28 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         <button
           type="button"
           onClick={() => setPaused((p) => !p)}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus-ring focus-ring-strong"
         >
           {paused ? 'Resume' : 'Pause'}
         </button>
         <button
           type="button"
           onClick={snapshot}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus-ring focus-ring-strong"
         >
           Snapshot
         </button>
         <button
           type="button"
           onClick={replay}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus-ring focus-ring-strong"
         >
           Replay
         </button>
         <button
           type="button"
           onClick={shareApp}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus-ring focus-ring-strong"
         >
           Share
         </button>
@@ -262,7 +262,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           <button
             type="button"
             onClick={shareScore}
-            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus-ring focus-ring-strong"
           >
             Share Score
           </button>
@@ -272,7 +272,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           aria-label="Help"
           aria-expanded={showHelp}
           onClick={toggle}
-          className="bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
+          className="bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus-ring focus-ring-strong"
         >
           ?
         </button>

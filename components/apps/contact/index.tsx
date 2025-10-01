@@ -299,11 +299,12 @@ const ContactApp: React.FC = () => {
         </p>
       )}
       <form onSubmit={handleSubmit} className="space-y-6 max-w-md">
-        <div className="relative">
-          <input
-            id="contact-name"
-            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
-            value={name}
+          <div className="relative">
+            <input
+              id="contact-name"
+              aria-label="Name"
+              className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus-ring focus-ring-inset focus-ring-strong"
+              value={name}
             onChange={(e) => setName(e.target.value)}
             required
             placeholder=" "
@@ -316,10 +317,11 @@ const ContactApp: React.FC = () => {
           </label>
         </div>
         <div className="relative">
-          <input
-            id="contact-email"
-            type="email"
-            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+            <input
+              id="contact-email"
+              type="email"
+              aria-label="Email"
+              className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus-ring focus-ring-inset focus-ring-strong"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -340,9 +342,10 @@ const ContactApp: React.FC = () => {
           )}
         </div>
         <div className="relative">
-          <textarea
-            id="contact-message"
-            className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+            <textarea
+              id="contact-message"
+              aria-label="Message"
+              className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus-ring focus-ring-inset focus-ring-strong"
             rows={4}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -374,14 +377,16 @@ const ContactApp: React.FC = () => {
             setAttachments((prev) => prev.filter((_, idx) => idx !== i))
           }
         />
-        <input
-          type="text"
-          value={honeypot}
-          onChange={(e) => setHoneypot(e.target.value)}
-          className="hidden"
-          tabIndex={-1}
-          autoComplete="off"
-        />
+          <input
+            type="text"
+            value={honeypot}
+            onChange={(e) => setHoneypot(e.target.value)}
+            className="hidden"
+            tabIndex={-1}
+            autoComplete="off"
+            aria-hidden="true"
+            aria-label="Do not fill"
+          />
         {error && <FormError className="mt-3">{error}</FormError>}
         <button
           type="submit"

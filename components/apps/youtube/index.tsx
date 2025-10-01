@@ -463,7 +463,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                 if (error) setError(null);
               }}
               placeholder="Search for playlists by topic, creator, or mood…"
-              className="w-full rounded-md border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-ubt-grey focus:border-ubt-green focus:outline-none focus:ring-2 focus:ring-ubt-green/40"
+              className="w-full rounded-md border border-white/10 bg-black/40 px-4 py-3 text-sm text-white placeholder:text-ubt-grey focus:border-ubt-green focus:outline-none focus-ring focus-ring-inset focus-ring-strong"
             />
           </div>
           <button

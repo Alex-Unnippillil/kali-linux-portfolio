@@ -5,6 +5,9 @@ import PopularModules from '../components/PopularModules';
 describe('PopularModules', () => {
   it('filters modules and displays logs and table when selected', () => {
     render(<PopularModules />);
+    expect(
+      screen.getByRole('button', { name: /update modules/i })
+    ).toHaveClass('focus-ring');
     fireEvent.click(screen.getByRole('button', { name: 'scanner' }));
     expect(screen.getByRole('button', { name: /Port Scanner/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Brute Force/i })).not.toBeInTheDocument();

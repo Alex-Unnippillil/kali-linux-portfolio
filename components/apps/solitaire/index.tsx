@@ -671,7 +671,7 @@ const Solitaire = () => {
           <button
             type="button"
             onClick={resume}
-            className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus-ring focus-ring-strong"
             autoFocus
           >
             Resume
@@ -782,14 +782,15 @@ const Solitaire = () => {
         >
           Passes {passLimit === Infinity ? '∞' : passLimit}
         </button>
-        <label className="flex items-center space-x-1">
-          <input
-            type="checkbox"
-            checked={winnableOnly}
-            onChange={(e) => setWinnableOnly(e.target.checked)}
-          />
-          <span className="select-none">Winnable Only</span>
-        </label>
+          <label className="flex items-center space-x-1">
+            <input
+              type="checkbox"
+              checked={winnableOnly}
+              aria-label="Winnable only"
+              onChange={(e) => setWinnableOnly(e.target.checked)}
+            />
+            <span className="select-none">Winnable Only</span>
+          </label>
       </div>
       <div className="flex space-x-4 mb-4">
         <div className="w-16 h-24 min-w-[24px] min-h-[24px]" onClick={draw}>

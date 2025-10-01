@@ -84,9 +84,42 @@
   --font-multiplier: 1;
   /* Minimum interactive target size */
   --hit-area: 32px;
-  /* Focus outline */
-  --focus-outline-color: var(--color-ubt-blue);
-  --focus-outline-width: 2px;
+  /* Focus rings */
+  --focus-ring-width: 2px;
+  --focus-ring-width-strong: 3px;
+  --focus-ring-offset: 2px;
+  --focus-ring-offset-wide: 3px;
+  --color-focus-ring: var(--color-accent);
+  --focus-ring-color: color-mix(in srgb, var(--color-focus-ring) 85%, white 15%);
+  --focus-ring-color-strong: var(--color-focus-ring);
+  --focus-ring-contrast-color: #ffffff;
+  --focus-ring-offset-color: color-mix(
+    in srgb,
+    var(--focus-ring-color) 25%,
+    transparent 75%
+  );
+  --focus-ring-contrast-offset-color: rgba(255, 255, 255, 0.35);
+}
+
+html.dark,
+html[data-theme='dark'],
+html[data-theme='neon'],
+html[data-theme='matrix'] {
+  --focus-ring-color: color-mix(in srgb, var(--color-focus-ring) 88%, white 12%);
+  --focus-ring-offset-color: color-mix(
+    in srgb,
+    var(--focus-ring-color) 32%,
+    transparent 68%
+  );
+}
+
+html[data-theme='light'] {
+  --focus-ring-color: color-mix(in srgb, var(--color-focus-ring) 75%, black 25%);
+  --focus-ring-offset-color: color-mix(
+    in srgb,
+    var(--focus-ring-color) 28%,
+    transparent 72%
+  );
 }
 
 /* High contrast theme */
@@ -104,6 +137,8 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --focus-ring-color: var(--focus-ring-contrast-color);
+  --focus-ring-offset-color: var(--focus-ring-contrast-offset-color);
 }
 
 /* Dyslexia-friendly fonts */

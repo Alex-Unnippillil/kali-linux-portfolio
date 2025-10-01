@@ -20,7 +20,7 @@ export default function ToggleSwitch({
       aria-checked={checked}
       aria-label={ariaLabel}
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex w-10 h-5 rounded-full transition-colors focus:outline-none ${
+      className={`relative inline-flex w-10 h-5 rounded-full transition-colors focus:outline-none focus-ring ${
         checked ? "bg-ub-orange" : "bg-ubt-cool-grey"
       } ${className}`.trim()}
     >
