@@ -14,6 +14,8 @@ import {
   NotificationPriority,
 } from '../../hooks/useNotifications';
 import { PRIORITY_ORDER } from '../../utils/notifications/ruleEngine';
+import { useSettings } from '../../hooks/useSettings';
+import useNormalizedScroll from '../../utils/scroll';
 
 const focusableSelector =
   'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
@@ -83,6 +85,16 @@ const NotificationBell: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const { reducedMotion } = useSettings();
+  const panelScrollRef = useNormalizedScroll<HTMLDivElement>({ reduceMotion: reducedMotion, overscrollCushion: 0.18 });
+  const listScrollRef = useNormalizedScroll<HTMLDivElement>({ reduceMotion: reducedMotion });
+  const setPanelNode = useCallback(
+    (node: HTMLDivElement | null) => {
+      panelRef.current = node;
+      panelScrollRef.current = node;
+    },
+    [panelScrollRef],
+  );
   const headingId = useId();
   const panelId = `${headingId}-panel`;
   const [collapsedGroups, setCollapsedGroups] = useState<Record<NotificationPriority, boolean>>(
@@ -263,7 +275,8 @@ const NotificationBell: React.FC = () => {
       </button>
       {isOpen && (
         <div
-          ref={panelRef}
+          ref={setPanelNode}
+          data-normalized-scroll
           id={panelId}
           role="dialog"
           aria-modal="false"
@@ -284,7 +297,7 @@ const NotificationBell: React.FC = () => {
               Dismiss all
             </button>
           </div>
-          <div className="max-h-80 overflow-y-auto">
+          <div ref={listScrollRef} className="max-h-80 overflow-y-auto" data-normalized-scroll>
             {notifications.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-ubt-grey text-opacity-80">
                 You&apos;re all caught up.
