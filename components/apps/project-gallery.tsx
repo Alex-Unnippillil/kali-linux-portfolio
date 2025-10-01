@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import projectsData from '../../data/projects.json';
+import { getMessageFormatter } from '../../i18n/message';
 
 interface Project {
   id: number;
@@ -35,6 +36,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   const [tags, setTags] = useState<string[]>([]);
   const [ariaMessage, setAriaMessage] = useState('');
   const [selected, setSelected] = useState<Project[]>([]);
+  const messageFormatter = useMemo(() => getMessageFormatter(), []);
 
   const readFilters = async () => {
     try {
@@ -88,9 +90,14 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
       setYear(data.year || '');
       setType(data.type || '');
       setTags(data.tags || []);
-      setAriaMessage(`Showing ${projects.length} projects`);
+      setAriaMessage(
+        messageFormatter.format('projectGallery.filteredCount', {
+          count: projects.length,
+          filters: '',
+        }),
+      );
     });
-  }, [projects.length]);
+  }, [messageFormatter, projects.length]);
 
   const stacks = useMemo(
     () => Array.from(new Set(projects.flatMap((p) => p.stack))),
@@ -129,10 +136,50 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   }, [search, stack, year, type, tags]);
 
   useEffect(() => {
+    const filterSegments: string[] = [];
+    if (stack) {
+      filterSegments.push(
+        messageFormatter.format('projectGallery.filters.stack', { stack }),
+      );
+    }
+    if (tags.length) {
+      filterSegments.push(
+        messageFormatter.format('projectGallery.filters.tags', {
+          tags: tags.join(', '),
+        }),
+      );
+    }
+    if (year) {
+      filterSegments.push(
+        messageFormatter.format('projectGallery.filters.year', { year }),
+      );
+    }
+    if (type) {
+      filterSegments.push(
+        messageFormatter.format('projectGallery.filters.type', { type }),
+      );
+    }
+    if (search) {
+      filterSegments.push(
+        messageFormatter.format('projectGallery.filters.search', { search }),
+      );
+    }
+
     setAriaMessage(
-      `Showing ${filtered.length} project${filtered.length === 1 ? '' : 's'}${stack ? ` filtered by ${stack}` : ''}${tags.length ? ` with tags ${tags.join(', ')}` : ''}${year ? ` in ${year}` : ''}${type ? ` of type ${type}` : ''}${search ? ` matching "${search}"` : ''}`
+      messageFormatter.format('projectGallery.filteredCount', {
+        count: filtered.length,
+        filters: filterSegments.join(''),
+      }),
     );
-  }, [filtered.length, stack, year, type, tags, search]);
+  }, [
+    filtered.length,
+    messageFormatter,
+    search,
+    stack,
+    tags,
+    type,
+    year,
+  ]);
 
   const openInFirefox = (url: string) => {
     try {

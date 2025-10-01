@@ -1,0 +1,12 @@
+{
+  "trash.daysRemaining": "{count, plural, one {Queda {count} día} other {Quedan {count} días}}",
+  "trash.daysRemaining.aria": "Se vacía en {count, plural, one {{count} día} other {{count} días}}",
+  "trash.genderedActor": "{gender, select, male {{name} eliminó {count, plural, one {su archivo} other {sus archivos}}} female {{name} eliminó {count, plural, one {su archivo} other {sus archivos}}} other {{name} eliminó {count, plural, one {su archivo} other {sus archivos}}}}",
+  "projectGallery.filteredCount": "Mostrando {count, plural, one {# proyecto} other {# proyectos}}{filters}",
+  "projectGallery.filters.stack": " filtrado por {stack}",
+  "projectGallery.filters.tags": " con etiquetas {tags}",
+  "projectGallery.filters.year": " en {year}",
+  "projectGallery.filters.type": " de tipo {type}",
+  "projectGallery.filters.search": " que coincide con \"{search}\"",
+  "youtube.playlistCount": "{count, plural, one {# lista de reproducción} other {# listas de reproducción}}"
+}
