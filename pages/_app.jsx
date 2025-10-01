@@ -17,6 +17,7 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import dynamic from 'next/dynamic';
 
 import { Ubuntu } from 'next/font/google';
 
@@ -24,6 +25,11 @@ const ubuntu = Ubuntu({
   subsets: ['latin'],
   weight: ['300', '400', '500', '700'],
 });
+
+const DevFocusLab =
+  process.env.NODE_ENV !== 'production'
+    ? dynamic(() => import('../components/dev/FocusLab'), { ssr: false })
+    : null;
 
 
 function MyApp(props) {
@@ -149,6 +155,7 @@ function MyApp(props) {
 
   return (
     <ErrorBoundary>
+      {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
       <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
         <a
@@ -163,6 +170,7 @@ function MyApp(props) {
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
               <ShortcutOverlay />
+              {DevFocusLab ? <DevFocusLab /> : null}
               <Analytics
                 beforeSend={(e) => {
                   if (e.url.includes('/admin') || e.url.includes('/private')) return null;

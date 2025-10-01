@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { FOCUSABLE_SELECTORS } from '../../utils/focusTrap';
 
 interface ModalProps {
     isOpen: boolean;
@@ -11,23 +12,16 @@ interface ModalProps {
      * Defaults to the Next.js root (`__next`).
      */
     overlayRoot?: string | HTMLElement;
+    /**
+     * Optional identifier used by the FocusLab diagnostics overlay.
+     * When provided, the modal container receives a matching
+     * `data-focus-lab-case` attribute so automated focus tests can
+     * locate the trap boundary without relying on DOM heuristics.
+     */
+    focusTrapId?: string;
 }
 
-const FOCUSABLE_SELECTORS = [
-    'a[href]',
-    'area[href]',
-    'input:not([disabled])',
-    'select:not([disabled])',
-    'textarea:not([disabled])',
-    'button:not([disabled])',
-    'iframe',
-    'object',
-    'embed',
-    '[tabindex]:not([tabindex="-1"])',
-    '[contenteditable]'
-].join(',');
-
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot, focusTrapId }) => {
     const modalRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLElement | null>(null);
     const portalRef = useRef<HTMLDivElement | null>(null);
@@ -116,6 +110,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
             ref={modalRef}
             onKeyDown={handleKeyDown}
             tabIndex={-1}
+            data-focus-lab-case={focusTrapId || undefined}
         >
             {children}
         </div>,

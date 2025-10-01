@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import Image from 'next/image';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { collectFocusableElements } from '../../utils/focusTrap';
 
 type AppMeta = {
   id: string;
@@ -28,6 +29,11 @@ type CategoryDefinitionBase = {
 const TRANSITION_DURATION = 180;
 const RECENT_STORAGE_KEY = 'recentApps';
 const CATEGORY_STORAGE_KEY = 'whisker-menu-category';
+
+type WhiskerMenuProps = {
+  debugFocusId?: string;
+  forceOpen?: boolean;
+};
 
 const CATEGORY_DEFINITIONS = [
   {
@@ -139,9 +145,9 @@ const readRecentAppIds = (): string[] => {
 };
 
 
-const WhiskerMenu: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
+const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ debugFocusId, forceOpen = false }) => {
+  const [isOpen, setIsOpen] = useState(forceOpen);
+  const [isVisible, setIsVisible] = useState(forceOpen);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [category, setCategory] = useState<CategoryDefinition['id']>('all');
 
@@ -161,6 +167,12 @@ const WhiskerMenu: React.FC = () => {
   useEffect(() => {
     setRecentIds(readRecentAppIds());
   }, []);
+
+  useEffect(() => {
+    if (!forceOpen) return;
+    setIsVisible(true);
+    setIsOpen(true);
+  }, [forceOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -263,12 +275,21 @@ const WhiskerMenu: React.FC = () => {
     setCategoryHighlight(index === -1 ? 0 : index);
   }, [isVisible, currentCategory.id, categoryConfigs]);
 
-  const openSelectedApp = (id: string) => {
+  const openSelectedApp = useCallback((id: string) => {
     window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
-    setIsOpen(false);
-  };
+    if (!forceOpen) {
+      setIsOpen(false);
+    }
+  }, [forceOpen]);
 
   useEffect(() => {
+    if (forceOpen) {
+      if (hideTimer.current) {
+        clearTimeout(hideTimer.current);
+        hideTimer.current = null;
+      }
+      return;
+    }
     if (!isOpen && isVisible) {
       hideTimer.current = setTimeout(() => {
         setIsVisible(false);
@@ -289,7 +310,7 @@ const WhiskerMenu: React.FC = () => {
         hideTimer.current = null;
       }
     };
-  }, [isOpen, isVisible]);
+  }, [forceOpen, isOpen, isVisible]);
 
   const showMenu = useCallback(() => {
     setIsVisible(true);
@@ -297,16 +318,18 @@ const WhiskerMenu: React.FC = () => {
   }, []);
 
   const hideMenu = useCallback(() => {
+    if (forceOpen) return;
     setIsOpen(false);
-  }, []);
+  }, [forceOpen]);
 
   const toggleMenu = useCallback(() => {
+    if (forceOpen) return;
     if (isOpen || isVisible) {
       hideMenu();
     } else {
       showMenu();
     }
-  }, [hideMenu, isOpen, isVisible, showMenu]);
+  }, [forceOpen, hideMenu, isOpen, isVisible, showMenu]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -337,7 +360,7 @@ const WhiskerMenu: React.FC = () => {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [currentApps, highlight, hideMenu, isVisible, toggleMenu]);
+  }, [currentApps, highlight, hideMenu, isVisible, openSelectedApp, toggleMenu]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -392,6 +415,30 @@ const WhiskerMenu: React.FC = () => {
     }
   };
 
+  const handleMenuKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Tab') {
+      return;
+    }
+    const container = menuRef.current;
+    if (!container) {
+      return;
+    }
+    const tabbable = collectFocusableElements(container);
+    if (tabbable.length === 0) {
+      return;
+    }
+    const first = tabbable[0];
+    const last = tabbable[tabbable.length - 1];
+    const active = document.activeElement;
+    if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    } else if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last.focus();
+    }
+  }, []);
+
   return (
     <div className="relative inline-flex">
       <button
@@ -399,6 +446,7 @@ const WhiskerMenu: React.FC = () => {
         type="button"
         onClick={toggleMenu}
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        data-focus-lab-trigger={debugFocusId || undefined}
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"
@@ -417,7 +465,10 @@ const WhiskerMenu: React.FC = () => {
           }`}
           style={{ transitionDuration: `${TRANSITION_DURATION}ms` }}
           tabIndex={-1}
+          data-focus-lab-case={debugFocusId || undefined}
+          onKeyDown={handleMenuKeyDown}
           onBlur={(e) => {
+            if (forceOpen) return;
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
               hideMenu();
             }
