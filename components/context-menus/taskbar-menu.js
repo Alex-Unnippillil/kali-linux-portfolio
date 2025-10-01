@@ -13,6 +13,15 @@ function TaskbarMenu(props) {
         }
     };
 
+    const handlePinToggle = () => {
+        if (props.pinned) {
+            props.onUnpin && props.onUnpin();
+        } else {
+            props.onPin && props.onPin();
+        }
+        props.onCloseMenu && props.onCloseMenu();
+    };
+
     const handleMinimize = () => {
         props.onMinimize && props.onMinimize();
         props.onCloseMenu && props.onCloseMenu();
@@ -32,6 +41,15 @@ function TaskbarMenu(props) {
             onKeyDown={handleKeyDown}
             className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-40 context-menu-bg border text-left border-gray-900 rounded text-white py-2 absolute z-50 text-sm'}
         >
+            <button
+                type="button"
+                onClick={handlePinToggle}
+                role="menuitem"
+                aria-label={props.pinned ? 'Unpin from taskbar' : 'Pin to taskbar'}
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">{props.pinned ? 'Unpin from Taskbar' : 'Pin to Taskbar'}</span>
+            </button>
             <button
                 type="button"
                 onClick={handleMinimize}
