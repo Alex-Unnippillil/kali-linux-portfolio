@@ -1,9 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import { getDailySeed } from '../../utils/dailySeed';
+import {
+  createScopedHistory,
+  setActiveScope,
+  getActiveScope,
+  clearHistory as clearHistoryScope,
+} from '../../utils/history/globalHistory';
 
 const SIZE = 4;
 
@@ -93,6 +99,17 @@ const tileColors: Record<number, string> = {
 
 const DB_NAME = '2048';
 const STORE_NAME = 'replays';
+const HISTORY_SCOPE = '2048';
+
+type Snapshot = {
+  board: number[][];
+  moves: string[];
+  highest: number;
+  won: boolean;
+  lost: boolean;
+};
+
+const cloneBoard = (value: number[][]): number[][] => value.map((row) => [...row]);
 
 const saveReplay = (replay: any) => {
   if (typeof indexedDB === 'undefined') return;
@@ -126,7 +143,81 @@ const Page2048 = () => {
   const [boardType, setBoardType] = useState<'classic' | 'hex'>('classic');
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
-  const [history, setHistory] = useState<number[][][]>([]);
+  const [history, setHistory] = useState<Snapshot[]>([]);
+  const [future, setFuture] = useState<Snapshot[]>([]);
+  const historyApi = useMemo(() => createScopedHistory(HISTORY_SCOPE), []);
+  const suppressHistory = useRef(false);
+
+  const getSnapshot = useCallback(
+    (): Snapshot => ({
+      board: cloneBoard(board),
+      moves: [...moves],
+      highest,
+      won,
+      lost,
+    }),
+    [board, moves, highest, won, lost],
+  );
+
+  const applySnapshot = useCallback(
+    (snapshot: Snapshot) => {
+      setBoard(cloneBoard(snapshot.board));
+      setMoves(snapshot.moves);
+      setHighest(snapshot.highest);
+      setWon(snapshot.won);
+      setLost(snapshot.lost);
+      resetTimer();
+    },
+    [resetTimer],
+  );
+
+  const performUndo = useCallback(() => {
+    let didUndo = false;
+    setHistory((past) => {
+      if (!past.length) return past;
+      const previous = past[past.length - 1];
+      const current = getSnapshot();
+      setFuture((next) => [current, ...next]);
+      suppressHistory.current = true;
+      try {
+        applySnapshot(previous);
+      } finally {
+        suppressHistory.current = false;
+      }
+      didUndo = true;
+      return past.slice(0, -1);
+    });
+    return didUndo;
+  }, [applySnapshot, getSnapshot]);
+
+  const performRedo = useCallback(() => {
+    let didRedo = false;
+    setFuture((next) => {
+      if (!next.length) return next;
+      const [target, ...rest] = next;
+      const current = getSnapshot();
+      setHistory((past) => [...past, current]);
+      suppressHistory.current = true;
+      try {
+        applySnapshot(target);
+      } finally {
+        suppressHistory.current = false;
+      }
+      didRedo = true;
+      return rest;
+    });
+    return didRedo;
+  }, [applySnapshot, getSnapshot]);
+
+  useEffect(() => {
+    setActiveScope(HISTORY_SCOPE);
+    return () => {
+      if (getActiveScope() === HISTORY_SCOPE) {
+        setActiveScope(null);
+      }
+      clearHistoryScope(HISTORY_SCOPE);
+    };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -138,6 +229,9 @@ const Page2048 = () => {
       addRandomTile(b, rand);
       addRandomTile(b, rand);
       if (!mounted) return;
+      historyApi.clear();
+      setHistory([]);
+      setFuture([]);
       setBoard(b);
       rngRef.current = rand;
       seedRef.current = seed;
@@ -145,7 +239,7 @@ const Page2048 = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [historyApi]);
 
   const resetTimer = useCallback(() => {
     if (!hard) return;
@@ -180,35 +274,59 @@ const Page2048 = () => {
       if (dir === 'ArrowUp') moved = moveUp(board);
       if (dir === 'ArrowDown') moved = moveDown(board);
       if (!moved || boardsEqual(board, moved)) return;
-      setHistory((h) => [...h, board.map((row) => [...row])]);
+      const previous = getSnapshot();
       addRandomTile(moved, rngRef.current);
       const newHighest = checkHighest(moved);
       if ((newHighest === 2048 || newHighest === 4096) && newHighest > highest) {
         ReactGA.event('post_score', { score: newHighest, board: boardType });
       }
-      setHighest(newHighest);
-      setBoard(moved);
-      setMoves((m) => [...m, dir]);
-      resetTimer();
-      if (newHighest >= 2048) setWon(true);
-      else if (!hasMoves(moved)) setLost(true);
+      const wonNext = newHighest >= 2048;
+      const lostNext = !wonNext && !hasMoves(moved);
+      const nextSnapshot: Snapshot = {
+        board: cloneBoard(moved),
+        moves: [...previous.moves, dir],
+        highest: newHighest,
+        won: wonNext,
+        lost: lostNext,
+      };
+      suppressHistory.current = true;
+      try {
+        applySnapshot(nextSnapshot);
+      } finally {
+        suppressHistory.current = false;
+      }
+      setHistory((past) => [...past, previous]);
+      setFuture([]);
+      historyApi.register({
+        undo: () => performUndo(),
+        redo: () => performRedo(),
+      });
     },
-    [board, won, lost, highest, boardType, resetTimer]
+    [
+      board,
+      won,
+      lost,
+      highest,
+      boardType,
+      applySnapshot,
+      getSnapshot,
+      historyApi,
+      performRedo,
+      performUndo,
+    ]
   );
 
   const handleUndo = useCallback(() => {
-    setHistory((h) => {
-      if (!h.length) return h;
-      const prev = h[h.length - 1];
-      setBoard(prev.map((row) => [...row]));
-      setMoves((m) => m.slice(0, -1));
-      setHighest(checkHighest(prev));
-      setWon(false);
-      setLost(false);
-      resetTimer();
-      return h.slice(0, -1);
-    });
-  }, [resetTimer]);
+    if (!historyApi.undo()) {
+      performUndo();
+    }
+  }, [historyApi, performUndo]);
+
+  const handleRedo = useCallback(() => {
+    if (!historyApi.redo()) {
+      performRedo();
+    }
+  }, [historyApi, performRedo]);
 
   const restart = useCallback(() => {
     const rand = mulberry32(seedRef.current);
@@ -216,14 +334,21 @@ const Page2048 = () => {
     const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
     addRandomTile(b, rand);
     addRandomTile(b, rand);
-    setBoard(b);
-    setMoves([]);
+    historyApi.clear();
     setHistory([]);
-    setWon(false);
-    setLost(false);
-    setHighest(0);
-    resetTimer();
-  }, [resetTimer]);
+    setFuture([]);
+    suppressHistory.current = true;
+    try {
+      setBoard(b);
+      setMoves([]);
+      setWon(false);
+      setLost(false);
+      setHighest(0);
+      resetTimer();
+    } finally {
+      suppressHistory.current = false;
+    }
+  }, [historyApi, resetTimer]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -239,11 +364,16 @@ const Page2048 = () => {
       if (['u', 'U', 'Backspace'].includes(e.key)) {
         e.preventDefault();
         handleUndo();
+        return;
+      }
+      if (['y', 'Y'].includes(e.key)) {
+        e.preventDefault();
+        handleRedo();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [handleMove, restart, handleUndo]);
+  }, [handleMove, restart, handleUndo, handleRedo]);
 
   const close = () => {
     if (typeof document !== 'undefined') {
