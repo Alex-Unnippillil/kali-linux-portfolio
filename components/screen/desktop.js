@@ -378,6 +378,67 @@ export class Desktop extends Component {
         return true;
     };
 
+    isSpaceKey = (event) => {
+        if (!event) return false;
+        const key = event.key || '';
+        const code = event.code || '';
+        return key === ' ' || key === 'Spacebar' || code === 'Space';
+    };
+
+    shouldHandleFocusedWindowShortcut = (event, windowId) => {
+        if (!windowId) return false;
+        if (!this.state.focused_windows?.[windowId]) return false;
+        if (typeof document === 'undefined') return false;
+        const root = document.getElementById(windowId);
+        if (!root) return false;
+
+        const hasElement = typeof Element !== 'undefined';
+        const hasNode = typeof Node !== 'undefined';
+        const targetNode = hasElement && event?.target instanceof Element
+            ? event.target
+            : hasNode && event?.target instanceof Node
+                ? event.target
+                : null;
+
+        if (targetNode) {
+            const targetWindow = hasElement && targetNode instanceof Element
+                ? targetNode.closest('.opened-window')
+                : null;
+            if (targetWindow && targetWindow.id && targetWindow.id !== windowId) {
+                return false;
+            }
+            if (root.contains(targetNode)) {
+                return true;
+            }
+        }
+
+        const activeElement = document.activeElement;
+        if (!activeElement || activeElement === document.body) {
+            return true;
+        }
+        if (root.contains(activeElement)) {
+            return true;
+        }
+        return false;
+    };
+
+    openWindowMenuAt = (windowId) => {
+        if (typeof document === 'undefined') return;
+        const node = document.getElementById(windowId);
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
+        const scrollX = typeof window !== 'undefined' ? (window.scrollX || window.pageXOffset || 0) : 0;
+        const scrollY = typeof window !== 'undefined' ? (window.scrollY || window.pageYOffset || 0) : 0;
+        const fakeEvent = {
+            pageX: rect.left + scrollX + Math.min(rect.width / 2, 120),
+            pageY: rect.top + scrollY + 32,
+        };
+        this.hideAllContextMenu();
+        this.setState({ context_app: windowId }, () => {
+            this.showContextMenu(fakeEvent, 'app');
+        });
+    };
+
     updateWorkspaceSnapshots = (baseState) => {
         const validKeys = new Set(Object.keys(baseState.closed_windows || {}));
         this.workspaceSnapshots = this.workspaceSnapshots.map((snapshot, index) => {
@@ -1025,27 +1086,50 @@ export class Desktop extends Component {
     handleGlobalShortcut = (e) => {
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
-            if (!this.state.showWindowSwitcher) {
+            if (this.state.showWindowSwitcher) {
+                this.cycleApps(e.shiftKey ? -1 : 1);
+            } else {
                 this.openWindowSwitcher();
             }
         } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
-        }
-        else if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
-        }
-        else if (e.altKey && (e.key === '`' || e.key === '~')) {
+        } else if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
-        }
-        else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-            e.preventDefault();
+        } else {
             const id = this.getFocusedWindowId();
-            if (id) {
-                const event = new CustomEvent('super-arrow', { detail: e.key });
-                document.getElementById(id)?.dispatchEvent(event);
+            if (!this.shouldHandleFocusedWindowShortcut(e, id)) {
+                return;
+            }
+
+            if (
+                e.metaKey &&
+                !e.altKey &&
+                !e.ctrlKey &&
+                ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)
+            ) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.dispatchWindowCommand(id, e.key);
+            } else if (
+                e.altKey &&
+                !e.metaKey &&
+                !e.ctrlKey &&
+                this.isSpaceKey(e)
+            ) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.openWindowMenuAt(id);
+            } else if (
+                e.altKey &&
+                !e.metaKey &&
+                !e.ctrlKey &&
+                e.key === 'F4'
+            ) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.closeApp(id);
             }
         }
     }
@@ -1175,7 +1259,8 @@ export class Desktop extends Component {
 
     showContextMenu = (e, menuName /* context menu name */) => {
         let { posx, posy } = this.getMenuPosition(e);
-        let contextMenu = document.getElementById(`${menuName}-menu`);
+        const contextMenu = document.getElementById(`${menuName}-menu`);
+        if (!contextMenu) return;
 
         const menuWidth = contextMenu.offsetWidth;
         const menuHeight = contextMenu.offsetHeight;
@@ -1188,7 +1273,16 @@ export class Desktop extends Component {
         contextMenu.style.left = posx;
         contextMenu.style.top = posy;
 
-        this.setState({ context_menus: { ...this.state.context_menus, [menuName]: true } });
+        this.setState({ context_menus: { ...this.state.context_menus, [menuName]: true } }, () => {
+            if (menuName === 'app' && typeof window !== 'undefined') {
+                window.requestAnimationFrame(() => {
+                    const focusable = contextMenu.querySelector('[role="menuitem"], button, [tabindex]:not([tabindex="-1"])');
+                    if (focusable && typeof focusable.focus === 'function') {
+                        focusable.focus();
+                    }
+                });
+            }
+        });
     }
 
     hideAllContextMenu = () => {
