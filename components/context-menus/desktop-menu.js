@@ -55,35 +55,35 @@ function DesktopMenu(props) {
                 type="button"
                 role="menuitem"
                 aria-label="New Folder"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left mb-1.5 flex min-h-[44px] items-center rounded px-4 py-2 hover:bg-ub-warm-grey hover:bg-opacity-20"
             >
-                <span className="ml-5">New Folder</span>
+                <span className="ml-2">New Folder</span>
             </button>
             <button
                 onClick={props.openShortcutSelector}
                 type="button"
                 role="menuitem"
                 aria-label="Create Shortcut"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left mb-1.5 flex min-h-[44px] items-center rounded px-4 py-2 hover:bg-ub-warm-grey hover:bg-opacity-20"
             >
-                <span className="ml-5">Create Shortcut...</span>
+                <span className="ml-2">Create Shortcut...</span>
             </button>
             <Devider />
-            <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Paste</span>
+            <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full mb-1.5 flex min-h-[44px] items-center rounded px-4 py-2 text-gray-400 hover:bg-ub-warm-grey hover:bg-opacity-20">
+                <span className="ml-2">Paste</span>
             </div>
             <Devider />
-            <div role="menuitem" aria-label="Show Desktop in Files" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Show Desktop in Files</span>
+            <div role="menuitem" aria-label="Show Desktop in Files" aria-disabled="true" className="w-full mb-1.5 flex min-h-[44px] items-center rounded px-4 py-2 text-gray-400 hover:bg-ub-warm-grey hover:bg-opacity-20">
+                <span className="ml-2">Show Desktop in Files</span>
             </div>
             <button
                 onClick={openTerminal}
                 type="button"
                 role="menuitem"
                 aria-label="Open in Terminal"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left mb-1.5 flex min-h-[44px] items-center rounded px-4 py-2 hover:bg-ub-warm-grey hover:bg-opacity-20"
             >
-                <span className="ml-5">Open in Terminal</span>
+                <span className="ml-2">Open in Terminal</span>
             </button>
             <Devider />
             <button
@@ -91,22 +91,22 @@ function DesktopMenu(props) {
                 type="button"
                 role="menuitem"
                 aria-label="Change Background"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left mb-1.5 flex min-h-[44px] items-center rounded px-4 py-2 hover:bg-ub-warm-grey hover:bg-opacity-20"
             >
-                <span className="ml-5">Change Background...</span>
+                <span className="ml-2">Change Background...</span>
             </button>
             <Devider />
-            <div role="menuitem" aria-label="Display Settings" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Display Settings</span>
+            <div role="menuitem" aria-label="Display Settings" aria-disabled="true" className="w-full mb-1.5 flex min-h-[44px] items-center rounded px-4 py-2 text-gray-400 hover:bg-ub-warm-grey hover:bg-opacity-20">
+                <span className="ml-2">Display Settings</span>
             </div>
             <button
                 onClick={openSettings}
                 type="button"
                 role="menuitem"
                 aria-label="Settings"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left mb-1.5 flex min-h-[44px] items-center rounded px-4 py-2 hover:bg-ub-warm-grey hover:bg-opacity-20"
             >
-                <span className="ml-5">Settings</span>
+                <span className="ml-2">Settings</span>
             </button>
             <Devider />
             <button
@@ -114,9 +114,9 @@ function DesktopMenu(props) {
                 type="button"
                 role="menuitem"
                 aria-label={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left mb-1.5 flex min-h-[44px] items-center rounded px-4 py-2 hover:bg-ub-warm-grey hover:bg-opacity-20"
             >
-                <span className="ml-5">{isFullScreen ? "Exit" : "Enter"} Full Screen</span>
+                <span className="ml-2">{isFullScreen ? "Exit" : "Enter"} Full Screen</span>
             </button>
             <Devider />
             <button
@@ -124,9 +124,9 @@ function DesktopMenu(props) {
                 type="button"
                 role="menuitem"
                 aria-label="Clear Session"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left mb-1.5 flex min-h-[44px] items-center rounded px-4 py-2 hover:bg-ub-warm-grey hover:bg-opacity-20"
             >
-                <span className="ml-5">Clear Session</span>
+                <span className="ml-2">Clear Session</span>
             </button>
         </div>
     )

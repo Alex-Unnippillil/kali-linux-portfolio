@@ -37,18 +37,18 @@ function TaskbarMenu(props) {
                 onClick={handleMinimize}
                 role="menuitem"
                 aria-label={props.minimized ? 'Restore Window' : 'Minimize Window'}
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                className="w-full text-left cursor-default mb-1.5 flex min-h-[44px] items-center rounded px-4 py-2 hover:bg-gray-700"
             >
-                <span className="ml-5">{props.minimized ? 'Restore' : 'Minimize'}</span>
+                <span className="ml-2">{props.minimized ? 'Restore' : 'Minimize'}</span>
             </button>
             <button
                 type="button"
                 onClick={handleClose}
                 role="menuitem"
                 aria-label="Close Window"
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                className="w-full text-left cursor-default mb-1.5 flex min-h-[44px] items-center rounded px-4 py-2 hover:bg-gray-700"
             >
-                <span className="ml-5">Close</span>
+                <span className="ml-2">Close</span>
             </button>
         </div>
     );
