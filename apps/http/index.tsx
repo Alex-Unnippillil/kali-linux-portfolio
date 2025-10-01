@@ -50,6 +50,7 @@ const HTTPBuilder: React.FC = () => {
             className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
+            aria-label="Request URL"
           />
         </div>
       </form>
@@ -76,6 +77,7 @@ const HTTPPreview: React.FC = () => {
       className="min-h-screen bg-gray-900 text-white"
       initialTabs={[createTab()]}
       onNewTab={createTab}
+      sessionId="http-tabbed"
     />
   );
 };

@@ -7,6 +7,10 @@ import React, {
   createContext,
   useContext,
 } from 'react';
+import clsx from 'clsx';
+import useWindowLayout from '../../hooks/useWindowLayout';
+import type { SnapArea } from '../../types/windowLayout';
+import styles from './tabbedWindow.module.css';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -29,6 +33,7 @@ interface TabbedWindowProps {
   onNewTab?: () => TabDefinition;
   onTabsChange?: (tabs: TabDefinition[]) => void;
   className?: string;
+  sessionId?: string;
 }
 
 interface TabContextValue {
@@ -40,11 +45,66 @@ interface TabContextValue {
 const TabContext = createContext<TabContextValue>({ id: '', active: false, close: () => {} });
 export const useTab = () => useContext(TabContext);
 
+type DropGroup = 'half' | 'third' | 'quarter' | 'full';
+
+interface DropTargetConfig {
+  id: string;
+  label: string;
+  area: SnapArea | null;
+  group: DropGroup;
+}
+
+const DROP_TARGETS: DropTargetConfig[] = [
+  { id: 'half-left', label: '½ Left', area: 'half-left', group: 'half' },
+  { id: 'half-right', label: '½ Right', area: 'half-right', group: 'half' },
+  { id: 'third-left', label: '⅓ Left', area: 'third-left', group: 'third' },
+  { id: 'third-center', label: '⅓ Center', area: 'third-center', group: 'third' },
+  { id: 'third-right', label: '⅓ Right', area: 'third-right', group: 'third' },
+  { id: 'quarter-top-left', label: '¼ Top Left', area: 'quarter-top-left', group: 'quarter' },
+  { id: 'quarter-top-right', label: '¼ Top Right', area: 'quarter-top-right', group: 'quarter' },
+  { id: 'quarter-bottom-left', label: '¼ Bottom Left', area: 'quarter-bottom-left', group: 'quarter' },
+  { id: 'quarter-bottom-right', label: '¼ Bottom Right', area: 'quarter-bottom-right', group: 'quarter' },
+  { id: 'full', label: 'Full', area: null, group: 'full' },
+];
+
+const DROP_TARGET_GROUPS: Record<DropGroup, DropTargetConfig[]> = {
+  half: DROP_TARGETS.filter((target) => target.group === 'half'),
+  third: DROP_TARGETS.filter((target) => target.group === 'third'),
+  quarter: DROP_TARGETS.filter((target) => target.group === 'quarter'),
+  full: DROP_TARGETS.filter((target) => target.group === 'full'),
+};
+
+const DROP_TARGET_LOOKUP = new Map<string, DropTargetConfig>(
+  DROP_TARGETS.map((target) => [target.id, target]),
+);
+
+const DROP_GROUP_ORDER: DropGroup[] = ['half', 'third', 'quarter', 'full'];
+
+const SNAP_CLASS_MAP: Record<SnapArea, string> = {
+  'half-left': styles.snapHalfLeft,
+  'half-right': styles.snapHalfRight,
+  'third-left': styles.snapThirdLeft,
+  'third-center': styles.snapThirdCenter,
+  'third-right': styles.snapThirdRight,
+  'quarter-top-left': styles.snapQuarterTopLeft,
+  'quarter-top-right': styles.snapQuarterTopRight,
+  'quarter-bottom-left': styles.snapQuarterBottomLeft,
+  'quarter-bottom-right': styles.snapQuarterBottomRight,
+};
+
+const DROP_GROUP_CLASS: Record<DropGroup, string> = {
+  half: styles.dropGroupHalf,
+  third: styles.dropGroupThird,
+  quarter: styles.dropGroupQuarter,
+  full: styles.dropGroupFull,
+};
+
 const TabbedWindow: React.FC<TabbedWindowProps> = ({
   initialTabs,
   onNewTab,
   onTabsChange,
   className = '',
+  sessionId,
 }) => {
   const [tabs, setTabs] = useState<TabDefinition[]>(initialTabs);
   const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id || '');
@@ -58,6 +118,10 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  const dragPreviewRef = useRef<HTMLDivElement>(null);
+  const [draggingTabId, setDraggingTabId] = useState<string | null>(null);
+  const [activeDropTarget, setActiveDropTarget] = useState<string | null>(null);
+  const { layout, snapTab, unsnapTab, cycleSnap } = useWindowLayout(sessionId);
 
   useEffect(() => {
     if (prevActive.current !== activeId) {
@@ -104,7 +168,10 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         const idx = prev.findIndex((t) => t.id === id);
         const removed = prev[idx];
         const next = prev.filter((t) => t.id !== id);
-        if (removed && removed.onClose) removed.onClose();
+        if (removed) {
+          unsnapTab(removed.id);
+          if (removed.onClose) removed.onClose();
+        }
         if (id === activeId && next.length > 0) {
           const fallback = next[idx] || next[idx - 1];
           setActiveId(fallback.id);
@@ -117,7 +184,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         return next;
       });
     },
-    [activeId, focusTab, onNewTab, updateTabs],
+    [activeId, focusTab, onNewTab, unsnapTab, updateTabs],
   );
 
   const addTab = useCallback(() => {
@@ -127,9 +194,17 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     setActiveId(tab.id);
   }, [onNewTab, updateTabs]);
 
-  const handleDragStart = (index: number) => (e: React.DragEvent) => {
+  const handleDragStart = (tab: TabDefinition, index: number) => (e: React.DragEvent) => {
     dragSrc.current = index;
+    setDraggingTabId(tab.id);
+    setActiveDropTarget(null);
     e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', tab.id);
+    if (dragPreviewRef.current) {
+      dragPreviewRef.current.textContent = middleEllipsis(tab.title, 24);
+      const rect = dragPreviewRef.current.getBoundingClientRect();
+      e.dataTransfer.setDragImage(dragPreviewRef.current, rect.width / 2, rect.height / 2);
+    }
   };
 
   const handleDragOver = (index: number) => (e: React.DragEvent) => {
@@ -147,6 +222,44 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       next.splice(index, 0, moved);
       return next;
     });
+    dragSrc.current = null;
+    setDraggingTabId(null);
+    setActiveDropTarget(null);
+  };
+
+  const handleDragEnd = () => {
+    dragSrc.current = null;
+    setDraggingTabId(null);
+    setActiveDropTarget(null);
+  };
+
+  const handleDropTargetOver = (targetId: string) => (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (activeDropTarget !== targetId) {
+      setActiveDropTarget(targetId);
+    }
+  };
+
+  const handleDropTargetLeave = (targetId: string) => () => {
+    setActiveDropTarget((current) => (current === targetId ? null : current));
+  };
+
+  const handleDropTargetDrop = (targetId: string) => (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!draggingTabId) return;
+    const target = DROP_TARGET_LOOKUP.get(targetId);
+    if (!target) return;
+    if (target.area) {
+      snapTab(draggingTabId, target.area);
+    } else {
+      unsnapTab(draggingTabId);
+    }
+    setActive(draggingTabId);
+    requestAnimationFrame(() => focusTab(draggingTabId, { force: true }));
+    setActiveDropTarget(null);
+    setDraggingTabId(null);
+    dragSrc.current = null;
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -158,6 +271,15 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     if (e.ctrlKey && e.key.toLowerCase() === 't') {
       e.preventDefault();
       addTab();
+      return;
+    }
+    if (
+      (e.metaKey && e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) ||
+      (e.metaKey && !e.altKey && !e.ctrlKey && !e.shiftKey &&
+        (e.key === 'ArrowLeft' || e.key === 'ArrowRight'))
+    ) {
+      e.preventDefault();
+      cycleSnap(activeId, e.key === 'ArrowLeft' ? 'left' : 'right');
       return;
     }
     if (e.ctrlKey && e.key === 'Tab') {
@@ -339,11 +461,15 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
                     tabRefs.current.delete(t.id);
                   }
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none flex-shrink-0 ${
-                  t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
-                }`}
+                className={clsx(
+                  'flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none flex-shrink-0',
+                  t.id === activeId ? 'bg-gray-700' : 'bg-gray-800',
+                  layout[t.id] && styles.snappedTab,
+                  layout[t.id] && t.id === activeId && styles.snappedTabActive,
+                )}
                 draggable
-                onDragStart={handleDragStart(i)}
+                onDragStart={handleDragStart(t, i)}
+                onDragEnd={handleDragEnd}
                 onDragOver={handleDragOver(i)}
                 onDrop={handleDrop(i)}
                 onClick={() => setActive(t.id)}
@@ -355,6 +481,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
                 }}
               >
                 <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
+                {layout[t.id] && <span className={styles.snapBadge}>Snapped</span>}
                 {t.closable !== false && tabs.length > 1 && (
                   <button
                     className="p-0.5"
@@ -408,7 +535,12 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
                     onClick={() => handleMoreSelect(tab.id)}
                   >
                     <span className="truncate">{tab.title}</span>
-                    {tab.id === activeId && <span className="ml-2 text-xs text-ub-orange">Active</span>}
+                    {(tab.id === activeId || layout[tab.id]) && (
+                      <span className="ml-2 flex items-center gap-1 text-xs">
+                        {tab.id === activeId && <span className="text-ub-orange">Active</span>}
+                        {layout[tab.id] && <span className={styles.snapBadge}>Snapped</span>}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -426,21 +558,58 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         )}
       </div>
       <div className="flex-grow relative overflow-hidden">
-        {tabs.map((t) => (
-          <TabContext.Provider
-            key={t.id}
-            value={{ id: t.id, active: t.id === activeId, close: () => closeTab(t.id) }}
-          >
-            <div
-              className={`absolute inset-0 w-full h-full ${
-                t.id === activeId ? 'block' : 'hidden'
-              }`}
+        {tabs.map((t) => {
+          const area = layout[t.id];
+          const isSnapped = Boolean(area);
+          const areaClass = isSnapped && area ? SNAP_CLASS_MAP[area as SnapArea] : undefined;
+          const isActive = t.id === activeId;
+          return (
+            <TabContext.Provider
+              key={t.id}
+              value={{ id: t.id, active: isActive, close: () => closeTab(t.id) }}
             >
-              {t.content}
+              <div
+                className={
+                  isSnapped
+                    ? clsx(
+                        styles.snapPane,
+                        areaClass,
+                        isActive && styles.snapPaneActive,
+                      )
+                    : clsx('absolute inset-0 w-full h-full', isActive ? 'block' : 'hidden')
+                }
+              >
+                {t.content}
+              </div>
+            </TabContext.Provider>
+          );
+        })}
+        {draggingTabId && (
+          <div className={styles.dropOverlay} aria-hidden="true">
+            <div className={styles.dropOverlayInner}>
+              {DROP_GROUP_ORDER.map((group) => (
+                <div key={group} className={clsx(styles.dropGroup, DROP_GROUP_CLASS[group])}>
+                  {DROP_TARGET_GROUPS[group].map((target) => (
+                    <div
+                      key={target.id}
+                      className={clsx(
+                        styles.dropTarget,
+                        activeDropTarget === target.id && styles.dropTargetActive,
+                      )}
+                      onDragOver={handleDropTargetOver(target.id)}
+                      onDragLeave={handleDropTargetLeave(target.id)}
+                      onDrop={handleDropTargetDrop(target.id)}
+                    >
+                      <span className={styles.dropLabel}>{target.label}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
             </div>
-          </TabContext.Provider>
-        ))}
+          </div>
+        )}
       </div>
+      <div ref={dragPreviewRef} className={styles.dragGhost} aria-hidden="true" />
     </div>
   );
 };

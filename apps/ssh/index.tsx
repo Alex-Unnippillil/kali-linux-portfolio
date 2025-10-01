@@ -35,6 +35,7 @@ const SSHBuilder: React.FC = () => {
             className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
             value={user}
             onChange={(e) => setUser(e.target.value)}
+            aria-label="SSH username"
           />
         </div>
         <div>
@@ -47,6 +48,7 @@ const SSHBuilder: React.FC = () => {
             className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
             value={host}
             onChange={(e) => setHost(e.target.value)}
+            aria-label="SSH host"
           />
         </div>
         <div>
@@ -59,6 +61,7 @@ const SSHBuilder: React.FC = () => {
             className="w-full rounded border border-gray-700 bg-gray-800 p-2 text-white"
             value={port}
             onChange={(e) => setPort(e.target.value)}
+            aria-label="SSH port"
           />
         </div>
       </form>
@@ -85,6 +88,7 @@ const SSHPreview: React.FC = () => {
       className="min-h-screen bg-gray-900 text-white"
       initialTabs={[createTab()]}
       onNewTab={createTab}
+      sessionId="ssh-tabs"
     />
   );
 };

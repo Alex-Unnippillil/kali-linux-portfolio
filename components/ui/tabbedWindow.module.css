@@ -1,0 +1,196 @@
+.dropOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.35), rgba(15, 23, 42, 0.55));
+  z-index: 20;
+}
+
+.dropOverlayInner {
+  width: min(28rem, 90%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dropGroup {
+  width: 100%;
+  pointer-events: none;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.dropGroupHalf {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dropGroupThird {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dropGroupQuarter {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dropGroupFull {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.dropTarget {
+  pointer-events: auto;
+  min-height: 2.75rem;
+  border-radius: var(--radius-4, 0.5rem);
+  border: 1px dashed rgba(148, 163, 184, 0.45);
+  background: rgba(15, 23, 42, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(226, 232, 240, 0.9);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
+  box-shadow: inset 0 0 0 0 rgba(59, 130, 246, 0.4);
+}
+
+.dropTargetActive {
+  border-color: var(--color-window-accent, #f97316);
+  background: rgba(59, 130, 246, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.55), 0 0 0 1px rgba(15, 23, 42, 0.3);
+  color: #f8fafc;
+}
+
+.dropLabel {
+  pointer-events: none;
+}
+
+.dragGhost {
+  position: fixed;
+  top: -9999px;
+  left: -9999px;
+  padding: 0.4rem 0.7rem;
+  border-radius: var(--radius-4, 0.5rem);
+  background: rgba(15, 23, 42, 0.9);
+  color: #f8fafc;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.45);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.snappedTab {
+  position: relative;
+  isolation: isolate;
+}
+
+.snappedTab::after {
+  content: '';
+  position: absolute;
+  inset-inline: 6px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--color-window-accent, #f97316);
+  opacity: 0.5;
+}
+
+.snappedTabActive::after {
+  opacity: 1;
+  height: 3px;
+}
+
+.snapBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  background: rgba(14, 165, 233, 0.25);
+  color: rgba(125, 211, 252, 0.95);
+  text-transform: uppercase;
+}
+
+.snapPane {
+  position: absolute;
+  overflow: auto;
+  border-radius: var(--radius-4, 0.5rem);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(17, 24, 39, 0.92);
+  box-shadow: var(--shadow-1, 0 16px 40px rgba(2, 6, 23, 0.35));
+  backdrop-filter: blur(10px);
+}
+
+.snapPaneActive {
+  box-shadow: 0 0 0 2px var(--color-window-accent, #f97316), var(--shadow-2, 0 18px 46px rgba(2, 6, 23, 0.45));
+}
+
+.snapHalfLeft {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 50%;
+}
+
+.snapHalfRight {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 50%;
+}
+
+.snapThirdLeft {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 33.3333%;
+}
+
+.snapThirdCenter {
+  top: 0;
+  bottom: 0;
+  left: 33.3333%;
+  width: 33.3333%;
+}
+
+.snapThirdRight {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 33.3333%;
+}
+
+.snapQuarterTopLeft {
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 50%;
+}
+
+.snapQuarterTopRight {
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 50%;
+}
+
+.snapQuarterBottomLeft {
+  bottom: 0;
+  left: 0;
+  width: 50%;
+  height: 50%;
+}
+
+.snapQuarterBottomRight {
+  bottom: 0;
+  right: 0;
+  width: 50%;
+  height: 50%;
+}
