@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import progressInfo from './progress.json';
 import StatsChart from '../../StatsChart';
+import HashcatAdvisor from './Advisor';
 
 export const hashTypes = [
   {
@@ -444,6 +445,16 @@ function HashcatApp() {
           {rulePreview || '(no rules)'}
         </pre>
       </div>
+      <HashcatAdvisor
+        hashTypeId={hashType}
+        attackMode={attackMode}
+        ruleSet={ruleSet}
+        mask={mask}
+        maskStats={maskStats}
+        wordlist={wordlist}
+        pattern={pattern}
+        maskModeActive={showMask}
+      />
       <div>Detected: {selectedHash}</div>
       <div>Summary: {selected.summary}</div>
       <div>Example hash: {selected.example}</div>
