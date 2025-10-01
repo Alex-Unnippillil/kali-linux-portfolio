@@ -96,30 +96,49 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
   };
 
   return (
-    <div>
-      <div className="flex gap-2 mb-2">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search"
+      <div>
+        <div className="flex gap-2 mb-2 items-end">
+          <label htmlFor="pdf-search" className="sr-only">
+            Search document
+          </label>
+          <input
+            id="pdf-search"
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search"
+            className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+            aria-label="Search document"
+          />
+          <button
+            type="button"
+            onClick={search}
+            className="rounded bg-sky-500 px-3 py-1 text-sm font-medium text-neutral-900 hover:bg-sky-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
+          >
+            Search
+          </button>
+        </div>
+        <canvas
+          ref={canvasRef}
+          data-testid="pdf-canvas"
+          role="img"
+          aria-label={`Document page ${page}`}
         />
-        <button onClick={search}>Search</button>
-      </div>
-      <canvas ref={canvasRef} data-testid="pdf-canvas" />
       <div
         className="flex gap-2 overflow-x-auto mt-2"
         role="listbox"
         aria-orientation="horizontal"
         ref={thumbListRef}
       >
-        {thumbs.map((t, i) => (
-          <canvas
-            key={i + 1}
-            role="option"
-            tabIndex={page === i + 1 ? 0 : -1}
-            aria-selected={page === i + 1}
-            data-testid={`thumb-${i + 1}`}
-            onClick={() => setPage(i + 1)}
+          {thumbs.map((t, i) => (
+            <canvas
+              key={i + 1}
+              role="option"
+              tabIndex={page === i + 1 ? 0 : -1}
+              aria-selected={page === i + 1}
+              aria-label={`Page ${i + 1}`}
+              data-testid={`thumb-${i + 1}`}
+              onClick={() => setPage(i + 1)}
             onFocus={() => setPage(i + 1)}
             ref={(el) => {
               if (el) el.getContext('2d')?.drawImage(t, 0, 0);
@@ -141,3 +160,14 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
 };
 
 export default PdfViewer;
+
+export { default as PdfForms } from './Forms';
+export type {
+  PdfCheckboxField,
+  PdfFormField,
+  PdfFormValue,
+  PdfFormValueMap,
+  PdfRadioField,
+  PdfRadioOption,
+  PdfTextField,
+} from './Forms';
