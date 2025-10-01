@@ -4,8 +4,6 @@ import { useState, useRef } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
-  resetSettings,
-  defaults,
   exportSettings as exportSettingsData,
   importSettings as importSettingsData,
 } from "../../utils/settingsStore";
@@ -13,6 +11,7 @@ import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
 import KaliWallpaper from "../../components/util-components/kali-wallpaper";
+import ClearDataSection from "./components/ClearDataSection";
 
 export default function Settings() {
   const {
@@ -89,24 +88,6 @@ export default function Settings() {
     }
   };
 
-  const handleReset = async () => {
-    if (
-      !window.confirm(
-        "Reset desktop to default settings? This will clear all saved data."
-      )
-    )
-      return;
-    await resetSettings();
-    window.localStorage.clear();
-    setAccent(defaults.accent);
-    setWallpaper(defaults.wallpaper);
-    setDensity(defaults.density as any);
-    setReducedMotion(defaults.reducedMotion);
-    setFontScale(defaults.fontScale);
-    setHighContrast(defaults.highContrast);
-    setTheme("default");
-  };
-
   const [showKeymap, setShowKeymap] = useState(false);
 
   return (
@@ -157,16 +138,17 @@ export default function Settings() {
             </div>
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey flex items-center">
-              <input
-                type="checkbox"
-                checked={useKaliWallpaper}
-                onChange={(e) => setUseKaliWallpaper(e.target.checked)}
-                className="mr-2"
-              />
-              Kali Gradient Wallpaper
-            </label>
-          </div>
+              <label className="mr-2 text-ubt-grey flex items-center">
+                <input
+                  type="checkbox"
+                  checked={useKaliWallpaper}
+                  onChange={(e) => setUseKaliWallpaper(e.target.checked)}
+                  className="mr-2"
+                  aria-label="Use Kali gradient wallpaper"
+                />
+                Kali Gradient Wallpaper
+              </label>
+            </div>
           {useKaliWallpaper && (
             <p className="text-center text-xs text-ubt-grey/70 px-6 -mt-2 mb-4">
               Your previous wallpaper selection is preserved for when you turn this off.
@@ -220,14 +202,6 @@ export default function Settings() {
                 }}
               ></div>
             ))}
-          </div>
-          <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
-            <button
-              onClick={handleReset}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
-            >
-              Reset Desktop
-            </button>
           </div>
         </>
       )}
@@ -308,6 +282,7 @@ export default function Settings() {
               Import Settings
             </button>
           </div>
+          <ClearDataSection />
         </>
       )}
         <input
