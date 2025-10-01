@@ -12,6 +12,7 @@ import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
+import QuickOpen from '../components/common/QuickOpen';
 import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
@@ -162,6 +163,7 @@ function MyApp(props) {
             <PipPortalProvider>
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
+              <QuickOpen />
               <ShortcutOverlay />
               <Analytics
                 beforeSend={(e) => {

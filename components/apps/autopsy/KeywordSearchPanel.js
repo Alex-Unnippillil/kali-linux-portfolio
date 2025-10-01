@@ -65,6 +65,7 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
             key={`${a.name}-${idx}`}
             onClick={() => onSelect(a)}
             className="p-2 bg-ub-grey rounded text-sm text-left flex flex-col"
+            data-run-id={a.runId || undefined}
           >
             <div className="flex items-center font-bold">
               <span className="mr-1" aria-hidden="true">
@@ -74,6 +75,9 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
                 dangerouslySetInnerHTML={{ __html: highlight(a.name) }}
               />
             </div>
+            {a.runId && (
+              <div className="text-xs text-ubt-blue">{a.runId}</div>
+            )}
             <div className="text-gray-400">{a.type}</div>
             <div className="text-xs">
               {new Date(a.timestamp).toLocaleString()}

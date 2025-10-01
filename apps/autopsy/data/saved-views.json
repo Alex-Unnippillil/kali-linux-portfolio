@@ -1,0 +1,17 @@
+[
+  {
+    "id": "hash-findings",
+    "title": "Artifacts with hash hits",
+    "description": "Filter to artifacts flagged by the hash plugin to review suspicious binaries."
+  },
+  {
+    "id": "recent-executions",
+    "title": "Timeline: run.exe execution",
+    "description": "Jump to the run.exe execution event and open its artifact details."
+  },
+  {
+    "id": "documents-review",
+    "title": "Documents workspace",
+    "description": "Focus on document artifacts like resume.docx for context gathering."
+  }
+]

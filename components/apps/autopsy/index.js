@@ -5,6 +5,7 @@ import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
 import demoCase from '../../../apps/autopsy/data/case.json';
+import savedViews from '../../../apps/autopsy/data/saved-views.json';
 
 const escapeFilename = (str = '') =>
   str
@@ -359,6 +360,84 @@ function Autopsy({ initialArtifacts = null }) {
     demoCase.timeline.map((t) => ({ name: t.event, timestamp: t.timestamp }))
   );
   const parseWorkerRef = useRef(null);
+  const runCounterRef = useRef(0);
+  const highlightTimers = useRef([]);
+  const savedViewList = Array.isArray(savedViews) ? savedViews : [];
+
+  const assignRunIds = useCallback((list) => {
+    runCounterRef.current = 0;
+    return (Array.isArray(list) ? list : []).map((artifact) => {
+      runCounterRef.current += 1;
+      return {
+        ...artifact,
+        runId:
+          artifact.runId ||
+          `RUN-${String(runCounterRef.current).padStart(3, '0')}`,
+      };
+    });
+  }, []);
+
+  const setArtifactsWithRunIds = useCallback(
+    (list) => {
+      const next = assignRunIds(list);
+      setArtifacts(next);
+      return next;
+    },
+    [assignRunIds]
+  );
+
+  const appendRunId = useCallback((artifact) => {
+    runCounterRef.current += 1;
+    return {
+      ...artifact,
+      runId:
+        artifact.runId ||
+        `RUN-${String(runCounterRef.current).padStart(3, '0')}`,
+    };
+  }, []);
+
+  const escapeForSelector = useCallback((value) => {
+    const str = String(value ?? '');
+    if (
+      typeof window !== 'undefined' &&
+      window.CSS &&
+      typeof window.CSS.escape === 'function'
+    ) {
+      return window.CSS.escape(str);
+    }
+    return str.replace(/"/g, '\\"');
+  }, []);
+
+  const highlightElement = useCallback((element) => {
+    if (!element) return;
+    if (typeof window === 'undefined') return;
+    const previousOutline = element.style.outline;
+    const previousOffset = element.style.outlineOffset;
+    element.style.outline = '2px solid #f97316';
+    element.style.outlineOffset = '2px';
+    if (typeof element.scrollIntoView === 'function') {
+      element.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+    try {
+      element.focus({ preventScroll: true });
+    } catch {
+      if (typeof element.focus === 'function') element.focus();
+    }
+    const timer = window.setTimeout(() => {
+      element.style.outline = previousOutline;
+      element.style.outlineOffset = previousOffset;
+    }, 1200);
+    highlightTimers.current.push(timer);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (typeof window === 'undefined') return;
+      highlightTimers.current.forEach((id) => window.clearTimeout(id));
+      highlightTimers.current = [];
+    },
+    []
+  );
 
   useEffect(() => {
     fetch('/plugin-marketplace.json')
@@ -374,20 +453,20 @@ function Autopsy({ initialArtifacts = null }) {
           new URL('./jsonWorker.js', import.meta.url)
         );
         parseWorkerRef.current.onmessage = (e) =>
-          setArtifacts(e.data || []);
+          setArtifactsWithRunIds(e.data || []);
       } catch {
         parseWorkerRef.current = null;
       }
     }
     return () => parseWorkerRef.current?.terminate();
-  }, []);
+  }, [setArtifactsWithRunIds]);
 
   useEffect(() => {
     if (!currentCase) return;
     if (initialArtifacts) {
-      setArtifacts(initialArtifacts);
+      setArtifactsWithRunIds(initialArtifacts);
     } else {
-      setArtifacts(demoArtifacts);
+      setArtifactsWithRunIds(demoArtifacts);
       fetch('/autopsy-demo.json')
         .then(async (res) => {
           const text = res.text
@@ -398,13 +477,13 @@ function Autopsy({ initialArtifacts = null }) {
           } else {
             try {
               const data = JSON.parse(text);
-              setArtifacts(data.artifacts || demoArtifacts);
+              setArtifactsWithRunIds(data.artifacts || demoArtifacts);
             } catch {
-              setArtifacts(demoArtifacts);
+              setArtifactsWithRunIds(demoArtifacts);
             }
           }
         })
-        .catch(() => setArtifacts(demoArtifacts));
+        .catch(() => setArtifactsWithRunIds(demoArtifacts));
     }
     fetch('/demo-data/autopsy/filetree.json')
       .then((res) => res.json())
@@ -414,7 +493,7 @@ function Autopsy({ initialArtifacts = null }) {
       .then((res) => res.json())
       .then((data) => setHashDB(data || {}))
       .catch(() => setHashDB({}));
-  }, [currentCase, initialArtifacts]);
+  }, [currentCase, initialArtifacts, setArtifactsWithRunIds]);
 
   const types = ['All', ...Array.from(new Set(artifacts.map((a) => a.type)))];
   const users = [
@@ -469,16 +548,14 @@ function Autopsy({ initialArtifacts = null }) {
       setAnalysis(
         `File: ${safeName}\nSize: ${file.size} bytes\nFirst 20 bytes: ${hex}`
       );
-      setArtifacts((prev) => [
-        ...prev,
-        {
-          name: file.name,
-          size: file.size,
-          hex,
-          plugin: selectedPlugin || 'None',
-          timestamp: new Date().toISOString(),
-        },
-      ]);
+      const artifactWithRunId = appendRunId({
+        name: file.name,
+        size: file.size,
+        hex,
+        plugin: selectedPlugin || 'None',
+        timestamp: new Date().toISOString(),
+      });
+      setArtifacts((prev) => [...prev, artifactWithRunId]);
     };
     reader.readAsArrayBuffer(file);
   };
@@ -538,6 +615,159 @@ function Autopsy({ initialArtifacts = null }) {
       setPreviewTab('hex');
     }
   };
+
+  const focusSavedViewButton = useCallback(
+    (viewId) => {
+      if (typeof document === 'undefined') return;
+      const selector = `[data-view-id="${escapeForSelector(viewId)}"]`;
+      const element = document.querySelector(selector);
+      if (element instanceof HTMLElement) {
+        highlightElement(element);
+      }
+    },
+    [escapeForSelector, highlightElement]
+  );
+
+  const selectArtifactByRunId = useCallback(
+    (runId) => {
+      if (!runId) return;
+      const artifact = artifacts.find((a) => a.runId === runId);
+      if (!artifact) return;
+      setTypeFilter('All');
+      setUserFilter('All');
+      setPluginFilter('All');
+      setStartTime('');
+      setEndTime('');
+      setKeyword('');
+      setSelectedArtifact(artifact);
+      if (typeof document !== 'undefined') {
+        const selector = `[data-run-id="${escapeForSelector(runId)}"]`;
+        const element = document.querySelector(selector);
+        if (element instanceof HTMLElement) {
+          highlightElement(element);
+        }
+      }
+    },
+    [
+      artifacts,
+      escapeForSelector,
+      highlightElement,
+      setEndTime,
+      setKeyword,
+      setPluginFilter,
+      setStartTime,
+      setTypeFilter,
+      setUserFilter,
+    ]
+  );
+
+  const selectFileByPath = useCallback(
+    (path) => {
+      if (!path || !fileTree) return;
+      setTypeFilter('All');
+      setUserFilter('All');
+      setPluginFilter('All');
+      setStartTime('');
+      setEndTime('');
+      setKeyword('');
+      const parts = path.split('/').filter(Boolean);
+      const findNode = (node, segments) => {
+        if (!node || segments.length === 0) return node;
+        const [head, ...rest] = segments;
+        const nextNode = (node.children || []).find((child) => child.name === head);
+        if (!nextNode) return null;
+        return findNode(nextNode, rest);
+      };
+      const target = findNode(fileTree, parts);
+      if (target && !target.children) {
+        selectFile(target);
+        if (typeof document !== 'undefined') {
+          const selector = `[data-file-path="${escapeForSelector(path)}"]`;
+          const element = document.querySelector(selector);
+          if (element instanceof HTMLElement) {
+            highlightElement(element);
+          }
+        }
+      }
+    },
+    [
+      escapeForSelector,
+      fileTree,
+      highlightElement,
+      selectFile,
+      setEndTime,
+      setKeyword,
+      setPluginFilter,
+      setStartTime,
+      setTypeFilter,
+      setUserFilter,
+    ]
+  );
+
+  const applySavedView = useCallback(
+    (viewId) => {
+      if (!viewId) return;
+      const id = String(viewId);
+      if (id === 'hash-findings') {
+        setTypeFilter('All');
+        setUserFilter('All');
+        setPluginFilter('hash');
+        setStartTime('');
+        setEndTime('');
+        setKeyword('');
+        focusSavedViewButton(id);
+      } else if (id === 'recent-executions') {
+        setTypeFilter('All');
+        setUserFilter('All');
+        setPluginFilter('All');
+        setStartTime('');
+        setEndTime('');
+        setKeyword('');
+        focusSavedViewButton(id);
+        const runArtifact = artifacts.find((a) => a.name === 'run.exe');
+        if (runArtifact?.runId) {
+          selectArtifactByRunId(runArtifact.runId);
+        }
+      } else if (id === 'documents-review') {
+        setTypeFilter('Document');
+        setUserFilter('All');
+        setPluginFilter('All');
+        setStartTime('');
+        setEndTime('');
+        setKeyword('');
+        focusSavedViewButton(id);
+        selectFileByPath('Documents/resume.docx');
+      }
+    },
+    [
+      artifacts,
+      focusSavedViewButton,
+      selectArtifactByRunId,
+      selectFileByPath,
+      setEndTime,
+      setKeyword,
+      setPluginFilter,
+      setStartTime,
+      setTypeFilter,
+      setUserFilter,
+    ]
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handler = (event) => {
+      const detail = event.detail || {};
+      if (detail.kind === 'run' && detail.runId) {
+        selectArtifactByRunId(detail.runId);
+      } else if (detail.kind === 'file' && detail.path) {
+        selectFileByPath(detail.path);
+      } else if (detail.kind === 'view' && detail.viewId) {
+        applySavedView(detail.viewId);
+      }
+    };
+    window.addEventListener('autopsy-focus', handler);
+    return () => window.removeEventListener('autopsy-focus', handler);
+  }, [applySavedView, selectArtifactByRunId, selectFileByPath]);
 
   useEffect(() => {
     return () => {
@@ -638,6 +868,25 @@ function Autopsy({ initialArtifacts = null }) {
               className="text-sm"
             />
           </div>
+          {savedViewList.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-sm font-bold">Saved Views</div>
+              <div className="flex flex-col gap-2 md:flex-row md:flex-wrap">
+                {savedViewList.map((view) => (
+                  <button
+                    key={view.id}
+                    type="button"
+                    data-view-id={view.id}
+                    onClick={() => applySavedView(view.id)}
+                    className="rounded border border-white/20 bg-ub-grey/70 px-3 py-2 text-left transition hover:border-ub-orange"
+                  >
+                    <div className="text-sm font-semibold">{view.title}</div>
+                    <div className="text-xs text-white/70">{view.description}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
       {analysis && (
