@@ -68,6 +68,7 @@ const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
 const SubnetCalculatorApp = createDynamicApp('subnet-calculator', 'Subnet Calculator');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
+const DeveloperToolsApp = createDynamicApp('developer-tools', 'Developer Tools');
 
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
 const TrashApp = createDynamicApp('trash', 'Trash');
@@ -163,6 +164,7 @@ const displayInputLab = createDisplay(InputLabApp);
 const displaySubnetCalculator = createDisplay(SubnetCalculatorApp);
 
 const displayGhidra = createDisplay(GhidraApp);
+const displayDeveloperTools = createDisplay(DeveloperToolsApp);
 
 const displayAutopsy = createDisplay(AutopsyApp);
 const displayPluginManager = createDisplay(PluginManagerApp);
@@ -253,6 +255,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayProjectGallery,
+  },
+  {
+    id: 'developer-tools',
+    title: 'Developer Tools',
+    icon: '/themes/Yaru/apps/ssh.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayDeveloperTools,
   },
   {
     id: 'input-lab',
