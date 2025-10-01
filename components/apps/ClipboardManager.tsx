@@ -1,7 +1,9 @@
-"use client";
+'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { openDB, type IDBPDatabase } from 'idb';
+import { openDB } from 'idb';
+const isBrowser =
+  typeof window !== 'undefined' && typeof indexedDB !== 'undefined';
 
 interface ClipItem {
   id?: number;
@@ -11,8 +13,6 @@ interface ClipItem {
 
 const DB_NAME = 'clipboard-manager';
 const STORE_NAME = 'items';
-const isBrowser =
-  typeof window !== 'undefined' && typeof indexedDB !== 'undefined';
 
 let dbPromise: ReturnType<typeof openDB> | null = null;
 function getDB() {
