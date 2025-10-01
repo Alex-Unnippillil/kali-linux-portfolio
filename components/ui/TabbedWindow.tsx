@@ -7,6 +7,7 @@ import React, {
   createContext,
   useContext,
 } from 'react';
+import useHibernation from '../../hooks/useHibernation';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -22,6 +23,9 @@ export interface TabDefinition {
   onActivate?: () => void;
   onDeactivate?: () => void;
   onClose?: () => void;
+  disableHibernation?: boolean;
+  onSnapshot?: () => unknown;
+  onRestore?: (snapshot: unknown | null) => void;
 }
 
 interface TabbedWindowProps {
@@ -29,15 +33,26 @@ interface TabbedWindowProps {
   onNewTab?: () => TabDefinition;
   onTabsChange?: (tabs: TabDefinition[]) => void;
   className?: string;
+  hibernateAfterMs?: number;
 }
 
 interface TabContextValue {
   id: string;
   active: boolean;
   close: () => void;
+  markInteraction: () => void;
+  wake: () => void;
+  hibernating: boolean;
 }
 
-const TabContext = createContext<TabContextValue>({ id: '', active: false, close: () => {} });
+const TabContext = createContext<TabContextValue>({
+  id: '',
+  active: false,
+  close: () => {},
+  markInteraction: () => {},
+  wake: () => {},
+  hibernating: false,
+});
 export const useTab = () => useContext(TabContext);
 
 const TabbedWindow: React.FC<TabbedWindowProps> = ({
@@ -45,6 +60,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   onNewTab,
   onTabsChange,
   className = '',
+  hibernateAfterMs = 45000,
 }) => {
   const [tabs, setTabs] = useState<TabDefinition[]>(initialTabs);
   const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id || '');
@@ -58,6 +74,62 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  const emitMemoryEvent = useCallback((tabId: string, state: 'hibernate' | 'resume') => {
+    const perf =
+      typeof performance !== 'undefined'
+        ? (performance as Performance & { memory?: { usedJSHeapSize?: number } })
+        : undefined;
+    const heapBytes = perf?.memory?.usedJSHeapSize ?? null;
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('tabbed-window:hibernation', {
+          detail: {
+            tabId,
+            state,
+            heapBytes,
+            timestamp: Date.now(),
+          },
+        }),
+      );
+    }
+    if (process.env.NODE_ENV !== 'production') {
+      const formatted = heapBytes ? `${(heapBytes / 1024 / 1024).toFixed(1)} MB` : 'unknown';
+      console.debug(`[TabbedWindow] Pane ${tabId} ${state}. Heap ≈ ${formatted}`);
+    }
+  }, []);
+
+  const paneDescriptors = useMemo(
+    () =>
+      tabs.map((tab) => ({
+        id: tab.id,
+        disabled: tab.disableHibernation,
+        snapshot: tab.onSnapshot,
+        restore: tab.onRestore,
+      })),
+    [tabs],
+  );
+
+  const { hibernating, markInteraction, wake } = useHibernation({
+    idleMs: hibernateAfterMs,
+    panes: paneDescriptors,
+    onHibernate: (id) => emitMemoryEvent(id, 'hibernate'),
+    onResume: (id) => emitMemoryEvent(id, 'resume'),
+  });
+
+  const markTab = useCallback(
+    (id: string) => {
+      if (!id) return;
+      markInteraction(id);
+    },
+    [markInteraction],
+  );
+
+  useEffect(() => {
+    if (!activeId) return;
+    wake(activeId);
+    markTab(activeId);
+  }, [activeId, markTab, wake]);
 
   useEffect(() => {
     if (prevActive.current !== activeId) {
@@ -93,9 +165,11 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
 
   const setActive = useCallback(
     (id: string) => {
+      wake(id);
+      markTab(id);
       setActiveId(id);
     },
-    [],
+    [markTab, wake],
   );
 
   const closeTab = useCallback(
@@ -108,16 +182,24 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         if (id === activeId && next.length > 0) {
           const fallback = next[idx] || next[idx - 1];
           setActiveId(fallback.id);
-          requestAnimationFrame(() => focusTab(fallback.id, { force: true }));
+          requestAnimationFrame(() => {
+            focusTab(fallback.id, { force: true });
+            wake(fallback.id);
+            markTab(fallback.id);
+          });
         } else if (next.length === 0 && onNewTab) {
           const tab = onNewTab();
           next.push(tab);
           setActiveId(tab.id);
+          requestAnimationFrame(() => {
+            wake(tab.id);
+            markTab(tab.id);
+          });
         }
         return next;
       });
     },
-    [activeId, focusTab, onNewTab, updateTabs],
+    [activeId, focusTab, markTab, onNewTab, updateTabs, wake],
   );
 
   const addTab = useCallback(() => {
@@ -125,7 +207,9 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     const tab = onNewTab();
     updateTabs((prev) => [...prev, tab]);
     setActiveId(tab.id);
-  }, [onNewTab, updateTabs]);
+    wake(tab.id);
+    markTab(tab.id);
+  }, [markTab, onNewTab, updateTabs, wake]);
 
   const handleDragStart = (index: number) => (e: React.DragEvent) => {
     dragSrc.current = index;
@@ -150,6 +234,9 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
+    if (activeId) {
+      markTab(activeId);
+    }
     if (e.ctrlKey && e.key.toLowerCase() === 'w') {
       e.preventDefault();
       closeTab(activeId);
@@ -171,6 +258,10 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         const nextTab = prev[nextIdx];
         setActiveId(nextTab.id);
         requestAnimationFrame(() => focusTab(nextTab.id));
+        requestAnimationFrame(() => {
+          wake(nextTab.id);
+          markTab(nextTab.id);
+        });
         return prev;
       });
       return;
@@ -187,6 +278,10 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         const nextTab = prev[nextIdx];
         setActiveId(nextTab.id);
         requestAnimationFrame(() => focusTab(nextTab.id));
+        requestAnimationFrame(() => {
+          wake(nextTab.id);
+          markTab(nextTab.id);
+        });
         return prev;
       });
     }
@@ -215,7 +310,12 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
-    const handleScroll = () => updateOverflow();
+    const handleScroll = () => {
+      updateOverflow();
+      if (activeId) {
+        markTab(activeId);
+      }
+    };
     updateOverflow();
     container.addEventListener('scroll', handleScroll);
     const observer =
@@ -227,7 +327,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       observer?.disconnect();
       window.removeEventListener('resize', handleScroll);
     };
-  }, [updateOverflow]);
+  }, [activeId, markTab, updateOverflow]);
 
   useEffect(() => {
     const id = requestAnimationFrame(() => updateOverflow());
@@ -286,20 +386,27 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     }
   }, [moreMenuOpen, overflowTabs.length]);
 
-  const scrollByAmount = useCallback((direction: 'left' | 'right') => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    const amount = container.clientWidth * 0.6;
-    container.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' });
-  }, []);
+  const scrollByAmount = useCallback(
+    (direction: 'left' | 'right') => {
+      const container = scrollContainerRef.current;
+      if (!container) return;
+      const amount = container.clientWidth * 0.6;
+      container.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' });
+      if (activeId) {
+        markTab(activeId);
+      }
+    },
+    [activeId, markTab],
+  );
 
   const handleMoreSelect = useCallback(
     (id: string) => {
       setMoreMenuOpen(false);
+      markTab(activeId);
       setActive(id);
       requestAnimationFrame(() => focusTab(id, { force: true }));
     },
-    [focusTab, setActive],
+    [activeId, focusTab, markTab, setActive],
   );
 
   return (
@@ -307,6 +414,11 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       className={`flex flex-col w-full h-full ${className}`.trim()}
       tabIndex={0}
       onKeyDown={onKeyDown}
+      onMouseDown={() => {
+        if (activeId) {
+          markTab(activeId);
+        }
+      }}
     >
       <div className="flex flex-shrink-0 items-center gap-1 bg-gray-800 text-white text-sm">
         {canScrollLeft && (
@@ -326,49 +438,70 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             aria-orientation="horizontal"
             className="flex overflow-x-auto scrollbar-thin scroll-smooth"
           >
-            {tabs.map((t, i) => (
-              <div
-                key={t.id}
-                role="tab"
-                aria-selected={t.id === activeId}
-                tabIndex={t.id === activeId ? 0 : -1}
-                ref={(node) => {
-                  if (node) {
-                    tabRefs.current.set(t.id, node);
-                  } else {
-                    tabRefs.current.delete(t.id);
-                  }
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none flex-shrink-0 ${
-                  t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
-                }`}
-                draggable
-                onDragStart={handleDragStart(i)}
-                onDragOver={handleDragOver(i)}
-                onDrop={handleDrop(i)}
-                onClick={() => setActive(t.id)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
+            {tabs.map((t, i) => {
+              const isActive = t.id === activeId;
+              const isHibernating = Boolean(hibernating[t.id]);
+              const dragStart = handleDragStart(i);
+              const dropHandler = handleDrop(i);
+              const dragOver = handleDragOver(i);
+              return (
+                <div
+                  key={t.id}
+                  role="tab"
+                  aria-selected={isActive}
+                  tabIndex={isActive ? 0 : -1}
+                  ref={(node) => {
+                    if (node) {
+                      tabRefs.current.set(t.id, node);
+                    } else {
+                      tabRefs.current.delete(t.id);
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none flex-shrink-0 ${
+                    isActive ? 'bg-gray-700' : 'bg-gray-800'
+                  } ${isHibernating ? 'opacity-70' : ''}`}
+                  draggable
+                  onDragStart={(event) => {
+                    markTab(t.id);
+                    dragStart(event);
+                  }}
+                  onDragOver={dragOver}
+                  onDrop={(event) => {
+                    markTab(t.id);
+                    dropHandler(event);
+                  }}
+                  onClick={() => {
+                    markTab(t.id);
                     setActive(t.id);
-                  }
-                }}
-              >
-                <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
-                {t.closable !== false && tabs.length > 1 && (
-                  <button
-                    className="p-0.5"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      closeTab(t.id);
-                    }}
-                    aria-label="Close Tab"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            ))}
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      markTab(t.id);
+                      setActive(t.id);
+                    }
+                  }}
+                >
+                  <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
+                  {isHibernating && !isActive && (
+                    <span className="text-xs text-gray-400">⏸</span>
+                  )}
+                  {t.closable !== false && tabs.length > 1 && (
+                    <button
+                      className="p-0.5"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        markTab(t.id);
+                        closeTab(t.id);
+                      }}
+                      aria-label="Close Tab"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
         {canScrollRight && (
@@ -387,7 +520,12 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
               type="button"
               ref={moreButtonRef}
               className="px-2 py-1 bg-gray-800 hover:bg-gray-700 focus:outline-none"
-              onClick={() => setMoreMenuOpen((open) => !open)}
+              onClick={() => {
+                if (activeId) {
+                  markTab(activeId);
+                }
+                setMoreMenuOpen((open) => !open);
+              }}
               aria-haspopup="menu"
               aria-expanded={moreMenuOpen}
             >
@@ -426,20 +564,37 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         )}
       </div>
       <div className="flex-grow relative overflow-hidden">
-        {tabs.map((t) => (
-          <TabContext.Provider
-            key={t.id}
-            value={{ id: t.id, active: t.id === activeId, close: () => closeTab(t.id) }}
-          >
-            <div
-              className={`absolute inset-0 w-full h-full ${
-                t.id === activeId ? 'block' : 'hidden'
-              }`}
+        {tabs.map((t) => {
+          const isActive = t.id === activeId;
+          const isHibernating = Boolean(hibernating[t.id]);
+          return (
+            <TabContext.Provider
+              key={t.id}
+              value={{
+                id: t.id,
+                active: isActive,
+                close: () => closeTab(t.id),
+                markInteraction: () => markTab(t.id),
+                wake: () => wake(t.id),
+                hibernating: isHibernating,
+              }}
             >
-              {t.content}
-            </div>
-          </TabContext.Provider>
-        ))}
+              <div
+                className={`absolute inset-0 w-full h-full ${
+                  isActive ? 'block' : 'hidden'
+                }`}
+              >
+                {isHibernating && !isActive ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-900/70 text-sm text-gray-300">
+                    Pane hibernated to conserve memory
+                  </div>
+                ) : (
+                  t.content
+                )}
+              </div>
+            </TabContext.Provider>
+          );
+        })}
       </div>
     </div>
   );
