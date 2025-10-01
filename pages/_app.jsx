@@ -82,6 +82,38 @@ function MyApp(props) {
   }, []);
 
   useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+      return undefined;
+    }
+
+    const applyBadge = (count) => {
+      const nav = navigator;
+      if (!nav || typeof nav.setAppBadge !== 'function') return;
+      if (count > 0) {
+        nav.setAppBadge(count).catch(() => {});
+      } else if (typeof nav.clearAppBadge === 'function') {
+        nav.clearAppBadge().catch(() => {});
+      }
+    };
+
+    const handleMessage = (event) => {
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+      if (data.type !== 'shortcuts-updated') return;
+      const shortcuts = Array.isArray(data.shortcuts) ? data.shortcuts : [];
+      const count = Number.isFinite(data.count)
+        ? Number(data.count)
+        : shortcuts.filter((entry) => entry && entry.pinned).length;
+      applyBadge(count);
+    };
+
+    navigator.serviceWorker.addEventListener('message', handleMessage);
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleMessage);
+    };
+  }, []);
+
+  useEffect(() => {
     const liveRegion = document.getElementById('live-region');
     if (!liveRegion) return;
 
