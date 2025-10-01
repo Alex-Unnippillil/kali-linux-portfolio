@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import ListView from './file-explorer/ListView';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -62,6 +63,33 @@ export async function saveFileDialog(options = {}) {
 const DB_NAME = 'file-explorer';
 const STORE_NAME = 'recent';
 
+const EXTENSION_LABELS = {
+  txt: 'Text Document',
+  md: 'Markdown',
+  json: 'JSON',
+  js: 'JavaScript',
+  ts: 'TypeScript',
+  tsx: 'TypeScript JSX',
+  jsx: 'JavaScript JSX',
+  html: 'HTML Document',
+  css: 'CSS Stylesheet',
+  png: 'PNG Image',
+  jpg: 'JPEG Image',
+  jpeg: 'JPEG Image',
+  gif: 'GIF Image',
+  pdf: 'PDF Document',
+  log: 'Log File',
+  zip: 'ZIP Archive',
+};
+
+function guessTypeFromName(name) {
+  if (typeof name !== 'string') return '';
+  const segments = name.split('.');
+  if (segments.length <= 1) return '';
+  const ext = segments.pop().toLowerCase();
+  return EXTENSION_LABELS[ext] || `${ext.toUpperCase()} file`;
+}
+
 function openDB() {
   return getDb(DB_NAME, 1, {
     upgrade(db) {
@@ -117,6 +145,45 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   } = useOPFS();
   const [unsavedDir, setUnsavedDir] = useState(null);
 
+  const workspaceKey = useMemo(() => {
+    if (context?.workspace) return context.workspace;
+    if (path.length > 0 && path[0]?.name) return path[0].name;
+    if (root?.name) return root.name;
+    return 'default';
+  }, [context?.workspace, path, root]);
+
+  const folderKey = useMemo(() => {
+    const names = path.map((crumb) => crumb.name).filter(Boolean);
+    if (names.length) return names.join('/');
+    if (dirHandle?.name) return dirHandle.name;
+    return 'root';
+  }, [path, dirHandle]);
+
+  const readDir = useCallback(async (handle) => {
+    const ds = [];
+    const fs = [];
+    for await (const [name, h] of handle.entries()) {
+      if (h.kind === 'file') {
+        let size = null;
+        let type = '';
+        let modified = null;
+        try {
+          const file = await h.getFile();
+          size = typeof file.size === 'number' ? file.size : null;
+          type = file.type || guessTypeFromName(name);
+          modified = file.lastModified ? new Date(file.lastModified) : null;
+        } catch {}
+        fs.push({ name, handle: h, size, type, modified, tags: null });
+      } else if (h.kind === 'directory') {
+        ds.push({ name, handle: h });
+      }
+    }
+    ds.sort((a, b) => a.name.localeCompare(b.name));
+    fs.sort((a, b) => a.name.localeCompare(b.name));
+    setDirs(ds);
+    setFiles(fs);
+  }, []);
+
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
     setSupported(ok);
@@ -131,7 +198,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       setPath([{ name: root.name || '/', handle: root }]);
       await readDir(root);
     })();
-  }, [opfsSupported, root, getDir]);
+  }, [opfsSupported, root, getDir, readDir]);
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -190,17 +257,6 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     }
     setContent(text);
   };
-
-  const readDir = useCallback(async (handle) => {
-    const ds = [];
-    const fs = [];
-    for await (const [name, h] of handle.entries()) {
-      if (h.kind === 'file') fs.push({ name, handle: h });
-      else if (h.kind === 'directory') ds.push({ name, handle: h });
-    }
-    setDirs(ds);
-    setFiles(fs);
-  }, []);
 
   useEffect(() => {
     const requested =
@@ -315,7 +371,13 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+        <input
+          ref={fallbackInputRef}
+          type="file"
+          onChange={openFallback}
+          className="hidden"
+          aria-label="Select file to open"
+        />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -330,6 +392,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
               value={content}
               onChange={onChange}
+              aria-label="File contents"
             />
             <button
               onClick={async () => {
@@ -404,16 +467,33 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             </div>
           ))}
         </div>
-        <div className="flex-1 flex flex-col">
-          {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
-          )}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 min-h-0 flex flex-col">
+            <div className="flex-1 min-h-0">
+              <ListView
+                items={files}
+                onOpen={openFile}
+                activeFileName={currentFile?.name || null}
+                folderKey={folderKey}
+                workspaceKey={workspaceKey}
+              />
+            </div>
+            {currentFile && (
+              <textarea
+                className="flex-1 min-h-[160px] p-2 bg-ub-cool-grey outline-none border-t border-gray-600"
+                value={content}
+                onChange={onChange}
+                aria-label="File editor"
+              />
+            )}
+          </div>
           <div className="p-2 border-t border-gray-600">
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find in files"
               className="px-1 py-0.5 text-black"
+              aria-label="Search files"
             />
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
