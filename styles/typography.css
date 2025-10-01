@@ -1,0 +1,54 @@
+:root {
+  --font-body-latin: var(--font-ubuntu, 'Ubuntu'), 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  --font-body-cjk: 'Noto Sans CJK SC', 'Noto Sans CJK JP', 'Noto Sans CJK TC', 'PingFang SC', 'Hiragino Sans', 'Microsoft YaHei', 'Source Han Sans SC', 'Noto Sans', sans-serif;
+  --font-body-rtl: 'Noto Naskh Arabic', 'Noto Sans Arabic', 'Segoe UI', 'Tahoma', 'Noto Sans', sans-serif;
+  --font-body: var(--font-body-latin);
+  --font-monospace: 'JetBrains Mono', 'Fira Code', 'Fira Mono', 'Source Code Pro', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
+html[dir='rtl'] {
+  --font-body: var(--font-body-rtl);
+}
+
+html:lang(zh),
+html:lang(ja),
+html:lang(ko),
+body:lang(zh),
+body:lang(ja),
+body:lang(ko) {
+  --font-body: var(--font-body-cjk);
+}
+
+body {
+  font-family: var(--font-body);
+  font-feature-settings: 'kern' 1, 'liga' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  line-height: 1.6;
+}
+
+.font-root {
+  font-family: var(--font-body);
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-monospace);
+}
+
+[lang='ar'],
+[lang='fa'],
+[lang='ur'],
+[lang='ps'],
+[lang='he'] {
+  font-family: var(--font-body-rtl);
+}
+
+[lang='zh'],
+[lang='ja'],
+[lang='ko'] {
+  font-family: var(--font-body-cjk);
+}

@@ -1,4 +1,5 @@
 import Document, { Html, Head, Main, NextScript } from 'next/document';
+import Script from 'next/script';
 
 class MyDocument extends Document {
   /**
@@ -18,7 +19,8 @@ class MyDocument extends Document {
           <link rel="icon" href="/favicon.ico" />
           <link rel="manifest" href="/manifest.webmanifest" />
           <meta name="theme-color" content="#0f1317" />
-          <script nonce={nonce} src="/theme.js" />
+          <Script nonce={nonce} src="/theme.js" strategy="beforeInteractive" />
+          <Script nonce={nonce} src="/a2hs.js" strategy="beforeInteractive" />
         </Head>
         <body>
           <Main />
