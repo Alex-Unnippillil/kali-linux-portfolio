@@ -4,7 +4,14 @@ export const RECENT_STORAGE_KEY = 'kali-recent';
 const LEGACY_RECENT_STORAGE_KEY = 'recentApps';
 const MAX_RECENT_ENTRIES = 20;
 
-type RecentId = string;
+export type RecentId = string;
+
+export const RECENT_STORAGE_EVENT = 'recent-storage-change';
+
+const dispatchRecentChange = (ids: RecentId[]) => {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(RECENT_STORAGE_EVENT, { detail: ids }));
+};
 
 const parseIds = (raw: string | null): RecentId[] => {
   if (!raw) return [];
@@ -38,25 +45,30 @@ export const seedRecentAppsFromLegacy = (): RecentId[] => {
     // ignore storage failures (e.g., quota exceeded)
   }
 
+  dispatchRecentChange(legacyIds);
+
   return legacyIds;
 };
 
 export const readRecentAppIds = (): RecentId[] => {
   if (!safeLocalStorage) return [];
   const seeded = seedRecentAppsFromLegacy();
-  if (seeded.length > 0 || safeLocalStorage.getItem(RECENT_STORAGE_KEY) !== null) {
+  if (seeded.length > 0) {
     return seeded;
   }
-  return [];
+  const stored = safeLocalStorage.getItem(RECENT_STORAGE_KEY);
+  if (stored === null) return [];
+  return parseIds(stored);
 };
 
 export const writeRecentAppIds = (ids: RecentId[]): void => {
   if (!safeLocalStorage) return;
   try {
-    safeLocalStorage.setItem(
-      RECENT_STORAGE_KEY,
-      JSON.stringify(ids.filter((id): id is RecentId => typeof id === 'string').slice(0, MAX_RECENT_ENTRIES))
-    );
+    const sanitized = ids
+      .filter((id): id is RecentId => typeof id === 'string')
+      .slice(0, MAX_RECENT_ENTRIES);
+    safeLocalStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(sanitized));
+    dispatchRecentChange(sanitized);
   } catch {
     // ignore storage failures
   }
@@ -70,9 +82,14 @@ export const addRecentApp = (id: RecentId): RecentId[] => {
 
   try {
     safeLocalStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(updated));
+    dispatchRecentChange(updated);
   } catch {
     // ignore storage failures
   }
 
   return updated;
+};
+
+export const clearRecentApps = (): void => {
+  writeRecentAppIds([]);
 };
