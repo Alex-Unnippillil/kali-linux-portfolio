@@ -15,15 +15,23 @@
     "dedupe:check": "yarn dedupe --check",
     "test:watch": "jest --watch",
     "lint": "node scripts/lint-changed.mjs",
+    "lint:staged": "node scripts/lint-changed.mjs --staged",
     "tsc": "tsc",
     "typecheck": "tsc --noEmit",
+    "typecheck:staged": "node scripts/typecheck-staged.mjs --staged",
     "a11y": "node scripts/a11y.mjs",
+    "a11y:staged": "node scripts/a11y-staged.mjs --staged",
     "smoke": "node scripts/smoke-all-apps.mjs",
     "module-report": "node scripts/generate-module-report.mjs",
     "analyze": "ANALYZE=true yarn build",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
     "verify:all": "node scripts/verify.mjs",
-    "dedupe:fix": "yarn dedupe"
+    "test:staged": "node scripts/test-staged.mjs --staged",
+    "hook:check": "node scripts/pre-commit-checks.mjs --mode=staged",
+    "hook:verify": "node scripts/pre-commit-checks.mjs --mode=ci",
+    "hook:install": "husky install",
+    "dedupe:fix": "yarn dedupe",
+    "prepare": "husky install"
   },
   "engines": {
     "node": "20"
@@ -134,6 +142,7 @@
     "eslint-config-next": "15.5.2",
     "fake-indexeddb": "^6.1.0",
     "fast-glob": "^3.3.3",
+    "husky": "^9.1.7",
     "jest": "30.0.5",
     "jest-environment-jsdom": "30.0.5",
     "magic-string": "0.30.18",
