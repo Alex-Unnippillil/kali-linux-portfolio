@@ -3,6 +3,7 @@ import PseudoDisasmViewer from './PseudoDisasmViewer';
 import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
 import ImportAnnotate from './ImportAnnotate';
+import HexViewer from './HexViewer';
 import { Capstone, Const, loadCapstone } from 'capstone-wasm';
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
@@ -77,6 +78,7 @@ export default function GhidraApp() {
   const [liveMessage, setLiveMessage] = useState('');
   const decompileRef = useRef(null);
   const hexRef = useRef(null);
+  const codeLineRefs = useRef({});
   const syncing = useRef(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const hexWorkerRef = useRef(null);
@@ -90,6 +92,7 @@ export default function GhidraApp() {
   const capstoneRef = useRef(null);
   const [instructions, setInstructions] = useState([]);
   const [arch, setArch] = useState('x86');
+  const [hexAnchor, setHexAnchor] = useState({ line: null, offset: null });
   // S1: Detect GHIDRA web support and fall back to Capstone
   const ensureCapstone = useCallback(async () => {
     if (capstoneRef.current) return capstoneRef.current;
@@ -145,6 +148,34 @@ export default function GhidraApp() {
     }
   };
 
+  const handleHexAnchorChange = useCallback(
+    (anchor) => {
+      if (!anchor) return;
+      setHexAnchor(anchor);
+      if (anchor.offset != null) {
+        setLiveMessage(`Selected hex offset 0x${anchor.offset.toString(16)}`);
+      } else if (anchor.line != null) {
+        setLiveMessage(`Selected code line ${anchor.line + 1}`);
+      }
+    },
+    []
+  );
+
+  const handleCodeLineClick = useCallback(
+    (lineIdx) => {
+      const entry = hexMap[selected];
+      if (entry && entry.lines) {
+        const match = entry.lines.find((l) => l.sourceLine === lineIdx);
+        if (match) {
+          handleHexAnchorChange({ line: lineIdx, offset: match.offset });
+          return;
+        }
+      }
+      handleHexAnchorChange({ line: lineIdx, offset: null });
+    },
+    [hexMap, selected, handleHexAnchorChange]
+  );
+
   // Load pre-generated disassembly JSON
   useEffect(() => {
     fetch('/demo-data/ghidra/disassembly.json')
@@ -194,7 +225,59 @@ export default function GhidraApp() {
     if (typeof window !== 'undefined' && typeof Worker === 'function') {
       hexWorkerRef.current = new Worker(new URL('./hexWorker.js', import.meta.url));
       hexWorkerRef.current.onmessage = (e) => {
-        setHexMap((m) => ({ ...m, [e.data.id]: e.data.hex }));
+        const { id, type, lines = [], totalBytes, hex } = e.data || {};
+        if (!id) return;
+
+        if (type === 'start') {
+          setHexMap((m) => ({
+            ...m,
+            [id]: { lines: [], totalBytes: totalBytes || 0, done: false },
+          }));
+          return;
+        }
+
+        if (type === 'chunk') {
+          setHexMap((m) => {
+            const entry = m[id] || { lines: [], totalBytes: 0, done: false };
+            return {
+              ...m,
+              [id]: {
+                ...entry,
+                totalBytes: totalBytes ?? entry.totalBytes,
+                lines: entry.lines.concat(lines),
+              },
+            };
+          });
+          return;
+        }
+
+        if (type === 'done') {
+          setHexMap((m) => {
+            const entry = m[id] || { lines: [], totalBytes: totalBytes || 0 };
+            return {
+              ...m,
+              [id]: { ...entry, done: true },
+            };
+          });
+          return;
+        }
+
+        if (hex) {
+          // Fallback for legacy messages without chunking
+          const legacyLines = hex
+            .split('\n')
+            .filter(Boolean)
+            .map((line, idx) => ({
+              offset: idx * 16,
+              hex: line,
+              ascii: '',
+              sourceLine: idx,
+            }));
+          setHexMap((m) => ({
+            ...m,
+            [id]: { lines: legacyLines, totalBytes: legacyLines.length * 16, done: true },
+          }));
+        }
       };
       return () => hexWorkerRef.current?.terminate();
     }
@@ -205,6 +288,10 @@ export default function GhidraApp() {
     if (!hexWorkerRef.current || !selected) return;
     const func = funcMap[selected];
     if (func && !hexMap[func.name]) {
+      setHexMap((m) => ({
+        ...m,
+        [func.name]: { lines: [], totalBytes: 0, done: false },
+      }));
       hexWorkerRef.current.postMessage({
         id: func.name,
         code: func.code.join('\n'),
@@ -218,6 +305,19 @@ export default function GhidraApp() {
       setLiveMessage(`Selected function ${selected}`);
     }
   }, [selected]);
+
+  useEffect(() => {
+    setHexAnchor({ line: null, offset: null });
+    codeLineRefs.current = {};
+  }, [selected]);
+
+  useEffect(() => {
+    if (hexAnchor.line == null) return;
+    const node = codeLineRefs.current[hexAnchor.line];
+    if (node && typeof node.scrollIntoView === 'function') {
+      node.scrollIntoView({ block: 'nearest' });
+    }
+  }, [hexAnchor]);
 
   // S5: Synchronize scrolling between decompile and hex panes
   useEffect(() => {
@@ -291,6 +391,8 @@ export default function GhidraApp() {
   const filteredStrings = strings.filter((s) =>
     s.value.toLowerCase().includes(stringQuery.toLowerCase())
   );
+  const functionNotesId = `function-notes-${selected || 'none'}`;
+  const stringNotesId = `string-notes-${selectedString || 'none'}`;
 
   return (
     <div className="w-full h-full flex flex-col bg-gray-900 text-gray-100">
@@ -313,6 +415,7 @@ export default function GhidraApp() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search symbols"
+              aria-label="Search symbols"
               className="w-full mb-2 p-1 rounded text-black"
             />
           </div>
@@ -365,7 +468,20 @@ export default function GhidraApp() {
             }
             const note = lineNotes[selected]?.[idx] || '';
             return (
-              <div key={idx} className="flex items-start">
+              <div
+                key={idx}
+                ref={(node) => {
+                  if (node) {
+                    codeLineRefs.current[idx] = node;
+                  } else {
+                    delete codeLineRefs.current[idx];
+                  }
+                }}
+                onClick={() => handleCodeLineClick(idx)}
+                className={`flex cursor-pointer items-start ${
+                  hexAnchor.line === idx ? 'bg-yellow-800 text-black' : ''
+                }`}
+              >
                 <div className="flex-1">{codeElem}</div>
                 <input
                   value={note}
@@ -379,6 +495,8 @@ export default function GhidraApp() {
                     })
                   }
                   placeholder="note"
+                  aria-label={`Add note for line ${idx + 1}`}
+                  onClick={(e) => e.stopPropagation()}
                   className="ml-2 w-24 text-xs text-black rounded"
                 />
               </div>
@@ -399,13 +517,16 @@ export default function GhidraApp() {
             </div>
           )}
         </pre>
-        <pre
-          ref={hexRef}
-          aria-label="Hexadecimal representation"
-          className="overflow-auto p-2 whitespace-pre-wrap border-b md:border-b-0 border-gray-700 min-h-0 last:border-b-0 md:last:border-r-0"
-        >
-          {hexMap[selected] || ''}
-        </pre>
+        <div className="border-b md:border-b-0 border-gray-700 min-h-0 last:border-b-0 md:last:border-r-0 flex">
+          <HexViewer
+            key={selected || 'none'}
+            data={hexMap[selected]}
+            caret={hexAnchor}
+            onAnchorChange={handleHexAnchorChange}
+            loading={!hexMap[selected]?.done}
+            viewerRef={hexRef}
+          />
+        </div>
       </div>
       <PseudoDisasmViewer />
       <div className="h-48 border-t border-gray-700">
@@ -416,14 +537,16 @@ export default function GhidraApp() {
         />
       </div>
       <div className="border-t border-gray-700 p-2">
-        <label className="block text-sm mb-1">
+        <label htmlFor={functionNotesId} className="block text-sm mb-1">
           Notes for {selected || 'function'}
         </label>
         <textarea
+          id={functionNotesId}
           value={funcNotes[selected] || ''}
           onChange={(e) =>
             setFuncNotes({ ...funcNotes, [selected]: e.target.value })
           }
+          aria-label={`Notes for ${selected || 'function'}`}
           className="w-full h-16 p-1 rounded text-black"
         />
       </div>
@@ -434,6 +557,7 @@ export default function GhidraApp() {
             value={stringQuery}
             onChange={(e) => setStringQuery(e.target.value)}
             placeholder="Search strings"
+            aria-label="Search strings"
             className="w-full mb-2 p-1 rounded text-black"
           />
           <ul className="text-sm space-y-1">
@@ -452,12 +576,13 @@ export default function GhidraApp() {
           </ul>
         </div>
         <div className="p-2">
-          <label className="block text-sm mb-1">
+          <label htmlFor={stringNotesId} className="block text-sm mb-1">
             Notes for {
               strings.find((s) => s.id === selectedString)?.value || 'string'
             }
           </label>
           <textarea
+            id={stringNotesId}
             value={stringNotes[selectedString] || ''}
             onChange={(e) =>
               setStringNotes({
@@ -465,6 +590,9 @@ export default function GhidraApp() {
                 [selectedString]: e.target.value,
               })
             }
+            aria-label={`Notes for ${
+              strings.find((s) => s.id === selectedString)?.value || 'string'
+            }`}
             className="w-full h-full p-1 rounded text-black"
           />
         </div>
