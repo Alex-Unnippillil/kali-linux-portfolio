@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import progressInfo from './progress.json';
 import StatsChart from '../../StatsChart';
+import { useHashcatSession } from './session';
 
 export const hashTypes = [
   {
@@ -166,9 +167,7 @@ function HashcatApp() {
   const [pattern, setPattern] = useState('');
   const [wordlistUrl, setWordlistUrl] = useState('');
   const [wordlist, setWordlist] = useState('');
-  const [progress, setProgress] = useState(0);
   const [result, setResult] = useState('');
-  const [isCracking, setIsCracking] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [attackMode, setAttackMode] = useState('0');
   const [mask, setMask] = useState('');
@@ -177,8 +176,22 @@ function HashcatApp() {
   const showMask = ['3', '6', '7'].includes(attackMode);
   const [ruleSet, setRuleSet] = useState('none');
   const rulePreview = (ruleSets[ruleSet] || []).slice(0, 10).join('\n');
-  const workerRef = useRef(null);
-  const frameRef = useRef(null);
+
+  const {
+    status,
+    progress,
+    target,
+    checkpoints,
+    error: sessionError,
+    corrupted,
+    startSession,
+    pauseSession,
+    resumeSession,
+    cancelSession,
+    createCheckpoint,
+    deleteCheckpoint,
+    clearCorruptedCheckpoints,
+  } = useHashcatSession({ autoCheckpointEvery: 10, retentionLimit: 5 });
 
   const formatTime = (seconds) => {
     if (seconds < 60) return `${seconds.toFixed(2)}s`;
@@ -228,70 +241,41 @@ function HashcatApp() {
   }, []);
 
   const startCracking = () => {
-    if (isCracking) return;
-    const expected = selected.output;
-    setIsCracking(true);
-    setProgress(0);
+    if (status === 'running') return;
     setResult('');
-    if (typeof window === 'undefined') return;
-    if (typeof Worker === 'function') {
-      workerRef.current = new Worker(
-        new URL('./progress.worker.js', import.meta.url)
-      );
-      workerRef.current.postMessage({ target: progressInfo.progress });
-      workerRef.current.onmessage = ({ data }) => {
-        const update = () => {
-          setProgress(data);
-          if (data >= progressInfo.progress) {
-            setResult(expected);
-            cancelCracking(false);
-          }
-        };
-        if (prefersReducedMotion) {
-          update();
-        } else {
-          frameRef.current = requestAnimationFrame(update);
-        }
-      };
-    } else {
-      const target = progressInfo.progress;
-      const animate = () => {
-        setProgress((p) => {
-          if (p >= target) {
-            setResult(expected);
-            cancelCracking(false);
-            return p;
-          }
-          frameRef.current = requestAnimationFrame(animate);
-          return p + 1;
-        });
-      };
-      frameRef.current = requestAnimationFrame(animate);
-    }
+    startSession({
+      target: progressInfo.progress,
+      metadata: {
+        hashType,
+        hashName: hashTypes.find((h) => h.id === hashType)?.name || hashType,
+        attackMode,
+        mask,
+        ruleSet,
+        wordlist,
+      },
+      stepDelay: prefersReducedMotion ? 0 : 100,
+    });
   };
 
-  const cancelCracking = (reset = true) => {
-    if (workerRef.current) {
-      workerRef.current.postMessage({ cancel: true });
-      workerRef.current.terminate();
-      workerRef.current = null;
-    }
-    if (frameRef.current) {
-      cancelAnimationFrame(frameRef.current);
-      frameRef.current = null;
-    }
-    setIsCracking(false);
-    if (reset) {
-      setProgress(0);
-      setResult('');
-    }
+  const stopCracking = () => {
+    cancelSession();
+    setResult('');
   };
 
-  useEffect(() => {
-    return () => cancelCracking();
-  }, []);
+  const handleManualCheckpoint = () => {
+    createCheckpoint('Manual checkpoint').catch(() => {
+      /* noop */
+    });
+  };
+
+  useEffect(() => () => cancelSession(), [cancelSession]);
 
   const selected = hashTypes.find((h) => h.id === hashType) || hashTypes[0];
+  useEffect(() => {
+    if (status === 'completed') {
+      setResult(selected.output);
+    }
+  }, [status, selected.output]);
   const filteredHashTypes = hashTypes.filter(
     (h) =>
       h.id.includes(hashFilter) ||
@@ -323,6 +307,18 @@ function HashcatApp() {
     const url = URL.createObjectURL(blob);
     setWordlistUrl(url);
   };
+
+  const progressPercent = target
+    ? Math.min(100, Math.round((progress / (target || 1)) * 100))
+    : progress;
+  const statusLabel =
+    status === 'running'
+      ? 'Running'
+      : status === 'paused'
+      ? 'Paused'
+      : status === 'completed'
+      ? 'Completed'
+      : 'Idle';
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center gap-4 bg-ub-cool-grey text-white">
@@ -558,21 +554,123 @@ function HashcatApp() {
       </div>
       <Gauge value={gpuUsage} />
       <div className="text-xs">Note: real hashcat requires a compatible GPU.</div>
-      {!isCracking ? (
-        <button type="button" onClick={startCracking}>
-          Start Cracking
+      <div
+        className="flex flex-wrap gap-2 mt-3"
+        role="group"
+        aria-label="Session controls"
+      >
+        <button
+          type="button"
+          onClick={startCracking}
+          className="px-3 py-1 bg-green-600 rounded disabled:opacity-40"
+          disabled={status === 'running'}
+        >
+          Start
         </button>
-      ) : (
-        <button type="button" onClick={() => cancelCracking()}>
-          Cancel
+        <button
+          type="button"
+          onClick={pauseSession}
+          className="px-3 py-1 bg-yellow-600 rounded disabled:opacity-40"
+          disabled={status !== 'running'}
+        >
+          Pause
         </button>
+        <button
+          type="button"
+          onClick={() => resumeSession()}
+          className="px-3 py-1 bg-blue-600 rounded disabled:opacity-40"
+          disabled={status !== 'paused'}
+        >
+          Resume
+        </button>
+        <button
+          type="button"
+          onClick={stopCracking}
+          className="px-3 py-1 bg-red-600 rounded disabled:opacity-40"
+          disabled={status === 'idle'}
+        >
+          Stop
+        </button>
+        <button
+          type="button"
+          onClick={handleManualCheckpoint}
+          className="px-3 py-1 bg-purple-600 rounded disabled:opacity-40"
+          disabled={status === 'idle'}
+        >
+          Checkpoint now
+        </button>
+      </div>
+      <div className="text-xs mt-2">Status: {statusLabel}</div>
+      {sessionError && (
+        <div className="text-xs text-red-300 mt-1">
+          Session error: {sessionError}
+        </div>
+      )}
+      {corrupted && (
+        <div className="text-xs text-yellow-300 mt-2 flex items-center gap-2">
+          Stored checkpoints were corrupted.{' '}
+          <button
+            type="button"
+            onClick={clearCorruptedCheckpoints}
+            className="underline"
+          >
+            Reset storage
+          </button>
+        </div>
       )}
       <ProgressGauge
-        progress={progress}
+        progress={progressPercent}
         info={info}
         reduceMotion={prefersReducedMotion}
       />
       {result && <div>Result: {result}</div>}
+      <section className="w-full max-w-md bg-gray-800 rounded p-3 mt-4">
+        <h3 className="text-sm font-semibold mb-2">Checkpoints</h3>
+        {checkpoints.length === 0 ? (
+          <p className="text-xs text-gray-300">
+            No checkpoints saved yet. Automatic checkpoints are created every
+            10 progress units while running.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {checkpoints.map((cp) => (
+              <li
+                key={cp.id}
+                className="bg-gray-900 rounded p-2 text-xs flex flex-col gap-1"
+              >
+                <div className="flex justify-between items-center gap-2">
+                  <span>
+                    {new Date(cp.createdAt).toLocaleTimeString()} · Progress {cp.progress}
+                    /{cp.workerState?.target ?? target}
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="px-2 py-1 bg-blue-600 rounded"
+                      onClick={() => resumeSession(cp.id)}
+                    >
+                      Resume
+                    </button>
+                    <button
+                      type="button"
+                      className="px-2 py-1 bg-red-700 rounded"
+                      onClick={() => deleteCheckpoint(cp.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+                <div className="text-gray-300">
+                  Reason: {cp.reason === 'auto' ? 'Automatic' : 'Manual'}
+                </div>
+                {cp.metadata?.mask && (
+                  <div className="text-gray-400">Mask: {cp.metadata.mask}</div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
       <pre className="bg-black text-green-400 p-2 rounded text-xs w-full max-w-md overflow-x-auto mt-4">
         {sampleOutput}
       </pre>
