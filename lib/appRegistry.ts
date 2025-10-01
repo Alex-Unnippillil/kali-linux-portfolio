@@ -70,6 +70,15 @@ const metadataOverrides: Partial<Record<string, Partial<AppMetadata>>> = {
   'mimikatz/offline': {
     description: 'Offline walkthrough of mimikatz credential extraction stages with canned data.',
   },
+  'attempt-analytics': {
+    description:
+      'Attempt analytics dashboard with run-to-run comparisons, charts, and privacy-aware exports for training.',
+    keyboard: [
+      'Tab — Move between filter controls',
+      'Arrow keys — Adjust run selectors',
+      'Enter — Toggle focused filter',
+    ],
+  },
 };
 
 export const buildAppMetadata = (app: AppEntry): AppMetadata => {
