@@ -1,4 +1,5 @@
 import ReactGA from 'react-ga4';
+import { recordWebVitalMetric } from './metrics';
 
 interface WebVitalMetric {
   id: string;
@@ -12,6 +13,9 @@ const thresholds: Record<string, number> = {
 };
 
 export const reportWebVitals = ({ id, name, value }: WebVitalMetric): void => {
+  if (name === 'LCP' || name === 'INP' || name === 'CLS') {
+    recordWebVitalMetric(name, value, { id });
+  }
   if (process.env.NEXT_PUBLIC_VERCEL_ENV !== 'preview') return;
   if (name !== 'LCP' && name !== 'INP') return;
 
