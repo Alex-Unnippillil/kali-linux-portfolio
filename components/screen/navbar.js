@@ -7,6 +7,7 @@ import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
+import ChangelogModal from '../common/ChangelogModal';
 
 const areWorkspacesEqual = (next, prev) => {
         if (next.length !== prev.length) return false;
@@ -203,6 +204,31 @@ export default class Navbar extends PureComponent {
                                                 )}
                                                 {this.renderRunningApps()}
                                                 <PerformanceGraph />
+                                                <ChangelogModal
+                                                        trigger={({ open, hasNew, isOpen }) => (
+                                                                <button
+                                                                        type="button"
+                                                                        onClick={open}
+                                                                        aria-haspopup="dialog"
+                                                                        aria-expanded={isOpen}
+                                                                        aria-label={
+                                                                                hasNew
+                                                                                        ? "View what's new (new release available)"
+                                                                                        : "View what's new"
+                                                                        }
+                                                                        data-has-new={hasNew ? 'true' : 'false'}
+                                                                        className="relative inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/90 shadow-sm transition duration-150 ease-in-out hover:border-white/30 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                                                                >
+                                                                        <span className="whitespace-nowrap">What&apos;s new</span>
+                                                                        {hasNew && (
+                                                                                <span className="absolute -top-0.5 -right-0.5 inline-flex h-2.5 w-2.5">
+                                                                                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ubb-orange/60 opacity-75" />
+                                                                                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-ubb-orange" />
+                                                                                </span>
+                                                                        )}
+                                                                </button>
+                                                        )}
+                                                />
                                         </div>
                                         <div className="flex items-center gap-4 text-xs md:text-sm">
                                                 <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
