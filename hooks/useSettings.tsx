@@ -16,6 +16,8 @@ import {
   setHighContrast as saveHighContrast,
   getLargeHitAreas as loadLargeHitAreas,
   setLargeHitAreas as saveLargeHitAreas,
+  getCursorThickness as loadCursorThickness,
+  setCursorThickness as saveCursorThickness,
   getPongSpin as loadPongSpin,
   setPongSpin as savePongSpin,
   getAllowNetwork as loadAllowNetwork,
@@ -26,6 +28,8 @@ import {
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
+type CursorThickness = 'thin' | 'regular' | 'thick';
+const defaultCursorThickness = defaults.cursorThickness as CursorThickness;
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -63,6 +67,7 @@ interface SettingsContextValue {
   fontScale: number;
   highContrast: boolean;
   largeHitAreas: boolean;
+  cursorThickness: CursorThickness;
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
@@ -75,6 +80,7 @@ interface SettingsContextValue {
   setFontScale: (value: number) => void;
   setHighContrast: (value: boolean) => void;
   setLargeHitAreas: (value: boolean) => void;
+  setCursorThickness: (value: CursorThickness) => void;
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
@@ -91,6 +97,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   fontScale: defaults.fontScale,
   highContrast: defaults.highContrast,
   largeHitAreas: defaults.largeHitAreas,
+  cursorThickness: defaults.cursorThickness as CursorThickness,
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
@@ -103,6 +110,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setFontScale: () => {},
   setHighContrast: () => {},
   setLargeHitAreas: () => {},
+  setCursorThickness: () => {},
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
@@ -118,11 +126,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
+  const [cursorThickness, setCursorThickness] = useState<CursorThickness>(defaultCursorThickness);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
+  const hydratedRef = useRef(false);
+  const cursorHydratedRef = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -134,10 +145,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setFontScale(await loadFontScale());
       setHighContrast(await loadHighContrast());
       setLargeHitAreas(await loadLargeHitAreas());
+      setCursorThickness((await loadCursorThickness()) as CursorThickness);
+      cursorHydratedRef.current = true;
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      hydratedRef.current = true;
     })();
   }, []);
 
@@ -155,6 +169,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       '--color-focus-ring': accent,
       '--color-selection': accent,
       '--color-control-accent': accent,
+      '--text-caret-color': accent,
     };
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
@@ -217,6 +232,27 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [largeHitAreas]);
 
   useEffect(() => {
+    const thicknessVars: Record<CursorThickness, { width: string; shape: string }> = {
+      thin: { width: '1px', shape: 'bar' },
+      regular: { width: '2px', shape: 'bar' },
+      thick: { width: '4px', shape: 'block' },
+    };
+    const { width, shape } = thicknessVars[cursorThickness];
+    document.documentElement.style.setProperty('--text-caret-width', width);
+    document.documentElement.style.setProperty('--text-caret-shape', shape);
+    document.documentElement.style.setProperty('--text-caret-transition', '150ms');
+    if (!cursorHydratedRef.current) {
+      if (cursorThickness !== defaultCursorThickness) {
+        saveCursorThickness(cursorThickness);
+      }
+      return;
+    }
+    if (hydratedRef.current) {
+      saveCursorThickness(cursorThickness);
+    }
+  }, [cursorThickness]);
+
+  useEffect(() => {
     savePongSpin(pongSpin);
   }, [pongSpin]);
 
@@ -264,6 +300,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         fontScale,
         highContrast,
         largeHitAreas,
+        cursorThickness,
         pongSpin,
         allowNetwork,
         haptics,
@@ -276,6 +313,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setFontScale,
         setHighContrast,
         setLargeHitAreas,
+        setCursorThickness,
         setPongSpin,
         setAllowNetwork,
         setHaptics,
