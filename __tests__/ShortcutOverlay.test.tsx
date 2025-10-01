@@ -1,6 +1,10 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
+import {
+  SHORTCUT_OVERLAY_EVENT,
+  type ShortcutOverlayEventDetail,
+} from '../components/common/shortcutOverlayEvents';
 
 describe('ShortcutOverlay', () => {
   beforeEach(() => {
@@ -16,7 +20,18 @@ describe('ShortcutOverlay', () => {
       })
     );
     render(<ShortcutOverlay />);
-    fireEvent.keyDown(window, { key: 'a' });
+
+    const openEvent = new CustomEvent<ShortcutOverlayEventDetail>(
+      SHORTCUT_OVERLAY_EVENT,
+      {
+        detail: { action: 'hold', state: 'start', trigger: 'test' },
+      }
+    );
+
+    act(() => {
+      window.dispatchEvent(openEvent);
+    });
+
     expect(
       screen.getByText('Show keyboard shortcuts')
     ).toBeInTheDocument();

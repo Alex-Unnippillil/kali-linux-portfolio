@@ -2,13 +2,24 @@ import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import Navbar from '../components/screen/navbar';
 
-jest.mock('../components/util-components/clock', () => () => <div data-testid="clock" />);
-jest.mock('../components/util-components/status', () => () => <div data-testid="status" />);
-jest.mock('../components/ui/QuickSettings', () => ({ open }: { open: boolean }) => (
+const MockClock: React.FC = () => <div data-testid="clock" />;
+MockClock.displayName = 'MockClock';
+const MockStatus: React.FC = () => <div data-testid="status" />;
+MockStatus.displayName = 'MockStatus';
+const MockQuickSettings: React.FC<{ open: boolean }> = ({ open }) => (
   <div data-testid="quick-settings">{open ? 'open' : 'closed'}</div>
-));
-jest.mock('../components/menu/WhiskerMenu', () => () => <button type="button">Menu</button>);
-jest.mock('../components/ui/PerformanceGraph', () => () => <div data-testid="performance" />);
+);
+MockQuickSettings.displayName = 'MockQuickSettings';
+const MockMenu: React.FC = () => <button type="button">Menu</button>;
+MockMenu.displayName = 'MockWhiskerMenu';
+const MockPerformance: React.FC = () => <div data-testid="performance" />;
+MockPerformance.displayName = 'MockPerformanceGraph';
+
+jest.mock('../components/util-components/clock', () => MockClock);
+jest.mock('../components/util-components/status', () => MockStatus);
+jest.mock('../components/ui/QuickSettings', () => MockQuickSettings);
+jest.mock('../components/menu/WhiskerMenu', () => MockMenu);
+jest.mock('../components/ui/PerformanceGraph', () => MockPerformance);
 
 const workspaceEventDetail = {
   workspaces: [
