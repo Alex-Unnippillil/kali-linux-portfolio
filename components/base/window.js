@@ -656,7 +656,11 @@ export class Window extends Component {
                             this.state.cursorType,
                             this.state.closed ? 'closed-window' : '',
                             this.state.maximized ? 'duration-300' : '',
-                            this.props.minimized ? 'opacity-0 invisible duration-200' : '',
+                            this.props.animationState === 'minimizing' ? 'window-animation-minimize' : '',
+                            this.props.animationState === 'restoring' ? 'window-animation-restore' : '',
+                            this.props.minimized && this.props.animationState !== 'restoring'
+                                ? 'opacity-0 invisible duration-200'
+                                : '',
                             this.state.grabbed ? 'opacity-70' : '',
                             this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
                             this.props.isFocused ? 'z-30' : 'z-20',
