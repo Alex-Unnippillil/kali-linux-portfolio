@@ -25,6 +25,7 @@ import {
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { updateMetricsConsent } from '../utils/metrics';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -222,6 +223,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     saveAllowNetwork(allowNetwork);
+    updateMetricsConsent({
+      allowNetwork,
+      analyticsEnabled: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true',
+    });
     if (typeof window === 'undefined') return;
     if (!fetchRef.current) fetchRef.current = window.fetch.bind(window);
     if (!allowNetwork) {
