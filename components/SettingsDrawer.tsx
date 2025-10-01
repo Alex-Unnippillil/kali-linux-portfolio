@@ -9,7 +9,17 @@ interface Props {
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const unlocked = getUnlockedThemes(highScore);
-  const { accent, setAccent, theme, setTheme } = useSettings();
+  const {
+    accent,
+    setAccent,
+    theme,
+    setTheme,
+    highContrast,
+    setHighContrast,
+    highContrastMode,
+    setHighContrastMode,
+  } = useSettings();
+  const followingSystem = highContrastMode === 'system';
 
   return (
     <div>
@@ -32,6 +42,34 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
               ))}
             </select>
           </label>
+            <div className="mt-4">
+              <label htmlFor="drawer-high-contrast" className="mr-2">
+                High contrast
+              </label>
+              <input
+                id="drawer-high-contrast"
+                type="checkbox"
+                className="ml-2 align-middle"
+                checked={highContrast}
+                onChange={(e) => setHighContrast(e.target.checked)}
+                aria-label="High contrast"
+                aria-describedby="drawer-high-contrast-help"
+              />
+            </div>
+          <p id="drawer-high-contrast-help" className="mt-2 text-xs text-ubt-grey">
+            {followingSystem
+              ? 'Matches your operating system preference. Toggle to override if you need extra contrast.'
+              : 'Manual override enabled. Turn it off or follow system settings when you no longer need the override.'}
+          </p>
+          {!followingSystem && (
+            <button
+              type="button"
+              className="mt-2 text-xs underline"
+              onClick={() => setHighContrastMode('system')}
+            >
+              Follow system preference
+            </button>
+          )}
           <label>
             Accent
             <div
