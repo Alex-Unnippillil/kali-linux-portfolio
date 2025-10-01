@@ -7,10 +7,17 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  useMemo,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import {
+  executeCommand as executeExtensionCommand,
+  onCommandsChanged as onExtensionCommandsChanged,
+  type RegisteredCommand as ExtensionCommand,
+  type CommandShortcut,
+} from '../../extensions/api/commands';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -45,6 +52,16 @@ const PasteIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <rect x={9} y={2} width={6} height={4} rx={1} />
   </svg>
 );
+
+const formatShortcut = (shortcut?: CommandShortcut) => {
+  if (!shortcut) return '';
+  const entries: string[] = [];
+  if (shortcut.default) entries.push(shortcut.default);
+  if (shortcut.mac) entries.push(`${shortcut.mac} (macOS)`);
+  if (shortcut.windows) entries.push(`${shortcut.windows} (Windows)`);
+  if (shortcut.linux) entries.push(`${shortcut.linux} (Linux)`);
+  return entries.join(' • ');
+};
 
 const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -100,6 +117,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
+  const [extensionCommands, setExtensionCommands] = useState<ExtensionCommand[]>([]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
@@ -163,6 +181,24 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       handleInput(text);
     } catch {}
   };
+
+  useEffect(() => {
+    return onExtensionCommandsChanged(setExtensionCommands);
+  }, []);
+
+  const handleExtensionCommand = useCallback(
+    async (command: ExtensionCommand) => {
+      try {
+        await Promise.resolve(executeExtensionCommand(command.id));
+      } catch (error) {
+        console.error(`Failed to execute command ${command.id}`, error);
+      }
+      setPaletteInput('');
+      setPaletteOpen(false);
+      termRef.current?.focus();
+    },
+    [],
+  );
 
   const runWorker = useCallback(
     async (command: string) => {
@@ -410,6 +446,21 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     return () => window.removeEventListener('keydown', listener);
   }, [paletteOpen]);
 
+  const paletteQuery = paletteInput.trim().toLowerCase();
+  const availableTerminalCommands = Object.keys(registryRef.current);
+  const filteredTerminalCommands = paletteQuery
+    ? availableTerminalCommands.filter((c) =>
+        c.toLowerCase().startsWith(paletteQuery),
+      )
+    : availableTerminalCommands;
+  const filteredExtensionCommands = useMemo(() => {
+    if (!paletteQuery) return extensionCommands;
+    return extensionCommands.filter((command) => {
+      const haystack = `${command.label} ${command.id} ${command.category ?? ''}`.toLowerCase();
+      return haystack.includes(paletteQuery);
+    });
+  }, [extensionCommands, paletteQuery]);
+
   return (
     <div className="relative h-full w-full">
       {paletteOpen && (
@@ -418,6 +469,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             <input
               autoFocus
               className="w-full mb-2 bg-black text-white p-2"
+              aria-label="Command palette search"
               value={paletteInput}
               onChange={(e) => setPaletteInput(e.target.value)}
               onKeyDown={(e) => {
@@ -432,15 +484,83 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
                 }
               }}
             />
-            <ul className="max-h-40 overflow-y-auto">
-              {Object.keys(registryRef.current)
-                .filter((c) => c.startsWith(paletteInput))
-                .map((c) => (
-                  <li key={c} className="text-white">
-                    {c}
-                  </li>
-                ))}
-            </ul>
+            <div className="max-h-60 overflow-y-auto space-y-3">
+              {filteredTerminalCommands.length > 0 && (
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-gray-400 mb-1">
+                    Terminal commands
+                  </div>
+                  <ul className="space-y-1">
+                    {filteredTerminalCommands.map((command) => (
+                      <li key={`terminal-${command}`}>
+                        <button
+                          type="button"
+                          className="w-full rounded bg-gray-900/40 px-2 py-2 text-left text-white transition hover:bg-gray-700/70 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => {
+                            runCommand(command);
+                            setPaletteInput('');
+                            setPaletteOpen(false);
+                            termRef.current?.focus();
+                          }}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-medium">{command}</span>
+                            <span className="rounded bg-gray-700 px-1.5 py-0.5 text-xs uppercase tracking-wide text-gray-200">
+                              Core
+                            </span>
+                          </div>
+                          <div className="mt-1 text-xs text-gray-400">
+                            Built-in terminal command
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {filteredExtensionCommands.length > 0 && (
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-gray-400 mb-1">
+                    Extension commands
+                  </div>
+                  <ul className="space-y-1">
+                    {filteredExtensionCommands.map((command) => {
+                      const shortcutText = formatShortcut(command.shortcut);
+                      return (
+                        <li key={command.id}>
+                          <button
+                            type="button"
+                            className="w-full rounded bg-gray-900/40 px-2 py-2 text-left text-white transition hover:bg-gray-700/70 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => handleExtensionCommand(command)}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="truncate font-medium">{command.label}</div>
+                                <div className="text-xs text-gray-400 truncate">{command.id}</div>
+                              </div>
+                              <span className="shrink-0 rounded bg-blue-700 px-1.5 py-0.5 text-xs uppercase tracking-wide text-blue-50">
+                                {command.badge}
+                              </span>
+                            </div>
+                            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-400">
+                              {command.category && (
+                                <span className="rounded bg-gray-700/60 px-1 py-0.5">{command.category}</span>
+                              )}
+                              {shortcutText && <span>{shortcutText}</span>}
+                            </div>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+              {filteredTerminalCommands.length === 0 && filteredExtensionCommands.length === 0 && (
+                <div className="text-sm text-gray-400">No commands found.</div>
+              )}
+            </div>
           </div>
         </div>
       )}
