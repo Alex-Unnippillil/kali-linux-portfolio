@@ -21,6 +21,7 @@ const TerminalTabs: React.FC<TerminalProps> = ({ openApp }) => {
       className="h-full w-full"
       initialTabs={[createTab()]}
       onNewTab={createTab}
+      storageKey="terminal-tabs"
     />
   );
 };
