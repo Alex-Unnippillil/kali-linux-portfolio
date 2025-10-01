@@ -5,6 +5,7 @@ import { toPng } from 'html-to-image';
 import usePersistentState from '../../../hooks/usePersistentState';
 import { useSettings } from '../../../hooks/useSettings';
 import type { ScheduledTweet } from '../state/scheduled';
+import { useFormatter } from '../../../utils/format';
 
 interface TweetDraft {
   text: string;
@@ -38,6 +39,16 @@ export default function ThreadComposer() {
   );
   const previewRefs = useRef<(HTMLDivElement | null)[]>([]);
   const workerRef = useRef<Worker | null>(null);
+  const { formatDateTime } = useFormatter();
+  const renderTimestamp = (value: number) => {
+    const formatted = formatDateTime(value, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+    if (formatted) return formatted;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? 'Unknown time' : parsed.toLocaleString();
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -182,7 +193,7 @@ export default function ThreadComposer() {
           <ul className="space-y-1">
             {scheduled.map((t) => (
               <li key={t.id} className="text-sm">
-                {new Date(t.time).toLocaleString()} - {t.text}
+                {renderTimestamp(t.time)} - {t.text}
               </li>
             ))}
           </ul>
@@ -194,7 +205,7 @@ export default function ThreadComposer() {
           <ul className="space-y-1">
             {published.map((t) => (
               <li key={t.id} className="text-sm">
-                {new Date(t.time).toLocaleString()} - {t.text}
+                {renderTimestamp(t.time)} - {t.text}
               </li>
             ))}
           </ul>

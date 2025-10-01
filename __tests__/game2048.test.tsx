@@ -1,6 +1,10 @@
 import React from 'react';
 import { render, fireEvent, act, waitFor } from '@testing-library/react';
 import Game2048, { setSeed } from '../components/apps/2048';
+import { LocaleProvider } from '../utils/format';
+
+const renderWithLocale = (ui: React.ReactElement) =>
+  render(<LocaleProvider value={{ locale: 'en-US' }}>{ui}</LocaleProvider>);
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -15,7 +19,7 @@ test.skip('merging two 2s creates one 4', async () => {
     [0, 0, 0, 0],
     [0, 0, 0, 0],
   ]));
-  render(<Game2048 />);
+  renderWithLocale(<Game2048 />);
   await waitFor(() => {
     const b = JSON.parse(window.localStorage.getItem('2048-board') || '[]');
     expect(b[0][0]).toBe(2);
@@ -32,7 +36,7 @@ test.skip('merge triggers animation', async () => {
     [0, 0, 0, 0],
     [0, 0, 0, 0],
   ]));
-  const { container } = render(<Game2048 />);
+  const { container } = renderWithLocale(<Game2048 />);
   await waitFor(() => {
     const b = JSON.parse(window.localStorage.getItem('2048-board') || '[]');
     expect(b[0][0]).toBe(2);
@@ -49,7 +53,7 @@ test.skip('score persists in localStorage', async () => {
     [0, 0, 0, 0],
     [0, 0, 0, 0],
   ]));
-  const { unmount } = render(<Game2048 />);
+  const { unmount } = renderWithLocale(<Game2048 />);
   await waitFor(() => {
     const b = JSON.parse(window.localStorage.getItem('2048-board') || '[]');
     expect(b[0][0]).toBe(2);
@@ -59,7 +63,7 @@ test.skip('score persists in localStorage', async () => {
     expect(window.localStorage.getItem('2048-score')).toBe('4');
   });
   unmount();
-  const { getAllByText } = render(<Game2048 />);
+  const { getAllByText } = renderWithLocale(<Game2048 />);
   expect(getAllByText(/Score:/)[0].textContent).toContain('4');
 });
 
@@ -70,7 +74,7 @@ test('ignores browser key repeat events', () => {
     [0, 0, 0, 0],
     [0, 0, 0, 0],
   ]));
-  const { getByText } = render(<Game2048 />);
+  const { getByText } = renderWithLocale(<Game2048 />);
   fireEvent.keyDown(window, { key: 'ArrowLeft', repeat: true });
   expect(getByText(/Moves: 0/)).toBeTruthy();
 });
@@ -83,7 +87,7 @@ test('tracks moves and allows multiple undos', async () => {
     [0, 0, 0, 0],
     [0, 0, 0, 0],
   ]));
-  const { getByText } = render(<Game2048 />);
+  const { getByText } = renderWithLocale(<Game2048 />);
   const initial = JSON.parse(window.localStorage.getItem('2048-board') || '[]');
   fireEvent.keyDown(window, { key: 'ArrowLeft' });
   await act(async () => {
@@ -107,7 +111,7 @@ test.skip('skin selection changes tile class', async () => {
     [0, 0, 0, 0],
     [0, 0, 0, 0],
   ]));
-  const { container, getByLabelText } = render(<Game2048 />);
+  const { container, getByLabelText } = renderWithLocale(<Game2048 />);
   await waitFor(() => {
     const b = JSON.parse(window.localStorage.getItem('2048-board') || '[]');
     expect(b[0][0]).toBe(2);
@@ -127,7 +131,7 @@ test('ignores key repeats while a move is in progress', async () => {
     [0, 0, 0, 0],
     [0, 0, 0, 0],
   ]));
-  const { getByText } = render(<Game2048 />);
+  const { getByText } = renderWithLocale(<Game2048 />);
   fireEvent.keyDown(window, { key: 'ArrowLeft' });
   fireEvent.keyDown(window, { key: 'ArrowLeft' });
   expect(getByText(/Moves: 1/)).toBeTruthy();

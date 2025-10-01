@@ -14,6 +14,7 @@ import {
   NotificationPriority,
 } from '../../hooks/useNotifications';
 import { PRIORITY_ORDER } from '../../utils/notifications/ruleEngine';
+import { useFormatter } from '../../utils/format';
 
 const focusableSelector =
   'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
@@ -188,24 +189,28 @@ const NotificationBell: React.FC = () => {
     }
   }, [isOpen, markAllRead, notifications]);
 
-  const timeFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'short',
-        timeStyle: 'short',
-      }),
-    [],
-  );
+  const { formatDateTime } = useFormatter();
 
   const formattedNotifications = useMemo(
     () =>
       notifications.map<FormattedNotification>(notification => ({
         ...notification,
-        formattedTime: new Date(notification.timestamp).toISOString(),
-        readableTime: timeFormatter.format(new Date(notification.timestamp)),
+        formattedTime: (() => {
+          const parsed = new Date(notification.timestamp);
+          return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString();
+        })(),
+        readableTime: (() => {
+          const parsed = new Date(notification.timestamp);
+          if (Number.isNaN(parsed.getTime())) return 'Unknown time';
+          const formatted = formatDateTime(parsed, {
+            dateStyle: 'short',
+            timeStyle: 'short',
+          });
+          return formatted || parsed.toLocaleString();
+        })(),
         metadata: PRIORITY_METADATA[notification.priority],
       })),
-    [notifications, timeFormatter],
+    [notifications, formatDateTime],
   );
 
   const groupedNotifications = useMemo<NotificationGroup[]>(

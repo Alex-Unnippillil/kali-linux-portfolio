@@ -17,6 +17,7 @@ import {
 } from '../../apps/games/_2048/logic';
 import { reset, serialize, deserialize } from '../../apps/games/rng';
 import { startRecording, recordMove, downloadReplay } from './replay';
+import { useFormatter } from '../../utils/format';
 
 // limit of undo operations per game
 const UNDO_LIMIT = 5;
@@ -74,6 +75,7 @@ const Game2048 = () => {
   const touchStart = useRef<{ x: number; y: number; time: number } | null>(null);
   const lastTouch = useRef<{ x: number; y: number; time: number } | null>(null);
   const { scores, addScore } = useOPFSLeaderboard('game_2048');
+  const { formatDate, formatNumber } = useFormatter();
 
   // load best score from localStorage
   useEffect(() => {
@@ -410,11 +412,14 @@ const Game2048 = () => {
           <div className="mt-4 text-sm">
             <div className="font-bold">Leaderboard</div>
             <ol className="list-decimal list-inside space-y-1">
-              {scores.map((s, i) => (
-                <li key={i}>
-                  {new Date(s.date).toLocaleDateString()}: {s.score}
-                </li>
-              ))}
+              {scores.map((s, i) => {
+                const dateLabel = formatDate(s.date, { dateStyle: 'medium' }) || 'Unknown date';
+                return (
+                  <li key={i}>
+                    {dateLabel}: {formatNumber(s.score)}
+                  </li>
+                );
+              })}
             </ol>
           </div>
         )}

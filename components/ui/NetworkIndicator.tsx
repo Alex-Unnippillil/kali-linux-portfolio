@@ -3,6 +3,7 @@
 import QRCode from "qrcode";
 import type { FC, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useFormatter } from "../../utils/format";
 
 import usePersistentState from "../../hooks/usePersistentState";
 
@@ -405,6 +406,7 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
     [],
     isShareLogEntryArray,
   );
+  const { formatDateTime } = useFormatter();
 
   const connectedNetwork = useMemo(
     () => NETWORKS.find((network) => network.id === connectedId) ?? NETWORKS[0],
@@ -672,14 +674,25 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
                   {shareLogs
                     .slice()
                     .reverse()
-                    .map((entry, index) => (
-                      <li key={`${entry.timestamp}-${index}`} className="leading-snug">
-                        <span className="text-gray-400">{new Date(entry.timestamp).toLocaleString()}</span>
-                        <span className="ml-1 text-white">[{entry.networkId}]</span> {entry.action}
-                        {entry.provider && <span className="ml-1 text-gray-300">via {entry.provider}</span>}
-                        {entry.details && <span className="ml-1 text-gray-300">— {entry.details}</span>}
-                      </li>
-                    ))}
+                    .map((entry, index) => {
+                      const timestampLabel = (() => {
+                        const parsed = new Date(entry.timestamp);
+                        if (Number.isNaN(parsed.getTime())) return 'Unknown time';
+                        const formatted = formatDateTime(parsed, {
+                          dateStyle: 'short',
+                          timeStyle: 'short',
+                        });
+                        return formatted || parsed.toLocaleString();
+                      })();
+                      return (
+                        <li key={`${entry.timestamp}-${index}`} className="leading-snug">
+                          <span className="text-gray-400">{timestampLabel}</span>
+                          <span className="ml-1 text-white">[{entry.networkId}]</span> {entry.action}
+                          {entry.provider && <span className="ml-1 text-gray-300">via {entry.provider}</span>}
+                          {entry.details && <span className="ml-1 text-gray-300">— {entry.details}</span>}
+                        </li>
+                      );
+                    })}
                 </ul>
               )}
             </div>

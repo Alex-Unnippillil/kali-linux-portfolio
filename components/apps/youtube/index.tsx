@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { useFormatter } from '../../../utils/format';
 
 interface Playlist {
   id: string;
@@ -232,17 +233,6 @@ async function fetchPlaylistsFromPiped(query: string): Promise<FetchResult> {
   return { items, nextPageToken: null };
 }
 
-function formatDate(value?: string) {
-  if (!value) return 'Unknown';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Unknown';
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(date);
-}
-
 function getChannelDisplay(playlist: Playlist) {
   return playlist.channelTitle ?? playlist.channelName ?? 'Unknown channel';
 }
@@ -253,6 +243,12 @@ function getChannelId(playlist: Playlist) {
 
 function PlaylistCard({ playlist }: { playlist: Playlist }) {
   const title = playlist.title || 'Untitled playlist';
+  const { formatDate } = useFormatter();
+  const updatedLabel = useMemo(() => {
+    if (!playlist.updatedAt) return 'Unknown';
+    const formatted = formatDate(playlist.updatedAt, { dateStyle: 'medium' });
+    return formatted || 'Unknown';
+  }, [formatDate, playlist.updatedAt]);
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-lg border border-white/10 bg-black/30 shadow-lg transition hover:-translate-y-1 hover:border-ubt-green/70 hover:shadow-2xl">
@@ -285,7 +281,7 @@ function PlaylistCard({ playlist }: { playlist: Playlist }) {
           </p>
         )}
         <div className="mt-auto flex items-center justify-between text-xs text-ubt-grey">
-          <span>Updated {formatDate(playlist.updatedAt)}</span>
+          <span>Updated {updatedLabel}</span>
           <a
             href={`https://www.youtube.com/playlist?list=${playlist.id}`}
             target="_blank"

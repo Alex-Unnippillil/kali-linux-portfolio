@@ -1,6 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Autopsy from '../components/apps/autopsy';
+import { LocaleProvider } from '../utils/format';
+
+const renderWithLocale = (ui: React.ReactElement) =>
+  render(<LocaleProvider value={{ locale: 'en-US' }}>{ui}</LocaleProvider>);
 
 describe('Autopsy plugins and timeline', () => {
   beforeEach(() => {
@@ -50,7 +54,7 @@ describe('Autopsy plugins and timeline', () => {
   });
 
   it('loads plugins from marketplace', async () => {
-    render(<Autopsy />);
+    renderWithLocale(<Autopsy />);
     fireEvent.change(screen.getByPlaceholderText('Case name'), {
       target: { value: 'Demo' },
     });
@@ -64,7 +68,7 @@ describe('Autopsy plugins and timeline', () => {
   });
 
   it('filters artifacts by type', async () => {
-    render(<Autopsy />);
+    renderWithLocale(<Autopsy />);
     fireEvent.change(screen.getByPlaceholderText('Case name'), {
       target: { value: 'Demo' },
     });

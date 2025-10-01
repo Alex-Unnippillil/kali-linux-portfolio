@@ -1,6 +1,7 @@
 import demoCity from './demoCity.json';
 import { isBrowser } from '../../utils/env';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { formatDateTime } from '../../utils/format';
 
 if (isBrowser) {
 const widget = document.getElementById('weather');
@@ -52,7 +53,13 @@ function convertTemp(celsius) {
 }
 
 function formatTime(timestamp) {
-  return new Date(timestamp * 1000).toLocaleTimeString([], {
+  const formatted = formatDateTime(timestamp * 1000, {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  if (formatted) return formatted;
+  const fallback = new Date(timestamp * 1000);
+  return fallback.toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -113,9 +120,13 @@ async function fetchLiveWeather(city) {
     for (let i = 0; i < fcJson.list.length && forecast.length < 5; i += 8) {
       const entry = fcJson.list[i];
       forecast.push({
-        day: new Date(entry.dt * 1000).toLocaleDateString([], {
-          weekday: 'short',
-        }),
+        day:
+          formatDateTime(entry.dt * 1000, {
+            weekday: 'short',
+          }) ||
+          new Date(entry.dt * 1000).toLocaleDateString([], {
+            weekday: 'short',
+          }),
         tempC: entry.main.temp,
         icon: entry.weather[0].icon,
         condition: entry.weather[0].description,

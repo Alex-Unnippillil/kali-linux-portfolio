@@ -1,6 +1,10 @@
 import React from 'react';
 import { render, fireEvent, waitFor, act } from '@testing-library/react';
 import HashcatApp, { detectHashType } from '../components/apps/hashcat';
+import { LocaleProvider } from '../utils/format';
+
+const renderWithLocale = (ui: React.ReactElement) =>
+  render(<LocaleProvider value={{ locale: 'en-US' }}>{ui}</LocaleProvider>);
 import progressInfo from '../components/apps/hashcat/progress.json';
 
 describe('HashcatApp', () => {
@@ -18,7 +22,7 @@ describe('HashcatApp', () => {
   });
 
   it('displays benchmark results', async () => {
-    const { getByText, getByTestId } = render(<HashcatApp />);
+    const { getByText, getByTestId } = renderWithLocale(<HashcatApp />);
     fireEvent.click(getByText('Run Benchmark'));
     await waitFor(() => {
       expect(getByTestId('benchmark-output').textContent).toMatch(/GPU0/);
@@ -27,7 +31,7 @@ describe('HashcatApp', () => {
 
   it('animates attempts/sec and ETA from JSON', () => {
     jest.useFakeTimers();
-    const { getByText } = render(<HashcatApp />);
+    const { getByText } = renderWithLocale(<HashcatApp />);
     expect(
       getByText(`Attempts/sec: ${progressInfo.hashRate[0]}`)
     ).toBeInTheDocument();
@@ -49,7 +53,7 @@ describe('HashcatApp', () => {
   });
 
   it('labels hashcat modes with example hashes', () => {
-    const { getByLabelText, getAllByText } = render(<HashcatApp />);
+    const { getByLabelText, getAllByText } = renderWithLocale(<HashcatApp />);
     fireEvent.change(getByLabelText('Hash Type:'), { target: { value: '100' } });
     expect(
       getAllByText(
@@ -63,7 +67,9 @@ describe('HashcatApp', () => {
 
   it('generates demo command and shows sample output', () => {
     const { getByLabelText, getByTestId, getByText } = render(
-      <HashcatApp />
+      <LocaleProvider value={{ locale: 'en-US' }}>
+        <HashcatApp />
+      </LocaleProvider>
     );
     fireEvent.change(getByLabelText('Hash:'), {
       target: { value: '5f4dcc3b5aa765d61d8327deb882cf99' },
@@ -78,28 +84,28 @@ describe('HashcatApp', () => {
   });
 
   it('shows descriptions for hash modes', () => {
-    const { getAllByText } = render(<HashcatApp />);
+    const { getAllByText } = renderWithLocale(<HashcatApp />);
     expect(
       getAllByText('Description: Fast, legacy 32-character hash')[0]
     ).toBeInTheDocument();
   });
 
   it('allows mask building in brute-force mode', () => {
-    const { getByLabelText, getByText } = render(<HashcatApp />);
+    const { getByLabelText, getByText } = renderWithLocale(<HashcatApp />);
     fireEvent.change(getByLabelText('Attack Mode:'), { target: { value: '3' } });
     fireEvent.click(getByText('?d'));
     expect((getByLabelText('Mask') as HTMLInputElement).value).toBe('?d');
   });
 
   it('estimates candidate space for mask', () => {
-    const { getByLabelText, getByText } = render(<HashcatApp />);
+    const { getByLabelText, getByText } = renderWithLocale(<HashcatApp />);
     fireEvent.change(getByLabelText('Attack Mode:'), { target: { value: '3' } });
     fireEvent.change(getByLabelText('Mask'), { target: { value: '?d?d' } });
     expect(getByText(/Candidate space:/).textContent).toContain('100');
   });
 
   it('previews selected rule set', () => {
-    const { getByLabelText } = render(<HashcatApp />);
+    const { getByLabelText } = renderWithLocale(<HashcatApp />);
     fireEvent.change(getByLabelText('Rule Set:'), {
       target: { value: 'best64' },
     });
@@ -108,21 +114,21 @@ describe('HashcatApp', () => {
   });
 
   it('provides dictionary file hints with example paths', () => {
-    const { getByText } = render(<HashcatApp />);
+    const { getByText } = renderWithLocale(<HashcatApp />);
     expect(
       getByText(/\/usr\/share\/wordlists\/rockyou\.txt/)
     ).toBeInTheDocument();
   });
 
   it('displays GPU requirement notice', () => {
-    const { getByText } = render(<HashcatApp />);
+    const { getByText } = renderWithLocale(<HashcatApp />);
     expect(
       getByText(/requires a compatible GPU/i)
     ).toBeInTheDocument();
   });
 
   it('renders static sample output', () => {
-    const { getByText } = render(<HashcatApp />);
+    const { getByText } = renderWithLocale(<HashcatApp />);
     expect(
       getByText(/hashcat \(v6\.2\.6\) starting in benchmark mode/)
     ).toBeInTheDocument();

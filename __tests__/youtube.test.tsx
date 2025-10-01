@@ -2,6 +2,10 @@ import React from 'react';
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import YouTubeApp from '../components/apps/youtube';
+import { LocaleProvider } from '../utils/format';
+
+const renderWithLocale = (ui: React.ReactElement) =>
+  render(<LocaleProvider value={{ locale: 'en-US' }}>{ui}</LocaleProvider>);
 
 const mockVideos = [
   {
@@ -27,7 +31,7 @@ describe('YouTube search app', () => {
 
   it('loads video when thumbnail clicked', async () => {
     const user = userEvent.setup();
-    render(<YouTubeApp initialResults={mockVideos} />);
+    renderWithLocale(<YouTubeApp initialResults={mockVideos} />);
     await user.click(screen.getByAltText('Video A'));
     const iframe = screen.getByTitle('YouTube video player');
     expect(iframe).toHaveAttribute('src', expect.stringContaining('a'));
@@ -35,7 +39,7 @@ describe('YouTube search app', () => {
 
   it('adds to queue and watch later lists', async () => {
     const user = userEvent.setup();
-    render(<YouTubeApp initialResults={mockVideos} />);
+    renderWithLocale(<YouTubeApp initialResults={mockVideos} />);
     const queueButtons = screen.getAllByRole('button', { name: 'Queue' });
     const laterButtons = screen.getAllByRole('button', { name: 'Later' });
     await user.click(queueButtons[0]);
@@ -53,7 +57,7 @@ describe('YouTube search app', () => {
 
   it('renders watch later playlist from storage', () => {
     window.localStorage.setItem('youtube:watch-later', JSON.stringify(mockVideos));
-    render(<YouTubeApp initialResults={[]} />);
+    renderWithLocale(<YouTubeApp initialResults={[]} />);
     const list = within(screen.getByTestId('watch-later-list'));
     expect(list.getByText('Video A')).toBeInTheDocument();
     expect(list.getByText('Video B')).toBeInTheDocument();
@@ -61,7 +65,7 @@ describe('YouTube search app', () => {
 
   it('reorders watch later with keyboard', async () => {
     const user = userEvent.setup();
-    render(<YouTubeApp initialResults={mockVideos} />);
+    renderWithLocale(<YouTubeApp initialResults={mockVideos} />);
     const laterButtons = screen.getAllByRole('button', { name: 'Later' });
     await user.click(laterButtons[0]);
     await user.click(laterButtons[1]);
@@ -95,7 +99,7 @@ describe('YouTube search app', () => {
       },
       PlayerState: { PLAYING: 1 },
     };
-    render(<YouTubeApp initialResults={mockVideos} />);
+    renderWithLocale(<YouTubeApp initialResults={mockVideos} />);
     await user.click(screen.getByAltText('Video A'));
     curTime = 5;
     await user.click(screen.getByLabelText('Set loop start'));
