@@ -99,3 +99,67 @@ html {
   background-color: var(--kali-border, var(--color-border));
   border-radius: 6px;
 }
+
+:root.privacy-mode-armed {
+  transition: background-color 0.3s ease;
+}
+
+:root.privacy-mode {
+  background-color: color-mix(in srgb, var(--color-bg) 80%, #050608);
+}
+
+:root.privacy-mode [data-privacy-hidden="true"] {
+  position: relative;
+  filter: blur(14px) saturate(0);
+  color: transparent !important;
+  text-shadow: 0 0 1.25rem rgba(0, 0, 0, 0.85);
+  pointer-events: none;
+  user-select: none;
+  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
+:root.privacy-mode [data-privacy-hidden="true"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(5, 8, 11, 0.85), rgba(23, 147, 209, 0.2));
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+:root.privacy-mode [data-privacy-avatar-hidden="true"] {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(6, 9, 12, 0.9), rgba(23, 147, 209, 0.35));
+  color: transparent !important;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+:root.privacy-mode [data-privacy-avatar-hidden="true"] > * {
+  visibility: hidden !important;
+}
+
+:root.privacy-mode [data-privacy-avatar-hidden="true"]::after {
+  content: '👤';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(1.25rem, 65%, 3rem);
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 0 0.75rem rgba(0, 0, 0, 0.8);
+}
+
+:root.privacy-mode [data-privacy-hidden="true"] a,
+:root.privacy-mode [data-privacy-avatar-hidden="true"] a {
+  pointer-events: none !important;
+}
+
+:root.privacy-mode-armed:not(.privacy-mode) [data-privacy="sensitive"] {
+  transition: filter 0.2s ease;
+}

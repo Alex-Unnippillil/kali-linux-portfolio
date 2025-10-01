@@ -116,7 +116,7 @@ export default displayAboutAlex;
 function About() {
     return (
         <>
-            <div className="w-20 md:w-28 my-4 full">
+            <div className="w-20 md:w-28 my-4 full" data-privacy="sensitive" data-privacy-avatar="true">
                 <Image
                     className="w-full"
                     src="/images/logos/bitmoji.png"
@@ -128,15 +128,15 @@ function About() {
                 />
             </div>
             <div className=" mt-4 md:mt-8 text-lg md:text-2xl text-center px-1">
-                <div>My name is <span className="font-bold">Alex Unnippillil</span>, </div>
-                 <div className="font-normal ml-1">I&apos;m a <span className="text-ubt-blue font-bold"> Cybersecurity Specialist!</span></div>
+                <div data-privacy="sensitive">My name is <span className="font-bold">Alex Unnippillil</span>, </div>
+                 <div className="font-normal ml-1" data-privacy="sensitive">I&apos;m a <span className="text-ubt-blue font-bold" data-privacy-whitelist="true"> Cybersecurity Specialist!</span></div>
             </div>
             <div className=" mt-4 relative md:my-8 pt-px bg-white w-32 md:w-48">
                 <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-0"></div>
                 <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-0"></div>
             </div>
             <ul className=" mt-4 leading-tight tracking-tight text-sm md:text-base w-5/6 md:w-3/4 emoji-list">
-                <li className="list-pc">
+                <li className="list-pc" data-privacy="sensitive">
                     I&apos;m a <span className=" font-medium">Technology Enthusiast</span> who thrives on learning and mastering the rapidly evolving world of tech. I completed four years of a{" "}
                     <a
                         className=" underline cursor-pointer"
@@ -157,11 +157,11 @@ function About() {
                     </a>
                     .
                 </li>
-                <li className="mt-3 list-building">
+                <li className="mt-3 list-building" data-privacy="sensitive">
                     If you&apos;re looking for someone who always wants to help others and will put in the work 24/7, feel free to email{" "}
                     <a className=" underline" href="mailto:alex.unnippillil@hotmail.com">alex.unnippillil@hotmail.com</a>.
                 </li>
-                <li className="mt-3 list-time">
+                <li className="mt-3 list-time" data-privacy="sensitive">
                     When I&apos;m not learning new technical skills, I enjoy reading books, rock climbing, or watching{" "}
                     <a
                         className=" underline cursor-pointer"
@@ -181,7 +181,7 @@ function About() {
                     </a>
                     .
                 </li>
-                <li className="mt-3 list-star">
+                <li className="mt-3 list-star" data-privacy="sensitive">
                     I also have interests in deep learning, software development, and animation.
                 </li>
             </ul>
@@ -300,14 +300,15 @@ const SkillSection = ({ title, badges }) => {
 
   return (
     <div className="px-2 w-full">
-      <div className="text-sm text-center md:text-base font-bold">{title}</div>
-      <input
-        type="text"
-        placeholder="Filter..."
-        className="mt-2 w-full px-2 py-1 rounded text-black"
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-      />
+        <div className="text-sm text-center md:text-base font-bold">{title}</div>
+        <input
+          type="text"
+          placeholder="Filter..."
+          className="mt-2 w-full px-2 py-1 rounded text-black"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          aria-label="Filter skills"
+        />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map(badge => (
           <img
