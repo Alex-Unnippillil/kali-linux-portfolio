@@ -62,6 +62,17 @@ const InputHub = () => {
   }, [router.query]);
 
   useEffect(() => {
+    const { shareError } = router.query;
+    if (typeof shareError !== 'string') return;
+    const messages: Record<string, string> = {
+      'file-read': 'Unable to import shared file. Please attach it manually.',
+      'processing-error': 'Shared content could not be processed.',
+      unsupported: 'Shared content is not supported by this workspace.',
+    };
+    setStatus(messages[shareError] ?? 'Unable to process shared content.');
+  }, [router.query]);
+
+  useEffect(() => {
     const userId = process.env.NEXT_PUBLIC_USER_ID;
     const serviceId = process.env.NEXT_PUBLIC_SERVICE_ID;
     const templateId = process.env.NEXT_PUBLIC_TEMPLATE_ID;

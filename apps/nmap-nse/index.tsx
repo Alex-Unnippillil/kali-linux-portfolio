@@ -77,7 +77,10 @@ const NmapNSE: React.FC = () => {
 
   const shareResult = () => {
     if (!result) return;
-    share(JSON.stringify(result, null, 2), 'Nmap NSE Result');
+    void share({
+      text: JSON.stringify(result, null, 2),
+      title: 'Nmap NSE Result',
+    });
   };
 
   const severityColor = (tag: string) => {

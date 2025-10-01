@@ -276,7 +276,7 @@ export default function QuoteApp() {
   const shareQuote = () => {
     if (!current) return;
     const text = `"${current.content}" — ${current.author}`;
-    share(text);
+    void share({ text });
   };
 
   const copyQuote = () => {

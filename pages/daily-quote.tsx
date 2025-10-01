@@ -39,7 +39,7 @@ export default function DailyQuote() {
   const shareQuote = () => {
     if (!quote) return;
     const text = `"${quote.content}" — ${quote.author}`;
-    share(text);
+    void share({ text });
   };
 
   const copyQuote = () => {
