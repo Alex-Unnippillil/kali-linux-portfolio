@@ -1,48 +1,89 @@
 import usePersistentState from '../../hooks/usePersistentState';
+import {
+  ALL_SHORTCUTS,
+  ORDERED_PLATFORMS,
+  type ShortcutDefinition,
+  type ShortcutPlatform,
+} from '../../config/shortcuts';
 
 export interface Shortcut {
+  id: string;
   description: string;
-  keys: string;
+  section: string;
+  bindings: Record<ShortcutPlatform, string>;
 }
 
-const DEFAULT_SHORTCUTS: Shortcut[] = [
-  { description: 'Show keyboard shortcuts', keys: '?' },
-  { description: 'Open settings', keys: 'Ctrl+,' },
-];
+type ShortcutOverrides = Partial<
+  Record<string, Partial<Record<ShortcutPlatform, string>>>
+>;
 
-const validator = (value: unknown): value is Record<string, string> => {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    !Array.isArray(value) &&
-    Object.values(value as Record<string, unknown>).every(
-      (v) => typeof v === 'string'
-    )
-  );
+const createDefaultBindings = (
+  shortcut: ShortcutDefinition
+): Record<ShortcutPlatform, string> => {
+  const bindings: Record<ShortcutPlatform, string> = {
+    mac: shortcut.bindings.mac,
+    windows: shortcut.bindings.windows,
+    linux: shortcut.bindings.linux,
+  };
+  return bindings;
+};
+
+const validator = (value: unknown): value is ShortcutOverrides => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  return Object.values(value).every((platformMap) => {
+    if (
+      typeof platformMap !== 'object' ||
+      platformMap === null ||
+      Array.isArray(platformMap)
+    ) {
+      return false;
+    }
+
+    return Object.values(platformMap).every((binding) =>
+      typeof binding === 'string'
+    );
+  });
 };
 
 export function useKeymap() {
-  const initial = DEFAULT_SHORTCUTS.reduce<Record<string, string>>(
-    (acc, s) => {
-      acc[s.description] = s.keys;
-      return acc;
-    },
-    {}
-  );
-
-  const [map, setMap] = usePersistentState<Record<string, string>>(
+  const [overrides, setOverrides] = usePersistentState<ShortcutOverrides>(
     'keymap',
-    initial,
+    {},
     validator
   );
 
-  const shortcuts = DEFAULT_SHORTCUTS.map(({ description, keys }) => ({
-    description,
-    keys: map[description] || keys,
-  }));
+  const shortcuts: Shortcut[] = ALL_SHORTCUTS.map((shortcut) => {
+    const defaultBindings = createDefaultBindings(shortcut);
+    const overrideBindings = overrides[shortcut.id] ?? {};
 
-  const updateShortcut = (description: string, keys: string) =>
-    setMap({ ...map, [description]: keys });
+    const bindings = { ...defaultBindings };
+
+    ORDERED_PLATFORMS.forEach((platform) => {
+      const overrideValue = overrideBindings[platform];
+      if (overrideValue) {
+        bindings[platform] = overrideValue;
+      }
+    });
+
+    return {
+      id: shortcut.id,
+      description: shortcut.description,
+      section: shortcut.section,
+      bindings,
+    };
+  });
+
+  const updateShortcut = (
+    id: string,
+    platform: ShortcutPlatform,
+    keys: string
+  ) => {
+    const existing = overrides[id] ?? {};
+    setOverrides({ ...overrides, [id]: { ...existing, [platform]: keys } });
+  };
 
   return { shortcuts, updateShortcut };
 }
