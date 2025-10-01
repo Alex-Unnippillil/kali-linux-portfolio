@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { diffLines, type Change } from 'diff';
+import { createLineDiff, type DiffSegment } from '../../utils/diffEngine';
 
 interface Rule {
   selector: string;
@@ -44,11 +44,11 @@ const HtmlRewriterApp: React.FC = () => {
       const rules = JSON.parse(ruleText) as Rule[];
       setError(null);
       const rewritten = applyRules(html, rules);
-      const diff = diffLines(html, rewritten);
+      const diff = createLineDiff(html, rewritten);
       return { rewritten, diff };
     } catch (e: any) {
       setError(e.message);
-      return { rewritten: html, diff: diffLines(html, html) };
+      return { rewritten: html, diff: createLineDiff(html, html) };
     }
   }, [ruleText, html]);
 
@@ -85,10 +85,16 @@ const HtmlRewriterApp: React.FC = () => {
       <div>
         <h2 className="text-xl mb-2">Diff</h2>
         <pre className="whitespace-pre-wrap bg-gray-800 p-2 rounded overflow-auto">
-          {diff.map((part: Change, i: number) => (
+          {diff.map((part: DiffSegment, i: number) => (
             <span
               key={i}
-              className={part.added ? 'bg-green-800' : part.removed ? 'bg-red-800 line-through' : ''}
+              className={
+                part.type === 'added'
+                  ? 'bg-green-800'
+                  : part.type === 'removed'
+                  ? 'bg-red-800 line-through'
+                  : ''
+              }
             >
               {part.value}
             </span>
