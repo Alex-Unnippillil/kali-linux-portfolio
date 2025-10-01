@@ -2,13 +2,26 @@ import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import Navbar from '../components/screen/navbar';
 
-jest.mock('../components/util-components/clock', () => () => <div data-testid="clock" />);
-jest.mock('../components/util-components/status', () => () => <div data-testid="status" />);
-jest.mock('../components/ui/QuickSettings', () => ({ open }: { open: boolean }) => (
-  <div data-testid="quick-settings">{open ? 'open' : 'closed'}</div>
-));
-jest.mock('../components/menu/WhiskerMenu', () => () => <button type="button">Menu</button>);
-jest.mock('../components/ui/PerformanceGraph', () => () => <div data-testid="performance" />);
+jest.mock('../components/util-components/clock', () =>
+  Object.assign(() => <div data-testid="clock" />, { displayName: 'MockClock' }),
+);
+jest.mock('../components/util-components/status', () =>
+  Object.assign(() => <div data-testid="status" />, { displayName: 'MockStatus' }),
+);
+jest.mock('../components/ui/QuickSettings', () =>
+  Object.assign(
+    ({ open }: { open: boolean }) => (
+      <div data-testid="quick-settings">{open ? 'open' : 'closed'}</div>
+    ),
+    { displayName: 'MockQuickSettings' },
+  ),
+);
+jest.mock('../components/menu/WhiskerMenu', () =>
+  Object.assign(() => <button type="button">Menu</button>, { displayName: 'MockWhiskerMenu' }),
+);
+jest.mock('../components/ui/PerformanceGraph', () =>
+  Object.assign(() => <div data-testid="performance" />, { displayName: 'MockPerformanceGraph' }),
+);
 
 const workspaceEventDetail = {
   workspaces: [

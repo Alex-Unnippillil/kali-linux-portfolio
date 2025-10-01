@@ -11,6 +11,33 @@ body{
     color: var(--color-text);
 }
 
+#desktop::before {
+    content: none;
+}
+
+body.ui-overlay-active #desktop::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    pointer-events: none;
+    background: rgba(10, 10, 14, 0.45);
+    background: color-mix(in srgb, var(--color-bg) 60%, rgba(0, 0, 0, 0.65) 40%);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    opacity: 1;
+    transition: opacity 150ms ease;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    body.ui-overlay-active #desktop::before {
+        content: none;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: none;
+    }
+}
+
 :root {
     /* Stack utility defaults */
     --stack-space-0-5: 0.125rem;

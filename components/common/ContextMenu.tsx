@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import useRovingTabIndex from '../../hooks/useRovingTabIndex';
+import { setOverlayActive } from '../../utils/overlayState';
 
 export interface MenuItem {
   label: React.ReactNode;
@@ -24,6 +25,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
+  const overlayTokenRef = useRef(`context-menu-${Math.random().toString(36).slice(2)}`);
 
   useFocusTrap(menuRef as React.RefObject<HTMLElement>, open);
   useRovingTabIndex(
@@ -66,6 +68,14 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
     } else {
       window.dispatchEvent(new CustomEvent('context-menu-close'));
     }
+  }, [open]);
+
+  useEffect(() => {
+    const token = overlayTokenRef.current;
+    setOverlayActive(token, open);
+    return () => {
+      setOverlayActive(token, false);
+    };
   }, [open]);
 
   useEffect(() => {

@@ -22,6 +22,7 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING } from '../../utils/uiConstants';
+import { setOverlayActive } from '../../utils/overlayState';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 import {
     clampWindowTopPosition,
@@ -79,6 +80,7 @@ export class Desktop extends Component {
         this.iconDragState = null;
         this.preventNextIconClick = false;
         this.savedIconPositions = {};
+        this.overlayToken = 'desktop-overlays';
 
         this.defaultIconDimensions = { width: 96, height: 88 };
         this.defaultIconGridSpacing = { row: 112, column: 128 };
@@ -855,6 +857,7 @@ export class Desktop extends Component {
         window.addEventListener('open-app', this.handleOpenAppEvent);
         this.setupPointerMediaWatcher();
         this.setupGestureListeners();
+        this.syncOverlayBodyClass();
     }
 
     componentDidUpdate(_prevProps, prevState) {
@@ -866,6 +869,14 @@ export class Desktop extends Component {
             prevState.workspaces !== this.state.workspaces
         ) {
             this.broadcastWorkspaceState();
+        }
+        if (
+            prevState.showWindowSwitcher !== this.state.showWindowSwitcher ||
+            prevState.allAppsView !== this.state.allAppsView ||
+            prevState.showShortcutSelector !== this.state.showShortcutSelector ||
+            prevState.context_menus !== this.state.context_menus
+        ) {
+            this.syncOverlayBodyClass();
         }
     }
 
@@ -883,7 +894,15 @@ export class Desktop extends Component {
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
+        setOverlayActive(this.overlayToken, false);
     }
+
+    syncOverlayBodyClass = () => {
+        const { showWindowSwitcher, allAppsView, showShortcutSelector, context_menus } = this.state;
+        const hasContextMenu = context_menus && Object.values(context_menus).some(Boolean);
+        const overlayOpen = Boolean(showWindowSwitcher || allAppsView || showShortcutSelector || hasContextMenu);
+        setOverlayActive(this.overlayToken, overlayOpen);
+    };
 
     handleExternalTaskbarCommand = (event) => {
         const detail = event?.detail || {};
