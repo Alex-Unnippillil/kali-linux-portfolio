@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:tower-defense:service",
+  "title": "Tower Defense service contract",
+  "description": "Service interactions for the Tower Defense application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:service"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "tower-defense"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

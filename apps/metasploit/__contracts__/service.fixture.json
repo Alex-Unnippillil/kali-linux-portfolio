@@ -1,0 +1,35 @@
+{
+  "appId": "metasploit",
+  "version": "1.0.0",
+  "notes": "Metasploit simulation requires FEATURE_TOOL_APIS to be enabled.",
+  "endpoints": [
+    {
+      "method": "POST",
+      "path": "/api/metasploit",
+      "description": "Executes a command within the Metasploit simulation.",
+      "mock": {
+        "status": 501,
+        "body": {
+          "error": "Not implemented"
+        }
+      },
+      "runtimeTest": {
+        "enabled": true,
+        "mode": "mock",
+        "expectedStatus": 501,
+        "responseSchema": {
+          "type": "object",
+          "required": [
+            "error"
+          ],
+          "properties": {
+            "error": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    }
+  ]
+}

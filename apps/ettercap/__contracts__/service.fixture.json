@@ -1,0 +1,6 @@
+{
+  "appId": "ettercap",
+  "version": "1.0.0",
+  "notes": "Ettercap does not define remote calls. Extend this contract when the app integrates with APIs.",
+  "endpoints": []
+}

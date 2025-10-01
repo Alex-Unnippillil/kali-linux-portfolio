@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:http:service",
+  "title": "Http service contract",
+  "description": "Service interactions for the Http application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:service"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "http"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

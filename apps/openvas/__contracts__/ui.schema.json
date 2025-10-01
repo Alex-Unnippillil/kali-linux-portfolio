@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:openvas:ui",
+  "title": "Openvas UI contract",
+  "description": "UI surface contract for the Openvas application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:ui"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "openvas"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:mimikatz:ui",
+  "title": "Mimikatz UI contract",
+  "description": "UI surface contract for the Mimikatz application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:ui"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "mimikatz"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:sticky_notes:ui",
+  "title": "Sticky Notes UI contract",
+  "description": "UI surface contract for the Sticky Notes application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:ui"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "sticky_notes"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

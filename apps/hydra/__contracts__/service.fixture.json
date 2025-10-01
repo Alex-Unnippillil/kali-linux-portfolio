@@ -1,0 +1,34 @@
+{
+  "appId": "hydra",
+  "version": "1.0.0",
+  "notes": "The Hydra simulation returns 501 when FEATURE_TOOL_APIS is disabled.",
+  "endpoints": [
+    {
+      "method": "POST",
+      "path": "/api/hydra",
+      "description": "Triggers the Hydra password auditing simulation.",
+      "mock": {
+        "status": 501,
+        "body": {
+          "error": "Not implemented"
+        }
+      },
+      "runtimeTest": {
+        "enabled": true,
+        "expectedStatus": 501,
+        "responseSchema": {
+          "type": "object",
+          "required": [
+            "error"
+          ],
+          "properties": {
+            "error": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    }
+  ]
+}

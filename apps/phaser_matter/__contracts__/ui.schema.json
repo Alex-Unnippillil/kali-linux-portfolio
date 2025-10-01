@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:phaser_matter:ui",
+  "title": "Phaser Matter UI contract",
+  "description": "UI surface contract for the Phaser Matter application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:ui"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "phaser_matter"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

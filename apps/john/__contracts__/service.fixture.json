@@ -1,0 +1,34 @@
+{
+  "appId": "john",
+  "version": "1.0.0",
+  "notes": "John the Ripper stub short-circuits with 501 unless FEATURE_TOOL_APIS is enabled.",
+  "endpoints": [
+    {
+      "method": "POST",
+      "path": "/api/john",
+      "description": "Submits a hash for cracking.",
+      "mock": {
+        "status": 501,
+        "body": {
+          "error": "Not implemented"
+        }
+      },
+      "runtimeTest": {
+        "enabled": true,
+        "expectedStatus": 501,
+        "responseSchema": {
+          "type": "object",
+          "required": [
+            "error"
+          ],
+          "properties": {
+            "error": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:vscode:ui",
+  "title": "Vscode UI contract",
+  "description": "UI surface contract for the Vscode application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:ui"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "vscode"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

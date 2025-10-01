@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:contract:service",
+  "title": "Base service contract",
+  "type": "object",
+  "required": ["appId", "version", "endpoints"],
+  "additionalProperties": false,
+  "properties": {
+    "appId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._\\-/]+$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "endpoints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["method", "path", "mock", "description"],
+        "additionalProperties": false,
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+          },
+          "path": {
+            "type": "string",
+            "pattern": "^/"
+          },
+          "description": {
+            "type": "string"
+          },
+          "mock": {
+            "type": "object",
+            "required": ["status", "body"],
+            "additionalProperties": false,
+            "properties": {
+              "status": {
+                "type": "integer",
+                "minimum": 100,
+                "maximum": 599
+              },
+              "body": {}
+            }
+          },
+          "runtimeTest": {
+            "type": "object",
+            "required": ["enabled"],
+            "additionalProperties": false,
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "mode": {
+                "type": "string",
+                "enum": ["handler", "mock"],
+                "default": "handler"
+              },
+              "expectedStatus": {
+                "type": "integer",
+                "minimum": 100,
+                "maximum": 599
+              },
+              "responseSchema": {
+                "type": "object"
+              },
+              "request": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "query": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "body": {},
+                  "headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": ["string", "number", "boolean"]
+                    }
+                  },
+                  "cookies": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

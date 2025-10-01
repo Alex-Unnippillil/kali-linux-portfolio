@@ -1,0 +1,35 @@
+{
+  "appId": "mimikatz",
+  "version": "1.0.0",
+  "notes": "Mimikatz simulation requires FEATURE_TOOL_APIS to be enabled.",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/mimikatz",
+      "description": "Lists available Mimikatz modules or executes a command.",
+      "mock": {
+        "status": 501,
+        "body": {
+          "error": "Not implemented"
+        }
+      },
+      "runtimeTest": {
+        "enabled": true,
+        "mode": "mock",
+        "expectedStatus": 501,
+        "responseSchema": {
+          "type": "object",
+          "required": [
+            "error"
+          ],
+          "properties": {
+            "error": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      }
+    }
+  ]
+}

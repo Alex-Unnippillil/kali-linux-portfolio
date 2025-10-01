@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:checkers:service",
+  "title": "Checkers service contract",
+  "description": "Service interactions for the Checkers application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:service"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "checkers"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

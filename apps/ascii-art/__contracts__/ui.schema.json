@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:unnippillil:app:ascii-art:ui",
+  "title": "Ascii Art UI contract",
+  "description": "UI surface contract for the Ascii Art application.",
+  "allOf": [
+    {
+      "$ref": "urn:unnippillil:contract:ui"
+    },
+    {
+      "type": "object",
+      "properties": {
+        "appId": {
+          "const": "ascii-art"
+        }
+      },
+      "required": [
+        "appId"
+      ]
+    }
+  ]
+}

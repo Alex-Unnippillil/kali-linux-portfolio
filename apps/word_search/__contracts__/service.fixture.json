@@ -1,0 +1,6 @@
+{
+  "appId": "word_search",
+  "version": "1.0.0",
+  "notes": "Word Search does not define remote calls. Extend this contract when the app integrates with APIs.",
+  "endpoints": []
+}

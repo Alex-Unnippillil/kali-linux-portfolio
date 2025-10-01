@@ -91,7 +91,11 @@ See `.env.local.example` for the full list.
 - `yarn dev` – start the development server with hot reloading.
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
+- `yarn contracts:sync` – scaffold missing JSON Schemas and fixtures for new apps.
+- `yarn contracts:check` – validate that every fixture matches its schema and run enabled API stub checks.
 - `yarn export` – generate a static export in the `out/` directory.
+
+See [`docs/contracts.md`](./docs/contracts.md) for the full contract maintenance workflow.
 
 ---
 
