@@ -39,12 +39,55 @@ self.addEventListener('periodicsync', (event) => {
   }
 });
 
+const FLAG_DB_NAME = 'app-flags';
+const FLAG_STORE_NAME = 'flags';
+const FLAG_STATE_KEY = 'state';
+const FLAG_DEFAULTS = { networkAccess: false };
+
+function persistFlags(flags) {
+  const next = { ...FLAG_DEFAULTS, ...(flags || {}) };
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(FLAG_DB_NAME);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(FLAG_STORE_NAME)) {
+        db.createObjectStore(FLAG_STORE_NAME);
+      }
+    };
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction(FLAG_STORE_NAME, 'readwrite');
+      tx.oncomplete = () => {
+        db.close();
+        resolve(next);
+      };
+      tx.onerror = () => {
+        db.close();
+        reject(tx.error);
+      };
+      tx.objectStore(FLAG_STORE_NAME).put(next, FLAG_STATE_KEY);
+    };
+  });
+}
+
+async function handleRollback(flags) {
+  const next = await persistFlags(flags);
+  const clients = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
+  clients.forEach((client) => {
+    client.postMessage({ type: 'kill-switch:update', state: next });
+  });
+}
+
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'refresh') {
+  if (!event.data) return;
+  if (event.data.type === 'refresh') {
     event.waitUntil(prefetchAssets());
   }
+  if (event.data.type === 'rollback') {
+    event.waitUntil(handleRollback(event.data.flags));
+  }
 });
-
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);

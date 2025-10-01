@@ -1,13 +1,17 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
+import { KILL_SWITCH_DEFINITIONS, KILL_SWITCH_DEFAULTS, getKillSwitches, setKillSwitch, subscribeToKillSwitches } from '../../flags';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme, networkKillSwitchActive } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
+    const [killSwitchState, setKillSwitchState] = useState(KILL_SWITCH_DEFAULTS);
+    const [confirmKillSwitch, setConfirmKillSwitch] = useState(false);
+    const [isUpdatingKillSwitch, setIsUpdatingKillSwitch] = useState(false);
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
 
@@ -56,6 +60,53 @@ export function Settings() {
         return () => cancelAnimationFrame(raf);
     }, [accent, accentText, contrastRatio]);
 
+    useEffect(() => {
+        let mounted = true;
+        getKillSwitches().then((flags) => {
+            if (mounted) setKillSwitchState(flags);
+        });
+        const unsubscribe = subscribeToKillSwitches((flags) => {
+            if (mounted) setKillSwitchState(flags);
+        });
+        return () => {
+            mounted = false;
+            unsubscribe();
+        };
+    }, []);
+
+    const definitions = KILL_SWITCH_DEFINITIONS.networkAccess;
+
+    const handleKillSwitchToggle = async () => {
+        if (killSwitchState.networkAccess) {
+            setIsUpdatingKillSwitch(true);
+            try {
+                const next = await setKillSwitch('networkAccess', false);
+                setKillSwitchState(next);
+            } catch (error) {
+                console.error('Failed to update kill switch', error);
+            } finally {
+                setIsUpdatingKillSwitch(false);
+            }
+            return;
+        }
+        setConfirmKillSwitch(true);
+    };
+
+    const confirmKillSwitchActivation = async () => {
+        setIsUpdatingKillSwitch(true);
+        try {
+            const next = await setKillSwitch('networkAccess', true);
+            setKillSwitchState(next);
+            setConfirmKillSwitch(false);
+        } catch (error) {
+            console.error('Failed to activate kill switch', error);
+        } finally {
+            setIsUpdatingKillSwitch(false);
+        }
+    };
+
+    const cancelKillSwitchConfirmation = () => setConfirmKillSwitch(false);
+
     return (
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
             <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4 relative overflow-hidden rounded-lg shadow-inner">
@@ -89,6 +140,7 @@ export function Settings() {
                         checked={useKaliWallpaper}
                         onChange={(e) => setUseKaliWallpaper(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle Kali gradient wallpaper"
                     />
                     Kali Gradient Wallpaper
                 </label>
@@ -135,6 +187,7 @@ export function Settings() {
                     value={fontScale}
                     onChange={(e) => setFontScale(parseFloat(e.target.value))}
                     className="ubuntu-slider"
+                    aria-label="Adjust font size"
                 />
             </div>
             <div className="flex justify-center my-4">
@@ -144,6 +197,7 @@ export function Settings() {
                         checked={reducedMotion}
                         onChange={(e) => setReducedMotion(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle reduced motion"
                     />
                     Reduced Motion
                 </label>
@@ -155,6 +209,7 @@ export function Settings() {
                         checked={largeHitAreas}
                         onChange={(e) => setLargeHitAreas(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle large hit areas"
                     />
                     Large Hit Areas
                 </label>
@@ -166,6 +221,7 @@ export function Settings() {
                         checked={highContrast}
                         onChange={(e) => setHighContrast(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle high contrast mode"
                     />
                     High Contrast
                 </label>
@@ -177,9 +233,60 @@ export function Settings() {
                         checked={allowNetwork}
                         onChange={(e) => setAllowNetwork(e.target.checked)}
                         className="mr-2"
+                        disabled={networkKillSwitchActive}
+                        aria-label="Toggle simulated network requests"
                     />
                     Allow Network Requests
                 </label>
+            </div>
+            {networkKillSwitchActive && (
+                <p className="text-center text-sm text-red-300 -mt-2 mb-4">
+                    Disabled by the emergency kill switch.
+                </p>
+            )}
+            <div className="mx-auto my-6 w-11/12 max-w-xl rounded-lg border border-red-500/40 bg-red-900/20 p-5 text-left">
+                <h3 className="text-lg font-semibold text-red-200">{definitions.label}</h3>
+                <p className="mt-2 text-sm text-red-100">{definitions.description}</p>
+                <button
+                    type="button"
+                    onClick={handleKillSwitchToggle}
+                    disabled={isUpdatingKillSwitch}
+                    className={`mt-4 inline-flex items-center rounded px-4 py-2 font-semibold transition ${
+                        killSwitchState.networkAccess
+                            ? 'bg-ubt-cool-grey text-ubt-grey hover:bg-ubt-grey/20'
+                            : 'bg-red-600 text-white hover:bg-red-500'
+                    } ${isUpdatingKillSwitch ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                    {killSwitchState.networkAccess ? definitions.undoLabel : definitions.confirmLabel}
+                </button>
+                {confirmKillSwitch && !killSwitchState.networkAccess && (
+                    <div className="mt-4 rounded border border-red-500/50 bg-red-950/70 p-4">
+                        <p className="text-sm text-red-100">
+                            Activating the kill switch will immediately block outbound network requests across every open
+                            tab. Continue?
+                        </p>
+                        <div className="mt-4 flex justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={confirmKillSwitchActivation}
+                                disabled={isUpdatingKillSwitch}
+                                className={`rounded bg-red-600 px-3 py-1 text-white transition hover:bg-red-500 ${
+                                    isUpdatingKillSwitch ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
+                            >
+                                Confirm
+                            </button>
+                            <button
+                                type="button"
+                                onClick={cancelKillSwitchConfirmation}
+                                disabled={isUpdatingKillSwitch}
+                                className="rounded bg-ubt-cool-grey px-3 py-1 text-ubt-grey transition hover:bg-ubt-grey/20"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey flex items-center">
@@ -188,6 +295,7 @@ export function Settings() {
                         checked={haptics}
                         onChange={(e) => setHaptics(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle haptics"
                     />
                     Haptics
                 </label>
@@ -199,6 +307,7 @@ export function Settings() {
                         checked={pongSpin}
                         onChange={(e) => setPongSpin(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle Pong spin"
                     />
                     Pong Spin
                 </label>
@@ -308,6 +417,7 @@ export function Settings() {
                     e.target.value = '';
                 }}
                 className="hidden"
+                aria-label="Import settings file"
             />
         </div>
     )
