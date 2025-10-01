@@ -2,6 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { registerExtension } from '../../utils/extensionDiagnostics';
 
 // The Document Picture-in-Picture API is still experimental and the
 // TypeScript definitions do not ship with the DOM lib yet.
@@ -29,6 +30,24 @@ const PipPortalProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const [content, setContent] = useState<React.ReactNode>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [isEnabled, setIsEnabled] = useState(true);
+  const diagnosticsRef = useRef<ReturnType<typeof registerExtension> | null>(null);
+
+  useEffect(() => {
+    const handle = registerExtension(
+      {
+        id: 'pip-portal',
+        name: 'Picture-in-Picture Helper',
+        permissions: ['documentPictureInPicture'],
+      },
+      {
+        onEnabledChange: setIsEnabled,
+      },
+    );
+    diagnosticsRef.current = handle;
+    handle.markReady();
+    return () => handle.dispose();
+  }, []);
 
   const close = useCallback(() => {
     const win = pipWindowRef.current;
@@ -43,6 +62,7 @@ const PipPortalProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
   const open = useCallback(
     async (node: React.ReactNode) => {
+      if (!isEnabled) return null;
       if (typeof window === 'undefined' || !window.documentPictureInPicture) return null;
 
       let win = pipWindowRef.current;
@@ -62,9 +82,10 @@ const PipPortalProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
       setIsOpen(true);
       setContent(node);
+      diagnosticsRef.current?.logMessage();
       return win;
     },
-    [close],
+    [close, isEnabled],
   );
 
   useEffect(() => {

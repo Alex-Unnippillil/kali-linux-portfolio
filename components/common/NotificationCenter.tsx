@@ -3,6 +3,7 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import {
@@ -11,6 +12,7 @@ import {
   NotificationPriority,
   classifyNotification,
 } from '../../utils/notifications/ruleEngine';
+import { registerExtension } from '../../utils/extensionDiagnostics';
 
 export type {
   ClassificationResult,
@@ -64,8 +66,13 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
   const [notificationsByApp, setNotificationsByApp] = useState<
     Record<string, AppNotification[]>
   >({});
+  const diagnosticsRef = useRef<ReturnType<typeof registerExtension> | null>(null);
+  const [enabled, setEnabled] = useState(true);
 
   const pushNotification = useCallback((input: PushNotificationInput) => {
+    if (!enabled) {
+      return `ntf-disabled-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    }
     const id = createId();
     const timestamp = input.timestamp ?? Date.now();
     const classification = classifyNotification({
@@ -95,8 +102,10 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
       };
     });
 
+    diagnosticsRef.current?.logMessage();
+
     return id;
-  }, []);
+  }, [enabled]);
 
   const dismissNotification = useCallback((appId: string, id: string) => {
     setNotificationsByApp(prev => {
@@ -165,6 +174,37 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
     () => notifications.reduce((sum, notification) => sum + (notification.read ? 0 : 1), 0),
     [notifications],
   );
+
+  useEffect(() => {
+    const handle = registerExtension(
+      {
+        id: 'notification-center',
+        name: 'Notification Center',
+        permissions: ['notifications', 'storage'],
+      },
+      { onEnabledChange: setEnabled },
+    );
+    diagnosticsRef.current = handle;
+    handle.markReady();
+    return () => handle.dispose();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const globalObj = window as any;
+    const previous = globalObj.__EXTENSION_MOCKS__ ?? {};
+    const mock = {
+      push: (input: PushNotificationInput) => pushNotification(input),
+      clear: (appId?: string) => clearNotifications(appId),
+      enabled: () => enabled,
+    };
+    globalObj.__EXTENSION_MOCKS__ = { ...previous, notifications: mock };
+    return () => {
+      if (globalObj.__EXTENSION_MOCKS__?.notifications === mock) {
+        delete globalObj.__EXTENSION_MOCKS__.notifications;
+      }
+    };
+  }, [pushNotification, clearNotifications, enabled]);
 
   useEffect(() => {
     const nav: any = navigator;
