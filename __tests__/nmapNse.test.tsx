@@ -82,7 +82,7 @@ describe('NmapNSEApp', () => {
     expect(writeText).toHaveBeenCalledWith(
       expect.stringContaining('Sample output')
     );
-    expect(await screen.findByRole('alert')).toHaveTextContent(/copied/i);
+    expect(await screen.findByRole('status')).toHaveTextContent(/copied/i);
 
     mockFetch.mockRestore();
   });
@@ -123,13 +123,97 @@ describe('NmapNSEApp', () => {
     render(<NmapNSEApp />);
     await waitFor(() => expect(mockFetch).toHaveBeenCalled());
 
-    const hostNode = await screen.findByText('192.0.2.1');
+    const parsedHeading = screen.getByRole('heading', { name: /parsed output/i });
+    const parsedList = parsedHeading.nextElementSibling as HTMLElement;
+    const hostNode = await within(parsedList).findByText('192.0.2.1');
     const scriptNode = within(hostNode.parentElement as HTMLElement).getByText(
       'http-title'
     );
     expect(
       within(scriptNode.parentElement as HTMLElement).getByText('discovery')
     ).toBeInTheDocument();
+
+    mockFetch.mockRestore();
+  });
+
+  it('summarizes host deltas and exports markdown', async () => {
+    const mockFetch = jest
+      .spyOn(global, 'fetch')
+      .mockImplementation((url: RequestInfo | URL) =>
+        Promise.resolve({
+          json: () =>
+            Promise.resolve(
+              typeof url === 'string' && url.includes('nmap-results')
+                ? {
+                    hosts: [
+                      {
+                        ip: '203.0.113.10',
+                        ports: [
+                          { port: 80, state: 'open', service: 'http' },
+                          { port: 22, state: 'closed', service: 'ssh' },
+                        ],
+                      },
+                      {
+                        ip: '203.0.113.20',
+                        ports: [{ port: 443, state: 'open', service: 'https' }],
+                      },
+                    ],
+                    previous: {
+                      hosts: [
+                        {
+                          ip: '203.0.113.10',
+                          ports: [{ port: 80, state: 'open', service: 'http' }],
+                        },
+                        {
+                          ip: '203.0.113.30',
+                          ports: [
+                            { port: 25, state: 'filtered', service: 'smtp' },
+                          ],
+                        },
+                      ],
+                    },
+                    metadata: {
+                      runLabel: 'Today',
+                      previousRunLabel: 'Yesterday',
+                    },
+                  }
+                : {}
+            ),
+        })
+      );
+
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    // @ts-ignore
+    navigator.clipboard = { writeText };
+
+    render(<NmapNSEApp />);
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+
+    const summary = await screen.findByLabelText('Scan summary');
+    const hostsScanned = within(summary).getByText('Hosts scanned');
+    expect(hostsScanned.nextElementSibling?.textContent).toBe('2 hosts');
+    const newHosts = within(summary).getByText('New hosts');
+    expect(newHosts.nextElementSibling?.textContent).toBe('1 host');
+    expect(
+      within(summary).getAllByText('203.0.113.20')[0]
+    ).toBeInTheDocument();
+    expect(
+      within(summary).getAllByText('203.0.113.30')[0]
+    ).toBeInTheDocument();
+    expect(within(summary).getByText('open')).toBeInTheDocument();
+    expect(within(summary).getAllByText('Δ +1')).toHaveLength(2);
+    expect(within(summary).getAllByText('Δ -1')).toHaveLength(1);
+
+    await userEvent.click(
+      within(summary).getByRole('button', { name: /export markdown/i })
+    );
+    expect(writeText).toHaveBeenCalledWith(
+      expect.stringContaining('| State | Current | Previous | Delta |')
+    );
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('## New hosts'));
+    expect(writeText).toHaveBeenCalledWith(
+      expect.stringContaining('203.0.113.20')
+    );
 
     mockFetch.mockRestore();
   });

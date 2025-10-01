@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
 import DiscoveryMap from './DiscoveryMap';
+import Explain from './Explain';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
 const scripts = [
@@ -80,7 +81,11 @@ const NmapNSEApp = () => {
   const [scriptQuery, setScriptQuery] = useState('');
   const [portFlag, setPortFlag] = useState('');
   const [examples, setExamples] = useState({});
-  const [results, setResults] = useState({ hosts: [] });
+  const [results, setResults] = useState({
+    hosts: [],
+    previous: { hosts: [] },
+    metadata: {},
+  });
   const [scriptOptions, setScriptOptions] = useState({});
   const [activeScript, setActiveScript] = useState(scripts[0].name);
   const [phaseStep, setPhaseStep] = useState(0);
@@ -95,8 +100,16 @@ const NmapNSEApp = () => {
       .catch(() => setExamples({}));
     fetch('/demo/nmap-results.json')
       .then((r) => r.json())
-      .then(setResults)
-      .catch(() => setResults({ hosts: [] }));
+      .then((data) => {
+        setResults({
+          hosts: data.hosts || [],
+          previous: data.previous || { hosts: [] },
+          metadata: data.metadata || {},
+        });
+      })
+      .catch(() =>
+        setResults({ hosts: [], previous: { hosts: [] }, metadata: {} })
+      );
   }, []);
 
   const toggleScript = (name) => {
@@ -345,6 +358,13 @@ const NmapNSEApp = () => {
         ) : (
           <p className="text-sm mb-4">Select a script to view phases.</p>
         )}
+        <Explain
+          hosts={results.hosts}
+          previousHosts={results.previous?.hosts}
+          onExport={(message) => setToast(message)}
+          runLabel={results.metadata?.runLabel}
+          previousRunLabel={results.metadata?.previousRunLabel}
+        />
         <h2 className="text-lg mb-2">Topology</h2>
         <DiscoveryMap hosts={results.hosts} />
         <h2 className="text-lg mb-2">Parsed output</h2>

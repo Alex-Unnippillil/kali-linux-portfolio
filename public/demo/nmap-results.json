@@ -1,4 +1,8 @@
 {
+  "metadata": {
+    "runLabel": "Current snapshot (lab demo)",
+    "previousRunLabel": "Baseline snapshot"
+  },
   "hosts": [
     {
       "ip": "192.0.2.10",
@@ -6,6 +10,7 @@
         {
           "port": 80,
           "service": "http",
+          "state": "open",
           "cvss": 5.0,
           "scripts": [
             {
@@ -21,6 +26,7 @@
         {
           "port": 443,
           "service": "https",
+          "state": "open",
           "cvss": 3.1,
           "scripts": [
             {
@@ -37,6 +43,7 @@
         {
           "port": 21,
           "service": "ftp",
+          "state": "open",
           "cvss": 7.5,
           "scripts": [
             {
@@ -53,6 +60,7 @@
         {
           "port": 445,
           "service": "microsoft-ds",
+          "state": "open",
           "cvss": 4.0,
           "scripts": [
             {
@@ -63,5 +71,62 @@
         }
       ]
     }
-  ]
+  ],
+  "previous": {
+    "hosts": [
+      {
+        "ip": "192.0.2.10",
+        "ports": [
+          {
+            "port": 80,
+            "service": "http",
+            "state": "open",
+            "cvss": 5.0,
+            "scripts": [
+              {
+                "name": "http-title",
+                "output": "Example Domain"
+              }
+            ]
+          },
+          {
+            "port": 443,
+            "service": "https",
+            "state": "closed",
+            "cvss": 0.0,
+            "scripts": []
+          }
+        ]
+      },
+      {
+        "ip": "192.0.2.20",
+        "ports": [
+          {
+            "port": 21,
+            "service": "ftp",
+            "state": "open",
+            "cvss": 7.5,
+            "scripts": [
+              {
+                "name": "ftp-anon",
+                "output": "Anonymous FTP login allowed"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "ip": "192.0.2.40",
+        "ports": [
+          {
+            "port": 22,
+            "service": "ssh",
+            "state": "filtered",
+            "cvss": 4.3,
+            "scripts": []
+          }
+        ]
+      }
+    ]
+  }
 }
