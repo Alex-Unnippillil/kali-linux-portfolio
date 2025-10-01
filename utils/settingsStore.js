@@ -2,6 +2,12 @@
 
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
+import {
+  readBudgetsFromStorage,
+  writeBudgetsToStorage,
+  readOverrideLogFromStorage,
+  writeOverrideLogToStorage,
+} from './performanceBudgets';
 
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
@@ -150,6 +156,8 @@ export async function resetSettings() {
   window.localStorage.removeItem('allow-network');
   window.localStorage.removeItem('haptics');
   window.localStorage.removeItem('use-kali-wallpaper');
+  writeBudgetsToStorage({});
+  writeOverrideLogToStorage([]);
 }
 
 export async function exportSettings() {
@@ -179,6 +187,8 @@ export async function exportSettings() {
     getHaptics(),
   ]);
   const theme = getTheme();
+  const performanceBudgets = readBudgetsFromStorage();
+  const performanceOverrideLog = readOverrideLogFromStorage();
   return JSON.stringify({
     accent,
     wallpaper,
@@ -192,6 +202,8 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    performanceBudgets,
+    performanceOverrideLog,
   });
 }
 
@@ -217,6 +229,8 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    performanceBudgets,
+    performanceOverrideLog,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -230,6 +244,12 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (performanceBudgets !== undefined) {
+    writeBudgetsToStorage(performanceBudgets);
+  }
+  if (performanceOverrideLog !== undefined) {
+    writeOverrideLogToStorage(performanceOverrideLog);
+  }
 }
 
 export const defaults = DEFAULT_SETTINGS;

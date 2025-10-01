@@ -1,3 +1,5 @@
+import { performanceBudgetManager } from '../utils/performanceBudgetManager';
+
 export interface FetchLog {
   id: number;
   url: string;
@@ -10,6 +12,7 @@ export interface FetchLog {
   responseSize?: number;
   fromServiceWorkerCache?: boolean;
   error?: unknown;
+  appId?: string;
 }
 
 export type FetchEntry = FetchLog;
@@ -69,13 +72,31 @@ if (typeof globalThis.fetch === 'function' && !(globalThis as any).__fetchProxyI
         : input instanceof URL
         ? input.toString()
         : (input as Request).url;
+    const requestSize = init?.body ? bodySize(init.body) : undefined;
+    const appId = performanceBudgetManager.getActiveApp();
     const record: FetchLog = {
       id,
       url,
       method,
       startTime: now(),
-      requestSize: init?.body ? bodySize(init.body) : undefined,
+      requestSize,
+      appId,
     };
+
+    if (requestSize && requestSize > 0) {
+      const allowUpload = performanceBudgetManager.shouldAllow(
+        appId,
+        { mb: requestSize / (1024 * 1024) },
+        { type: 'network upload', description: `${method} ${url}` },
+      );
+      if (!allowUpload) {
+        record.error = new Error('Network upload blocked by performance budget');
+        record.endTime = now();
+        record.duration = record.endTime - record.startTime;
+        throw record.error;
+      }
+    }
+
     active.set(id, record);
     notify('start', record);
 
@@ -91,32 +112,40 @@ if (typeof globalThis.fetch === 'function' && !(globalThis as any).__fetchProxyI
         response.headers.get('sw-cache');
       record.fromServiceWorkerCache = !!swHeader && /hit/i.test(swHeader);
 
-      const finalize = (size?: number) => {
-        if (typeof size === 'number') record.responseSize = size;
-        active.delete(id);
-        notify('end', record);
-      };
-
+      let responseSize: number | undefined;
       const contentLength = response.headers.get('content-length');
       if (contentLength) {
-        finalize(Number(contentLength));
+        const parsed = Number(contentLength);
+        if (!Number.isNaN(parsed)) {
+          responseSize = parsed;
+        }
       } else if (
         typeof (response as any).clone === 'function' &&
         typeof (response as any).arrayBuffer === 'function'
       ) {
         try {
-          response
-            .clone()
-            .arrayBuffer()
-            .then((buf) => finalize(buf.byteLength))
-            .catch(() => finalize());
+          const clone = response.clone();
+          const buf = await clone.arrayBuffer();
+          responseSize = buf.byteLength;
         } catch {
-          finalize();
+          responseSize = undefined;
         }
-      } else {
-        finalize();
       }
-
+      if (typeof responseSize === 'number') {
+        record.responseSize = responseSize;
+      }
+      active.delete(id);
+      const allowed = performanceBudgetManager.reportNetworkUsage(appId, {
+        responseBytes: responseSize,
+        requestBytes: requestSize,
+        duration: record.duration,
+        description: `${method} ${url}`,
+      });
+      if (!allowed) {
+        record.error = new Error('Network response blocked by performance budget');
+        throw record.error;
+      }
+      notify('end', record);
       return response;
     } catch (err) {
       const end = now();

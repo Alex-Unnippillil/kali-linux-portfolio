@@ -8,6 +8,7 @@ import FlowGraph from '../../../apps/wireshark/components/FlowGraph';
 import FilterHelper from '../../../apps/wireshark/components/FilterHelper';
 import ColorRuleEditor from '../../../apps/wireshark/components/ColorRuleEditor';
 import { parsePcap } from '../../../utils/pcap';
+import { performanceBudgetManager } from '../../../utils/performanceBudgetManager';
 
 const toHex = (bytes) =>
   Array.from(bytes, (b, i) =>
@@ -128,8 +129,34 @@ const WiresharkApp = ({ initialPackets = [] }) => {
 
   const handleFile = async (file) => {
     try {
+      const uploadAllowed = performanceBudgetManager.shouldAllow(
+        'wireshark',
+        { mb: file.size / (1024 * 1024) },
+        {
+          type: 'pcap import',
+          description: file.name,
+          estimatedImpact: 'Large capture files can slow packet analysis and visualisations.',
+        },
+      );
+      if (!uploadAllowed) {
+        setError('Import cancelled by performance budget');
+        return;
+      }
       const buffer = await file.arrayBuffer();
       const parsed = parsePcap(buffer);
+      const rowsAllowed = performanceBudgetManager.shouldAllow(
+        'wireshark',
+        { rows: parsed.length },
+        {
+          type: 'pcap import',
+          description: `${file.name} (${parsed.length} packets)`,
+          estimatedImpact: 'Rendering very large packet tables may impact scrolling performance.',
+        },
+      );
+      if (!rowsAllowed) {
+        setError('Import cancelled by performance budget');
+        return;
+      }
       setPackets(parsed);
       setTimeline(parsed);
       setError('');
@@ -289,9 +316,12 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           type="file"
           accept=".keys,.txt,.log"
           onChange={handleTLSKeyUpload}
-          aria-label="TLS key file"
           className="px-2 py-1 bg-gray-800 rounded text-white"
+          aria-labelledby="wireshark-tls-key-label"
         />
+        <span id="wireshark-tls-key-label" className="sr-only">
+          TLS key file
+        </span>
         <FilterHelper value={filter} onChange={handleFilterChange} />
         <input
           value={bpf}
@@ -301,13 +331,15 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           aria-label="BPF filter"
           className="px-2 py-1 bg-gray-800 rounded text-white"
         />
+        {/* eslint-disable jsx-a11y/control-has-associated-label */}
         <datalist id="bpf-suggestions">
-          <option value="tcp" />
-          <option value="udp" />
-          <option value="icmp" />
-          <option value="port 80" />
-          <option value="host 10.0.0.1" />
+          <option value="tcp" label="tcp" />
+          <option value="udp" label="udp" />
+          <option value="icmp" label="icmp" />
+          <option value="port 80" label="port 80" />
+          <option value="host 10.0.0.1" label="host 10.0.0.1" />
         </datalist>
+        {/* eslint-enable jsx-a11y/control-has-associated-label */}
         <a
           href="https://www.wireshark.org/docs/dfref/"
           target="_blank"

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { performanceBudgetManager } from '../../utils/performanceBudgetManager';
 
 // Helper to convert bytes to MAC address string
 const macToString = (bytes) =>
@@ -140,11 +141,35 @@ const KismetApp = ({ onNetworkDiscovered }) => {
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const allowUpload = performanceBudgetManager.shouldAllow(
+      'kismet',
+      { mb: file.size / (1024 * 1024) },
+      {
+        type: 'pcap import',
+        description: file.name,
+        estimatedImpact: 'Large wireless captures may affect channel and timeline charts.',
+      },
+    );
+    if (!allowUpload) {
+      return;
+    }
     const buffer = await file.arrayBuffer();
     const { networks, channelCounts, timeCounts } = parsePcap(
       buffer,
       onNetworkDiscovered,
     );
+    const allowRows = performanceBudgetManager.shouldAllow(
+      'kismet',
+      { rows: networks.length },
+      {
+        type: 'pcap import',
+        description: `${file.name} (${networks.length} networks)`,
+        estimatedImpact: 'Visualising many networks may slow down rendering.',
+      },
+    );
+    if (!allowRows) {
+      return;
+    }
     setNetworks(networks);
     setChannels(channelCounts);
     setTimes(timeCounts);
