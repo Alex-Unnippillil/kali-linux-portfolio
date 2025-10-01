@@ -1,26 +1,47 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import FilterEditor from './components/FilterEditor';
 import LogPane, { LogEntry } from './components/LogPane';
 import ArpDiagram from './components/ArpDiagram';
+import {
+  createLogGenerator,
+  DEFAULT_LOG_SEED,
+  FakeLogEntry,
+  formatLogEntry,
+} from '@/utils/faker/logs';
 
 const MODES = ['Unified', 'Sniff', 'ARP'];
+const INITIAL_LOG_COUNT = 6;
+
+const toLogEntry = (entry: FakeLogEntry): LogEntry => ({
+  id: entry.id,
+  level: entry.level,
+  message: formatLogEntry(entry),
+});
 
 export default function EttercapPage() {
   const [mode, setMode] = useState('Unified');
   const [started, setStarted] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const generatorRef = useRef<() => FakeLogEntry>(
+    createLogGenerator({ seed: DEFAULT_LOG_SEED })
+  );
 
   useEffect(() => {
     if (!started) return;
-    const id = setInterval(() => {
-      const levels: LogEntry['level'][] = ['info', 'warn', 'error'];
-      const level = levels[Math.floor(Math.random() * levels.length)];
-      const message = `Sample ${level} message ${new Date().toLocaleTimeString()}`;
-      setLogs((l) => [...l, { id: Date.now(), level, message }]);
+    const generator = generatorRef.current;
+    setLogs(() => {
+      const initial: LogEntry[] = [];
+      for (let i = 0; i < INITIAL_LOG_COUNT; i += 1) {
+        initial.push(toLogEntry(generator()));
+      }
+      return initial;
+    });
+    const id = window.setInterval(() => {
+      setLogs((l) => [...l, toLogEntry(generator())]);
     }, 2000);
-    return () => clearInterval(id);
+    return () => window.clearInterval(id);
   }, [started]);
 
   return (
