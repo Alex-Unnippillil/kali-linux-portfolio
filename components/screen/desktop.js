@@ -1514,6 +1514,7 @@ export class Desktop extends Component {
 
         // if app is already open, focus it instead of spawning a new window
         if (this.state.closed_windows[objId] === false) {
+            addRecentApp(objId);
             // if it's minimised, restore its last position
             if (this.state.minimized_windows[objId]) {
                 this.focus(objId);
