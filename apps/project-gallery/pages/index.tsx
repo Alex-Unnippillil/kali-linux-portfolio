@@ -3,6 +3,12 @@
 import { useRouter } from 'next/router';
 import type { TouchEvent } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  finalizeNormalized,
+  matchesSearchQuery,
+  normalizeForSearch,
+  transliterateBulk,
+} from '../../../utils/search/transliterate';
 import usePersistentState from '../../../hooks/usePersistentState';
 import FilterChip from '../components/FilterChip';
 
@@ -312,6 +318,9 @@ function ProjectCard({
 
 export default function ProjectGalleryPage() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [normalizedProjects, setNormalizedProjects] = useState<
+    Record<number, { title: string; description: string }>
+  >({});
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -332,6 +341,47 @@ export default function ProjectGalleryPage() {
       .catch(() => setProjects([]))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!projects.length) {
+      setNormalizedProjects({});
+      return;
+    }
+    let cancelled = false;
+    const titles = projects.map((project) => project.title);
+    const descriptions = projects.map((project) => project.description);
+    Promise.all([transliterateBulk(titles), transliterateBulk(descriptions)])
+      .then(([titleResults, descriptionResults]) => {
+        if (cancelled) return;
+        const lookup: Record<number, { title: string; description: string }> = {};
+        projects.forEach((project, index) => {
+          const titleResult = titleResults[index];
+          const descriptionResult = descriptionResults[index];
+          lookup[project.id] = {
+            title: titleResult
+              ? finalizeNormalized(titleResult)
+              : normalizeForSearch(project.title),
+            description: descriptionResult
+              ? finalizeNormalized(descriptionResult)
+              : normalizeForSearch(project.description),
+          };
+        });
+        setNormalizedProjects(lookup);
+      })
+      .catch(() => {
+        const fallback: Record<number, { title: string; description: string }> = {};
+        projects.forEach((project) => {
+          fallback[project.id] = {
+            title: normalizeForSearch(project.title),
+            description: normalizeForSearch(project.description),
+          };
+        });
+        setNormalizedProjects(fallback);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projects]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -397,11 +447,24 @@ export default function ProjectGalleryPage() {
           (!type || p.type === type) &&
           (!tags.length || tags.every((t) => p.tags.includes(t))) &&
           (!search ||
-            p.title.toLowerCase().includes(search.toLowerCase()) ||
-            p.description.toLowerCase().includes(search.toLowerCase())) &&
+            matchesSearchQuery(search, p.title, normalizedProjects[p.id]?.title) ||
+            matchesSearchQuery(
+              search,
+              p.description,
+              normalizedProjects[p.id]?.description,
+            )) &&
           (!demoOnly || Boolean(p.demo))
       ),
-    [projects, tech, year, type, tags, search, demoOnly]
+    [
+      projects,
+      tech,
+      year,
+      type,
+      tags,
+      search,
+      demoOnly,
+      normalizedProjects,
+    ]
   );
 
   const handleOpen = (project: Project) => {

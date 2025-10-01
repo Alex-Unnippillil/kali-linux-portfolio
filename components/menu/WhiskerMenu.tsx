@@ -4,6 +4,12 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import Image from 'next/image';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import {
+  finalizeNormalized,
+  matchesSearchQuery,
+  normalizeForSearch,
+  transliterateBulk,
+} from '../../utils/search/transliterate';
 
 type AppMeta = {
   id: string;
@@ -147,6 +153,7 @@ const WhiskerMenu: React.FC = () => {
 
   const [query, setQuery] = useState('');
   const [recentIds, setRecentIds] = useState<string[]>([]);
+  const [normalizedTitles, setNormalizedTitles] = useState<Record<string, string>>({});
   const [highlight, setHighlight] = useState(0);
   const [categoryHighlight, setCategoryHighlight] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -157,6 +164,32 @@ const WhiskerMenu: React.FC = () => {
 
 
   const allApps: AppMeta[] = apps as any;
+
+  useEffect(() => {
+    let cancelled = false;
+    const titles = allApps.map(app => app.title);
+    transliterateBulk(titles)
+      .then(results => {
+        if (cancelled) return;
+        const lookup: Record<string, string> = {};
+        results.forEach((value, index) => {
+          const app = allApps[index];
+          if (!app) return;
+          lookup[app.id] = finalizeNormalized(value);
+        });
+        setNormalizedTitles(lookup);
+      })
+      .catch(() => {
+        const fallback: Record<string, string> = {};
+        allApps.forEach(app => {
+          fallback[app.id] = normalizeForSearch(app.title);
+        });
+        setNormalizedTitles(fallback);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [allApps]);
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
   useEffect(() => {
     setRecentIds(readRecentAppIds());
@@ -235,11 +268,12 @@ const WhiskerMenu: React.FC = () => {
   const currentApps = useMemo(() => {
     let list = currentCategory?.apps ?? [];
     if (query) {
-      const q = query.toLowerCase();
-      list = list.filter(a => a.title.toLowerCase().includes(q));
+      list = list.filter(app =>
+        matchesSearchQuery(query, app.title, normalizedTitles[app.id]),
+      );
     }
     return list;
-  }, [currentCategory, query]);
+  }, [currentCategory, normalizedTitles, query]);
 
   useEffect(() => {
     const storedCategory = safeLocalStorage?.getItem(CATEGORY_STORAGE_KEY);
