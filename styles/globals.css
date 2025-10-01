@@ -75,6 +75,25 @@ html[data-theme='matrix'] {
 
 }
 
+@keyframes shell-taskbar-progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(-20%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+.shell-taskbar-progress-indeterminate {
+  width: 40%;
+  min-width: 2rem;
+  animation: shell-taskbar-progress-indeterminate 1.2s ease-in-out infinite;
+  will-change: transform;
+}
+
 ::selection {
   background: color-mix(in srgb, var(--color-primary) 65%, var(--kali-bg));
   color: var(--kali-text);
