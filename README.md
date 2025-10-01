@@ -467,6 +467,39 @@ play/pause and track controls include keyboard hotkeys.
 
 ---
 
+## Pane Snapshot Recovery
+
+Interactive panes can opt into crash recovery by recording serializable snapshots of their state. The error boundaries under `app/error.tsx` and `app/global-error.tsx` surface two actions when a pane throws:
+
+1. **Reload pane / desktop** — calls `reset()` to retry rendering with a clean slate.
+2. **Restore snapshot** — rehydrates the most recent snapshot captured for that pane and then reloads it.
+
+Use the [`usePaneSnapshot`](./hooks/usePaneSnapshot.ts) hook inside panes that manage form inputs or other transient state:
+
+```tsx
+const snapshot = useCallback(() => ({ command, buffer }), [command, buffer]);
+
+usePaneSnapshot({
+  paneId: 'terminal',
+  getSnapshot: snapshot,
+  applySnapshot: (restored) => {
+    setCommand(restored.command);
+    setBuffer(restored.buffer);
+  },
+});
+```
+
+- `paneId` should match the window/app identifier (for desktop apps this is the same id used in `apps.config.js`).
+- `getSnapshot` must return a JSON-serializable object describing the pane state before the next render. Wrap it in `useCallback` so the hook only records snapshots when the tracked values change.
+- `applySnapshot` is optional but recommended; it hydrates restored data after the user selects “Restore snapshot”.
+- `clearOnUnmount` defaults to `false`. Set it to `true` for panes that should drop their snapshot when they close without errors.
+
+For event-driven updates (e.g., before calling `setState` inside an `onChange` handler) you can also call `capturePaneSnapshot(paneId, data)` from [`utils/windowLayout.js`](./utils/windowLayout.js) to synchronously persist the latest values.
+
+When a pane successfully re-renders, the hook clears the consumed snapshot so the error boundary won’t offer stale restore options.
+
+---
+
 ## Adding a New App
 
 1. Create your component under `components/apps/my-app/index.tsx`.
