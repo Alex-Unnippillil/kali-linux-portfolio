@@ -11,6 +11,11 @@ import {
   NotificationPriority,
   classifyNotification,
 } from '../../utils/notifications/ruleEngine';
+import {
+  NotificationEventType,
+  subscribeEvent,
+  SystemEventChannel,
+} from '../../utils/pubsub';
 
 export type {
   ClassificationResult,
@@ -173,6 +178,29 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
       else nav.clearAppBadge?.().catch(() => {});
     }
   }, [unreadCount]);
+
+  useEffect(() => {
+    return subscribeEvent(SystemEventChannel.Notification, event => {
+      switch (event.type) {
+        case NotificationEventType.Push:
+          pushNotification(event.payload);
+          break;
+        case NotificationEventType.Dismiss: {
+          const { appId, id } = event.payload;
+          dismissNotification(appId, id);
+          break;
+        }
+        case NotificationEventType.Clear:
+          clearNotifications(event.payload.appId);
+          break;
+        case NotificationEventType.MarkAllRead:
+          markAllRead(event.payload.appId);
+          break;
+        default:
+          break;
+      }
+    });
+  }, [clearNotifications, dismissNotification, markAllRead, pushNotification]);
 
   return (
     <NotificationsContext.Provider
