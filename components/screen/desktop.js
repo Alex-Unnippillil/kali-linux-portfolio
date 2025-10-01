@@ -838,6 +838,12 @@ export class Desktop extends Component {
         this.setupGestureListeners();
     }
 
+    openExtensionDiagnostics = () => {
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('extensions:diagnostics:open'));
+        }
+    };
+
     componentDidUpdate(_prevProps, prevState) {
         if (
             prevState.activeWorkspace !== this.state.activeWorkspace ||
@@ -1808,6 +1814,7 @@ export class Desktop extends Component {
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    openExtensionDiagnostics={this.openExtensionDiagnostics}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu

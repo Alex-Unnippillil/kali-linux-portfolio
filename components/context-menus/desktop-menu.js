@@ -21,6 +21,14 @@ function DesktopMenu(props) {
         props.openApp("settings");
     }
 
+    const openDiagnostics = () => {
+        if (typeof props.openExtensionDiagnostics === 'function') {
+            props.openExtensionDiagnostics();
+        } else if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('extensions:diagnostics:open'));
+        }
+    }
+
     const checkFullScreen = () => {
         if (document.fullscreenElement) {
             setIsFullScreen(true)
@@ -127,6 +135,16 @@ function DesktopMenu(props) {
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
                 <span className="ml-5">Clear Session</span>
+            </button>
+            <Devider />
+            <button
+                onClick={openDiagnostics}
+                type="button"
+                role="menuitem"
+                aria-label="Extension Diagnostics"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5">Extension Diagnostics</span>
             </button>
         </div>
     )
