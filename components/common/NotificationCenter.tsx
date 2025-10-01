@@ -3,6 +3,7 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import {
@@ -11,6 +12,8 @@ import {
   NotificationPriority,
   classifyNotification,
 } from '../../utils/notifications/ruleEngine';
+import usePersistentState from '../../hooks/usePersistentState';
+import Toast from '../ui/Toast';
 
 export type {
   ClassificationResult,
@@ -47,6 +50,9 @@ interface NotificationsContextValue {
   dismissNotification: (appId: string, id: string) => void;
   clearNotifications: (appId?: string) => void;
   markAllRead: (appId?: string) => void;
+  isDoNotDisturb: boolean;
+  setDoNotDisturb: (value: boolean) => void;
+  toggleDoNotDisturb: () => void;
 }
 
 export const NotificationsContext = createContext<NotificationsContextValue | null>(null);
@@ -64,6 +70,42 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
   const [notificationsByApp, setNotificationsByApp] = useState<
     Record<string, AppNotification[]>
   >({});
+  const [doNotDisturb, setDoNotDisturbState] = usePersistentState<boolean>(
+    'qs-dnd',
+    false,
+    (value): value is boolean => typeof value === 'boolean',
+  );
+  const dndRef = useRef(doNotDisturb);
+  const [toastQueue, setToastQueue] = useState<AppNotification[]>([]);
+  const [activeToast, setActiveToast] = useState<AppNotification | null>(null);
+
+  useEffect(() => {
+    dndRef.current = doNotDisturb;
+  }, [doNotDisturb]);
+
+  const setDoNotDisturb = useCallback((value: boolean) => {
+    setDoNotDisturbState(value);
+  }, [setDoNotDisturbState]);
+
+  const toggleDoNotDisturb = useCallback(() => {
+    setDoNotDisturbState(prev => !prev);
+  }, [setDoNotDisturbState]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(
+      new CustomEvent('notification-dnd-change', {
+        detail: { enabled: doNotDisturb },
+      }),
+    );
+  }, [doNotDisturb]);
+
+  useEffect(() => {
+    if (doNotDisturb) {
+      setToastQueue([]);
+      setActiveToast(null);
+    }
+  }, [doNotDisturb]);
 
   const pushNotification = useCallback((input: PushNotificationInput) => {
     const id = createId();
@@ -75,25 +117,30 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
       priority: input.priority,
       hints: input.hints,
     });
+    const nextNotification: AppNotification = {
+      id,
+      appId: input.appId,
+      title: input.title,
+      body: input.body,
+      timestamp,
+      read: false,
+      priority: classification.priority,
+      hints: input.hints,
+      classification,
+    };
+
     setNotificationsByApp(prev => {
       const list = prev[input.appId] ?? [];
-      const nextNotification: AppNotification = {
-        id,
-        appId: input.appId,
-        title: input.title,
-        body: input.body,
-        timestamp,
-        read: false,
-        priority: classification.priority,
-        hints: input.hints,
-        classification,
-      };
 
       return {
         ...prev,
         [input.appId]: [nextNotification, ...list],
       };
     });
+
+    if (!dndRef.current) {
+      setToastQueue(prev => [...prev, nextNotification]);
+    }
 
     return id;
   }, []);
@@ -167,6 +214,24 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
   );
 
   useEffect(() => {
+    if (doNotDisturb) return;
+    if (activeToast) return;
+    if (toastQueue.length === 0) return;
+
+    setActiveToast(toastQueue[0]);
+    setToastQueue(prev => prev.slice(1));
+  }, [activeToast, toastQueue, doNotDisturb]);
+
+  const handleToastClose = useCallback(() => {
+    setActiveToast(null);
+  }, []);
+
+  const handleToastAction = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent('notification-center-open-request'));
+  }, []);
+
+  useEffect(() => {
     const nav: any = navigator;
     if (nav && nav.setAppBadge) {
       if (unreadCount > 0) nav.setAppBadge(unreadCount).catch(() => {});
@@ -184,9 +249,26 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
         dismissNotification,
         clearNotifications,
         markAllRead,
+        isDoNotDisturb: doNotDisturb,
+        setDoNotDisturb,
+        toggleDoNotDisturb,
       }}
     >
       {children}
+      {!doNotDisturb && activeToast && (
+        <Toast
+          key={activeToast.id}
+          message={`${activeToast.appId}: ${activeToast.title}${
+            activeToast.body ? ` — ${activeToast.body}` : ''
+          }`}
+          actionLabel="View"
+          onAction={() => {
+            handleToastAction();
+            handleToastClose();
+          }}
+          onClose={handleToastClose}
+        />
+      )}
     </NotificationsContext.Provider>
   );
 };

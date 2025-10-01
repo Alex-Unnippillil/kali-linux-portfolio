@@ -78,6 +78,7 @@ const NotificationBell: React.FC = () => {
     unreadCount,
     clearNotifications,
     markAllRead,
+    isDoNotDisturb,
   } = useNotifications();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -188,6 +189,17 @@ const NotificationBell: React.FC = () => {
     }
   }, [isOpen, markAllRead, notifications]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handleOpenRequest = () => {
+      setIsOpen(true);
+    };
+    window.addEventListener('notification-center-open-request', handleOpenRequest);
+    return () => {
+      window.removeEventListener('notification-center-open-request', handleOpenRequest);
+    };
+  }, []);
+
   const timeFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(undefined, {
@@ -238,7 +250,11 @@ const NotificationBell: React.FC = () => {
       <button
         type="button"
         ref={buttonRef}
-        aria-label="Open notifications"
+        aria-label={
+          isDoNotDisturb
+            ? 'Open notifications (Do Not Disturb enabled)'
+            : 'Open notifications'
+        }
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-controls={panelId}
@@ -252,9 +268,23 @@ const NotificationBell: React.FC = () => {
           viewBox="0 0 20 20"
           fill="currentColor"
         >
-          <path d="M10 2a4 4 0 00-4 4v1.09c0 .471-.158.93-.45 1.3L4.3 10.2A1 1 0 005 11.8h10a1 1 0 00.7-1.6l-1.25-1.81a2 2 0 01-.45-1.3V6a4 4 0 00-4-4z" />
-          <path d="M7 12a3 3 0 006 0H7z" />
+          {isDoNotDisturb ? (
+            <path d="M4 8c0-.26.017-.517.049-.77l7.722 7.723a33.56 33.56 0 0 1-3.722-.01 2 2 0 0 0 3.862.15l1.134 1.134a3.5 3.5 0 0 1-6.53-1.409 32.91 32.91 0 0 1-3.257-.508.75.75 0 0 1-.515-1.076A11.448 11.448 0 0 0 4 8ZM17.266 13.9a.756.756 0 0 1-.068.116L6.389 3.207A6 6 0 0 1 16 8c.001 1.887.455 3.665 1.258 5.234a.75.75 0 0 1 .01.666ZM3.28 2.22a.75.75 0 0 0-1.06 1.06l14.5 14.5a.75.75 0 1 0 1.06-1.06L3.28 2.22Z" />
+          ) : (
+            <>
+              <path d="M10 2a4 4 0 00-4 4v1.09c0 .471-.158.93-.45 1.3L4.3 10.2A1 1 0 005 11.8h10a1 1 0 00.7-1.6l-1.25-1.81a2 2 0 01-.45-1.3V6a4 4 0 00-4-4z" />
+              <path d="M7 12a3 3 0 006 0H7z" />
+            </>
+          )}
         </svg>
+        {isDoNotDisturb && (
+          <span
+            aria-hidden="true"
+            className="absolute -top-1.5 -left-1.5 rounded-full border border-ubb-orange/60 bg-ubb-orange/10 px-1 text-[0.55rem] font-semibold uppercase tracking-wide text-ubb-orange"
+          >
+            DND
+          </span>
+        )}
         {unreadCount > 0 && (
           <span className="absolute -top-1.5 -right-1.5 min-w-[1.5rem] rounded-full bg-ubb-orange px-1 text-center text-[0.65rem] font-semibold leading-5 text-white">
             {unreadCount > 99 ? '99+' : unreadCount}
@@ -271,6 +301,23 @@ const NotificationBell: React.FC = () => {
           tabIndex={-1}
           className="absolute right-0 z-50 mt-2 w-72 max-h-96 overflow-hidden rounded-md border border-white/10 bg-ub-grey/95 text-ubt-grey shadow-xl backdrop-blur"
         >
+          {isDoNotDisturb && (
+            <div className="flex items-center gap-2 border-b border-white/10 bg-ubb-orange/10 px-4 py-2 text-xs font-medium text-ubb-orange">
+              <svg
+                aria-hidden="true"
+                focusable="false"
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              >
+                <circle cx="12" cy="12" r="9" />
+                <path d="M8 12h8" strokeLinecap="round" />
+              </svg>
+              <span>Do Not Disturb is on. Toasts stay muted.</span>
+            </div>
+          )}
           <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
             <h2 id={headingId} className="text-sm font-semibold text-white">
               Notifications

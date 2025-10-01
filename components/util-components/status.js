@@ -4,10 +4,12 @@ import { useSettings } from '../../hooks/useSettings';
 import VolumeControl from '../ui/VolumeControl';
 import NetworkIndicator from '../ui/NetworkIndicator';
 import BatteryIndicator from '../ui/BatteryIndicator';
+import useNotifications from "../../hooks/useNotifications";
 
 export default function Status() {
   const { allowNetwork } = useSettings();
   const [online, setOnline] = useState(true);
+  const { isDoNotDisturb } = useNotifications();
 
   useEffect(() => {
     const pingServer = async () => {
@@ -47,6 +49,24 @@ export default function Status() {
       />
       <VolumeControl className="mx-1.5" />
       <BatteryIndicator className="mx-1.5" />
+      {isDoNotDisturb && (
+        <span
+          role="img"
+          aria-label="Do Not Disturb enabled"
+          className="mx-1.5 text-ubb-orange"
+          title="Do Not Disturb enabled"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-4 w-4"
+          >
+            <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M8 12h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </span>
+      )}
       <span className="mx-1">
         <SmallArrow angle="down" className=" status-symbol" />
       </span>
