@@ -76,6 +76,7 @@ export class Desktop extends Component {
         }
 
         this.desktopRef = React.createRef();
+        this.folderNameInputRef = React.createRef();
         this.iconDragState = null;
         this.preventNextIconClick = false;
         this.savedIconPositions = {};
@@ -1724,8 +1725,14 @@ export class Desktop extends Component {
     showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }); };
 
     renderNameBar = () => {
-        const addFolder = () => {
-            let folder_name = document.getElementById("folder-name-input").value;
+        const handleSubmit = (event) => {
+            event.preventDefault();
+            const input = this.folderNameInputRef.current;
+            const folder_name = input?.value ?? "";
+            if (!folder_name.trim()) {
+                input?.focus();
+                return;
+            }
             this.addToDesktop(folder_name);
         };
 
@@ -1735,36 +1742,38 @@ export class Desktop extends Component {
 
         return (
             <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
-                <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
-                    <span>New folder name</span>
-                    <input
-                        className="outline-none mt-5 px-1 w-10/12  context-menu-bg border-2 border-blue-700 rounded py-0.5"
-                        id="folder-name-input"
-                        type="text"
-                        autoComplete="off"
-                        spellCheck="false"
-                        autoFocus={true}
-                        aria-label="Folder name"
-                    />
-                </div>
-                <div className="flex">
-                    <button
-                        type="button"
-                        onClick={addFolder}
-                        aria-label="Create folder"
-                        className="w-1/2 px-4 py-2 border border-gray-900 border-opacity-50 border-r-0 hover:bg-ub-warm-grey hover:bg-opacity-10 hover:border-opacity-50"
-                    >
-                        Create
-                    </button>
-                    <button
-                        type="button"
-                        onClick={removeCard}
-                        aria-label="Cancel folder creation"
-                        className="w-1/2 px-4 py-2 border border-gray-900 border-opacity-50 hover:bg-ub-warm-grey hover:bg-opacity-10 hover:border-opacity-50"
-                    >
-                        Cancel
-                    </button>
-                </div>
+                <form onSubmit={handleSubmit} className="flex flex-col">
+                    <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
+                        <label htmlFor="folder-name-input">New folder name</label>
+                        <input
+                            className="outline-none mt-5 px-1 w-10/12 context-menu-bg border-2 border-blue-700 rounded py-0.5"
+                            id="folder-name-input"
+                            type="text"
+                            autoComplete="off"
+                            spellCheck="false"
+                            autoFocus={true}
+                            aria-label="Folder name"
+                            ref={this.folderNameInputRef}
+                        />
+                    </div>
+                    <div className="flex">
+                        <button
+                            type="submit"
+                            aria-label="Create folder"
+                            className="w-1/2 px-4 py-2 border border-gray-900 border-opacity-50 border-r-0 hover:bg-ub-warm-grey hover:bg-opacity-10 hover:border-opacity-50"
+                        >
+                            Create
+                        </button>
+                        <button
+                            type="button"
+                            onClick={removeCard}
+                            aria-label="Cancel folder creation"
+                            className="w-1/2 px-4 py-2 border border-gray-900 border-opacity-50 hover:bg-ub-warm-grey hover:bg-opacity-10 hover:border-opacity-50"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </form>
             </div>
         );
     };
