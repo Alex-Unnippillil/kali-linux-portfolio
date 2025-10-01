@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
+import RunHistory from '../../common/RunHistory';
+import { addRunHistoryEntry } from '../../../utils/runHistory';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
 
@@ -79,6 +81,9 @@ const HydraApp = () => {
   const canvasRef = useRef(null);
   const [progress, setProgress] = useState(0);
   const [showSaved, setShowSaved] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [customTags, setCustomTags] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
 
   const LOCKOUT_THRESHOLD = 10;
   const BACKOFF_THRESHOLD = 5;
@@ -328,6 +333,42 @@ const HydraApp = () => {
     });
     setAnnounce('Hydra started');
     announceRef.current = Date.now();
+    const manualTags = customTags
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    const command = [
+      'hydra',
+      user?.name ? `-L ${user.name}` : '',
+      pass?.name ? `-P ${pass.name}` : '',
+      target ? `${service}://${target}` : service,
+    ]
+      .filter(Boolean)
+      .join(' ');
+    const tags = [
+      service,
+      user?.name ? `userlist:${user.name}` : 'userlist:inline',
+      pass?.name ? `passlist:${pass.name}` : 'passlist:inline',
+      ...manualTags,
+    ];
+    addRunHistoryEntry({
+      tool: 'hydra',
+      summary: `Hydra · ${target || 'unspecified target'}`,
+      command,
+      tags,
+      notes,
+      options: {
+        target,
+        service,
+        selectedUser,
+        selectedPass,
+        charset,
+        rule,
+        notes,
+        customTags: [...manualTags],
+      },
+    });
+    setShowHistory(true);
     try {
       if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
         const res = await fetch('/api/hydra', {
@@ -373,6 +414,25 @@ const HydraApp = () => {
     ].join('\n');
     setOutput(report);
     setAnnounce('Dry run complete');
+  };
+
+  const handleHistoryRestore = (entry) => {
+    const opts = entry.options || {};
+    if (typeof opts.target === 'string') setTarget(opts.target);
+    if (typeof opts.service === 'string') setService(opts.service);
+    if (typeof opts.selectedUser === 'string') setSelectedUser(opts.selectedUser);
+    if (typeof opts.selectedPass === 'string') setSelectedPass(opts.selectedPass);
+    if (typeof opts.charset === 'string') setCharset(opts.charset);
+    if (typeof opts.rule === 'string') setRule(opts.rule);
+    setNotes(opts.notes || '');
+    setCustomTags(
+      Array.isArray(opts.customTags) ? opts.customTags.join(', ') : ''
+    );
+    setShowHistory(true);
+    if (running) {
+      cancelHydra();
+    }
+    setTimeout(() => runHydra(), 0);
   };
 
   const handleSaveConfig = () => {
@@ -456,21 +516,29 @@ const HydraApp = () => {
           ))}
         </div>
         <div>
-          <label className="block mb-1">Target</label>
+          <label className="block mb-1" htmlFor="hydra-target">
+            Target
+          </label>
           <input
+            id="hydra-target"
             type="text"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="192.168.0.1"
+            aria-label="Hydra target"
           />
         </div>
         <div>
-          <label className="block mb-1">Service</label>
+          <label className="block mb-1" htmlFor="hydra-service">
+            Service
+          </label>
           <select
+            id="hydra-service"
             value={service}
             onChange={(e) => setService(e.target.value)}
             className="w-full p-2 rounded text-black"
+            aria-label="Hydra service"
           >
             {availableServices.map((s) => (
               <option key={s} value={s}>
@@ -480,11 +548,15 @@ const HydraApp = () => {
           </select>
         </div>
         <div>
-          <label className="block mb-1">User List</label>
+          <label className="block mb-1" htmlFor="hydra-user-list">
+            User List
+          </label>
           <select
+            id="hydra-user-list"
             value={selectedUser}
             onChange={(e) => setSelectedUser(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Hydra user list"
           >
             {userLists.map((l) => (
               <option key={l.name} value={l.name}>
@@ -500,6 +572,7 @@ const HydraApp = () => {
               addWordList(e.target.files[0], setUserLists, userLists)
             }
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Upload user wordlist"
           />
           <ul>
             {userLists.map((l) => (
@@ -516,11 +589,15 @@ const HydraApp = () => {
           </ul>
         </div>
         <div>
-          <label className="block mb-1">Password List</label>
+          <label className="block mb-1" htmlFor="hydra-pass-list">
+            Password List
+          </label>
           <select
+            id="hydra-pass-list"
             value={selectedPass}
             onChange={(e) => setSelectedPass(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Hydra password list"
           >
             {passLists.map((l) => (
               <option key={l.name} value={l.name}>
@@ -536,6 +613,7 @@ const HydraApp = () => {
               addWordList(e.target.files[0], setPassLists, passLists)
             }
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Upload password wordlist"
           />
           <ul>
             {passLists.map((l) => (
@@ -552,23 +630,31 @@ const HydraApp = () => {
           </ul>
         </div>
         <div>
-          <label className="block mb-1">Charset</label>
+          <label className="block mb-1" htmlFor="hydra-charset">
+            Charset
+          </label>
           <input
+            id="hydra-charset"
             type="text"
             value={charset}
             onChange={(e) => setCharset(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="abc123"
+            aria-label="Hydra charset"
           />
         </div>
         <div className="col-span-2">
-          <label className="block mb-1">Rule (min:max length)</label>
+          <label className="block mb-1" htmlFor="hydra-rule">
+            Rule (min:max length)
+          </label>
           <input
+            id="hydra-rule"
             type="text"
             value={rule}
             onChange={(e) => setRule(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="1:3"
+            aria-label="Hydra rule length"
           />
           <p className="mt-1 text-sm">
             Candidate space: {candidateSpace.toLocaleString()}
@@ -578,6 +664,7 @@ const HydraApp = () => {
             width="300"
             height="100"
             className="bg-gray-800 mt-2 w-full"
+            aria-label="Candidate distribution chart"
           ></canvas>
         </div>
         <div className="col-span-2 flex flex-wrap gap-1.5 mt-2">
@@ -635,6 +722,56 @@ const HydraApp = () => {
             </button>
           )}
         </div>
+      </div>
+
+      <div className="mt-4 bg-gray-800/40 rounded p-3 space-y-2">
+        <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wide">
+          Run notes & history
+        </h2>
+        <p className="text-xs text-gray-400">
+          Hydra saves a history entry automatically when a run begins. Add notes
+          and custom tags here before launching to keep the log organized.
+        </p>
+        <label className="block text-sm font-semibold" htmlFor="hydra-notes">
+          Notes
+        </label>
+        <textarea
+          id="hydra-notes"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Notes for the next run"
+          aria-label="Notes for the next run"
+          className="w-full h-20 bg-gray-900 border border-gray-700 rounded p-2 text-sm"
+        />
+        <label className="block text-sm font-semibold" htmlFor="hydra-tags">
+          Tags
+        </label>
+        <input
+          id="hydra-tags"
+          type="text"
+          value={customTags}
+          onChange={(e) => setCustomTags(e.target.value)}
+          placeholder="Tags (comma separated)"
+          aria-label="Tags for this run"
+          className="w-full bg-gray-900 border border-gray-700 rounded p-2 text-sm"
+        />
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setShowHistory((v) => !v)}
+            className="px-3 py-1 bg-gray-700 rounded text-sm focus:outline-none focus:ring-2 focus:ring-ub-yellow focus:ring-offset-2 focus:ring-offset-gray-900"
+          >
+            {showHistory ? 'Hide history' : 'Show history'}
+          </button>
+        </div>
+        {showHistory && (
+          <RunHistory
+            tools={['hydra']}
+            onRerun={{ hydra: handleHistoryRestore }}
+            className="mt-2"
+            emptyMessage="No Hydra runs logged yet."
+          />
+        )}
       </div>
 
       <Stepper
