@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import RunHistory from '../../common/RunHistory';
+import { addRunHistoryEntry } from '../../../utils/runHistory';
 import progressInfo from './progress.json';
 import StatsChart from '../../StatsChart';
 
@@ -176,6 +178,9 @@ function HashcatApp() {
   const [maskStats, setMaskStats] = useState({ count: 0, time: 0 });
   const showMask = ['3', '6', '7'].includes(attackMode);
   const [ruleSet, setRuleSet] = useState('none');
+  const [notes, setNotes] = useState('');
+  const [customTags, setCustomTags] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
   const rulePreview = (ruleSets[ruleSet] || []).slice(0, 10).join('\n');
   const workerRef = useRef(null);
   const frameRef = useRef(null);
@@ -230,6 +235,54 @@ function HashcatApp() {
   const startCracking = () => {
     if (isCracking) return;
     const expected = selected.output;
+    const manualTags = customTags
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    const attackLabel =
+      attackModes.find((m) => m.value === attackMode)?.label ||
+      attackModes[0].label;
+    const dictionary = wordlist
+      ? `${wordlist}.txt`
+      : wordlistUrl
+      ? wordlistUrl
+      : 'wordlist.txt';
+    const command = [
+      'hashcat',
+      '-m',
+      hashType,
+      '-a',
+      attackMode,
+      hashInput || 'hash.txt',
+      dictionary,
+      ...(showMask && mask ? [mask] : []),
+      ...(ruleSet !== 'none' ? [`-r ${ruleSet}.rule`] : []),
+    ].join(' ');
+    const tags = [
+      selected?.name || 'hashcat',
+      `mode:${attackLabel.toLowerCase().replace(/\s+/g, '-')}`,
+      ...manualTags,
+    ];
+    addRunHistoryEntry({
+      tool: 'hashcat',
+      summary: `Hashcat · ${selected?.name || hashType}`,
+      command,
+      tags,
+      notes,
+      options: {
+        hashType,
+        hashInput,
+        attackMode,
+        mask,
+        wordlistUrl,
+        wordlist,
+        pattern,
+        ruleSet,
+        notes,
+        customTags: [...manualTags],
+      },
+    });
+    setShowHistory(true);
     setIsCracking(true);
     setProgress(0);
     setResult('');
@@ -290,6 +343,29 @@ function HashcatApp() {
   useEffect(() => {
     return () => cancelCracking();
   }, []);
+
+  const handleHistoryRestore = (entry) => {
+    const opts = entry.options || {};
+    setHashType(typeof opts.hashType === 'string' ? opts.hashType : hashTypes[0].id);
+    setHashInput(typeof opts.hashInput === 'string' ? opts.hashInput : '');
+    setAttackMode(
+      typeof opts.attackMode === 'string' ? opts.attackMode : attackModes[0].value
+    );
+    setMask(typeof opts.mask === 'string' ? opts.mask : '');
+    setWordlistUrl(typeof opts.wordlistUrl === 'string' ? opts.wordlistUrl : '');
+    setWordlist(typeof opts.wordlist === 'string' ? opts.wordlist : '');
+    setPattern(typeof opts.pattern === 'string' ? opts.pattern : '');
+    setRuleSet(typeof opts.ruleSet === 'string' ? opts.ruleSet : 'none');
+    setNotes(opts.notes || '');
+    setCustomTags(
+      Array.isArray(opts.customTags) ? opts.customTags.join(', ') : ''
+    );
+    setShowHistory(true);
+    if (isCracking) {
+      cancelCracking();
+    }
+    setTimeout(() => startCracking(), 0);
+  };
 
   const selected = hashTypes.find((h) => h.id === hashType) || hashTypes[0];
   const filteredHashTypes = hashTypes.filter(
@@ -546,6 +622,56 @@ function HashcatApp() {
           </button>
         </div>
       </div>
+      <div className="mt-4 w-full max-w-md bg-gray-900 border border-gray-800 rounded p-3 space-y-2">
+        <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wide">
+          Run notes & history
+        </h2>
+        <p className="text-xs text-gray-400">
+          Each cracking session is logged when it starts. Add notes and tags to
+          label the run before launching.
+        </p>
+        <label className="block text-sm font-semibold" htmlFor="hashcat-notes">
+          Notes
+        </label>
+        <textarea
+          id="hashcat-notes"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Notes for this run"
+          aria-label="Notes for this run"
+          className="w-full h-20 bg-black border border-gray-800 rounded p-2 text-sm"
+        />
+        <label className="block text-sm font-semibold" htmlFor="hashcat-tags">
+          Tags
+        </label>
+        <input
+          id="hashcat-tags"
+          type="text"
+          value={customTags}
+          onChange={(e) => setCustomTags(e.target.value)}
+          placeholder="Tags (comma separated)"
+          aria-label="Tags for this run"
+          className="w-full bg-black border border-gray-800 rounded p-2 text-sm"
+        />
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setShowHistory((v) => !v)}
+            className="px-3 py-1 bg-gray-800 rounded text-sm focus:outline-none focus:ring-2 focus:ring-ub-yellow"
+          >
+            {showHistory ? 'Hide history' : 'Show history'}
+          </button>
+        </div>
+        {showHistory && (
+          <RunHistory
+            tools={['hashcat']}
+            onRerun={{ hashcat: handleHistoryRestore }}
+            className="mt-2"
+            emptyMessage="No Hashcat runs logged yet."
+          />
+        )}
+      </div>
+
       <div className="mt-4 w-full max-w-md">
         <div className="text-sm">Sample Output:</div>
         <pre className="bg-black p-2 text-xs overflow-auto">

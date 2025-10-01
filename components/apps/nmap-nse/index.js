@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
+import RunHistory from '../../common/RunHistory';
+import { addRunHistoryEntry } from '../../../utils/runHistory';
 import DiscoveryMap from './DiscoveryMap';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
@@ -85,6 +87,9 @@ const NmapNSEApp = () => {
   const [activeScript, setActiveScript] = useState(scripts[0].name);
   const [phaseStep, setPhaseStep] = useState(0);
   const [toast, setToast] = useState('');
+  const [notes, setNotes] = useState('');
+  const [customTags, setCustomTags] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
   const outputRef = useRef(null);
   const phases = ['prerule', 'hostrule', 'portrule'];
 
@@ -129,6 +134,62 @@ const NmapNSEApp = () => {
   } ${argsString ? `--script-args ${argsString}` : ''} ${target}`
     .replace(/\s+/g, ' ')
     .trim();
+
+  const manualTags = customTags
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+
+  const handleSaveRun = () => {
+    const scriptTags = selectedScripts.flatMap((name) => {
+      const meta = scripts.find((s) => s.name === name);
+      return meta?.tags || [];
+    });
+    const tags = [
+      ...scriptTags,
+      ...(portFlag ? [`ports:${portFlag}`] : []),
+      ...manualTags,
+    ];
+    addRunHistoryEntry({
+      tool: 'nmap',
+      summary: `Nmap · ${target || 'unspecified target'}`,
+      command,
+      tags,
+      notes,
+      options: {
+        target,
+        selectedScripts: [...selectedScripts],
+        portFlag,
+        scriptOptions: { ...scriptOptions },
+        notes,
+        customTags: manualTags,
+      },
+    });
+    setToast('Run saved to history');
+    setShowHistory(true);
+  };
+
+  const handleHistoryRestore = (entry) => {
+    const opts = entry.options || {};
+    if (typeof opts.target === 'string') setTarget(opts.target);
+    if (Array.isArray(opts.selectedScripts)) {
+      setSelectedScripts(opts.selectedScripts);
+    }
+    if (typeof opts.portFlag === 'string') {
+      setPortFlag(opts.portFlag);
+    } else if (!opts.portFlag) {
+      setPortFlag('');
+    }
+    if (opts.scriptOptions) {
+      setScriptOptions(opts.scriptOptions);
+    } else {
+      setScriptOptions({});
+    }
+    setNotes(opts.notes || '');
+    setCustomTags(Array.isArray(opts.customTags) ? opts.customTags.join(', ') : '');
+    setShowHistory(true);
+    setToast('Nmap options restored from history');
+  };
 
   const copyCommand = async () => {
     if (typeof window !== 'undefined') {
@@ -203,6 +264,7 @@ const NmapNSEApp = () => {
             id="target"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
+            aria-label="Scan target"
             className="w-full p-2 text-black"
           />
         </div>
@@ -215,6 +277,7 @@ const NmapNSEApp = () => {
             value={scriptQuery}
             onChange={(e) => setScriptQuery(e.target.value)}
             placeholder="Search scripts"
+            aria-label="Search scripts"
             className="w-full p-2 text-black mb-2"
           />
           <div className="max-h-64 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -225,6 +288,7 @@ const NmapNSEApp = () => {
                     type="checkbox"
                     checked={selectedScripts.includes(s.name)}
                     onChange={() => toggleScript(s.name)}
+                    aria-label={`Toggle script ${s.name}`}
                   />
                   <span className="font-mono">{s.name}</span>
                 </label>
@@ -248,6 +312,7 @@ const NmapNSEApp = () => {
                     }
                     placeholder="arg=value"
                     className="w-full p-1 border rounded text-black"
+                    aria-label={`Arguments for script ${s.name}`}
                   />
                 )}
               </div>
@@ -285,6 +350,55 @@ const NmapNSEApp = () => {
           >
             Copy Command
           </button>
+        </div>
+        <div className="mb-4 space-y-2">
+          <label className="block text-sm font-semibold" htmlFor="nmap-notes">
+            Notes
+          </label>
+          <textarea
+            id="nmap-notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Notes about this run"
+            aria-label="Notes about this run"
+            className="w-full h-20 p-2 text-black rounded"
+          />
+          <label className="block text-sm font-semibold" htmlFor="nmap-tags">
+            Tags
+          </label>
+          <input
+            id="nmap-tags"
+            type="text"
+            value={customTags}
+            onChange={(e) => setCustomTags(e.target.value)}
+            placeholder="Tags (comma separated)"
+            aria-label="Tags for this run"
+            className="w-full p-2 text-black rounded"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleSaveRun}
+              className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+            >
+              Save Run
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowHistory((v) => !v)}
+              className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+            >
+              {showHistory ? 'Hide History' : 'Show History'}
+            </button>
+          </div>
+          {showHistory && (
+            <RunHistory
+              tools={['nmap']}
+              onRerun={{ nmap: handleHistoryRestore }}
+              className="mt-2"
+              emptyMessage="No Nmap runs logged yet."
+            />
+          )}
         </div>
       </div>
       <div className="md:w-1/2 p-4 bg-black overflow-y-auto">
