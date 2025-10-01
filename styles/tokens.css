@@ -38,6 +38,11 @@
   --kali-panel-highlight: rgba(255, 255, 255, 0.05);
   --kali-terminal-green: #00ff00;
   --kali-terminal-text: #f5f5f5;
+  --resource-chart-label-color: #ffffff;
+  --resource-chart-cpu-stroke: #00ff00;
+  --resource-chart-mem-stroke: #ffd700;
+  --resource-chart-fps-stroke: #00ffff;
+  --resource-chart-net-stroke: #ff00ff;
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
@@ -104,6 +109,11 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --resource-chart-label-color: #ffffff;
+  --resource-chart-cpu-stroke: #ffff00;
+  --resource-chart-mem-stroke: #ff8800;
+  --resource-chart-fps-stroke: #00ffff;
+  --resource-chart-net-stroke: #ff00ff;
 }
 
 /* Dyslexia-friendly fonts */
