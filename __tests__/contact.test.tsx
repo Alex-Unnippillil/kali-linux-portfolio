@@ -40,4 +40,22 @@ describe('contact form', () => {
     );
     expect(result.success).toBe(true);
   });
+
+  it('normalizes spoofed characters before submit', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({ ok: true });
+    await processContactForm(
+      {
+        name: 'p\u0430ypal',
+        email: 'safe@example.com',
+        message: 'alert\u202E()',
+        honeypot: '',
+        csrfToken: 'csrf',
+        recaptchaToken: 'rc',
+      },
+      fetchMock
+    );
+    const payload = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(payload.name).toBe('paypal');
+    expect(payload.message).toBe('alert()');
+  });
 });
