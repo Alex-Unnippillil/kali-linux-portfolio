@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { syncGistContent } from '../../../utils/gistSync';
 
 interface PluginInfo { id: string; file: string; }
 
@@ -50,7 +51,18 @@ export default function PluginManager() {
   const install = async (plugin: PluginInfo) => {
     const res = await fetch(`/api/plugins/${plugin.file}`);
     const manifest: PluginManifest = await res.json();
-    const updated = { ...installed, [plugin.id]: manifest };
+    const resolved = await syncGistContent({
+      id: plugin.id,
+      incomingContent: JSON.stringify(manifest, null, 2),
+      metadata: { source: 'plugin-manager' },
+    });
+    let parsed = manifest;
+    try {
+      parsed = JSON.parse(resolved) as PluginManifest;
+    } catch {
+      // fall back to fetched manifest on parse error
+    }
+    const updated = { ...installed, [plugin.id]: parsed };
     setInstalled(updated);
     localStorage.setItem('installedPlugins', JSON.stringify(updated));
   };
