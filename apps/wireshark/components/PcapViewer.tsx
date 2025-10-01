@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
 import presets from '../filters/presets.json';
 import LayerView from './LayerView';
+import { rentUint8Array, releaseTypedArray } from '../../../utils/pools';
 
 
 interface PcapViewerProps {
@@ -21,6 +22,50 @@ const samples = [
   { label: 'HTTP', path: '/samples/wireshark/http.pcap' },
   { label: 'DNS', path: '/samples/wireshark/dns.pcap' },
 ];
+
+const perfEnabled =
+  typeof performance !== 'undefined' &&
+  typeof performance.mark === 'function' &&
+  typeof performance.measure === 'function';
+
+const perfCanClear =
+  typeof performance !== 'undefined' && typeof performance.clearMarks === 'function';
+
+const perfMark = (name: string) => {
+  if (!perfEnabled) return;
+  try {
+    performance.mark(name);
+  } catch {
+    // ignore unsupported marks
+  }
+};
+
+const perfMeasure = (name: string, start: string, end: string) => {
+  if (!perfEnabled) return;
+  try {
+    performance.measure(name, start, end);
+  } catch {
+    // ignore duplicate marks
+  }
+  if (perfCanClear) {
+    try {
+      performance.clearMarks(start);
+      performance.clearMarks(end);
+    } catch {
+      // swallow
+    }
+  }
+};
+
+const copyPacketData = (buf: ArrayBuffer, offset: number, length: number) => {
+  const slice = rentUint8Array(length);
+  slice.set(new Uint8Array(buf, offset, length));
+  return slice;
+};
+
+const releasePacketBuffers = (packets: Packet[]) => {
+  packets.forEach((pkt) => releaseTypedArray(pkt.data));
+};
 
 // Convert bytes to hex dump string
 const toHex = (bytes: Uint8Array) =>
@@ -70,6 +115,9 @@ const parseEthernetIpv4 = (data: Uint8Array) => {
 
 // Parse classic pcap format
 const parsePcap = (buf: ArrayBuffer): Packet[] => {
+  const start = 'wireshark:pcap:classic:start';
+  const end = 'wireshark:pcap:classic:end';
+  perfMark(start);
   const view = new DataView(buf);
   const magic = view.getUint32(0, false);
   let little: boolean;
@@ -85,7 +133,7 @@ const parsePcap = (buf: ArrayBuffer): Packet[] => {
     const origLen = view.getUint32(offset + 12, little);
     offset += 16;
     if (offset + capLen > view.byteLength) break;
-    const data = new Uint8Array(buf.slice(offset, offset + capLen));
+    const data = copyPacketData(buf, offset, capLen);
     const meta: any = parseEthernetIpv4(data);
     packets.push({
       timestamp: `${tsSec}.${tsUsec.toString().padStart(6, '0')}`,
@@ -99,11 +147,16 @@ const parsePcap = (buf: ArrayBuffer): Packet[] => {
     });
     offset += capLen;
   }
+  perfMark(end);
+  perfMeasure('wireshark:pcap:classic', start, end);
   return packets;
 };
 
 // Parse PCAP-NG files including section and interface blocks
 const parsePcapNg = (buf: ArrayBuffer): Packet[] => {
+  const start = 'wireshark:pcapng:start';
+  const end = 'wireshark:pcapng:end';
+  perfMark(start);
   const view = new DataView(buf);
   let offset = 0;
   let little = true;
@@ -141,7 +194,7 @@ const parsePcapNg = (buf: ArrayBuffer): Packet[] => {
       const tsLow = view.getUint32(offset + 16, little);
       const capLen = view.getUint32(offset + 20, little);
       const dataStart = offset + 28;
-      const data = new Uint8Array(buf.slice(dataStart, dataStart + capLen));
+      const data = copyPacketData(buf, dataStart, capLen);
       const meta: any = parseEthernetIpv4(data);
       const res = ifaces[ifaceId]?.tsres ?? 1e-6;
       const timestamp = ((tsHigh * 2 ** 32 + tsLow) * res).toFixed(6);
@@ -159,6 +212,9 @@ const parsePcapNg = (buf: ArrayBuffer): Packet[] => {
 
     offset += blockLen;
   }
+
+  perfMark(end);
+  perfMeasure('wireshark:pcap:ng', start, end);
 
   return packets;
 };
@@ -247,6 +303,8 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
   ]);
   const [dragCol, setDragCol] = useState<string | null>(null);
 
+  const packetsRef = useRef<Packet[]>([]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'c') {
@@ -256,6 +314,16 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [filter]);
+
+  useEffect(() => {
+    packetsRef.current = packets;
+  }, [packets]);
+
+  useEffect(() => {
+    return () => {
+      releasePacketBuffers(packetsRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -277,7 +345,10 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     if (!file) return;
     const buf = await file.arrayBuffer();
     const pkts = await parseWithWasm(buf);
-    setPackets(pkts);
+    setPackets((prev) => {
+      releasePacketBuffers(prev);
+      return pkts;
+    });
     setSelected(null);
   };
 
@@ -285,7 +356,10 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     const res = await fetch(path);
     const buf = await res.arrayBuffer();
     const pkts = await parseWithWasm(buf);
-    setPackets(pkts);
+    setPackets((prev) => {
+      releasePacketBuffers(prev);
+      return pkts;
+    });
     setSelected(null);
   };
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { rentUint8Array, releaseTypedArray } from '../../../utils/pools';
 
 interface ParsedData {
   sections: string[];
@@ -94,20 +95,25 @@ export default function ImportAnnotate() {
     const file = e.target.files?.[0];
     if (!file) return;
     const buf = await file.arrayBuffer();
-    const bytes = new Uint8Array(buf);
-    let parsed: ParsedData = { sections: [], strings: [] };
-    if (bytes[0] === 0x4d && bytes[1] === 0x5a) {
-      parsed = parsePE(bytes);
-    } else if (
-      bytes[0] === 0x7f &&
-      bytes[1] === 0x45 &&
-      bytes[2] === 0x4c &&
-      bytes[3] === 0x46
-    ) {
-      parsed = parseELF(bytes);
+    const bytes = rentUint8Array(buf.byteLength);
+    try {
+      bytes.set(new Uint8Array(buf));
+      let parsed: ParsedData = { sections: [], strings: [] };
+      if (bytes[0] === 0x4d && bytes[1] === 0x5a) {
+        parsed = parsePE(bytes);
+      } else if (
+        bytes[0] === 0x7f &&
+        bytes[1] === 0x45 &&
+        bytes[2] === 0x4c &&
+        bytes[3] === 0x46
+      ) {
+        parsed = parseELF(bytes);
+      }
+      setSections(parsed.sections);
+      setStrings(parsed.strings);
+    } finally {
+      releaseTypedArray(bytes);
     }
-    setSections(parsed.sections);
-    setStrings(parsed.strings);
   };
 
   return (
