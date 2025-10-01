@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -13,6 +13,15 @@ import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
 import KaliWallpaper from "../../components/util-components/kali-wallpaper";
+import ComplianceChecklist from "./components/ComplianceChecklist";
+import {
+  clearComplianceChecklist,
+  getDefaultComplianceChecklist,
+  loadComplianceChecklist,
+  deserializeComplianceChecklist,
+  saveComplianceChecklist,
+  type ComplianceChecklistState,
+} from "../../utils/complianceChecklist";
 
 export default function Settings() {
   const {
@@ -36,11 +45,26 @@ export default function Settings() {
     setTheme,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const complianceHydratedRef = useRef(false);
+  const [complianceChecklist, setComplianceChecklist] =
+    useState<ComplianceChecklistState>(() => getDefaultComplianceChecklist());
+
+  useEffect(() => {
+    const stored = loadComplianceChecklist();
+    complianceHydratedRef.current = true;
+    setComplianceChecklist(stored);
+  }, []);
+
+  useEffect(() => {
+    if (!complianceHydratedRef.current) return;
+    saveComplianceChecklist(complianceChecklist);
+  }, [complianceChecklist]);
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
+    { id: "about", label: "About" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
@@ -61,7 +85,25 @@ export default function Settings() {
 
   const handleExport = async () => {
     const data = await exportSettingsData();
-    const blob = new Blob([data], { type: "application/json" });
+    let parsed: Record<string, unknown> = {};
+    try {
+      parsed = JSON.parse(data);
+    } catch (error) {
+      console.warn("Unable to parse settings for export", error);
+    }
+    const payload = {
+      ...parsed,
+      complianceChecklist: {
+        version: complianceChecklist.version,
+        items: complianceChecklist.items,
+        lastUpdated:
+          complianceChecklist.lastUpdated ?? new Date().toISOString(),
+      },
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -84,6 +126,22 @@ export default function Settings() {
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
+      if (parsed.complianceChecklist) {
+        const normalized = deserializeComplianceChecklist(
+          JSON.stringify(parsed.complianceChecklist)
+        );
+        if (normalized) {
+          complianceHydratedRef.current = true;
+          setComplianceChecklist({
+            version: normalized.version,
+            items: normalized.items.map((item) => ({
+              ...item,
+              updatedAt: item.updatedAt ?? new Date().toISOString(),
+            })),
+            lastUpdated: normalized.lastUpdated ?? new Date().toISOString(),
+          });
+        }
+      }
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -98,6 +156,7 @@ export default function Settings() {
       return;
     await resetSettings();
     window.localStorage.clear();
+    clearComplianceChecklist();
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
     setDensity(defaults.density as any);
@@ -105,6 +164,7 @@ export default function Settings() {
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
+    setComplianceChecklist(getDefaultComplianceChecklist());
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -157,16 +217,17 @@ export default function Settings() {
             </div>
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey flex items-center">
-              <input
-                type="checkbox"
-                checked={useKaliWallpaper}
-                onChange={(e) => setUseKaliWallpaper(e.target.checked)}
-                className="mr-2"
-              />
-              Kali Gradient Wallpaper
-            </label>
-          </div>
+          <label className="mr-2 text-ubt-grey flex items-center">
+            <input
+              type="checkbox"
+              checked={useKaliWallpaper}
+              onChange={(e) => setUseKaliWallpaper(e.target.checked)}
+              className="mr-2"
+              aria-label="Toggle Kali gradient wallpaper"
+            />
+            Kali Gradient Wallpaper
+          </label>
+        </div>
           {useKaliWallpaper && (
             <p className="text-center text-xs text-ubt-grey/70 px-6 -mt-2 mb-4">
               Your previous wallpaper selection is preserved for when you turn this off.
@@ -310,9 +371,15 @@ export default function Settings() {
           </div>
         </>
       )}
-        <input
-          type="file"
-          accept="application/json"
+      {activeTab === "about" && (
+        <ComplianceChecklist
+          state={complianceChecklist}
+          onChange={setComplianceChecklist}
+        />
+      )}
+      <input
+        type="file"
+        accept="application/json"
           ref={fileInputRef}
           aria-label="Import settings file"
           onChange={(e) => {
