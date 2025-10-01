@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
 import DiscoveryMap from './DiscoveryMap';
+import Batch from './Batch';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
 const scripts = [
@@ -204,6 +205,7 @@ const NmapNSEApp = () => {
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             className="w-full p-2 text-black"
+            aria-label="Target host"
           />
         </div>
         <div className="mb-4">
@@ -216,6 +218,7 @@ const NmapNSEApp = () => {
             onChange={(e) => setScriptQuery(e.target.value)}
             placeholder="Search scripts"
             className="w-full p-2 text-black mb-2"
+            aria-label="Filter scripts"
           />
           <div className="max-h-64 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
             {filteredScripts.map((s) => (
@@ -225,6 +228,7 @@ const NmapNSEApp = () => {
                     type="checkbox"
                     checked={selectedScripts.includes(s.name)}
                     onChange={() => toggleScript(s.name)}
+                    aria-label={`Toggle script ${s.name}`}
                   />
                   <span className="font-mono">{s.name}</span>
                 </label>
@@ -236,20 +240,21 @@ const NmapNSEApp = () => {
                     </span>
                   ))}
                 </div>
-                {selectedScripts.includes(s.name) && (
-                  <input
-                    type="text"
-                    value={scriptOptions[s.name] || ''}
-                    onChange={(e) =>
-                      setScriptOptions((prev) => ({
-                        ...prev,
-                        [s.name]: e.target.value,
-                      }))
-                    }
-                    placeholder="arg=value"
-                    className="w-full p-1 border rounded text-black"
-                  />
-                )}
+                  {selectedScripts.includes(s.name) && (
+                    <input
+                      type="text"
+                      value={scriptOptions[s.name] || ''}
+                      onChange={(e) =>
+                        setScriptOptions((prev) => ({
+                          ...prev,
+                          [s.name]: e.target.value,
+                        }))
+                      }
+                      placeholder="arg=value"
+                      className="w-full p-1 border rounded text-black"
+                      aria-label={`${s.name} arguments`}
+                    />
+                  )}
               </div>
             ))}
             {filteredScripts.length === 0 && (
@@ -286,6 +291,13 @@ const NmapNSEApp = () => {
             Copy Command
           </button>
         </div>
+        <Batch
+          target={target}
+          selectedScripts={selectedScripts}
+          scriptArgs={scriptOptions}
+          portFlag={portFlag}
+          command={command}
+        />
       </div>
       <div className="md:w-1/2 p-4 bg-black overflow-y-auto">
         <h2 className="text-lg mb-2">Script phases</h2>
