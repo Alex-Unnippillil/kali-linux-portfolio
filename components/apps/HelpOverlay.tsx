@@ -160,10 +160,6 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
     objective: "Get five stones in a row.",
     controls: "Click a grid intersection to place a stone.",
   },
-  pinball: {
-    objective: "Score points by hitting targets.",
-    controls: "Left/right arrows control flippers, space to launch.",
-  },
 };
 
 const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {

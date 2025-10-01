@@ -378,7 +378,6 @@ play/pause and track controls include keyboard hotkeys.
 | Minesweeper | /apps/minesweeper | Game |
 | Nonogram | /apps/nonogram | Game |
 | Pacman | /apps/pacman | Game |
-| Pinball | /apps/pinball | Game |
 | Platformer | /apps/platformer | Game |
 | Pong | /apps/pong | Game |
 | Reversi | /apps/reversi | Game |

@@ -124,7 +124,6 @@ For each game below, build a canvas-based component with `requestAnimationFrame`
 - Space Invaders
 - Sudoku
 - Flappy Bird
-- Pinball
 
 ## Housekeeping
 - Keep `apps.config.js` organized with utilities and games grouped and exported consistently.
