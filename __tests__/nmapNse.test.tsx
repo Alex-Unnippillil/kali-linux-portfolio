@@ -9,12 +9,16 @@ describe('NmapNSEApp', () => {
       .spyOn(global, 'fetch')
       .mockImplementation((url: RequestInfo | URL) =>
         Promise.resolve({
-          json: () =>
-            Promise.resolve(
-              typeof url === 'string' && url.includes('nmap-results')
-                ? { hosts: [] }
-                : { 'ftp-anon': 'FTP output' }
-            ),
+          json: () => {
+            const href = typeof url === 'string' ? url : url.toString();
+            if (href.includes('nmap-results')) {
+              return Promise.resolve({ hosts: [] });
+            }
+            if (href.includes('run-history')) {
+              return Promise.resolve({ runs: [] });
+            }
+            return Promise.resolve({ 'ftp-anon': 'FTP output' });
+          },
         })
       );
 
@@ -32,12 +36,16 @@ describe('NmapNSEApp', () => {
       .spyOn(global, 'fetch')
       .mockImplementation((url: RequestInfo | URL) =>
         Promise.resolve({
-          json: () =>
-            Promise.resolve(
-              typeof url === 'string' && url.includes('nmap-results')
-                ? { hosts: [] }
-                : {}
-            ),
+          json: () => {
+            const href = typeof url === 'string' ? url : url.toString();
+            if (href.includes('nmap-results')) {
+              return Promise.resolve({ hosts: [] });
+            }
+            if (href.includes('run-history')) {
+              return Promise.resolve({ runs: [] });
+            }
+            return Promise.resolve({});
+          },
         })
       );
     const writeText = jest.fn();
@@ -61,12 +69,16 @@ describe('NmapNSEApp', () => {
       .spyOn(global, 'fetch')
       .mockImplementation((url: RequestInfo | URL) =>
         Promise.resolve({
-          json: () =>
-            Promise.resolve(
-              typeof url === 'string' && url.includes('nmap-results')
-                ? { hosts: [] }
-                : { 'http-title': 'Sample output' }
-            ),
+          json: () => {
+            const href = typeof url === 'string' ? url : url.toString();
+            if (href.includes('nmap-results')) {
+              return Promise.resolve({ hosts: [] });
+            }
+            if (href.includes('run-history')) {
+              return Promise.resolve({ runs: [] });
+            }
+            return Promise.resolve({ 'http-title': 'Sample output' });
+          },
         })
       );
     const writeText = jest.fn();
@@ -82,7 +94,7 @@ describe('NmapNSEApp', () => {
     expect(writeText).toHaveBeenCalledWith(
       expect.stringContaining('Sample output')
     );
-    expect(await screen.findByRole('alert')).toHaveTextContent(/copied/i);
+    expect(await screen.findByRole('status')).toHaveTextContent(/copied/i);
 
     mockFetch.mockRestore();
   });
@@ -92,31 +104,35 @@ describe('NmapNSEApp', () => {
       .spyOn(global, 'fetch')
       .mockImplementation((url: RequestInfo | URL) =>
         Promise.resolve({
-          json: () =>
-            Promise.resolve(
-              typeof url === 'string' && url.includes('nmap-results')
-                ? {
-                    hosts: [
+          json: () => {
+            const href = typeof url === 'string' ? url : url.toString();
+            if (href.includes('nmap-results')) {
+              return Promise.resolve({
+                hosts: [
+                  {
+                    ip: '192.0.2.1',
+                    ports: [
                       {
-                        ip: '192.0.2.1',
-                        ports: [
+                        port: 80,
+                        service: 'http',
+                        cvss: 5,
+                        scripts: [
                           {
-                            port: 80,
-                            service: 'http',
-                            cvss: 5,
-                            scripts: [
-                              {
-                                name: 'http-title',
-                                output: 'Example Domain',
-                              },
-                            ],
+                            name: 'http-title',
+                            output: 'Example Domain',
                           },
                         ],
                       },
                     ],
-                  }
-                : {}
-            ),
+                  },
+                ],
+              });
+            }
+            if (href.includes('run-history')) {
+              return Promise.resolve({ runs: [] });
+            }
+            return Promise.resolve({});
+          },
         })
       );
 
