@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import { getDb } from '../../utils/safeIDB';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import Checksums from './file-explorer/Checksums';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -102,6 +103,11 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const [content, setContent] = useState('');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [checksumsConfig, setChecksumsConfig] = useState({
+    open: false,
+    selection: [],
+    autoStart: false,
+  });
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
   const [locationError, setLocationError] = useState(null);
@@ -131,7 +137,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       setPath([{ name: root.name || '/', handle: root }]);
       await readDir(root);
     })();
-  }, [opfsSupported, root, getDir]);
+  }, [opfsSupported, root, getDir, readDir]);
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -145,6 +151,21 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const removeBuffer = async (name) => {
     if (unsavedDir) await opfsDelete(name, unsavedDir);
   };
+
+  const openChecksumsPanel = (entries = null, autoStart = false) => {
+    const source = entries && entries.length ? entries : files;
+    const names = Array.from(
+      new Set((source || []).map((entry) => entry && entry.name).filter(Boolean)),
+    );
+    setChecksumsConfig({
+      open: true,
+      selection: names,
+      autoStart,
+    });
+  };
+
+  const closeChecksumsPanel = () =>
+    setChecksumsConfig({ open: false, selection: [], autoStart: false });
 
   const openFallback = async (e) => {
     const file = e.target.files[0];
@@ -315,7 +336,13 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+        <input
+          ref={fallbackInputRef}
+          type="file"
+          onChange={openFallback}
+          className="hidden"
+          aria-label="Open file"
+        />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -330,6 +357,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
               value={content}
               onChange={onChange}
+              aria-label="File contents"
             />
             <button
               onClick={async () => {
@@ -349,7 +377,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
+    <div className="relative w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
       <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
         <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
           Open Folder
@@ -368,6 +396,14 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         {currentFile && (
           <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
             Save
+          </button>
+        )}
+        {!!files.length && (
+          <button
+            onClick={() => openChecksumsPanel(files, false)}
+            className="px-2 py-1 bg-black bg-opacity-50 rounded"
+          >
+            Checksums
           </button>
         )}
       </div>
@@ -399,6 +435,10 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               key={i}
               className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
               onClick={() => openFile(f)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                openChecksumsPanel([f], true);
+              }}
             >
               {f.name}
             </div>
@@ -406,7 +446,12 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+            <textarea
+              className="flex-1 p-2 bg-ub-cool-grey outline-none"
+              value={content}
+              onChange={onChange}
+              aria-label="File contents"
+            />
           )}
           <div className="p-2 border-t border-gray-600">
             <input
@@ -414,6 +459,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find in files"
               className="px-1 py-0.5 text-black"
+              aria-label="Search query"
             />
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
@@ -428,6 +474,17 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           </div>
         </div>
       </div>
+      {checksumsConfig.open && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4">
+          <Checksums
+            files={files}
+            directoryHandle={dirHandle}
+            initialSelection={checksumsConfig.selection}
+            autoStart={checksumsConfig.autoStart}
+            onClose={closeChecksumsPanel}
+          />
+        </div>
+      )}
     </div>
   );
 }
