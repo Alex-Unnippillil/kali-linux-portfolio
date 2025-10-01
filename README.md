@@ -154,6 +154,7 @@ components/
 
 public/
   images/                # wallpapers, icons
+  icons/                 # UI glyph set (see docs/iconography.md)
   apps/platformer/       # static assets for games
   chess/, checkers-worker.js, …
 
