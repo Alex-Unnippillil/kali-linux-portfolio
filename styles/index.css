@@ -471,6 +471,12 @@ dialog {
     animation: shake 0.5s;
 }
 
+@media (prefers-reduced-motion: reduce) {
+    .shake {
+        animation: none;
+    }
+}
+
 @keyframes keypress {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(0.95); }

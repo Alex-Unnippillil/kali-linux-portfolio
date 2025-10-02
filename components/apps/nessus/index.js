@@ -55,7 +55,9 @@ const Nessus = () => {
   const [findings, setFindings] = useState([]);
   const [parseError, setParseError] = useState('');
   const [selected, setSelected] = useState(null);
+  const [shouldShake, setShouldShake] = useState(false);
   const parserWorkerRef = useRef(null);
+  const prefersReducedMotion = useRef(false);
 
   const hostData = useMemo(
     () =>
@@ -87,6 +89,36 @@ const Nessus = () => {
     };
     return () => parserWorkerRef.current?.terminate();
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updatePreference = (matches) => {
+      prefersReducedMotion.current = matches;
+      if (matches) setShouldShake(false);
+    };
+    updatePreference(media.matches);
+    const listener = (event) => updatePreference(event.matches);
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', listener);
+      return () => media.removeEventListener('change', listener);
+    }
+    if (typeof media.addListener === 'function') {
+      media.addListener(listener);
+      return () => media.removeListener(listener);
+    }
+    return undefined;
+  }, []);
+
+  useEffect(() => {
+    if (!error || token || prefersReducedMotion.current) {
+      setShouldShake(false);
+      return;
+    }
+    setShouldShake(true);
+    const timeout = setTimeout(() => setShouldShake(false), 500);
+    return () => clearTimeout(timeout);
+  }, [error, token]);
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
@@ -136,7 +168,14 @@ const Nessus = () => {
       setToken(data.token);
       fetchScans(data.token, url);
     } catch (err) {
-      setError(err.message);
+      const fallback = 'Authentication failed. Please check your credentials and try again.';
+      if (err?.message === 'Authentication failed') {
+        setError(fallback);
+      } else if (err?.message) {
+        setError(err.message);
+      } else {
+        setError(fallback);
+      }
     }
   };
 
@@ -152,6 +191,7 @@ const Nessus = () => {
       if (!res.ok) throw new Error('Unable to fetch scans');
       const data = await res.json();
       setScans(data.scans || []);
+      setError('');
     } catch (err) {
       setError(err.message);
     }
@@ -181,7 +221,10 @@ const Nessus = () => {
   if (!token) {
     return (
       <div className="h-full w-full bg-gray-900 text-white flex items-center justify-center">
-        <form onSubmit={login} className="space-y-2 p-4 w-64">
+        <form
+          onSubmit={login}
+          className={`space-y-2 p-4 w-64${shouldShake ? ' shake' : ''}`}
+        >
           <label htmlFor="nessus-url" className="block text-sm">
             Nessus URL
           </label>
@@ -189,9 +232,13 @@ const Nessus = () => {
             id="nessus-url"
             className="w-full p-2 rounded text-black"
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            onChange={(e) => {
+              if (error) setError('');
+              setUrl(e.target.value);
+            }}
             aria-invalid={error ? 'true' : undefined}
             aria-describedby={error ? 'nessus-error' : undefined}
+            aria-label="Nessus URL"
             placeholder="https://nessus:8834"
           />
           <label htmlFor="nessus-username" className="block text-sm">
@@ -201,9 +248,13 @@ const Nessus = () => {
             id="nessus-username"
             className="w-full p-2 rounded text-black"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={(e) => {
+              if (error) setError('');
+              setUsername(e.target.value);
+            }}
             aria-invalid={error ? 'true' : undefined}
             aria-describedby={error ? 'nessus-error' : undefined}
+            aria-label="Username"
           />
           <label htmlFor="nessus-password" className="block text-sm">
             Password
@@ -213,9 +264,13 @@ const Nessus = () => {
             type="password"
             className="w-full p-2 rounded text-black"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              if (error) setError('');
+              setPassword(e.target.value);
+            }}
             aria-invalid={error ? 'true' : undefined}
             aria-describedby={error ? 'nessus-error' : undefined}
+            aria-label="Password"
           />
           <button type="submit" className="w-full bg-blue-600 py-2 rounded">
             Login
@@ -244,6 +299,7 @@ const Nessus = () => {
           accept=".nessus,.xml"
           onChange={handleFile}
           className="text-black mb-2"
+          aria-label="Upload Nessus XML"
         />
         {parseError && <FormError>{parseError}</FormError>}
         {findings.length > 0 && (
@@ -286,6 +342,7 @@ const Nessus = () => {
                               value={feedbackText}
                               onChange={(e) => setFeedbackText(e.target.value)}
                               placeholder="Reason"
+                              aria-label="False positive reason"
                             />
                             <div className="flex space-x-2">
                               <button
@@ -331,12 +388,14 @@ const Nessus = () => {
           placeholder="Scan ID"
           value={newJob.scanId}
           onChange={(e) => setNewJob({ ...newJob, scanId: e.target.value })}
+          aria-label="Scan ID"
         />
         <input
           className="p-1 rounded text-black"
           placeholder="Schedule"
           value={newJob.schedule}
           onChange={(e) => setNewJob({ ...newJob, schedule: e.target.value })}
+          aria-label="Scan schedule"
         />
         <button type="submit" className="bg-blue-600 px-2 py-1 rounded">
           Add Job
@@ -375,6 +434,7 @@ const Nessus = () => {
                   value={feedbackText}
                   onChange={(e) => setFeedbackText(e.target.value)}
                   placeholder="Reason"
+                  aria-label="False positive reason"
                 />
                 <div className="flex space-x-2">
                   <button
