@@ -194,10 +194,8 @@ function About() {
 
 function Timeline() {
     const events = [
-        { date: '2012', description: 'Began Nuclear Engineering at Ontario Tech.' },
-        { date: '2016', description: 'Graduated with B. Eng.' },
-        { date: '2020', description: 'Started Networking and I.T. Security program.' },
-        { date: '2024', description: 'Graduated with BIT in Networking and I.T. Security.' },
+        
+  
     ];
 
     const [liveMessage, setLiveMessage] = React.useState('');
