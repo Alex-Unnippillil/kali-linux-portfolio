@@ -28,16 +28,16 @@ function AppMenu(props) {
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}
-            className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm'}
+            className={(props.active ? ' block ' : ' hidden ') + ' absolute z-50 w-56 cursor-default rounded-lg border border-gray-900 p-2 text-left text-sm text-white shadow-xl context-menu-bg'}
         >
             <button
                 type="button"
                 onClick={handlePin}
                 role="menuitem"
                 aria-label={props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                className="w-full rounded px-4 py-1.5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ubt-blue focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 hover:bg-gray-700/70"
             >
-                <span className="ml-5">{props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}</span>
+                {props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}
             </button>
         </div>
     )
