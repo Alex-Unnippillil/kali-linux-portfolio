@@ -470,7 +470,8 @@ describe('Edge resistance', () => {
       ref.current!.handleDrag({}, { node: winEl, x: -100, y: -50 } as any);
     });
 
-    expect(winEl.style.transform).toBe('translate(0px, 0px)');
+    const expectedTop = ref.current!.state.safeAreaTop ?? 0;
+    expect(winEl.style.transform).toBe(`translate(0px, ${expectedTop}px)`);
   });
 });
 
