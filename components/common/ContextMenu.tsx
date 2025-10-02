@@ -1,10 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import useFocusTrap from '../../hooks/useFocusTrap';
-import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 
 export interface MenuItem {
   label: React.ReactNode;
   onSelect: () => void;
+  /** Marks the item as unavailable. Disabled items are skipped during keyboard navigation. */
+  disabled?: boolean;
+  /** Optional callback to trigger when the user requests to open a submenu via keyboard */
+  onOpenSubmenu?: () => void;
+  /** Optional callback to trigger when the user requests to close a submenu via keyboard */
+  onCloseSubmenu?: () => void;
 }
 
 interface ContextMenuProps {
@@ -12,24 +17,125 @@ interface ContextMenuProps {
   targetRef: React.RefObject<HTMLElement>;
   /** Menu items to render */
   items: MenuItem[];
+  /** Optional callback fired when the menu closes */
+  onClose?: () => void;
 }
 
 /**
  * Accessible context menu that supports right click and Shift+F10
- * activation. Uses roving tab index for keyboard navigation and
- * dispatches global events when opened/closed so backgrounds can
+ * activation. It manages a roving focus index for keyboard navigation
+ * and dispatches global events when opened/closed so backgrounds can
  * be made inert.
  */
-const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
+const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items, onClose }) => {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const [focusedIndex, setFocusedIndex] = useState<number>(-1);
 
   useFocusTrap(menuRef as React.RefObject<HTMLElement>, open);
-  useRovingTabIndex(
-    menuRef as React.RefObject<HTMLElement>,
-    open,
-    'vertical',
+
+  const closeMenu = useCallback(() => {
+    setOpen(false);
+    setFocusedIndex(-1);
+    onClose?.();
+
+    const target = targetRef.current;
+    if (target) {
+      try {
+        target.focus({ preventScroll: true });
+      } catch (error) {
+        // Some elements such as SVG nodes may throw if focus is attempted.
+        // Ignore the error silently because focus restoration is a best-effort enhancement.
+      }
+    }
+  }, [onClose, targetRef]);
+
+  const focusItem = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= items.length) return;
+      setFocusedIndex(index);
+      requestAnimationFrame(() => {
+        itemRefs.current[index]?.focus();
+      });
+    },
+    [items.length],
+  );
+
+  const findNextEnabled = useCallback(
+    (startIndex: number, direction: 1 | -1) => {
+      if (items.length === 0) return -1;
+      let index = startIndex;
+      for (let attempt = 0; attempt < items.length; attempt += 1) {
+        index = (index + direction + items.length) % items.length;
+        if (!items[index]?.disabled) {
+          return index;
+        }
+      }
+      return -1;
+    },
+    [items],
+  );
+
+  const handleItemKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>, index: number, item: MenuItem) => {
+      switch (event.key) {
+        case 'ArrowDown': {
+          event.preventDefault();
+          const next = findNextEnabled(index, 1);
+          if (next !== -1) {
+            focusItem(next);
+          }
+          break;
+        }
+        case 'ArrowUp': {
+          event.preventDefault();
+          const prev = findNextEnabled(index, -1);
+          if (prev !== -1) {
+            focusItem(prev);
+          }
+          break;
+        }
+        case 'ArrowRight': {
+          if (item.onOpenSubmenu) {
+            event.preventDefault();
+            item.onOpenSubmenu();
+          }
+          break;
+        }
+        case 'ArrowLeft': {
+          event.preventDefault();
+          if (item.onCloseSubmenu) {
+            item.onCloseSubmenu();
+          } else {
+            closeMenu();
+          }
+          break;
+        }
+        case 'Enter':
+        case ' ': {
+          event.preventDefault();
+          if (!item.disabled) {
+            item.onSelect();
+            closeMenu();
+          }
+          break;
+        }
+        default:
+          break;
+      }
+    },
+    [closeMenu, findNextEnabled, focusItem],
+  );
+
+  const handleSelect = useCallback(
+    (item: MenuItem) => {
+      if (item.disabled) return;
+      item.onSelect();
+      closeMenu();
+    },
+    [closeMenu],
   );
 
   useEffect(() => {
@@ -69,17 +175,28 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
   }, [open]);
 
   useEffect(() => {
+    if (!open) {
+      setFocusedIndex(-1);
+      return;
+    }
+    const firstEnabled = items.findIndex((item) => !item.disabled);
+    if (firstEnabled !== -1) {
+      focusItem(firstEnabled);
+    }
+  }, [focusItem, items, open]);
+
+  useEffect(() => {
     if (!open) return;
 
     const handleClick = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpen(false);
+        closeMenu();
       }
     };
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setOpen(false);
+        closeMenu();
       }
     };
 
@@ -90,7 +207,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
       document.removeEventListener('mousedown', handleClick);
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [open]);
+  }, [closeMenu, open]);
 
   return (
     <div
@@ -105,12 +222,16 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
         <button
           key={i}
           role="menuitem"
-          tabIndex={-1}
-          onClick={() => {
-            item.onSelect();
-            setOpen(false);
+          tabIndex={focusedIndex === i ? 0 : -1}
+          ref={(element) => {
+            itemRefs.current[i] = element;
           }}
-          className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+          onFocus={() => setFocusedIndex(i)}
+          onKeyDown={(event) => handleItemKeyDown(event, i, item)}
+          onClick={() => handleSelect(item)}
+          aria-disabled={item.disabled || undefined}
+          className="w-full cursor-default py-0.5 text-left hover:bg-gray-700 mb-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={item.disabled}
         >
           {item.label}
         </button>
