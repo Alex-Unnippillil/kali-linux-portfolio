@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import Toast from '../../ui/Toast';
+import useNotifications from '../../../hooks/useNotifications';
 import DiscoveryMap from './DiscoveryMap';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
@@ -75,6 +75,7 @@ const cvssColor = (score) => {
 };
 
 const NmapNSEApp = () => {
+  const { pushNotification } = useNotifications();
   const [target, setTarget] = useState('example.com');
   const [selectedScripts, setSelectedScripts] = useState([scripts[0].name]);
   const [scriptQuery, setScriptQuery] = useState('');
@@ -84,7 +85,6 @@ const NmapNSEApp = () => {
   const [scriptOptions, setScriptOptions] = useState({});
   const [activeScript, setActiveScript] = useState(scripts[0].name);
   const [phaseStep, setPhaseStep] = useState(0);
-  const [toast, setToast] = useState('');
   const outputRef = useRef(null);
   const phases = ['prerule', 'hostrule', 'portrule'];
 
@@ -134,7 +134,11 @@ const NmapNSEApp = () => {
     if (typeof window !== 'undefined') {
       try {
         await navigator.clipboard.writeText(command);
-        setToast('Command copied');
+        pushNotification({
+          appId: 'nmap-nse',
+          title: 'Command copied',
+          mode: 'toast',
+        });
       } catch (e) {
         // ignore
       }
@@ -148,7 +152,11 @@ const NmapNSEApp = () => {
     if (!text.trim()) return;
     try {
       await navigator.clipboard.writeText(text);
-      setToast('Output copied');
+      pushNotification({
+        appId: 'nmap-nse',
+        title: 'Output copied',
+        mode: 'toast',
+      });
     } catch (e) {
       // ignore
     }
@@ -162,7 +170,11 @@ const NmapNSEApp = () => {
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
-    setToast('Output selected');
+    pushNotification({
+      appId: 'nmap-nse',
+      title: 'Output selected',
+      mode: 'toast',
+    });
   };
 
   const handleOutputKey = (e) => {
@@ -197,37 +209,52 @@ const NmapNSEApp = () => {
             Educational use only. Do not scan systems without permission.
           </p>
         </div>
-        <div className="mb-4">
-          <label className="block text-sm mb-1" htmlFor="target">Target</label>
-          <input
-            id="target"
-            value={target}
-            onChange={(e) => setTarget(e.target.value)}
-            className="w-full p-2 text-black"
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-sm mb-1" htmlFor="scripts">
-            Scripts
-          </label>
-          <input
-            id="scripts"
-            value={scriptQuery}
-            onChange={(e) => setScriptQuery(e.target.value)}
-            placeholder="Search scripts"
-            className="w-full p-2 text-black mb-2"
-          />
+          <div className="mb-4">
+            <label
+              className="block text-sm mb-1"
+              htmlFor="target"
+              id="target-label"
+            >
+              Target
+            </label>
+            <input
+              id="target"
+              value={target}
+              onChange={(e) => setTarget(e.target.value)}
+              className="w-full p-2 text-black"
+              type="text"
+              aria-labelledby="target-label"
+            />
+          </div>
+          <div className="mb-4">
+            <label
+              className="block text-sm mb-1"
+              htmlFor="scripts"
+              id="scripts-label"
+            >
+              Scripts
+            </label>
+            <input
+              id="scripts"
+              value={scriptQuery}
+              onChange={(e) => setScriptQuery(e.target.value)}
+              placeholder="Search scripts"
+              className="w-full p-2 text-black mb-2"
+              type="text"
+              aria-labelledby="scripts-label"
+            />
           <div className="max-h-64 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
             {filteredScripts.map((s) => (
               <div key={s.name} className="bg-white text-black p-2 rounded">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedScripts.includes(s.name)}
-                    onChange={() => toggleScript(s.name)}
-                  />
-                  <span className="font-mono">{s.name}</span>
-                </label>
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedScripts.includes(s.name)}
+                      onChange={() => toggleScript(s.name)}
+                      aria-label={`Toggle script ${s.name}`}
+                    />
+                    <span className="font-mono">{s.name}</span>
+                  </label>
                 <p className="text-xs mb-1">{s.description}</p>
                 <div className="flex flex-wrap gap-1 mb-1">
                   {s.tags.map((t) => (
@@ -236,20 +263,21 @@ const NmapNSEApp = () => {
                     </span>
                   ))}
                 </div>
-                {selectedScripts.includes(s.name) && (
-                  <input
-                    type="text"
-                    value={scriptOptions[s.name] || ''}
-                    onChange={(e) =>
-                      setScriptOptions((prev) => ({
-                        ...prev,
-                        [s.name]: e.target.value,
-                      }))
-                    }
-                    placeholder="arg=value"
-                    className="w-full p-1 border rounded text-black"
-                  />
-                )}
+                  {selectedScripts.includes(s.name) && (
+                    <input
+                      type="text"
+                      value={scriptOptions[s.name] || ''}
+                      onChange={(e) =>
+                        setScriptOptions((prev) => ({
+                          ...prev,
+                          [s.name]: e.target.value,
+                        }))
+                      }
+                      placeholder="arg=value"
+                      className="w-full p-1 border rounded text-black"
+                      aria-label={`Arguments for ${s.name}`}
+                    />
+                  )}
               </div>
             ))}
             {filteredScripts.length === 0 && (
@@ -435,7 +463,6 @@ const NmapNSEApp = () => {
           </button>
         </div>
       </div>
-      {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );
 };

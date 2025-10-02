@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import FormError from "../../components/ui/FormError";
-import Toast from "../../components/ui/Toast";
+import useNotifications from "../../hooks/useNotifications";
 import { processContactForm } from "../../components/apps/contact";
 import { contactSchema } from "../../utils/contactSchema";
 import { copyToClipboard } from "../../utils/clipboard";
@@ -24,12 +24,12 @@ const getRecaptchaToken = (siteKey: string): Promise<string> =>
   });
 
 const ContactApp: React.FC = () => {
+  const { pushNotification } = useNotifications();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [honeypot, setHoneypot] = useState("");
   const [error, setError] = useState("");
-  const [toast, setToast] = useState("");
   const [csrfToken, setCsrfToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [emailError, setEmailError] = useState("");
@@ -101,7 +101,11 @@ const ContactApp: React.FC = () => {
         recaptchaToken,
       });
       if (result.success) {
-        setToast("Message sent");
+        pushNotification({
+          appId: "contact",
+          title: "Message sent",
+          mode: "toast",
+        });
         setName("");
         setEmail("");
         setMessage("");
@@ -274,7 +278,6 @@ const ContactApp: React.FC = () => {
           )}
         </button>
       </form>
-      {toast && <Toast message={toast} onClose={() => setToast("")} />}
     </div>
   );
 };

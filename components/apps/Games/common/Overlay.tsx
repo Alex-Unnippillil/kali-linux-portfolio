@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import Toast from '../../../ui/Toast';
+import useNotifications from '../../../hooks/useNotifications';
 
 /**
  * Heads up display for games. Provides pause/resume, sound toggle and
@@ -16,13 +16,14 @@ export default function Overlay({
   muted?: boolean;
   onToggleSound?: (muted: boolean) => void;
 }) {
+  const { pushNotification, dismissNotification } = useNotifications();
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(externalMuted ?? false);
   const [fps, setFps] = useState(0);
   const frame = useRef(performance.now());
   const count = useRef(0);
-  const [toast, setToast] = useState('');
   const pausedByDisconnect = useRef(false);
+  const disconnectToastId = useRef<string | null>(null);
 
   // track fps using requestAnimationFrame
   useEffect(() => {
@@ -65,16 +66,31 @@ export default function Overlay({
   useEffect(() => {
     const handleDisconnect = () => {
       pausedByDisconnect.current = true;
-      setToast('Controller disconnected. Reconnect to resume.');
+      if (disconnectToastId.current) {
+        dismissNotification('game-overlay', disconnectToastId.current, {
+          target: 'toast',
+        });
+      }
+      disconnectToastId.current = pushNotification({
+        appId: 'game-overlay',
+        title: 'Controller disconnected. Reconnect to resume.',
+        mode: 'toast',
+        autoDismissMs: null,
+      });
       setPaused(true);
       onPause?.();
     };
     const handleConnect = () => {
       if (pausedByDisconnect.current) {
         pausedByDisconnect.current = false;
-        setToast('');
         setPaused(false);
         onResume?.();
+      }
+      if (disconnectToastId.current) {
+        dismissNotification('game-overlay', disconnectToastId.current, {
+          target: 'toast',
+        });
+        disconnectToastId.current = null;
       }
     };
     window.addEventListener('gamepaddisconnected', handleDisconnect);
@@ -83,7 +99,19 @@ export default function Overlay({
       window.removeEventListener('gamepaddisconnected', handleDisconnect);
       window.removeEventListener('gamepadconnected', handleConnect);
     };
-  }, [onPause, onResume]);
+  }, [dismissNotification, onPause, onResume, pushNotification]);
+
+  useEffect(
+    () => () => {
+      if (disconnectToastId.current) {
+        dismissNotification('game-overlay', disconnectToastId.current, {
+          target: 'toast',
+        });
+        disconnectToastId.current = null;
+      }
+    },
+    [dismissNotification],
+  );
 
   return (
     <>
@@ -96,13 +124,6 @@ export default function Overlay({
         </button>
         <span className="fps">{fps} FPS</span>
       </div>
-      {toast && (
-        <Toast
-          message={toast}
-          onClose={() => setToast('')}
-          duration={1000000}
-        />
-      )}
     </>
   );
 }
