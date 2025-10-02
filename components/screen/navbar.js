@@ -7,6 +7,7 @@ import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
+import apps, { games } from '../../apps.config';
 
 const areWorkspacesEqual = (next, prev) => {
         if (next.length !== prev.length) return false;
@@ -37,6 +38,31 @@ const areRunningAppsEqual = (next = [], prev = []) => {
         return true;
 };
 
+const arePinnedAppsEqual = (next = [], prev = []) => {
+        if (next.length !== prev.length) return false;
+        for (let index = 0; index < next.length; index += 1) {
+                if (next[index] !== prev[index]) {
+                        return false;
+                }
+        }
+        return true;
+};
+
+const taskbarMetaMap = (() => {
+        const map = new Map();
+        const addEntries = (collection = []) => {
+                collection.forEach((app) => {
+                        if (!app || typeof app.id !== 'string' || map.has(app.id)) return;
+                        map.set(app.id, app);
+                });
+        };
+        addEntries(Array.isArray(apps) ? apps : []);
+        addEntries(Array.isArray(games) ? games : []);
+        return map;
+})();
+
+const FALLBACK_ICON = '/themes/Yaru/apps/utilities-terminal-symbolic.svg';
+
 export default class Navbar extends PureComponent {
         constructor() {
                 super();
@@ -46,7 +72,8 @@ export default class Navbar extends PureComponent {
                         placesMenuOpen: false,
                         workspaces: [],
                         activeWorkspace: 0,
-                        runningApps: []
+                        runningApps: [],
+                        pinnedApps: [],
                 };
         }
 
@@ -69,20 +96,25 @@ export default class Navbar extends PureComponent {
                 const nextWorkspaces = Array.isArray(workspaces) ? workspaces : [];
                 const nextActiveWorkspace = typeof activeWorkspace === 'number' ? activeWorkspace : 0;
                 const nextRunningApps = Array.isArray(detail.runningApps) ? detail.runningApps : [];
+                const nextPinnedApps = Array.isArray(detail.taskbarPins)
+                        ? detail.taskbarPins.filter((id) => typeof id === 'string' && taskbarMetaMap.has(id))
+                        : [];
 
                 this.setState((previousState) => {
                         const workspacesChanged = !areWorkspacesEqual(nextWorkspaces, previousState.workspaces);
                         const activeChanged = previousState.activeWorkspace !== nextActiveWorkspace;
                         const runningAppsChanged = !areRunningAppsEqual(nextRunningApps, previousState.runningApps);
+                        const pinnedAppsChanged = !arePinnedAppsEqual(nextPinnedApps, previousState.pinnedApps);
 
-                        if (!workspacesChanged && !activeChanged && !runningAppsChanged) {
+                        if (!workspacesChanged && !activeChanged && !runningAppsChanged && !pinnedAppsChanged) {
                                 return null;
                         }
 
                         return {
                                 workspaces: workspacesChanged ? nextWorkspaces : previousState.workspaces,
                                 activeWorkspace: nextActiveWorkspace,
-                                runningApps: runningAppsChanged ? nextRunningApps : previousState.runningApps
+                                runningApps: runningAppsChanged ? nextRunningApps : previousState.runningApps,
+                                pinnedApps: pinnedAppsChanged ? nextPinnedApps : previousState.pinnedApps,
                         };
                 });
         };
@@ -104,17 +136,61 @@ export default class Navbar extends PureComponent {
                 }
         };
 
+        buildTaskbarItems = () => {
+                const { runningApps = [], pinnedApps = [] } = this.state;
+                const pinnedSet = new Set(pinnedApps);
+        const runningMap = new Map(
+                runningApps.map((app) => [
+                        app.id,
+                        {
+                                ...app,
+                                icon: app.icon || FALLBACK_ICON,
+                                isPinned: pinnedSet.has(app.id),
+                                isRunning: true,
+                        },
+                ]),
+        );
+
+                const items = [];
+                pinnedApps.forEach((id) => {
+                        const running = runningMap.get(id);
+                        if (running) {
+                                items.push({ ...running, isPinned: true });
+                                runningMap.delete(id);
+                                return;
+                        }
+                        const meta = taskbarMetaMap.get(id);
+                        if (!meta) return;
+                        const icon = (meta.icon || '').replace('./', '/');
+                        items.push({
+                                id,
+                                title: meta.title,
+                                icon: icon || FALLBACK_ICON,
+                                isFocused: false,
+                                isMinimized: true,
+                                isRunning: false,
+                                isPinned: true,
+                        });
+                });
+
+                runningMap.forEach((app) => {
+                        items.push({ ...app, isPinned: pinnedSet.has(app.id) });
+                });
+
+                return items;
+        };
+
         renderRunningApps = () => {
-                const { runningApps } = this.state;
-                if (!runningApps.length) return null;
+                const items = this.buildTaskbarItems();
+                if (!items.length) return null;
 
                 return (
                         <ul
                                 className="flex max-w-[40vw] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
                                 role="list"
-                                aria-label="Open applications"
+                                aria-label="Taskbar applications"
                         >
-                                {runningApps.map((app) => (
+                                {items.map((app) => (
                                         <li key={app.id} className="flex">
                                                 {this.renderRunningAppButton(app)}
                                         </li>
@@ -124,17 +200,19 @@ export default class Navbar extends PureComponent {
         };
 
         renderRunningAppButton = (app) => {
-                const isActive = !app.isMinimized;
-                const isFocused = app.isFocused && isActive;
+                const isActive = app.isRunning && !app.isMinimized;
+                const isFocused = app.isRunning && app.isFocused && isActive;
+                const label = app.isPinned ? `${app.title} (pinned)` : app.title;
 
                 return (
                         <button
                                 type="button"
-                                aria-label={app.title}
+                                aria-label={label}
                                 aria-pressed={isActive}
                                 data-context="taskbar"
                                 data-app-id={app.id}
                                 data-active={isActive ? 'true' : 'false'}
+                                data-pinned={app.isPinned ? 'true' : 'false'}
                                 onClick={() => this.handleAppButtonClick(app)}
                                 onKeyDown={(event) => this.handleAppButtonKeyDown(event, app)}
                                 className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
@@ -153,6 +231,14 @@ export default class Navbar extends PureComponent {
                                                         data-testid="running-indicator"
                                                         className="absolute -bottom-1 left-1/2 h-1 w-2 -translate-x-1/2 rounded-full bg-current"
                                                 />
+                                        )}
+                                        {app.isPinned && (
+                                                <span
+                                                        aria-hidden="true"
+                                                        className="absolute -top-1 right-0 text-[0.55rem]"
+                                                >
+                                                        📌
+                                                </span>
                                         )}
                                 </span>
                                 <span className="hidden whitespace-nowrap text-white md:inline">{app.title}</span>

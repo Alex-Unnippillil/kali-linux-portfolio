@@ -59,6 +59,7 @@ class AllApplications extends React.Component {
             unfilteredApps: [],
             favorites: [],
             recents: [],
+            showHidden: false,
         };
     }
 
@@ -76,12 +77,102 @@ class AllApplications extends React.Component {
         persistIds(RECENTS_KEY, recents);
 
         this.setState({
-            apps: combined,
-            unfilteredApps: combined,
+            favorites,
+            recents,
+        }, () => {
+            this.refreshAppLists();
+        });
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (
+            prevProps.apps !== this.props.apps ||
+            prevProps.games !== this.props.games ||
+            prevProps.hiddenApps !== this.props.hiddenApps ||
+            prevState.showHidden !== this.state.showHidden ||
+            prevState.favorites !== this.state.favorites ||
+            prevState.recents !== this.state.recents
+        ) {
+            this.refreshAppLists();
+        }
+    }
+
+    areAppListsEqual = (next = [], prev = []) => {
+        if (next.length !== prev.length) return false;
+        for (let index = 0; index < next.length; index += 1) {
+            const a = next[index];
+            const b = prev[index];
+            if (!b || a.id !== b.id || !!a.isHidden !== !!b.isHidden) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    areArraysEqual = (next = [], prev = []) => {
+        if (next.length !== prev.length) return false;
+        for (let index = 0; index < next.length; index += 1) {
+            if (next[index] !== prev[index]) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    refreshAppLists = () => {
+        const { apps = [], games = [], hiddenApps = [] } = this.props;
+        const hiddenSet = new Set(Array.isArray(hiddenApps) ? hiddenApps : []);
+
+        const combinedMap = new Map();
+        apps.forEach((app) => {
+            if (!app || typeof app.id !== 'string') return;
+            if (combinedMap.has(app.id)) return;
+            combinedMap.set(app.id, { ...app, isHidden: hiddenSet.has(app.id) });
+        });
+        games.forEach((game) => {
+            if (!game || typeof game.id !== 'string') return;
+            if (combinedMap.has(game.id)) return;
+            combinedMap.set(game.id, { ...game, isHidden: hiddenSet.has(game.id) });
+        });
+
+        const allApps = Array.from(combinedMap.values());
+        const availableIds = new Set(allApps.map((app) => app.id));
+        const favorites = sanitizeIds(this.state.favorites, availableIds);
+        const recents = sanitizeIds(this.state.recents, availableIds, 10);
+
+        if (!this.areArraysEqual(favorites, this.state.favorites)) {
+            persistIds(FAVORITES_KEY, favorites);
+        }
+        if (!this.areArraysEqual(recents, this.state.recents)) {
+            persistIds(RECENTS_KEY, recents);
+        }
+
+        const baseList = this.state.showHidden
+            ? allApps
+            : allApps.filter((app) => !app.isHidden);
+
+        const query = this.state.query || '';
+        const normalizedQuery = query.toLowerCase();
+        const filtered = normalizedQuery
+            ? baseList.filter((app) => app.title.toLowerCase().includes(normalizedQuery))
+            : baseList;
+
+        if (
+            this.areAppListsEqual(filtered, this.state.apps) &&
+            this.areAppListsEqual(baseList, this.state.unfilteredApps) &&
+            this.areArraysEqual(favorites, this.state.favorites) &&
+            this.areArraysEqual(recents, this.state.recents)
+        ) {
+            return;
+        }
+
+        this.setState({
+            apps: filtered,
+            unfilteredApps: baseList,
             favorites,
             recents,
         });
-    }
+    };
 
     handleChange = (e) => {
         const value = e.target.value;
@@ -93,6 +184,21 @@ class AllApplications extends React.Component {
                       app.title.toLowerCase().includes(value.toLowerCase())
                   );
         this.setState({ query: value, apps });
+    };
+
+    handleShowHiddenToggle = (event) => {
+        const checked = event?.target?.checked;
+        this.setState({ showHidden: Boolean(checked) }, () => {
+            this.refreshAppLists();
+        });
+    };
+
+    handleRestore = (event, id) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof this.props.onRestoreApp === 'function') {
+            this.props.onRestoreApp(id);
+        }
     };
 
     openApp = (id) => {
@@ -123,8 +229,14 @@ class AllApplications extends React.Component {
 
     renderAppTile = (app) => {
         const isFavorite = this.state.favorites.includes(app.id);
+        const isHidden = Boolean(app.isHidden);
+        const disableApp = app.disabled || isHidden;
         return (
-            <div key={app.id} className="relative flex w-full justify-center">
+            <div
+                key={app.id}
+                className={`relative flex w-full justify-center ${isHidden ? 'opacity-70' : ''}`}
+                data-hidden={isHidden ? 'true' : 'false'}
+            >
                 <button
                     type="button"
                     aria-pressed={isFavorite}
@@ -134,20 +246,37 @@ class AllApplications extends React.Component {
                             : `Add ${app.title} to favorites`
                     }
                     onClick={(event) => this.handleToggleFavorite(event, app.id)}
+                    disabled={isHidden}
                     className={`absolute right-2 top-2 text-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
                         isFavorite ? 'text-yellow-300' : 'text-white/60 hover:text-white'
-                    }`}
+                    } ${isHidden ? 'opacity-40 cursor-not-allowed' : ''}`}
                 >
                     ★
                 </button>
+                {isHidden && (
+                    <span className="pointer-events-none absolute left-2 top-2 rounded bg-black/70 px-2 py-0.5 text-[0.55rem] uppercase tracking-wide text-white">
+                        Hidden
+                    </span>
+                )}
                 <UbuntuApp
                     name={app.title}
                     id={app.id}
                     icon={app.icon}
                     openApp={() => this.openApp(app.id)}
-                    disabled={app.disabled}
+                    disabled={disableApp}
                     prefetch={app.screen?.prefetch}
                 />
+                {isHidden && this.state.showHidden && (
+                    <div className="absolute inset-x-0 bottom-2 flex justify-center">
+                        <button
+                            type="button"
+                            onClick={(event) => this.handleRestore(event, app.id)}
+                            className="rounded bg-black/70 px-2 py-1 text-[0.65rem] text-white transition hover:bg-black/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                        >
+                            Restore
+                        </button>
+                    </div>
+                )}
             </div>
         );
     };
@@ -167,20 +296,23 @@ class AllApplications extends React.Component {
     };
 
     render() {
-        const { apps, favorites, recents } = this.state;
+        const { apps, favorites, recents, showHidden } = this.state;
         const favoriteSet = new Set(favorites);
-        const appMap = new Map(apps.map((app) => [app.id, app]));
-        const favoriteApps = apps.filter((app) => favoriteSet.has(app.id));
+        const visibleApps = apps.filter((app) => !app.isHidden);
+        const hiddenAppsList = showHidden ? apps.filter((app) => app.isHidden) : [];
+        const appMap = new Map(visibleApps.map((app) => [app.id, app]));
+        const favoriteApps = visibleApps.filter((app) => favoriteSet.has(app.id));
         const recentApps = recents
             .map((id) => appMap.get(id))
             .filter(Boolean);
         const seenIds = new Set([...favoriteApps, ...recentApps].map((app) => app.id));
-        const remainingApps = apps.filter((app) => !seenIds.has(app.id));
+        const remainingApps = visibleApps.filter((app) => !seenIds.has(app.id));
         const groupedApps = chunkApps(remainingApps, GROUP_SIZE);
         const hasResults =
             favoriteApps.length > 0 ||
             recentApps.length > 0 ||
-            groupedApps.some((group) => group.length > 0);
+            groupedApps.some((group) => group.length > 0) ||
+            hiddenAppsList.length > 0;
 
         return (
             <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
@@ -191,12 +323,33 @@ class AllApplications extends React.Component {
                     onChange={this.handleChange}
                     aria-label="Search applications"
                 />
+                <div className="mb-6 flex w-2/3 flex-col items-start gap-2 text-xs text-white/70 md:w-1/3 md:flex-row md:items-center md:justify-between md:text-sm">
+                    <div className="flex items-center gap-2">
+                        <input
+                            id="show-hidden-apps-toggle"
+                            type="checkbox"
+                            checked={showHidden}
+                            onChange={this.handleShowHiddenToggle}
+                            className="h-4 w-4 rounded border border-white/40 bg-black/30"
+                            aria-labelledby="show-hidden-apps-label"
+                        />
+                        <label id="show-hidden-apps-label" htmlFor="show-hidden-apps-toggle" className="cursor-pointer">
+                            Show hidden apps
+                        </label>
+                    </div>
+                    {showHidden && (
+                        <span className="text-[0.7rem] text-white/50 md:text-xs">
+                            Hidden apps stay disabled until restored.
+                        </span>
+                    )}
+                </div>
                 <div className="flex w-full max-w-5xl flex-col items-stretch px-6 pb-10">
                     {this.renderSection('Favorites', favoriteApps)}
                     {this.renderSection('Recent', recentApps)}
                     {groupedApps.map((group, index) =>
                         group.length ? this.renderSection(`Group ${index + 1}`, group) : null
                     )}
+                    {showHidden && hiddenAppsList.length > 0 && this.renderSection('Hidden', hiddenAppsList)}
                     {!hasResults && (
                         <p className="mt-6 text-center text-sm text-white/70">
                             No applications match your search.
