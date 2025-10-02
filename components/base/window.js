@@ -14,6 +14,11 @@ import {
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
 import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET, WINDOW_TOP_INSET } from '../../utils/uiConstants';
+import {
+    invalidateWindowThumbnail,
+    queueWindowThumbnailCapture,
+    removeWindowThumbnail,
+} from '../../utils/windowThumbnails';
 
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
@@ -96,6 +101,8 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+
+        this.scheduleThumbnailCapture();
     }
 
     componentWillUnmount() {
@@ -109,7 +116,42 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+
+        removeWindowThumbnail(this.id);
     }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (
+            this.state.width !== prevState.width ||
+            this.state.height !== prevState.height ||
+            this.state.maximized !== prevState.maximized ||
+            this.state.snapped !== prevState.snapped
+        ) {
+            this.markThumbnailStale();
+        }
+
+        if (prevProps.minimized && !this.props.minimized) {
+            this.scheduleThumbnailCapture(true);
+        }
+
+        if (prevState.grabbed && !this.state.grabbed) {
+            this.scheduleThumbnailCapture();
+        }
+    }
+
+    scheduleThumbnailCapture = (force = false) => {
+        if (!this.id) return;
+        if (this.props.minimized) return;
+        const node = this.getWindowNode();
+        if (!node) return;
+        queueWindowThumbnailCapture(this.id, node, { force });
+    };
+
+    markThumbnailStale = () => {
+        if (!this.id) return;
+        invalidateWindowThumbnail(this.id);
+        this.scheduleThumbnailCapture();
+    };
 
     setDefaultWindowDimenstion = () => {
         if (this.props.defaultHeight && this.props.defaultWidth) {
