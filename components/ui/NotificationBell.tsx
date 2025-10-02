@@ -67,13 +67,14 @@ interface FormattedNotification extends AppNotification {
 }
 
 interface NotificationGroup {
-  priority: NotificationPriority;
-  metadata: PriorityMetadata;
+  appId: string;
   notifications: FormattedNotification[];
+  unreadCount: number;
 }
 
 const NotificationBell: React.FC = () => {
   const {
+    notificationsByApp,
     notifications,
     unreadCount,
     clearNotifications,
@@ -85,16 +86,7 @@ const NotificationBell: React.FC = () => {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const headingId = useId();
   const panelId = `${headingId}-panel`;
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<NotificationPriority, boolean>>(
-    () =>
-      PRIORITY_ORDER.reduce(
-        (acc, priority) => ({
-          ...acc,
-          [priority]: PRIORITY_METADATA[priority].defaultCollapsed,
-        }),
-        {} as Record<NotificationPriority, boolean>,
-      ),
-  );
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
   const closePanel = useCallback(() => {
     setIsOpen(false);
@@ -181,13 +173,6 @@ const NotificationBell: React.FC = () => {
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    if (notifications.some(notification => !notification.read)) {
-      markAllRead();
-    }
-  }, [isOpen, markAllRead, notifications]);
-
   const timeFormatter = useMemo(
     () =>
       new Intl.DateTimeFormat(undefined, {
@@ -197,35 +182,100 @@ const NotificationBell: React.FC = () => {
     [],
   );
 
-  const formattedNotifications = useMemo(
-    () =>
-      notifications.map<FormattedNotification>(notification => ({
-        ...notification,
-        formattedTime: new Date(notification.timestamp).toISOString(),
-        readableTime: timeFormatter.format(new Date(notification.timestamp)),
-        metadata: PRIORITY_METADATA[notification.priority],
-      })),
-    [notifications, timeFormatter],
-  );
+  const formattedNotificationsByApp = useMemo(() => {
+    const map: Record<string, FormattedNotification[]> = {};
+    Object.entries(notificationsByApp).forEach(([appId, list]) => {
+      map[appId] = list
+        .map<FormattedNotification>(notification => ({
+          ...notification,
+          formattedTime: new Date(notification.timestamp).toISOString(),
+          readableTime: timeFormatter.format(new Date(notification.timestamp)),
+          metadata: PRIORITY_METADATA[notification.priority],
+        }))
+        .sort((a, b) => {
+          const priorityDiff =
+            PRIORITY_ORDER.indexOf(a.priority) - PRIORITY_ORDER.indexOf(b.priority);
+          if (priorityDiff !== 0) return priorityDiff;
+          return b.timestamp - a.timestamp;
+        });
+    });
+    return map;
+  }, [notificationsByApp, timeFormatter]);
 
-  const groupedNotifications = useMemo<NotificationGroup[]>(
-    () =>
-      PRIORITY_ORDER.map(priority => ({
-        priority,
-        metadata: PRIORITY_METADATA[priority],
-        notifications: formattedNotifications.filter(
-          notification => notification.priority === priority,
+  const groupedNotifications = useMemo<NotificationGroup[]>(() => {
+    const groups = Object.entries(formattedNotificationsByApp).map(
+      ([appId, list]) => ({
+        appId,
+        notifications: list,
+        unreadCount: list.reduce(
+          (total, notification) => total + (notification.read ? 0 : 1),
+          0,
         ),
-      })).filter(group => group.notifications.length > 0),
-    [formattedNotifications],
+      }),
+    );
+    return groups.sort((a, b) => {
+      const aPriority = PRIORITY_ORDER.indexOf(a.notifications[0].priority);
+      const bPriority = PRIORITY_ORDER.indexOf(b.notifications[0].priority);
+      if (aPriority !== bPriority) return aPriority - bPriority;
+      return b.notifications[0].timestamp - a.notifications[0].timestamp;
+    });
+  }, [formattedNotificationsByApp]);
+
+  useEffect(() => {
+    setCollapsedGroups(prev => {
+      let changed = false;
+      const next = { ...prev };
+      groupedNotifications.forEach(group => {
+        if (!(group.appId in next)) {
+          next[group.appId] = true;
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
+    });
+  }, [groupedNotifications]);
+
+  const groupsRef = useRef<NotificationGroup[]>([]);
+  useEffect(() => {
+    groupsRef.current = groupedNotifications;
+  }, [groupedNotifications]);
+
+  const toggleGroup = useCallback(
+    (appId: string) => {
+      setCollapsedGroups(prev => {
+        const currentlyCollapsed = prev?.[appId] ?? true;
+        const nextCollapsed = !currentlyCollapsed;
+        if (!nextCollapsed) {
+          const group = groupsRef.current.find(entry => entry.appId === appId);
+          if (group && group.unreadCount > 0) {
+            markAllRead(appId);
+          }
+        }
+        return {
+          ...prev,
+          [appId]: nextCollapsed,
+        };
+      });
+    },
+    [markAllRead],
   );
 
-  const toggleGroup = useCallback((priority: NotificationPriority) => {
-    setCollapsedGroups(prev => ({
-      ...prev,
-      [priority]: !(prev?.[priority] ?? PRIORITY_METADATA[priority].defaultCollapsed),
-    }));
-  }, []);
+  useEffect(() => {
+    if (!isOpen) return;
+    groupedNotifications.forEach(group => {
+      const isCollapsed = collapsedGroups[group.appId];
+      if (isCollapsed === false && group.unreadCount > 0) {
+        markAllRead(group.appId);
+      }
+    });
+  }, [collapsedGroups, groupedNotifications, isOpen, markAllRead]);
+
+  const handleClearGroup = useCallback(
+    (appId: string) => {
+      clearNotifications(appId);
+    },
+    [clearNotifications],
+  );
 
   const handleDismissAll = useCallback(() => {
     if (notifications.length === 0) return;
@@ -292,37 +342,50 @@ const NotificationBell: React.FC = () => {
             ) : (
               <div>
                 {groupedNotifications.map(group => {
-                  const collapsed =
-                    collapsedGroups[group.priority] ?? group.metadata.defaultCollapsed;
-                  const contentId = `${panelId}-${group.priority}-group`;
+                  const collapsed = collapsedGroups[group.appId] ?? true;
+                  const headline = group.notifications[0];
+                  const badgeMetadata = headline?.metadata ?? PRIORITY_METADATA.normal;
+                  const contentId = `${panelId}-${group.appId}-group`;
                   return (
-                    <section key={group.priority} className="border-b border-white/10 last:border-b-0">
-                      <button
-                        type="button"
-                        onClick={() => toggleGroup(group.priority)}
-                        aria-expanded={!collapsed}
-                        aria-controls={contentId}
-                        className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
-                      >
-                        <span className="flex items-center gap-2">
-                          {group.metadata.label}
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide ${group.metadata.badgeClass}`}
-                            title={group.metadata.description}
-                          >
-                            {group.notifications.length}
-                          </span>
-                        </span>
-                        <svg
-                          aria-hidden="true"
-                          focusable="false"
-                          className={`h-4 w-4 transition-transform ${collapsed ? 'rotate-0' : 'rotate-90'}`}
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
+                    <section key={group.appId} className="border-b border-white/10 last:border-b-0">
+                      <div className="flex items-center gap-2 px-4 py-2">
+                        <button
+                          type="button"
+                          onClick={() => toggleGroup(group.appId)}
+                          aria-expanded={!collapsed}
+                          aria-controls={contentId}
+                          aria-label={`Toggle ${group.appId} notifications`}
+                          className="flex flex-1 items-center justify-between text-left text-sm font-semibold text-white transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
                         >
-                          <path d="M7 5l6 5-6 5V5z" />
-                        </svg>
-                      </button>
+                          <span className="flex items-center gap-2 px-2 py-1">
+                            <span className="truncate">{group.appId}</span>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide ${badgeMetadata.badgeClass}`}
+                              title={badgeMetadata.description}
+                            >
+                              {group.unreadCount > 0
+                                ? `${group.unreadCount} unread`
+                                : `${group.notifications.length} total`}
+                            </span>
+                          </span>
+                          <svg
+                            aria-hidden="true"
+                            focusable="false"
+                            className={`mr-2 h-4 w-4 shrink-0 transition-transform ${collapsed ? 'rotate-0' : 'rotate-90'}`}
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path d="M7 5l6 5-6 5V5z" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleClearGroup(group.appId)}
+                          className="shrink-0 text-xs font-medium text-ubb-orange transition hover:text-white focus:outline-none"
+                        >
+                          Clear
+                        </button>
+                      </div>
                       <div
                         id={contentId}
                         role="region"
