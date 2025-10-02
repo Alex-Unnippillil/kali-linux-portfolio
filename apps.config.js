@@ -68,6 +68,7 @@ const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
 const SubnetCalculatorApp = createDynamicApp('subnet-calculator', 'Subnet Calculator');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
+const NetHunterApp = createDynamicApp('nethunter', 'NetHunter');
 
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
 const TrashApp = createDynamicApp('trash', 'Trash');
@@ -163,6 +164,7 @@ const displayInputLab = createDisplay(InputLabApp);
 const displaySubnetCalculator = createDisplay(SubnetCalculatorApp);
 
 const displayGhidra = createDisplay(GhidraApp);
+const displayNetHunter = createDisplay(NetHunterApp);
 
 const displayAutopsy = createDisplay(AutopsyApp);
 const displayPluginManager = createDisplay(PluginManagerApp);
@@ -869,6 +871,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayGhidra,
+  },
+  {
+    id: 'nethunter',
+    title: 'NetHunter',
+    icon: '/themes/Yaru/apps/nethunter.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNetHunter,
   },
   {
     id: 'mimikatz',

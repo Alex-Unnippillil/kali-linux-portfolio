@@ -1,0 +1,108 @@
+.tile {
+  background: linear-gradient(145deg, var(--kali-panel) 0%, var(--color-ub-cool-grey) 100%);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--kali-panel-border);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  justify-content: space-between;
+  box-shadow: var(--shadow-2);
+  transition: transform var(--motion-medium) ease, box-shadow var(--motion-medium) ease;
+  min-height: 220px;
+}
+
+.tile:focus-visible,
+.tile:hover {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--kali-blue), transparent 40%);
+  transform: translateY(-2px);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--kali-blue) 20%, transparent);
+  color: var(--kali-blue);
+  font-size: 1.75rem;
+}
+
+.title {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--kali-blue);
+}
+
+.description {
+  font-size: 0.95rem;
+  color: color-mix(in srgb, var(--color-text), transparent 15%);
+}
+
+.actions {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.actionButton {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  background: color-mix(in srgb, var(--kali-panel) 70%, transparent);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--kali-panel-border);
+  padding: var(--space-4);
+  min-height: calc(var(--hit-area) * 1.6);
+  width: 100%;
+  transition: background var(--motion-fast) ease, border var(--motion-fast) ease;
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.actionButton span {
+  display: block;
+}
+
+.actionButton:focus-visible,
+.actionButton:hover {
+  outline: none;
+  border-color: color-mix(in srgb, var(--kali-blue) 80%, transparent);
+  background: color-mix(in srgb, var(--kali-blue) 25%, var(--kali-panel));
+}
+
+.actionMeta {
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--color-text), transparent 35%);
+}
+
+.primary {
+  background: color-mix(in srgb, var(--kali-blue) 35%, var(--kali-panel));
+  border-color: color-mix(in srgb, var(--kali-blue) 60%, transparent);
+  color: var(--color-bg);
+}
+
+.primary:hover,
+.primary:focus-visible {
+  color: var(--color-bg);
+  border-color: var(--kali-blue);
+}
+
+.alert {
+  background: color-mix(in srgb, var(--game-color-danger) 25%, var(--kali-panel));
+  border-color: color-mix(in srgb, var(--game-color-danger) 50%, transparent);
+}
+
+.alert:hover,
+.alert:focus-visible {
+  border-color: var(--game-color-danger);
+}

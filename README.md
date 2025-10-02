@@ -441,6 +441,7 @@ play/pause and track controls include keyboard hotkeys.
 | Metasploit | /apps/metasploit | Security Tool (simulated) |
 | Metasploit Post | /apps/metasploit-post | Security Tool (simulated) |
 | Mimikatz | /apps/mimikatz | Security Tool (simulated) |
+| NetHunter | /apps/nethunter | Security Tool (simulated) |
 | Nessus | /apps/nessus | Security Tool (simulated) |
 | Nmap NSE | /apps/nmap-nse | Security Tool (simulated) |
 | OpenVAS | /apps/openvas | Security Tool (simulated) |

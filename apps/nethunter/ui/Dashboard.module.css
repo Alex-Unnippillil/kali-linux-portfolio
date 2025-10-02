@@ -1,0 +1,58 @@
+.dashboard {
+  width: 100%;
+  display: grid;
+  gap: var(--space-4);
+  background: color-mix(in srgb, var(--kali-bg-solid) 85%, transparent);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--kali-panel-border);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-2);
+}
+
+.dashboardLandscape {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.dashboardPortrait {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.statusBanner {
+  grid-column: 1 / -1;
+  background: color-mix(in srgb, var(--kali-blue) 35%, var(--kali-panel));
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-bg);
+  font-size: 1.05rem;
+}
+
+.statusAccent {
+  font-size: 2rem;
+}
+
+.statusText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.statusText strong {
+  font-weight: 700;
+}
+
+.secondaryRow {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.secondaryLandscape {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.secondaryPortrait {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
