@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import useRovingTabIndex from '../../hooks/useRovingTabIndex';
+import MenuRow from './MenuRow';
 
 function TaskbarMenu(props) {
     const menuRef = useRef(null);
@@ -39,7 +40,7 @@ function TaskbarMenu(props) {
                 aria-label={props.minimized ? 'Restore Window' : 'Minimize Window'}
                 className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
-                <span className="ml-5">{props.minimized ? 'Restore' : 'Minimize'}</span>
+                <MenuRow label={props.minimized ? 'Restore' : 'Minimize'} />
             </button>
             <button
                 type="button"
@@ -48,7 +49,7 @@ function TaskbarMenu(props) {
                 aria-label="Close Window"
                 className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
-                <span className="ml-5">Close</span>
+                <MenuRow label="Close" />
             </button>
         </div>
     );

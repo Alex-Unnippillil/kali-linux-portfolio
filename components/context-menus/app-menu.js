@@ -1,6 +1,7 @@
 import React, { useRef } from 'react'
 import useFocusTrap from '../../hooks/useFocusTrap'
 import useRovingTabIndex from '../../hooks/useRovingTabIndex'
+import MenuRow from './MenuRow'
 
 function AppMenu(props) {
     const menuRef = useRef(null)
@@ -37,7 +38,7 @@ function AppMenu(props) {
                 aria-label={props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}
                 className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
-                <span className="ml-5">{props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}</span>
+                <MenuRow label={props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'} />
             </button>
         </div>
     )

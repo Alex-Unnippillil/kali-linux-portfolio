@@ -1,6 +1,7 @@
 import React, { useRef } from 'react'
 import useFocusTrap from '../../hooks/useFocusTrap'
 import useRovingTabIndex from '../../hooks/useRovingTabIndex'
+import MenuRow from './MenuRow'
 
 function DefaultMenu(props) {
     const menuRef = useRef(null)
@@ -32,7 +33,7 @@ function DefaultMenu(props) {
                 aria-label="Follow on Linkedin"
                 className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
-                <span className="ml-5">🙋‍♂️</span> <span className="ml-2">Follow on <strong>Linkedin</strong></span>
+                <MenuRow icon={<span>🙋‍♂️</span>} label={<>Follow on <strong>Linkedin</strong></>} />
             </a>
             <a
                 rel="noopener noreferrer"
@@ -42,7 +43,7 @@ function DefaultMenu(props) {
                 aria-label="Follow on Github"
                 className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
-                <span className="ml-5">🤝</span> <span className="ml-2">Follow on <strong>Github</strong></span>
+                <MenuRow icon={<span>🤝</span>} label={<>Follow on <strong>Github</strong></>} />
             </a>
             <a
                 rel="noopener noreferrer"
@@ -52,7 +53,7 @@ function DefaultMenu(props) {
                 aria-label="Contact Me"
                 className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
-                <span className="ml-5">📥</span> <span className="ml-2">Contact Me</span>
+                <MenuRow icon={<span>📥</span>} label="Contact Me" />
             </a>
             <Devider />
             <button
@@ -62,7 +63,7 @@ function DefaultMenu(props) {
                 aria-label="Reset Kali Linux"
                 className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
-                <span className="ml-5">🧹</span> <span className="ml-2">Reset Kali Linux</span>
+                <MenuRow icon={<span>🧹</span>} label="Reset Kali Linux" />
             </button>
         </div>
     )
