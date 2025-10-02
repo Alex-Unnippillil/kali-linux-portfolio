@@ -1,6 +1,6 @@
 const NAVBAR_SELECTOR = '.main-navbar-vp';
 const DEFAULT_NAVBAR_HEIGHT = 48;
-const WINDOW_TOP_MARGIN = 16;
+const WINDOW_TOP_MARGIN = 8;
 const SAFE_AREA_PROPERTIES = {
   top: '--safe-area-top',
   right: '--safe-area-right',
