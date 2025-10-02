@@ -1,14 +1,29 @@
 import React from 'react'
 import Image from 'next/image'
 
-const bootMessages = [
-    'Securing environment',
-    'Loading offensive simulations',
-    'Calibrating desktop widgets',
+const defaultBootMessages = [
+    {
+        id: 'boot-default-1',
+        label: 'Securing environment',
+        status: 'pending',
+    },
+    {
+        id: 'boot-default-2',
+        label: 'Loading offensive simulations',
+        status: 'pending',
+    },
+    {
+        id: 'boot-default-3',
+        label: 'Calibrating desktop widgets',
+        status: 'pending',
+    },
 ]
 
 function BootingScreen(props) {
     const isVisible = props.visible || props.isShutDown
+    const steps = props.progressSteps && props.progressSteps.length > 0 ? props.progressSteps : defaultBootMessages
+    const completedSteps = steps.filter((step) => step.status === 'complete')
+    const latestAnnouncement = completedSteps.length > 0 ? completedSteps[completedSteps.length - 1]?.label : undefined
 
     return (
         <div
@@ -66,14 +81,40 @@ function BootingScreen(props) {
                         )}
                     </button>
 
-                    <ul className="flex flex-col gap-2 text-sm text-slate-300">
-                        {bootMessages.map((message) => (
-                            <li key={message} className="flex items-center gap-3">
-                                <span className="inline-flex h-2 w-2 rounded-full bg-sky-400/70 shadow-[0_0_12px_rgba(56,189,248,0.7)] animate-[pulse_2s_ease-in-out_infinite]" aria-hidden />
-                                <span>{message}</span>
-                            </li>
-                        ))}
-                    </ul>
+                    <div className="flex flex-col gap-2 text-sm text-slate-300" aria-live="polite">
+                        {latestAnnouncement ? <span className="sr-only">{latestAnnouncement}</span> : null}
+                        <ul className="flex flex-col gap-2 text-sm text-slate-300">
+                            {steps.map((step) => {
+                                const isComplete = step.status === 'complete'
+                                return (
+                                    <li key={step.id} className="flex items-center gap-3">
+                                        <span
+                                            className={`inline-flex h-3 w-3 items-center justify-center rounded-full border border-sky-400/70 transition ${
+                                                isComplete
+                                                    ? 'bg-sky-400/80 text-slate-900'
+                                                    : 'border-dashed border-sky-400/40 text-slate-400'
+                                            }`}
+                                            aria-hidden
+                                        >
+                                            {isComplete ? (
+                                                <svg viewBox="0 0 20 20" className="h-2.5 w-2.5" focusable="false" aria-hidden>
+                                                    <path
+                                                        d="M5 10.5l3 3 7-7"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        strokeWidth="2"
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                    />
+                                                </svg>
+                                            ) : null}
+                                        </span>
+                                        <span className={isComplete ? 'text-slate-100' : 'text-slate-400'}>{step.label}</span>
+                                    </li>
+                                )
+                            })}
+                        </ul>
+                    </div>
                 </div>
 
                 <div className="relative mb-6 flex gap-4 text-xs uppercase tracking-[0.4em] text-slate-500">
