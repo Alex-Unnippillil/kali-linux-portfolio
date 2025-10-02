@@ -1,12 +1,213 @@
-import React, { PureComponent } from 'react';
+"use client";
+
+import React, { PureComponent, useEffect, useId } from 'react';
 import Image from 'next/image';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
-import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
+import usePersistentState from '../../hooks/usePersistentState';
+
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+const THEME_OPTIONS = [
+        { value: 'light', label: 'Light' },
+        { value: 'dark', label: 'Dark' },
+        { value: 'high-contrast', label: 'High contrast' }
+];
+
+const isValidTheme = (value) => THEME_OPTIONS.some((option) => option.value === value);
+
+const applyBrightness = (rawValue) => {
+        if (typeof document === 'undefined') return;
+        const value = clamp(Math.round(Number(rawValue) || 100), 10, 200);
+        const root = document.documentElement;
+        root.style.setProperty('--screen-brightness', String(value));
+        root.setAttribute('data-screen-brightness', String(value));
+        if (typeof window !== 'undefined') {
+                window.dispatchEvent(
+                        new CustomEvent('system-brightness-change', {
+                                detail: { brightness: value }
+                        })
+                );
+        }
+};
+
+const applyVolume = (rawValue) => {
+        if (typeof document === 'undefined') return;
+        const value = clamp(Math.round(Number(rawValue) || 0), 0, 100);
+        const root = document.documentElement;
+        const body = document.body;
+        root.style.setProperty('--system-volume', String(value));
+        root.setAttribute('data-system-volume', String(value));
+        if (body) {
+                body.classList.toggle('muted', value === 0);
+                body.setAttribute('data-system-volume', String(value));
+        }
+        if (typeof window !== 'undefined') {
+                window.dispatchEvent(
+                        new CustomEvent('system-volume-change', {
+                                detail: { volume: value }
+                        })
+                );
+        }
+};
+
+const applyTheme = (theme) => {
+        if (typeof document === 'undefined') return;
+        const root = document.documentElement;
+        const nextTheme = isValidTheme(theme) ? theme : 'light';
+        const isHighContrast = nextTheme === 'high-contrast';
+
+        root.dataset.shellTheme = nextTheme;
+        root.classList.toggle('high-contrast', isHighContrast);
+
+        if (nextTheme === 'light') {
+                root.setAttribute('data-theme', 'light');
+        } else {
+                root.setAttribute('data-theme', 'dark');
+        }
+
+        if (typeof window !== 'undefined') {
+                try {
+                        window.localStorage.setItem('high-contrast', isHighContrast ? 'true' : 'false');
+                } catch (error) {
+                        // Silently ignore storage errors
+                }
+
+                window.dispatchEvent(
+                        new CustomEvent('system-theme-change', {
+                                detail: { theme: nextTheme }
+                        })
+                );
+        }
+};
+
+const QuickSettingsFlyout = ({ open }) => {
+        const baseId = useId();
+        const headingId = `${baseId}-heading`;
+        const brightnessId = `${baseId}-brightness`;
+        const volumeId = `${baseId}-volume`;
+        const themeLegendId = `${baseId}-theme`; // for <fieldset>
+
+        const [brightness, setBrightness] = usePersistentState(
+                'system:brightness',
+                100,
+                (value) => typeof value === 'number' && Number.isFinite(value)
+        );
+        const [volume, setVolume] = usePersistentState(
+                'system:volume',
+                100,
+                (value) => typeof value === 'number' && value >= 0 && value <= 100
+        );
+        const [theme, setTheme] = usePersistentState('system:theme', 'light', isValidTheme);
+
+        useEffect(() => {
+                applyBrightness(brightness);
+        }, [brightness]);
+
+        useEffect(() => {
+                applyVolume(volume);
+        }, [volume]);
+
+        useEffect(() => {
+                applyTheme(theme);
+        }, [theme]);
+
+        return (
+                <div
+                        role="dialog"
+                        aria-modal="false"
+                        aria-labelledby={headingId}
+                        aria-hidden={!open}
+                        className={`absolute right-3 top-9 w-72 rounded-lg border border-white/10 bg-[#101521]/95 p-4 text-xs text-white shadow-lg transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)] md:text-sm ${
+                                open
+                                        ? 'pointer-events-auto opacity-100 backdrop-blur translate-y-0'
+                                        : 'pointer-events-none opacity-0 -translate-y-1'
+                        }`}
+                        tabIndex={-1}
+                >
+                        <h2 id={headingId} className="text-sm font-semibold text-white">
+                                Quick settings
+                        </h2>
+                        <div className="mt-4 flex flex-col gap-4" role="group" aria-labelledby={headingId}>
+                                <div className="flex flex-col gap-2">
+                                        <label htmlFor={brightnessId} className="font-medium text-white/90">
+                                                Screen brightness
+                                        </label>
+                                        <input
+                                                id={brightnessId}
+                                                type="range"
+                                                min="10"
+                                                max="200"
+                                                step="10"
+                                                value={brightness}
+                                                onChange={(event) => setBrightness(Number(event.target.value))}
+                                                className="w-full accent-[var(--color-accent)]"
+                                                aria-valuenow={brightness}
+                                                aria-valuemin={10}
+                                                aria-valuemax={200}
+                                                aria-valuetext={`${brightness}%`}
+                                                aria-label="Screen brightness"
+                                        />
+                                        <span className="text-[11px] text-white/60" aria-live="polite">
+                                                {brightness}%
+                                        </span>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                        <label htmlFor={volumeId} className="font-medium text-white/90">
+                                                System volume
+                                        </label>
+                                        <input
+                                                id={volumeId}
+                                                type="range"
+                                                min="0"
+                                                max="100"
+                                                step="5"
+                                                value={volume}
+                                                onChange={(event) => setVolume(Number(event.target.value))}
+                                                className="w-full accent-[var(--color-accent)]"
+                                                aria-valuenow={volume}
+                                                aria-valuemin={0}
+                                                aria-valuemax={100}
+                                                aria-valuetext={`${volume}%`}
+                                                aria-label="System volume"
+                                        />
+                                        <span className="text-[11px] text-white/60" aria-live="polite">
+                                                {volume === 0 ? 'Muted' : `${volume}%`}
+                                        </span>
+                                </div>
+                                <fieldset className="flex flex-col gap-2" aria-labelledby={themeLegendId}>
+                                        <legend id={themeLegendId} className="font-medium text-white/90">
+                                                Theme
+                                        </legend>
+                                        <div className="flex flex-col gap-2">
+                                                {THEME_OPTIONS.map((option) => (
+                                                        <label
+                                                                key={option.value}
+                                                                className="flex items-center justify-between gap-2 rounded-md border border-transparent px-2 py-1 text-left hover:border-white/20 hover:bg-white/5 focus-within:border-[var(--kali-blue)] focus-within:bg-white/10"
+                                                        >
+                                                                <span>{option.label}</span>
+                                                                <input
+                                                                        type="radio"
+                                                                        name={`${baseId}-theme-choice`}
+                                                                        value={option.value}
+                                                                        checked={theme === option.value}
+                                                                        onChange={(event) => {
+                                                                                if (event.target.checked) setTheme(option.value);
+                                                                        }}
+                                                                        aria-label={option.label}
+                                                                />
+                                                        </label>
+                                                ))}
+                                        </div>
+                                </fieldset>
+                        </div>
+                </div>
+        );
+};
 
 const areWorkspacesEqual = (next, prev) => {
         if (next.length !== prev.length) return false;
@@ -219,7 +420,7 @@ export default class Navbar extends PureComponent {
                                                         }
                                                 >
                                                         <Status />
-                                                        <QuickSettings open={this.state.status_card} />
+                                                        <QuickSettingsFlyout open={this.state.status_card} />
                                                 </div>
                                         </div>
                                 </div>
