@@ -797,6 +797,16 @@ export class Desktop extends Component {
         return this.workspaceStacks[activeWorkspace];
     };
 
+    promoteWindowInStack = (id) => {
+        if (!id) return;
+        const stack = this.getActiveStack();
+        const index = stack.indexOf(id);
+        if (index !== -1) {
+            stack.splice(index, 1);
+        }
+        stack.unshift(id);
+    };
+
     handleExternalWorkspaceSelect = (event) => {
         const workspaceId = event?.detail?.workspaceId;
         if (typeof workspaceId === 'number') {
@@ -1372,41 +1382,59 @@ export class Desktop extends Component {
     }
 
     renderWindows = () => {
-        let windowsJsx = [];
+        const { closed_windows = {}, minimized_windows = {}, focused_windows = {} } = this.state;
         const safeTopOffset = measureWindowTopOffset();
-        apps.forEach((app, index) => {
-            if (this.state.closed_windows[app.id] === false) {
+        const stack = this.getActiveStack();
+        const orderedIds = [];
+        const seen = new Set();
 
-                const pos = this.state.window_positions[app.id];
-                const props = {
-                    title: app.title,
-                    id: app.id,
-                    screen: app.screen,
-                    addFolder: this.addToDesktop,
-                    closed: this.closeApp,
-                    openApp: this.openApp,
-                    focus: this.focus,
-                    isFocused: this.state.focused_windows[app.id],
-                    hasMinimised: this.hasMinimised,
-                    minimized: this.state.minimized_windows[app.id],
-                    resizable: app.resizable,
-                    allowMaximize: app.allowMaximize,
-                    defaultWidth: app.defaultWidth,
-                    defaultHeight: app.defaultHeight,
-                    initialX: pos ? pos.x : undefined,
-                    initialY: pos ? clampWindowTopPosition(pos.y, safeTopOffset) : safeTopOffset,
-
-                    onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
-                    snapEnabled: this.props.snapEnabled,
-                    context: this.state.window_context[app.id],
-                }
-
-                windowsJsx.push(
-                    <Window key={app.id} {...props} />
-                )
+        stack.slice().reverse().forEach((id) => {
+            if (closed_windows[id] === false && !seen.has(id)) {
+                orderedIds.push(id);
+                seen.add(id);
             }
         });
-        return windowsJsx;
+
+        apps.forEach((app) => {
+            if (closed_windows[app.id] === false && !seen.has(app.id)) {
+                orderedIds.push(app.id);
+                seen.add(app.id);
+            }
+        });
+
+        if (!orderedIds.length) return null;
+
+        const appMap = new Map(apps.map((app) => [app.id, app]));
+
+        return orderedIds.map((id, index) => {
+            const app = appMap.get(id);
+            if (!app) return null;
+            const pos = this.state.window_positions[id];
+            const props = {
+                title: app.title,
+                id: app.id,
+                screen: app.screen,
+                addFolder: this.addToDesktop,
+                closed: this.closeApp,
+                openApp: this.openApp,
+                focus: this.focus,
+                isFocused: focused_windows[id],
+                hasMinimised: this.hasMinimised,
+                minimized: minimized_windows[id],
+                resizable: app.resizable,
+                allowMaximize: app.allowMaximize,
+                defaultWidth: app.defaultWidth,
+                defaultHeight: app.defaultHeight,
+                initialX: pos ? pos.x : undefined,
+                initialY: pos ? clampWindowTopPosition(pos.y, safeTopOffset) : safeTopOffset,
+                onPositionChange: (x, y) => this.updateWindowPosition(id, x, y),
+                snapEnabled: this.props.snapEnabled,
+                context: this.state.window_context[id],
+                zIndex: 200 + index,
+            };
+
+            return <Window key={id} {...props} />;
+        }).filter(Boolean);
     }
 
     updateWindowPosition = (id, x, y) => {
@@ -1587,10 +1615,6 @@ export class Desktop extends Component {
                         this.focus(objId);
                         this.saveSession();
                     });
-                    const stack = this.getActiveStack();
-                    if (!stack.includes(objId)) {
-                        stack.push(objId);
-                    }
                 });
             }, 200);
         }
@@ -1679,8 +1703,9 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
+        // removes focus from all window and
         // gives focus to window with 'id = objId'
+        this.promoteWindowInStack(objId);
         var focused_windows = this.state.focused_windows;
         focused_windows[objId] = true;
         for (let key in focused_windows) {
