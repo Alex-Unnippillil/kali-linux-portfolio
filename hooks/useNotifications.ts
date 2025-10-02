@@ -5,6 +5,8 @@ export type {
   AppNotification,
   PushNotificationInput,
   NotificationPriority,
+  QuietHoursConfig,
+  NotificationMutingReason,
 } from '../components/common/NotificationCenter';
 export type {
   ClassificationResult,

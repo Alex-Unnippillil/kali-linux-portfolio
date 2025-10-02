@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Toast from '../../../ui/Toast';
+import { useToastNotifications } from '../../../../hooks/useToastNotifications';
 
 /**
  * Heads up display for games. Provides pause/resume, sound toggle and
@@ -21,8 +22,12 @@ export default function Overlay({
   const [fps, setFps] = useState(0);
   const frame = useRef(performance.now());
   const count = useRef(0);
-  const [toast, setToast] = useState('');
   const pausedByDisconnect = useRef(false);
+  const { toast, showToast, dismissToast } = useToastNotifications({
+    appId: 'games',
+    notificationTitle: 'Game notification',
+    priority: 'high',
+  });
 
   // track fps using requestAnimationFrame
   useEffect(() => {
@@ -65,14 +70,18 @@ export default function Overlay({
   useEffect(() => {
     const handleDisconnect = () => {
       pausedByDisconnect.current = true;
-      setToast('Controller disconnected. Reconnect to resume.');
+      showToast('Controller disconnected. Reconnect to resume.', {
+        duration: 1_000_000,
+        notificationTitle: 'Controller disconnected',
+        priority: 'high',
+      });
       setPaused(true);
       onPause?.();
     };
     const handleConnect = () => {
       if (pausedByDisconnect.current) {
         pausedByDisconnect.current = false;
-        setToast('');
+        dismissToast();
         setPaused(false);
         onResume?.();
       }
@@ -83,7 +92,7 @@ export default function Overlay({
       window.removeEventListener('gamepaddisconnected', handleDisconnect);
       window.removeEventListener('gamepadconnected', handleConnect);
     };
-  }, [onPause, onResume]);
+  }, [dismissToast, onPause, onResume, showToast]);
 
   return (
     <>
@@ -98,9 +107,11 @@ export default function Overlay({
       </div>
       {toast && (
         <Toast
-          message={toast}
-          onClose={() => setToast('')}
-          duration={1000000}
+          message={toast.message}
+          actionLabel={toast.actionLabel}
+          onAction={toast.onAction}
+          duration={toast.duration ?? 1_000_000}
+          onClose={dismissToast}
         />
       )}
     </>
