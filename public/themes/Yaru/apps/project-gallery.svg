@@ -1,5 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
-  <rect x="4" y="4" width="40" height="40" rx="3" ry="3" fill="#4A4A4A"/>
-  <circle cx="16" cy="16" r="5" fill="#FFFFFF"/>
-  <path d="M4 32l10-10 8 8 5-5 13 13H4V32z" fill="#FFFFFF"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-labelledby="title desc">
+  <title id="title">Project gallery icon</title>
+  <desc id="desc">A rounded square containing a 3 by 3 grid of tiles with a highlighted preview tile.</desc>
+  <defs>
+    <linearGradient id="galleryBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2E3A4E"/>
+      <stop offset="100%" stop-color="#1B2433"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="40" height="40" rx="5" fill="url(#galleryBg)"/>
+  <g fill="#F4F6FB">
+    <rect x="11" y="13" width="6" height="6" rx="1.2"/>
+    <rect x="21" y="13" width="6" height="6" rx="1.2"/>
+    <rect x="31" y="13" width="6" height="6" rx="1.2"/>
+    <rect x="11" y="23" width="6" height="6" rx="1.2"/>
+    <rect x="21" y="23" width="6" height="6" rx="1.2"/>
+    <rect x="31" y="23" width="6" height="6" rx="1.2"/>
+    <rect x="11" y="33" width="6" height="6" rx="1.2"/>
+    <rect x="21" y="33" width="6" height="6" rx="1.2"/>
+  </g>
+  <rect x="31" y="33" width="6" height="6" rx="1.2" fill="#8CE2FF"/>
+  <path d="M33 35h2l1.5 1.8L38 35h2v2l-3 3-4-4z" fill="#0A7CC1"/>
 </svg>
