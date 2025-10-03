@@ -1,5 +1,35 @@
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <rect x="8" y="8" width="48" height="48" rx="4" ry="4" fill="#ffffff" stroke="#2e3436" stroke-width="2"/>
-  <text x="16" y="24" font-family="sans-serif" font-size="14" fill="#2e3436">A</text>
-  <text x="32" y="44" font-family="sans-serif" font-size="20" text-anchor="middle" fill="#d32f2f">♥</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Blackjack Hand Icon</title>
+  <desc id="desc">Two playing cards showing an ace of hearts and a jack of clubs to depict a blackjack hand.</desc>
+  <defs>
+    <linearGradient id="felt" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2d8659" />
+      <stop offset="100%" stop-color="#1b4d30" />
+    </linearGradient>
+    <linearGradient id="cardShade" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#e2e5e9" />
+    </linearGradient>
+    <linearGradient id="shadow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.18" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="8" fill="url(#felt)" />
+  <path d="M18 14h28a4 4 0 0 1 4 4v24a4 4 0 0 1-4 4H18a4 4 0 0 1-4-4V18a4 4 0 0 1 4-4z" fill="#0d0f10" opacity="0.35" />
+  <g transform="rotate(-10 28 30)">
+    <rect x="10" y="12" width="28" height="40" rx="4" fill="url(#cardShade)" stroke="#c3c7d1" stroke-width="1.2" />
+    <path d="M12 14h24v6H12z" fill="url(#shadow)" />
+    <text x="16" y="24" font-family="'Ubuntu', 'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#1b1f24">J</text>
+    <g transform="translate(16 30) scale(0.9)">
+      <path d="M6 0L0 10h12z" fill="#1b1f24" />
+      <circle cx="6" cy="7" r="2" fill="#ffffff" />
+    </g>
+  </g>
+  <g transform="rotate(8 38 32)">
+    <rect x="24" y="10" width="30" height="42" rx="4" fill="url(#cardShade)" stroke="#c3c7d1" stroke-width="1.4" />
+    <path d="M26 12h26v6H26z" fill="url(#shadow)" />
+    <text x="30" y="24" font-family="'Ubuntu', 'Noto Sans', sans-serif" font-size="12" font-weight="700" fill="#c62828">A</text>
+    <path d="M48 42c-3.6-3.3-6-6.1-6-8.7 0-2.2 1.8-4 4-4 1.5 0 2.8 0.9 3.5 2.2 0.7-1.3 2-2.2 3.5-2.2 2.2 0 4 1.8 4 4 0 2.6-2.4 5.4-6 8.7a1 1 0 0 1-1.4 0z" fill="#c62828" />
+  </g>
 </svg>
