@@ -1,5 +1,38 @@
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" fill="#2e3436"/>
-  <rect x="20" y="32" width="24" height="24" fill="#4caf50"/>
-  <circle cx="32" cy="24" r="10" fill="#d32f2f"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <!-- Original artwork created for the Kali Linux Portfolio project, released under CC0 1.0. -->
+  <title id="title">Tower Defense Turret</title>
+  <desc id="desc">Stylised automated turret icon for the tower defense game.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#31363f" />
+      <stop offset="100%" stop-color="#20242b" />
+    </linearGradient>
+    <linearGradient id="turret" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8dd0ff" />
+      <stop offset="100%" stop-color="#2c6ebd" />
+    </linearGradient>
+    <linearGradient id="base" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#555b66" />
+      <stop offset="100%" stop-color="#2d323a" />
+    </linearGradient>
+    <linearGradient id="barrel" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#c9d6ff" />
+      <stop offset="100%" stop-color="#5b6b9f" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="12" fill="url(#bg)"/>
+  <g fill="none" stroke="#10131a" stroke-opacity="0.4" stroke-width="2">
+    <path d="M14 46h36l4 10H10z" fill="url(#base)" stroke-linejoin="round" />
+  </g>
+  <g fill="url(#turret)">
+    <path d="M22 40c0-6 4-12 10-12s10 6 10 12v8H22z" stroke="#10131a" stroke-width="2" stroke-linejoin="round" />
+    <path d="M18 46h28l-3 8H21z" fill="url(#base)" stroke="#10131a" stroke-width="2" stroke-linejoin="round" />
+  </g>
+  <g stroke="#10131a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M28 22l-3 10h14l-3-10z" fill="url(#turret)" />
+    <path d="M32 18l-10 4v6h20v-6z" fill="#1f2732" />
+    <path d="M38 20h16v6H38z" fill="url(#barrel)" />
+    <circle cx="44" cy="23" r="2" fill="#f95f53" stroke="#73221d" stroke-width="1.5" />
+  </g>
+  <ellipse cx="32" cy="50" rx="12" ry="4" fill="#000" opacity="0.25"/>
 </svg>
