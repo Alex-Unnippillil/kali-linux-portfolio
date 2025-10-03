@@ -1,7 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <circle cx="50" cy="50" r="50" fill="#000"/>
-  <path d="M50 5a45 45 0 0 1 45 45H50z" fill="#f44336"/>
-  <path d="M5 50a45 45 0 0 1 45-45v45z" fill="#4caf50"/>
-  <path d="M50 95a45 45 0 0 1-45-45h45z" fill="#ffeb3b"/>
-  <path d="M95 50a45 45 0 0 1-45 45V50z" fill="#2196f3"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Simon memory pad icon</title>
+  <desc id="desc">Stylised four quadrant memory pad with the classic Simon colors and a central control disk.</desc>
+  <defs>
+    <radialGradient id="outerGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#151515"/>
+      <stop offset="1" stop-color="#000"/>
+    </radialGradient>
+    <radialGradient id="innerDepth" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#1b1b1b"/>
+      <stop offset="1" stop-color="#080808"/>
+    </radialGradient>
+    <linearGradient id="highlight" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.3"/>
+      <stop offset="0.4" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" fill-rule="evenodd">
+    <circle cx="64" cy="64" r="62" fill="url(#outerGlow)"/>
+    <circle cx="64" cy="64" r="54" fill="#111" stroke="#0a0a0a" stroke-width="2"/>
+    <g stroke="#000" stroke-width="3">
+      <path d="M64 12c24.3008 0 44 19.6992 44 44H64V12z" fill="#d94137"/>
+      <path d="M20 56c0-24.3008 19.6992-44 44-44v44H20z" fill="#40b659"/>
+      <path d="M64 116c-24.3008 0-44-19.6992-44-44h44v44z" fill="#f9e13a"/>
+      <path d="M108 72c0 24.3008-19.6992 44-44 44V72h44z" fill="#2281d9"/>
+    </g>
+    <circle cx="64" cy="64" r="28" fill="url(#innerDepth)" stroke="#1f1f1f" stroke-width="2"/>
+    <circle cx="64" cy="64" r="18" fill="#1a1a1a" stroke="#2c2c2c" stroke-width="2"/>
+    <circle cx="64" cy="64" r="10" fill="#303030"/>
+    <path d="M64 10c-30 0-54 24-54 54s24 54 54 54 54-24 54-54-24-54-54-54zm0-6c33.137 0 60 26.863 60 60s-26.863 60-60 60-60-26.863-60-60S30.863 4 64 4z" fill="url(#highlight)" opacity="0.35"/>
+  </g>
 </svg>
