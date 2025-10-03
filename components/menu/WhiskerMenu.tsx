@@ -398,16 +398,21 @@ const WhiskerMenu: React.FC = () => {
         ref={buttonRef}
         type="button"
         onClick={toggleMenu}
-        className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        aria-label="Open start menu"
+        aria-haspopup="true"
+        aria-expanded={isOpen}
+        className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-sm font-medium text-white/90 shadow-[0_6px_16px_rgba(16,24,40,0.25)] transition duration-150 ease-in-out hover:border-white/30 hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
       >
-        <Image
-          src="/themes/Yaru/status/decompiler-symbolic.svg"
-          alt="Menu"
-          width={16}
-          height={16}
-          className="inline mr-1"
-        />
-        Applications
+        <span className="relative inline-flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-black/40">
+          <Image
+            src="/icons/start-menu-logo.svg"
+            alt="Start menu logo"
+            width={24}
+            height={24}
+            className="h-5 w-5 transition-transform duration-150 group-hover:scale-105"
+          />
+        </span>
+        <span className="tracking-wide">Start</span>
       </button>
       {isVisible && (
         <div
