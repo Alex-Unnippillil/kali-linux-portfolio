@@ -1,6 +1,17 @@
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" fill="#2e3436"/>
-  <circle cx="32" cy="32" r="30" fill="#ffd700"/>
-  <polygon points="32,32 62,16 62,48" fill="#2e3436"/>
-  <circle cx="42" cy="22" r="4" fill="#2e3436"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Pac-Man themed icon</title>
+  <desc id="desc">Minimal Pac-Man character chasing pellets with a ghost on a dark background.</desc>
+  <!-- Based on "Pacman" from Openclipart (https://openclipart.org/detail/20640/pacman) which is released into the public domain. -->
+  <rect width="64" height="64" rx="8" fill="#0d1120"/>
+  <circle cx="24" cy="32" r="16" fill="#f7d547"/>
+  <polygon points="24,32 40,20 40,44" fill="#0d1120"/>
+  <circle cx="30" cy="24" r="2.4" fill="#0d1120"/>
+  <circle cx="45" cy="32" r="2.2" fill="#f7d547" opacity="0.6"/>
+  <circle cx="51" cy="32" r="2.2" fill="#f7d547" opacity="0.75"/>
+  <circle cx="57" cy="32" r="2.2" fill="#f7d547"/>
+  <path d="M42 20a10 10 0 0 1 10 10v14l-3-2-3 2-3-2-3 2-3-2-3 2V30a10 10 0 0 1 10-10z" fill="#ff5f6d"/>
+  <circle cx="45" cy="28.5" r="2.2" fill="#f7f8ff"/>
+  <circle cx="51" cy="28.5" r="2.2" fill="#f7f8ff"/>
+  <circle cx="45.8" cy="28.5" r="1.1" fill="#0d1120"/>
+  <circle cx="51.8" cy="28.5" r="1.1" fill="#0d1120"/>
 </svg>
