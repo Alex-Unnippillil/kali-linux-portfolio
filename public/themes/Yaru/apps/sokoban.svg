@@ -1,5 +1,29 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" fill="#4c566a"/>
-  <rect x="8" y="8" width="20" height="20" fill="#d08770"/>
-  <rect x="36" y="36" width="20" height="20" fill="#a3be8c"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Sokoban character with crate</title>
+  <desc id="desc">Minimal illustration of a warehouse worker pushing a wooden crate</desc>
+  <defs>
+    <linearGradient id="floor" x1="0" y1="48" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#253041" />
+      <stop offset="1" stop-color="#1c2331" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" fill="#101723" rx="8" />
+  <rect x="6" y="40" width="52" height="16" fill="url(#floor)" />
+  <g transform="translate(12 14)">
+    <circle cx="14" cy="8" r="6" fill="#f8d5b8" />
+    <path d="M14 14c-6 0-10 4-10 10v6h20v-6c0-6-4-10-10-10z" fill="#3a7bd5" />
+    <path d="M6 28h16l1.5 10H4.5z" fill="#2a5da0" />
+    <path d="M9 28l-3 10H2l3.5-12h3.5z" fill="#1f2f4a" />
+    <path d="M19 28l3 10h4l-3.5-12H19z" fill="#1f2f4a" />
+    <path d="M9.5 16l-5.5 6 4 4 5-5.5z" fill="#f8d5b8" />
+    <path d="M18.5 16l5.5 6-4 4-5-5.5z" fill="#f8d5b8" />
+    <path d="M12.5 34l-.5 6h4l-.5-6z" fill="#f5a623" />
+  </g>
+  <g transform="translate(34 22)">
+    <rect x="0" y="0" width="20" height="20" rx="2" fill="#bd8235" />
+    <rect x="1.5" y="1.5" width="17" height="17" fill="#d9a25c" rx="1" />
+    <path d="M0 7h20v2H0zm0 6h20v2H0z" fill="#8a5a24" />
+    <path d="M8 0h4v20H8z" fill="#8a5a24" />
+  </g>
+  <path d="M30 32h6v4h-6z" fill="#f8d5b8" />
 </svg>
