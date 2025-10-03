@@ -1,0 +1,7 @@
+Greenbone logo (OpenVAS) used in this repository:
+
+  Source: https://github.com/greenbone/docs/blob/main/src/_static/logo-light.svg
+  Copyright: © Greenbone AG
+  License: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
+
+This copy keeps the artwork intact with minor formatting adjustments for sizing within the icon grid.
