@@ -1,4 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="8" ry="8" fill="#323232"/>
-  <path d="M20 16h14c8 0 14 3 14 11 0 7-5 11-12 11h-8v10h-8V16zm14 16c4 0 6-1 6-5 0-3-2-5-6-5h-6v10h6z" fill="#fff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Reaver WPS Attack Simulator Icon</title>
+  <desc id="desc">Stylized Wi-Fi waves breaking a padlock to represent WPS cracking simulations.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2a59d1" />
+      <stop offset="100%" stop-color="#111b45" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="8" ry="8" fill="url(#bg)" />
+  <g fill="none" stroke="#f4f6ff" stroke-width="3" stroke-linecap="round">
+    <path d="M16 30c8-9 24-9 32 0" />
+    <path d="M22 36c5-6 15-6 20 0" />
+    <path d="M28 42c2-2 6-2 8 0" />
+  </g>
+  <g transform="translate(20 22)">
+    <path d="M12 10a6 6 0 0 1 12 0v2" fill="none" stroke="#f4f6ff" stroke-width="3" stroke-linecap="round" />
+    <path d="M8 18a8 8 0 0 1 8-8h8a8 8 0 0 1 8 8v6a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4v-6z" fill="#0c122b" stroke="#f4f6ff" stroke-width="3" />
+    <path d="M20 26v-4" stroke="#f4f6ff" stroke-width="3" stroke-linecap="round" />
+    <path d="M24 22l3-3" stroke="#ff5c7a" stroke-width="3" stroke-linecap="round" />
+    <path d="M16 22l-3 3" stroke="#ff5c7a" stroke-width="3" stroke-linecap="round" />
+  </g>
 </svg>
