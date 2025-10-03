@@ -1,4 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" fill="#272727"/>
-  <text x="50" y="65" font-size="60" text-anchor="middle" fill="#fff" font-family="sans-serif">N</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="nikto-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f1c2c" />
+      <stop offset="100%" stop-color="#05070b" />
+    </linearGradient>
+    <linearGradient id="nikto-sweep" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1cd2ff" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#23f5c6" stop-opacity="0.6" />
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="16" fill="url(#nikto-bg)" />
+  <rect x="22" y="28" width="84" height="72" rx="10" fill="#0a121b" stroke="#15283a" stroke-width="3" />
+  <rect x="22" y="28" width="84" height="16" rx="8" fill="#15283a" />
+  <circle cx="36" cy="36" r="4" fill="#2fd7ff" />
+  <circle cx="48" cy="36" r="4" fill="#23f5c6" />
+  <circle cx="60" cy="36" r="4" fill="#9cf3ff" />
+  <g transform="translate(0,6)">
+    <circle cx="64" cy="70" r="26" fill="#091017" stroke="#1f3b52" stroke-width="3" />
+    <circle cx="64" cy="70" r="20" fill="url(#nikto-sweep)" opacity="0.8" />
+    <path d="M64 50v40M44 70h40" stroke="#9cf3ff" stroke-width="3" stroke-linecap="round" opacity="0.4" />
+    <path d="M50 82V58l28 26V58" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
 </svg>
