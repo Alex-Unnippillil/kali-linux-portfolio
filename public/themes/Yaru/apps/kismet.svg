@@ -1,4 +1,32 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="8" ry="8" fill="#1a73e8"/>
-  <path d="M32 16c-11 0-20 9-20 20h4c0-8.8 7.2-16 16-16s16 7.2 16 16h4c0-11-9-20-20-20zm0-8C17.7 8 6 19.7 6 34h4c0-11.6 9.4-21 21-21s21 9.4 21 21h4c0-14.3-11.7-26-26-26zm0 26a4 4 0 100 8 4 4 0 000-8z" fill="#fff"/>
+  <!-- Created for Kali Linux Portfolio (2025). License: CC0 1.0 -->
+  <defs>
+    <linearGradient id="bgGradient" x1="16" y1="6" x2="48" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#201a3d" />
+      <stop offset="1" stop-color="#2d1f58" />
+    </linearGradient>
+    <radialGradient id="radarCore" cx="32" cy="32" r="24" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3cf1ff" stop-opacity="0.35" />
+      <stop offset="0.55" stop-color="#162640" stop-opacity="0.4" />
+      <stop offset="1" stop-color="#090e1d" stop-opacity="0.7" />
+    </radialGradient>
+    <linearGradient id="sweep" x1="28" y1="20" x2="52" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#67f3ff" stop-opacity="0.6" />
+      <stop offset="1" stop-color="#67f3ff" stop-opacity="0" />
+    </linearGradient>
+    <filter id="glow" x="-0.2" y="-0.2" width="1.4" height="1.4" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="1.5" result="blur" />
+      <feBlend in="SourceGraphic" in2="blur" mode="screen" />
+    </filter>
+  </defs>
+  <rect width="64" height="64" rx="14" ry="14" fill="url(#bgGradient)" />
+  <circle cx="32" cy="32" r="23" fill="url(#radarCore)" />
+  <path d="M32 10v44M10 32h44" stroke="#2dd0f5" stroke-width="1.6" stroke-linecap="round" stroke-opacity="0.6" />
+  <circle cx="32" cy="32" r="21" fill="none" stroke="#81f5ff" stroke-opacity="0.3" stroke-width="1.4" />
+  <circle cx="32" cy="32" r="16" fill="none" stroke="#5be0ff" stroke-opacity="0.2" stroke-width="1.2" />
+  <path d="M30.6 24.4a7.6 7.6 0 0 1 6 6" fill="none" stroke="#9df8ff" stroke-width="2" stroke-linecap="round" />
+  <path d="M27.8 21.6a11.4 11.4 0 0 1 9 9" fill="none" stroke="#67f3ff" stroke-width="1.8" stroke-linecap="round" stroke-opacity="0.85" />
+  <path d="M24.4 18.2a15.8 15.8 0 0 1 12.4 12.4" fill="none" stroke="#3bd4ff" stroke-width="1.6" stroke-linecap="round" stroke-opacity="0.75" />
+  <path d="M32 32l17 17a23.5 23.5 0 0 0 7-16.7l-11.4-1.1z" fill="url(#sweep)" opacity="0.7" />
+  <circle cx="32" cy="32" r="3.4" fill="#a8f7ff" filter="url(#glow)" />
 </svg>
