@@ -11,6 +11,10 @@ interface ModalProps {
      * Defaults to the Next.js root (`__next`).
      */
     overlayRoot?: string | HTMLElement;
+    className?: string;
+    ariaLabelledBy?: string;
+    ariaDescribedBy?: string;
+    ariaLabel?: string;
 }
 
 const FOCUSABLE_SELECTORS = [
@@ -27,7 +31,16 @@ const FOCUSABLE_SELECTORS = [
     '[contenteditable]'
 ].join(',');
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot }) => {
+const Modal: React.FC<ModalProps> = ({
+    isOpen,
+    onClose,
+    children,
+    overlayRoot,
+    className,
+    ariaLabelledBy,
+    ariaDescribedBy,
+    ariaLabel,
+}) => {
     const modalRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLElement | null>(null);
     const portalRef = useRef<HTMLDivElement | null>(null);
@@ -116,6 +129,10 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
             ref={modalRef}
             onKeyDown={handleKeyDown}
             tabIndex={-1}
+            className={className}
+            {...(ariaLabelledBy ? { 'aria-labelledby': ariaLabelledBy } : {})}
+            {...(ariaDescribedBy ? { 'aria-describedby': ariaDescribedBy } : {})}
+            {...(ariaLabel ? { 'aria-label': ariaLabel } : {})}
         >
             {children}
         </div>,
