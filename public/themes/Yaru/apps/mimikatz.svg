@@ -1,6 +1,32 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <rect width="64" height="64" rx="8" fill="#2d2d2d"/>
-  <path d="M20 24h24v16H20z" stroke="#fff" stroke-width="4"/>
-  <path d="M24 28h16v8H24z" fill="#ff4d4d"/>
-  <circle cx="32" cy="32" r="30" stroke="#fff" stroke-width="2"/>
+  <defs>
+    <linearGradient id="mimikatz-bg" x1="16" x2="52" y1="12" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1f2937"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="mimikatz-face" x1="20" x2="44" y1="18" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#60a5fa"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="mimikatz-key" x1="36" x2="56" y1="40" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fcd34d"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="12" fill="#0f172a"/>
+  <rect x="8" y="8" width="48" height="48" rx="16" fill="url(#mimikatz-bg)"/>
+  <path d="M22 26L26 12L32 22" fill="url(#mimikatz-face)"/>
+  <path d="M42 26L38 12L32 22" fill="url(#mimikatz-face)"/>
+  <path d="M20 28c0-8 5.82-14 12-14s12 6 12 14v6c0 9-5.82 16-12 16s-12-7-12-16v-6z" fill="url(#mimikatz-face)"/>
+  <path d="M32 22c4 0 6 4 6 6" stroke="#1e3a8a" stroke-linecap="round" stroke-width="2"/>
+  <path d="M32 22c-4 0-6 4-6 6" stroke="#1e3a8a" stroke-linecap="round" stroke-width="2"/>
+  <circle cx="26" cy="34" r="3.5" fill="#f8fafc"/>
+  <circle cx="38" cy="34" r="3.5" fill="#f8fafc"/>
+  <circle cx="26" cy="34" r="1.5" fill="#1f2937"/>
+  <circle cx="38" cy="34" r="1.5" fill="#1f2937"/>
+  <path d="M32 38l-2.5 3.5c1 .8 1.6 1.5 2.5 1.5s1.5-.7 2.5-1.5L32 38z" fill="#f8fafc"/>
+  <path d="M34 40.5c0 1.38-.9 2.5-2 2.5s-2-1.12-2-2.5" stroke="#1f2937" stroke-linecap="round" stroke-width="1.5"/>
+  <path d="M44 36a8 8 0 1 1-7.1 12.06l-5.4 5.44a1.5 1.5 0 0 1-2.12-2.12l5.4-5.44A8 8 0 0 1 44 36z" fill="url(#mimikatz-key)"/>
+  <path d="M44 40a4 4 0 1 1 0 8 4 4 0 0 1 0-8z" fill="#0f172a"/>
+  <rect x="42" y="44" width="4" height="6" rx="2" fill="#0f172a"/>
 </svg>
