@@ -1,5 +1,15 @@
 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <rect x="8" y="8" width="36" height="48" rx="4" ry="4" fill="#d0d0d0"/>
-  <rect x="16" y="8" width="36" height="48" rx="4" ry="4" fill="#ffffff" stroke="#2e3436" stroke-width="2"/>
-  <path d="M34 24c0-3.3 2.7-6 6-6s6 2.7 6 6c0 6-6 9-6 9s-6-3-6-9z" fill="#e63946"/>
+  <!-- Original solitaire card icon created for the Kali Linux Portfolio project. -->
+  <defs>
+    <linearGradient id="card-face" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" />
+      <stop offset="1" stop-color="#f1f5f9" />
+    </linearGradient>
+    <path id="heart-symbol" d="M0 0 A7 7 0 0 1 14 0 A7 7 0 0 1 28 0 Q28 10 14 20 Q0 10 0 0 Z" />
+  </defs>
+  <rect x="14" y="12" width="30" height="42" rx="5" fill="#dbeafe" />
+  <rect x="18" y="8" width="32" height="48" rx="5" fill="url(#card-face)" stroke="#111827" stroke-width="2" />
+  <use href="#heart-symbol" fill="#dc2626" transform="translate(20 22)" />
+  <use href="#heart-symbol" fill="#dc2626" transform="translate(24 14) scale(0.32)" />
+  <use href="#heart-symbol" fill="#dc2626" transform="translate(40 42) scale(0.32)" />
 </svg>
