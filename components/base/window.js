@@ -30,14 +30,16 @@ const percentOf = (value, total) => {
 
 const computeSnapRegions = (viewportWidth, viewportHeight, topInset = DEFAULT_WINDOW_TOP_OFFSET) => {
     const halfWidth = viewportWidth / 2;
-    const safeTop = Math.max(topInset, DEFAULT_WINDOW_TOP_OFFSET);
+    const normalizedTopInset = typeof topInset === 'number'
+        ? Math.max(topInset, DESKTOP_TOP_PADDING)
+        : DEFAULT_WINDOW_TOP_OFFSET;
     const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
-    const availableHeight = Math.max(0, viewportHeight - safeTop - SNAP_BOTTOM_INSET - safeBottom);
+    const availableHeight = Math.max(0, viewportHeight - normalizedTopInset - SNAP_BOTTOM_INSET - safeBottom);
     const topHeight = Math.min(availableHeight, Math.max(viewportHeight / 2, 0));
     return {
-        left: { left: 0, top: safeTop, width: halfWidth, height: availableHeight },
-        right: { left: viewportWidth - halfWidth, top: safeTop, width: halfWidth, height: availableHeight },
-        top: { left: 0, top: safeTop, width: viewportWidth, height: topHeight },
+        left: { left: 0, top: normalizedTopInset, width: halfWidth, height: availableHeight },
+        right: { left: viewportWidth - halfWidth, top: normalizedTopInset, width: halfWidth, height: availableHeight },
+        top: { left: 0, top: normalizedTopInset, width: viewportWidth, height: topHeight },
 
     };
 };

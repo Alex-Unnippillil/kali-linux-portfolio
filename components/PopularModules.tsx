@@ -68,10 +68,31 @@ const PopularModules: React.FC = () => {
   };
 
   useEffect(() => {
-    fetch(`/api/modules/update?version=${version}`)
-      .then((res) => res.json())
-      .then((data) => setUpdateAvailable(data.needsUpdate))
-      .catch(() => setUpdateAvailable(false));
+    if (typeof window === 'undefined' || process.env.NODE_ENV === 'test') {
+      return;
+    }
+
+    let cancelled = false;
+
+    const checkForUpdate = async () => {
+      try {
+        const res = await fetch(`/api/modules/update?version=${version}`);
+        const data = await res.json();
+        if (!cancelled) {
+          setUpdateAvailable(Boolean(data.needsUpdate));
+        }
+      } catch {
+        if (!cancelled) {
+          setUpdateAvailable(false);
+        }
+      }
+    };
+
+    void checkForUpdate();
+
+    return () => {
+      cancelled = true;
+    };
   }, [version]);
 
   const handleUpdate = async () => {
@@ -198,13 +219,14 @@ const PopularModules: React.FC = () => {
         )}
       </div>
       {updateMessage && <p className="text-sm">{updateMessage}</p>}
-      <input
-        type="text"
-        placeholder="Search modules"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full p-2 text-black rounded"
-      />
+        <input
+          type="text"
+          placeholder="Search modules"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full p-2 text-black rounded"
+          aria-label="Search modules"
+        />
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setFilter('')}
@@ -284,13 +306,14 @@ const PopularModules: React.FC = () => {
           <div className="space-y-1">
             <label className="block text-sm">
               Filter logs
-              <input
-                placeholder="Filter logs"
-                type="text"
-                value={logFilter}
-                onChange={(e) => setLogFilter(e.target.value)}
-                className="w-full p-1 mt-1 text-black rounded"
-              />
+                <input
+                  placeholder="Filter logs"
+                  type="text"
+                  value={logFilter}
+                  onChange={(e) => setLogFilter(e.target.value)}
+                  className="w-full p-1 mt-1 text-black rounded"
+                  aria-label="Filter logs"
+                />
             </label>
             <button
               type="button"
