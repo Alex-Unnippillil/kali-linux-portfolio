@@ -5,6 +5,7 @@ export class UbuntuApp extends Component {
     constructor() {
         super();
         this.state = { launching: false, dragging: false, prefetched: false };
+        this.touchGesture = null;
     }
 
     handleDragStart = () => {
@@ -55,16 +56,71 @@ export class UbuntuApp extends Component {
 
         const dragging = this.state.dragging || isBeingDragged;
 
-        const handlePointerUp = (event) => {
-            if (typeof this.props.onPointerUp === 'function') {
-                this.props.onPointerUp(event);
+        const touchMoveThreshold = 10;
+
+        const handlePointerDown = (event) => {
+            if (typeof onPointerDown === 'function') {
+                onPointerDown(event);
             }
 
             if (event?.defaultPrevented) return;
 
             if (event?.pointerType === 'touch') {
+                this.touchGesture = {
+                    pointerId: event.pointerId,
+                    startX: event.clientX,
+                    startY: event.clientY,
+                    moved: false,
+                    target: event.currentTarget,
+                };
+            }
+        };
+
+        const handlePointerMove = (event) => {
+            if (typeof onPointerMove === 'function') {
+                onPointerMove(event);
+            }
+
+            if (event?.defaultPrevented) return;
+
+            if (
+                event?.pointerType === 'touch' &&
+                this.touchGesture?.pointerId === event.pointerId &&
+                !this.touchGesture.moved
+            ) {
+                const deltaX = Math.abs(event.clientX - this.touchGesture.startX);
+                const deltaY = Math.abs(event.clientY - this.touchGesture.startY);
+
+                if (deltaX > touchMoveThreshold || deltaY > touchMoveThreshold) {
+                    this.touchGesture = { ...this.touchGesture, moved: true };
+                }
+            }
+        };
+
+        const resetTouchGesture = () => {
+            this.touchGesture = null;
+        };
+
+        const handlePointerUp = (event) => {
+            if (typeof this.props.onPointerUp === 'function') {
+                this.props.onPointerUp(event);
+            }
+
+            if (event?.defaultPrevented) {
+                resetTouchGesture();
+                return;
+            }
+
+            if (
+                event?.pointerType === 'touch' &&
+                this.touchGesture?.pointerId === event.pointerId &&
+                this.touchGesture.target === event.currentTarget &&
+                !this.touchGesture.moved
+            ) {
                 this.handleActivate(event);
             }
+
+            resetTouchGesture();
         };
 
         const combinedStyle = {
@@ -88,10 +144,16 @@ export class UbuntuApp extends Component {
                 draggable={draggable}
                 onDragStart={this.handleDragStart}
                 onDragEnd={this.handleDragEnd}
-                onPointerDown={onPointerDown}
-                onPointerMove={onPointerMove}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
-                onPointerCancel={onPointerCancel}
+                onPointerCancel={(event) => {
+                    if (typeof onPointerCancel === 'function') {
+                        onPointerCancel(event);
+                    }
+
+                    resetTouchGesture();
+                }}
                 style={combinedStyle}
                 className={(this.state.launching ? " app-icon-launch " : "") + (dragging ? " opacity-70 " : "") +
                     " m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none flex flex-col justify-start items-center text-center font-normal text-white transition-hover transition-active "}
