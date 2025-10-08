@@ -84,7 +84,18 @@ export default function useDailyQuote(tag?: string) {
     const pool = tag
       ? offlineQuotes.filter((q) => q.tags.includes(tag))
       : offlineQuotes;
-    const fetched = pool[Math.floor(Math.random() * pool.length)];
+
+    const fallbackPool = pool.length > 0 ? pool : offlineQuotes;
+    const fetched =
+      fallbackPool.length > 0
+        ? fallbackPool[Math.floor(Math.random() * fallbackPool.length)]
+        : undefined;
+
+    if (!fetched) {
+      setQuote(null);
+      return;
+    }
+
     const toStore: Quote = { ...fetched, date: today } as Quote;
     try {
       localStorage.setItem('dailyQuote', JSON.stringify(toStore));
