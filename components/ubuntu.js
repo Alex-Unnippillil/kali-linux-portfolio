@@ -37,15 +37,8 @@ export default class Ubuntu extends Component {
 			this.setState({ bg_image_name });
 		}
 
-                let booting_screen = safeLocalStorage?.getItem('booting_screen');
-		if (booting_screen !== null && booting_screen !== undefined) {
-			// user has visited site before
-			this.setState({ booting_screen: false });
-		} else {
-			// user is visiting site for the first time
-                        safeLocalStorage?.setItem('booting_screen', false);
-			this.setTimeOutBootScreen();
-		}
+                this.setTimeOutBootScreen();
+                safeLocalStorage?.removeItem('booting_screen');
 
 		// get shutdown state
                 let shut_down = safeLocalStorage?.getItem('shut-down');
