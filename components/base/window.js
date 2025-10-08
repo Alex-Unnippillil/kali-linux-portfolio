@@ -226,6 +226,24 @@ export class Window extends Component {
         return null;
     }
 
+    setTransformMotionPreset = (node, preset) => {
+        if (!node) return;
+        const durationVars = {
+            maximize: '--window-motion-duration-maximize',
+            restore: '--window-motion-duration-restore',
+            snap: '--window-motion-duration-snap',
+        };
+        const easingVars = {
+            maximize: '--window-motion-ease-maximize',
+            restore: '--window-motion-ease-restore',
+            snap: '--window-motion-ease-snap',
+        };
+        const duration = durationVars[preset] || durationVars.restore;
+        const easing = easingVars[preset] || easingVars.restore;
+        node.style.setProperty('--window-motion-transform-duration', `var(${duration})`);
+        node.style.setProperty('--window-motion-transform-easing', `var(${easing})`);
+    }
+
     activateOverlay = () => {
         const root = this.getOverlayRoot();
         if (root) {
@@ -302,6 +320,7 @@ export class Window extends Component {
         if (!this.state.snapped) return;
         const node = this.getWindowNode();
         if (node) {
+            this.setTransformMotionPreset(node, 'snap');
             const x = node.style.getPropertyValue('--window-transform-x');
             const y = node.style.getPropertyValue('--window-transform-y');
             if (x && y) {
@@ -333,6 +352,7 @@ export class Window extends Component {
         const node = this.getWindowNode();
         if (node) {
             const offsetTop = region.top - DESKTOP_TOP_PADDING;
+            this.setTransformMotionPreset(node, 'snap');
             node.style.transform = `translate(${region.left}px, ${offsetTop}px)`;
         }
         this.setState({
@@ -457,21 +477,15 @@ export class Window extends Component {
         const endTransform = `translate(${posx},${posy})`;
         const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+        this.setTransformMotionPreset(node, 'restore');
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
             this.setState({ maximized: false });
             return;
         }
 
-        const startTransform = node.style.transform;
-        const animation = node.animate(
-            [{ transform: startTransform }, { transform: endTransform }],
-            { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
-        );
-        animation.onfinish = () => {
-            node.style.transform = endTransform;
-            this.setState({ maximized: false });
-        };
+        node.style.transform = endTransform;
+        this.setState({ maximized: false });
     }
 
     maximizeWindow = () => {
@@ -491,6 +505,7 @@ export class Window extends Component {
             );
             const heightPercent = percentOf(availableHeight, viewportHeight);
             if (node) {
+                this.setTransformMotionPreset(node, 'maximize');
                 node.style.transform = `translate(-1pt, 0px)`;
             }
             this.setState({ maximized: true, height: heightPercent, width: 100.2 });
@@ -623,7 +638,7 @@ export class Window extends Component {
                 {this.state.snapPreview && (
                     <div
                         data-testid="snap-preview"
-                        className="fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-opacity"
+                        className={`fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-opacity ${styles.snapPreview}`}
                         style={{
                             left: `${this.state.snapPreview.left}px`,
                             top: `${this.state.snapPreview.top}px`,
@@ -659,8 +674,7 @@ export class Window extends Component {
                         className={[
                             this.state.cursorType,
                             this.state.closed ? 'closed-window' : '',
-                            this.state.maximized ? 'duration-300' : '',
-                            this.props.minimized ? 'opacity-0 invisible duration-200' : '',
+                            this.props.minimized ? styles.windowFrameMinimized : '',
                             this.state.grabbed ? 'opacity-70' : '',
                             this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
                             'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',

@@ -4,7 +4,17 @@
   border-radius: var(--radius-6);
   box-shadow: var(--shadow-2);
   overflow: hidden;
-  transition: filter var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+  --window-motion-transform-duration: var(--window-motion-duration-restore);
+  --window-motion-transform-easing: var(--window-motion-ease-restore);
+  --window-motion-opacity-duration: var(--window-motion-duration-minimize);
+  --window-motion-opacity-easing: var(--window-motion-ease-minimize);
+  transition:
+    transform var(--window-motion-transform-duration) var(--window-motion-transform-easing),
+    filter var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
+    opacity var(--window-motion-opacity-duration) var(--window-motion-opacity-easing),
+    visibility 0s linear;
+  transition-delay: 0s, 0s, 0s, 0s, 0s;
 }
 
 .windowFrame::before {
@@ -33,10 +43,23 @@
 
 .windowFrameMaximized {
   border-radius: 0;
+  --window-motion-transform-duration: var(--window-motion-duration-maximize);
+  --window-motion-transform-easing: var(--window-motion-ease-maximize);
 }
 
 .windowFrameMaximized::before {
   border-radius: 0;
+}
+
+.windowFrameMinimized {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition-delay: 0s, 0s, 0s, 0s, var(--window-motion-opacity-duration);
+}
+
+.snapPreview {
+  transition: opacity var(--window-motion-duration-snap-preview) var(--window-motion-ease-snap-preview);
 }
 
 .windowTitlebar {
