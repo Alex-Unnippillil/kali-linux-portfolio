@@ -252,10 +252,28 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
 ## H) SEO, metadata, social
 
 59. **`<SEO/Meta>` audit**
-    - **Accept:** Titles, descriptions, canonical, Open Graph images for desktop and key apps; JSON‑LD for Person and Project list.
-    - **Where:** `components/SEO/Meta.js`.
+   - **Accept:** Titles, descriptions, canonical, Open Graph images for desktop and key apps; JSON‑LD for Person and Project list.
+   - **Where:** `components/SEO/Meta.js`.
 
 60. **Image sizes for social previews**
-    - **Accept:** 1200×630 Open Graph, 1080×1080 square fallback; served as static files and referenced in meta.
-    - **Where:** `public/images/social/*`.
+   - **Accept:** 1200×630 Open Graph, 1080×1080 square fallback; served as static files and referenced in meta.
+   - **Where:** `public/images/social/*`.
+
+## I) Whisker menu mobile optimization
+
+61. **Mobile-first layout pass**
+   - **Accept:** At viewports ≤ 768 px, the whisker menu expands to a full-height sheet anchored to the bottom, with safe-area padding and scrollable content that never clips under the notch.
+   - **Where:** `components/menu/WhiskerMenu.tsx`, Tailwind utility tokens.
+
+62. **Touch-friendly categories**
+   - **Accept:** Category list converts to horizontally scrollable chips with 48 px minimum touch targets, swipe support, and retains keyboard focus loops.
+   - **Where:** `components/menu/WhiskerMenu.tsx`, supporting CSS.
+
+63. **Sticky search and quick actions**
+   - **Accept:** Search input remains pinned to the top when scrolling; quick favorite shortcuts wrap to two columns with 56 px targets on mobile.
+   - **Where:** `components/menu/WhiskerMenu.tsx`.
+
+64. **One-handed reach mode toggle**
+   - **Accept:** Settings exposes a "One-handed mode" switch that repositions close/launch actions toward the bottom on small screens; persisted per device.
+   - **Where:** `components/menu/WhiskerMenu.tsx`, Settings store, menu layout helpers.
 
