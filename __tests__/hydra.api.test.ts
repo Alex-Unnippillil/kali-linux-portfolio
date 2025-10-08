@@ -79,6 +79,68 @@ describe('Hydra API temp file cleanup', () => {
   });
 });
 
+describe('Hydra API service validation', () => {
+  beforeEach(() => {
+    process.env.FEATURE_TOOL_APIS = 'enabled';
+    process.env.FEATURE_HYDRA = 'enabled';
+  });
+
+  afterEach(async () => {
+    jest.resetModules();
+    jest.dontMock('child_process');
+    jest.dontMock('crypto');
+    await cleanup();
+    delete process.env.FEATURE_TOOL_APIS;
+    delete process.env.FEATURE_HYDRA;
+  });
+
+  it('allows http variants exposed in UI', async () => {
+    jest.doMock('crypto', () => ({ randomUUID: () => 'test-uuid' }));
+    const execFileMock = jest.fn(
+      (cmd: string, args: any, options: any, cb: any) => {
+        if (typeof options === 'function') {
+          cb = options;
+        }
+        cb(null, Buffer.from('ok'), Buffer.from(''));
+      }
+    );
+    jest.doMock('child_process', () => ({ execFile: execFileMock }));
+
+    const handler = (await import('../pages/api/hydra')).default;
+
+    const req: any = {
+      method: 'POST',
+      body: { target: 'host', service: 'http-get', userList: 'u', passList: 'p' },
+    };
+    const res: any = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(execFileMock).toHaveBeenCalled();
+  });
+
+  it('rejects unsupported services', async () => {
+    const handler = (await import('../pages/api/hydra')).default;
+
+    const req: any = {
+      method: 'POST',
+      body: {
+        target: 'host',
+        service: 'unsupported-service',
+        userList: 'u',
+        passList: 'p',
+      },
+    };
+    const res: any = { status: jest.fn().mockReturnThis(), json: jest.fn() };
+
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Unsupported service' });
+  });
+});
+
 describe('Hydra API resume session', () => {
   const sessionDir = path.join(process.cwd(), 'hydra');
   const sessionFile = path.join(sessionDir, 'session');
