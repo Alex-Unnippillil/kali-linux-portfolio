@@ -142,6 +142,7 @@ const readRecentAppIds = (): string[] => {
 const WhiskerMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [category, setCategory] = useState<CategoryDefinition['id']>('all');
   const [isDesktop, setIsDesktop] = useState(false);
@@ -414,6 +415,54 @@ const WhiskerMenu: React.FC = () => {
     }
   }, []);
 
+  useEffect(() => {
+    if (!isVisible) {
+      setMenuStyle({});
+      return;
+    }
+
+    const updateMenuPosition = () => {
+      const trigger = buttonRef.current;
+      if (!trigger) {
+        setMenuStyle({});
+        return;
+      }
+
+      if (window.innerWidth >= 640) {
+        setMenuStyle({});
+        return;
+      }
+
+      const rect = trigger.getBoundingClientRect();
+      const desiredWidth = Math.min(window.innerWidth - 24, 680);
+      const rootStyle = getComputedStyle(document.documentElement);
+      const parseInset = (value: string) => {
+        const numeric = parseFloat(value);
+        return Number.isFinite(numeric) ? numeric : 0;
+      };
+      const safeAreaLeft = parseInset(rootStyle.getPropertyValue('--safe-area-left'));
+      const safeAreaRight = parseInset(rootStyle.getPropertyValue('--safe-area-right'));
+
+      const availableWidth = Math.max(window.innerWidth - safeAreaLeft - safeAreaRight, 0);
+      const width = Math.min(desiredWidth, availableWidth);
+      const maxLeft = Math.max(safeAreaLeft, window.innerWidth - safeAreaRight - width);
+      const centeredLeft = rect.left + rect.width / 2 - width / 2;
+      const clampedLeft = Math.min(Math.max(centeredLeft, safeAreaLeft), maxLeft);
+
+      setMenuStyle({
+        width: `${width}px`,
+        left: `${clampedLeft}px`,
+        top: `${rect.bottom + 12}px`,
+      });
+    };
+
+    updateMenuPosition();
+    window.addEventListener('resize', updateMenuPosition);
+    return () => {
+      window.removeEventListener('resize', updateMenuPosition);
+    };
+  }, [isVisible]);
+
   const focusCategoryButton = (index: number) => {
     const btn = categoryButtonRefs.current[index];
     if (btn) {
@@ -484,10 +533,11 @@ const WhiskerMenu: React.FC = () => {
       {isVisible && (
         <div
           ref={menuRef}
-          className={`absolute top-full left-1/2 mt-3 z-50 flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] -translate-x-1/2 flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:-translate-x-0 sm:flex-row sm:overflow-hidden ${
+          data-testid="whisker-menu-dropdown"
+          className={`fixed z-50 flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:absolute sm:top-full sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:flex-row sm:overflow-hidden ${
             isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
           }`}
-          style={{ transitionDuration: `${TRANSITION_DURATION}ms` }}
+          style={{ ...menuStyle, transitionDuration: `${TRANSITION_DURATION}ms` }}
           tabIndex={-1}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
