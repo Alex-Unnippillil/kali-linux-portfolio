@@ -81,10 +81,6 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
           ? (instance as { state?: BaseWindowState }).state ?? null
           : null;
 
-      if (instanceState?.maximized) {
-        return;
-      }
-
       const rect = node.getBoundingClientRect();
       const topOffset = measureWindowTopOffset();
       const storedPosition = readNodePosition(node);
@@ -99,6 +95,26 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
         topOffset,
       });
       if (!clamped) return;
+      if (instanceState?.maximized) {
+        if (clamped.x === currentPosition.x && clamped.y === currentPosition.y) {
+          return;
+        }
+
+        if (typeof node.style.setProperty === "function") {
+          node.style.setProperty("--window-transform-x", `${clamped.x}px`);
+          node.style.setProperty("--window-transform-y", `${clamped.y}px`);
+        } else {
+          (node.style as unknown as Record<string, string>)["--window-transform-x"] = `${clamped.x}px`;
+          (node.style as unknown as Record<string, string>)["--window-transform-y"] = `${clamped.y}px`;
+        }
+
+        if (typeof props.onPositionChange === "function") {
+          props.onPositionChange(clamped.x, clamped.y);
+        }
+
+        return;
+      }
+
       if (clamped.x === currentPosition.x && clamped.y === currentPosition.y) {
         return;
       }
