@@ -10,6 +10,10 @@ type BaseWindowProps = React.ComponentProps<typeof BaseWindow>;
 // BaseWindow is a class component, so the instance type exposes helper methods.
 type BaseWindowInstance = InstanceType<typeof BaseWindow> | null;
 
+type BaseWindowState = {
+  maximized?: boolean;
+};
+
 type MutableRef<T> = React.MutableRefObject<T>;
 
 const parsePx = (value?: string | null): number | null => {
@@ -71,6 +75,15 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
         ? instance.getWindowNode()
         : null;
       if (!node || typeof node.getBoundingClientRect !== "function") return;
+
+      const instanceState =
+        instance && typeof instance === "object" && "state" in instance
+          ? (instance as { state?: BaseWindowState }).state ?? null
+          : null;
+
+      if (instanceState?.maximized) {
+        return;
+      }
 
       const rect = node.getBoundingClientRect();
       const topOffset = measureWindowTopOffset();
