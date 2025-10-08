@@ -8,7 +8,7 @@ const BackgroundImage = dynamic(
     { ssr: false }
 );
 import apps, { games } from '../../apps.config';
-import Window from '../base/window';
+import Window from '../desktop/Window';
 import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
@@ -24,6 +24,7 @@ import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING } from '../../utils/uiConstants';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 import {
+    clampWindowPositionWithinViewport,
     clampWindowTopPosition,
     getSafeAreaInsets,
     measureWindowTopOffset,
@@ -211,6 +212,75 @@ export class Desktop extends Component {
     handleViewportResize = () => {
         this.configureTouchTargets(this.currentPointerIsCoarse);
         this.realignIconPositions();
+
+        if (typeof window === 'undefined') return;
+
+        const viewportWidth = typeof window.innerWidth === 'number' ? window.innerWidth : 0;
+        const viewportHeight = typeof window.innerHeight === 'number' ? window.innerHeight : 0;
+        const topOffset = measureWindowTopOffset();
+        const closedWindows = this.state.closed_windows || {};
+        const storedPositions = this.state.window_positions || {};
+        const nextPositions = { ...storedPositions };
+        let changed = false;
+
+        const extractPositionFromNode = (node) => {
+            if (!node || !node.style) return null;
+            const parse = (value) => {
+                if (typeof value !== 'string') return null;
+                const parsed = parseFloat(value);
+                return Number.isFinite(parsed) ? parsed : null;
+            };
+            if (typeof node.style.getPropertyValue === 'function') {
+                const xVar = parse(node.style.getPropertyValue('--window-transform-x'));
+                const yVar = parse(node.style.getPropertyValue('--window-transform-y'));
+                if (xVar !== null && yVar !== null) {
+                    return { x: xVar, y: yVar };
+                }
+            }
+            if (typeof node.style.transform === 'string') {
+                const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
+                if (match) {
+                    const parsedX = parseFloat(match[1]);
+                    const parsedY = parseFloat(match[2]);
+                    if (Number.isFinite(parsedX) && Number.isFinite(parsedY)) {
+                        return { x: parsedX, y: parsedY };
+                    }
+                }
+            }
+            return null;
+        };
+
+        Object.keys(closedWindows).forEach((id) => {
+            if (closedWindows[id] !== false) return;
+            const node = typeof document !== 'undefined' ? document.getElementById(id) : null;
+            let position = nextPositions[id];
+            if (!position && node) {
+                const extracted = extractPositionFromNode(node);
+                if (extracted) {
+                    position = extracted;
+                    nextPositions[id] = { ...extracted };
+                }
+            }
+            if (!position) return;
+
+            const rect = node && typeof node.getBoundingClientRect === 'function'
+                ? node.getBoundingClientRect()
+                : null;
+            const clamped = clampWindowPositionWithinViewport(position, rect, {
+                viewportWidth,
+                viewportHeight,
+                topOffset,
+            });
+            if (!clamped) return;
+            if (clamped.x !== position.x || clamped.y !== position.y) {
+                nextPositions[id] = { x: clamped.x, y: clamped.y };
+                changed = true;
+            }
+        });
+
+        if (changed) {
+            this.setWorkspaceState({ window_positions: nextPositions }, this.saveSession);
+        }
     };
 
     computeTouchCentroid = (touchList) => {

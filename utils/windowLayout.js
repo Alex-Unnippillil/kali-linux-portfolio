@@ -1,3 +1,5 @@
+import { SNAP_BOTTOM_INSET } from './uiConstants';
+
 const NAVBAR_SELECTOR = '.main-navbar-vp';
 const DEFAULT_NAVBAR_HEIGHT = 48;
 const WINDOW_TOP_MARGIN = 8;
@@ -65,4 +67,91 @@ export const clampWindowTopPosition = (value, topOffset) => {
     return safeOffset;
   }
   return Math.max(value, safeOffset);
+};
+
+const parseDimension = (value) => {
+  if (typeof value !== 'number') return 0;
+  return Number.isFinite(value) ? Math.max(value, 0) : 0;
+};
+
+const getViewportDimension = (dimension, fallback) => {
+  if (typeof dimension === 'number' && Number.isFinite(dimension)) {
+    return dimension;
+  }
+  if (typeof window !== 'undefined' && typeof window[fallback] === 'number') {
+    return window[fallback];
+  }
+  return 0;
+};
+
+const parsePositionCoordinate = (value, fallback) => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  return fallback;
+};
+
+export const clampWindowPositionWithinViewport = (
+  position,
+  dimensions,
+  options = {},
+) => {
+  if (!position || typeof position !== 'object') {
+    return null;
+  }
+
+  const viewportWidth = getViewportDimension(options.viewportWidth, 'innerWidth');
+  const viewportHeight = getViewportDimension(options.viewportHeight, 'innerHeight');
+  const topOffset = typeof options.topOffset === 'number'
+    ? options.topOffset
+    : measureWindowTopOffset();
+  const bottomInset = typeof options.bottomInset === 'number'
+    ? Math.max(options.bottomInset, 0)
+    : Math.max(0, measureSafeAreaInset('bottom'));
+
+  if (!viewportWidth || !viewportHeight) {
+    return {
+      x: parsePositionCoordinate(position.x, 0),
+      y: clampWindowTopPosition(position.y, topOffset),
+      bounds: {
+        minX: 0,
+        maxX: 0,
+        minY: topOffset,
+        maxY: topOffset,
+      },
+    };
+  }
+
+  const width = dimensions && typeof dimensions === 'object'
+    ? parseDimension(dimensions.width)
+    : 0;
+  const height = dimensions && typeof dimensions === 'object'
+    ? parseDimension(dimensions.height)
+    : 0;
+
+  const horizontalSpace = Math.max(viewportWidth - width, 0);
+  const availableVertical = Math.max(viewportHeight - topOffset - SNAP_BOTTOM_INSET - bottomInset, 0);
+  const verticalSpace = Math.max(availableVertical - height, 0);
+
+  const minX = 0;
+  const maxX = horizontalSpace;
+  const minY = topOffset;
+  const maxY = topOffset + verticalSpace;
+
+  const nextX = Math.min(Math.max(parsePositionCoordinate(position.x, 0), minX), maxX);
+  const nextY = Math.min(
+    Math.max(clampWindowTopPosition(position.y, topOffset), minY),
+    maxY,
+  );
+
+  return {
+    x: nextX,
+    y: nextY,
+    bounds: {
+      minX,
+      maxX,
+      minY,
+      maxY,
+    },
+  };
 };
