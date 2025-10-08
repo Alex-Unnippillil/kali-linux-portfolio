@@ -499,14 +499,16 @@ export class Window extends Component {
             this.setWinowsPosition();
             // translate window to maximize position
             const viewportHeight = window.innerHeight;
+            const topOffset = measureWindowTopOffset();
             const availableHeight = Math.max(
                 0,
-                viewportHeight - DESKTOP_TOP_PADDING - SNAP_BOTTOM_INSET - Math.max(0, measureSafeAreaInset('bottom')),
+                viewportHeight - topOffset - SNAP_BOTTOM_INSET - Math.max(0, measureSafeAreaInset('bottom')),
             );
             const heightPercent = percentOf(availableHeight, viewportHeight);
             if (node) {
                 this.setTransformMotionPreset(node, 'maximize');
-                node.style.transform = `translate(-1pt, 0px)`;
+                const translateYOffset = topOffset - DESKTOP_TOP_PADDING;
+                node.style.transform = `translate(-1pt, ${translateYOffset}px)`;
             }
             this.setState({ maximized: true, height: heightPercent, width: 100.2 });
         }

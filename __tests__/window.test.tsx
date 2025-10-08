@@ -4,6 +4,18 @@ import Window from '../components/desktop/Window';
 import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET } from '../utils/uiConstants';
 import { measureSafeAreaInset, measureWindowTopOffset } from '../utils/windowLayout';
 
+jest.mock('../utils/windowLayout', () => {
+  const actual = jest.requireActual('../utils/windowLayout');
+  return {
+    ...actual,
+    measureSafeAreaInset: jest.fn(() => 0),
+    measureWindowTopOffset: jest.fn(() => actual.DEFAULT_WINDOW_TOP_OFFSET),
+  };
+});
+
+const measureSafeAreaInsetMock = measureSafeAreaInset as jest.MockedFunction<typeof measureSafeAreaInset>;
+const measureWindowTopOffsetMock = measureWindowTopOffset as jest.MockedFunction<typeof measureWindowTopOffset>;
+
 const computeSnappedHeightPercent = () => {
   const topOffset = measureWindowTopOffset();
   const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
@@ -20,6 +32,8 @@ const setViewport = (width: number, height: number) => {
 
 beforeEach(() => {
   setViewport(1440, 900);
+  measureSafeAreaInsetMock.mockReturnValue(0);
+  measureWindowTopOffsetMock.mockReturnValue(DESKTOP_TOP_PADDING);
 });
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
@@ -414,6 +428,31 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBeNull();
     expect(ref.current!.state.width).toBe(60);
     expect(ref.current!.state.height).toBe(85);
+  });
+});
+
+describe('Window maximize behavior', () => {
+  it('respects safe-area aware top offset when maximizing', () => {
+    const safeTop = DESKTOP_TOP_PADDING + 48;
+    measureWindowTopOffsetMock.mockReturnValue(safeTop);
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const maximizeButton = screen.getByRole('button', { name: /window maximize/i });
+    fireEvent.click(maximizeButton);
+
+    const winEl = document.getElementById('test-window') as HTMLElement | null;
+    expect(winEl?.style.transform).toBe(`translate(-1pt, ${safeTop - DESKTOP_TOP_PADDING}px)`);
   });
 });
 
