@@ -149,6 +149,12 @@ const WhiskerMenu: React.FC = () => {
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [highlight, setHighlight] = useState(0);
   const [categoryHighlight, setCategoryHighlight] = useState(0);
+  const [prefersTouch, setPrefersTouch] = useState(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return false;
+    }
+    return window.matchMedia('(pointer: coarse)').matches;
+  });
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
@@ -163,12 +169,37 @@ const WhiskerMenu: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia('(pointer: coarse)');
+    const handleChange = (event: MediaQueryListEvent) => {
+      setPrefersTouch(event.matches);
+    };
+
+    setPrefersTouch(mediaQuery.matches);
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+
+    if (typeof mediaQuery.addListener === 'function') {
+      mediaQuery.addListener(handleChange);
+      return () => mediaQuery.removeListener(handleChange);
+    }
+
+    return undefined;
+  }, []);
+
+  useEffect(() => {
     if (!isOpen) return;
     setRecentIds(readRecentAppIds());
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || prefersTouch) return;
     let timeout: ReturnType<typeof setTimeout> | null = null;
     const focusInput = () => {
       const input = searchInputRef.current;
@@ -189,7 +220,7 @@ const WhiskerMenu: React.FC = () => {
         clearTimeout(timeout);
       }
     };
-  }, [isOpen]);
+  }, [isOpen, prefersTouch]);
 
   const recentApps = useMemo(() => {
     const mapById = new Map(allApps.map(app => [app.id, app] as const));

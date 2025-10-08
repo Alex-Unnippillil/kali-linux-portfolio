@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import WhiskerMenu from '../components/menu/WhiskerMenu';
 
@@ -22,5 +22,48 @@ describe('WhiskerMenu keyboard shortcuts', () => {
     fireEvent.keyDown(window, { key: 'F1', altKey: true });
 
     expect(screen.getByText('Categories')).toBeInTheDocument();
+  });
+});
+
+describe('WhiskerMenu touch pointer behavior', () => {
+  const originalMatchMedia = window.matchMedia;
+
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia;
+  });
+
+  it('does not focus the search input when coarse pointer is preferred', async () => {
+    window.matchMedia = jest.fn().mockImplementation((query: string) => {
+      const listeners = new Set<(event: MediaQueryListEvent) => void>();
+      const mediaQueryList = {
+        matches: query === '(pointer: coarse)',
+        media: query,
+        onchange: null,
+        addEventListener: jest.fn((eventName: string, listener: (event: MediaQueryListEvent) => void) => {
+          if (eventName === 'change') {
+            listeners.add(listener);
+          }
+        }),
+        removeEventListener: jest.fn((eventName: string, listener: (event: MediaQueryListEvent) => void) => {
+          if (eventName === 'change') {
+            listeners.delete(listener);
+          }
+        }),
+        addListener: jest.fn((listener: (event: MediaQueryListEvent) => void) => listeners.add(listener)),
+        removeListener: jest.fn((listener: (event: MediaQueryListEvent) => void) => listeners.delete(listener)),
+        dispatchEvent: jest.fn(),
+      } satisfies MediaQueryList;
+      return mediaQueryList;
+    });
+
+    render(<WhiskerMenu />);
+
+    fireEvent.click(screen.getByRole('button', { name: /applications/i }));
+
+    const searchInput = await screen.findByPlaceholderText('Search applications');
+
+    await waitFor(() => {
+      expect(searchInput).not.toHaveFocus();
+    });
   });
 });
