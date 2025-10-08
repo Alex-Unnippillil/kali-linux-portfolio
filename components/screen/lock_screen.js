@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import Clock from '../util-components/clock';
 import { useSettings } from '../../hooks/useSettings';
 import KaliWallpaper from '../util-components/kali-wallpaper';
@@ -8,10 +8,25 @@ export default function LockScreen(props) {
     const { bgImageName, useKaliWallpaper } = useSettings();
     const useKaliTheme = useKaliWallpaper || bgImageName === 'kali-gradient';
 
-    if (props.isLocked) {
-        window.addEventListener('click', props.unLockScreen);
-        window.addEventListener('keypress', props.unLockScreen);
-    };
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return undefined;
+        }
+
+        if (!props.isLocked) {
+            return undefined;
+        }
+
+        const handleUnlock = props.unLockScreen;
+
+        window.addEventListener('click', handleUnlock);
+        window.addEventListener('keypress', handleUnlock);
+
+        return () => {
+            window.removeEventListener('click', handleUnlock);
+            window.removeEventListener('keypress', handleUnlock);
+        };
+    }, [props.isLocked, props.unLockScreen]);
 
     return (
         <div
