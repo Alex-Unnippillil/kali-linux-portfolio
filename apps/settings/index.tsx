@@ -13,6 +13,7 @@ import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
 import KaliWallpaper from "../../components/util-components/kali-wallpaper";
+import { useOnScreenKeyboard } from "../../components/osk/OnScreenKeyboardProvider";
 
 export default function Settings() {
   const {
@@ -32,9 +33,14 @@ export default function Settings() {
     setHighContrast,
     haptics,
     setHaptics,
+    onScreenKeyboardEnabled,
+    setOnScreenKeyboardEnabled,
+    onScreenKeyboardAutoShow,
+    setOnScreenKeyboardAutoShow,
     theme,
     setTheme,
   } = useSettings();
+  const { hardwareKeyboardDetected, autoVisible } = useOnScreenKeyboard();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const tabs = [
@@ -282,6 +288,35 @@ export default function Settings() {
               ariaLabel="Haptics"
             />
           </div>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">On-screen Keyboard:</span>
+            <ToggleSwitch
+              checked={onScreenKeyboardEnabled}
+              onChange={setOnScreenKeyboardEnabled}
+              ariaLabel="Enable on-screen keyboard"
+            />
+          </div>
+          <div
+            className={`flex justify-center my-3 items-center transition-opacity ${
+              onScreenKeyboardEnabled ? "" : "opacity-40"
+            }`}
+          >
+            <span className="mr-2 text-ubt-grey text-sm">
+              Auto-show without hardware keyboard:
+            </span>
+            <ToggleSwitch
+              checked={onScreenKeyboardAutoShow}
+              onChange={setOnScreenKeyboardAutoShow}
+              ariaLabel="Auto show on-screen keyboard"
+            />
+          </div>
+          <p className="mx-auto max-w-lg px-6 text-center text-xs text-ubt-grey/70">
+            {hardwareKeyboardDetected
+              ? "Hardware keyboard detected. Use the toggle above when you need the touchscreen keyboard, or open it manually from the floating button."
+              : autoVisible
+                ? "Touch inputs will keep the NetHunter keyboard visible until focus moves away."
+                : "No hardware keyboard detected. Focusing a terminal or text field will slide the on-screen keyboard into view."}
+          </p>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
               onClick={() => setShowKeymap(true)}
