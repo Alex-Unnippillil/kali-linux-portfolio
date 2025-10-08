@@ -30,18 +30,42 @@ export class UbuntuApp extends Component {
         }
     }
 
+    handleActivate = (event) => {
+        if (this.props.disabled) return;
+
+        const dragging = this.state.dragging || this.props.isBeingDragged;
+        if (dragging) return;
+
+        if (event && typeof event.preventDefault === 'function') {
+            event.preventDefault();
+        }
+
+        this.openApp();
+    }
+
     render() {
         const {
             draggable = true,
             isBeingDragged = false,
             onPointerDown,
             onPointerMove,
-            onPointerUp,
             onPointerCancel,
             style,
         } = this.props;
 
         const dragging = this.state.dragging || isBeingDragged;
+
+        const handlePointerUp = (event) => {
+            if (typeof this.props.onPointerUp === 'function') {
+                this.props.onPointerUp(event);
+            }
+
+            if (event?.defaultPrevented) return;
+
+            if (event?.pointerType === 'touch') {
+                this.handleActivate(event);
+            }
+        };
 
         const combinedStyle = {
             width: 'var(--desktop-icon-width, 6rem)',
@@ -66,7 +90,7 @@ export class UbuntuApp extends Component {
                 onDragEnd={this.handleDragEnd}
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
-                onPointerUp={onPointerUp}
+                onPointerUp={handlePointerUp}
                 onPointerCancel={onPointerCancel}
                 style={combinedStyle}
                 className={(this.state.launching ? " app-icon-launch " : "") + (dragging ? " opacity-70 " : "") +
