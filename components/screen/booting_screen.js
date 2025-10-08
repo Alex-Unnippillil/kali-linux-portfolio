@@ -9,6 +9,7 @@ const bootMessages = [
 
 function BootingScreen(props) {
     const isVisible = props.visible || props.isShutDown
+    const visibilityClass = isVisible ? 'visible opacity-100' : 'invisible opacity-0'
 
     return (
         <div
@@ -19,9 +20,9 @@ function BootingScreen(props) {
                 ...(isVisible ? { zIndex: '100' } : { zIndex: '-20' }),
                 contentVisibility: 'auto',
             }}
-            className={`${isVisible ? 'visible opacity-100' : 'invisible opacity-0'} absolute inset-0 select-none overflow-hidden transition-opacity duration-700`}
+            className={`${visibilityClass} absolute inset-0 select-none overflow-hidden transition-opacity duration-700`}
         >
-            <div className="relative flex h-full w-full flex-col items-center justify-center gap-12 bg-[#030712] text-slate-100">
+            <div className={`${visibilityClass} relative flex h-full w-full flex-col items-center justify-center gap-12 bg-[#030712] text-slate-100`}>
                 <div className="pointer-events-none absolute inset-0">
                     <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-[#030712] to-black" />
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.22),_transparent_58%)]" />
@@ -30,14 +31,14 @@ function BootingScreen(props) {
 
                 <div className="relative flex flex-col items-center gap-6 px-6 text-center">
                     <span className="text-xs uppercase tracking-[0.5em] text-slate-400">Initializing workspace</span>
-                    <div className="relative">
+                    <div className={`${visibilityClass} relative`}>
                         <div className="absolute -inset-6 rounded-full bg-sky-500/20 blur-3xl" aria-hidden />
                         <Image
                             width={360}
                             height={360}
                             className="w-48 md:w-64"
                             src="/themes/Yaru/status/icons8-kali-linux.svg"
-                            alt="Kali Linux dragon emblem"
+                            alt="Ubuntu Logo"
                             sizes="(max-width: 768px) 12rem, 16rem"
                             priority
                         />

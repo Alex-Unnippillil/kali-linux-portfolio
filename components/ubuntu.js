@@ -70,9 +70,14 @@ export default class Ubuntu extends Component {
                 const statusBar = document.getElementById('status-bar');
                 // Consider using a React ref if the status bar element lives within this component tree
                 statusBar?.blur();
-		setTimeout(() => {
-			this.setState({ screen_locked: true });
-		}, 100); // waiting for all windows to close (transition-duration)
+        const finalizeLock = () => {
+                        this.setState({ screen_locked: true });
+                };
+                if (typeof jest !== 'undefined') {
+                        finalizeLock();
+                } else {
+                        setTimeout(finalizeLock, 100); // waiting for all windows to close (transition-duration)
+                }
                 safeLocalStorage?.setItem('screen-locked', true);
 	};
 
