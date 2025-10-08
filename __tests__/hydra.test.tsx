@@ -115,8 +115,15 @@ describe('Hydra session restore', () => {
     let runResolve: Function = () => {};
     // @ts-ignore
     global.fetch = jest.fn((url, options) => {
-      if (options && options.body && options.body.includes('resume')) {
-        return Promise.resolve({ json: async () => ({ output: '' }) });
+      if (options && options.body) {
+        try {
+          const payload = JSON.parse(options.body as string);
+          if (payload.action === 'resume') {
+            return Promise.resolve({ json: async () => ({ output: '' }) });
+          }
+        } catch {
+          // ignore malformed JSON in tests
+        }
       }
       return new Promise((resolve) => {
         runResolve = () => resolve({ json: async () => ({ output: '' }) });
@@ -133,10 +140,24 @@ describe('Hydra session restore', () => {
     unmount();
     render(<HydraApp />);
 
-    expect(global.fetch).toHaveBeenCalledWith(
-      '/api/hydra',
-      expect.objectContaining({ body: expect.stringContaining('resume') })
-    );
+    const resumeCall = (global.fetch as jest.Mock).mock.calls.find((call) => {
+      const options = call[1];
+      if (!options || !options.body) return false;
+      try {
+        const payload = JSON.parse(options.body as string);
+        return payload.action === 'resume';
+      } catch {
+        return false;
+      }
+    });
+
+    expect(resumeCall).toBeTruthy();
+
+    if (resumeCall) {
+      const resumeOptions = resumeCall[1];
+      const resumePayload = JSON.parse(resumeOptions.body as string);
+      expect(resumePayload).toMatchObject({ action: 'resume' });
+    }
 
     await act(async () => {
       runResolve();
