@@ -71,6 +71,7 @@ export class Window extends Component {
             snapPosition: null,
             snapped: null,
             lastSize: null,
+            lastTransform: null,
             grabbed: false,
         }
         this.windowRef = React.createRef();
@@ -298,14 +299,86 @@ export class Window extends Component {
         }
     }
 
+    getCurrentTransform = () => {
+        const node = this.getWindowNode();
+        if (!node) {
+            return { x: `${this.startX}px`, y: `${this.startY}px` };
+        }
+
+        const storedX = node.style.getPropertyValue('--window-transform-x');
+        const storedY = node.style.getPropertyValue('--window-transform-y');
+        if (storedX && storedY) {
+            return { x: storedX.trim(), y: storedY.trim() };
+        }
+
+        const inlineTransform = node.style.transform;
+        if (inlineTransform) {
+            const translateMatch = inlineTransform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+            if (translateMatch) {
+                return {
+                    x: translateMatch[1].trim(),
+                    y: translateMatch[2].trim(),
+                };
+            }
+        }
+
+        if (typeof window !== 'undefined') {
+            const computedTransform = window.getComputedStyle(node).transform;
+            if (computedTransform && computedTransform !== 'none') {
+                try {
+                    if (typeof DOMMatrixReadOnly !== 'undefined') {
+                        const matrix = new DOMMatrixReadOnly(computedTransform);
+                        return {
+                            x: `${matrix.m41}px`,
+                            y: `${matrix.m42}px`,
+                        };
+                    }
+                } catch (_error) {
+                    // Ignore parsing errors and fall back to manual parsing below.
+                }
+
+                const matrixMatch = computedTransform.match(/matrix(3d)?\(([^)]+)\)/);
+                if (matrixMatch) {
+                    const values = matrixMatch[2].split(',').map((value) => value.trim());
+                    if (matrixMatch[1] === '3d' && values.length >= 16) {
+                        const x = parseFloat(values[12]);
+                        const y = parseFloat(values[13]);
+                        if (!Number.isNaN(x) && !Number.isNaN(y)) {
+                            return { x: `${x}px`, y: `${y}px` };
+                        }
+                    } else if (values.length >= 6) {
+                        const x = parseFloat(values[4]);
+                        const y = parseFloat(values[5]);
+                        if (!Number.isNaN(x) && !Number.isNaN(y)) {
+                            return { x: `${x}px`, y: `${y}px` };
+                        }
+                    }
+                }
+            }
+        }
+
+        return { x: `${this.startX}px`, y: `${this.startY}px` };
+    }
+
+    getCurrentGeometry = () => {
+        const { width, height } = this.state;
+        return {
+            size: { width, height },
+            transform: this.getCurrentTransform(),
+        };
+    }
+
     unsnapWindow = () => {
         if (!this.state.snapped) return;
         const node = this.getWindowNode();
         if (node) {
-            const x = node.style.getPropertyValue('--window-transform-x');
-            const y = node.style.getPropertyValue('--window-transform-y');
-            if (x && y) {
-                node.style.transform = `translate(${x},${y})`;
+            const { lastTransform } = this.state;
+            const storedX = lastTransform?.x || node.style.getPropertyValue('--window-transform-x');
+            const storedY = lastTransform?.y || node.style.getPropertyValue('--window-transform-y');
+            if (storedX && storedY) {
+                node.style.setProperty('--window-transform-x', storedX);
+                node.style.setProperty('--window-transform-y', storedY);
+                node.style.transform = `translate(${storedX},${storedY})`;
             }
         }
         if (this.state.lastSize) {
@@ -320,6 +393,10 @@ export class Window extends Component {
     }
 
     snapWindow = (position) => {
+        const { size, transform } = this.getCurrentGeometry();
+        const preserveExisting = Boolean(this.state.snapped && this.state.lastSize && this.state.lastTransform);
+        const lastSize = preserveExisting ? this.state.lastSize : size;
+        const lastTransform = preserveExisting ? this.state.lastTransform : transform;
         this.setWinowsPosition();
         this.focusWindow();
         const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
@@ -329,7 +406,6 @@ export class Window extends Component {
         const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset);
         const region = regions[position];
         if (!region) return;
-        const { width, height } = this.state;
         const node = this.getWindowNode();
         if (node) {
             const offsetTop = region.top - DESKTOP_TOP_PADDING;
@@ -339,7 +415,8 @@ export class Window extends Component {
             snapPreview: null,
             snapPosition: null,
             snapped: position,
-            lastSize: { width, height },
+            lastSize,
+            lastTransform,
             width: percentOf(region.width, viewportWidth),
             height: percentOf(region.height, viewportHeight)
         }, this.resizeBoundries);
@@ -450,16 +527,36 @@ export class Window extends Component {
     restoreWindow = () => {
         const node = this.getWindowNode();
         if (!node) return;
-        this.setDefaultWindowDimenstion();
-        // get previous position
-        const posx = node.style.getPropertyValue("--window-transform-x") || `${this.startX}px`;
-        const posy = node.style.getPropertyValue("--window-transform-y") || `${this.startY}px`;
-        const endTransform = `translate(${posx},${posy})`;
+        const storedTransform = this.state.lastTransform;
+        const fallbackX = node.style.getPropertyValue('--window-transform-x') || `${this.startX}px`;
+        const fallbackY = node.style.getPropertyValue('--window-transform-y') || `${this.startY}px`;
+        const targetX = storedTransform?.x || fallbackX;
+        const targetY = storedTransform?.y || fallbackY;
+        const endTransform = `translate(${targetX}, ${targetY})`;
+
+        node.style.setProperty('--window-transform-x', targetX);
+        node.style.setProperty('--window-transform-y', targetY);
+
+        if (this.state.lastSize) {
+            this.setState({
+                width: this.state.lastSize.width,
+                height: this.state.lastSize.height,
+                maximized: false,
+                snapped: null,
+                lastTransform: { x: targetX, y: targetY },
+            }, this.resizeBoundries);
+        } else {
+            this.setDefaultWindowDimenstion();
+            this.setState({
+                maximized: false,
+                snapped: null,
+                lastTransform: { x: targetX, y: targetY },
+            });
+        }
         const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
-            this.setState({ maximized: false });
             return;
         }
 
@@ -482,6 +579,10 @@ export class Window extends Component {
         else {
             this.focusWindow();
             const node = this.getWindowNode();
+            const { size, transform } = this.getCurrentGeometry();
+            const preserveSnapHistory = Boolean(this.state.snapped && this.state.lastSize && this.state.lastTransform);
+            const lastSize = preserveSnapHistory ? this.state.lastSize : size;
+            const lastTransform = preserveSnapHistory ? this.state.lastTransform : transform;
             this.setWinowsPosition();
             // translate window to maximize position
             const viewportHeight = window.innerHeight;
@@ -493,7 +594,13 @@ export class Window extends Component {
             if (node) {
                 node.style.transform = `translate(-1pt, 0px)`;
             }
-            this.setState({ maximized: true, height: heightPercent, width: 100.2 });
+            this.setState({
+                maximized: true,
+                height: heightPercent,
+                width: 100.2,
+                lastSize,
+                lastTransform,
+            });
         }
     }
 
