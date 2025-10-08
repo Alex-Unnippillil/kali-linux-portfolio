@@ -144,6 +144,7 @@ const WhiskerMenu: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [category, setCategory] = useState<CategoryDefinition['id']>('all');
+  const [isDesktop, setIsDesktop] = useState(false);
 
   const [query, setQuery] = useState('');
   const [recentIds, setRecentIds] = useState<string[]>([]);
@@ -158,6 +159,26 @@ const WhiskerMenu: React.FC = () => {
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const mediaQuery = window.matchMedia('(min-width: 640px)');
+    const handleChange = (event: MediaQueryListEvent) => {
+      setIsDesktop(event.matches);
+    };
+    setIsDesktop(mediaQuery.matches);
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleChange);
+      return () => {
+        mediaQuery.removeEventListener('change', handleChange);
+      };
+    }
+    mediaQuery.addListener(handleChange);
+    return () => {
+      mediaQuery.removeListener(handleChange);
+    };
+  }, []);
   useEffect(() => {
     setRecentIds(readRecentAppIds());
   }, []);
@@ -365,7 +386,14 @@ const WhiskerMenu: React.FC = () => {
   const focusCategoryButton = (index: number) => {
     const btn = categoryButtonRefs.current[index];
     if (btn) {
-      btn.focus();
+      btn.focus({ preventScroll: true });
+      requestAnimationFrame(() => {
+        btn.scrollIntoView({
+          behavior: 'smooth',
+          block: isDesktop ? 'nearest' : 'center',
+          inline: 'center',
+        });
+      });
     }
   };
 
@@ -382,10 +410,17 @@ const WhiskerMenu: React.FC = () => {
   };
 
   const handleCategoryKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'ArrowDown') {
+    const isHorizontal = !isDesktop;
+    if (isHorizontal && event.key === 'ArrowRight') {
       event.preventDefault();
       handleCategoryNavigation(1);
-    } else if (event.key === 'ArrowUp') {
+    } else if (isHorizontal && event.key === 'ArrowLeft') {
+      event.preventDefault();
+      handleCategoryNavigation(-1);
+    } else if (!isHorizontal && event.key === 'ArrowDown') {
+      event.preventDefault();
+      handleCategoryNavigation(1);
+    } else if (!isHorizontal && event.key === 'ArrowUp') {
       event.preventDefault();
       handleCategoryNavigation(-1);
     } else if (event.key === 'Enter') {
@@ -436,11 +471,18 @@ const WhiskerMenu: React.FC = () => {
             </div>
             <div
               ref={categoryListRef}
-              className="flex max-h-[32vh] flex-1 flex-col gap-1 overflow-y-auto px-3 py-3 sm:max-h-full sm:px-2"
+              className="-mx-1 flex gap-2 overflow-x-auto px-2 pb-3 pt-3 sm:mx-0 sm:max-h-full sm:flex-1 sm:flex-col sm:gap-1 sm:overflow-y-auto sm:px-2 sm:py-3"
               role="listbox"
               aria-label="Application categories"
+              aria-orientation={isDesktop ? 'vertical' : 'horizontal'}
               tabIndex={0}
               onKeyDown={handleCategoryKeyDown}
+              style={{
+                WebkitOverflowScrolling: 'touch',
+                scrollSnapType: isDesktop
+                  ? undefined
+                  : ('x proximity' as React.CSSProperties['scrollSnapType']),
+              }}
             >
               {categoryConfigs.map((cat, index) => (
                 <button
@@ -449,11 +491,12 @@ const WhiskerMenu: React.FC = () => {
                     categoryButtonRefs.current[index] = el;
                   }}
                   type="button"
-                  className={`group flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-3 text-left text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] ${
+                  className={`group inline-flex min-h-[48px] min-w-[48px] flex-shrink-0 items-center gap-3 rounded-full border border-transparent bg-[#142132] px-5 py-2 text-sm text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] sm:min-h-[44px] sm:min-w-0 sm:w-full sm:rounded-lg sm:px-3 sm:py-3 ${
                     category === cat.id
-                      ? 'bg-[#162236] text-white shadow-[inset_2px_0_0_#53b9ff]'
+                      ? 'bg-[#1d2c43] text-white shadow-[inset_0_0_0_1px_rgba(83,185,255,0.35)]'
                       : 'text-gray-300 hover:bg-[#152133] hover:text-white'
                   }`}
+                  style={{ scrollSnapAlign: 'start' }}
                   role="option"
                   aria-selected={category === cat.id}
                   onClick={() => {
@@ -461,7 +504,7 @@ const WhiskerMenu: React.FC = () => {
                     setCategoryHighlight(index);
                   }}
                 >
-                  <span className="w-8 font-mono text-[11px] uppercase tracking-[0.2em] text-[#4aa8ff]">{String(index + 1).padStart(2, '0')}</span>
+                  <span className="hidden w-8 font-mono text-[11px] uppercase tracking-[0.2em] text-[#4aa8ff] sm:inline-flex">{String(index + 1).padStart(2, '0')}</span>
                   <span className="flex items-center gap-2">
                     <Image
                       src={cat.icon}
