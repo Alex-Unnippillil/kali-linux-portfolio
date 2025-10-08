@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 interface Playlist {
   id: string;
@@ -12,6 +12,9 @@ interface Playlist {
   channelId?: string;
   itemCount?: number;
   updatedAt?: string;
+  start?: number;
+  end?: number;
+  name?: string;
 }
 
 interface Props {
@@ -19,6 +22,31 @@ interface Props {
 }
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+
+const WATCH_LATER_STORAGE_KEY = 'youtube:watch-later';
+
+type YouTubePlayer = {
+  loadVideoById?: (id: string) => void;
+  getCurrentTime?: () => number;
+  getPlayerState?: () => number;
+  pauseVideo?: () => void;
+  playVideo?: () => void;
+  seekTo?: (seconds: number, allowSeekAhead?: boolean) => void;
+  destroy?: () => void;
+};
+
+declare global {
+  interface Window {
+    YT?: {
+      Player: new (
+        element: string | HTMLElement,
+        options?: { events?: { onReady?: (event: { target: YouTubePlayer }) => void } },
+      ) => YouTubePlayer;
+      PlayerState?: Record<string, number>;
+    };
+    onYouTubeIframeAPIReady?: () => void;
+  }
+}
 
 const getTitleForSort = (value?: string) => value ?? '';
 
@@ -115,7 +143,7 @@ function normalizePlaylist(playlist: Playlist): Playlist {
   const channelDisplay = playlist.channelTitle ?? playlist.channelName ?? 'Unknown channel';
   const channelIdentifier = playlist.channelId ?? playlist.channelName ?? channelDisplay;
 
-  return {
+  const normalized: Playlist = {
     ...playlist,
     title: playlist.title || 'Untitled playlist',
     description: playlist.description ?? '',
@@ -125,6 +153,18 @@ function normalizePlaylist(playlist: Playlist): Playlist {
     itemCount: playlist.itemCount ?? 0,
     updatedAt: playlist.updatedAt ?? new Date().toISOString(),
   };
+
+  if (typeof playlist.start === 'number' && Number.isFinite(playlist.start)) {
+    normalized.start = playlist.start;
+  }
+  if (typeof playlist.end === 'number' && Number.isFinite(playlist.end)) {
+    normalized.end = playlist.end;
+  }
+  if (playlist.name) {
+    normalized.name = playlist.name;
+  }
+
+  return normalized;
 }
 
 async function fetchPlaylistsFromYouTube(
@@ -251,7 +291,17 @@ function getChannelId(playlist: Playlist) {
   return playlist.channelId ?? playlist.channelName ?? getChannelDisplay(playlist);
 }
 
-function PlaylistCard({ playlist }: { playlist: Playlist }) {
+function PlaylistCard({
+  playlist,
+  onPlay,
+  onQueue,
+  onWatchLater,
+}: {
+  playlist: Playlist;
+  onPlay: (playlist: Playlist) => void;
+  onQueue: (playlist: Playlist) => void;
+  onWatchLater: (playlist: Playlist) => void;
+}) {
   const title = playlist.title || 'Untitled playlist';
 
   return (
@@ -260,8 +310,18 @@ function PlaylistCard({ playlist }: { playlist: Playlist }) {
         {playlist.thumbnail ? (
           <img
             src={playlist.thumbnail}
-            alt={`Thumbnail for ${title}`}
+            alt={title}
             className="h-40 w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+            onClick={() => onPlay(playlist)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onPlay(playlist);
+              }
+            }}
+            style={{ cursor: 'pointer' }}
           />
         ) : (
           <div className="flex h-40 w-full items-center justify-center bg-ub-cool-grey text-sm text-ubt-grey">
@@ -284,16 +344,34 @@ function PlaylistCard({ playlist }: { playlist: Playlist }) {
             {playlist.description}
           </p>
         )}
-        <div className="mt-auto flex items-center justify-between text-xs text-ubt-grey">
-          <span>Updated {formatDate(playlist.updatedAt)}</span>
-          <a
-            href={`https://www.youtube.com/playlist?list=${playlist.id}`}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-full bg-ubt-green/10 px-3 py-1 font-semibold text-ubt-green transition hover:bg-ubt-green/20"
-          >
-            Open playlist
-          </a>
+        <div className="mt-auto space-y-3 text-xs text-ubt-grey">
+          <div className="flex items-center justify-between">
+            <span>Updated {formatDate(playlist.updatedAt)}</span>
+            <a
+              href={`https://www.youtube.com/playlist?list=${playlist.id}`}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full bg-ubt-green/10 px-3 py-1 font-semibold text-ubt-green transition hover:bg-ubt-green/20"
+            >
+              Open playlist
+            </a>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => onQueue(playlist)}
+              className="flex-1 rounded-md bg-white/10 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-ubt-green/60"
+            >
+              Queue
+            </button>
+            <button
+              type="button"
+              onClick={() => onWatchLater(playlist)}
+              className="flex-1 rounded-md bg-ubt-green/20 px-3 py-2 text-sm font-semibold text-ubt-green transition hover:bg-ubt-green/30 focus:outline-none focus:ring-2 focus:ring-ubt-green/60"
+            >
+              Later
+            </button>
+          </div>
         </div>
       </div>
     </article>
@@ -316,10 +394,95 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [lastQuery, setLastQuery] = useState<string>('');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [nowPlaying, setNowPlaying] = useState<Playlist | null>(null);
+  const [currentVideoId, setCurrentVideoId] = useState<string | null>(null);
+  const [queue, setQueue] = useState<Playlist[]>([]);
+  const [watchLater, setWatchLater] = useState<Playlist[]>([]);
+  const [loopStart, setLoopStart] = useState<number | null>(null);
+  const [loopEnd, setLoopEnd] = useState<number | null>(null);
+  const playerRef = useRef<YouTubePlayer | null>(null);
+  const playerFrameRef = useRef<HTMLIFrameElement | null>(null);
+  const watchLaterHydratedRef = useRef(false);
 
   useEffect(() => {
     setPlaylists(normalizedInitial);
   }, [normalizedInitial]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      watchLaterHydratedRef.current = true;
+      return;
+    }
+
+    try {
+      const stored = window.localStorage.getItem(WATCH_LATER_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setWatchLater(parsed.map((item: Playlist) => normalizePlaylist(item)));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to restore watch later list', error);
+    } finally {
+      watchLaterHydratedRef.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !watchLaterHydratedRef.current) {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(
+        WATCH_LATER_STORAGE_KEY,
+        JSON.stringify(watchLater),
+      );
+    } catch (error) {
+      console.error('Failed to persist watch later list', error);
+    }
+  }, [watchLater]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const mountPlayer = () => {
+      if (!window.YT || typeof window.YT.Player !== 'function') {
+        return;
+      }
+      const element = playerFrameRef.current ?? 'youtube-player-frame';
+      const player = new window.YT.Player(element, {
+        events: {
+          onReady: (event: { target: YouTubePlayer }) => {
+            playerRef.current = event.target;
+          },
+        },
+      });
+      playerRef.current = player;
+    };
+
+    if (window.YT && typeof window.YT.Player === 'function') {
+      mountPlayer();
+    } else {
+      const previous = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        mountPlayer();
+        if (typeof previous === 'function') {
+          previous();
+        }
+      };
+    }
+
+    return () => {
+      if (playerRef.current && typeof playerRef.current.destroy === 'function') {
+        playerRef.current.destroy();
+      }
+      playerRef.current = null;
+    };
+  }, []);
 
   const channels = useMemo(() => {
     const map = new Map<string, { id: string; title: string; count: number }>();
@@ -381,6 +544,126 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     return Array.from(groups.values());
   }, [layout, organizedPlaylists]);
 
+  const handleAddToQueue = useCallback((playlist: Playlist) => {
+    const normalized = normalizePlaylist(playlist);
+    setQueue((prev) => {
+      if (prev.some((item) => item.id === normalized.id)) {
+        return prev;
+      }
+      return [...prev, normalized];
+    });
+  }, []);
+
+  const handleAddToWatchLater = useCallback((playlist: Playlist) => {
+    const normalized = normalizePlaylist(playlist);
+    setWatchLater((prev) => {
+      if (prev.some((item) => item.id === normalized.id)) {
+        return prev;
+      }
+      return [...prev, normalized];
+    });
+  }, []);
+
+  const handlePlay = useCallback(
+    (playlist: Playlist) => {
+      const normalized = normalizePlaylist(playlist);
+      setNowPlaying(normalized);
+      setCurrentVideoId(normalized.id);
+      setLoopStart(null);
+      setLoopEnd(null);
+      if (playerRef.current && typeof playerRef.current.loadVideoById === 'function') {
+        playerRef.current.loadVideoById(normalized.id);
+      }
+    },
+    [],
+  );
+
+  const handleWatchLaterKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>, index: number) => {
+      if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') {
+        return;
+      }
+      event.preventDefault();
+      setWatchLater((prev) => {
+        if (prev.length < 2) {
+          return prev;
+        }
+        const targetIndex =
+          event.key === 'ArrowUp'
+            ? Math.max(index - 1, 0)
+            : Math.min(index + 1, prev.length - 1);
+        if (targetIndex === index) {
+          return prev;
+        }
+        const next = [...prev];
+        const [moved] = next.splice(index, 1);
+        next.splice(targetIndex, 0, moved);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const handleSetLoopStart = useCallback(() => {
+    if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
+      setLoopStart(playerRef.current.getCurrentTime());
+    } else {
+      setLoopStart(0);
+    }
+  }, []);
+
+  const handleSetLoopEnd = useCallback(() => {
+    if (playerRef.current && typeof playerRef.current.getCurrentTime === 'function') {
+      setLoopEnd(playerRef.current.getCurrentTime());
+    } else {
+      setLoopEnd(0);
+    }
+  }, []);
+
+  const handleSaveClip = useCallback(() => {
+    if (currentVideoId == null || loopStart == null || loopEnd == null) {
+      return;
+    }
+    if (loopEnd < loopStart) {
+      return;
+    }
+
+    const clipName = typeof window !== 'undefined'
+      ? window.prompt('Name this clip', nowPlaying?.title ?? 'Saved clip')
+      : null;
+
+    if (!clipName) {
+      return;
+    }
+
+    setWatchLater((prev) => {
+      const existingIndex = prev.findIndex((item) => item.id === currentVideoId);
+      const base = existingIndex >= 0
+        ? prev[existingIndex]
+        : normalizePlaylist(
+            nowPlaying ??
+              playlists.find((item) => item.id === currentVideoId) ?? {
+                id: currentVideoId,
+                title: clipName,
+                description: '',
+              },
+          );
+      const updated: Playlist = {
+        ...base,
+        start: loopStart,
+        end: loopEnd,
+        name: clipName,
+      };
+
+      if (existingIndex >= 0) {
+        const next = [...prev];
+        next[existingIndex] = updated;
+        return next;
+      }
+      return [...prev, updated];
+    });
+  }, [currentVideoId, loopEnd, loopStart, nowPlaying, playlists]);
+
   const handleSearch = useCallback(
     async (append = false, token?: string) => {
       const rawQuery = append ? lastQuery : query;
@@ -441,6 +724,9 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     if (!nextPageToken) return;
     void handleSearch(true, nextPageToken);
   }, [handleSearch, nextPageToken]);
+
+  const loopControlsDisabled = currentVideoId == null;
+  const saveClipDisabled = loopControlsDisabled || loopStart == null || loopEnd == null;
 
   return (
     <div className="flex h-full flex-col bg-gradient-to-br from-[#10151c] via-[#0f1f2d] to-[#111827] text-white">
@@ -615,6 +901,123 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
         </aside>
 
         <main className="flex-1 overflow-auto px-6 py-6">
+          <section className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+            <div className="rounded-lg border border-white/10 bg-black/30 p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-ubt-grey">
+                  Now playing
+                </h2>
+                {nowPlaying && (
+                  <span className="text-xs text-ubt-grey">
+                    {getChannelDisplay(nowPlaying)}
+                  </span>
+                )}
+              </div>
+              <div className="mt-3 aspect-video overflow-hidden rounded-lg bg-black/40">
+                <iframe
+                  id="youtube-player-frame"
+                  ref={playerFrameRef}
+                  title="YouTube video player"
+                  src={currentVideoId ? `https://www.youtube.com/embed/${currentVideoId}` : 'https://www.youtube.com/embed/?rel=0'}
+                  className="h-full w-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+              {nowPlaying ? (
+                <div className="mt-3 text-sm text-ubt-grey">
+                  <p className="text-base font-semibold text-white">{nowPlaying.title}</p>
+                  <p className="mt-1 text-xs">
+                    {nowPlaying.description ? nowPlaying.description : 'Loop timestamps apply to this playlist.'}
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-3 text-xs text-ubt-grey">
+                  Select a playlist thumbnail to start playback.
+                </p>
+              )}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  aria-label="Set loop start"
+                  onClick={handleSetLoopStart}
+                  disabled={loopControlsDisabled}
+                  className="rounded-md border border-white/15 px-4 py-2 text-xs font-medium text-white transition hover:border-ubt-green hover:text-ubt-green disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Set loop start
+                </button>
+                <button
+                  type="button"
+                  aria-label="Set loop end"
+                  onClick={handleSetLoopEnd}
+                  disabled={loopControlsDisabled}
+                  className="rounded-md border border-white/15 px-4 py-2 text-xs font-medium text-white transition hover:border-ubt-green hover:text-ubt-green disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Set loop end
+                </button>
+                <button
+                  type="button"
+                  aria-label="Save clip"
+                  onClick={handleSaveClip}
+                  disabled={saveClipDisabled}
+                  className="rounded-md bg-ubt-green px-4 py-2 text-xs font-semibold text-black transition hover:bg-ubt-green/90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Save clip
+                </button>
+              </div>
+              {loopStart != null && loopEnd != null && (
+                <p className="mt-2 text-xs text-ubt-grey">
+                  Looping from {loopStart.toFixed(1)}s to {loopEnd.toFixed(1)}s
+                </p>
+              )}
+            </div>
+            <div className="space-y-4 rounded-lg border border-white/10 bg-black/30 p-5 shadow-sm">
+              <div>
+                <h3 className="text-sm font-semibold text-white">Up next</h3>
+                <ul data-testid="queue-list" className="mt-3 space-y-2">
+                  {queue.length ? (
+                    queue.map((item) => (
+                      <li key={`queue-${item.id}`} className="rounded-md border border-white/10 bg-black/40 px-3 py-2 text-sm text-white">
+                        <div className="font-medium">{item.title}</div>
+                        <div className="text-xs text-ubt-grey">{getChannelDisplay(item)}</div>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-xs text-ubt-grey">Queue is empty.</li>
+                  )}
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-white">Watch later</h3>
+                <ul data-testid="watch-later-list" className="mt-3 space-y-2">
+                  {watchLater.length ? (
+                    watchLater.map((item, index) => (
+                      <li key={`later-${item.id}`}>
+                        <div
+                          tabIndex={0}
+                          onKeyDown={(event) => handleWatchLaterKeyDown(event, index)}
+                          className="flex items-center justify-between rounded-md border border-white/10 bg-black/40 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ubt-green/60"
+                        >
+                          <div>
+                            <div className="text-sm font-medium text-white">{item.title}</div>
+                            <div className="text-xs text-ubt-grey">
+                              {item.name ? `${item.name} • ` : ''}
+                              {getChannelDisplay(item)}
+                              {typeof item.start === 'number' && typeof item.end === 'number'
+                                ? ` • ${Math.round(item.start)}s – ${Math.round(item.end)}s`
+                                : ''}
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-xs text-ubt-grey">No saved playlists yet.</li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          </section>
           <section className="mb-6 flex flex-wrap items-center gap-3 text-xs text-ubt-grey">
             <span className="rounded-full bg-black/40 px-3 py-1">
               {organizedPlaylists.length} playlists
@@ -642,7 +1045,13 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
             organizedPlaylists.length ? (
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {organizedPlaylists.map((playlist) => (
-                  <PlaylistCard key={playlist.id} playlist={playlist} />
+                  <PlaylistCard
+                    key={playlist.id}
+                    playlist={playlist}
+                    onPlay={handlePlay}
+                    onQueue={handleAddToQueue}
+                    onWatchLater={handleAddToWatchLater}
+                  />
                 ))}
               </div>
             ) : (
@@ -662,7 +1071,13 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                   </div>
                   <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {group.items.map((playlist) => (
-                      <PlaylistCard key={playlist.id} playlist={playlist} />
+                      <PlaylistCard
+                        key={playlist.id}
+                        playlist={playlist}
+                        onPlay={handlePlay}
+                        onQueue={handleAddToQueue}
+                        onWatchLater={handleAddToWatchLater}
+                      />
                     ))}
                   </div>
                 </div>
