@@ -94,6 +94,10 @@ export class Desktop extends Component {
 
         this.validAppIds = new Set(apps.map((app) => app.id));
 
+        this.openSettingsTarget = null;
+        this.openSettingsClickHandler = null;
+        this.openSettingsListenerAttached = false;
+
     }
 
     createEmptyWorkspaceState = () => ({
@@ -263,6 +267,8 @@ export class Desktop extends Component {
         node.removeEventListener('touchend', this.handleShellTouchEnd);
         node.removeEventListener('touchcancel', this.handleShellTouchCancel);
         this.gestureRoot = null;
+        this.gestureState.pointer = null;
+        this.gestureState.overview = null;
     };
 
     handleShellPointerDown = (event) => {
@@ -880,6 +886,7 @@ export class Desktop extends Component {
     }
 
     componentWillUnmount() {
+        this.removeEventListeners();
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         window.removeEventListener('trash-change', this.updateTrashIcon);
@@ -1011,11 +1018,36 @@ export class Desktop extends Component {
 
     setEventListeners = () => {
         const openSettings = document.getElementById("open-settings");
-        if (openSettings) {
-            openSettings.addEventListener("click", () => {
-                this.openApp("settings");
-            });
+        if (!openSettings) {
+            this.removeEventListeners();
+            return;
         }
+
+        if (!this.openSettingsClickHandler) {
+            this.openSettingsClickHandler = () => {
+                this.openApp("settings");
+            };
+        }
+
+        if (this.openSettingsTarget && this.openSettingsTarget !== openSettings && this.openSettingsClickHandler) {
+            this.openSettingsTarget.removeEventListener('click', this.openSettingsClickHandler);
+            this.openSettingsListenerAttached = false;
+        }
+
+        this.openSettingsTarget = openSettings;
+
+        if (!this.openSettingsListenerAttached && this.openSettingsClickHandler) {
+            this.openSettingsTarget.addEventListener('click', this.openSettingsClickHandler);
+            this.openSettingsListenerAttached = true;
+        }
+    }
+
+    removeEventListeners = () => {
+        if (this.openSettingsTarget && this.openSettingsClickHandler) {
+            this.openSettingsTarget.removeEventListener('click', this.openSettingsClickHandler);
+        }
+        this.openSettingsTarget = null;
+        this.openSettingsListenerAttached = false;
     }
 
     setContextListeners = () => {
