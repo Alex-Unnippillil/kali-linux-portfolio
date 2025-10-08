@@ -310,7 +310,12 @@ const WhiskerMenu: React.FC = () => {
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Meta' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+      const metaShortcut =
+        e.key === 'Meta' && !e.ctrlKey && !e.shiftKey && !e.altKey;
+      const altF1Shortcut =
+        e.key === 'F1' && e.altKey && !e.metaKey && !e.ctrlKey && !e.shiftKey;
+
+      if (metaShortcut || altF1Shortcut) {
         e.preventDefault();
         toggleMenu();
         return;
@@ -398,6 +403,7 @@ const WhiskerMenu: React.FC = () => {
         ref={buttonRef}
         type="button"
         onClick={toggleMenu}
+        aria-keyshortcuts="Meta Alt+F1"
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
       >
         <Image

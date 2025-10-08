@@ -13,6 +13,10 @@ const KeyboardReference = () => (
       </thead>
       <tbody>
         <tr>
+          <td className="p-2 border border-ubt-grey">Meta / Alt + F1</td>
+          <td className="p-2 border border-ubt-grey">Open the applications menu</td>
+        </tr>
+        <tr>
           <td className="p-2 border border-ubt-grey">Ctrl + C</td>
           <td className="p-2 border border-ubt-grey">Copy selected text</td>
         </tr>
