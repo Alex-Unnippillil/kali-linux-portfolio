@@ -129,11 +129,11 @@ const HydraApp = () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            action: 'resume',
             target: session.target,
             service: session.service,
             userList: user.content,
             passList: pass.content,
-            resume: true,
           }),
         });
         const data = await res.json();
