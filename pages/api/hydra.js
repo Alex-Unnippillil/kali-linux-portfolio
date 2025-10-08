@@ -5,7 +5,15 @@ import { promisify } from 'util';
 import path from 'path';
 
 const execFileAsync = promisify(execFile);
-const allowed = new Set(['http', 'https', 'ssh', 'ftp', 'smtp']);
+const allowed = new Set([
+  'http',
+  'https',
+  'ssh',
+  'ftp',
+  'smtp',
+  'http-get',
+  'http-post-form',
+]);
 
 export default async function handler(req, res) {
   if (
