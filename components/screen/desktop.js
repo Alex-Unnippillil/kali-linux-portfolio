@@ -21,7 +21,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
-import { DESKTOP_TOP_PADDING } from '../../utils/uiConstants';
+import { DESKTOP_TOP_PADDING, NAVBAR_BOTTOM_MARGIN } from '../../utils/uiConstants';
 import { useSnapSetting } from '../../hooks/usePersistentState';
 import {
     clampWindowPositionWithinViewport,
@@ -185,7 +185,7 @@ export class Desktop extends Component {
             ? { row: 144, column: 156 }
             : { ...this.defaultIconGridSpacing };
         const basePadding = isCoarse
-            ? { top: 72, right: 32, bottom: 168, left: 32 }
+            ? { top: DESKTOP_TOP_PADDING + NAVBAR_BOTTOM_MARGIN, right: 32, bottom: 168, left: 32 }
             : { ...this.defaultDesktopPadding };
         const safeArea = getSafeAreaInsets();
         const nextPadding = {
