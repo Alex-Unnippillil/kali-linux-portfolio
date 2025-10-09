@@ -687,6 +687,7 @@ export class Window extends Component {
                             this.state.maximized ? styles.windowFrameMaximized : '',
                         ].filter(Boolean).join(' ')}
                         id={this.id}
+                        data-pinned={this.props.isPinned ? 'true' : 'false'}
                         role="dialog"
                         aria-label={this.props.title}
                         tabIndex={0}
@@ -710,6 +711,8 @@ export class Window extends Component {
                             close={this.closeWindow}
                             id={this.id}
                             allowMaximize={this.props.allowMaximize !== false}
+                            isPinned={this.props.isPinned}
+                            onTogglePin={this.props.onTogglePin}
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
                         />
                         {(this.id === "settings"
@@ -786,20 +789,45 @@ export class WindowXBorder extends Component {
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
-    const { togglePin } = useDocPiP(props.pip || (() => null));
+    const { togglePin: togglePictureInPicture } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
     return (
-        <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[8.25rem]`}>
-            {pipSupported && props.pip && (
+        <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[9.5rem]`}>
+            {typeof props.onTogglePin === 'function' && (
                 <button
                     type="button"
-                    aria-label="Window pin"
-                    className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
-                    onClick={togglePin}
+                    aria-label={props.isPinned ? 'Disable always on top' : 'Enable always on top'}
+                    aria-pressed={props.isPinned ? 'true' : 'false'}
+                    className={[
+                        'mx-1 rounded-full flex justify-center items-center h-6 w-6 transition-colors',
+                        'bg-white',
+                        props.isPinned ? 'bg-opacity-20 ring-2 ring-ub-orange ring-offset-1 ring-offset-transparent' : 'bg-opacity-0 hover:bg-opacity-10',
+                    ].join(' ')}
+                    onClick={props.onTogglePin}
                 >
                     <NextImage
                         src="/themes/Yaru/window/window-pin-symbolic.svg"
-                        alt="Kali window pin"
+                        alt="Toggle always on top"
+                        className={[
+                            'h-4 w-4 inline transition-transform duration-150',
+                            props.isPinned ? 'rotate-45' : '-rotate-45',
+                        ].join(' ')}
+                        width={16}
+                        height={16}
+                        sizes="16px"
+                    />
+                </button>
+            )}
+            {pipSupported && props.pip && (
+                <button
+                    type="button"
+                    aria-label="Pop window out"
+                    className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                    onClick={togglePictureInPicture}
+                >
+                    <NextImage
+                        src="/themes/Yaru/window/window-pin-symbolic.svg"
+                        alt="Pop window out"
                         className="h-4 w-4 inline"
                         width={16}
                         height={16}
