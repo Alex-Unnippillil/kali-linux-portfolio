@@ -1,4 +1,13 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+  Dispatch,
+  SetStateAction,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -22,10 +31,32 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getWallpaperRotationInterval as loadRotationInterval,
+  setWallpaperRotationInterval as saveRotationInterval,
+  getWallpaperRotationPlaylist as loadRotationPlaylist,
+  setWallpaperRotationPlaylist as saveRotationPlaylist,
+  getWallpaperRotationTimestamp as loadRotationTimestamp,
+  setWallpaperRotationTimestamp as saveRotationTimestamp,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
+
+const getNextWallpaperFromPlaylist = (current: string, playlist: string[]): string => {
+  if (playlist.length === 0) return current;
+  const index = playlist.indexOf(current);
+  if (index === -1) {
+    return playlist[0];
+  }
+  return playlist[(index + 1) % playlist.length];
+};
+
+const sanitizePlaylist = (playlist: string[]): string[] =>
+  Array.from(
+    new Set(
+      playlist.filter((item) => typeof item === 'string' && item.trim().length > 0)
+    )
+  );
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -67,6 +98,8 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  rotationIntervalMinutes: number;
+  rotationPlaylist: string[];
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setUseKaliWallpaper: (value: boolean) => void;
@@ -79,6 +112,8 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setRotationIntervalMinutes: Dispatch<SetStateAction<number>>;
+  setRotationPlaylist: Dispatch<SetStateAction<string[]>>;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -95,6 +130,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  rotationIntervalMinutes: defaults.rotationIntervalMinutes,
+  rotationPlaylist: defaults.rotationPlaylist,
   setAccent: () => {},
   setWallpaper: () => {},
   setUseKaliWallpaper: () => {},
@@ -107,6 +144,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setRotationIntervalMinutes: (() => {}) as Dispatch<SetStateAction<number>>,
+  setRotationPlaylist: (() => {}) as Dispatch<SetStateAction<string[]>>,
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -122,28 +161,96 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [rotationIntervalMinutes, setRotationIntervalMinutes] = useState<number>(
+    defaults.rotationIntervalMinutes
+  );
+  const [rotationPlaylist, setRotationPlaylist] = useState<string[]>(defaults.rotationPlaylist);
   const fetchRef = useRef<typeof fetch | null>(null);
+  const lastRotationRef = useRef<number | null>(null);
+  const initialWallpaperRef = useRef(true);
+  const hasLoadedRef = useRef(false);
+  const wallpaperRef = useRef<string>(defaults.wallpaper);
 
   useEffect(() => {
     (async () => {
-      setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
-      setUseKaliWallpaper(await loadUseKaliWallpaper());
-      setDensity((await loadDensity()) as Density);
-      setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
-      setHighContrast(await loadHighContrast());
-      setLargeHitAreas(await loadLargeHitAreas());
-      setPongSpin(await loadPongSpin());
-      setAllowNetwork(await loadAllowNetwork());
-      setHaptics(await loadHaptics());
+      const [
+        accentValue,
+        wallpaperValue,
+        useKaliValue,
+        densityValue,
+        reducedMotionValue,
+        fontScaleValue,
+        highContrastValue,
+        largeHitAreasValue,
+        pongSpinValue,
+        allowNetworkValue,
+        hapticsValue,
+        rotationIntervalValue,
+        rotationPlaylistValue,
+        rotationTimestamp,
+      ] = await Promise.all([
+        loadAccent(),
+        loadWallpaper(),
+        loadUseKaliWallpaper(),
+        loadDensity(),
+        loadReducedMotion(),
+        loadFontScale(),
+        loadHighContrast(),
+        loadLargeHitAreas(),
+        loadPongSpin(),
+        loadAllowNetwork(),
+        loadHaptics(),
+        loadRotationInterval(),
+        loadRotationPlaylist(),
+        loadRotationTimestamp(),
+      ]);
+
+      const sanitizedPlaylist = sanitizePlaylist(rotationPlaylistValue);
+      const resolvedInterval = Number.isFinite(rotationIntervalValue)
+        ? rotationIntervalValue
+        : defaults.rotationIntervalMinutes;
+
+      setAccent(accentValue);
+      setUseKaliWallpaper(useKaliValue);
+      setDensity(densityValue as Density);
+      setReducedMotion(reducedMotionValue);
+      setFontScale(fontScaleValue);
+      setHighContrast(highContrastValue);
+      setLargeHitAreas(largeHitAreasValue);
+      setPongSpin(pongSpinValue);
+      setAllowNetwork(allowNetworkValue);
+      setHaptics(hapticsValue);
+      setRotationIntervalMinutes(resolvedInterval);
+      setRotationPlaylist(sanitizedPlaylist);
       setTheme(loadTheme());
+
+      let resolvedWallpaper = wallpaperValue;
+      const now = Date.now();
+      lastRotationRef.current = rotationTimestamp;
+
+      if (
+        resolvedInterval > 0 &&
+        sanitizedPlaylist.length > 0 &&
+        rotationTimestamp !== null &&
+        now - rotationTimestamp >= resolvedInterval * 60 * 1000
+      ) {
+        resolvedWallpaper = getNextWallpaperFromPlaylist(resolvedWallpaper, sanitizedPlaylist);
+        lastRotationRef.current = now;
+        await saveRotationTimestamp(now);
+      }
+
+      setWallpaper(resolvedWallpaper);
+      hasLoadedRef.current = true;
     })();
   }, []);
 
   useEffect(() => {
     saveTheme(theme);
   }, [theme]);
+
+  useEffect(() => {
+    wallpaperRef.current = wallpaper;
+  }, [wallpaper]);
 
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
@@ -250,6 +357,64 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    if (!hasLoadedRef.current) return;
+    saveRotationInterval(rotationIntervalMinutes);
+    if (rotationIntervalMinutes > 0 && lastRotationRef.current === null) {
+      const now = Date.now();
+      lastRotationRef.current = now;
+      void saveRotationTimestamp(now);
+    }
+  }, [rotationIntervalMinutes]);
+
+  useEffect(() => {
+    if (!hasLoadedRef.current) return;
+    const sanitized = sanitizePlaylist(rotationPlaylist);
+    if (
+      sanitized.length !== rotationPlaylist.length ||
+      sanitized.some((item, index) => item !== rotationPlaylist[index])
+    ) {
+      setRotationPlaylist(sanitized);
+      return;
+    }
+    saveRotationPlaylist(sanitized);
+  }, [rotationPlaylist]);
+
+  useEffect(() => {
+    if (initialWallpaperRef.current) {
+      initialWallpaperRef.current = false;
+      return;
+    }
+    if (!hasLoadedRef.current) return;
+    const now = Date.now();
+    lastRotationRef.current = now;
+    void saveRotationTimestamp(now);
+  }, [wallpaper]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const playlist = sanitizePlaylist(rotationPlaylist);
+    if (rotationIntervalMinutes <= 0 || playlist.length === 0) return;
+
+    const intervalId = window.setInterval(() => {
+      if (rotationIntervalMinutes <= 0 || playlist.length === 0) return;
+      const lastRotation = lastRotationRef.current;
+      const now = Date.now();
+      if (lastRotation !== null && now - lastRotation < rotationIntervalMinutes * 60 * 1000) {
+        return;
+      }
+      const nextWallpaper = getNextWallpaperFromPlaylist(wallpaperRef.current, playlist);
+      if (!nextWallpaper) return;
+      setWallpaper(nextWallpaper);
+      lastRotationRef.current = now;
+      void saveRotationTimestamp(now);
+    }, 60 * 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [rotationIntervalMinutes, rotationPlaylist]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
   return (
@@ -268,6 +433,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        rotationIntervalMinutes,
+        rotationPlaylist,
         setAccent,
         setWallpaper,
         setUseKaliWallpaper,
@@ -280,6 +447,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setRotationIntervalMinutes,
+        setRotationPlaylist,
       }}
     >
       {children}

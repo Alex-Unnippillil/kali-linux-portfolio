@@ -1,19 +1,80 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const {
+        accent,
+        setAccent,
+        wallpaper,
+        setWallpaper,
+        useKaliWallpaper,
+        setUseKaliWallpaper,
+        density,
+        setDensity,
+        reducedMotion,
+        setReducedMotion,
+        largeHitAreas,
+        setLargeHitAreas,
+        fontScale,
+        setFontScale,
+        highContrast,
+        setHighContrast,
+        pongSpin,
+        setPongSpin,
+        allowNetwork,
+        setAllowNetwork,
+        haptics,
+        setHaptics,
+        theme,
+        setTheme,
+        rotationIntervalMinutes,
+        setRotationIntervalMinutes,
+        rotationPlaylist,
+        setRotationPlaylist,
+    } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
 
+    const sanitizedRotationPlaylist = useMemo(
+        () => rotationPlaylist.filter((name) => wallpapers.includes(name)),
+        [rotationPlaylist]
+    );
+
+    const rotationEnabled = rotationIntervalMinutes > 0 && sanitizedRotationPlaylist.length > 0;
+
+    const upcomingWallpapers = useMemo(() => {
+        if (!rotationEnabled) return [];
+        const list = sanitizedRotationPlaylist.length ? sanitizedRotationPlaylist : wallpapers;
+        if (!list.length) return [];
+        const currentIndex = list.indexOf(wallpaper);
+        const startIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % list.length;
+        const preview = [];
+        const maxPreviews = Math.min(3, list.length);
+        for (let i = 0; i < maxPreviews; i += 1) {
+            const idx = (startIndex + i) % list.length;
+            preview.push(list[idx]);
+        }
+        return preview;
+    }, [rotationEnabled, sanitizedRotationPlaylist, wallpaper, wallpapers]);
+
     const changeBackgroundImage = (e) => {
         const name = e.currentTarget.dataset.path;
         setWallpaper(name);
+    };
+
+    const toggleRotationWallpaper = (name) => {
+        setRotationPlaylist((prev) => {
+            const exists = prev.includes(name);
+            if (exists) {
+                return prev.filter((item) => item !== name);
+            }
+            return [...prev, name];
+        });
     };
 
     let hexToRgb = (hex) => {
@@ -98,6 +159,61 @@ export function Settings() {
                     Your previous wallpaper selection is preserved for when you turn this off.
                 </p>
             )}
+            <div className="px-6">
+                <h2 className="text-center text-ubt-grey font-semibold mb-2">Wallpaper Rotation</h2>
+                <div className="flex justify-center items-center gap-2 mb-2">
+                    <label htmlFor="wallpaper-rotation-interval" className="text-ubt-grey">
+                        Interval (minutes)
+                    </label>
+                    <input
+                        id="wallpaper-rotation-interval"
+                        type="number"
+                        min="0"
+                        value={rotationIntervalMinutes}
+                        onChange={(e) => {
+                            const parsed = Number.parseInt(e.target.value, 10);
+                            setRotationIntervalMinutes(Number.isFinite(parsed) && parsed > 0 ? parsed : 0);
+                        }}
+                        className="w-24 bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                    />
+                </div>
+                <p className="text-center text-xs text-ubt-grey/70 mb-3">Set to 0 to disable rotation.</p>
+                <div className="flex flex-wrap justify-center gap-2 mb-4" role="group" aria-label="Wallpaper rotation playlist">
+                    {wallpapers.map((name) => {
+                        const active = sanitizedRotationPlaylist.includes(name);
+                        return (
+                            <button
+                                key={`rotation-${name}`}
+                                type="button"
+                                onClick={() => toggleRotationWallpaper(name)}
+                                className={`w-16 h-10 rounded border-2 focus:outline-none focus:ring-2 focus:ring-ub-orange transition ${
+                                    active ? 'border-ub-orange opacity-100' : 'border-transparent opacity-60'
+                                }`}
+                                style={{ backgroundImage: `url(/wallpapers/${name}.webp)`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                                aria-pressed={active}
+                                aria-label={`Toggle ${name.replace('wall-', 'wallpaper ')}`}
+                            ></button>
+                        );
+                    })}
+                </div>
+                <div className="text-center mb-6">
+                    <p className="text-ubt-grey text-sm mb-2">Upcoming rotation</p>
+                    {rotationEnabled && upcomingWallpapers.length > 0 ? (
+                        <div className="flex justify-center gap-3">
+                            {upcomingWallpapers.map((name) => (
+                                <div
+                                    key={`upcoming-${name}`}
+                                    className="w-16 h-10 rounded border border-ubt-cool-grey bg-cover bg-center"
+                                    style={{ backgroundImage: `url(/wallpapers/${name}.webp)` }}
+                                    aria-label={`Upcoming wallpaper ${name.replace('wall-', 'wallpaper ')}`}
+                                ></div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-xs text-ubt-grey/70">Rotation disabled</p>
+                    )}
+                </div>
+            </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Accent:</label>
                 <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
