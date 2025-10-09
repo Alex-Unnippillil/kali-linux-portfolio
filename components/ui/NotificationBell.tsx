@@ -12,6 +12,7 @@ import {
   useNotifications,
   AppNotification,
   NotificationPriority,
+  NotificationAction,
 } from '../../hooks/useNotifications';
 import { PRIORITY_ORDER } from '../../utils/notifications/ruleEngine';
 
@@ -78,6 +79,7 @@ const NotificationBell: React.FC = () => {
     unreadCount,
     clearNotifications,
     markAllRead,
+    dismissNotification,
   } = useNotifications();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -233,6 +235,26 @@ const NotificationBell: React.FC = () => {
     closePanel();
   }, [clearNotifications, closePanel, notifications.length]);
 
+  const handleNotificationDismiss = useCallback(
+    (notification: AppNotification) => {
+      dismissNotification(notification.appId, notification.id);
+    },
+    [dismissNotification],
+  );
+
+  const handleActionClick = useCallback(
+    (action: NotificationAction, notification: AppNotification) => {
+      action.onClick({
+        notification,
+        dismiss: () => dismissNotification(notification.appId, notification.id),
+      });
+      if (action.closePanel) {
+        closePanel();
+      }
+    },
+    [closePanel, dismissNotification],
+  );
+
   return (
     <div className="relative">
       <button
@@ -243,7 +265,7 @@ const NotificationBell: React.FC = () => {
         aria-expanded={isOpen}
         aria-controls={panelId}
         onClick={togglePanel}
-        className="relative mx-1 flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-ubt-grey transition focus:border-ubb-orange focus:outline-none focus:ring-0 hover:bg-white hover:bg-opacity-10"
+        className="relative flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-ubt-grey transition focus:border-ubb-orange focus:outline-none focus:ring-0 hover:bg-white hover:bg-opacity-10"
       >
         <svg
           aria-hidden="true"
@@ -357,6 +379,26 @@ const NotificationBell: React.FC = () => {
                               <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[0.65rem] uppercase tracking-wide text-ubt-grey text-opacity-70">
                                 <span>{notification.appId}</span>
                                 <time dateTime={notification.formattedTime}>{notification.readableTime}</time>
+                              </div>
+                              <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium">
+                                <button
+                                  type="button"
+                                  onClick={() => handleNotificationDismiss(notification)}
+                                  aria-label={`Dismiss ${notification.title}`}
+                                  className="rounded border border-white/20 px-2 py-1 text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
+                                >
+                                  Dismiss
+                                </button>
+                                {notification.actions?.map((action, index) => (
+                                  <button
+                                    key={`${notification.id}-action-${index}`}
+                                    type="button"
+                                    onClick={() => handleActionClick(action, notification)}
+                                    className="rounded border border-white/20 px-2 py-1 text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
+                                  >
+                                    {action.label}
+                                  </button>
+                                ))}
                               </div>
                             </li>
                           ))}
