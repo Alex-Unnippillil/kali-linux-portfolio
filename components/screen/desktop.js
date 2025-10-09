@@ -858,6 +858,58 @@ export class Desktop extends Component {
         });
     };
 
+    moveWindowToWorkspace = (windowId, targetWorkspaceId) => {
+        if (!windowId) return;
+        const { workspaces, activeWorkspace } = this.state;
+        if (typeof targetWorkspaceId !== 'number') return;
+        if (targetWorkspaceId === activeWorkspace) return;
+        if (targetWorkspaceId < 0 || targetWorkspaceId >= workspaces.length) return;
+
+        const currentSnapshot = this.workspaceSnapshots[activeWorkspace] || this.createEmptyWorkspaceState();
+        if (currentSnapshot.closed_windows[windowId] !== false) return;
+
+        const targetSnapshot = this.workspaceSnapshots[targetWorkspaceId] || this.createEmptyWorkspaceState();
+        const nextTargetSnapshot = this.cloneWorkspaceState(targetSnapshot);
+
+        const position = this.state.window_positions?.[windowId];
+        if (position) {
+            nextTargetSnapshot.window_positions[windowId] = { ...position };
+        }
+        nextTargetSnapshot.closed_windows[windowId] = false;
+        nextTargetSnapshot.minimized_windows[windowId] = false;
+        nextTargetSnapshot.focused_windows[windowId] = false;
+        this.workspaceSnapshots[targetWorkspaceId] = nextTargetSnapshot;
+
+        if (!this.workspaceStacks[targetWorkspaceId]) {
+            this.workspaceStacks[targetWorkspaceId] = [];
+        }
+        const targetStack = this.workspaceStacks[targetWorkspaceId];
+        const existingIndex = targetStack.indexOf(windowId);
+        if (existingIndex !== -1) {
+            targetStack.splice(existingIndex, 1);
+        }
+        targetStack.unshift(windowId);
+
+        const currentStack = this.getActiveStack();
+        const currentIndex = currentStack.indexOf(windowId);
+        if (currentIndex !== -1) {
+            currentStack.splice(currentIndex, 1);
+        }
+
+        this.setWorkspaceState((prev) => {
+            const closed_windows = { ...prev.closed_windows, [windowId]: true };
+            const minimized_windows = { ...prev.minimized_windows };
+            const focused_windows = { ...prev.focused_windows };
+            delete minimized_windows[windowId];
+            delete focused_windows[windowId];
+            return { closed_windows, minimized_windows, focused_windows };
+        }, () => {
+            this.giveFocusToLastApp();
+            this.saveSession();
+            this.broadcastWorkspaceState();
+        });
+    };
+
     shiftWorkspace = (direction) => {
         const { activeWorkspace, workspaces } = this.state;
         const count = workspaces.length;
@@ -890,6 +942,14 @@ export class Desktop extends Component {
         }
     };
 
+    handleWorkspaceMoveWindow = (event) => {
+        const detail = event?.detail || {};
+        const windowId = detail.windowId;
+        const targetWorkspaceId = detail.targetWorkspaceId;
+        if (!windowId || typeof targetWorkspaceId !== 'number') return;
+        this.moveWindowToWorkspace(windowId, targetWorkspaceId);
+    };
+
     broadcastWorkspaceState = () => {
         if (typeof window === 'undefined') return;
         const detail = {
@@ -908,6 +968,7 @@ export class Desktop extends Component {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.addEventListener('workspace-move-window', this.handleWorkspaceMoveWindow);
             this.broadcastWorkspaceState();
         }
 
@@ -967,6 +1028,7 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.removeEventListener('workspace-move-window', this.handleWorkspaceMoveWindow);
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
@@ -2010,6 +2072,13 @@ export class Desktop extends Component {
                         const id = this.state.context_app;
                         if (!id) return;
                         this.closeApp(id);
+                    }}
+                    workspaces={this.state.workspaces}
+                    activeWorkspace={this.state.activeWorkspace}
+                    onMoveToWorkspace={(workspaceId) => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        this.moveWindowToWorkspace(id, workspaceId);
                     }}
                     onCloseMenu={this.hideAllContextMenu}
                 />

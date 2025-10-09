@@ -23,6 +23,15 @@ function TaskbarMenu(props) {
         props.onCloseMenu && props.onCloseMenu();
     };
 
+    const handleMove = (workspaceId) => {
+        props.onMoveToWorkspace && props.onMoveToWorkspace(workspaceId);
+        props.onCloseMenu && props.onCloseMenu();
+    };
+
+    const moveTargets = Array.isArray(props.workspaces)
+        ? props.workspaces.filter((workspace) => workspace?.id !== props.activeWorkspace)
+        : [];
+
     return (
         <div
             id="taskbar-menu"
@@ -50,6 +59,25 @@ function TaskbarMenu(props) {
             >
                 <span className="ml-5">Close</span>
             </button>
+            {moveTargets.length > 0 && (
+                <div className="mt-1 border-t border-white/10 pt-1" role="presentation">
+                    <p className="px-5 pb-1 text-[11px] uppercase tracking-wide text-white/60">
+                        Move to workspace
+                    </p>
+                    {moveTargets.map((workspace) => (
+                        <button
+                            key={workspace.id}
+                            type="button"
+                            onClick={() => handleMove(workspace.id)}
+                            role="menuitem"
+                            aria-label={`Move window to ${workspace.label}`}
+                            className="w-full text-left cursor-default py-0.5 hover:bg-gray-700"
+                        >
+                            <span className="ml-5">{workspace.label}</span>
+                        </button>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
