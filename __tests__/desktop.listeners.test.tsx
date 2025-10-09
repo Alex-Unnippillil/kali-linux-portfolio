@@ -113,6 +113,8 @@ describe('Desktop event listeners', () => {
         ['resize', instance.handleViewportResize],
         ['workspace-select', instance.handleExternalWorkspaceSelect],
         ['workspace-request', instance.broadcastWorkspaceState],
+        ['workspace-add', instance.handleExternalWorkspaceAdd],
+        ['workspace-remove', instance.handleExternalWorkspaceRemove],
         ['taskbar-command', instance.handleExternalTaskbarCommand],
       ])
     );

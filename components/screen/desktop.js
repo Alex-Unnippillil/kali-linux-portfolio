@@ -34,7 +34,9 @@ import {
 export class Desktop extends Component {
     constructor() {
         super();
-        this.workspaceCount = 4;
+        this.workspaceStorageKey = 'desktop_workspaces';
+        const storedWorkspaces = this.loadStoredWorkspaceDefinitions();
+        this.workspaceCount = storedWorkspaces.length;
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => this.createEmptyWorkspaceState());
         this.workspaceKeys = new Set([
@@ -68,9 +70,9 @@ export class Desktop extends Component {
             showWindowSwitcher: false,
             switcherWindows: [],
             activeWorkspace: 0,
-            workspaces: Array.from({ length: this.workspaceCount }, (_, index) => ({
+            workspaces: storedWorkspaces.map((workspace, index) => ({
                 id: index,
-                label: `Workspace ${index + 1}`,
+                label: workspace.label,
             })),
             draggingIconId: null,
         }
@@ -100,6 +102,155 @@ export class Desktop extends Component {
         this.openSettingsListenerAttached = false;
 
     }
+
+    getDefaultWorkspaceDefinitions = (count = 4) => {
+        const safeCount = Math.max(1, count);
+        return Array.from({ length: safeCount }, (_, index) => ({
+            label: `Workspace ${index + 1}`,
+        }));
+    };
+
+    normalizeWorkspaceLabel = (label, index) => {
+        if (typeof label === 'string') {
+            const trimmed = label.trim();
+            if (trimmed) return trimmed;
+        }
+        return `Workspace ${index + 1}`;
+    };
+
+    loadStoredWorkspaceDefinitions = () => {
+        const fallback = this.getDefaultWorkspaceDefinitions();
+        if (!safeLocalStorage) {
+            return fallback;
+        }
+        try {
+            const stored = safeLocalStorage.getItem(this.workspaceStorageKey);
+            if (!stored) return fallback;
+            const parsed = JSON.parse(stored);
+            if (!Array.isArray(parsed)) return fallback;
+            const labels = parsed
+                .map((entry, index) => {
+                    if (typeof entry === 'string') {
+                        return this.normalizeWorkspaceLabel(entry, index);
+                    }
+                    if (entry && typeof entry === 'object' && typeof entry.label === 'string') {
+                        return this.normalizeWorkspaceLabel(entry.label, index);
+                    }
+                    return null;
+                })
+                .filter(Boolean);
+            if (!labels.length) return fallback;
+            return labels.map(label => ({ label }));
+        } catch (error) {
+            return fallback;
+        }
+    };
+
+    persistWorkspaceDefinitions = (workspaces) => {
+        if (!safeLocalStorage) return;
+        try {
+            const payload = workspaces.map(workspace => this.normalizeWorkspaceLabel(workspace.label));
+            safeLocalStorage.setItem(this.workspaceStorageKey, JSON.stringify(payload));
+        } catch (error) {
+            // ignore persistence errors
+        }
+    };
+
+    ensureWorkspaceContainers = (count) => {
+        const targetCount = Math.max(1, count);
+        if (!Array.isArray(this.workspaceSnapshots)) {
+            this.workspaceSnapshots = [];
+        }
+        if (!Array.isArray(this.workspaceStacks)) {
+            this.workspaceStacks = [];
+        }
+        if (this.workspaceSnapshots.length > targetCount) {
+            this.workspaceSnapshots.length = targetCount;
+        }
+        while (this.workspaceSnapshots.length < targetCount) {
+            this.workspaceSnapshots.push(this.createEmptyWorkspaceState());
+        }
+        if (this.workspaceStacks.length > targetCount) {
+            this.workspaceStacks.length = targetCount;
+        }
+        while (this.workspaceStacks.length < targetCount) {
+            this.workspaceStacks.push([]);
+        }
+        this.workspaceCount = targetCount;
+    };
+
+    addWorkspace = (label) => {
+        let createdWorkspaceId = null;
+        this.setState((prevState) => {
+            const nextIndex = prevState.workspaces.length;
+            const nextLabel = this.normalizeWorkspaceLabel(label, nextIndex);
+            const nextWorkspaces = [...prevState.workspaces, { id: nextIndex, label: nextLabel }];
+            this.ensureWorkspaceContainers(nextWorkspaces.length);
+            this.persistWorkspaceDefinitions(nextWorkspaces);
+            createdWorkspaceId = nextIndex;
+            return { workspaces: nextWorkspaces };
+        }, () => {
+            this.broadcastWorkspaceState();
+        });
+        return createdWorkspaceId;
+    };
+
+    removeWorkspace = (workspaceId) => {
+        let removed = false;
+        const targetId = typeof workspaceId === 'number' ? workspaceId : this.state.activeWorkspace;
+        this.setState((prevState) => {
+            const count = prevState.workspaces.length;
+            if (count <= 1) {
+                return null;
+            }
+            if (targetId < 0 || targetId >= count) {
+                return null;
+            }
+            const remaining = prevState.workspaces.filter((workspace) => workspace.id !== targetId);
+            if (remaining.length === prevState.workspaces.length) {
+                return null;
+            }
+            const normalizedWorkspaces = remaining.map((workspace, index) => ({
+                id: index,
+                label: this.normalizeWorkspaceLabel(workspace.label, index),
+            }));
+            if (Array.isArray(this.workspaceSnapshots)) {
+                this.workspaceSnapshots.splice(targetId, 1);
+            } else {
+                this.workspaceSnapshots = [];
+            }
+            if (Array.isArray(this.workspaceStacks)) {
+                this.workspaceStacks.splice(targetId, 1);
+            } else {
+                this.workspaceStacks = [];
+            }
+            this.ensureWorkspaceContainers(normalizedWorkspaces.length);
+            const previousActive = prevState.activeWorkspace;
+            let nextActive = previousActive;
+            if (previousActive === targetId) {
+                nextActive = Math.max(0, previousActive - 1);
+            } else if (previousActive > targetId) {
+                nextActive = previousActive - 1;
+            }
+            const snapshot = this.workspaceSnapshots[nextActive] || this.createEmptyWorkspaceState();
+            this.persistWorkspaceDefinitions(normalizedWorkspaces);
+            removed = true;
+            return {
+                workspaces: normalizedWorkspaces,
+                activeWorkspace: nextActive,
+                focused_windows: { ...snapshot.focused_windows },
+                closed_windows: { ...snapshot.closed_windows },
+                minimized_windows: { ...snapshot.minimized_windows },
+                window_positions: { ...snapshot.window_positions },
+            };
+        }, () => {
+            if (removed) {
+                this.broadcastWorkspaceState();
+                this.giveFocusToLastApp();
+            }
+        });
+        return removed;
+    };
 
     createEmptyWorkspaceState = () => ({
         focused_windows: {},
@@ -455,6 +606,7 @@ export class Desktop extends Component {
     };
 
     updateWorkspaceSnapshots = (baseState) => {
+        this.ensureWorkspaceContainers(this.state.workspaces.length);
         const validKeys = new Set(Object.keys(baseState.closed_windows || {}));
         this.workspaceSnapshots = this.workspaceSnapshots.map((snapshot, index) => {
             const existing = snapshot || this.createEmptyWorkspaceState();
@@ -471,6 +623,7 @@ export class Desktop extends Component {
     };
 
     getWorkspaceSummaries = () => {
+        this.ensureWorkspaceContainers(this.state.workspaces.length);
         return this.state.workspaces.map((workspace) => {
             const snapshot = this.workspaceSnapshots[workspace.id] || this.createEmptyWorkspaceState();
             const openWindows = Object.values(snapshot.closed_windows || {}).filter((value) => value === false).length;
@@ -843,6 +996,7 @@ export class Desktop extends Component {
     switchWorkspace = (workspaceId) => {
         if (workspaceId === this.state.activeWorkspace) return;
         if (workspaceId < 0 || workspaceId >= this.state.workspaces.length) return;
+        this.ensureWorkspaceContainers(this.state.workspaces.length);
         const snapshot = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
         this.setState({
             activeWorkspace: workspaceId,
@@ -867,6 +1021,7 @@ export class Desktop extends Component {
 
     getActiveStack = () => {
         const { activeWorkspace } = this.state;
+        this.ensureWorkspaceContainers(this.state.workspaces.length);
         if (!this.workspaceStacks[activeWorkspace]) {
             this.workspaceStacks[activeWorkspace] = [];
         }
@@ -890,6 +1045,20 @@ export class Desktop extends Component {
         }
     };
 
+    handleExternalWorkspaceAdd = (event) => {
+        const label = event?.detail?.label;
+        this.addWorkspace(typeof label === 'string' ? label : undefined);
+    };
+
+    handleExternalWorkspaceRemove = (event) => {
+        const workspaceId = event?.detail?.workspaceId;
+        if (typeof workspaceId === 'number') {
+            this.removeWorkspace(workspaceId);
+        } else {
+            this.removeWorkspace();
+        }
+    };
+
     broadcastWorkspaceState = () => {
         if (typeof window === 'undefined') return;
         const detail = {
@@ -907,6 +1076,8 @@ export class Desktop extends Component {
         if (typeof window !== 'undefined') {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
+            window.addEventListener('workspace-add', this.handleExternalWorkspaceAdd);
+            window.addEventListener('workspace-remove', this.handleExternalWorkspaceRemove);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
             this.broadcastWorkspaceState();
         }
@@ -966,6 +1137,8 @@ export class Desktop extends Component {
         if (typeof window !== 'undefined') {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
+            window.removeEventListener('workspace-add', this.handleExternalWorkspaceAdd);
+            window.removeEventListener('workspace-remove', this.handleExternalWorkspaceRemove);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
         }
         this.teardownGestureListeners();
@@ -1364,7 +1537,8 @@ export class Desktop extends Component {
             window_positions: this.state.window_positions || {},
         };
         this.updateWorkspaceSnapshots(workspaceState);
-        this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
+        this.workspaceStacks = this.state.workspaces.map(() => []);
+        this.ensureWorkspaceContainers(this.state.workspaces.length);
         this.setWorkspaceState({
             ...workspaceState,
             disabled_apps,
@@ -1401,6 +1575,7 @@ export class Desktop extends Component {
             window_positions: this.state.window_positions || {},
         };
         this.updateWorkspaceSnapshots(workspaceState);
+        this.ensureWorkspaceContainers(this.state.workspaces.length);
         this.setWorkspaceState({
             ...workspaceState,
             disabled_apps,
