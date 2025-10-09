@@ -11,6 +11,13 @@ const SAFE_AREA_PROPERTIES = {
   left: '--safe-area-left',
 };
 
+let lastAppliedSafeAreaInsets = {
+  top: null,
+  right: null,
+  bottom: null,
+  left: null,
+};
+
 const parseSafeAreaValue = (value) => {
   if (typeof value !== 'string') return 0;
   const trimmed = value.trim();
@@ -36,6 +43,60 @@ export const getSafeAreaInsets = () => {
     bottom: readSafeAreaInset(computed, SAFE_AREA_PROPERTIES.bottom),
     left: readSafeAreaInset(computed, SAFE_AREA_PROPERTIES.left),
   };
+};
+
+const normalizeSafeAreaInsets = (source) => {
+  if (!source || typeof source !== 'object') {
+    return { top: 0, right: 0, bottom: 0, left: 0 };
+  }
+
+  const normalizeValue = (value) => {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? Math.max(value, 0) : 0;
+    }
+
+    return parseSafeAreaValue(value);
+  };
+
+  return {
+    top: normalizeValue(source.top),
+    right: normalizeValue(source.right),
+    bottom: normalizeValue(source.bottom),
+    left: normalizeValue(source.left),
+  };
+};
+
+export const updateDocumentSafeAreaProperties = (overrides) => {
+  const measured = overrides && typeof overrides === 'object'
+    ? overrides
+    : getSafeAreaInsets();
+  const normalized = normalizeSafeAreaInsets(measured);
+
+  if (typeof document === 'undefined') {
+    lastAppliedSafeAreaInsets = normalized;
+    return { insets: normalized, changed: false };
+  }
+
+  const root = document.documentElement;
+  const style = root && root.style;
+  if (!style || typeof style.setProperty !== 'function') {
+    lastAppliedSafeAreaInsets = normalized;
+    return { insets: normalized, changed: false };
+  }
+
+  let changed = false;
+  Object.keys(SAFE_AREA_PROPERTIES).forEach((side) => {
+    const cssVar = SAFE_AREA_PROPERTIES[side];
+    const value = normalized[side];
+    if (lastAppliedSafeAreaInsets[side] !== value) {
+      style.setProperty(cssVar, `${value}px`);
+      changed = true;
+    }
+  });
+
+  lastAppliedSafeAreaInsets = normalized;
+
+  return { insets: normalized, changed };
 };
 
 export const measureSafeAreaInset = (side) => {
