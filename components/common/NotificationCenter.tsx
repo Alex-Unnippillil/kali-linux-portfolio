@@ -28,6 +28,7 @@ export interface AppNotification {
   priority: NotificationPriority;
   hints?: NotificationHints;
   classification: ClassificationResult;
+  actions?: NotificationAction[];
 }
 
 export interface PushNotificationInput {
@@ -37,6 +38,13 @@ export interface PushNotificationInput {
   timestamp?: number;
   priority?: NotificationPriority;
   hints?: NotificationHints;
+  actions?: NotificationAction[];
+}
+
+export interface NotificationAction {
+  label: string;
+  onClick: (context: { notification: AppNotification; dismiss: () => void }) => void;
+  closePanel?: boolean;
 }
 
 interface NotificationsContextValue {
@@ -87,6 +95,7 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
         priority: classification.priority,
         hints: input.hints,
         classification,
+        actions: input.actions?.map(action => ({ ...action })) ?? [],
       };
 
       return {
