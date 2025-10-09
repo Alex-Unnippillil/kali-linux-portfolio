@@ -464,6 +464,17 @@ export class Window extends Component {
         this.props.focus(this.id);
     }
 
+    handleTitlebarDoubleClick = (event) => {
+        if (event && typeof event.preventDefault === 'function') {
+            event.preventDefault();
+        }
+        if (typeof this.props.onTitlebarDoubleClick === 'function') {
+            this.props.onTitlebarDoubleClick(this.id, this);
+            return;
+        }
+        this.maximizeWindow();
+    }
+
     minimizeWindow = () => {
         this.setWinowsPosition();
         this.props.hasMinimised(this.id);
@@ -702,6 +713,7 @@ export class Window extends Component {
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
                             onPointerDown={this.focusWindow}
+                            onDoubleClick={this.handleTitlebarDoubleClick}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -728,7 +740,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick }) {
     return (
         <div
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
@@ -738,6 +750,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown 
             onKeyDown={onKeyDown}
             onBlur={onBlur}
             onPointerDown={onPointerDown}
+            onDoubleClick={onDoubleClick}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
