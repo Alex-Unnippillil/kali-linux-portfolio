@@ -42,6 +42,7 @@ export class Desktop extends Component {
             'closed_windows',
             'minimized_windows',
             'window_positions',
+            'desktop_icon_positions',
         ]);
         this.initFavourite = {};
         this.allWindowClosed = false;
@@ -79,7 +80,7 @@ export class Desktop extends Component {
         this.folderNameInputRef = React.createRef();
         this.iconDragState = null;
         this.preventNextIconClick = false;
-        this.savedIconPositions = {};
+        this.savedIconPositionsByWorkspace = {};
 
         this.defaultIconDimensions = { width: 96, height: 88 };
         this.defaultIconGridSpacing = { row: 112, column: 128 };
@@ -106,6 +107,7 @@ export class Desktop extends Component {
         closed_windows: {},
         minimized_windows: {},
         window_positions: {},
+        desktop_icon_positions: {},
     });
 
     cloneWorkspaceState = (state) => ({
@@ -113,6 +115,7 @@ export class Desktop extends Component {
         closed_windows: { ...state.closed_windows },
         minimized_windows: { ...state.minimized_windows },
         window_positions: { ...state.window_positions },
+        desktop_icon_positions: { ...state.desktop_icon_positions },
     });
 
     commitWorkspacePartial = (partial, index) => {
@@ -140,6 +143,28 @@ export class Desktop extends Component {
             }
         });
         return merged;
+    };
+
+    getSavedWorkspaceIconPositions = (workspaceId = this.state?.activeWorkspace ?? 0) => {
+        if (!this.savedIconPositionsByWorkspace) {
+            return {};
+        }
+        const key = Number.isInteger(workspaceId) ? workspaceId : 0;
+        return this.savedIconPositionsByWorkspace[key] || {};
+    };
+
+    updateSavedIconPositionsForWorkspace = (workspaceId, positions = {}) => {
+        if (!Number.isInteger(workspaceId)) return;
+        const sanitized = {};
+        Object.entries(positions || {}).forEach(([id, position]) => {
+            if (this.isValidIconPosition(position)) {
+                sanitized[id] = { x: position.x, y: position.y };
+            }
+        });
+        this.savedIconPositionsByWorkspace = {
+            ...(this.savedIconPositionsByWorkspace || {}),
+            [workspaceId]: sanitized,
+        };
     };
 
     setupPointerMediaWatcher = () => {
@@ -458,14 +483,27 @@ export class Desktop extends Component {
         const validKeys = new Set(Object.keys(baseState.closed_windows || {}));
         this.workspaceSnapshots = this.workspaceSnapshots.map((snapshot, index) => {
             const existing = snapshot || this.createEmptyWorkspaceState();
+            const baseDesktopIcons = baseState.desktop_icon_positions || {};
+            const existingDesktopIcons = existing.desktop_icon_positions || {};
             if (index === this.state.activeWorkspace) {
-                return this.cloneWorkspaceState(baseState);
+                return this.cloneWorkspaceState({
+                    ...baseState,
+                    desktop_icon_positions: baseDesktopIcons,
+                });
             }
             return {
                 focused_windows: this.mergeWorkspaceMaps(existing.focused_windows, baseState.focused_windows, validKeys),
                 closed_windows: this.mergeWorkspaceMaps(existing.closed_windows, baseState.closed_windows, validKeys),
                 minimized_windows: this.mergeWorkspaceMaps(existing.minimized_windows, baseState.minimized_windows, validKeys),
                 window_positions: this.mergeWorkspaceMaps(existing.window_positions, baseState.window_positions, validKeys),
+                desktop_icon_positions: this.mergeWorkspaceMaps(
+                    existingDesktopIcons,
+                    baseDesktopIcons,
+                    new Set([
+                        ...Object.keys(baseDesktopIcons || {}),
+                        ...Object.keys(existingDesktopIcons || {}),
+                    ]),
+                ),
             };
         });
     };
@@ -499,12 +537,16 @@ export class Desktop extends Component {
         if (typeof updater === 'function') {
             this.setState((prevState) => {
                 const partial = updater(prevState);
-                this.commitWorkspacePartial(partial, prevState.activeWorkspace);
+                if (partial && typeof partial === 'object') {
+                    this.commitWorkspacePartial(partial, prevState.activeWorkspace);
+                }
                 return partial;
             }, callback);
-        } else {
+        } else if (updater && typeof updater === 'object') {
             this.commitWorkspacePartial(updater);
             this.setState(updater, callback);
+        } else if (typeof callback === 'function') {
+            callback();
         }
     };
 
@@ -512,7 +554,37 @@ export class Desktop extends Component {
         if (!safeLocalStorage) return {};
         try {
             const stored = safeLocalStorage.getItem('desktop_icon_positions');
-            return stored ? JSON.parse(stored) : {};
+            if (!stored) return {};
+            const parsed = JSON.parse(stored);
+            if (!parsed || typeof parsed !== 'object') {
+                return {};
+            }
+            const normalized = {};
+            const values = Object.values(parsed);
+            const isLegacyFormat = values.every((value) => this.isValidIconPosition(value));
+            if (isLegacyFormat) {
+                const legacyPositions = {};
+                Object.entries(parsed).forEach(([id, position]) => {
+                    if (this.isValidIconPosition(position)) {
+                        legacyPositions[id] = { x: position.x, y: position.y };
+                    }
+                });
+                normalized[0] = legacyPositions;
+                return normalized;
+            }
+            Object.entries(parsed).forEach(([workspaceKey, iconMap]) => {
+                if (!iconMap || typeof iconMap !== 'object') return;
+                const sanitized = {};
+                Object.entries(iconMap).forEach(([id, position]) => {
+                    if (this.isValidIconPosition(position)) {
+                        sanitized[id] = { x: position.x, y: position.y };
+                    }
+                });
+                const keyAsNumber = Number(workspaceKey);
+                const normalizedKey = Number.isNaN(keyAsNumber) ? workspaceKey : keyAsNumber;
+                normalized[normalizedKey] = sanitized;
+            });
+            return normalized;
         } catch (e) {
             return {};
         }
@@ -520,10 +592,13 @@ export class Desktop extends Component {
 
     persistIconPositions = () => {
         if (!safeLocalStorage) return;
-        const positions = this.state.desktop_icon_positions || {};
+        const { desktop_icon_positions: positions = {}, activeWorkspace = 0 } = this.state;
+        this.updateSavedIconPositionsForWorkspace(activeWorkspace, positions);
         try {
-            safeLocalStorage.setItem('desktop_icon_positions', JSON.stringify(positions));
-            this.savedIconPositions = { ...positions };
+            safeLocalStorage.setItem(
+                'desktop_icon_positions',
+                JSON.stringify(this.savedIconPositionsByWorkspace || {}),
+            );
         } catch (e) {
             // ignore write errors (storage may be unavailable)
         }
@@ -531,7 +606,7 @@ export class Desktop extends Component {
 
     ensureIconPositions = (desktopApps = []) => {
         if (!Array.isArray(desktopApps)) return;
-        this.setState((prevState) => {
+        this.setWorkspaceState((prevState) => {
             const current = prevState.desktop_icon_positions || {};
             const layout = this.resolveIconLayout(desktopApps, current);
             if (this.areIconLayoutsEqual(current, layout)) {
@@ -646,13 +721,15 @@ export class Desktop extends Component {
             return fallback;
         };
 
+        const savedPositions = this.getSavedWorkspaceIconPositions();
+
         desktopApps.forEach((id, orderIndex) => {
             const candidates = [];
             if (current[id]) {
                 candidates.push(current[id]);
             }
             if (!clampOnly) {
-                const saved = this.savedIconPositions?.[id];
+                const saved = savedPositions?.[id];
                 if (saved) {
                     candidates.push(saved);
                 }
@@ -719,7 +796,7 @@ export class Desktop extends Component {
     };
 
     updateIconPosition = (id, x, y, persist = false) => {
-        this.setState((prevState) => {
+        this.setWorkspaceState((prevState) => {
             const current = prevState.desktop_icon_positions || {};
             const nextPosition = this.clampIconPosition(x, y);
             const previous = current[id];
@@ -828,7 +905,7 @@ export class Desktop extends Component {
     realignIconPositions = () => {
         const desktopApps = this.state.desktop_apps || [];
         if (!desktopApps.length) return;
-        this.setState((prevState) => {
+        this.setWorkspaceState((prevState) => {
             const current = prevState.desktop_icon_positions || {};
             const layout = this.resolveIconLayout(desktopApps, current, { clampOnly: true });
             if (this.areIconLayoutsEqual(current, layout)) {
@@ -843,15 +920,25 @@ export class Desktop extends Component {
     switchWorkspace = (workspaceId) => {
         if (workspaceId === this.state.activeWorkspace) return;
         if (workspaceId < 0 || workspaceId >= this.state.workspaces.length) return;
+        this.updateSavedIconPositionsForWorkspace(
+            this.state.activeWorkspace,
+            this.state.desktop_icon_positions || {},
+        );
         const snapshot = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
+        this.updateSavedIconPositionsForWorkspace(
+            workspaceId,
+            snapshot.desktop_icon_positions || {},
+        );
         this.setState({
             activeWorkspace: workspaceId,
             focused_windows: { ...snapshot.focused_windows },
             closed_windows: { ...snapshot.closed_windows },
             minimized_windows: { ...snapshot.minimized_windows },
             window_positions: { ...snapshot.window_positions },
+            desktop_icon_positions: { ...(snapshot.desktop_icon_positions || {}) },
             showWindowSwitcher: false,
             switcherWindows: [],
+            draggingIconId: null,
         }, () => {
             this.broadcastWorkspaceState();
             this.giveFocusToLastApp();
@@ -911,7 +998,16 @@ export class Desktop extends Component {
             this.broadcastWorkspaceState();
         }
 
-        this.savedIconPositions = this.loadDesktopIconPositions();
+        this.savedIconPositionsByWorkspace = this.loadDesktopIconPositions();
+        const activeWorkspace = this.state.activeWorkspace || 0;
+        const activePositions = this.getSavedWorkspaceIconPositions(activeWorkspace);
+        if (activePositions && Object.keys(activePositions).length > 0) {
+            this.workspaceSnapshots[activeWorkspace] = {
+                ...this.workspaceSnapshots[activeWorkspace],
+                desktop_icon_positions: { ...activePositions },
+            };
+            this.setWorkspaceState({ desktop_icon_positions: { ...activePositions } });
+        }
         this.fetchAppsData(() => {
             const session = this.props.session || {};
             const positions = {};
@@ -1033,7 +1129,7 @@ export class Desktop extends Component {
 
         if (revert && dragState.startPosition) {
             const original = this.clampIconPosition(dragState.startPosition.x, dragState.startPosition.y);
-            this.setState((prevState) => {
+            this.setWorkspaceState((prevState) => {
                 const current = prevState.desktop_icon_positions || {};
                 const previous = current[dragState.id];
                 if (previous && previous.x === original.x && previous.y === original.y && prevState.draggingIconId === null) {
@@ -1362,6 +1458,7 @@ export class Desktop extends Component {
             closed_windows,
             minimized_windows,
             window_positions: this.state.window_positions || {},
+            desktop_icon_positions: this.state.desktop_icon_positions || {},
         };
         this.updateWorkspaceSnapshots(workspaceState);
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
@@ -1399,6 +1496,7 @@ export class Desktop extends Component {
             closed_windows,
             minimized_windows,
             window_positions: this.state.window_positions || {},
+            desktop_icon_positions: this.state.desktop_icon_positions || {},
         };
         this.updateWorkspaceSnapshots(workspaceState);
         this.setWorkspaceState({
