@@ -36,10 +36,18 @@ const computeSnapRegions = (viewportWidth, viewportHeight, topInset = DEFAULT_WI
     const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
     const availableHeight = Math.max(0, viewportHeight - normalizedTopInset - SNAP_BOTTOM_INSET - safeBottom);
     const topHeight = Math.min(availableHeight, Math.max(viewportHeight / 2, 0));
+    const bottomHeight = Math.min(topHeight, Math.max(availableHeight - topHeight, 0));
+    const bottomTop = normalizedTopInset + Math.max(availableHeight - bottomHeight, 0);
+
     return {
         left: { left: 0, top: normalizedTopInset, width: halfWidth, height: availableHeight },
         right: { left: viewportWidth - halfWidth, top: normalizedTopInset, width: halfWidth, height: availableHeight },
         top: { left: 0, top: normalizedTopInset, width: viewportWidth, height: topHeight },
+        bottom: { left: 0, top: bottomTop, width: viewportWidth, height: bottomHeight },
+        'top-left': { left: 0, top: normalizedTopInset, width: halfWidth, height: topHeight },
+        'top-right': { left: viewportWidth - halfWidth, top: normalizedTopInset, width: halfWidth, height: topHeight },
+        'bottom-left': { left: 0, top: bottomTop, width: halfWidth, height: bottomHeight },
+        'bottom-right': { left: viewportWidth - halfWidth, top: bottomTop, width: halfWidth, height: bottomHeight },
 
     };
 };
@@ -74,11 +82,13 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            liveRegionMessage: '',
         }
         this.windowRef = React.createRef();
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._announceTimeout = null;
     }
 
     componentDidMount() {
@@ -110,6 +120,9 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+        if (this._announceTimeout) {
+            clearTimeout(this._announceTimeout);
         }
     }
 
@@ -263,6 +276,38 @@ export class Window extends Component {
             this._menuOpener.focus();
         }
         this._menuOpener = null;
+    }
+
+    announce = (message) => {
+        if (!message) return;
+        if (typeof window === 'undefined') return;
+        if (this._announceTimeout) {
+            clearTimeout(this._announceTimeout);
+            this._announceTimeout = null;
+        }
+        this.setState({ liveRegionMessage: '' }, () => {
+            this._announceTimeout = window.setTimeout(() => {
+                this.setState({ liveRegionMessage: message });
+                this._announceTimeout = null;
+            }, 50);
+        });
+    }
+
+    announceSnap = (position) => {
+        const messages = {
+            left: 'Snapped window to the left half',
+            right: 'Snapped window to the right half',
+            top: 'Snapped window to the top half',
+            bottom: 'Snapped window to the bottom half',
+            'top-left': 'Snapped window to the top-left quadrant',
+            'top-right': 'Snapped window to the top-right quadrant',
+            'bottom-left': 'Snapped window to the bottom-left quadrant',
+            'bottom-right': 'Snapped window to the bottom-right quadrant',
+        };
+        const message = messages[position];
+        if (message) {
+            this.announce(message);
+        }
     }
 
     changeCursorToMove = () => {
@@ -569,28 +614,76 @@ export class Window extends Component {
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
             this.closeWindow();
-        } else if (e.key === 'Tab') {
+            return;
+        }
+
+        if (e.key === 'Tab') {
             this.focusWindow();
-        } else if (e.altKey) {
+            return;
+        }
+
+        const isMinimized = !!this.props.minimized;
+        const hasCtrlOrMeta = e.ctrlKey || e.metaKey;
+
+        if (e.altKey && e.shiftKey) {
+            if (isMinimized) return;
+            const snapMap = {
+                ArrowUp: 'top-left',
+                ArrowRight: 'top-right',
+                ArrowDown: 'bottom-right',
+                ArrowLeft: 'bottom-left',
+            };
+            const position = snapMap[e.key];
+            if (position) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (this.state.maximized) {
+                    this.restoreWindow();
+                }
+                this.snapWindow(position);
+                this.announceSnap(position);
+                this.focusWindow();
+            }
+            return;
+        }
+
+        if (e.altKey) {
+            if (isMinimized) return;
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.unsnapWindow();
-            } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('left');
-            } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('right');
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('top');
+                if (this.state.maximized) {
+                    this.restoreWindow();
+                    this.announce('Restored window from maximized view');
+                } else if (this.state.snapped) {
+                    this.unsnapWindow();
+                    this.announce('Restored window to floating size');
+                }
+                this.focusWindow();
+                return;
             }
-            this.focusWindow();
-        } else if (e.shiftKey) {
+
+            const snapMap = {
+                ArrowLeft: 'left',
+                ArrowRight: 'right',
+                ArrowUp: 'top',
+            };
+            const position = snapMap[e.key];
+            if (position) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (this.state.maximized) {
+                    this.restoreWindow();
+                }
+                this.snapWindow(position);
+                this.announceSnap(position);
+                this.focusWindow();
+            }
+            return;
+        }
+
+        if (e.shiftKey && !hasCtrlOrMeta) {
+            if (isMinimized) return;
             const step = 1;
             if (e.key === 'ArrowLeft') {
                 e.preventDefault();
@@ -654,6 +747,9 @@ export class Window extends Component {
                         }}
                     />
                 )}
+                <span aria-live="polite" role="status" className="sr-only">
+                    {this.state.liveRegionMessage}
+                </span>
                 <Draggable
                     nodeRef={this.windowRef}
                     axis="both"

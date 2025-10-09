@@ -100,6 +100,21 @@ See `.env.local.example` for the full list.
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
 
+## Window Keyboard Shortcuts
+
+The desktop shell supports keyboard tiling for accessibility and fast navigation. Shortcuts are ignored while a window is minimized and announce their action through a hidden live region for screen readers.
+
+| Shortcut | Action |
+| --- | --- |
+| `Alt + ArrowLeft` | Snap the focused window to the left half. |
+| `Alt + ArrowRight` | Snap to the right half. |
+| `Alt + ArrowUp` | Snap to the top half. |
+| `Alt + ArrowDown` | Restore from a snap or exit maximized mode. |
+| `Alt + Shift + ArrowUp` | Snap to the top-left quadrant. |
+| `Alt + Shift + ArrowRight` | Snap to the top-right quadrant. |
+| `Alt + Shift + ArrowDown` | Snap to the bottom-right quadrant. |
+| `Alt + Shift + ArrowLeft` | Snap to the bottom-left quadrant. |
+
 ---
 
 ## Speed Insights
