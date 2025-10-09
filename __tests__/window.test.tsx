@@ -1,6 +1,8 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/desktop/Window';
+import QuickSettings from '../components/ui/QuickSettings';
+import { useSnapSetting } from '../hooks/usePersistentState';
 import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET } from '../utils/uiConstants';
 import { measureSafeAreaInset, measureWindowTopOffset } from '../utils/windowLayout';
 
@@ -34,6 +36,7 @@ beforeEach(() => {
   setViewport(1440, 900);
   measureSafeAreaInsetMock.mockReturnValue(0);
   measureWindowTopOffsetMock.mockReturnValue(DESKTOP_TOP_PADDING);
+  window.localStorage.clear();
 });
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
@@ -428,6 +431,66 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBeNull();
     expect(ref.current!.state.width).toBe(60);
     expect(ref.current!.state.height).toBe(85);
+  });
+});
+
+describe('Snap setting integration', () => {
+  const SnapAwareWindow = React.forwardRef<any, React.ComponentProps<typeof Window>>(
+    (props, ref) => {
+      const [snapEnabled] = useSnapSetting();
+      return <Window {...props} ref={ref} snapEnabled={snapEnabled} />;
+    },
+  );
+
+  it('disables snap preview when window snapping is toggled off', () => {
+    setViewport(1920, 1080);
+    const ref = React.createRef<any>();
+
+    render(
+      <>
+        <QuickSettings open />
+        <SnapAwareWindow
+          id="test-window"
+          title="Test"
+          screen={() => <div>content</div>}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          openApp={() => {}}
+          ref={ref}
+        />
+      </>,
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 5,
+      top: 150,
+      right: 105,
+      bottom: 250,
+      width: 100,
+      height: 100,
+      x: 5,
+      y: 150,
+      toJSON: () => {},
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+
+    expect(screen.getByTestId('snap-preview')).toBeInTheDocument();
+
+    const toggle = screen.getByRole('checkbox', { name: /window snapping/i });
+    act(() => {
+      fireEvent.click(toggle);
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+
+    expect(screen.queryByTestId('snap-preview')).toBeNull();
   });
 });
 
