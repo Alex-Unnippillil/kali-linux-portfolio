@@ -1,4 +1,13 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+  useCallback,
+  useMemo,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -109,36 +118,152 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setTheme: () => {},
 });
 
+type SettingsState = {
+  accent: string;
+  wallpaper: string;
+  useKaliWallpaper: boolean;
+  density: Density;
+  reducedMotion: boolean;
+  fontScale: number;
+  highContrast: boolean;
+  largeHitAreas: boolean;
+  pongSpin: boolean;
+  allowNetwork: boolean;
+  haptics: boolean;
+  theme: string;
+};
+
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [accent, setAccent] = useState<string>(defaults.accent);
-  const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
-  const [useKaliWallpaper, setUseKaliWallpaper] = useState<boolean>(defaults.useKaliWallpaper);
-  const [density, setDensity] = useState<Density>(defaults.density as Density);
-  const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
-  const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
-  const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
-  const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
-  const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
-  const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
-  const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
-  const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [settings, setSettings] = useState<SettingsState>(() => ({
+    accent: defaults.accent,
+    wallpaper: defaults.wallpaper,
+    useKaliWallpaper: defaults.useKaliWallpaper,
+    density: defaults.density as Density,
+    reducedMotion: defaults.reducedMotion,
+    fontScale: defaults.fontScale,
+    highContrast: defaults.highContrast,
+    largeHitAreas: defaults.largeHitAreas,
+    pongSpin: defaults.pongSpin,
+    allowNetwork: defaults.allowNetwork,
+    haptics: defaults.haptics,
+    theme: loadTheme(),
+  }));
   const fetchRef = useRef<typeof fetch | null>(null);
 
+  const {
+    accent,
+    wallpaper,
+    useKaliWallpaper,
+    density,
+    reducedMotion,
+    fontScale,
+    highContrast,
+    largeHitAreas,
+    pongSpin,
+    allowNetwork,
+    haptics,
+    theme,
+  } = settings;
+
   useEffect(() => {
+    let cancelled = false;
+    const perfCandidate =
+      typeof globalThis !== 'undefined'
+        ? (globalThis as typeof globalThis & { performance?: Performance }).performance
+        : undefined;
+    const perf =
+      perfCandidate &&
+      typeof perfCandidate.mark === 'function' &&
+      typeof perfCandidate.measure === 'function'
+        ? perfCandidate
+        : null;
+    const now =
+      perfCandidate && typeof perfCandidate.now === 'function'
+        ? perfCandidate.now.bind(perfCandidate)
+        : typeof Date.now === 'function'
+          ? () => Date.now()
+          : null;
+    const startTime = now ? now() : null;
+    const startMark = 'settings-hydration-start';
+    const endMark = 'settings-hydration-end';
+    if (perf) {
+      perf.mark(startMark);
+    }
     (async () => {
-      setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
-      setUseKaliWallpaper(await loadUseKaliWallpaper());
-      setDensity((await loadDensity()) as Density);
-      setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
-      setHighContrast(await loadHighContrast());
-      setLargeHitAreas(await loadLargeHitAreas());
-      setPongSpin(await loadPongSpin());
-      setAllowNetwork(await loadAllowNetwork());
-      setHaptics(await loadHaptics());
-      setTheme(loadTheme());
+      const [
+        loadedAccent,
+        loadedWallpaper,
+        loadedUseKaliWallpaper,
+        loadedDensity,
+        loadedReducedMotion,
+        loadedFontScale,
+        loadedHighContrast,
+        loadedLargeHitAreas,
+        loadedPongSpin,
+        loadedAllowNetwork,
+        loadedHaptics,
+      ] = await Promise.all([
+        loadAccent(),
+        loadWallpaper(),
+        loadUseKaliWallpaper(),
+        loadDensity(),
+        loadReducedMotion(),
+        loadFontScale(),
+        loadHighContrast(),
+        loadLargeHitAreas(),
+        loadPongSpin(),
+        loadAllowNetwork(),
+        loadHaptics(),
+      ]);
+      if (cancelled) return;
+      const loadedTheme = loadTheme();
+      setSettings((prev) => ({
+        ...prev,
+        accent: loadedAccent,
+        wallpaper: loadedWallpaper,
+        useKaliWallpaper: loadedUseKaliWallpaper,
+        density: loadedDensity as Density,
+        reducedMotion: loadedReducedMotion,
+        fontScale: loadedFontScale,
+        highContrast: loadedHighContrast,
+        largeHitAreas: loadedLargeHitAreas,
+        pongSpin: loadedPongSpin,
+        allowNetwork: loadedAllowNetwork,
+        haptics: loadedHaptics,
+        theme: loadedTheme,
+      }));
+      if (perf) {
+        perf.mark(endMark);
+        perf.measure('settings-hydration', startMark, endMark);
+        const measures = perf.getEntriesByName('settings-hydration');
+        const latest = measures[measures.length - 1];
+        const duration = latest?.duration ?? (startTime !== null && now ? now() - startTime : null);
+        if (process.env.NODE_ENV === 'development' && duration !== null) {
+          console.info(`[settings] hydration completed in ${duration.toFixed(2)}ms`);
+        }
+        if (typeof globalThis !== 'undefined') {
+          (globalThis as typeof globalThis & {
+            __settingsHydrationDuration?: number;
+          }).__settingsHydrationDuration = duration ?? undefined;
+        }
+        perf.clearMarks(startMark);
+        perf.clearMarks(endMark);
+        perf.clearMeasures('settings-hydration');
+      } else if (startTime !== null && now) {
+        const duration = now() - startTime;
+        if (typeof globalThis !== 'undefined') {
+          (globalThis as typeof globalThis & {
+            __settingsHydrationDuration?: number;
+          }).__settingsHydrationDuration = duration;
+        }
+        if (process.env.NODE_ENV === 'development') {
+          console.info(`[settings] hydration completed in ${duration.toFixed(2)}ms`);
+        }
+      }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -252,35 +377,114 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
+  const setAccent = useCallback((value: string) => {
+    setSettings((prev) => ({ ...prev, accent: value }));
+  }, []);
+
+  const setWallpaper = useCallback((value: string) => {
+    setSettings((prev) => ({ ...prev, wallpaper: value }));
+  }, []);
+
+  const setUseKaliWallpaper = useCallback((value: boolean) => {
+    setSettings((prev) => ({ ...prev, useKaliWallpaper: value }));
+  }, []);
+
+  const setDensity = useCallback((value: Density) => {
+    setSettings((prev) => ({ ...prev, density: value }));
+  }, []);
+
+  const setReducedMotion = useCallback((value: boolean) => {
+    setSettings((prev) => ({ ...prev, reducedMotion: value }));
+  }, []);
+
+  const setFontScale = useCallback((value: number) => {
+    setSettings((prev) => ({ ...prev, fontScale: value }));
+  }, []);
+
+  const setHighContrast = useCallback((value: boolean) => {
+    setSettings((prev) => ({ ...prev, highContrast: value }));
+  }, []);
+
+  const setLargeHitAreas = useCallback((value: boolean) => {
+    setSettings((prev) => ({ ...prev, largeHitAreas: value }));
+  }, []);
+
+  const setPongSpin = useCallback((value: boolean) => {
+    setSettings((prev) => ({ ...prev, pongSpin: value }));
+  }, []);
+
+  const setAllowNetwork = useCallback((value: boolean) => {
+    setSettings((prev) => ({ ...prev, allowNetwork: value }));
+  }, []);
+
+  const setHaptics = useCallback((value: boolean) => {
+    setSettings((prev) => ({ ...prev, haptics: value }));
+  }, []);
+
+  const setTheme = useCallback((value: string) => {
+    setSettings((prev) => ({ ...prev, theme: value }));
+  }, []);
+
+  const contextValue = useMemo(
+    () => ({
+      accent,
+      wallpaper,
+      bgImageName,
+      useKaliWallpaper,
+      density,
+      reducedMotion,
+      fontScale,
+      highContrast,
+      largeHitAreas,
+      pongSpin,
+      allowNetwork,
+      haptics,
+      theme,
+      setAccent,
+      setWallpaper,
+      setUseKaliWallpaper,
+      setDensity,
+      setReducedMotion,
+      setFontScale,
+      setHighContrast,
+      setLargeHitAreas,
+      setPongSpin,
+      setAllowNetwork,
+      setHaptics,
+      setTheme,
+    }),
+    [
+      accent,
+      wallpaper,
+      bgImageName,
+      useKaliWallpaper,
+      density,
+      reducedMotion,
+      fontScale,
+      highContrast,
+      largeHitAreas,
+      pongSpin,
+      allowNetwork,
+      haptics,
+      theme,
+      setAccent,
+      setWallpaper,
+      setUseKaliWallpaper,
+      setDensity,
+      setReducedMotion,
+      setFontScale,
+      setHighContrast,
+      setLargeHitAreas,
+      setPongSpin,
+      setAllowNetwork,
+      setHaptics,
+      setTheme,
+    ]
+  );
+
   return (
     <SettingsContext.Provider
-      value={{
-        accent,
-        wallpaper,
-        bgImageName,
-        useKaliWallpaper,
-        density,
-        reducedMotion,
-        fontScale,
-        highContrast,
-        largeHitAreas,
-        pongSpin,
-        allowNetwork,
-        haptics,
-        theme,
-        setAccent,
-        setWallpaper,
-        setUseKaliWallpaper,
-        setDensity,
-        setReducedMotion,
-        setFontScale,
-        setHighContrast,
-        setLargeHitAreas,
-        setPongSpin,
-        setAllowNetwork,
-        setHaptics,
-        setTheme,
-      }}
+      value={contextValue}
     >
       {children}
     </SettingsContext.Provider>
