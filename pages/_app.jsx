@@ -149,6 +149,7 @@ function MyApp(props) {
 
   return (
     <ErrorBoundary>
+      {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
       <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
         <a
@@ -157,8 +158,8 @@ function MyApp(props) {
         >
           Skip to app grid
         </a>
-        <SettingsProvider>
-          <NotificationCenter>
+        <NotificationCenter>
+          <SettingsProvider>
             <PipPortalProvider>
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
@@ -174,8 +175,8 @@ function MyApp(props) {
 
               {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
             </PipPortalProvider>
-          </NotificationCenter>
-        </SettingsProvider>
+          </SettingsProvider>
+        </NotificationCenter>
       </div>
     </ErrorBoundary>
 

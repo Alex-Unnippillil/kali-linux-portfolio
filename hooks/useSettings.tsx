@@ -22,9 +22,14 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getNetworkChangeAlerts as loadNetworkChangeAlerts,
+  setNetworkChangeAlerts as saveNetworkChangeAlerts,
+  getHapticsChangeAlerts as loadHapticsChangeAlerts,
+  setHapticsChangeAlerts as saveHapticsChangeAlerts,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { useNotifications } from './useNotifications';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -66,6 +71,8 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  networkChangeAlerts: boolean;
+  hapticsChangeAlerts: boolean;
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
@@ -78,6 +85,8 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setNetworkChangeAlerts: (value: boolean) => void;
+  setHapticsChangeAlerts: (value: boolean) => void;
   setTheme: (value: string) => void;
 }
 
@@ -94,6 +103,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  networkChangeAlerts: defaults.networkChangeAlerts,
+  hapticsChangeAlerts: defaults.hapticsChangeAlerts,
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
@@ -106,6 +117,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
+  setNetworkChangeAlerts: () => {},
+  setHapticsChangeAlerts: () => {},
   setTheme: () => {},
 });
 
@@ -121,8 +134,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [networkChangeAlerts, setNetworkChangeAlerts] = useState<boolean>(
+    defaults.networkChangeAlerts,
+  );
+  const [hapticsChangeAlerts, setHapticsChangeAlerts] = useState<boolean>(
+    defaults.hapticsChangeAlerts,
+  );
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
+  const previousAllowNetwork = useRef<boolean | null>(null);
+  const previousHaptics = useRef<boolean | null>(null);
+  const { pushNotification } = useNotifications();
 
   useEffect(() => {
     (async () => {
@@ -135,8 +157,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setHighContrast(await loadHighContrast());
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
-      setAllowNetwork(await loadAllowNetwork());
-      setHaptics(await loadHaptics());
+      const loadedAllowNetwork = await loadAllowNetwork();
+      previousAllowNetwork.current = loadedAllowNetwork;
+      setAllowNetwork(loadedAllowNetwork);
+      const loadedHaptics = await loadHaptics();
+      previousHaptics.current = loadedHaptics;
+      setHaptics(loadedHaptics);
+      setNetworkChangeAlerts(await loadNetworkChangeAlerts());
+      setHapticsChangeAlerts(await loadHapticsChangeAlerts());
       setTheme(loadTheme());
     })();
   }, []);
@@ -244,11 +272,59 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     } else {
       window.fetch = fetchRef.current!;
     }
-  }, [allowNetwork]);
+    if (
+      previousAllowNetwork.current !== null &&
+      previousAllowNetwork.current !== allowNetwork &&
+      networkChangeAlerts
+    ) {
+      pushNotification({
+        appId: 'system-settings',
+        title: allowNetwork ? 'Network access enabled' : 'Network access restricted',
+        body: allowNetwork
+          ? 'External network requests are now permitted.'
+          : 'External network requests are now blocked.',
+        hints: {
+          'x-kali-setting': 'allow-network',
+          state: allowNetwork ? 'enabled' : 'disabled',
+          category: 'security',
+        },
+      });
+    }
+
+    previousAllowNetwork.current = allowNetwork;
+  }, [allowNetwork, networkChangeAlerts, pushNotification]);
 
   useEffect(() => {
     saveHaptics(haptics);
-  }, [haptics]);
+    if (
+      previousHaptics.current !== null &&
+      previousHaptics.current !== haptics &&
+      hapticsChangeAlerts
+    ) {
+      pushNotification({
+        appId: 'system-settings',
+        title: haptics ? 'Haptics enabled' : 'Haptics disabled',
+        body: haptics
+          ? 'Compatible games and tools can trigger vibration feedback.'
+          : 'Haptic feedback has been muted.',
+        hints: {
+          'x-kali-setting': 'haptics',
+          state: haptics ? 'enabled' : 'disabled',
+          category: 'input',
+        },
+      });
+    }
+
+    previousHaptics.current = haptics;
+  }, [haptics, hapticsChangeAlerts, pushNotification]);
+
+  useEffect(() => {
+    saveNetworkChangeAlerts(networkChangeAlerts);
+  }, [networkChangeAlerts]);
+
+  useEffect(() => {
+    saveHapticsChangeAlerts(hapticsChangeAlerts);
+  }, [hapticsChangeAlerts]);
 
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
@@ -267,6 +343,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        networkChangeAlerts,
+        hapticsChangeAlerts,
         theme,
         setAccent,
         setWallpaper,
@@ -279,6 +357,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setNetworkChangeAlerts,
+        setHapticsChangeAlerts,
         setTheme,
       }}
     >
