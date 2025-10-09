@@ -1,6 +1,14 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+
+export type UsePersistentStateValidator<T> = (value: unknown) => value is T;
+export type UsePersistentStateResult<T> = readonly [
+  T,
+  Dispatch<SetStateAction<T>>,
+  () => void,
+  () => void,
+];
 
 /**
  * Persist state in localStorage.
@@ -12,8 +20,8 @@ import { useState, useEffect } from 'react';
 export default function usePersistentState<T>(
   key: string,
   initial: T | (() => T),
-  validator?: (value: unknown) => value is T,
-) {
+  validator?: UsePersistentStateValidator<T>,
+): UsePersistentStateResult<T> {
   const getInitial = () =>
     typeof initial === 'function' ? (initial as () => T)() : initial;
 
@@ -58,5 +66,5 @@ export const useSnapSetting = () =>
   usePersistentState<boolean>(
     'snap-enabled',
     true,
-    (v): v is boolean => typeof v === 'boolean',
+    (value): value is boolean => typeof value === 'boolean',
   );

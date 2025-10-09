@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { getMapping } from './Games/common/input-remap/useInputMapping';
 import useGamepad from '../../hooks/useGamepad';
-import usePersistedState from '../../hooks/usePersistedState';
+import usePersistentState from '../../hooks/usePersistentState';
 
 /**
  * Multifunctional game control hook.
@@ -185,10 +185,10 @@ const useGameControls = (arg, gameId = 'default') => {
 
 export const useGameSettings = (gameId = 'default') => {
   const [paused, setPaused] = useState(false);
-  const [speed, setSpeedRaw] = usePersistedState(`game:${gameId}:speed`, 1);
-  const [muted, setMuted] = usePersistedState(`game:${gameId}:muted`, false);
-  const [screenShake, setScreenShake] = usePersistedState(`game:${gameId}:shake`, true);
-  const [palette, setPalette] = usePersistedState(`game:${gameId}:palette`, 'normal');
+  const [speed, setSpeedRaw] = usePersistentState(`game:${gameId}:speed`, 1);
+  const [muted, setMuted] = usePersistentState(`game:${gameId}:muted`, false);
+  const [screenShake, setScreenShake] = usePersistentState(`game:${gameId}:shake`, true);
+  const [palette, setPalette] = usePersistentState(`game:${gameId}:palette`, 'normal');
 
   const togglePause = useCallback(() => setPaused((p) => !p), []);
   const toggleMute = useCallback(() => setMuted((m) => !m), [setMuted]);

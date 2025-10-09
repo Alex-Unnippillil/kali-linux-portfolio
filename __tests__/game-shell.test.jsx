@@ -5,7 +5,7 @@ import VirtualControls from '../components/games/VirtualControls';
 import useGameInput from '../hooks/useGameInput';
 import useGameAudio from '../hooks/useGameAudio';
 import useGameHaptics from '../hooks/useGameHaptics';
-import usePersistedState from '../hooks/usePersistedState';
+import usePersistentState from '../hooks/usePersistentState';
 import useOrientationGuard from '../hooks/useOrientationGuard';
 
 function HookTester({ hook }) {
@@ -36,7 +36,7 @@ describe('game utilities', () => {
       useGameInput,
       useGameAudio,
       useGameHaptics,
-      () => usePersistedState('test', 0),
+      () => usePersistentState('test', 0),
       useOrientationGuard,
     ];
 
