@@ -81,6 +81,13 @@ export class Window extends Component {
         this._menuOpener = null;
     }
 
+    dispatchWindowDragEvent = (type, detail = {}) => {
+        if (typeof window === 'undefined') return;
+        const windowId = this.id || this.props.id;
+        if (!windowId) return;
+        window.dispatchEvent(new CustomEvent(type, { detail: { windowId, ...detail } }));
+    };
+
     componentDidMount() {
         this.id = this.props.id;
         this.setDefaultWindowDimenstion();
@@ -273,10 +280,14 @@ export class Window extends Component {
         if (this.state.snapped) {
             this.unsnapWindow();
         }
-        this.setState({ cursorType: "cursor-move", grabbed: true })
+        this.setState({ cursorType: "cursor-move", grabbed: true });
+        this.dispatchWindowDragEvent('desktop-window-drag-start');
     }
 
     changeCursorToDefault = () => {
+        if (this.state.grabbed) {
+            this.dispatchWindowDragEvent('desktop-window-drag-end');
+        }
         this.setState({ cursorType: "cursor-default", grabbed: false })
     }
 
@@ -448,6 +459,12 @@ export class Window extends Component {
             this.applyEdgeResistance(data.node, data);
         }
         this.checkSnapPreview();
+        const clientX = typeof e?.clientX === 'number' ? e.clientX : null;
+        const clientY = typeof e?.clientY === 'number' ? e.clientY : null;
+        this.dispatchWindowDragEvent('desktop-window-dragging', {
+            clientX,
+            clientY,
+        });
     }
 
     handleStop = () => {
