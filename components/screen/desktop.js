@@ -73,11 +73,14 @@ export class Desktop extends Component {
                 label: `Workspace ${index + 1}`,
             })),
             draggingIconId: null,
+            selected_icons: [],
+            selection_box: null,
         }
 
         this.desktopRef = React.createRef();
         this.folderNameInputRef = React.createRef();
         this.iconDragState = null;
+        this.selectionDrag = null;
         this.preventNextIconClick = false;
         this.savedIconPositions = {};
 
@@ -543,6 +546,172 @@ export class Desktop extends Component {
         });
     };
 
+    setSelectedIcons = (ids = [], callback) => {
+        const list = Array.isArray(ids) ? ids : [];
+        const seen = new Set();
+        const normalized = [];
+        list.forEach((id) => {
+            if (typeof id === 'string' && !seen.has(id)) {
+                normalized.push(id);
+                seen.add(id);
+            }
+        });
+        const current = this.state.selected_icons || [];
+        const shouldUpdate =
+            current.length !== normalized.length ||
+            current.some((value, index) => value !== normalized[index]);
+        if (!shouldUpdate) {
+            if (typeof callback === 'function') {
+                callback();
+            }
+            return;
+        }
+        this.setState({ selected_icons: normalized }, () => {
+            if (typeof callback === 'function') {
+                callback();
+            }
+        });
+    };
+
+    clearSelection = () => {
+        this.setSelectedIcons([]);
+    };
+
+    computeSelectionBox = (dragState = this.selectionDrag) => {
+        if (!dragState) return null;
+        const { originX, originY, currentX, currentY } = dragState;
+        if (
+            !Number.isFinite(originX) ||
+            !Number.isFinite(originY) ||
+            !Number.isFinite(currentX) ||
+            !Number.isFinite(currentY)
+        ) {
+            return null;
+        }
+        const left = Math.min(originX, currentX);
+        const top = Math.min(originY, currentY);
+        const right = Math.max(originX, currentX);
+        const bottom = Math.max(originY, currentY);
+        return {
+            left,
+            top,
+            right,
+            bottom,
+            width: right - left,
+            height: bottom - top,
+        };
+    };
+
+    doRectsIntersect = (a, b) => {
+        if (!a || !b) return false;
+        return a.left <= b.right && a.right >= b.left && a.top <= b.bottom && a.bottom >= b.top;
+    };
+
+    getIconsWithinSelectionBox = (box) => {
+        if (!box) return [];
+        const iconWidth = this.iconDimensions?.width ?? this.defaultIconDimensions.width;
+        const iconHeight = this.iconDimensions?.height ?? this.defaultIconDimensions.height;
+        const { desktop_apps: desktopApps = [], desktop_icon_positions: positions = {} } = this.state;
+        if (!Array.isArray(desktopApps) || desktopApps.length === 0) {
+            return [];
+        }
+        const selected = [];
+        desktopApps.forEach((appId, index) => {
+            const base = positions[appId] || this.computeGridPosition(index);
+            if (!base) return;
+            const rect = {
+                left: base.x,
+                top: base.y,
+                right: base.x + iconWidth,
+                bottom: base.y + iconHeight,
+            };
+            if (this.doRectsIntersect(box, rect)) {
+                selected.push(appId);
+            }
+        });
+        return selected;
+    };
+
+    updateSelectionFromBox = (box) => {
+        if (!box) {
+            this.clearSelection();
+            return;
+        }
+        if (box.width <= 1 && box.height <= 1) {
+            this.clearSelection();
+            return;
+        }
+        const selected = this.getIconsWithinSelectionBox(box);
+        this.setSelectedIcons(selected);
+    };
+
+    handleDesktopSelectionStart = (event) => {
+        if (event.button !== 0) return;
+        if (event.pointerType === 'touch') return;
+        const target = event.target;
+        if (target && typeof target.closest === 'function') {
+            if (target.closest('[data-app-id]')) return;
+            if (target.closest('.opened-window')) return;
+        }
+        const rect = this.getDesktopRect();
+        if (!rect) return;
+        const originX = event.clientX - rect.left;
+        const originY = event.clientY - rect.top;
+        this.selectionDrag = {
+            pointerId: event.pointerId,
+            originX,
+            originY,
+            currentX: originX,
+            currentY: originY,
+        };
+        this.hideAllContextMenu();
+        this.clearSelection();
+        this.setState({
+            selection_box: {
+                left: originX,
+                top: originY,
+                right: originX,
+                bottom: originY,
+                width: 0,
+                height: 0,
+            },
+        });
+        event.currentTarget?.setPointerCapture?.(event.pointerId);
+    };
+
+    handleDesktopSelectionMove = (event) => {
+        const drag = this.selectionDrag;
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        const rect = this.getDesktopRect();
+        if (!rect) return;
+        drag.currentX = event.clientX - rect.left;
+        drag.currentY = event.clientY - rect.top;
+        const box = this.computeSelectionBox(drag);
+        this.setState({ selection_box: box });
+        this.updateSelectionFromBox(box);
+    };
+
+    handleDesktopSelectionEnd = (event) => {
+        const drag = this.selectionDrag;
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        const box = this.computeSelectionBox(drag);
+        event.currentTarget?.releasePointerCapture?.(event.pointerId);
+        this.selectionDrag = null;
+        if (box) {
+            this.updateSelectionFromBox(box);
+        }
+        this.setState({ selection_box: null });
+    };
+
+    handleDesktopSelectionCancel = (event) => {
+        const drag = this.selectionDrag;
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        event.currentTarget?.releasePointerCapture?.(event.pointerId);
+        this.selectionDrag = null;
+        this.setState({ selection_box: null });
+        this.clearSelection();
+    };
+
     getDesktopRect = () => {
         if (this.desktopRef && this.desktopRef.current) {
             return this.desktopRef.current.getBoundingClientRect();
@@ -737,6 +906,34 @@ export class Desktop extends Component {
         });
     };
 
+    applyIconGroupMovement = (deltaX = 0, deltaY = 0, dragState = this.iconDragState, persist = false) => {
+        const state = dragState || this.iconDragState;
+        if (!state) return;
+        const ids = (state.selectedIds && state.selectedIds.length ? state.selectedIds : [state.id]).filter(Boolean);
+        if (!ids.length) return;
+        const startPositions = state.selectionStartPositions || {};
+        const updates = {};
+        ids.forEach((id) => {
+            const base = startPositions[id];
+            if (!base) return;
+            const nextX = base.x + deltaX;
+            const nextY = base.y + deltaY;
+            updates[id] = this.clampIconPosition(nextX, nextY);
+        });
+        if (!Object.keys(updates).length) return;
+        this.setState((prevState) => {
+            const current = prevState.desktop_icon_positions || {};
+            return {
+                desktop_icon_positions: { ...current, ...updates },
+                draggingIconId: persist ? null : prevState.draggingIconId,
+            };
+        }, () => {
+            if (persist) {
+                this.persistIconPositions();
+            }
+        });
+    };
+
     handleIconPointerDown = (event, appId) => {
         if (event.button !== 0) return;
         const container = event.currentTarget;
@@ -744,16 +941,31 @@ export class Desktop extends Component {
         const offsetX = event.clientX - rect.left;
         const offsetY = event.clientY - rect.top;
         container.setPointerCapture?.(event.pointerId);
+        this.hideAllContextMenu();
         this.preventNextIconClick = false;
-        let startPosition = null;
+        const currentSelection = this.state.selected_icons || [];
+        const isAlreadySelected = currentSelection.includes(appId);
+        const selectionIds = isAlreadySelected ? [...currentSelection] : [appId];
+        if (!isAlreadySelected) {
+            this.setSelectedIcons([appId]);
+        }
         const positions = this.state.desktop_icon_positions || {};
-        if (positions[appId]) {
-            startPosition = { ...positions[appId] };
-        } else if (typeof window !== 'undefined') {
+        const desktopApps = this.state.desktop_apps || [];
+        const orderMap = new Map(desktopApps.map((id, index) => [id, index]));
+        const selectionStartPositions = {};
+        selectionIds.forEach((id) => {
+            const base = positions[id] || this.computeGridPosition(orderMap.get(id) ?? 0);
+            if (base) {
+                selectionStartPositions[id] = { ...base };
+            }
+        });
+        let startPosition = selectionStartPositions[appId] ? { ...selectionStartPositions[appId] } : null;
+        if (!startPosition && typeof window !== 'undefined') {
             const style = window.getComputedStyle(container);
             const left = parseFloat(style.left) || 0;
             const top = parseFloat(style.top) || 0;
             startPosition = { x: left, y: top };
+            selectionStartPositions[appId] = { ...startPosition };
         }
         this.iconDragState = {
             id: appId,
@@ -766,6 +978,8 @@ export class Desktop extends Component {
             container,
             startPosition,
             lastPosition: startPosition,
+            selectedIds: selectionIds,
+            selectionStartPositions,
         };
         this.setState({ draggingIconId: appId });
         this.attachIconKeyboardListeners();
@@ -786,7 +1000,17 @@ export class Desktop extends Component {
         event.preventDefault();
         const position = this.calculateIconPosition(event.clientX, event.clientY, dragState);
         dragState.lastPosition = position;
-        this.updateIconPosition(dragState.id, position.x, position.y, false);
+        const basePosition = dragState.startPosition || dragState.selectionStartPositions?.[dragState.id];
+        const baseX = basePosition ? basePosition.x : position.x;
+        const baseY = basePosition ? basePosition.y : position.y;
+        const deltaFromStartX = position.x - baseX;
+        const deltaFromStartY = position.y - baseY;
+        const selectedIds = dragState.selectedIds || [];
+        if (selectedIds.length > 1) {
+            this.applyIconGroupMovement(deltaFromStartX, deltaFromStartY, dragState, false);
+        } else {
+            this.updateIconPosition(dragState.id, position.x, position.y, false);
+        }
     };
 
     handleIconPointerUp = (event) => {
@@ -801,7 +1025,17 @@ export class Desktop extends Component {
             event.stopPropagation();
             const position = this.resolveDropPosition(event, dragState);
             this.preventNextIconClick = true;
-            this.updateIconPosition(dragState.id, position.x, position.y, true);
+            const basePosition = dragState.startPosition || dragState.selectionStartPositions?.[dragState.id];
+            const baseX = basePosition ? basePosition.x : position.x;
+            const baseY = basePosition ? basePosition.y : position.y;
+            const deltaX = position.x - baseX;
+            const deltaY = position.y - baseY;
+            const selectedIds = dragState.selectedIds || [];
+            if (selectedIds.length > 1) {
+                this.applyIconGroupMovement(deltaX, deltaY, dragState, true);
+            } else {
+                this.updateIconPosition(dragState.id, position.x, position.y, true);
+            }
         } else {
             event.preventDefault();
             event.stopPropagation();
@@ -837,6 +1071,143 @@ export class Desktop extends Component {
             return { desktop_icon_positions: layout };
         }, () => {
             this.persistIconPositions();
+        });
+    };
+
+    removeIconsFromDesktop = (ids = []) => {
+        const list = Array.isArray(ids) ? ids : [];
+        if (!list.length) return;
+        const seen = new Set();
+        const unique = [];
+        list.forEach((id) => {
+            if (typeof id === 'string' && !seen.has(id)) {
+                unique.push(id);
+                seen.add(id);
+            }
+        });
+        if (!unique.length) return;
+        const targets = new Set(unique);
+        let changed = false;
+        apps.forEach((app) => {
+            if (targets.has(app.id) && app.desktop_shortcut) {
+                app.desktop_shortcut = false;
+                changed = true;
+            }
+        });
+        if (!changed) {
+            this.clearSelection();
+            return;
+        }
+        if (safeLocalStorage) {
+            let shortcuts = [];
+            try {
+                shortcuts = JSON.parse(safeLocalStorage.getItem('app_shortcuts') || '[]');
+            } catch (e) {
+                shortcuts = [];
+            }
+            const filtered = shortcuts.filter((id) => !targets.has(id));
+            try {
+                safeLocalStorage.setItem('app_shortcuts', JSON.stringify(filtered));
+            } catch (e) {
+                // ignore storage write failures
+            }
+        }
+        if (this.savedIconPositions) {
+            const nextSaved = {};
+            Object.keys(this.savedIconPositions).forEach((key) => {
+                if (!targets.has(key)) {
+                    nextSaved[key] = this.savedIconPositions[key];
+                }
+            });
+            this.savedIconPositions = nextSaved;
+        }
+        this.setState((prevState) => {
+            const nextPositions = { ...(prevState.desktop_icon_positions || {}) };
+            targets.forEach((id) => {
+                delete nextPositions[id];
+            });
+            return {
+                desktop_icon_positions: nextPositions,
+                selected_icons: [],
+            };
+        }, () => {
+            this.persistIconPositions();
+            this.updateAppsData();
+        });
+    };
+
+    openSelectedIcons = () => {
+        const selection = this.state.selected_icons || [];
+        if (!selection.length) return;
+        selection.forEach((id) => {
+            this.openApp(id);
+        });
+        this.hideAllContextMenu();
+    };
+
+    removeSelectedIcons = () => {
+        const selection = this.state.selected_icons || [];
+        if (!selection.length) {
+            this.hideAllContextMenu();
+            return;
+        }
+        this.removeIconsFromDesktop(selection);
+        this.hideAllContextMenu();
+    };
+
+    alignSelectedIcons = () => {
+        const selection = this.state.selected_icons || [];
+        if (!selection.length) {
+            this.hideAllContextMenu();
+            return;
+        }
+        const desktopApps = this.state.desktop_apps || [];
+        if (!desktopApps.length) {
+            this.hideAllContextMenu();
+            return;
+        }
+        const selectedSet = new Set(selection);
+        const positions = this.state.desktop_icon_positions || {};
+        const taken = new Set();
+        const nextPositions = { ...positions };
+        desktopApps.forEach((id, index) => {
+            if (selectedSet.has(id)) return;
+            const base = positions[id] || this.computeGridPosition(index);
+            const key = this.getIconPositionKey(base);
+            if (key) {
+                taken.add(key);
+            }
+            nextPositions[id] = base;
+        });
+        const selectionIndices = desktopApps
+            .map((id, index) => (selectedSet.has(id) ? index : null))
+            .filter((value) => value !== null);
+        let fallbackIndex = selectionIndices.length ? Math.min(...selectionIndices) : 0;
+        selection.forEach((id) => {
+            let assigned = null;
+            let probeIndex = fallbackIndex;
+            let attempts = 0;
+            while (attempts < desktopApps.length + 500) {
+                const candidate = this.computeGridPosition(probeIndex);
+                const key = this.getIconPositionKey(candidate);
+                if (key && !taken.has(key)) {
+                    assigned = candidate;
+                    taken.add(key);
+                    fallbackIndex = probeIndex + 1;
+                    break;
+                }
+                probeIndex += 1;
+                attempts += 1;
+            }
+            if (!assigned) {
+                assigned = this.computeGridPosition(probeIndex);
+                fallbackIndex = probeIndex + 1;
+            }
+            nextPositions[id] = assigned;
+        });
+        this.setState({ desktop_icon_positions: nextPositions }, () => {
+            this.persistIconPositions();
+            this.hideAllContextMenu();
         });
     };
 
@@ -1031,19 +1402,29 @@ export class Desktop extends Component {
         this.iconDragState = null;
         this.detachIconKeyboardListeners();
 
-        if (revert && dragState.startPosition) {
-            const original = this.clampIconPosition(dragState.startPosition.x, dragState.startPosition.y);
-            this.setState((prevState) => {
-                const current = prevState.desktop_icon_positions || {};
-                const previous = current[dragState.id];
-                if (previous && previous.x === original.x && previous.y === original.y && prevState.draggingIconId === null) {
-                    return { draggingIconId: null };
-                }
-                return {
-                    desktop_icon_positions: { ...current, [dragState.id]: original },
-                    draggingIconId: null,
-                };
+        if (revert) {
+            const startPositions = { ...(dragState.selectionStartPositions || {}) };
+            if (dragState.startPosition) {
+                startPositions[dragState.id] = { ...dragState.startPosition };
+            }
+            const ids = (dragState.selectedIds && dragState.selectedIds.length ? dragState.selectedIds : [dragState.id]).filter(Boolean);
+            const updates = {};
+            ids.forEach((id) => {
+                const base = startPositions[id];
+                if (!base) return;
+                updates[id] = this.clampIconPosition(base.x, base.y);
             });
+            if (Object.keys(updates).length) {
+                this.setState((prevState) => {
+                    const current = prevState.desktop_icon_positions || {};
+                    return {
+                        desktop_icon_positions: { ...current, ...updates },
+                        draggingIconId: null,
+                    };
+                });
+            } else {
+                this.setState({ draggingIconId: null });
+            }
         } else {
             this.setState({ draggingIconId: null });
         }
@@ -1232,6 +1613,7 @@ export class Desktop extends Component {
                     category: `Context Menu`,
                     action: `Opened Desktop Context Menu`
                 });
+                this.clearSelection();
                 this.showContextMenu(e, "desktop");
                 break;
             case "app":
@@ -1239,7 +1621,17 @@ export class Desktop extends Component {
                     category: `Context Menu`,
                     action: `Opened App Context Menu`
                 });
-                this.setState({ context_app: appId }, () => this.showContextMenu(e, "app"));
+                if (appId) {
+                    const openMenu = () => this.setState({ context_app: appId }, () => this.showContextMenu(e, "app"));
+                    const selected = this.state.selected_icons || [];
+                    if (!selected.includes(appId)) {
+                        this.setSelectedIcons([appId], openMenu);
+                    } else {
+                        openMenu();
+                    }
+                } else {
+                    this.showContextMenu(e, "app");
+                }
                 break;
             case "taskbar":
                 ReactGA.event({
@@ -1269,11 +1661,22 @@ export class Desktop extends Component {
         switch (context) {
             case "desktop-area":
                 ReactGA.event({ category: `Context Menu`, action: `Opened Desktop Context Menu` });
+                this.clearSelection();
                 this.showContextMenu(fakeEvent, "desktop");
                 break;
             case "app":
                 ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
-                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app"));
+                if (appId) {
+                    const openMenu = () => this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app"));
+                    const selected = this.state.selected_icons || [];
+                    if (!selected.includes(appId)) {
+                        this.setSelectedIcons([appId], openMenu);
+                    } else {
+                        openMenu();
+                    }
+                } else {
+                    this.showContextMenu(fakeEvent, "app");
+                }
                 break;
             case "taskbar":
                 ReactGA.event({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
@@ -1421,13 +1824,14 @@ export class Desktop extends Component {
     };
 
     renderDesktopApps = () => {
-        const { desktop_apps: desktopApps, desktop_icon_positions: positions = {}, draggingIconId } = this.state;
+        const { desktop_apps: desktopApps, desktop_icon_positions: positions = {}, draggingIconId, selected_icons: selectedIcons = [] } = this.state;
         if (!desktopApps || desktopApps.length === 0) return null;
 
         const hasOpenWindows = this.hasVisibleWindows();
         const blockIcons = hasOpenWindows && !draggingIconId;
         const iconBaseZIndex = 15;
         const containerZIndex = blockIcons ? 5 : 15;
+        const selectedSet = new Set(selectedIcons);
         const icons = desktopApps.map((appId, index) => {
             const app = apps.find((item) => item.id === appId);
             if (!app) return null;
@@ -1439,10 +1843,12 @@ export class Desktop extends Component {
                 openApp: this.openApp,
                 disabled: this.state.disabled_apps[app.id],
                 prefetch: app.screen?.prefetch,
+                selected: selectedSet.has(app.id),
             };
 
             const position = positions[appId] || this.computeGridPosition(index);
             const isDragging = draggingIconId === appId;
+            const isSelected = selectedSet.has(app.id);
             const wrapperStyle = {
                 position: 'absolute',
                 left: `${position.x}px`,
@@ -1461,6 +1867,7 @@ export class Desktop extends Component {
                     onPointerUp={this.handleIconPointerUp}
                     onPointerCancel={this.handleIconPointerCancel}
                     onClickCapture={this.handleIconClickCapture}
+                    data-selected={isSelected ? 'true' : 'false'}
                 >
                     <UbuntuApp {...props} draggable={false} isBeingDragged={isDragging} />
                 </div>
@@ -1953,6 +2360,8 @@ export class Desktop extends Component {
     };
 
     render() {
+        const selectionBox = this.state.selection_box;
+        const showSelectionBox = selectionBox && (selectionBox.width > 1 || selectionBox.height > 1);
         return (
             <main
                 id="desktop"
@@ -1960,6 +2369,10 @@ export class Desktop extends Component {
                 ref={this.desktopRef}
                 className={" min-h-screen h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent"}
                 style={{ paddingTop: DESKTOP_TOP_PADDING, minHeight: '100dvh' }}
+                onPointerDown={this.handleDesktopSelectionStart}
+                onPointerMove={this.handleDesktopSelectionMove}
+                onPointerUp={this.handleDesktopSelectionEnd}
+                onPointerCancel={this.handleDesktopSelectionCancel}
             >
 
                 {/* Window Area */}
@@ -1978,6 +2391,19 @@ export class Desktop extends Component {
                 {/* Desktop Apps */}
                 {this.renderDesktopApps()}
 
+                {showSelectionBox ? (
+                    <div
+                        className="absolute border border-blue-400 bg-blue-500 bg-opacity-20 pointer-events-none"
+                        style={{
+                            left: `${selectionBox.left}px`,
+                            top: `${selectionBox.top}px`,
+                            width: `${Math.max(selectionBox.width, 0)}px`,
+                            height: `${Math.max(selectionBox.height, 0)}px`,
+                            zIndex: 45,
+                        }}
+                    />
+                ) : null}
+
                 {/* Context Menus */}
                 <DesktopMenu
                     active={this.state.context_menus.desktop}
@@ -1993,6 +2419,10 @@ export class Desktop extends Component {
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
                     onClose={this.hideAllContextMenu}
+                    selectionCount={this.state.selected_icons.length}
+                    onOpenSelected={this.openSelectedIcons}
+                    onDeleteSelected={this.removeSelectedIcons}
+                    onMoveSelected={this.alignSelectedIcons}
                 />
                 <TaskbarMenu
                     active={this.state.context_menus.taskbar}
