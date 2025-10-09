@@ -2,6 +2,14 @@
 
 import usePersistentState from '../../hooks/usePersistentState';
 import { useEffect } from 'react';
+import {
+  ICON_SIZE_DEFAULT,
+  ICON_SIZE_EVENT,
+  ICON_SIZE_OPTIONS,
+  ICON_SIZE_STORAGE_KEY,
+  isValidIconSize,
+  type IconSize,
+} from '../../utils/iconSizeProfiles';
 
 interface Props {
   open: boolean;
@@ -12,6 +20,11 @@ const QuickSettings = ({ open }: Props) => {
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const [iconSize, setIconSize] = usePersistentState<IconSize>(
+    ICON_SIZE_STORAGE_KEY,
+    ICON_SIZE_DEFAULT,
+    (value): value is IconSize => isValidIconSize(value),
+  );
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -20,6 +33,12 @@ const QuickSettings = ({ open }: Props) => {
   useEffect(() => {
     document.documentElement.classList.toggle('reduce-motion', reduceMotion);
   }, [reduceMotion]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const detail = { size: iconSize };
+    window.dispatchEvent(new CustomEvent(ICON_SIZE_EVENT, { detail }));
+  }, [iconSize]);
 
   return (
     <div
@@ -51,6 +70,25 @@ const QuickSettings = ({ open }: Props) => {
           checked={reduceMotion}
           onChange={() => setReduceMotion(!reduceMotion)}
         />
+      </div>
+      <div className="px-4 pt-2 flex justify-between items-center gap-3">
+        <span>Icon size</span>
+        <select
+          className="bg-ub-grey text-white rounded px-2 py-1 text-sm"
+          value={iconSize}
+          onChange={(event) => {
+            const value = event.target.value;
+            if (isValidIconSize(value)) {
+              setIconSize(value);
+            }
+          }}
+        >
+          {ICON_SIZE_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option.charAt(0).toUpperCase() + option.slice(1)}
+            </option>
+          ))}
+        </select>
       </div>
     </div>
   );

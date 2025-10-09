@@ -29,6 +29,13 @@ import {
     getSafeAreaInsets,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
+import {
+    ICON_SIZE_DEFAULT,
+    ICON_SIZE_EVENT,
+    ICON_SIZE_STORAGE_KEY,
+    getIconProfile,
+    isValidIconSize,
+} from '../../utils/iconSizeProfiles';
 
 
 export class Desktop extends Component {
@@ -88,6 +95,8 @@ export class Desktop extends Component {
         this.iconDimensions = { ...this.defaultIconDimensions };
         this.iconGridSpacing = { ...this.defaultIconGridSpacing };
         this.desktopPadding = { ...this.defaultDesktopPadding };
+        this.iconCssVariables = {};
+        this.iconSizePreference = ICON_SIZE_DEFAULT;
 
         this.gestureState = { pointer: null, overview: null };
 
@@ -98,6 +107,7 @@ export class Desktop extends Component {
         this.openSettingsTarget = null;
         this.openSettingsClickHandler = null;
         this.openSettingsListenerAttached = false;
+        this.iconSizePreferenceListener = null;
 
     }
 
@@ -144,16 +154,16 @@ export class Desktop extends Component {
 
     setupPointerMediaWatcher = () => {
         if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-            this.configureTouchTargets(false);
+            this.configureTouchTargets(false, this.iconSizePreference);
             return;
         }
         const query = window.matchMedia('(pointer: coarse)');
         this.pointerMedia = query;
         const listener = (event) => {
-            this.configureTouchTargets(event.matches);
+            this.configureTouchTargets(event.matches, this.iconSizePreference);
         };
         this.pointerMediaListener = listener;
-        this.configureTouchTargets(query.matches);
+        this.configureTouchTargets(query.matches, this.iconSizePreference);
         if (typeof query.addEventListener === 'function') {
             query.addEventListener('change', listener);
         } else if (typeof query.addListener === 'function') {
@@ -175,18 +185,80 @@ export class Desktop extends Component {
         this.pointerMediaListener = null;
     };
 
-    configureTouchTargets = (isCoarse) => {
+    getStoredIconSizePreference = () => {
+        if (!safeLocalStorage) {
+            return ICON_SIZE_DEFAULT;
+        }
+        try {
+            const stored = safeLocalStorage.getItem(ICON_SIZE_STORAGE_KEY);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (isValidIconSize(parsed)) {
+                    return parsed;
+                }
+            }
+        } catch (e) {
+            // ignore parsing failures
+        }
+        return ICON_SIZE_DEFAULT;
+    };
+
+    applyIconCssVariables = (variables = {}) => {
+        if (typeof document === 'undefined' || !document.documentElement) {
+            return false;
+        }
+        const root = document.documentElement;
+        const previous = this.iconCssVariables || {};
+        let changed = false;
+
+        Object.entries(variables).forEach(([key, value]) => {
+            if (previous[key] !== value) {
+                root.style.setProperty(key, value);
+                changed = true;
+            }
+        });
+
+        Object.keys(previous).forEach((key) => {
+            if (!Object.prototype.hasOwnProperty.call(variables, key)) {
+                root.style.removeProperty(key);
+                changed = true;
+            }
+        });
+
+        this.iconCssVariables = { ...variables };
+        return changed;
+    };
+
+    setupIconSizePreferenceWatcher = () => {
+        if (typeof window === 'undefined') return;
+        if (!this.iconSizePreferenceListener) {
+            this.iconSizePreferenceListener = (event) => {
+                const size = event?.detail?.size;
+                if (isValidIconSize(size)) {
+                    this.configureTouchTargets(this.currentPointerIsCoarse, size);
+                }
+            };
+        }
+        window.addEventListener(ICON_SIZE_EVENT, this.iconSizePreferenceListener);
+    };
+
+    teardownIconSizePreferenceWatcher = () => {
+        if (typeof window === 'undefined') return;
+        if (this.iconSizePreferenceListener) {
+            window.removeEventListener(ICON_SIZE_EVENT, this.iconSizePreferenceListener);
+        }
+        this.iconSizePreferenceListener = null;
+    };
+
+    configureTouchTargets = (isCoarse, size = this.iconSizePreference) => {
         this.currentPointerIsCoarse = Boolean(isCoarse);
 
-        const baseDimensions = isCoarse
-            ? { width: 120, height: 108 }
-            : { ...this.defaultIconDimensions };
-        const baseSpacing = isCoarse
-            ? { row: 144, column: 156 }
-            : { ...this.defaultIconGridSpacing };
-        const basePadding = isCoarse
-            ? { top: 72, right: 32, bottom: 168, left: 32 }
-            : { ...this.defaultDesktopPadding };
+        const nextSize = isValidIconSize(size) ? size : ICON_SIZE_DEFAULT;
+        this.iconSizePreference = nextSize;
+        const profile = getIconProfile(nextSize, this.currentPointerIsCoarse);
+        const baseDimensions = profile.iconDimensions;
+        const baseSpacing = profile.iconGridSpacing;
+        const basePadding = profile.desktopPadding;
         const safeArea = getSafeAreaInsets();
         const nextPadding = {
             top: basePadding.top + safeArea.top,
@@ -205,16 +277,19 @@ export class Desktop extends Component {
             nextPadding.bottom !== this.desktopPadding.bottom ||
             nextPadding.left !== this.desktopPadding.left;
 
-        if (!changed) return;
+        const cssChanged = this.applyIconCssVariables(profile.cssVariables);
 
         this.iconDimensions = { ...baseDimensions };
         this.iconGridSpacing = { ...baseSpacing };
         this.desktopPadding = nextPadding;
-        this.realignIconPositions();
+
+        if (changed || cssChanged) {
+            this.realignIconPositions();
+        }
     };
 
     handleViewportResize = () => {
-        this.configureTouchTargets(this.currentPointerIsCoarse);
+        this.configureTouchTargets(this.currentPointerIsCoarse, this.iconSizePreference);
         this.realignIconPositions();
 
         if (typeof window === 'undefined') return;
@@ -939,7 +1014,9 @@ export class Desktop extends Component {
         window.addEventListener('resize', this.handleViewportResize);
         document.addEventListener('keydown', this.handleGlobalShortcut);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        this.iconSizePreference = this.getStoredIconSizePreference();
         this.setupPointerMediaWatcher();
+        this.setupIconSizePreferenceWatcher();
         this.setupGestureListeners();
     }
 
@@ -970,6 +1047,7 @@ export class Desktop extends Component {
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
+        this.teardownIconSizePreferenceWatcher();
     }
 
     handleExternalTaskbarCommand = (event) => {
