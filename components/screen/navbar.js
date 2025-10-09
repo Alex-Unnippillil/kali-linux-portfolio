@@ -181,6 +181,7 @@ export default class Navbar extends PureComponent {
 
                 render() {
                         const { workspaces, activeWorkspace } = this.state;
+                        const { statusBarRef } = this.props;
                         return (
                                 <div
                                         className="main-navbar-vp fixed inset-x-0 top-0 z-50 flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
@@ -208,6 +209,7 @@ export default class Navbar extends PureComponent {
                                                 <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
                                                 <div
                                                         id="status-bar"
+                                                        ref={statusBarRef}
                                                         role="button"
                                                         tabIndex={0}
                                                         aria-label="System status"

@@ -87,4 +87,23 @@ describe('Navbar running apps tray', () => {
     expect(button).toHaveAttribute('data-active', 'false');
     expect(button.querySelector('[data-testid="running-indicator"]')).toBeFalsy();
   });
+
+  it('supports focusing the status bar via ref and toggling quick settings with the keyboard', () => {
+    const statusBarRef = React.createRef<HTMLDivElement>();
+    render(<Navbar statusBarRef={statusBarRef} />);
+
+    const statusButton = screen.getByRole('button', { name: /system status/i });
+    expect(statusBarRef.current).toBe(statusButton);
+
+    statusButton.focus();
+    expect(statusButton).toHaveFocus();
+
+    fireEvent.keyDown(statusButton, { key: 'Enter' });
+    expect(screen.getByTestId('quick-settings')).toHaveTextContent('open');
+    expect(statusButton).toHaveFocus();
+
+    fireEvent.keyDown(statusButton, { key: ' ' });
+    expect(screen.getByTestId('quick-settings')).toHaveTextContent('closed');
+    expect(statusButton).toHaveFocus();
+  });
 });
