@@ -99,6 +99,12 @@ export class Desktop extends Component {
         this.openSettingsClickHandler = null;
         this.openSettingsListenerAttached = false;
 
+        this.showDesktopState = {
+            active: false,
+            restorableWindows: new Set(),
+            previousFocus: null,
+        };
+
     }
 
     createEmptyWorkspaceState = () => ({
@@ -452,6 +458,94 @@ export class Desktop extends Component {
         const event = new CustomEvent('super-arrow', { detail: key, bubbles: true });
         node.dispatchEvent(event);
         return true;
+    };
+
+    areAllWindowsHidden = () => {
+        const { closed_windows = {}, minimized_windows = {} } = this.state;
+        const openWindows = Object.keys(closed_windows).filter((id) => closed_windows[id] === false);
+        if (!openWindows.length) return true;
+        return openWindows.every((id) => minimized_windows[id]);
+    };
+
+    handleShowDesktopRequest = (event) => {
+        const detail = event?.detail || {};
+        const action = detail.action || 'toggle';
+        if (action === 'show') {
+            this.setShowDesktop(true);
+        } else if (action === 'hide') {
+            this.setShowDesktop(false);
+        } else {
+            const desired = typeof detail.force === 'boolean'
+                ? detail.force
+                : !this.showDesktopState.active;
+            this.setShowDesktop(desired);
+        }
+    };
+
+    setShowDesktop = (shouldShow) => {
+        if (shouldShow) {
+            if (this.showDesktopState.active && this.areAllWindowsHidden()) {
+                return;
+            }
+
+            const { closed_windows = {}, minimized_windows = {}, focused_windows = {} } = this.state;
+            const openWindows = Object.keys(closed_windows).filter((id) => closed_windows[id] === false);
+            const nextMinimized = { ...minimized_windows };
+            const nextFocused = { ...focused_windows };
+            const restorable = new Set();
+
+            openWindows.forEach((id) => {
+                if (!nextMinimized[id]) {
+                    restorable.add(id);
+                    nextMinimized[id] = true;
+                }
+                nextFocused[id] = false;
+            });
+
+            this.showDesktopState = {
+                active: true,
+                restorableWindows: restorable,
+                previousFocus: this.getFocusedWindowId(),
+            };
+
+            if (openWindows.length === 0) {
+                return;
+            }
+
+            this.setWorkspaceState({ minimized_windows: nextMinimized, focused_windows: nextFocused });
+        } else {
+            if (!this.showDesktopState.active) {
+                return;
+            }
+
+            const restorable = this.showDesktopState.restorableWindows || new Set();
+            const previousFocus = this.showDesktopState.previousFocus;
+            const { closed_windows = {}, minimized_windows = {} } = this.state;
+            const nextMinimized = { ...minimized_windows };
+
+            restorable.forEach((id) => {
+                if (closed_windows[id] === false) {
+                    nextMinimized[id] = false;
+                }
+            });
+
+            this.showDesktopState = {
+                active: false,
+                restorableWindows: new Set(),
+                previousFocus: null,
+            };
+
+            this.setWorkspaceState({ minimized_windows: nextMinimized }, () => {
+                if (previousFocus && closed_windows[previousFocus] === false) {
+                    this.focus(previousFocus);
+                } else {
+                    const [firstRestorable] = Array.from(restorable).filter((id) => closed_windows[id] === false);
+                    if (firstRestorable) {
+                        this.focus(firstRestorable);
+                    }
+                }
+            });
+        }
     };
 
     updateWorkspaceSnapshots = (baseState) => {
@@ -908,6 +1002,7 @@ export class Desktop extends Component {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.addEventListener('desktop-show-desktop', this.handleShowDesktopRequest);
             this.broadcastWorkspaceState();
         }
 
@@ -953,6 +1048,12 @@ export class Desktop extends Component {
         ) {
             this.broadcastWorkspaceState();
         }
+
+        if (this.showDesktopState.active && !this.areAllWindowsHidden()) {
+            this.showDesktopState.active = false;
+            this.showDesktopState.restorableWindows = new Set();
+            this.showDesktopState.previousFocus = null;
+        }
     }
 
     componentWillUnmount() {
@@ -967,6 +1068,7 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.removeEventListener('desktop-show-desktop', this.handleShowDesktopRequest);
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
