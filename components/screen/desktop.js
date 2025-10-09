@@ -55,6 +55,7 @@ export class Desktop extends Component {
             window_positions: {},
             desktop_apps: [],
             desktop_icon_positions: {},
+            desktop_icon_titles: {},
             window_context: {},
             context_menus: {
                 desktop: false,
@@ -73,13 +74,21 @@ export class Desktop extends Component {
                 label: `Workspace ${index + 1}`,
             })),
             draggingIconId: null,
+            renamingIconId: null,
+            renameDraft: '',
         }
 
         this.desktopRef = React.createRef();
         this.folderNameInputRef = React.createRef();
+        this.renameInputRef = React.createRef();
         this.iconDragState = null;
         this.preventNextIconClick = false;
         this.savedIconPositions = {};
+        this.savedDesktopIconState = { positions: {}, titles: {} };
+        this.iconLastClickTimes = {};
+
+        this.maxIconTitleLength = 32;
+        this.renameActivationWindow = { min: 500, max: 1200 };
 
         this.defaultIconDimensions = { width: 96, height: 88 };
         this.defaultIconGridSpacing = { row: 112, column: 128 };
@@ -488,7 +497,7 @@ export class Desktop extends Component {
             .filter((app) => closed_windows[app.id] === false)
             .map((app) => ({
                 id: app.id,
-                title: app.title,
+                title: this.getIconCurrentTitle(app.id) || app.title,
                 icon: app.icon.replace('./', '/'),
                 isFocused: Boolean(focused_windows[app.id]),
                 isMinimized: Boolean(minimized_windows[app.id]),
@@ -508,21 +517,186 @@ export class Desktop extends Component {
         }
     };
 
-    loadDesktopIconPositions = () => {
-        if (!safeLocalStorage) return {};
+    loadDesktopIconState = () => {
+        const fallback = { positions: {}, titles: {} };
+        if (!safeLocalStorage) return fallback;
         try {
             const stored = safeLocalStorage.getItem('desktop_icon_positions');
-            return stored ? JSON.parse(stored) : {};
+            if (!stored) return fallback;
+            const parsed = JSON.parse(stored);
+            if (!parsed || typeof parsed !== 'object') {
+                return fallback;
+            }
+            const positionsSource =
+                parsed.positions && typeof parsed.positions === 'object'
+                    ? parsed.positions
+                    : parsed;
+            const titlesSource =
+                parsed.titles && typeof parsed.titles === 'object'
+                    ? parsed.titles
+                    : {};
+            return {
+                positions: this.filterValidIconPositions(positionsSource),
+                titles: this.filterValidIconTitles(titlesSource),
+            };
         } catch (e) {
-            return {};
+            return fallback;
         }
+    };
+
+    filterValidIconPositions = (positions = {}) => {
+        if (!positions || typeof positions !== 'object') return {};
+        const valid = {};
+        Object.keys(positions).forEach((key) => {
+            const candidate = positions[key];
+            if (this.isValidIconPosition(candidate)) {
+                valid[key] = { x: Math.round(candidate.x), y: Math.round(candidate.y) };
+            }
+        });
+        return valid;
+    };
+
+    filterValidIconTitles = (titles = {}) => {
+        if (!titles || typeof titles !== 'object') return {};
+        const sanitized = {};
+        Object.keys(titles).forEach((key) => {
+            const normalized = this.sanitizeIconTitle(titles[key]);
+            if (normalized) {
+                sanitized[key] = normalized;
+            }
+        });
+        return sanitized;
+    };
+
+    sanitizeIconTitle = (value) => {
+        if (typeof value !== 'string') return null;
+        const withoutControl = value.replace(/[\r\n\t]+/g, ' ');
+        const trimmed = withoutControl.trim();
+        if (!trimmed) return null;
+        return trimmed.slice(0, this.maxIconTitleLength);
+    };
+
+    getIconDefaultTitle = (appId) => {
+        const app = apps.find((item) => item.id === appId);
+        return app ? app.title : '';
+    };
+
+    getIconCurrentTitle = (appId) => {
+        const titles = this.state.desktop_icon_titles || {};
+        if (titles[appId]) {
+            return titles[appId];
+        }
+        const saved = this.savedDesktopIconState?.titles?.[appId];
+        if (saved) {
+            return saved;
+        }
+        return this.getIconDefaultTitle(appId);
+    };
+
+    getAppsWithCustomTitles = (list = []) => {
+        const titles = this.state.desktop_icon_titles || {};
+        if (!titles || Object.keys(titles).length === 0) return list;
+        let hasOverride = false;
+        const decorated = list.map((app) => {
+            const customTitle = titles[app.id];
+            if (!customTitle) return app;
+            hasOverride = true;
+            return { ...app, title: customTitle };
+        });
+        return hasOverride ? decorated : list;
+    };
+
+    handleRenameInputChange = (event) => {
+        const value = typeof event?.target?.value === 'string' ? event.target.value : '';
+        this.setState({ renameDraft: value.slice(0, this.maxIconTitleLength) });
+    };
+
+    startRenamingIcon = (appId) => {
+        if (!appId) return;
+        const desktopApps = this.state.desktop_apps || [];
+        if (!desktopApps.includes(appId)) return;
+        const beginRename = () => {
+            const currentTitle = this.getIconCurrentTitle(appId) || '';
+            this.setState({ renamingIconId: appId, renameDraft: currentTitle });
+            this.iconLastClickTimes[appId] = 0;
+        };
+        if (this.state.renamingIconId && this.state.renamingIconId !== appId) {
+            this.commitIconRename(beginRename);
+            return;
+        }
+        beginRename();
+    };
+
+    commitIconRename = (afterCommit) => {
+        const { renamingIconId, renameDraft } = this.state;
+        if (!renamingIconId) {
+            if (typeof afterCommit === 'function') afterCommit();
+            return;
+        }
+        let shouldPersist = false;
+        const sanitized = this.sanitizeIconTitle(renameDraft);
+        this.setState((prevState) => {
+            const titles = { ...(prevState.desktop_icon_titles || {}) };
+            if (!sanitized) {
+                if (titles[renamingIconId]) {
+                    delete titles[renamingIconId];
+                    shouldPersist = true;
+                    return {
+                        desktop_icon_titles: titles,
+                        renamingIconId: null,
+                        renameDraft: '',
+                    };
+                }
+                shouldPersist = false;
+                return {
+                    renamingIconId: null,
+                    renameDraft: '',
+                };
+            }
+            if (titles[renamingIconId] === sanitized) {
+                shouldPersist = false;
+                return {
+                    renamingIconId: null,
+                    renameDraft: '',
+                };
+            }
+            titles[renamingIconId] = sanitized;
+            shouldPersist = true;
+            return {
+                desktop_icon_titles: titles,
+                renamingIconId: null,
+                renameDraft: '',
+            };
+        }, () => {
+            this.iconLastClickTimes[renamingIconId] = Date.now();
+            if (shouldPersist) {
+                this.persistIconPositions();
+            }
+            if (typeof afterCommit === 'function') {
+                afterCommit();
+            }
+        });
+    };
+
+    cancelIconRename = () => {
+        const { renamingIconId } = this.state;
+        if (!renamingIconId) return;
+        this.setState({ renamingIconId: null, renameDraft: '' }, () => {
+            this.iconLastClickTimes[renamingIconId] = Date.now();
+        });
     };
 
     persistIconPositions = () => {
         if (!safeLocalStorage) return;
-        const positions = this.state.desktop_icon_positions || {};
+        const positions = this.filterValidIconPositions(this.state.desktop_icon_positions || {});
+        const titles = this.filterValidIconTitles(this.state.desktop_icon_titles || {});
+        const payload = { positions, titles };
         try {
-            safeLocalStorage.setItem('desktop_icon_positions', JSON.stringify(positions));
+            safeLocalStorage.setItem('desktop_icon_positions', JSON.stringify(payload));
+            this.savedDesktopIconState = {
+                positions: { ...positions },
+                titles: { ...titles },
+            };
             this.savedIconPositions = { ...positions };
         } catch (e) {
             // ignore write errors (storage may be unavailable)
@@ -805,7 +979,23 @@ export class Desktop extends Component {
         } else {
             event.preventDefault();
             event.stopPropagation();
+            const now = Date.now();
+            const lastClick = this.iconLastClickTimes[dragState.id] || 0;
+            const delta = now - lastClick;
+            const renameAllowed = !this.state.renamingIconId || this.state.renamingIconId === dragState.id;
+            const shouldRename =
+                renameAllowed &&
+                delta >= this.renameActivationWindow.min &&
+                delta <= this.renameActivationWindow.max;
+            this.iconLastClickTimes[dragState.id] = now;
             this.setState({ draggingIconId: null }, () => {
+                if (shouldRename) {
+                    this.startRenamingIcon(dragState.id);
+                    return;
+                }
+                if (this.state.renamingIconId && this.state.renamingIconId !== dragState.id) {
+                    this.commitIconRename();
+                }
                 this.openApp(dragState.id);
             });
         }
@@ -911,24 +1101,31 @@ export class Desktop extends Component {
             this.broadcastWorkspaceState();
         }
 
-        this.savedIconPositions = this.loadDesktopIconPositions();
-        this.fetchAppsData(() => {
-            const session = this.props.session || {};
-            const positions = {};
-            if (session.windows && session.windows.length) {
-                const safeTopOffset = measureWindowTopOffset();
-                session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = {
-                        x,
-                        y: clampWindowTopPosition(y, safeTopOffset),
-                    };
-                });
-                this.setWorkspaceState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
-                });
-            } else {
-                this.openApp('about');
-            }
+        const savedIconState = this.loadDesktopIconState();
+        this.savedDesktopIconState = savedIconState;
+        this.savedIconPositions = { ...savedIconState.positions };
+        this.setState({
+            desktop_icon_positions: { ...savedIconState.positions },
+            desktop_icon_titles: { ...savedIconState.titles },
+        }, () => {
+            this.fetchAppsData(() => {
+                const session = this.props.session || {};
+                const positions = {};
+                if (session.windows && session.windows.length) {
+                    const safeTopOffset = measureWindowTopOffset();
+                    session.windows.forEach(({ id, x, y }) => {
+                        positions[id] = {
+                            x,
+                            y: clampWindowTopPosition(y, safeTopOffset),
+                        };
+                    });
+                    this.setWorkspaceState({ window_positions: positions }, () => {
+                        session.windows.forEach(({ id }) => this.openApp(id));
+                    });
+                } else {
+                    this.openApp('about');
+                }
+            });
         });
         this.setContextListeners();
         this.setEventListeners();
@@ -952,6 +1149,23 @@ export class Desktop extends Component {
             prevState.workspaces !== this.state.workspaces
         ) {
             this.broadcastWorkspaceState();
+        }
+        if (
+            this.state.renamingIconId &&
+            !(this.state.desktop_apps || []).includes(this.state.renamingIconId)
+        ) {
+            this.cancelIconRename();
+        }
+        if (prevState.renamingIconId !== this.state.renamingIconId) {
+            if (this.state.renamingIconId) {
+                const input = this.renameInputRef.current;
+                if (input && typeof input.focus === 'function') {
+                    input.focus();
+                    if (typeof input.select === 'function') {
+                        input.select();
+                    }
+                }
+            }
         }
     }
 
@@ -1285,6 +1499,12 @@ export class Desktop extends Component {
         }
     }
 
+    handleAppContextRename = () => {
+        const appId = this.state.context_app;
+        if (!appId) return;
+        this.startRenamingIcon(appId);
+    };
+
     showContextMenu = (e, menuName /* context menu name */) => {
         let { posx, posy } = this.getMenuPosition(e);
         let contextMenu = document.getElementById(`${menuName}-menu`);
@@ -1421,7 +1641,13 @@ export class Desktop extends Component {
     };
 
     renderDesktopApps = () => {
-        const { desktop_apps: desktopApps, desktop_icon_positions: positions = {}, draggingIconId } = this.state;
+        const {
+            desktop_apps: desktopApps,
+            desktop_icon_positions: positions = {},
+            draggingIconId,
+            renamingIconId,
+            renameDraft = '',
+        } = this.state;
         if (!desktopApps || desktopApps.length === 0) return null;
 
         const hasOpenWindows = this.hasVisibleWindows();
@@ -1432,6 +1658,7 @@ export class Desktop extends Component {
             const app = apps.find((item) => item.id === appId);
             if (!app) return null;
 
+            const displayName = this.getIconCurrentTitle(app.id) || app.title;
             const props = {
                 name: app.title,
                 id: app.id,
@@ -1439,30 +1666,70 @@ export class Desktop extends Component {
                 openApp: this.openApp,
                 disabled: this.state.disabled_apps[app.id],
                 prefetch: app.screen?.prefetch,
+                displayName,
             };
 
             const position = positions[appId] || this.computeGridPosition(index);
             const isDragging = draggingIconId === appId;
+            const isRenaming = renamingIconId === appId;
             const wrapperStyle = {
                 position: 'absolute',
                 left: `${position.x}px`,
                 top: `${position.y}px`,
                 touchAction: 'none',
-                cursor: isDragging ? 'grabbing' : 'pointer',
+                cursor: isRenaming ? 'text' : isDragging ? 'grabbing' : 'pointer',
                 zIndex: isDragging ? 60 : iconBaseZIndex,
             };
+
+            const pointerHandlers = isRenaming
+                ? {}
+                : {
+                    onPointerDown: (event) => this.handleIconPointerDown(event, app.id),
+                    onPointerMove: this.handleIconPointerMove,
+                    onPointerUp: this.handleIconPointerUp,
+                    onPointerCancel: this.handleIconPointerCancel,
+                    onClickCapture: this.handleIconClickCapture,
+                };
+
+            const renderLabel = isRenaming
+                ? () => (
+                    <input
+                        ref={this.renameInputRef}
+                        type="text"
+                        className="w-full rounded bg-black bg-opacity-60 px-2 py-1 text-xs text-white focus:outline-none focus:ring-2 focus:ring-ub-orange"
+                        value={renameDraft}
+                        onChange={this.handleRenameInputChange}
+                        onBlur={this.commitIconRename}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                                event.preventDefault();
+                                this.commitIconRename();
+                            } else if (event.key === 'Escape') {
+                                event.preventDefault();
+                                this.cancelIconRename();
+                            }
+                        }}
+                        onPointerDown={(event) => event.stopPropagation()}
+                        aria-label={`Rename ${displayName}`}
+                        spellCheck={false}
+                        maxLength={this.maxIconTitleLength}
+                        autoComplete="off"
+                    />
+                )
+                : undefined;
 
             return (
                 <div
                     key={app.id}
                     style={wrapperStyle}
-                    onPointerDown={(event) => this.handleIconPointerDown(event, app.id)}
-                    onPointerMove={this.handleIconPointerMove}
-                    onPointerUp={this.handleIconPointerUp}
-                    onPointerCancel={this.handleIconPointerCancel}
-                    onClickCapture={this.handleIconClickCapture}
+                    {...pointerHandlers}
                 >
-                    <UbuntuApp {...props} draggable={false} isBeingDragged={isDragging} />
+                    <UbuntuApp
+                        {...props}
+                        draggable={false}
+                        isBeingDragged={isDragging}
+                        renderLabel={renderLabel}
+                    />
                 </div>
             );
         }).filter(Boolean);
@@ -1953,6 +2220,8 @@ export class Desktop extends Component {
     };
 
     render() {
+        const decoratedApps = this.getAppsWithCustomTitles(apps);
+        const decoratedGames = this.getAppsWithCustomTitles(games);
         return (
             <main
                 id="desktop"
@@ -1992,6 +2261,7 @@ export class Desktop extends Component {
                     pinned={this.initFavourite[this.state.context_app]}
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
+                    onRename={this.handleAppContextRename}
                     onClose={this.hideAllContextMenu}
                 />
                 <TaskbarMenu
@@ -2023,14 +2293,14 @@ export class Desktop extends Component {
                 }
 
                 { this.state.allAppsView ?
-                    <AllApplications apps={apps}
-                        games={games}
+                    <AllApplications apps={decoratedApps}
+                        games={decoratedGames}
                         recentApps={this.getActiveStack()}
                         openApp={this.openApp} /> : null}
 
                 { this.state.showShortcutSelector ?
-                    <ShortcutSelector apps={apps}
-                        games={games}
+                    <ShortcutSelector apps={decoratedApps}
+                        games={decoratedGames}
                         onSelect={this.addShortcutToDesktop}
                         onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
 

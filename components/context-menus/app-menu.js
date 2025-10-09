@@ -21,6 +21,13 @@ function AppMenu(props) {
         }
     }
 
+    const handleRename = () => {
+        if (props.onRename) {
+            props.onRename()
+        }
+        props.onClose && props.onClose()
+    }
+
     return (
         <div
             id="app-menu"
@@ -38,6 +45,15 @@ function AppMenu(props) {
                 className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
                 <span className="ml-5">{props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}</span>
+            </button>
+            <button
+                type="button"
+                onClick={handleRename}
+                role="menuitem"
+                aria-label="Rename"
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700"
+            >
+                <span className="ml-5">Rename</span>
             </button>
         </div>
     )
