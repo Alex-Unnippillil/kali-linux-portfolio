@@ -30,6 +30,14 @@ import {
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 
+export const DESKTOP_SORT_MODES = {
+    MANUAL: 'manual',
+    DEFAULT: 'default',
+    NAME: 'name',
+};
+
+const DESKTOP_SORT_STORAGE_KEY = 'desktop_sort_mode';
+
 
 export class Desktop extends Component {
     constructor() {
@@ -45,6 +53,8 @@ export class Desktop extends Component {
         ]);
         this.initFavourite = {};
         this.allWindowClosed = false;
+        const initialSortMode = this.loadDesktopSortMode();
+
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -55,6 +65,7 @@ export class Desktop extends Component {
             window_positions: {},
             desktop_apps: [],
             desktop_icon_positions: {},
+            desktop_sort_mode: initialSortMode,
             window_context: {},
             context_menus: {
                 desktop: false,
@@ -140,6 +151,172 @@ export class Desktop extends Component {
             }
         });
         return merged;
+    };
+
+    loadDesktopSortMode = () => {
+        if (!safeLocalStorage) {
+            return DESKTOP_SORT_MODES.MANUAL;
+        }
+        try {
+            const stored = safeLocalStorage.getItem(DESKTOP_SORT_STORAGE_KEY);
+            if (stored && Object.values(DESKTOP_SORT_MODES).includes(stored)) {
+                return stored;
+            }
+        } catch (e) {
+            // ignore invalid storage state
+        }
+        return DESKTOP_SORT_MODES.MANUAL;
+    };
+
+    persistDesktopSortMode = (mode) => {
+        if (!safeLocalStorage || !mode) return;
+        try {
+            safeLocalStorage.setItem(DESKTOP_SORT_STORAGE_KEY, mode);
+        } catch (e) {
+            // ignore persistence failures
+        }
+    };
+
+    collectDesktopAppIds = () => {
+        const ids = [];
+        apps.forEach((app) => {
+            if (app.desktop_shortcut) {
+                ids.push(app.id);
+            }
+        });
+        return ids;
+    };
+
+    normalizeDesktopAppIds = (appIds = [], baseOrder = null) => {
+        const baseList = Array.isArray(baseOrder) ? baseOrder : this.collectDesktopAppIds();
+        const allowed = baseList && baseList.length ? new Set(baseList) : null;
+        const seen = new Set();
+        const normalized = [];
+        if (!Array.isArray(appIds)) {
+            return normalized;
+        }
+        appIds.forEach((id) => {
+            if (!id || seen.has(id)) return;
+            if (allowed && !allowed.has(id)) return;
+            seen.add(id);
+            normalized.push(id);
+        });
+        return normalized;
+    };
+
+    mergeDesktopAppOrder = (baseOrder = [], previousOrder = []) => {
+        const normalizedPrevious = this.normalizeDesktopAppIds(previousOrder, baseOrder);
+        const result = [...normalizedPrevious];
+        const seen = new Set(result);
+        baseOrder.forEach((id) => {
+            if (!seen.has(id)) {
+                seen.add(id);
+                result.push(id);
+            }
+        });
+        return result;
+    };
+
+    getAppSortKey = (id) => {
+        const app = apps.find((item) => item.id === id);
+        if (app && typeof app.title === 'string') {
+            const title = app.title;
+            if (typeof title.toLocaleLowerCase === 'function') {
+                return title.toLocaleLowerCase();
+            }
+            return title.toLowerCase();
+        }
+        if (typeof id === 'string') {
+            return id.toLowerCase();
+        }
+        return '';
+    };
+
+    areAppOrdersEqual = (first = [], second = []) => {
+        if (!Array.isArray(first) || !Array.isArray(second)) {
+            return Array.isArray(first) === Array.isArray(second);
+        }
+        if (first.length !== second.length) {
+            return false;
+        }
+        for (let index = 0; index < first.length; index += 1) {
+            if (first[index] !== second[index]) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    sortDesktopAppIds = (appIds = [], mode = DESKTOP_SORT_MODES.MANUAL, context = {}) => {
+        const baseOrder = Array.isArray(context.baseOrder) ? context.baseOrder : this.collectDesktopAppIds();
+        const normalized = this.normalizeDesktopAppIds(appIds, baseOrder);
+        switch (mode) {
+            case DESKTOP_SORT_MODES.DEFAULT: {
+                const baseResult = baseOrder.filter((id) => normalized.includes(id));
+                const extras = normalized.filter((id) => !baseResult.includes(id));
+                return [...baseResult, ...extras];
+            }
+            case DESKTOP_SORT_MODES.NAME:
+                return [...normalized].sort((a, b) =>
+                    this.getAppSortKey(a).localeCompare(this.getAppSortKey(b), undefined, { sensitivity: 'base' }),
+                );
+            case DESKTOP_SORT_MODES.MANUAL:
+            default:
+                return normalized;
+        }
+    };
+
+    applyDesktopSort = (mode, options = {}) => {
+        let layoutChanged = false;
+        let activeModeForCallback = null;
+        const shouldPersistMode = Boolean(mode) && options.persist !== false;
+        this.setState((prevState) => {
+            const activeMode = mode || prevState.desktop_sort_mode || DESKTOP_SORT_MODES.MANUAL;
+            activeModeForCallback = activeMode;
+            const baseOrder = Array.isArray(options.baseOrder) ? options.baseOrder : this.collectDesktopAppIds();
+            const sourceAppIds = Array.isArray(options.appIds)
+                ? this.normalizeDesktopAppIds(options.appIds, baseOrder)
+                : this.mergeDesktopAppOrder(baseOrder, prevState.desktop_apps);
+            const sortedApps = this.sortDesktopAppIds(sourceAppIds, activeMode, { baseOrder });
+            const shouldReflow = activeMode !== DESKTOP_SORT_MODES.MANUAL;
+            const currentPositions = shouldReflow ? {} : (prevState.desktop_icon_positions || {});
+            const layout = this.resolveIconLayout(sortedApps, currentPositions, {
+                clampOnly: false,
+                useCurrent: !shouldReflow,
+                useSaved: !shouldReflow,
+            });
+            layoutChanged = !this.areIconLayoutsEqual(prevState.desktop_icon_positions || {}, layout);
+            const orderChanged = !this.areAppOrdersEqual(prevState.desktop_apps, sortedApps);
+            const updates = {};
+            if (orderChanged) {
+                updates.desktop_apps = sortedApps;
+            }
+            if (layoutChanged) {
+                updates.desktop_icon_positions = layout;
+            }
+            if (mode && prevState.desktop_sort_mode !== activeMode) {
+                updates.desktop_sort_mode = activeMode;
+            } else if (!prevState.desktop_sort_mode) {
+                updates.desktop_sort_mode = activeMode;
+            }
+            if (Object.keys(updates).length === 0) {
+                if (mode && prevState.desktop_sort_mode !== activeMode) {
+                    return { desktop_sort_mode: activeMode };
+                }
+                return null;
+            }
+            if (mode && prevState.desktop_sort_mode === activeMode && !updates.desktop_sort_mode) {
+                updates.desktop_sort_mode = activeMode;
+            }
+            return updates;
+        }, () => {
+            if (layoutChanged) {
+                this.persistIconPositions();
+            }
+            if (shouldPersistMode && activeModeForCallback) {
+                this.persistDesktopSortMode(activeModeForCallback);
+            }
+        });
     };
 
     setupPointerMediaWatcher = () => {
@@ -529,18 +706,11 @@ export class Desktop extends Component {
         }
     };
 
-    ensureIconPositions = (desktopApps = []) => {
+    ensureIconPositions = (desktopApps = [], baseOrder = null) => {
         if (!Array.isArray(desktopApps)) return;
-        this.setState((prevState) => {
-            const current = prevState.desktop_icon_positions || {};
-            const layout = this.resolveIconLayout(desktopApps, current);
-            if (this.areIconLayoutsEqual(current, layout)) {
-                return null;
-            }
-            return { desktop_icon_positions: layout };
-        }, () => {
-            this.persistIconPositions();
-        });
+        const baseOrderList = Array.isArray(baseOrder) ? baseOrder : this.collectDesktopAppIds();
+        const normalized = this.normalizeDesktopAppIds(desktopApps, baseOrderList);
+        this.applyDesktopSort(null, { appIds: normalized, baseOrder: baseOrderList, persist: false });
     };
 
     getDesktopRect = () => {
@@ -615,6 +785,8 @@ export class Desktop extends Component {
         const next = {};
         const taken = new Set();
         const clampOnly = options?.clampOnly === true;
+        const useCurrent = options?.useCurrent !== false;
+        const useSaved = options?.useSaved !== false;
 
         const claimPosition = (position) => {
             if (!this.isValidIconPosition(position)) return null;
@@ -648,10 +820,10 @@ export class Desktop extends Component {
 
         desktopApps.forEach((id, orderIndex) => {
             const candidates = [];
-            if (current[id]) {
+            if (useCurrent && current[id]) {
                 candidates.push(current[id]);
             }
-            if (!clampOnly) {
+            if (!clampOnly && useSaved) {
                 const saved = this.savedIconPositions?.[id];
                 if (saved) {
                     candidates.push(saved);
@@ -733,6 +905,9 @@ export class Desktop extends Component {
         }, () => {
             if (persist) {
                 this.persistIconPositions();
+                if (this.state.desktop_sort_mode !== DESKTOP_SORT_MODES.MANUAL) {
+                    this.applyDesktopSort(DESKTOP_SORT_MODES.MANUAL, { persist: true });
+                }
             }
         });
     };
@@ -1346,7 +1521,7 @@ export class Desktop extends Component {
         const disabled_apps = {};
         const favourite_apps = {};
         const minimized_windows = {};
-        const desktop_apps = [];
+        const desktopBaseOrder = [];
 
         apps.forEach((app) => {
             focused_windows[app.id] = false;
@@ -1354,8 +1529,10 @@ export class Desktop extends Component {
             disabled_apps[app.id] = app.disabled;
             favourite_apps[app.id] = app.favourite;
             minimized_windows[app.id] = false;
-            if (app.desktop_shortcut) desktop_apps.push(app.id);
+            if (app.desktop_shortcut) desktopBaseOrder.push(app.id);
         });
+
+        const orderedDesktopApps = this.mergeDesktopAppOrder(desktopBaseOrder, this.state.desktop_apps);
 
         const workspaceState = {
             focused_windows,
@@ -1369,9 +1546,9 @@ export class Desktop extends Component {
             ...workspaceState,
             disabled_apps,
             favourite_apps,
-            desktop_apps,
+            desktop_apps: orderedDesktopApps,
         }, () => {
-            this.ensureIconPositions(desktop_apps);
+            this.ensureIconPositions(orderedDesktopApps, desktopBaseOrder);
             if (typeof callback === 'function') callback();
         });
         this.initFavourite = { ...favourite_apps };
@@ -1383,7 +1560,7 @@ export class Desktop extends Component {
         const favourite_apps = {};
         const minimized_windows = {};
         const disabled_apps = {};
-        const desktop_apps = [];
+        const desktopBaseOrder = [];
 
         apps.forEach((app) => {
             focused_windows[app.id] = this.state.focused_windows[app.id] ?? false;
@@ -1391,8 +1568,10 @@ export class Desktop extends Component {
             disabled_apps[app.id] = app.disabled;
             closed_windows[app.id] = this.state.closed_windows[app.id] ?? true;
             favourite_apps[app.id] = app.favourite;
-            if (app.desktop_shortcut) desktop_apps.push(app.id);
+            if (app.desktop_shortcut) desktopBaseOrder.push(app.id);
         });
+
+        const orderedDesktopApps = this.mergeDesktopAppOrder(desktopBaseOrder, this.state.desktop_apps);
 
         const workspaceState = {
             focused_windows,
@@ -1405,12 +1584,41 @@ export class Desktop extends Component {
             ...workspaceState,
             disabled_apps,
             favourite_apps,
-            desktop_apps,
+            desktop_apps: orderedDesktopApps,
         }, () => {
-            this.ensureIconPositions(desktop_apps);
+            this.ensureIconPositions(orderedDesktopApps, desktopBaseOrder);
         });
         this.initFavourite = { ...favourite_apps };
     }
+
+    sortDesktopByName = () => {
+        const baseOrder = this.collectDesktopAppIds();
+        const manualOrder = this.mergeDesktopAppOrder(baseOrder, this.state.desktop_apps);
+        this.applyDesktopSort(DESKTOP_SORT_MODES.NAME, {
+            appIds: manualOrder,
+            baseOrder,
+            persist: true,
+        });
+    };
+
+    sortDesktopByDefault = () => {
+        const baseOrder = this.collectDesktopAppIds();
+        this.applyDesktopSort(DESKTOP_SORT_MODES.DEFAULT, {
+            appIds: baseOrder,
+            baseOrder,
+            persist: true,
+        });
+    };
+
+    enableManualDesktopSort = () => {
+        const baseOrder = this.collectDesktopAppIds();
+        const manualOrder = this.mergeDesktopAppOrder(baseOrder, this.state.desktop_apps);
+        this.applyDesktopSort(DESKTOP_SORT_MODES.MANUAL, {
+            appIds: manualOrder,
+            baseOrder,
+            persist: true,
+        });
+    };
 
     hasVisibleWindows = () => {
         const closed = this.state.closed_windows || {};
@@ -1984,6 +2192,10 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    onSortByName={this.sortDesktopByName}
+                    onSortByDefault={this.sortDesktopByDefault}
+                    onSortManual={this.enableManualDesktopSort}
+                    sortMode={this.state.desktop_sort_mode}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />

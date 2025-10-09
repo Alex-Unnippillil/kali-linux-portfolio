@@ -4,6 +4,31 @@ import logger from '../../utils/logger'
 function DesktopMenu(props) {
 
     const [isFullScreen, setIsFullScreen] = useState(false)
+    const sortMode = props.sortMode || 'manual'
+
+    const renderSortItem = (mode, label, handler) => {
+        const safeHandler = typeof handler === 'function' ? handler : undefined
+        const isActive = sortMode === mode
+        return (
+            <button
+                onClick={safeHandler}
+                type="button"
+                role="menuitemradio"
+                aria-checked={isActive}
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5 flex items-center">
+                    <span
+                        aria-hidden="true"
+                        className={`w-3 text-xs ${isActive ? 'opacity-100' : 'opacity-0'}`}
+                    >
+                        •
+                    </span>
+                    <span className="ml-2">{label}</span>
+                </span>
+            </button>
+        )
+    }
 
     useEffect(() => {
         document.addEventListener('fullscreenchange', checkFullScreen);
@@ -68,6 +93,13 @@ function DesktopMenu(props) {
             >
                 <span className="ml-5">Create Shortcut...</span>
             </button>
+            <Devider />
+            <div role="none" className="py-0.5">
+                <p className="ml-5 mb-1 text-ubt-grey text-xs uppercase tracking-wide">Sort Icons</p>
+                {renderSortItem('manual', 'Manual Layout', props.onSortManual)}
+                {renderSortItem('name', 'Sort by Name', props.onSortByName)}
+                {renderSortItem('default', 'Restore Default Order', props.onSortByDefault)}
+            </div>
             <Devider />
             <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
                 <span className="ml-5">Paste</span>
