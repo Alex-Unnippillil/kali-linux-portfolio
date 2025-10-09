@@ -73,6 +73,7 @@ export class Desktop extends Component {
                 label: `Workspace ${index + 1}`,
             })),
             draggingIconId: null,
+            iconPlaceholder: null,
         }
 
         this.desktopRef = React.createRef();
@@ -80,6 +81,8 @@ export class Desktop extends Component {
         this.iconDragState = null;
         this.preventNextIconClick = false;
         this.savedIconPositions = {};
+        this.iconPlaceholderTimeout = null;
+        this.iconPlaceholderFadeDuration = 160;
 
         this.defaultIconDimensions = { width: 96, height: 88 };
         this.defaultIconGridSpacing = { row: 112, column: 128 };
@@ -718,6 +721,158 @@ export class Desktop extends Component {
         return this.clampIconPosition(snapped.x, snapped.y);
     };
 
+    getIconGridCellFromPosition = (x, y) => {
+        const metrics = this.computeGridMetrics();
+        const resolveIndex = (value, offset, spacing) => {
+            if (!Number.isFinite(value) || !Number.isFinite(offset) || !Number.isFinite(spacing) || spacing <= 0) {
+                return 0;
+            }
+            const rawIndex = Math.round((value - offset) / spacing);
+            return Number.isFinite(rawIndex) ? rawIndex : 0;
+        };
+
+        const column = Math.max(0, resolveIndex(x, metrics.offsetX, metrics.columnSpacing));
+        const row = Math.max(0, resolveIndex(y, metrics.offsetY, metrics.rowSpacing));
+
+        return { column, row };
+    };
+
+    getIconArrangementSettings = () => {
+        const session = this.props.session || {};
+        const candidates = [
+            this.state?.desktopPreferences,
+            this.state?.desktopSettings,
+            this.props?.desktopPreferences,
+            this.props?.desktopSettings,
+            session.desktopPreferences,
+            session.desktopSettings,
+            session.desktop,
+        ];
+        for (let i = 0; i < candidates.length; i += 1) {
+            const value = candidates[i];
+            if (value && typeof value === 'object') {
+                return value;
+            }
+        }
+        return null;
+    };
+
+    areDesktopIconsLocked = () => {
+        const settings = this.getIconArrangementSettings();
+        if (!settings) return false;
+        const keys = ['locked', 'iconsLocked', 'lockIcons', 'lock'];
+        for (let i = 0; i < keys.length; i += 1) {
+            const candidate = settings[keys[i]];
+            if (typeof candidate === 'boolean') {
+                return candidate;
+            }
+        }
+        return false;
+    };
+
+    getDesktopIconSortMode = () => {
+        const settings = this.getIconArrangementSettings();
+        if (!settings) return 'manual';
+        const candidates = ['sortMode', 'sort', 'arrange', 'mode'];
+        for (let i = 0; i < candidates.length; i += 1) {
+            const value = settings[candidates[i]];
+            if (typeof value === 'string' && value.trim()) {
+                return value;
+            }
+        }
+        return 'manual';
+    };
+
+    canReorderIcons = () => {
+        if (this.areDesktopIconsLocked()) {
+            return false;
+        }
+        const mode = this.getDesktopIconSortMode();
+        return typeof mode !== 'string' || mode === 'manual';
+    };
+
+    clearIconPlaceholderTimer = () => {
+        if (this.iconPlaceholderTimeout) {
+            clearTimeout(this.iconPlaceholderTimeout);
+            this.iconPlaceholderTimeout = null;
+        }
+    };
+
+    clearIconPlaceholder = (immediate = false) => {
+        this.clearIconPlaceholderTimer();
+        if (immediate) {
+            this.setState((prevState) => (prevState.iconPlaceholder ? { iconPlaceholder: null } : null));
+            if (!this.iconDragState) {
+                this.preventNextIconClick = false;
+            }
+            return;
+        }
+
+        this.setState((prevState) => {
+            if (!prevState.iconPlaceholder || prevState.iconPlaceholder.visible === false) {
+                return null;
+            }
+            return {
+                iconPlaceholder: {
+                    ...prevState.iconPlaceholder,
+                    visible: false,
+                },
+            };
+        }, () => {
+            if (!this.state.iconPlaceholder) return;
+            this.iconPlaceholderTimeout = setTimeout(() => {
+                this.iconPlaceholderTimeout = null;
+                this.setState((latest) => {
+                    if (!latest.iconPlaceholder || latest.iconPlaceholder.visible) {
+                        return null;
+                    }
+                    return { iconPlaceholder: null };
+                });
+            }, this.iconPlaceholderFadeDuration);
+        });
+    };
+
+    showIconPlaceholder = (position, dragId) => {
+        if (!this.canReorderIcons()) {
+            return;
+        }
+        if (!this.isValidIconPosition(position)) {
+            return;
+        }
+        const cell = this.getIconGridCellFromPosition(position.x, position.y);
+        const key = this.getIconPositionKey(position) || `${cell.column}:${cell.row}`;
+        this.clearIconPlaceholderTimer();
+        this.setState((prevState) => {
+            const previous = prevState.iconPlaceholder;
+            if (previous && previous.key === key && previous.visible && previous.id === dragId) {
+                if (previous.x === position.x && previous.y === position.y && previous.column === cell.column && previous.row === cell.row) {
+                    return null;
+                }
+                return {
+                    iconPlaceholder: {
+                        ...previous,
+                        x: position.x,
+                        y: position.y,
+                        column: cell.column,
+                        row: cell.row,
+                        visible: true,
+                    },
+                };
+            }
+            return {
+                iconPlaceholder: {
+                    id: dragId,
+                    key,
+                    x: position.x,
+                    y: position.y,
+                    column: cell.column,
+                    row: cell.row,
+                    visible: true,
+                },
+            };
+        });
+    };
+
     updateIconPosition = (id, x, y, persist = false) => {
         this.setState((prevState) => {
             const current = prevState.desktop_icon_positions || {};
@@ -739,6 +894,7 @@ export class Desktop extends Component {
 
     handleIconPointerDown = (event, appId) => {
         if (event.button !== 0) return;
+        this.clearIconPlaceholder(true);
         const container = event.currentTarget;
         const rect = container.getBoundingClientRect();
         const offsetX = event.clientX - rect.left;
@@ -786,6 +942,7 @@ export class Desktop extends Component {
         event.preventDefault();
         const position = this.calculateIconPosition(event.clientX, event.clientY, dragState);
         dragState.lastPosition = position;
+        this.showIconPlaceholder(position, dragState.id);
         this.updateIconPosition(dragState.id, position.x, position.y, false);
     };
 
@@ -802,12 +959,14 @@ export class Desktop extends Component {
             const position = this.resolveDropPosition(event, dragState);
             this.preventNextIconClick = true;
             this.updateIconPosition(dragState.id, position.x, position.y, true);
+            this.clearIconPlaceholder();
         } else {
             event.preventDefault();
             event.stopPropagation();
             this.setState({ draggingIconId: null }, () => {
                 this.openApp(dragState.id);
             });
+            this.clearIconPlaceholder(true);
         }
     };
 
@@ -970,6 +1129,7 @@ export class Desktop extends Component {
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
+        this.clearIconPlaceholderTimer();
     }
 
     handleExternalTaskbarCommand = (event) => {
@@ -1030,6 +1190,7 @@ export class Desktop extends Component {
         dragState.container?.releasePointerCapture?.(dragState.pointerId);
         this.iconDragState = null;
         this.detachIconKeyboardListeners();
+        this.clearIconPlaceholder(true);
 
         if (revert && dragState.startPosition) {
             const original = this.clampIconPosition(dragState.startPosition.x, dragState.startPosition.y);
@@ -1421,13 +1582,19 @@ export class Desktop extends Component {
     };
 
     renderDesktopApps = () => {
-        const { desktop_apps: desktopApps, desktop_icon_positions: positions = {}, draggingIconId } = this.state;
+        const {
+            desktop_apps: desktopApps,
+            desktop_icon_positions: positions = {},
+            draggingIconId,
+            iconPlaceholder,
+        } = this.state;
         if (!desktopApps || desktopApps.length === 0) return null;
 
         const hasOpenWindows = this.hasVisibleWindows();
         const blockIcons = hasOpenWindows && !draggingIconId;
         const iconBaseZIndex = 15;
         const containerZIndex = blockIcons ? 5 : 15;
+        const canReorderIcons = this.canReorderIcons();
         const icons = desktopApps.map((appId, index) => {
             const app = apps.find((item) => item.id === appId);
             if (!app) return null;
@@ -1469,6 +1636,29 @@ export class Desktop extends Component {
 
         if (!icons.length) return null;
 
+        const placeholder = iconPlaceholder ? (
+            <div
+                key="icon-placeholder"
+                data-testid="desktop-icon-placeholder"
+                aria-hidden="true"
+                style={{
+                    position: 'absolute',
+                    left: `${iconPlaceholder.x}px`,
+                    top: `${iconPlaceholder.y}px`,
+                    width: `${this.iconDimensions.width}px`,
+                    height: `${this.iconDimensions.height}px`,
+                    borderRadius: '12px',
+                    border: '1px dashed rgba(255, 255, 255, 0.4)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    opacity: canReorderIcons && iconPlaceholder.visible ? 1 : 0,
+                    transform: canReorderIcons && iconPlaceholder.visible ? 'scale(1)' : 'scale(0.94)',
+                    transition: 'opacity 140ms ease, transform 140ms ease',
+                    pointerEvents: 'none',
+                    zIndex: iconBaseZIndex - 1,
+                }}
+            />
+        ) : null;
+
         return (
             <div
                 className="absolute inset-0"
@@ -1478,6 +1668,7 @@ export class Desktop extends Component {
                     zIndex: containerZIndex,
                 }}
             >
+                {placeholder}
                 {icons}
             </div>
         );
