@@ -11,6 +11,10 @@ import {
   NotificationPriority,
   classifyNotification,
 } from '../../utils/notifications/ruleEngine';
+import {
+  loadPersistedNotifications,
+  persistNotificationsState,
+} from '../../utils/notifications/storage';
 
 export type {
   ClassificationResult,
@@ -64,6 +68,28 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
   const [notificationsByApp, setNotificationsByApp] = useState<
     Record<string, AppNotification[]>
   >({});
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const persisted = await loadPersistedNotifications();
+      if (cancelled) return;
+      if (Object.keys(persisted).length > 0) {
+        setNotificationsByApp(persisted);
+      }
+      setHydrated(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    void persistNotificationsState(notificationsByApp);
+  }, [notificationsByApp, hydrated]);
 
   const pushNotification = useCallback((input: PushNotificationInput) => {
     const id = createId();
