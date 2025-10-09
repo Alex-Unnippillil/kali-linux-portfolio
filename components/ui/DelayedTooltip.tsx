@@ -19,17 +19,21 @@ type TriggerProps = {
 type DelayedTooltipProps = {
   content: ReactNode;
   delay?: number;
+  id?: string;
   children: (triggerProps: TriggerProps) => React.ReactElement;
 };
 
 const useIsomorphicLayoutEffect =
-  typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+  typeof globalThis !== 'undefined' && 'document' in globalThis
+    ? useLayoutEffect
+    : useEffect;
 
 const DEFAULT_OFFSET = 8;
 
 const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
   content,
   delay = 300,
+  id,
   children,
 }) => {
   const triggerRef = useRef<HTMLElement | null>(null);
@@ -136,6 +140,9 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
                 left: position.left,
                 zIndex: 1000,
               }}
+              id={id}
+              role="tooltip"
+              aria-hidden={visible ? 'false' : 'true'}
               className="pointer-events-none max-w-xs rounded-md border border-gray-500/60 bg-ub-grey/95 px-3 py-2 text-xs text-white shadow-xl backdrop-blur"
             >
               {content}
