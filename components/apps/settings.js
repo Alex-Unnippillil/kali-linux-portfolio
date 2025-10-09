@@ -1,10 +1,19 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
+import useNotifications from '../../hooks/useNotifications';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
     const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    let pushNotification = () => {};
+    try {
+        ({ pushNotification } = useNotifications());
+    } catch (error) {
+        if (process.env.NODE_ENV !== 'production') {
+            console.warn('NotificationCenter context missing for Settings app.', error);
+        }
+    }
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -291,21 +300,42 @@ export function Settings() {
                 onChange={async (e) => {
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;
-                    const text = await file.text();
-                    await importSettingsData(text);
+
                     try {
-                        const parsed = JSON.parse(text);
-                        if (parsed.accent !== undefined) setAccent(parsed.accent);
-                        if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-                        if (parsed.density !== undefined) setDensity(parsed.density);
-                        if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
-                        if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
-                        if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
-                        if (parsed.theme !== undefined) { setTheme(parsed.theme); }
-                    } catch (err) {
-                        console.error('Invalid settings', err);
+                        const text = await file.text();
+                        const applied = await importSettingsData(text);
+                        if (!applied) {
+                            throw new Error('Settings import is not available in this environment.');
+                        }
+
+                        if (applied.accent !== undefined) setAccent(applied.accent);
+                        if (applied.wallpaper !== undefined) setWallpaper(applied.wallpaper);
+                        if (applied.useKaliWallpaper !== undefined) setUseKaliWallpaper(applied.useKaliWallpaper);
+                        if (applied.density !== undefined) setDensity(applied.density);
+                        if (applied.reducedMotion !== undefined) setReducedMotion(applied.reducedMotion);
+                        if (applied.fontScale !== undefined) setFontScale(applied.fontScale);
+                        if (applied.highContrast !== undefined) setHighContrast(applied.highContrast);
+                        if (applied.largeHitAreas !== undefined) setLargeHitAreas(applied.largeHitAreas);
+                        if (applied.pongSpin !== undefined) setPongSpin(applied.pongSpin);
+                        if (applied.allowNetwork !== undefined) setAllowNetwork(applied.allowNetwork);
+                        if (applied.haptics !== undefined) setHaptics(applied.haptics);
+                        if (applied.theme !== undefined) setTheme(applied.theme);
+
+                        pushNotification({
+                            appId: 'settings',
+                            title: 'Settings imported',
+                            body: 'Your desktop preferences have been restored.',
+                        });
+                    } catch (error) {
+                        pushNotification({
+                            appId: 'settings',
+                            title: 'Settings import failed',
+                            body: error instanceof Error ? error.message : 'Unable to import the selected file.',
+                            priority: 'high',
+                        });
+                    } finally {
+                        e.target.value = '';
                     }
-                    e.target.value = '';
                 }}
                 className="hidden"
             />

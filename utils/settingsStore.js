@@ -1,6 +1,7 @@
 "use client";
 
 import { get, set, del } from 'idb-keyval';
+import { z } from 'zod';
 import { getTheme, setTheme } from './theme';
 
 const DEFAULT_SETTINGS = {
@@ -18,6 +19,31 @@ const DEFAULT_SETTINGS = {
 };
 
 let hasLoggedStorageWarning = false;
+
+const HEX_COLOR_REGEX = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
+const WALLPAPER_NAME_REGEX = /^[\w-]+$/;
+
+const SETTINGS_SCHEMA = z
+  .object({
+    accent: z
+      .string()
+      .regex(HEX_COLOR_REGEX, 'Accent must be a hex color value.'),
+    wallpaper: z
+      .string()
+      .regex(WALLPAPER_NAME_REGEX, 'Wallpaper name contains invalid characters.'),
+    useKaliWallpaper: z.boolean(),
+    density: z.enum(['regular', 'compact']),
+    reducedMotion: z.boolean(),
+    fontScale: z.coerce.number().min(0.75).max(1.5),
+    highContrast: z.boolean(),
+    largeHitAreas: z.boolean(),
+    pongSpin: z.boolean(),
+    allowNetwork: z.boolean(),
+    haptics: z.boolean(),
+    theme: z.enum(['default', 'dark', 'neon', 'matrix']),
+  })
+  .partial()
+  .strict();
 
 function getLocalStorage() {
   if (typeof window === 'undefined') return null;
@@ -238,14 +264,22 @@ export async function exportSettings() {
 }
 
 export async function importSettings(json) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') return null;
+
   let settings;
   try {
     settings = typeof json === 'string' ? JSON.parse(json) : json;
-  } catch (e) {
-    console.error('Invalid settings', e);
-    return;
+  } catch (error) {
+    console.error('Failed to parse settings payload.', error);
+    throw new Error('Settings import failed. The selected file is not valid JSON.');
   }
+
+  const parsed = SETTINGS_SCHEMA.safeParse(settings);
+  if (!parsed.success) {
+    console.error('Settings import failed validation.', parsed.error);
+    throw new Error('Settings import failed validation.');
+  }
+
   const {
     accent,
     wallpaper,
@@ -259,7 +293,8 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
-  } = settings;
+  } = parsed.data;
+
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
   if (useKaliWallpaper !== undefined) await setUseKaliWallpaper(useKaliWallpaper);
@@ -272,6 +307,8 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+
+  return parsed.data;
 }
 
 export const defaults = DEFAULT_SETTINGS;
