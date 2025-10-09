@@ -31,6 +31,8 @@ import {
 } from '../../utils/windowLayout';
 
 
+const DESKTOP_DIRECTORY_PATH = '~/Desktop';
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -1828,6 +1830,11 @@ export class Desktop extends Component {
         this.setState({ showShortcutSelector: true });
     }
 
+    openDesktopInFiles = () => {
+        this.hideAllContextMenu();
+        this.openApp('file-explorer', { path: DESKTOP_DIRECTORY_PATH });
+    }
+
     addShortcutToDesktop = (app_id) => {
         const appIndex = apps.findIndex(app => app.id === app_id);
         if (appIndex === -1) return;
@@ -1984,6 +1991,7 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    openDesktopInFiles={this.openDesktopInFiles}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />

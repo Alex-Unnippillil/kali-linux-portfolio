@@ -203,8 +203,10 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   }, []);
 
   useEffect(() => {
+    const requestedSource =
+      context?.initialPath ?? context?.path ?? initialPath ?? pathProp;
     const requested =
-      (context?.initialPath ?? context?.path ?? initialPath ?? pathProp) || '';
+      typeof requestedSource === 'string' ? requestedSource.trim() : '';
     if (!requested) return;
     if (!opfsSupported || !root) return;
     let active = true;
