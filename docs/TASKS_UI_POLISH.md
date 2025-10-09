@@ -195,8 +195,9 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
     - **Where:** `pa11yci.json`, Tailwind tokens.
 
 46. **Skip to desktop content**
-    - **Accept:** Hidden “Skip to desktop” link focuses app grid on activation.
-    - **Where:** `_app.jsx` or layout.
+   - **Accept:** Hidden “Skip to desktop” link focuses app grid on activation.
+   - **Where:** `_app.jsx` or layout.
+
 
 47. **Dialog semantics for modals**
     - **Accept:** Lock screen, settings, and prompts use `role="dialog"` with focus trap and `aria-modal="true"`.
@@ -276,4 +277,264 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
 64. **One-handed reach mode toggle**
    - **Accept:** Settings exposes a "One-handed mode" switch that repositions close/launch actions toward the bottom on small screens; persisted per device.
    - **Where:** `components/menu/WhiskerMenu.tsx`, Settings store, menu layout helpers.
+
+## J) Onboarding & guidance
+
+65. **First-run desktop tour**
+   - **Accept:** First visit surfaces a 4-step overlay explaining dock, launcher, windows, and settings; dismissible with "Don't show again" stored in persistent state.
+   - **Where:** `components/screen/desktop-tour/*`, `hooks/usePersistentState.ts`.
+
+66. **Contextual help hotspots**
+   - **Accept:** Optional info dots on complex apps reveal tooltips with short guidance; toggle from Settings.
+   - **Where:** `components/base/window/WindowChrome.tsx`, app-specific wrappers.
+
+67. **Quick-start checklist widget**
+   - **Accept:** Dock shortcut opens a checklist modal highlighting key interactions; items persist completion per user.
+   - **Where:** `components/util-components/checklist/*`, `stores/uiStore.ts`.
+
+68. **Launcher empty-state copy**
+   - **Accept:** When search yields no apps, display helpful text plus a button to open the feedback form.
+   - **Where:** `components/screen/launcher/AppSearchResults.tsx`.
+
+69. **In-app keyboard cheatsheet**
+   - **Accept:** Pressing `?` with focus on desktop opens overlay listing shortcuts; respects reduced-motion setting.
+   - **Where:** `components/screen/overlays/ShortcutSheet.tsx`, `hooks/useGlobalHotkeys.ts`.
+
+70. **Feedback nudge toast**
+   - **Accept:** After 3 minutes of interaction, subtle toast invites user to send feedback with dismiss + never show again control.
+   - **Where:** `components/toast/*`, analytics event hook.
+
+## K) Notifications & feedback
+
+71. **Unified notification center**
+   - **Accept:** Clock tray icon opens panel listing recent system toasts with timestamps and clear-all.
+   - **Where:** `components/screen/panel/NotificationCenter.tsx`.
+
+72. **Non-blocking progress toasts**
+   - **Accept:** Long-running simulated tasks show progress bar toasts with pause/cancel affordances.
+   - **Where:** `components/toast/ToastQueue.tsx`.
+
+73. **Window-level status badges**
+   - **Accept:** Apps can pass status badge text (e.g., "Syncing…") to render in titlebar corner with tooltip.
+   - **Where:** `components/base/window/TitleBar.tsx`.
+
+74. **Error boundary theming**
+   - **Accept:** When a windowed app errors, show branded fallback with retry button instead of raw message.
+   - **Where:** `components/base/window/ErrorBoundary.tsx`.
+
+75. **Screenshot success feedback**
+   - **Accept:** Taking a screenshot triggers haptic-like pulse and toast with "Copy" + "Open folder" actions.
+   - **Where:** `components/screen/desktop/ScreenshotButton.tsx`, `hooks/useClipboard.ts`.
+
+76. **Notification sound palette**
+   - **Accept:** Provide 4 subtle sound themes selectable in Settings with preview playback and stored preference.
+   - **Where:** `settingsStore.js`, `components/audio/NotificationSounds.ts`.
+
+## L) Navigation & discoverability
+
+77. **Global command palette**
+   - **Accept:** `Ctrl+K` opens searchable palette for apps, settings, commands; supports keyboard navigation.
+   - **Where:** `components/screen/overlays/CommandPalette.tsx`, `hooks/useCommandRegistry.ts`.
+
+78. **Launcher categories row**
+   - **Accept:** App drawer adds horizontal filter chips (All, Tools, Games, Utilities) with smooth indicator.
+   - **Where:** `components/screen/launcher/CategoryTabs.tsx`.
+
+79. **Recent files list**
+   - **Accept:** Desktop exposes quick-access recent docs with icons and open-in-app mapping.
+   - **Where:** `stores/filesStore.ts`, `components/widgets/RecentFilesCard.tsx`.
+
+80. **Search-as-you-type highlight**
+   - **Accept:** Matching characters in launcher search are visually highlighted for clarity.
+   - **Where:** `components/screen/launcher/AppSearchResult.tsx`.
+
+81. **Dock reorder via drag**
+   - **Accept:** Users drag dock icons to reorder favorites with animated placeholder.
+   - **Where:** `components/screen/dock/DockIcon.tsx`, `hooks/useDragList.ts`.
+
+82. **Cross-app deep link handling**
+   - **Accept:** Opening `app://` links from Terminal or docs focuses existing windows or spawns new ones gracefully.
+   - **Where:** `utils/appLinks.ts`, desktop manager.
+
+## M) Motion & micro-interactions
+
+83. **Physics-based window easing**
+   - **Accept:** Window move/resize transitions use spring easing with velocity clamping under reduced-motion guard.
+   - **Where:** `components/base/window/WindowMotion.tsx`.
+
+84. **Launcher icon hover lift**
+   - **Accept:** App icons subtly lift and cast shadow on hover, settling with overshoot.
+   - **Where:** `styles/components/launcher.css`.
+
+85. **Dock minimize animation**
+   - **Accept:** Minimizing window animates toward dock icon with scale/opacity tween.
+   - **Where:** `components/base/window/animations.ts`.
+
+86. **Notification center reveal**
+   - **Accept:** Panel slides with 200 ms cubic-bezier and opacity fade, accessible fallback when reduced motion.
+   - **Where:** `components/screen/panel/NotificationCenter.tsx`.
+
+87. **Loading skeletons for heavy apps**
+   - **Accept:** Canvas-heavy apps show skeleton placeholders and shimmer while dynamic import loads.
+   - **Where:** `components/base/AppContainer.tsx`.
+
+88. **Wallpaper transition fade**
+   - **Accept:** Switching wallpaper crossfades over 300 ms with optional blur pre/post.
+   - **Where:** `components/screen/desktop/WallpaperLayer.tsx`.
+
+## N) Accessibility extensions
+
+89. **High-contrast icon set**
+   - **Accept:** Provide alternative icon assets with higher contrast automatically when high-contrast theme enabled.
+   - **Where:** `public/icons/high-contrast/*`, theme switcher.
+
+90. **Screen reader desktop map**
+   - **Accept:** Expose ARIA landmarks describing dock, launcher, desktop windows order.
+   - **Where:** `components/screen/desktop/DesktopRegion.tsx`.
+
+91. **Keyboard resizing shortcuts**
+   - **Accept:** `Alt+Shift+Arrow` adjusts window size in 40 px increments with announcements.
+   - **Where:** `hooks/useWindowHotkeys.ts`.
+
+92. **Accessible color picker**
+   - **Accept:** Theme picker includes text inputs for hex and WCAG compliance indicator.
+   - **Where:** `components/apps/settings/ThemePicker.tsx`.
+
+93. **Focus trap in modals**
+   - **Accept:** All modals enforce focus trap, close on Escape, and return focus to invoker.
+   - **Where:** `components/base/modal/Modal.tsx`.
+
+94. **Caption support for media apps**
+   - **Accept:** Media players surface captions toggle and remember preference.
+   - **Where:** `components/apps/media/*`.
+
+## O) Internationalization & localization
+
+95. **Language switcher UI**
+   - **Accept:** Settings adds language dropdown with instant locale swap using Next i18n routing.
+   - **Where:** `settingsStore.js`, `lib/i18n.ts`.
+
+96. **Localized date/time formatting**
+   - **Accept:** Clock, notifications, and file timestamps respect selected locale and timezone.
+   - **Where:** `utils/formatters/date.ts`.
+
+97. **RTL layout validation**
+   - **Accept:** Desktop chrome, dock, and launcher support RTL mirroring with CSS logical properties.
+   - **Where:** `styles/index.css`, layout helpers.
+
+98. **Localized onboarding copy**
+   - **Accept:** Tour and tooltips pull strings from translation files with fallback to English.
+   - **Where:** `public/locales/*`, onboarding components.
+
+99. **Number formatting for metrics**
+   - **Accept:** Resource monitor and analytics widgets format numbers per locale separators.
+   - **Where:** `utils/formatters/number.ts`.
+
+100. **Font stack adjustments per locale**
+   - **Accept:** Provide locale-specific font fallbacks (e.g., CJK) without layout shift.
+   - **Where:** `_document.jsx`, `styles/typography.css`.
+
+## P) Settings & personalization depth
+
+101. **Custom keybinding manager**
+   - **Accept:** Settings includes grid to remap global shortcuts with reset defaults.
+   - **Where:** `components/apps/settings/Keybindings.tsx`, `hooks/useShortcutRegistry.ts`.
+
+102. **Per-app theme overrides**
+   - **Accept:** Users can assign accent variants per app; stored and applied on window focus.
+   - **Where:** `stores/themeStore.ts`, app display wrappers.
+
+103. **Desktop icon sizing slider**
+   - **Accept:** Slider adjusts app grid icon size between 64–112 px with live preview.
+   - **Where:** `components/apps/settings/DesktopAppearance.tsx`.
+
+104. **Dynamic wallpaper playlists**
+   - **Accept:** Users create wallpaper rotation playlists with intervals, pause/resume.
+   - **Where:** `components/apps/settings/WallpaperScheduler.tsx`, `hooks/useInterval.ts`.
+
+105. **Session restore preference**
+   - **Accept:** Toggle to reopen previous session windows on boot; stores state snapshot.
+   - **Where:** `stores/sessionStore.ts`, desktop boot logic.
+
+106. **Ambient background audio**
+   - **Accept:** Optional ambient loops with volume slider in Settings; pauses on video playback.
+   - **Where:** `components/audio/AmbientPlayer.tsx`.
+
+## Q) Desktop widgets & surfaces
+
+107. **Calendar widget redesign**
+   - **Accept:** Month view with event dots, add event button linking to notes app.
+   - **Where:** `components/widgets/CalendarWidget.tsx`.
+
+108. **Weather widget cards**
+   - **Accept:** Desktop shows mini weather card with gradient backgrounds matching conditions.
+   - **Where:** `components/widgets/WeatherWidget.tsx`.
+
+109. **System health heads-up display**
+   - **Accept:** Compact overlay summarizing CPU, memory, storage with sparkline.
+   - **Where:** `components/widgets/SystemHud.tsx`.
+
+110. **Sticky notes refresh**
+   - **Accept:** Notes have color themes, markdown-lite support, drag ordering, persistence.
+   - **Where:** `components/apps/stickies/*`.
+
+111. **Notification summary widget**
+   - **Accept:** Desktop widget summarizing unread notifications and quick actions.
+   - **Where:** `components/widgets/NotificationSummary.tsx`.
+
+112. **Media control mini-player**
+   - **Accept:** Persistent mini-player for active media apps with album art and transport controls.
+   - **Where:** `components/widgets/NowPlaying.tsx`.
+
+## R) App-specific UI refinements
+
+113. **Terminal theme selector**
+   - **Accept:** Terminal offers selectable color schemes with preview grid.
+   - **Where:** `components/apps/terminal/ThemePicker.tsx`.
+
+114. **Calculator history timeline**
+   - **Accept:** Calc app shows scrollable history with tap-to-reuse results and export.
+   - **Where:** `components/apps/calc/HistoryPanel.tsx`.
+
+115. **Project gallery masonry layout**
+   - **Accept:** Projects grid switches to responsive masonry with lazy-loaded thumbnails.
+   - **Where:** `components/apps/projects/ProjectGrid.tsx`.
+
+116. **Resource monitor dark/light charts**
+   - **Accept:** Charts adapt colors per theme with accessible contrast.
+   - **Where:** `components/apps/resource-monitor/Charts.tsx`.
+
+117. **About app timeline section**
+   - **Accept:** Timeline visualization for career milestones with scroll-snap.
+   - **Where:** `components/apps/about/Timeline.tsx`.
+
+118. **Contact form confirmation modal**
+   - **Accept:** After submit, show modern confirmation modal with follow-up links and copy-to-clipboard email.
+   - **Where:** `components/apps/contact/ConfirmationModal.tsx`.
+
+## S) Observability & UX research hooks
+
+119. **Session replay opt-in banner**
+   - **Accept:** Provide optional privacy-respecting session replay toggle with explanatory copy (no actual tracking yet).
+   - **Where:** `components/screen/overlays/PrivacyBanner.tsx`.
+
+120. **In-app feedback form refresh**
+   - **Accept:** Feedback modal supports categories, screenshot attachment, sentiment rating.
+   - **Where:** `components/apps/feedback/FeedbackForm.tsx`.
+
+121. **UX metrics dashboard**
+   - **Accept:** Internal-only dashboard visualizing core Web Vitals and engagement metrics with dummy data.
+   - **Where:** `components/apps/analytics/ExperienceDashboard.tsx`.
+
+122. **User journey logging stub**
+   - **Accept:** Add logging hooks that emit anonymized events to console/storage for future analytics (no network calls).
+   - **Where:** `hooks/useUXEvents.ts`, `stores/analyticsStore.ts`.
+
+123. **Survey prompt scheduler**
+   - **Accept:** After defined sessions count, prompt short survey with skip/dismiss persistence.
+   - **Where:** `components/screen/overlays/SurveyPrompt.tsx`.
+
+124. **Changelog spotlight modal**
+   - **Accept:** New releases trigger modal summarizing changes with "Got it" and "Learn more" links.
+   - **Where:** `components/apps/changelog/ReleaseSpotlight.tsx`.
 
