@@ -31,6 +31,29 @@ import {
 } from '../../utils/windowLayout';
 
 
+const ICON_DENSITY_STORAGE_KEY = 'desktop-icon-density';
+const ICON_DENSITY_OPTIONS = ['small', 'medium', 'large'];
+const ICON_DENSITY_PRESETS = {
+    small: {
+        dimensions: { width: 80, height: 72 },
+        spacing: { row: 96, column: 112 },
+        padding: { top: DESKTOP_TOP_PADDING, right: 24, bottom: 112, left: 24 },
+    },
+    medium: {
+        dimensions: { width: 96, height: 88 },
+        spacing: { row: 112, column: 128 },
+        padding: { top: DESKTOP_TOP_PADDING, right: 24, bottom: 120, left: 24 },
+    },
+    large: {
+        dimensions: { width: 120, height: 108 },
+        spacing: { row: 144, column: 156 },
+        padding: { top: 72, right: 32, bottom: 168, left: 32 },
+    },
+};
+
+const isValidIconDensity = (value) => ICON_DENSITY_OPTIONS.includes(value);
+
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -81,9 +104,14 @@ export class Desktop extends Component {
         this.preventNextIconClick = false;
         this.savedIconPositions = {};
 
-        this.defaultIconDimensions = { width: 96, height: 88 };
-        this.defaultIconGridSpacing = { row: 112, column: 128 };
-        this.defaultDesktopPadding = { top: DESKTOP_TOP_PADDING, right: 24, bottom: 120, left: 24 };
+        this.iconDensityPreference = this.loadIconDensityPreference();
+        this.activeIconDensity = isValidIconDensity(this.iconDensityPreference)
+            ? this.iconDensityPreference
+            : 'medium';
+
+        this.defaultIconDimensions = { ...ICON_DENSITY_PRESETS.medium.dimensions };
+        this.defaultIconGridSpacing = { ...ICON_DENSITY_PRESETS.medium.spacing };
+        this.defaultDesktopPadding = { ...ICON_DENSITY_PRESETS.medium.padding };
 
         this.iconDimensions = { ...this.defaultIconDimensions };
         this.iconGridSpacing = { ...this.defaultIconGridSpacing };
@@ -142,6 +170,47 @@ export class Desktop extends Component {
         return merged;
     };
 
+    loadIconDensityPreference = () => {
+        if (!safeLocalStorage) return null;
+        try {
+            const stored = safeLocalStorage.getItem(ICON_DENSITY_STORAGE_KEY);
+            if (!stored) return null;
+            const parsed = JSON.parse(stored);
+            if (isValidIconDensity(parsed)) {
+                return parsed;
+            }
+        } catch (_error) {
+            // ignore malformed storage
+        }
+        return null;
+    };
+
+    persistIconDensityPreference = (density) => {
+        if (!safeLocalStorage) return;
+        try {
+            safeLocalStorage.setItem(ICON_DENSITY_STORAGE_KEY, JSON.stringify(density));
+        } catch (_error) {
+            // storage may be unavailable
+        }
+    };
+
+    resolveIconDensity = (isCoarse) => {
+        if (isValidIconDensity(this.iconDensityPreference)) {
+            return this.iconDensityPreference;
+        }
+        return isCoarse ? 'large' : 'medium';
+    };
+
+    handleIconDensityChange = (event) => {
+        const density = event?.detail?.density;
+        if (!isValidIconDensity(density)) return;
+        if (this.iconDensityPreference !== density) {
+            this.iconDensityPreference = density;
+        }
+        this.persistIconDensityPreference(density);
+        this.configureTouchTargets(this.currentPointerIsCoarse);
+    };
+
     setupPointerMediaWatcher = () => {
         if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
             this.configureTouchTargets(false);
@@ -178,15 +247,11 @@ export class Desktop extends Component {
     configureTouchTargets = (isCoarse) => {
         this.currentPointerIsCoarse = Boolean(isCoarse);
 
-        const baseDimensions = isCoarse
-            ? { width: 120, height: 108 }
-            : { ...this.defaultIconDimensions };
-        const baseSpacing = isCoarse
-            ? { row: 144, column: 156 }
-            : { ...this.defaultIconGridSpacing };
-        const basePadding = isCoarse
-            ? { top: 72, right: 32, bottom: 168, left: 32 }
-            : { ...this.defaultDesktopPadding };
+        const density = this.resolveIconDensity(this.currentPointerIsCoarse);
+        const preset = ICON_DENSITY_PRESETS[density] || ICON_DENSITY_PRESETS.medium;
+        const baseDimensions = { ...preset.dimensions };
+        const baseSpacing = { ...preset.spacing };
+        const basePadding = { ...preset.padding };
         const safeArea = getSafeAreaInsets();
         const nextPadding = {
             top: basePadding.top + safeArea.top,
@@ -203,9 +268,14 @@ export class Desktop extends Component {
             nextPadding.top !== this.desktopPadding.top ||
             nextPadding.right !== this.desktopPadding.right ||
             nextPadding.bottom !== this.desktopPadding.bottom ||
-            nextPadding.left !== this.desktopPadding.left;
+            nextPadding.left !== this.desktopPadding.left ||
+            this.activeIconDensity !== density;
 
-        if (!changed) return;
+        this.activeIconDensity = density;
+
+        if (!changed) {
+            return;
+        }
 
         this.iconDimensions = { ...baseDimensions };
         this.iconGridSpacing = { ...baseSpacing };
@@ -908,6 +978,7 @@ export class Desktop extends Component {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.addEventListener('desktop-density-change', this.handleIconDensityChange);
             this.broadcastWorkspaceState();
         }
 
@@ -967,6 +1038,7 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.removeEventListener('desktop-density-change', this.handleIconDensityChange);
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
