@@ -42,6 +42,7 @@ export class Desktop extends Component {
             'closed_windows',
             'minimized_windows',
             'window_positions',
+            'pinned_windows',
         ]);
         this.initFavourite = {};
         this.allWindowClosed = false;
@@ -53,6 +54,7 @@ export class Desktop extends Component {
             favourite_apps: {},
             minimized_windows: {},
             window_positions: {},
+            pinned_windows: {},
             desktop_apps: [],
             desktop_icon_positions: {},
             window_context: {},
@@ -106,6 +108,7 @@ export class Desktop extends Component {
         closed_windows: {},
         minimized_windows: {},
         window_positions: {},
+        pinned_windows: {},
     });
 
     cloneWorkspaceState = (state) => ({
@@ -113,6 +116,7 @@ export class Desktop extends Component {
         closed_windows: { ...state.closed_windows },
         minimized_windows: { ...state.minimized_windows },
         window_positions: { ...state.window_positions },
+        pinned_windows: { ...state.pinned_windows },
     });
 
     commitWorkspacePartial = (partial, index) => {
@@ -466,6 +470,7 @@ export class Desktop extends Component {
                 closed_windows: this.mergeWorkspaceMaps(existing.closed_windows, baseState.closed_windows, validKeys),
                 minimized_windows: this.mergeWorkspaceMaps(existing.minimized_windows, baseState.minimized_windows, validKeys),
                 window_positions: this.mergeWorkspaceMaps(existing.window_positions, baseState.window_positions, validKeys),
+                pinned_windows: this.mergeWorkspaceMaps(existing.pinned_windows, baseState.pinned_windows, validKeys),
             };
         });
     };
@@ -850,6 +855,7 @@ export class Desktop extends Component {
             closed_windows: { ...snapshot.closed_windows },
             minimized_windows: { ...snapshot.minimized_windows },
             window_positions: { ...snapshot.window_positions },
+            pinned_windows: { ...snapshot.pinned_windows },
             showWindowSwitcher: false,
             switcherWindows: [],
         }, () => {
@@ -915,15 +921,20 @@ export class Desktop extends Component {
         this.fetchAppsData(() => {
             const session = this.props.session || {};
             const positions = {};
+            const pinnedState = {};
             if (session.windows && session.windows.length) {
                 const safeTopOffset = measureWindowTopOffset();
-                session.windows.forEach(({ id, x, y }) => {
+                session.windows.forEach(({ id, x, y, pinned }) => {
                     positions[id] = {
                         x,
                         y: clampWindowTopPosition(y, safeTopOffset),
                     };
+                    pinnedState[id] = Boolean(pinned);
                 });
-                this.setWorkspaceState({ window_positions: positions }, () => {
+                this.setWorkspaceState((prev) => ({
+                    window_positions: { ...prev.window_positions, ...positions },
+                    pinned_windows: { ...(prev.pinned_windows || {}), ...pinnedState },
+                }), () => {
                     session.windows.forEach(({ id }) => this.openApp(id));
                 });
             } else {
@@ -949,6 +960,7 @@ export class Desktop extends Component {
             prevState.closed_windows !== this.state.closed_windows ||
             prevState.focused_windows !== this.state.focused_windows ||
             prevState.minimized_windows !== this.state.minimized_windows ||
+            prevState.pinned_windows !== this.state.pinned_windows ||
             prevState.workspaces !== this.state.workspaces
         ) {
             this.broadcastWorkspaceState();
@@ -1346,6 +1358,7 @@ export class Desktop extends Component {
         const disabled_apps = {};
         const favourite_apps = {};
         const minimized_windows = {};
+        const pinned_windows = {};
         const desktop_apps = [];
 
         apps.forEach((app) => {
@@ -1354,6 +1367,7 @@ export class Desktop extends Component {
             disabled_apps[app.id] = app.disabled;
             favourite_apps[app.id] = app.favourite;
             minimized_windows[app.id] = false;
+            pinned_windows[app.id] = false;
             if (app.desktop_shortcut) desktop_apps.push(app.id);
         });
 
@@ -1362,6 +1376,7 @@ export class Desktop extends Component {
             closed_windows,
             minimized_windows,
             window_positions: this.state.window_positions || {},
+            pinned_windows,
         };
         this.updateWorkspaceSnapshots(workspaceState);
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
@@ -1383,6 +1398,7 @@ export class Desktop extends Component {
         const favourite_apps = {};
         const minimized_windows = {};
         const disabled_apps = {};
+        const pinned_windows = {};
         const desktop_apps = [];
 
         apps.forEach((app) => {
@@ -1391,6 +1407,7 @@ export class Desktop extends Component {
             disabled_apps[app.id] = app.disabled;
             closed_windows[app.id] = this.state.closed_windows[app.id] ?? true;
             favourite_apps[app.id] = app.favourite;
+            pinned_windows[app.id] = this.state.pinned_windows[app.id] ?? false;
             if (app.desktop_shortcut) desktop_apps.push(app.id);
         });
 
@@ -1399,6 +1416,7 @@ export class Desktop extends Component {
             closed_windows,
             minimized_windows,
             window_positions: this.state.window_positions || {},
+            pinned_windows,
         };
         this.updateWorkspaceSnapshots(workspaceState);
         this.setWorkspaceState({
@@ -1484,7 +1502,7 @@ export class Desktop extends Component {
     }
 
     renderWindows = () => {
-        const { closed_windows = {}, minimized_windows = {}, focused_windows = {} } = this.state;
+        const { closed_windows = {}, minimized_windows = {}, focused_windows = {}, pinned_windows = {} } = this.state;
         const safeTopOffset = measureWindowTopOffset();
         const stack = this.getActiveStack();
         const orderedIds = [];
@@ -1506,12 +1524,25 @@ export class Desktop extends Component {
 
         if (!orderedIds.length) return null;
 
+        const unpinnedOrder = [];
+        const pinnedOrder = [];
+        orderedIds.forEach((id) => {
+            if (pinned_windows[id]) {
+                pinnedOrder.push(id);
+            } else {
+                unpinnedOrder.push(id);
+            }
+        });
+        const finalOrder = [...unpinnedOrder, ...pinnedOrder];
+
         const appMap = new Map(apps.map((app) => [app.id, app]));
 
-        return orderedIds.map((id, index) => {
+        return finalOrder.map((id, index) => {
             const app = appMap.get(id);
             if (!app) return null;
             const pos = this.state.window_positions[id];
+            const isPinned = Boolean(pinned_windows[id]);
+            const allowPin = app.allowPin !== false;
             const props = {
                 title: app.title,
                 id: app.id,
@@ -1533,6 +1564,8 @@ export class Desktop extends Component {
                 snapEnabled: this.props.snapEnabled,
                 context: this.state.window_context[id],
                 zIndex: 200 + index,
+                isPinned,
+                onTogglePin: allowPin ? () => this.toggleWindowPin(id) : undefined,
             };
 
             return <Window key={id} {...props} />;
@@ -1555,11 +1588,13 @@ export class Desktop extends Component {
         if (!this.props.setSession) return;
         const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
         const safeTopOffset = measureWindowTopOffset();
+        const pinned_windows = this.state.pinned_windows || {};
         const windows = openWindows.map(id => {
             const position = this.state.window_positions[id] || {};
             const nextX = typeof position.x === 'number' ? position.x : 60;
             const nextY = clampWindowTopPosition(position.y, safeTopOffset);
-            return { id, x: nextX, y: nextY };
+            const pinned = Boolean(pinned_windows[id]);
+            return pinned ? { id, x: nextX, y: nextY, pinned } : { id, x: nextX, y: nextY };
         });
 
         const nextSession = { ...this.props.session, windows };
@@ -1765,15 +1800,17 @@ export class Desktop extends Component {
         // close window
         let closed_windows = this.state.closed_windows;
         let favourite_apps = this.state.favourite_apps;
+        const pinned_windows = { ...this.state.pinned_windows };
 
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
+        if (pinned_windows[objId]) pinned_windows[objId] = false;
 
-        this.setWorkspaceState({ closed_windows, favourite_apps }, this.saveSession);
+        this.setWorkspaceState({ closed_windows, favourite_apps, pinned_windows }, this.saveSession);
 
         const window_context = { ...this.state.window_context };
         delete window_context[objId];
-        this.setState({ closed_windows, favourite_apps, window_context }, this.saveSession);
+        this.setState({ closed_windows, favourite_apps, window_context, pinned_windows }, this.saveSession);
     }
 
     pinApp = (id) => {
@@ -1802,6 +1839,15 @@ export class Desktop extends Component {
         safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
+    }
+
+    toggleWindowPin = (id) => {
+        if (!id) return;
+        this.setWorkspaceState((prev) => {
+            const current = { ...(prev.pinned_windows || {}) };
+            current[id] = !current[id];
+            return { pinned_windows: current };
+        }, this.saveSession);
     }
 
     focus = (objId) => {
