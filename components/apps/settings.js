@@ -4,7 +4,7 @@ import { resetSettings, defaults, exportSettings as exportSettingsData, importSe
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, networkChangeAlerts, setNetworkChangeAlerts, hapticsChangeAlerts, setHapticsChangeAlerts, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -70,8 +70,9 @@ export function Settings() {
                 )}
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Theme:</label>
+                <label className="mr-2 text-ubt-grey" htmlFor="settings-theme">Theme:</label>
                 <select
+                    id="settings-theme"
                     value={theme}
                     onChange={(e) => setTheme(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
@@ -83,12 +84,14 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="settings-use-kali-wallpaper">
                     <input
+                        id="settings-use-kali-wallpaper"
                         type="checkbox"
                         checked={useKaliWallpaper}
                         onChange={(e) => setUseKaliWallpaper(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle Kali gradient wallpaper"
                     />
                     Kali Gradient Wallpaper
                 </label>
@@ -115,8 +118,9 @@ export function Settings() {
                 </div>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Density:</label>
+                <label className="mr-2 text-ubt-grey" htmlFor="settings-density">Density:</label>
                 <select
+                    id="settings-density"
                     value={density}
                     onChange={(e) => setDensity(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
@@ -126,8 +130,9 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Font Size:</label>
+                <label className="mr-2 text-ubt-grey" htmlFor="settings-font-scale">Font Size:</label>
                 <input
+                    id="settings-font-scale"
                     type="range"
                     min="0.75"
                     max="1.5"
@@ -135,70 +140,109 @@ export function Settings() {
                     value={fontScale}
                     onChange={(e) => setFontScale(parseFloat(e.target.value))}
                     className="ubuntu-slider"
+                    aria-label="Adjust font scale"
                 />
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="settings-reduced-motion">
                     <input
+                        id="settings-reduced-motion"
                         type="checkbox"
                         checked={reducedMotion}
                         onChange={(e) => setReducedMotion(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle reduced motion"
                     />
                     Reduced Motion
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="settings-large-hit-areas">
                     <input
+                        id="settings-large-hit-areas"
                         type="checkbox"
                         checked={largeHitAreas}
                         onChange={(e) => setLargeHitAreas(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle large hit areas"
                     />
                     Large Hit Areas
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="settings-high-contrast">
                     <input
+                        id="settings-high-contrast"
                         type="checkbox"
                         checked={highContrast}
                         onChange={(e) => setHighContrast(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle high contrast mode"
                     />
                     High Contrast
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="settings-allow-network">
                     <input
+                        id="settings-allow-network"
                         type="checkbox"
                         checked={allowNetwork}
                         onChange={(e) => setAllowNetwork(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle external network requests"
                     />
                     Allow Network Requests
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="settings-network-alerts">
                     <input
+                        id="settings-network-alerts"
+                        type="checkbox"
+                        checked={networkChangeAlerts}
+                        onChange={(e) => setNetworkChangeAlerts(e.target.checked)}
+                        className="mr-2"
+                        aria-label="Toggle network change notifications"
+                    />
+                    Notify on network permission changes
+                </label>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="settings-haptics">
+                    <input
+                        id="settings-haptics"
                         type="checkbox"
                         checked={haptics}
                         onChange={(e) => setHaptics(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle haptics"
                     />
                     Haptics
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="settings-haptics-alerts">
                     <input
+                        id="settings-haptics-alerts"
+                        type="checkbox"
+                        checked={hapticsChangeAlerts}
+                        onChange={(e) => setHapticsChangeAlerts(e.target.checked)}
+                        className="mr-2"
+                        aria-label="Toggle haptics notifications"
+                    />
+                    Notify on haptics changes
+                </label>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-center" htmlFor="settings-pong-spin">
+                    <input
+                        id="settings-pong-spin"
                         type="checkbox"
                         checked={pongSpin}
                         onChange={(e) => setPongSpin(e.target.checked)}
                         className="mr-2"
+                        aria-label="Toggle pong spin"
                     />
                     Pong Spin
                 </label>
@@ -308,6 +352,7 @@ export function Settings() {
                     e.target.value = '';
                 }}
                 className="hidden"
+                aria-label="Import settings file"
             />
         </div>
     )

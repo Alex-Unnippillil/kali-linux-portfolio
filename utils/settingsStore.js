@@ -15,6 +15,8 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  networkChangeAlerts: true,
+  hapticsChangeAlerts: true,
 };
 
 let hasLoggedStorageWarning = false;
@@ -151,6 +153,32 @@ export async function setHaptics(value) {
   storage.setItem('haptics', value ? 'true' : 'false');
 }
 
+export async function getNetworkChangeAlerts() {
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.networkChangeAlerts;
+  const val = storage.getItem('notify-allow-network');
+  return val === null ? DEFAULT_SETTINGS.networkChangeAlerts : val === 'true';
+}
+
+export async function setNetworkChangeAlerts(value) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem('notify-allow-network', value ? 'true' : 'false');
+}
+
+export async function getHapticsChangeAlerts() {
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.hapticsChangeAlerts;
+  const val = storage.getItem('notify-haptics');
+  return val === null ? DEFAULT_SETTINGS.hapticsChangeAlerts : val === 'true';
+}
+
+export async function setHapticsChangeAlerts(value) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem('notify-haptics', value ? 'true' : 'false');
+}
+
 export async function getPongSpin() {
   const storage = getLocalStorage();
   if (!storage) return DEFAULT_SETTINGS.pongSpin;
@@ -191,6 +219,8 @@ export async function resetSettings() {
   storage.removeItem('pong-spin');
   storage.removeItem('allow-network');
   storage.removeItem('haptics');
+  storage.removeItem('notify-allow-network');
+  storage.removeItem('notify-haptics');
   storage.removeItem('use-kali-wallpaper');
 }
 
@@ -207,6 +237,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    networkChangeAlerts,
+    hapticsChangeAlerts,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -219,6 +251,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getNetworkChangeAlerts(),
+    getHapticsChangeAlerts(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -232,6 +266,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    networkChangeAlerts,
+    hapticsChangeAlerts,
     useKaliWallpaper,
     theme,
   });
@@ -258,6 +294,8 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    networkChangeAlerts,
+    hapticsChangeAlerts,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -271,6 +309,8 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (networkChangeAlerts !== undefined) await setNetworkChangeAlerts(networkChangeAlerts);
+  if (hapticsChangeAlerts !== undefined) await setHapticsChangeAlerts(hapticsChangeAlerts);
   if (theme !== undefined) setTheme(theme);
 }
 
