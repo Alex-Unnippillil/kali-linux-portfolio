@@ -11,13 +11,14 @@ type AppMeta = {
   icon: string;
   disabled?: boolean;
   favourite?: boolean;
+  categories?: readonly string[];
 };
 
 type CategorySource =
   | { type: 'all' }
   | { type: 'favorites' }
   | { type: 'recent' }
-  | { type: 'ids'; appIds: readonly string[] };
+  | { type: 'category'; categoryId: string };
 
 type CategoryDefinitionBase = {
   id: string;
@@ -52,66 +53,66 @@ const CATEGORY_DEFINITIONS = [
     id: 'information-gathering',
     label: 'Information Gathering',
     icon: '/themes/Yaru/apps/radar-symbolic.svg',
-    type: 'ids',
-    appIds: ['nmap-nse', 'reconng', 'kismet', 'wireshark'],
+    type: 'category',
+    categoryId: 'information-gathering',
   },
   {
     id: 'vulnerability-analysis',
     label: 'Vulnerability Analysis',
     icon: '/themes/Yaru/apps/nessus.svg',
-    type: 'ids',
-    appIds: ['nessus', 'openvas', 'nikto'],
+    type: 'category',
+    categoryId: 'vulnerability-analysis',
   },
   {
     id: 'web-app-analysis',
     label: 'Web App Analysis',
     icon: '/themes/Yaru/apps/http.svg',
-    type: 'ids',
-    appIds: ['http', 'beef', 'metasploit'],
+    type: 'category',
+    categoryId: 'web-app-analysis',
   },
   {
     id: 'password-attacks',
     label: 'Password Attacks',
     icon: '/themes/Yaru/apps/john.svg',
-    type: 'ids',
-    appIds: ['john', 'hashcat', 'hydra'],
+    type: 'category',
+    categoryId: 'password-attacks',
   },
   {
     id: 'wireless-attacks',
     label: 'Wireless Attacks',
     icon: '/themes/Yaru/status/network-wireless-signal-good-symbolic.svg',
-    type: 'ids',
-    appIds: ['kismet', 'reaver', 'wireshark'],
+    type: 'category',
+    categoryId: 'wireless-attacks',
   },
   {
     id: 'exploitation-tools',
     label: 'Exploitation Tools',
     icon: '/themes/Yaru/apps/metasploit.svg',
-    type: 'ids',
-    appIds: ['metasploit', 'security-tools', 'beef'],
+    type: 'category',
+    categoryId: 'exploitation-tools',
   },
   {
     id: 'sniffing-spoofing',
     label: 'Sniffing & Spoofing',
     icon: '/themes/Yaru/apps/ettercap.svg',
-    type: 'ids',
-    appIds: ['dsniff', 'ettercap', 'wireshark'],
+    type: 'category',
+    categoryId: 'sniffing-spoofing',
   },
   {
     id: 'post-exploitation',
     label: 'Post Exploitation',
     icon: '/themes/Yaru/apps/msf-post.svg',
-    type: 'ids',
-    appIds: ['msf-post', 'mimikatz', 'volatility'],
+    type: 'category',
+    categoryId: 'post-exploitation',
   },
   {
     id: 'forensics-reporting',
     label: 'Forensics & Reporting',
     icon: '/themes/Yaru/apps/autopsy.svg',
-    type: 'ids',
-    appIds: ['autopsy', 'evidence-vault', 'project-gallery'],
+    type: 'category',
+    categoryId: 'forensics-reporting',
   },
- ] as const satisfies readonly CategoryDefinitionBase[];
+] as const satisfies readonly CategoryDefinitionBase[];
 
 type CategoryDefinition = (typeof CATEGORY_DEFINITIONS)[number];
 const isCategoryId = (
@@ -120,6 +121,18 @@ const isCategoryId = (
   CATEGORY_DEFINITIONS.some(cat => cat.id === value);
 
 type CategoryConfig = CategoryDefinition & { apps: AppMeta[] };
+
+const CATEGORY_LABEL_OVERRIDES: Record<string, string> = {
+  'forensics-reporting': 'Forensics & Reporting',
+  'sniffing-spoofing': 'Sniffing & Spoofing',
+};
+
+const formatCategoryLabel = (id: string) =>
+  CATEGORY_LABEL_OVERRIDES[id] ??
+  id
+    .split('-')
+    .map(part => (part.length > 0 ? part[0].toUpperCase() + part.slice(1) : part))
+    .join(' ');
 
 
 const readRecentAppIds = (): string[] => {
@@ -148,6 +161,7 @@ const WhiskerMenu: React.FC = () => {
   const [isDesktop, setIsDesktop] = useState(false);
 
   const [query, setQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [highlight, setHighlight] = useState(0);
   const [categoryHighlight, setCategoryHighlight] = useState(0);
@@ -265,10 +279,10 @@ const WhiskerMenu: React.FC = () => {
         case 'recent':
           appsForCategory = recentApps;
           break;
-        case 'ids':
-          appsForCategory = definition.appIds
-            .map(appId => mapById.get(appId))
-            .filter((app): app is AppMeta => Boolean(app));
+        case 'category':
+          appsForCategory = allApps.filter(app =>
+            (app.categories ?? []).includes(definition.categoryId),
+          );
           break;
         default:
           appsForCategory = allApps;
@@ -285,14 +299,30 @@ const WhiskerMenu: React.FC = () => {
     return found ?? categoryConfigs[0];
   }, [category, categoryConfigs]);
 
+  const availableFilters = useMemo(() => {
+    const set = new Set<string>();
+    (currentCategory?.apps ?? []).forEach((app) => {
+      (app.categories ?? []).forEach(cat => set.add(cat));
+    });
+    if (categoryFilter !== 'all') {
+      set.add(categoryFilter);
+    }
+    return Array.from(set).sort((a, b) =>
+      formatCategoryLabel(a).localeCompare(formatCategoryLabel(b)),
+    );
+  }, [categoryFilter, currentCategory]);
+
   const currentApps = useMemo(() => {
     let list = currentCategory?.apps ?? [];
+    if (categoryFilter !== 'all') {
+      list = list.filter(app => (app.categories ?? []).includes(categoryFilter));
+    }
     if (query) {
       const q = query.toLowerCase();
       list = list.filter(a => a.title.toLowerCase().includes(q));
     }
     return list;
-  }, [currentCategory, query]);
+  }, [categoryFilter, currentCategory, query]);
 
   useEffect(() => {
     const storedCategory = safeLocalStorage?.getItem(CATEGORY_STORAGE_KEY);
@@ -306,9 +336,13 @@ const WhiskerMenu: React.FC = () => {
   }, [currentCategory.id]);
 
   useEffect(() => {
+    setCategoryFilter('all');
+  }, [currentCategory.id]);
+
+  useEffect(() => {
     if (!isVisible) return;
     setHighlight(0);
-  }, [isVisible, category, query]);
+  }, [isVisible, category, query, categoryFilter]);
 
   useEffect(() => {
     if (!isVisible) return;
@@ -651,6 +685,44 @@ const WhiskerMenu: React.FC = () => {
                   </button>
                 ))}
               </div>
+              {availableFilters.length > 0 && (
+                <div
+                  className="flex flex-wrap items-center gap-2"
+                  role="group"
+                  aria-label="Filter by category"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setCategoryFilter('all')}
+                    aria-pressed={categoryFilter === 'all'}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
+                      categoryFilter === 'all'
+                        ? 'border-[#53b9ff] bg-[#1b2d46] text-white shadow-[0_0_0_1px_rgba(83,185,255,0.35)]'
+                        : 'border-transparent bg-[#121f33] text-gray-300 hover:bg-[#1b2d46]'
+                    }`}
+                  >
+                    All categories
+                  </button>
+                  {availableFilters.map((filterId) => {
+                    const isActive = categoryFilter === filterId;
+                    return (
+                      <button
+                        key={filterId}
+                        type="button"
+                        onClick={() => setCategoryFilter(filterId)}
+                        aria-pressed={isActive}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
+                          isActive
+                            ? 'border-[#53b9ff] bg-[#1b2d46] text-white shadow-[0_0_0_1px_rgba(83,185,255,0.35)]'
+                            : 'border-transparent bg-[#121f33] text-gray-300 hover:bg-[#1b2d46]'
+                        }`}
+                      >
+                        {formatCategoryLabel(filterId)}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-3">
               {currentApps.length === 0 ? (

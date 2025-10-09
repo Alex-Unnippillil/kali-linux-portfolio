@@ -274,7 +274,110 @@ const utilityList = [
   },
 ];
 
-export const utilities = utilityList;
+const CATEGORY_ASSIGNMENTS = {
+  // Core applications
+  firefox: ['browsing', 'productivity'],
+  calculator: ['utilities', 'math'],
+  terminal: ['development', 'system'],
+  vscode: ['development'],
+  x: ['communication', 'social'],
+  spotify: ['media', 'entertainment'],
+  youtube: ['media', 'entertainment'],
+  beef: ['security', 'web-app-analysis', 'exploitation-tools'],
+  about: ['portfolio'],
+  settings: ['system'],
+  files: ['system', 'productivity'],
+  'resource-monitor': ['system', 'utilities'],
+  'screen-recorder': ['media', 'utilities'],
+  ettercap: ['security', 'sniffing-spoofing'],
+  'ble-sensor': ['hardware', 'security'],
+  metasploit: ['security', 'exploitation-tools', 'web-app-analysis'],
+  wireshark: ['security', 'information-gathering', 'sniffing-spoofing', 'wireless-attacks'],
+  todoist: ['productivity'],
+  sticky_notes: ['productivity'],
+  trash: ['system'],
+  gedit: ['productivity', 'writing'],
+  converter: ['utilities'],
+  kismet: ['security', 'information-gathering', 'wireless-attacks'],
+  nikto: ['security', 'vulnerability-analysis', 'web-app-analysis'],
+  autopsy: ['security', 'forensics-reporting'],
+  'plugin-manager': ['system', 'utilities'],
+  reaver: ['security', 'wireless-attacks'],
+  nessus: ['security', 'vulnerability-analysis'],
+  ghidra: ['security', 'reverse-engineering', 'development'],
+  mimikatz: ['security', 'post-exploitation'],
+  'mimikatz/offline': ['security', 'post-exploitation'],
+  ssh: ['development', 'networking'],
+  http: ['security', 'web-app-analysis'],
+  'html-rewriter': ['development', 'utilities'],
+  contact: ['communication', 'portfolio'],
+  hydra: ['security', 'password-attacks'],
+  'nmap-nse': ['security', 'information-gathering', 'vulnerability-analysis'],
+  weather: ['utilities', 'weather'],
+  'weather-widget': ['utilities', 'weather'],
+  'serial-terminal': ['development', 'hardware'],
+  radare2: ['security', 'reverse-engineering'],
+  volatility: ['security', 'post-exploitation', 'forensics'],
+  hashcat: ['security', 'password-attacks'],
+  'msf-post': ['security', 'post-exploitation'],
+  'evidence-vault': ['security', 'forensics-reporting'],
+  dsniff: ['security', 'sniffing-spoofing'],
+  john: ['security', 'password-attacks'],
+  openvas: ['security', 'vulnerability-analysis'],
+  'recon-ng': ['security', 'information-gathering'],
+  'security-tools': ['security', 'exploitation-tools'],
+  'clipboard-manager': ['utilities', 'productivity'],
+  figlet: ['utilities', 'creative'],
+  quote: ['utilities', 'creative'],
+  'project-gallery': ['portfolio', 'forensics-reporting'],
+  'input-lab': ['development', 'utilities'],
+  'subnet-calculator': ['utilities', 'networking'],
+  qr: ['utilities', 'networking'],
+  'ascii-art': ['utilities', 'creative'],
+  // Games
+  '2048': ['games', 'puzzle'],
+  asteroids: ['games', 'arcade'],
+  battleship: ['games', 'strategy', 'board'],
+  blackjack: ['games', 'card'],
+  breakout: ['games', 'arcade'],
+  'car-racer': ['games', 'arcade'],
+  'lane-runner': ['games', 'arcade'],
+  checkers: ['games', 'board'],
+  chess: ['games', 'board', 'strategy'],
+  'connect-four': ['games', 'board', 'puzzle'],
+  frogger: ['games', 'arcade'],
+  hangman: ['games', 'word'],
+  memory: ['games', 'puzzle'],
+  minesweeper: ['games', 'puzzle'],
+  pacman: ['games', 'arcade'],
+  platformer: ['games', 'action'],
+  pong: ['games', 'arcade'],
+  reversi: ['games', 'board', 'strategy'],
+  simon: ['games', 'puzzle'],
+  snake: ['games', 'arcade'],
+  sokoban: ['games', 'puzzle'],
+  solitaire: ['games', 'card'],
+  tictactoe: ['games', 'board'],
+  tetris: ['games', 'puzzle'],
+  'tower-defense': ['games', 'strategy'],
+  'word-search': ['games', 'word'],
+  wordle: ['games', 'word'],
+  nonogram: ['games', 'puzzle'],
+  'space-invaders': ['games', 'arcade'],
+  sudoku: ['games', 'puzzle'],
+  'flappy-bird': ['games', 'arcade'],
+  'candy-crush': ['games', 'puzzle'],
+  gomoku: ['games', 'board', 'strategy'],
+  pinball: ['games', 'arcade'],
+};
+
+const applyCategories = (items) =>
+  items.map(item => ({
+    ...item,
+    categories: CATEGORY_ASSIGNMENTS[item.id] ?? [],
+  }));
+
+export const utilities = applyCategories(utilityList);
 
 // Default window sizing for games to prevent oversized frames
 export const gameDefaults = {
@@ -597,9 +700,11 @@ const gameList = [
   },
 ];
 
-export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
+const gamesWithDefaults = gameList.map((game) => ({ ...gameDefaults, ...game }));
 
-const apps = [
+export const games = applyCategories(gamesWithDefaults);
+
+const baseApps = [
   {
     id: 'firefox',
     title: 'Firefox',
@@ -1064,5 +1169,7 @@ const apps = [
   // Games are included so they appear alongside apps
   ...games,
 ];
+
+const apps = applyCategories(baseApps);
 
 export default apps;
