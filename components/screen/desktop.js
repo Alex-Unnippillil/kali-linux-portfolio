@@ -941,6 +941,9 @@ export class Desktop extends Component {
         window.addEventListener('open-app', this.handleOpenAppEvent);
         this.setupPointerMediaWatcher();
         this.setupGestureListeners();
+        if (typeof window !== 'undefined') {
+            window.addEventListener('launcher-app-drop', this.handleLauncherAppDrop);
+        }
     }
 
     componentDidUpdate(_prevProps, prevState) {
@@ -967,10 +970,43 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.removeEventListener('launcher-app-drop', this.handleLauncherAppDrop);
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
     }
+
+    handleLauncherAppDrop = (event) => {
+        const detail = event?.detail || {};
+        const appId = detail.appId;
+        if (!appId || !this.validAppIds.has(appId)) return;
+
+        const pointerX = Number.isFinite(detail.clientX) ? detail.clientX : null;
+        const pointerY = Number.isFinite(detail.clientY) ? detail.clientY : null;
+        if (pointerX === null || pointerY === null) return;
+
+        const rect = this.getDesktopRect();
+        if (!rect) return;
+
+        const defaultOffsetX = this.iconDimensions?.width ? this.iconDimensions.width / 2 : 48;
+        const defaultOffsetY = this.iconDimensions?.height ? this.iconDimensions.height / 2 : 44;
+        const offsetX = Number.isFinite(detail.offsetX) ? detail.offsetX : defaultOffsetX;
+        const offsetY = Number.isFinite(detail.offsetY) ? detail.offsetY : defaultOffsetY;
+
+        const relativeX = pointerX - rect.left - offsetX;
+        const relativeY = pointerY - rect.top - offsetY;
+        const snapped = this.snapIconPosition(relativeX, relativeY);
+        const position = this.clampIconPosition(snapped.x, snapped.y);
+
+        this.addShortcutToDesktop(appId, {
+            position,
+            persistPosition: true,
+        });
+
+        if (detail.shouldClose !== false) {
+            this.setState({ allAppsView: false });
+        }
+    };
 
     handleExternalTaskbarCommand = (event) => {
         const detail = event?.detail || {};
@@ -1377,7 +1413,7 @@ export class Desktop extends Component {
         this.initFavourite = { ...favourite_apps };
     }
 
-    updateAppsData = () => {
+    updateAppsData = (callback) => {
         const focused_windows = {};
         const closed_windows = {};
         const favourite_apps = {};
@@ -1408,6 +1444,9 @@ export class Desktop extends Component {
             desktop_apps,
         }, () => {
             this.ensureIconPositions(desktop_apps);
+            if (typeof callback === 'function') {
+                callback();
+            }
         });
         this.initFavourite = { ...favourite_apps };
     }
@@ -1828,7 +1867,8 @@ export class Desktop extends Component {
         this.setState({ showShortcutSelector: true });
     }
 
-    addShortcutToDesktop = (app_id) => {
+    addShortcutToDesktop = (app_id, options = {}) => {
+        const { position = null, persistPosition = Boolean(options?.position) } = options || {};
         const appIndex = apps.findIndex(app => app.id === app_id);
         if (appIndex === -1) return;
         apps[appIndex].desktop_shortcut = true;
@@ -1838,7 +1878,36 @@ export class Desktop extends Component {
             shortcuts.push(app_id);
             safeLocalStorage?.setItem('app_shortcuts', JSON.stringify(shortcuts));
         }
-        this.setState({ showShortcutSelector: false }, this.updateAppsData);
+        const applyPosition = () => {
+            if (!this.isValidIconPosition(position)) return;
+            const nextPosition = this.clampIconPosition(position.x, position.y);
+            this.setState((prevState) => {
+                const current = prevState.desktop_icon_positions || {};
+                const previous = current[app_id];
+                if (previous && previous.x === nextPosition.x && previous.y === nextPosition.y) {
+                    return null;
+                }
+                return {
+                    desktop_icon_positions: { ...current, [app_id]: nextPosition },
+                };
+            }, () => {
+                if (persistPosition) {
+                    this.persistIconPositions();
+                }
+            });
+        };
+
+        const finalize = () => {
+            this.updateAppsData(() => {
+                applyPosition();
+            });
+        };
+
+        if (this.state.showShortcutSelector) {
+            this.setState({ showShortcutSelector: false }, finalize);
+        } else {
+            finalize();
+        }
     }
 
     checkForAppShortcuts = () => {
