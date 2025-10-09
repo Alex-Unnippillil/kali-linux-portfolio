@@ -15,7 +15,19 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  bootAnimationPreference: 'default',
 };
+
+export const BOOT_ANIMATION_OPTIONS = ['skip', 'short', 'default', 'long'];
+
+export const BOOT_ANIMATION_DURATIONS = {
+  skip: 0,
+  short: 1000,
+  default: 2000,
+  long: 4000,
+};
+
+const BOOT_ANIMATION_KEY = 'boot-animation-preference';
 
 let hasLoggedStorageWarning = false;
 
@@ -151,6 +163,33 @@ export async function setHaptics(value) {
   storage.setItem('haptics', value ? 'true' : 'false');
 }
 
+function isValidBootAnimation(value) {
+  return BOOT_ANIMATION_OPTIONS.includes(value);
+}
+
+export function getBootAnimationPreferenceSync() {
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.bootAnimationPreference;
+  const stored = storage.getItem(BOOT_ANIMATION_KEY);
+  if (!stored) return DEFAULT_SETTINGS.bootAnimationPreference;
+  return isValidBootAnimation(stored)
+    ? stored
+    : DEFAULT_SETTINGS.bootAnimationPreference;
+}
+
+export async function getBootAnimationPreference() {
+  return getBootAnimationPreferenceSync();
+}
+
+export async function setBootAnimationPreference(value) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  const preference = isValidBootAnimation(value)
+    ? value
+    : DEFAULT_SETTINGS.bootAnimationPreference;
+  storage.setItem(BOOT_ANIMATION_KEY, preference);
+}
+
 export async function getPongSpin() {
   const storage = getLocalStorage();
   if (!storage) return DEFAULT_SETTINGS.pongSpin;
@@ -192,6 +231,7 @@ export async function resetSettings() {
   storage.removeItem('allow-network');
   storage.removeItem('haptics');
   storage.removeItem('use-kali-wallpaper');
+  storage.removeItem(BOOT_ANIMATION_KEY);
 }
 
 export async function exportSettings() {
@@ -207,6 +247,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    bootAnimationPreference,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -219,6 +260,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getBootAnimationPreference(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -233,6 +275,7 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     useKaliWallpaper,
+    bootAnimationPreference,
     theme,
   });
 }
@@ -259,6 +302,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    bootAnimationPreference,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -271,6 +315,9 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (bootAnimationPreference !== undefined) {
+    await setBootAnimationPreference(bootAnimationPreference);
+  }
   if (theme !== undefined) setTheme(theme);
 }
 
