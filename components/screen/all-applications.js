@@ -121,6 +121,71 @@ class AllApplications extends React.Component {
         });
     };
 
+    removeDiacritics = (value) =>
+        value
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+
+    getHighlightedTitle = (app) => {
+        const { query } = this.state;
+        if (!query) return app.title;
+
+        const normalizedQuery = this.removeDiacritics(query).toLowerCase();
+        if (!normalizedQuery.trim()) return app.title;
+
+        const characters = Array.from(app.title);
+        const normalizedChars = characters.map((char) =>
+            this.removeDiacritics(char).toLowerCase()
+        );
+        const normalizedTitle = normalizedChars.join('');
+        if (!normalizedTitle.includes(normalizedQuery)) {
+            return app.title;
+        }
+
+        const offsets = [];
+        let cumulative = 0;
+        characters.forEach((char, index) => {
+            cumulative += char.length;
+            offsets[index] = cumulative;
+        });
+
+        const getOffset = (index) => {
+            if (index <= 0) return 0;
+            const clampedIndex = Math.min(index, offsets.length);
+            return offsets[clampedIndex - 1];
+        };
+
+        const nodes = [];
+        let lastIndex = 0;
+        let matchIndex = normalizedTitle.indexOf(normalizedQuery);
+
+        while (matchIndex !== -1) {
+            if (matchIndex > lastIndex) {
+                nodes.push(
+                    app.title.slice(getOffset(lastIndex), getOffset(matchIndex))
+                );
+            }
+
+            const matchEnd = matchIndex + normalizedQuery.length;
+            nodes.push(
+                <mark key={`${app.id}-highlight-${matchIndex}`}>
+                    {app.title.slice(getOffset(matchIndex), getOffset(matchEnd))}
+                </mark>
+            );
+
+            lastIndex = matchEnd;
+            matchIndex = normalizedTitle.indexOf(normalizedQuery, matchIndex + 1);
+        }
+
+        if (lastIndex < normalizedChars.length) {
+            nodes.push(
+                app.title.slice(getOffset(lastIndex), getOffset(normalizedChars.length))
+            );
+        }
+
+        return nodes;
+    };
+
     renderAppTile = (app) => {
         const isFavorite = this.state.favorites.includes(app.id);
         return (
@@ -142,6 +207,7 @@ class AllApplications extends React.Component {
                 </button>
                 <UbuntuApp
                     name={app.title}
+                    displayName={this.getHighlightedTitle(app)}
                     id={app.id}
                     icon={app.icon}
                     openApp={() => this.openApp(app.id)}
