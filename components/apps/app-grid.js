@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import UbuntuApp from '../base/ubuntu_app';
+import UbuntuApp from '../base/UbuntuApp';
 import apps from '../../apps.config';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { Grid } from 'react-window';

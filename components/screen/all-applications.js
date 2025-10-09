@@ -1,5 +1,5 @@
 import React from 'react';
-import UbuntuApp from '../base/ubuntu_app';
+import UbuntuApp from '../base/UbuntuApp';
 import { safeLocalStorage } from '../../utils/safeStorage';
 
 const FAVORITES_KEY = 'launcherFavorites';

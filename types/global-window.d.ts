@@ -7,8 +7,8 @@ declare global {
   }
 
   interface Window {
-    YT: any;
-    onYouTubeIframeAPIReady: () => void;
+    YT?: any;
+    onYouTubeIframeAPIReady?: () => void;
     twttr?: any;
     documentPictureInPicture?: {
       requestWindow: (options?: PictureInPictureWindowOptions) => Promise<Window>;

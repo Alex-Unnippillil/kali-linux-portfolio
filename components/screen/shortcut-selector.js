@@ -1,5 +1,5 @@
 import React from 'react';
-import UbuntuApp from '../base/ubuntu_app';
+import UbuntuApp from '../base/UbuntuApp';
 
 class ShortcutSelector extends React.Component {
     constructor() {

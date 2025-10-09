@@ -6,7 +6,7 @@ jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('html-to-image', () => ({ toPng: jest.fn().mockResolvedValue('data:image/png;base64,') }));
 jest.mock('../components/util-components/background-image', () => () => <div data-testid="background" />);
 jest.mock('../components/base/window', () => () => <div data-testid="window" />);
-jest.mock('../components/base/ubuntu_app', () => () => <div data-testid="ubuntu-app" />);
+jest.mock('../components/base/UbuntuApp', () => () => <div data-testid="ubuntu-app" />);
 jest.mock('../components/screen/all-applications', () => () => <div data-testid="all-apps" />);
 jest.mock('../components/screen/shortcut-selector', () => () => <div data-testid="shortcut-selector" />);
 jest.mock('../components/screen/window-switcher', () => () => <div data-testid="window-switcher" />);
