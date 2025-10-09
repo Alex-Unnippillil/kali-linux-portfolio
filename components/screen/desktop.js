@@ -840,8 +840,11 @@ export class Desktop extends Component {
         });
     };
 
-    switchWorkspace = (workspaceId) => {
-        if (workspaceId === this.state.activeWorkspace) return;
+    switchWorkspace = (workspaceId, callback) => {
+        if (workspaceId === this.state.activeWorkspace) {
+            if (typeof callback === 'function') callback();
+            return;
+        }
         if (workspaceId < 0 || workspaceId >= this.state.workspaces.length) return;
         const snapshot = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
         this.setState({
@@ -855,6 +858,7 @@ export class Desktop extends Component {
         }, () => {
             this.broadcastWorkspaceState();
             this.giveFocusToLastApp();
+            if (typeof callback === 'function') callback();
         });
     };
 
@@ -1776,6 +1780,18 @@ export class Desktop extends Component {
         this.setState({ closed_windows, favourite_apps, window_context }, this.saveSession);
     }
 
+    isAppPinned = (id) => {
+        if (!id) return false;
+        if (Object.prototype.hasOwnProperty.call(this.initFavourite, id)) {
+            return Boolean(this.initFavourite[id]);
+        }
+        const favourites = this.state.favourite_apps || {};
+        if (Object.prototype.hasOwnProperty.call(favourites, id)) {
+            return Boolean(favourites[id]);
+        }
+        return false;
+    };
+
     pinApp = (id) => {
         let favourite_apps = { ...this.state.favourite_apps }
         favourite_apps[id] = true
@@ -1894,6 +1910,21 @@ export class Desktop extends Component {
         safeLocalStorage?.setItem('new_folders', JSON.stringify(new_folders));
 
         this.setState({ showNameBar: false }, this.updateAppsData);
+    };
+
+    openAppInWorkspace = (objId, workspaceId) => {
+        const targetWorkspace = typeof workspaceId === 'number' ? workspaceId : this.state.activeWorkspace;
+        if (targetWorkspace < 0 || targetWorkspace >= this.state.workspaces.length) {
+            this.openApp(objId);
+            return;
+        }
+        if (targetWorkspace === this.state.activeWorkspace) {
+            this.openApp(objId);
+            return;
+        }
+        this.switchWorkspace(targetWorkspace, () => {
+            this.openApp(objId);
+        });
     };
 
     showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }); };
@@ -2023,10 +2054,18 @@ export class Desktop extends Component {
                 }
 
                 { this.state.allAppsView ?
-                    <AllApplications apps={apps}
+                    <AllApplications
+                        apps={apps}
                         games={games}
                         recentApps={this.getActiveStack()}
-                        openApp={this.openApp} /> : null}
+                        openApp={this.openApp}
+                        openAppInWorkspace={this.openAppInWorkspace}
+                        pinApp={this.pinApp}
+                        unpinApp={this.unpinApp}
+                        isAppPinned={this.isAppPinned}
+                        workspaces={this.state.workspaces}
+                        activeWorkspace={this.state.activeWorkspace}
+                    /> : null}
 
                 { this.state.showShortcutSelector ?
                     <ShortcutSelector apps={apps}
