@@ -6,6 +6,7 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import WindowSystemMenu from '../context-menus/window-system-menu';
 import {
     clampWindowTopPosition,
     DEFAULT_WINDOW_TOP_OFFSET,
@@ -74,8 +75,12 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            systemMenuOpen: false,
+            systemMenuPosition: { top: 0, left: 0 },
+            keyboardResize: false,
         }
         this.windowRef = React.createRef();
+        this.titleBarRef = React.createRef();
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
@@ -265,8 +270,58 @@ export class Window extends Component {
         this._menuOpener = null;
     }
 
+    computeSystemMenuPosition = () => {
+        if (this.titleBarRef.current) {
+            const rect = this.titleBarRef.current.getBoundingClientRect();
+            return {
+                top: rect.bottom,
+                left: rect.left,
+            };
+        }
+        const node = this.getWindowNode();
+        if (node) {
+            const rect = node.getBoundingClientRect();
+            return {
+                top: rect.top,
+                left: rect.left,
+            };
+        }
+        return { top: 0, left: 0 };
+    }
+
+    openSystemMenu = () => {
+        const position = this.computeSystemMenuPosition();
+        this.stopKeyboardResize();
+        this.activateOverlay();
+        this.setState({ systemMenuOpen: true, systemMenuPosition: position });
+    }
+
+    closeSystemMenu = () => {
+        if (!this.state.systemMenuOpen) return;
+        this.deactivateOverlay();
+        this.setState({ systemMenuOpen: false });
+    }
+
+    startKeyboardResize = () => {
+        if (this.props.resizable === false) return;
+        this.focusWindow();
+        if (this.state.maximized) {
+            this.restoreWindow();
+        }
+        if (this.state.snapped) {
+            this.unsnapWindow();
+        }
+        this.setState({ cursorType: 'cursor-nwse-resize', keyboardResize: true });
+    }
+
+    stopKeyboardResize = () => {
+        if (!this.state.keyboardResize) return;
+        this.setState({ cursorType: 'cursor-default', keyboardResize: false });
+    }
+
     changeCursorToMove = () => {
         this.focusWindow();
+        this.stopKeyboardResize();
         if (this.state.maximized) {
             this.restoreWindow();
         }
@@ -465,11 +520,15 @@ export class Window extends Component {
     }
 
     minimizeWindow = () => {
+        this.closeSystemMenu();
+        this.stopKeyboardResize();
         this.setWinowsPosition();
         this.props.hasMinimised(this.id);
     }
 
     restoreWindow = () => {
+        this.closeSystemMenu();
+        this.stopKeyboardResize();
         const node = this.getWindowNode();
         if (!node) return;
         this.setDefaultWindowDimenstion();
@@ -491,6 +550,8 @@ export class Window extends Component {
     }
 
     maximizeWindow = () => {
+        this.closeSystemMenu();
+        this.stopKeyboardResize();
         if (this.props.allowMaximize === false) return;
         if (this.state.maximized) {
             this.restoreWindow();
@@ -517,6 +578,8 @@ export class Window extends Component {
     }
 
     closeWindow = () => {
+        this.closeSystemMenu();
+        this.stopKeyboardResize();
         this.setWinowsPosition();
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
@@ -567,6 +630,50 @@ export class Window extends Component {
     }
 
     handleKeyDown = (e) => {
+        const isSpaceKey = e.key === ' ' || e.key === 'Space' || e.code === 'Space';
+        if (e.altKey && isSpaceKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (this.state.systemMenuOpen) {
+                this.closeSystemMenu();
+            } else {
+                this.openSystemMenu();
+            }
+            return;
+        }
+
+        if (this.state.systemMenuOpen && e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            this.closeSystemMenu();
+            return;
+        }
+
+        if (this.state.keyboardResize) {
+            if (e.key === 'Escape' || e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.stopKeyboardResize();
+                return;
+            }
+            const resizeKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+            if (resizeKeys.includes(e.key)) {
+                e.preventDefault();
+                e.stopPropagation();
+                const step = e.shiftKey ? 1 : 2;
+                if (e.key === 'ArrowLeft') {
+                    this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
+                } else if (e.key === 'ArrowRight') {
+                    this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
+                } else if (e.key === 'ArrowUp') {
+                    this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
+                } else if (e.key === 'ArrowDown') {
+                    this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
+                }
+                return;
+            }
+        }
+
         if (e.key === 'Escape') {
             this.closeWindow();
         } else if (e.key === 'Tab') {
@@ -702,6 +809,7 @@ export class Window extends Component {
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
                             onPointerDown={this.focusWindow}
+                            ref={this.titleBarRef}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -711,6 +819,18 @@ export class Window extends Component {
                             id={this.id}
                             allowMaximize={this.props.allowMaximize !== false}
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
+                        />
+                        <WindowSystemMenu
+                            open={this.state.systemMenuOpen}
+                            position={this.state.systemMenuPosition}
+                            onClose={this.closeSystemMenu}
+                            onMove={this.changeCursorToMove}
+                            onResize={this.startKeyboardResize}
+                            onMinimize={this.minimizeWindow}
+                            onToggleMaximize={this.maximizeWindow}
+                            onCloseWindow={this.closeWindow}
+                            isMaximized={this.state.maximized}
+                            allowMaximize={this.props.allowMaximize !== false}
                         />
                         {(this.id === "settings"
                             ? <Settings />
@@ -728,9 +848,10 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }) {
+export const WindowTopBar = React.forwardRef(function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }, ref) {
     return (
         <div
+            ref={ref}
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
             tabIndex={0}
             role="button"
@@ -742,7 +863,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown 
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
     )
-}
+});
 
 // Window's Borders
 export class WindowYBorder extends Component {
