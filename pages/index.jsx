@@ -4,7 +4,7 @@ import BetaBadge from '../components/BetaBadge';
 
 const Ubuntu = dynamic(
   () =>
-    import('../components/ubuntu').catch((err) => {
+    import('../components/ubuntu.tsx').catch((err) => {
       console.error('Failed to load Ubuntu component', err);
       throw err;
     }),
