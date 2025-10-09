@@ -79,6 +79,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._modalBackground = new Set();
     }
 
     componentDidMount() {
@@ -98,6 +99,7 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        this.updateModalState();
     }
 
     componentWillUnmount() {
@@ -110,6 +112,17 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+        this.releaseModalBackground();
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (
+            prevProps.isFocused !== this.props.isFocused ||
+            prevProps.minimized !== this.props.minimized ||
+            prevState.closed !== this.state.closed
+        ) {
+            this.updateModalState();
         }
     }
 
@@ -379,6 +392,61 @@ export class Window extends Component {
         if (root) {
             root.removeAttribute('inert');
         }
+    }
+
+    isWindowActive = () => {
+        return Boolean(this.props.isFocused && !this.props.minimized && !this.state.closed);
+    }
+
+    updateModalState = () => {
+        if (typeof document === 'undefined') {
+            return;
+        }
+        const node = this.getWindowNode();
+        if (!node) return;
+        const active = this.isWindowActive();
+        node.setAttribute('aria-modal', active ? 'true' : 'false');
+        if (active) {
+            this.applyModalBackground(node);
+        } else {
+            this.releaseModalBackground();
+        }
+    }
+
+    collectModalBackgroundElements = (node) => {
+        const elements = new Set();
+        if (!node || typeof node.closest !== 'function') {
+            return elements;
+        }
+        const windowArea = node.closest('#window-area');
+        if (windowArea) {
+            const candidates = windowArea.querySelectorAll('.opened-window');
+            candidates.forEach((el) => {
+                if (el instanceof HTMLElement && el !== node) {
+                    elements.add(el);
+                }
+            });
+        }
+        return elements;
+    }
+
+    applyModalBackground = (node) => {
+        this.releaseModalBackground();
+        const elements = this.collectModalBackgroundElements(node);
+        elements.forEach((el) => {
+            el.setAttribute('aria-hidden', 'true');
+            el.setAttribute('inert', '');
+            this._modalBackground.add(el);
+        });
+    }
+
+    releaseModalBackground = () => {
+        if (!this._modalBackground) return;
+        this._modalBackground.forEach((el) => {
+            el.removeAttribute('aria-hidden');
+            el.removeAttribute('inert');
+        });
+        this._modalBackground.clear();
     }
 
     checkSnapPreview = () => {
@@ -689,6 +757,7 @@ export class Window extends Component {
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
+                        aria-modal={this.isWindowActive() ? 'true' : 'false'}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                         onPointerDown={this.focusWindow}
