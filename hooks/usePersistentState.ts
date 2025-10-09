@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
 
 /**
  * Persist state in localStorage.
@@ -54,9 +60,65 @@ export default function usePersistentState<T>(
   return [state, setState, reset, clear] as const;
 }
 
-export const useSnapSetting = () =>
-  usePersistentState<boolean>(
-    'snap-enabled',
-    true,
-    (v): v is boolean => typeof v === 'boolean',
+const SNAP_SETTING_KEY = 'snap-enabled';
+const SNAP_SETTING_DEFAULT = true;
+const SNAP_SETTING_EVENT = 'snap-setting-change';
+
+const broadcastSnapSetting = (value: boolean) => {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(
+    new CustomEvent<boolean>(SNAP_SETTING_EVENT, { detail: value }),
   );
+};
+
+export const useSnapSetting = () => {
+  const [snapEnabled, setSnapEnabled, resetSnap, clearSnap] =
+    usePersistentState<boolean>(
+      SNAP_SETTING_KEY,
+      SNAP_SETTING_DEFAULT,
+      (v): v is boolean => typeof v === 'boolean',
+    );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handleExternalUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<boolean>).detail;
+      if (typeof detail !== 'boolean') return;
+      setSnapEnabled((previous) => (previous === detail ? previous : detail));
+    };
+
+    window.addEventListener(SNAP_SETTING_EVENT, handleExternalUpdate as EventListener);
+    return () => {
+      window.removeEventListener(
+        SNAP_SETTING_EVENT,
+        handleExternalUpdate as EventListener,
+      );
+    };
+  }, [setSnapEnabled]);
+
+  const setAndBroadcast: Dispatch<SetStateAction<boolean>> = useCallback(
+    (value) => {
+      setSnapEnabled((previous) => {
+        const nextValue =
+          typeof value === 'function' ? value(previous) : value;
+        if (nextValue !== previous) {
+          broadcastSnapSetting(nextValue);
+        }
+        return nextValue;
+      });
+    },
+    [setSnapEnabled],
+  );
+
+  const resetAndBroadcast = useCallback(() => {
+    resetSnap();
+    broadcastSnapSetting(SNAP_SETTING_DEFAULT);
+  }, [resetSnap]);
+
+  const clearAndBroadcast = useCallback(() => {
+    clearSnap();
+    broadcastSnapSetting(SNAP_SETTING_DEFAULT);
+  }, [clearSnap]);
+
+  return [snapEnabled, setAndBroadcast, resetAndBroadcast, clearAndBroadcast] as const;
+};

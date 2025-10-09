@@ -384,6 +384,12 @@ export class Window extends Component {
     checkSnapPreview = () => {
         const node = this.getWindowNode();
         if (!node) return;
+        if (!this.props.snapEnabled) {
+            if (this.state.snapPreview || this.state.snapPosition) {
+                this.setState({ snapPreview: null, snapPosition: null });
+            }
+            return;
+        }
         const rect = node.getBoundingClientRect();
         const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
         const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
@@ -726,6 +732,10 @@ export class Window extends Component {
 }
 
 export default Window
+
+Window.defaultProps = {
+    snapEnabled: true,
+};
 
 // Window's title bar
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }) {
