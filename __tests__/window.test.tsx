@@ -668,3 +668,115 @@ describe('Window overlay inert behaviour', () => {
     document.body.removeChild(opener);
   });
 });
+
+describe('Window shading', () => {
+  const fireMiddleClick = (element: Element) => {
+    fireEvent(element, new MouseEvent('auxclick', { button: 1, bubbles: true }));
+  };
+
+  it('toggles shade on middle click without losing focus', () => {
+    const focus = jest.fn();
+    const ref = React.createRef<any>();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={focus}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const windowNode = document.getElementById('test-window')!;
+    windowNode.getBoundingClientRect = jest.fn(() => {
+      const shaded = !!ref.current?.state?.shaded;
+      const height = shaded ? 42 : 300;
+      return {
+        left: 120,
+        top: 160,
+        right: 120 + 320,
+        bottom: 160 + height,
+        width: 320,
+        height,
+        x: 120,
+        y: 160,
+        toJSON() { return {}; },
+      } as DOMRect;
+    });
+
+    focus.mockClear();
+    const titleBar = screen.getByRole('button', { name: 'Test' });
+    fireMiddleClick(titleBar);
+
+    expect(windowNode.dataset.shaded).toBe('true');
+    const mainAfterShade = windowNode.querySelector('.windowMainScreen') as HTMLElement;
+    expect(mainAfterShade?.getAttribute('data-collapsed')).toBe('true');
+    expect(mainAfterShade?.getAttribute('aria-hidden')).toBe('true');
+    expect(focus).toHaveBeenCalledWith('test-window');
+
+    fireMiddleClick(titleBar);
+    const mainAfterRestore = windowNode.querySelector('.windowMainScreen') as HTMLElement;
+    expect(windowNode.dataset.shaded).toBe('false');
+    expect(mainAfterRestore?.getAttribute('data-collapsed')).toBe('false');
+    expect(focus).toHaveBeenCalledTimes(2);
+  });
+
+  it('recomputes drag bounds when shaded and keeps drag responsive', () => {
+    const ref = React.createRef<any>();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const windowNode = document.getElementById('test-window')!;
+    windowNode.getBoundingClientRect = jest.fn(() => {
+      const shaded = !!ref.current?.state?.shaded;
+      const height = shaded ? 48 : 280;
+      return {
+        left: 40,
+        top: 140,
+        right: 40 + 360,
+        bottom: 140 + height,
+        width: 360,
+        height,
+        x: 40,
+        y: 140,
+        toJSON() { return {}; },
+      } as DOMRect;
+    });
+
+    act(() => {
+      ref.current!.resizeBoundries();
+    });
+
+    const beforeShade = ref.current!.state.parentSize.height;
+    fireMiddleClick(screen.getByRole('button', { name: 'Test' }));
+    const afterShade = ref.current!.state.parentSize.height;
+
+    expect(afterShade).toBeGreaterThan(beforeShade);
+
+    const dragNode = document.createElement('div');
+    act(() => {
+      ref.current!.handleDrag({}, {
+        node: dragNode,
+        x: -20,
+        y: ref.current!.state.safeAreaTop - 10,
+      } as any);
+    });
+
+    expect(dragNode.style.transform).toContain('translate');
+  });
+});
