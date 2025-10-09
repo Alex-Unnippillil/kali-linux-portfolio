@@ -77,6 +77,8 @@ To send text or links directly into the Sticky Notes app:
 Copy `.env.local.example` to `.env.local` and fill in required API keys:
 
 - `NEXT_PUBLIC_ENABLE_ANALYTICS` – enable client-side analytics when set to `true`.
+- `NEXT_PUBLIC_WEB_VITALS_ENVS` – comma-separated Vercel environments (e.g., `preview,production`) allowed to emit Web Vitals.
+- `NEXT_PUBLIC_WEB_VITALS_METRICS` – comma-separated Web Vitals (e.g., `LCP,INP,CLS,TTFB`) to forward to analytics.
 - `FEATURE_TOOL_APIS` – toggle simulated tool APIs (`enabled` or `disabled`).
 - `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form spam protection.
 - `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase credentials. When unset, Supabase-backed APIs and features are disabled.
@@ -108,6 +110,12 @@ See `.env.local.example` for the full list.
 - `<SpeedInsights />` is rendered in [`pages/_app.jsx`](./pages/_app.jsx) alongside `<Analytics />`.
 - Validate collection by requesting `/_vercel/speed-insights/script.js` from a deployed build.
 - No metrics are collected in development mode; ad blockers or network filters can block the script.
+
+## Analytics Dashboards
+
+- GA4 events for Web Vitals are emitted with the category `Web Vitals` and the action matching the metric name (e.g., `LCP`, `INP`, `CLS`, `TTFB`). Add these dimensions to your existing dashboard widgets so the new metrics appear once enabled.
+- Performance regressions are reported as `Performance Alert` events with the action `<metric> degraded`. Add a corresponding alert/annotation panel to surface spikes.
+- When updating `NEXT_PUBLIC_WEB_VITALS_METRICS`, mirror the list in GA4 custom reports so opted-in metrics (such as `FCP` or `FID`) are charted alongside the defaults.
 
 See Vercel's [Speed Insights Quickstart](https://vercel.com/docs/speed-insights/quickstart) and [troubleshooting guide](https://vercel.com/docs/speed-insights/troubleshooting) for more information.
 
@@ -198,6 +206,9 @@ Copy `.env.local.example` to `.env.local` and fill in required values.
 
 | Name | Purpose |
 | --- | --- |
+| `NEXT_PUBLIC_ENABLE_ANALYTICS` | Toggle GA4 events; set to `true` to enable client-side analytics. |
+| `NEXT_PUBLIC_WEB_VITALS_ENVS` | Comma-separated Vercel environments allowed to emit Web Vitals (defaults to `preview`). |
+| `NEXT_PUBLIC_WEB_VITALS_METRICS` | Comma-separated Web Vitals to forward (defaults to `LCP,INP,CLS`). |
 | `NEXT_PUBLIC_TRACKING_ID` | GA4 measurement ID (e.g., `G-XXXXXXX`). |
 | `NEXT_PUBLIC_SERVICE_ID` | EmailJS service id. |
 | `NEXT_PUBLIC_TEMPLATE_ID` | EmailJS template id. |
