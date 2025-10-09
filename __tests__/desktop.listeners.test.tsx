@@ -1,6 +1,8 @@
+/* eslint-disable react/display-name */
 import React from 'react';
 import { render } from '@testing-library/react';
 import { Desktop } from '../components/screen/desktop';
+import { vibrate } from '../components/apps/Games/common/haptics';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('html-to-image', () => ({ toPng: jest.fn().mockResolvedValue('data:image/png;base64,') }));
@@ -27,6 +29,7 @@ jest.mock('../components/context-menus/taskbar-menu', () => ({
   default: () => <div data-testid="taskbar-menu" />,
 }));
 jest.mock('../utils/recentStorage', () => ({ addRecentApp: jest.fn() }));
+jest.mock('../components/apps/Games/common/haptics', () => ({ vibrate: jest.fn() }));
 
 describe('Desktop event listeners', () => {
   let originalMatchMedia: typeof window.matchMedia | undefined;
@@ -69,9 +72,7 @@ describe('Desktop event listeners', () => {
         value: originalMatchMedia,
       });
     } else {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error matchMedia can be removed for the test cleanup
-      delete window.matchMedia;
+      delete (window as any).matchMedia;
     }
     document.body.innerHTML = '';
     jest.restoreAllMocks();
@@ -142,6 +143,10 @@ describe('Desktop event listeners', () => {
 });
 
 describe('Desktop gesture handlers', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('releases pointer and touch references after interactions', () => {
     const desktop = new Desktop();
     desktop.dispatchWindowCommand = jest.fn().mockReturnValue(false);
@@ -197,6 +202,7 @@ describe('Desktop gesture handlers', () => {
     ];
     desktop.handleShellTouchStart({ touches } as TouchEvent);
     expect(desktop.gestureState.overview).not.toBeNull();
+    expect(desktop.gestureState.workspace).not.toBeNull();
 
     const movedTouches = [
       { clientX: 0, clientY: 60 },
@@ -206,18 +212,60 @@ describe('Desktop gesture handlers', () => {
     desktop.handleShellTouchMove({ touches: movedTouches } as TouchEvent);
     desktop.handleShellTouchEnd({ touches: [] } as TouchEvent);
     expect(desktop.gestureState.overview).toBeNull();
+    expect(desktop.gestureState.workspace).toBeNull();
 
     desktop.handleShellTouchStart({ touches } as TouchEvent);
     desktop.handleShellTouchCancel();
     expect(desktop.gestureState.overview).toBeNull();
+    expect(desktop.gestureState.workspace).toBeNull();
 
     desktop.gestureState.pointer = { pointerId: 3 } as any;
     desktop.gestureState.overview = { startY: 10 } as any;
+    desktop.gestureState.workspace = { startX: 5 } as any;
     desktop.teardownGestureListeners();
     expect(removeSpy).toHaveBeenCalledWith('pointerdown', desktop.handleShellPointerDown);
     expect(desktop.gestureState.pointer).toBeNull();
     expect(desktop.gestureState.overview).toBeNull();
+    expect(desktop.gestureState.workspace).toBeNull();
 
     document.body.innerHTML = '';
+  });
+
+  it('shifts workspace on horizontal three-finger swipe', () => {
+    const desktop = new Desktop();
+    const shiftSpy = jest.spyOn(desktop, 'shiftWorkspace').mockImplementation(() => {});
+
+    const startTouches = [
+      { clientX: 210, clientY: 200 },
+      { clientX: 220, clientY: 202 },
+      { clientX: 200, clientY: 198 },
+    ];
+    desktop.handleShellTouchStart({ touches: startTouches } as TouchEvent);
+
+    const moveTouches = [
+      { clientX: 70, clientY: 205 },
+      { clientX: 80, clientY: 195 },
+      { clientX: 60, clientY: 200 },
+    ];
+    desktop.handleShellTouchMove({ touches: moveTouches } as TouchEvent);
+    desktop.handleShellTouchEnd({ touches: [] } as TouchEvent);
+
+    expect(shiftSpy).toHaveBeenCalledTimes(1);
+    expect(shiftSpy).toHaveBeenCalledWith(1);
+    expect(desktop.gestureState.overview).toBeNull();
+    expect(desktop.gestureState.workspace).toBeNull();
+  });
+
+  it('emits feedback when switching workspaces', () => {
+    const desktop = new Desktop();
+    desktop.broadcastWorkspaceState = jest.fn();
+    desktop.giveFocusToLastApp = jest.fn();
+    desktop.setState = ((_: unknown, callback?: () => void) => {
+      if (callback) callback();
+    }) as any;
+
+    desktop.switchWorkspace(1);
+
+    expect(vibrate).toHaveBeenCalledWith(35);
   });
 });
