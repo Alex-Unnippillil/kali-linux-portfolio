@@ -108,6 +108,22 @@ class AllApplications extends React.Component {
         });
     };
 
+    handleMoveFavorite = (event, id, offset) => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.setState((state) => {
+            const index = state.favorites.indexOf(id);
+            if (index === -1) return null;
+            const targetIndex = index + offset;
+            if (targetIndex < 0 || targetIndex >= state.favorites.length) return null;
+            const favorites = [...state.favorites];
+            const [moved] = favorites.splice(index, 1);
+            favorites.splice(targetIndex, 0, moved);
+            persistIds(FAVORITES_KEY, favorites);
+            return { favorites };
+        });
+    };
+
     handleToggleFavorite = (event, id) => {
         event.preventDefault();
         event.stopPropagation();
@@ -152,6 +168,57 @@ class AllApplications extends React.Component {
         );
     };
 
+    renderFavoritesSection = (apps) => {
+        if (!apps.length) return null;
+        return (
+            <section key="Favorites" aria-label="Favorite apps" className="mb-8 w-full">
+                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-white/70">
+                    Favorites
+                </h2>
+                <ol
+                    className="flex flex-col gap-4"
+                    aria-label="Favorite applications"
+                >
+                    {apps.map((app, index) => {
+                        const isFirst = index === 0;
+                        const isLast = index === apps.length - 1;
+                        return (
+                            <li
+                                key={app.id}
+                                data-app-id={app.id}
+                                className="flex items-center gap-3 rounded-lg bg-white/5 p-3 shadow-md shadow-black/30 backdrop-blur"
+                            >
+                                <div className="flex-1">
+                                    {this.renderAppTile(app)}
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={(event) => this.handleMoveFavorite(event, app.id, -1)}
+                                        disabled={isFirst}
+                                        aria-label={`Move ${app.title} up`}
+                                        className="rounded border border-white/20 px-2 py-1 text-sm text-white transition disabled:cursor-not-allowed disabled:opacity-40 hover:bg-white/10"
+                                    >
+                                        <span aria-hidden>↑</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={(event) => this.handleMoveFavorite(event, app.id, 1)}
+                                        disabled={isLast}
+                                        aria-label={`Move ${app.title} down`}
+                                        className="rounded border border-white/20 px-2 py-1 text-sm text-white transition disabled:cursor-not-allowed disabled:opacity-40 hover:bg-white/10"
+                                    >
+                                        <span aria-hidden>↓</span>
+                                    </button>
+                                </div>
+                            </li>
+                        );
+                    })}
+                </ol>
+            </section>
+        );
+    };
+
     renderSection = (title, apps) => {
         if (!apps.length) return null;
         return (
@@ -168,9 +235,10 @@ class AllApplications extends React.Component {
 
     render() {
         const { apps, favorites, recents } = this.state;
-        const favoriteSet = new Set(favorites);
         const appMap = new Map(apps.map((app) => [app.id, app]));
-        const favoriteApps = apps.filter((app) => favoriteSet.has(app.id));
+        const favoriteApps = favorites
+            .map((id) => appMap.get(id))
+            .filter(Boolean);
         const recentApps = recents
             .map((id) => appMap.get(id))
             .filter(Boolean);
@@ -192,7 +260,7 @@ class AllApplications extends React.Component {
                     aria-label="Search applications"
                 />
                 <div className="flex w-full max-w-5xl flex-col items-stretch px-6 pb-10">
-                    {this.renderSection('Favorites', favoriteApps)}
+                    {this.renderFavoritesSection(favoriteApps)}
                     {this.renderSection('Recent', recentApps)}
                     {groupedApps.map((group, index) =>
                         group.length ? this.renderSection(`Group ${index + 1}`, group) : null
