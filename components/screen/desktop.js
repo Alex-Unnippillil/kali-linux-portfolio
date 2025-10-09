@@ -42,6 +42,7 @@ export class Desktop extends Component {
             'closed_windows',
             'minimized_windows',
             'window_positions',
+            'window_sizes',
         ]);
         this.initFavourite = {};
         this.allWindowClosed = false;
@@ -53,6 +54,7 @@ export class Desktop extends Component {
             favourite_apps: {},
             minimized_windows: {},
             window_positions: {},
+            window_sizes: {},
             desktop_apps: [],
             desktop_icon_positions: {},
             window_context: {},
@@ -106,13 +108,15 @@ export class Desktop extends Component {
         closed_windows: {},
         minimized_windows: {},
         window_positions: {},
+        window_sizes: {},
     });
 
     cloneWorkspaceState = (state) => ({
-        focused_windows: { ...state.focused_windows },
-        closed_windows: { ...state.closed_windows },
-        minimized_windows: { ...state.minimized_windows },
-        window_positions: { ...state.window_positions },
+        focused_windows: { ...(state.focused_windows || {}) },
+        closed_windows: { ...(state.closed_windows || {}) },
+        minimized_windows: { ...(state.minimized_windows || {}) },
+        window_positions: { ...(state.window_positions || {}) },
+        window_sizes: { ...(state.window_sizes || {}) },
     });
 
     commitWorkspacePartial = (partial, index) => {
@@ -466,6 +470,7 @@ export class Desktop extends Component {
                 closed_windows: this.mergeWorkspaceMaps(existing.closed_windows, baseState.closed_windows, validKeys),
                 minimized_windows: this.mergeWorkspaceMaps(existing.minimized_windows, baseState.minimized_windows, validKeys),
                 window_positions: this.mergeWorkspaceMaps(existing.window_positions, baseState.window_positions, validKeys),
+                window_sizes: this.mergeWorkspaceMaps(existing.window_sizes, baseState.window_sizes, validKeys),
             };
         });
     };
@@ -900,6 +905,50 @@ export class Desktop extends Component {
         window.dispatchEvent(new CustomEvent('workspace-state', { detail }));
     };
 
+    applySessionWindows = (session) => {
+        if (!session || !Array.isArray(session.windows) || session.windows.length === 0) {
+            return false;
+        }
+        const safeTopOffset = measureWindowTopOffset();
+        const positions = {};
+        const sizes = {};
+        let hasWindow = false;
+
+        session.windows.forEach((win) => {
+            if (!win || typeof win.id !== 'string') return;
+            hasWindow = true;
+            const nextX = typeof win.x === 'number' ? win.x : 60;
+            const nextY = clampWindowTopPosition(win.y, safeTopOffset);
+            positions[win.id] = { x: nextX, y: nextY };
+
+            const width = typeof win.width === 'number' ? win.width : null;
+            const height = typeof win.height === 'number' ? win.height : null;
+            if (width !== null || height !== null) {
+                sizes[win.id] = {
+                    ...(width !== null ? { width } : {}),
+                    ...(height !== null ? { height } : {}),
+                };
+            }
+        });
+
+        if (!hasWindow) {
+            return false;
+        }
+
+        this.setWorkspaceState((prev) => ({
+            window_positions: { ...(prev.window_positions || {}), ...positions },
+            window_sizes: { ...(prev.window_sizes || {}), ...sizes },
+        }), () => {
+            session.windows.forEach(({ id }) => {
+                if (typeof id === 'string') {
+                    this.openApp(id);
+                }
+            });
+        });
+
+        return true;
+    };
+
     componentDidMount() {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
@@ -914,19 +963,8 @@ export class Desktop extends Component {
         this.savedIconPositions = this.loadDesktopIconPositions();
         this.fetchAppsData(() => {
             const session = this.props.session || {};
-            const positions = {};
-            if (session.windows && session.windows.length) {
-                const safeTopOffset = measureWindowTopOffset();
-                session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = {
-                        x,
-                        y: clampWindowTopPosition(y, safeTopOffset),
-                    };
-                });
-                this.setWorkspaceState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
-                });
-            } else {
+            const restored = this.applySessionWindows(session);
+            if (!restored) {
                 this.openApp('about');
             }
         });
@@ -1362,6 +1400,7 @@ export class Desktop extends Component {
             closed_windows,
             minimized_windows,
             window_positions: this.state.window_positions || {},
+            window_sizes: this.state.window_sizes || {},
         };
         this.updateWorkspaceSnapshots(workspaceState);
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
@@ -1399,6 +1438,7 @@ export class Desktop extends Component {
             closed_windows,
             minimized_windows,
             window_positions: this.state.window_positions || {},
+            window_sizes: this.state.window_sizes || {},
         };
         this.updateWorkspaceSnapshots(workspaceState);
         this.setWorkspaceState({
@@ -1512,6 +1552,9 @@ export class Desktop extends Component {
             const app = appMap.get(id);
             if (!app) return null;
             const pos = this.state.window_positions[id];
+            const size = this.state.window_sizes && this.state.window_sizes[id];
+            const savedWidth = size && typeof size.width === 'number' ? size.width : undefined;
+            const savedHeight = size && typeof size.height === 'number' ? size.height : undefined;
             const props = {
                 title: app.title,
                 id: app.id,
@@ -1525,11 +1568,12 @@ export class Desktop extends Component {
                 minimized: minimized_windows[id],
                 resizable: app.resizable,
                 allowMaximize: app.allowMaximize,
-                defaultWidth: app.defaultWidth,
-                defaultHeight: app.defaultHeight,
+                defaultWidth: savedWidth ?? app.defaultWidth,
+                defaultHeight: savedHeight ?? app.defaultHeight,
                 initialX: pos ? pos.x : undefined,
                 initialY: pos ? clampWindowTopPosition(pos.y, safeTopOffset) : safeTopOffset,
                 onPositionChange: (x, y) => this.updateWindowPosition(id, x, y),
+                onSizeChange: (width, height) => this.updateWindowSize(id, width, height),
                 snapEnabled: this.props.snapEnabled,
                 context: this.state.window_context[id],
                 zIndex: 200 + index,
@@ -1551,15 +1595,36 @@ export class Desktop extends Component {
         }), this.saveSession);
     }
 
+    updateWindowSize = (id, width, height) => {
+        if (!Number.isFinite(width) || !Number.isFinite(height)) {
+            return;
+        }
+        this.setWorkspaceState((prev) => ({
+            window_sizes: {
+                ...(prev.window_sizes || {}),
+                [id]: { width, height },
+            },
+        }), this.saveSession);
+    }
+
     saveSession = () => {
         if (!this.props.setSession) return;
         const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
         const safeTopOffset = measureWindowTopOffset();
+        const windowSizes = this.state.window_sizes || {};
         const windows = openWindows.map(id => {
             const position = this.state.window_positions[id] || {};
             const nextX = typeof position.x === 'number' ? position.x : 60;
             const nextY = clampWindowTopPosition(position.y, safeTopOffset);
-            return { id, x: nextX, y: nextY };
+            const size = windowSizes[id] || {};
+            const entry = { id, x: nextX, y: nextY };
+            if (typeof size.width === 'number') {
+                entry.width = size.width;
+            }
+            if (typeof size.height === 'number') {
+                entry.height = size.height;
+            }
+            return entry;
         });
 
         const nextSession = { ...this.props.session, windows };
