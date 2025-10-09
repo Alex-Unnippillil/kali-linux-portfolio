@@ -1,13 +1,19 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 
 export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(0);
   const inputRef = useRef(null);
 
-  const filtered = windows.filter((w) =>
-    w.title.toLowerCase().includes(query.toLowerCase())
+  const filtered = useMemo(
+    () =>
+      windows.filter((w) =>
+        w.title.toLowerCase().includes(query.toLowerCase())
+      ),
+    [windows, query]
   );
+  const selectedWindow = filtered[selected];
+  const pendingSelection = selectedWindow ? selectedWindow.id : null;
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -16,17 +22,14 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
   useEffect(() => {
     const handleKeyUp = (e) => {
       if (e.key === 'Alt') {
-        const win = filtered[selected];
-        if (win && typeof onSelect === 'function') {
-          onSelect(win.id);
-        } else if (typeof onClose === 'function') {
-          onClose();
+        if (pendingSelection && typeof onSelect === 'function') {
+          onSelect(pendingSelection);
         }
       }
     };
     window.addEventListener('keyup', handleKeyUp);
     return () => window.removeEventListener('keyup', handleKeyUp);
-  }, [filtered, selected, onSelect, onClose]);
+  }, [pendingSelection, onSelect]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Tab') {
@@ -71,6 +74,7 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
           {filtered.map((w, i) => (
             <li
               key={w.id}
+              onMouseEnter={() => setSelected(i)}
               className={`px-2 py-1 rounded ${i === selected ? 'bg-ub-orange text-black' : ''}`}
             >
               {w.title}
