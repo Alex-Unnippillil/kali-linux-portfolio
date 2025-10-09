@@ -43,6 +43,11 @@ function DesktopMenu(props) {
         }
     }
 
+    const handleToggleDesktop = typeof props.toggleShowDesktop === 'function'
+        ? props.toggleShowDesktop
+        : () => {};
+    const showDesktopActive = Boolean(props.showDesktopActive);
+
     return (
         <div
             id="desktop-menu"
@@ -117,6 +122,16 @@ function DesktopMenu(props) {
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
                 <span className="ml-5">{isFullScreen ? "Exit" : "Enter"} Full Screen</span>
+            </button>
+            <Devider />
+            <button
+                onClick={handleToggleDesktop}
+                type="button"
+                role="menuitem"
+                aria-label={showDesktopActive ? "Restore Windows" : "Show Desktop"}
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5">{showDesktopActive ? "Restore Windows" : "Show Desktop"}</span>
             </button>
             <Devider />
             <button

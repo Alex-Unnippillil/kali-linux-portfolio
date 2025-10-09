@@ -45,6 +45,8 @@ export class Desktop extends Component {
         ]);
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.showDesktopSnapshot = null;
+        this.showDesktopLastFocused = null;
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -73,6 +75,7 @@ export class Desktop extends Component {
                 label: `Workspace ${index + 1}`,
             })),
             draggingIconId: null,
+            showDesktopActive: false,
         }
 
         this.desktopRef = React.createRef();
@@ -1581,6 +1584,98 @@ export class Desktop extends Component {
         this.giveFocusToLastApp();
     }
 
+    toggleShowDesktop = () => {
+        const {
+            closed_windows = {},
+            minimized_windows = {},
+            focused_windows = {},
+            showDesktopActive,
+        } = this.state;
+
+        const openWindowIds = Object.keys(closed_windows).filter(
+            (id) => closed_windows[id] === false && this.validAppIds.has(id),
+        );
+
+        const hasSnapshot = this.showDesktopSnapshot && Object.keys(this.showDesktopSnapshot).length > 0;
+
+        if (showDesktopActive && hasSnapshot) {
+            const nextMinimized = { ...minimized_windows };
+            const nextFocused = { ...focused_windows };
+
+            Object.entries(this.showDesktopSnapshot).forEach(([id, previousState]) => {
+                if (closed_windows[id] === false) {
+                    nextMinimized[id] = previousState.minimized;
+                    nextFocused[id] = previousState.focused;
+                } else {
+                    delete nextMinimized[id];
+                    delete nextFocused[id];
+                }
+            });
+
+            const focusTarget =
+                this.showDesktopLastFocused &&
+                this.showDesktopSnapshot[this.showDesktopLastFocused] &&
+                closed_windows[this.showDesktopLastFocused] === false &&
+                this.showDesktopSnapshot[this.showDesktopLastFocused].minimized === false
+                    ? this.showDesktopLastFocused
+                    : null;
+
+            this.showDesktopSnapshot = null;
+            this.showDesktopLastFocused = null;
+
+            this.setWorkspaceState({
+                minimized_windows: nextMinimized,
+                focused_windows: nextFocused,
+                showDesktopActive: false,
+            }, () => {
+                if (focusTarget) {
+                    this.focus(focusTarget);
+                } else {
+                    this.giveFocusToLastApp();
+                }
+                this.saveSession();
+            });
+            return;
+        }
+
+        if (!openWindowIds.length) {
+            this.showDesktopSnapshot = null;
+            this.showDesktopLastFocused = null;
+            if (showDesktopActive) {
+                this.setState({ showDesktopActive: false });
+            }
+            return;
+        }
+
+        const nextMinimized = { ...minimized_windows };
+        const nextFocused = { ...focused_windows };
+        const snapshot = {};
+        let lastFocused = null;
+
+        openWindowIds.forEach((id) => {
+            snapshot[id] = {
+                minimized: Boolean(minimized_windows[id]),
+                focused: Boolean(focused_windows[id]),
+            };
+            nextMinimized[id] = true;
+            nextFocused[id] = false;
+            if (focused_windows[id]) {
+                lastFocused = id;
+            }
+        });
+
+        this.showDesktopSnapshot = snapshot;
+        this.showDesktopLastFocused = lastFocused;
+
+        this.setWorkspaceState({
+            minimized_windows: nextMinimized,
+            focused_windows: nextFocused,
+            showDesktopActive: true,
+        }, () => {
+            this.saveSession();
+        });
+    }
+
     giveFocusToLastApp = () => {
         // if there is atleast one app opened, give it focus
         if (!this.checkAllMinimised()) {
@@ -1984,6 +2079,8 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    toggleShowDesktop={this.toggleShowDesktop}
+                    showDesktopActive={this.state.showDesktopActive}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
