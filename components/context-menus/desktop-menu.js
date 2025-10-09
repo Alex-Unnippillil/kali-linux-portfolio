@@ -21,6 +21,12 @@ function DesktopMenu(props) {
         props.openApp("settings");
     }
 
+    const openDisplaySettings = () => {
+        if (typeof props.openDisplaySettings === 'function') {
+            props.openDisplaySettings();
+        }
+    }
+
     const checkFullScreen = () => {
         if (document.fullscreenElement) {
             setIsFullScreen(true)
@@ -96,9 +102,15 @@ function DesktopMenu(props) {
                 <span className="ml-5">Change Background...</span>
             </button>
             <Devider />
-            <div role="menuitem" aria-label="Display Settings" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
+            <button
+                onClick={openDisplaySettings}
+                type="button"
+                role="menuitem"
+                aria-label="Display Settings"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
                 <span className="ml-5">Display Settings</span>
-            </div>
+            </button>
             <button
                 onClick={openSettings}
                 type="button"

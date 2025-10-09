@@ -17,6 +17,7 @@ import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import TaskbarMenu from '../context-menus/taskbar-menu';
+import DisplaySettingsModal from '../screen/display-settings-modal';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -73,6 +74,7 @@ export class Desktop extends Component {
                 label: `Workspace ${index + 1}`,
             })),
             draggingIconId: null,
+            showDisplaySettings: false,
         }
 
         this.desktopRef = React.createRef();
@@ -1120,6 +1122,15 @@ export class Desktop extends Component {
         this.openSettingsListenerAttached = false;
     }
 
+    openDisplaySettings = () => {
+        this.hideAllContextMenu();
+        this.setState({ showDisplaySettings: true });
+    }
+
+    closeDisplaySettings = () => {
+        this.setState({ showDisplaySettings: false });
+    }
+
     setContextListeners = () => {
         document.addEventListener('contextmenu', this.checkContextMenu);
         // on click, anywhere, hide all menus
@@ -1984,6 +1995,7 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    openDisplaySettings={this.openDisplaySettings}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
@@ -2039,6 +2051,10 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                { this.state.showDisplaySettings ?
+                    <DisplaySettingsModal onClose={this.closeDisplaySettings} />
+                    : null }
 
             </main>
         );
