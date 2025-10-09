@@ -42,6 +42,7 @@ export class Desktop extends Component {
             'closed_windows',
             'minimized_windows',
             'window_positions',
+            'window_stack',
         ]);
         this.initFavourite = {};
         this.allWindowClosed = false;
@@ -106,6 +107,7 @@ export class Desktop extends Component {
         closed_windows: {},
         minimized_windows: {},
         window_positions: {},
+        window_stack: [],
     });
 
     cloneWorkspaceState = (state) => ({
@@ -113,6 +115,7 @@ export class Desktop extends Component {
         closed_windows: { ...state.closed_windows },
         minimized_windows: { ...state.minimized_windows },
         window_positions: { ...state.window_positions },
+        window_stack: Array.isArray(state.window_stack) ? [...state.window_stack] : [],
     });
 
     commitWorkspacePartial = (partial, index) => {
@@ -456,16 +459,25 @@ export class Desktop extends Component {
 
     updateWorkspaceSnapshots = (baseState) => {
         const validKeys = new Set(Object.keys(baseState.closed_windows || {}));
+        const activeWorkspace = this.state.activeWorkspace;
+        const activeStack = this.sanitizeStack(this.workspaceStacks[activeWorkspace] || [], {
+            requireOpen: true,
+            closedMap: baseState.closed_windows,
+        });
         this.workspaceSnapshots = this.workspaceSnapshots.map((snapshot, index) => {
             const existing = snapshot || this.createEmptyWorkspaceState();
-            if (index === this.state.activeWorkspace) {
-                return this.cloneWorkspaceState(baseState);
+            if (index === activeWorkspace) {
+                const cloned = this.cloneWorkspaceState(baseState);
+                cloned.window_stack = activeStack;
+                return cloned;
             }
+            const closedMap = existing.closed_windows || {};
             return {
                 focused_windows: this.mergeWorkspaceMaps(existing.focused_windows, baseState.focused_windows, validKeys),
                 closed_windows: this.mergeWorkspaceMaps(existing.closed_windows, baseState.closed_windows, validKeys),
                 minimized_windows: this.mergeWorkspaceMaps(existing.minimized_windows, baseState.minimized_windows, validKeys),
                 window_positions: this.mergeWorkspaceMaps(existing.window_positions, baseState.window_positions, validKeys),
+                window_stack: this.sanitizeStack(existing.window_stack || [], { requireOpen: true, closedMap }),
             };
         });
     };
@@ -843,7 +855,16 @@ export class Desktop extends Component {
     switchWorkspace = (workspaceId) => {
         if (workspaceId === this.state.activeWorkspace) return;
         if (workspaceId < 0 || workspaceId >= this.state.workspaces.length) return;
+        this.persistActiveStack();
         const snapshot = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
+        const normalizedStack = this.sanitizeStack(snapshot.window_stack || [], {
+            closedMap: snapshot.closed_windows,
+        });
+        this.workspaceSnapshots[workspaceId] = {
+            ...snapshot,
+            window_stack: normalizedStack,
+        };
+        this.workspaceStacks[workspaceId] = [...normalizedStack];
         this.setState({
             activeWorkspace: workspaceId,
             focused_windows: { ...snapshot.focused_windows },
@@ -865,11 +886,47 @@ export class Desktop extends Component {
         this.switchWorkspace(next);
     };
 
+    sanitizeStack = (stack = [], options = {}) => {
+        if (!Array.isArray(stack)) return [];
+        const { requireOpen = false, closedMap } = options;
+        const closed = closedMap || this.state?.closed_windows || {};
+        const seen = new Set();
+        const normalized = [];
+        stack.forEach((id) => {
+            if (!this.validAppIds.has(id)) return;
+            if (seen.has(id)) return;
+            if (requireOpen && closed[id] === true) return;
+            seen.add(id);
+            normalized.push(id);
+        });
+        return normalized;
+    };
+
+    persistActiveStack = () => {
+        const { activeWorkspace } = this.state;
+        if (!this.workspaceStacks[activeWorkspace]) {
+            this.workspaceStacks[activeWorkspace] = [];
+        }
+        const stack = this.sanitizeStack(this.workspaceStacks[activeWorkspace], { requireOpen: true });
+        this.workspaceStacks[activeWorkspace] = [...stack];
+        this.commitWorkspacePartial({ window_stack: stack }, activeWorkspace);
+        return stack;
+    };
+
     getActiveStack = () => {
         const { activeWorkspace } = this.state;
         if (!this.workspaceStacks[activeWorkspace]) {
             this.workspaceStacks[activeWorkspace] = [];
         }
+        if (!this.workspaceStacks[activeWorkspace].length) {
+            const snapshot = this.workspaceSnapshots[activeWorkspace];
+            if (snapshot && Array.isArray(snapshot.window_stack) && snapshot.window_stack.length) {
+                const restored = this.sanitizeStack(snapshot.window_stack);
+                this.workspaceStacks[activeWorkspace] = [...restored];
+            }
+        }
+        const normalized = this.sanitizeStack(this.workspaceStacks[activeWorkspace]);
+        this.workspaceStacks[activeWorkspace] = [...normalized];
         return this.workspaceStacks[activeWorkspace];
     };
 
@@ -900,6 +957,37 @@ export class Desktop extends Component {
         window.dispatchEvent(new CustomEvent('workspace-state', { detail }));
     };
 
+    hydrateSession = (session) => {
+        const workspaceId = this.state.activeWorkspace;
+        const storedStack = Array.isArray(session?.stack) ? session.stack : [];
+        const normalizedStack = this.sanitizeStack(storedStack);
+        this.workspaceStacks[workspaceId] = [...normalizedStack];
+        this.commitWorkspacePartial({ window_stack: normalizedStack }, workspaceId);
+
+        const windows = Array.isArray(session?.windows) ? session.windows : [];
+        if (windows.length) {
+            const safeTopOffset = measureWindowTopOffset();
+            const positions = {};
+            windows.forEach(({ id, x, y }) => {
+                if (!this.validAppIds.has(id)) return;
+                const nextX = typeof x === 'number' ? x : 60;
+                const nextY = clampWindowTopPosition(y, safeTopOffset);
+                positions[id] = { x: nextX, y: nextY };
+            });
+            const stackOrder = normalizedStack.filter((id) => positions[id]);
+            const remaining = windows
+                .map(({ id }) => id)
+                .filter((id) => positions[id] && !stackOrder.includes(id));
+            const orderedIds = stackOrder.length ? [...stackOrder, ...remaining] : remaining;
+            this.setWorkspaceState({ window_positions: positions }, () => {
+                orderedIds.forEach((id) => this.openApp(id));
+            });
+            return;
+        }
+
+        this.openApp('about');
+    };
+
     componentDidMount() {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
@@ -914,21 +1002,7 @@ export class Desktop extends Component {
         this.savedIconPositions = this.loadDesktopIconPositions();
         this.fetchAppsData(() => {
             const session = this.props.session || {};
-            const positions = {};
-            if (session.windows && session.windows.length) {
-                const safeTopOffset = measureWindowTopOffset();
-                session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = {
-                        x,
-                        y: clampWindowTopPosition(y, safeTopOffset),
-                    };
-                });
-                this.setWorkspaceState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
-                });
-            } else {
-                this.openApp('about');
-            }
+            this.hydrateSession(session);
         });
         this.setContextListeners();
         this.setEventListeners();
@@ -1562,7 +1636,8 @@ export class Desktop extends Component {
             return { id, x: nextX, y: nextY };
         });
 
-        const nextSession = { ...this.props.session, windows };
+        const stack = this.sanitizeStack(this.getActiveStack(), { requireOpen: true });
+        const nextSession = { ...this.props.session, windows, stack };
         if ('dock' in nextSession) {
             delete nextSession.dock;
         }
@@ -1759,6 +1834,7 @@ export class Desktop extends Component {
         if (index !== -1) {
             stack.splice(index, 1);
         }
+        this.persistActiveStack();
 
         this.giveFocusToLastApp();
 
@@ -1817,7 +1893,10 @@ export class Desktop extends Component {
                 }
             }
         }
-        this.setWorkspaceState({ focused_windows });
+        this.setWorkspaceState({ focused_windows }, () => {
+            this.persistActiveStack();
+            this.saveSession();
+        });
     }
 
     addNewFolder = () => {
