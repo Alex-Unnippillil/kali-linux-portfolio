@@ -54,7 +54,7 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 - Replace static content with resume widget loaded from JSON; show skills as chips and project links.
 
 ### Settings
-- Add theme picker, wallpaper selector, and "reset desktop" clearing `localStorage` in `settingsStore.js`.
+- Add theme picker, wallpaper selector, and "reset desktop" clearing persisted settings (IndexedDB with localStorage fallback) in `settingsStore.js`.
 
 ### Resource Monitor
 - Display `performance.memory` data and FPS from `performance.now()` deltas.

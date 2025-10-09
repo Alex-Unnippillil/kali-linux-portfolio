@@ -18,6 +18,109 @@ const DEFAULT_SETTINGS = {
 };
 
 let hasLoggedStorageWarning = false;
+let hasLoggedIdbWarning = false;
+
+function logIdbWarning(error) {
+  if (process.env.NODE_ENV === 'production' || hasLoggedIdbWarning) return;
+  console.warn('IndexedDB is not available; falling back to localStorage.', error);
+  hasLoggedIdbWarning = true;
+}
+
+async function safeIdbGet(key) {
+  if (typeof window === 'undefined' || typeof indexedDB === 'undefined') {
+    if (typeof window !== 'undefined' && typeof indexedDB === 'undefined') {
+      logIdbWarning('indexedDB undefined');
+    }
+    return undefined;
+  }
+  try {
+    return await get(key);
+  } catch (error) {
+    logIdbWarning(error);
+    return undefined;
+  }
+}
+
+async function safeIdbSet(key, value) {
+  if (typeof window === 'undefined' || typeof indexedDB === 'undefined') {
+    if (typeof window !== 'undefined' && typeof indexedDB === 'undefined') {
+      logIdbWarning('indexedDB undefined');
+    }
+    return false;
+  }
+  try {
+    await set(key, value);
+    return true;
+  } catch (error) {
+    logIdbWarning(error);
+    return false;
+  }
+}
+
+async function safeIdbDel(key) {
+  if (typeof window === 'undefined' || typeof indexedDB === 'undefined') {
+    if (typeof window !== 'undefined' && typeof indexedDB === 'undefined') {
+      logIdbWarning('indexedDB undefined');
+    }
+    return false;
+  }
+  try {
+    await del(key);
+    return true;
+  } catch (error) {
+    logIdbWarning(error);
+    return false;
+  }
+}
+
+async function setWithFallback(idbKey, localKey, value, serializeLocal) {
+  if (typeof window === 'undefined') return;
+  await safeIdbSet(idbKey, value);
+  const storage = getLocalStorage();
+  if (!storage) return;
+  try {
+    storage.setItem(localKey, serializeLocal(value));
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production' && !hasLoggedStorageWarning) {
+      console.warn('Failed to persist to localStorage fallback.', error);
+      hasLoggedStorageWarning = true;
+    }
+  }
+}
+
+async function loadSetting({
+  idbKey,
+  localKey = idbKey,
+  defaultValue,
+  isValid,
+  parseLocal,
+  serializeLocal,
+}) {
+  if (typeof window === 'undefined') return defaultValue;
+  const idbValue = await safeIdbGet(idbKey);
+  if (isValid(idbValue)) return idbValue;
+
+  const storage = getLocalStorage();
+  if (storage) {
+    try {
+      const raw = storage.getItem(localKey);
+      if (raw !== null) {
+        const parsed = parseLocal(raw);
+        if (isValid(parsed)) {
+          await setWithFallback(idbKey, localKey, parsed, serializeLocal);
+          return parsed;
+        }
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production' && !hasLoggedStorageWarning) {
+        console.warn('Failed to read from localStorage fallback.', error);
+        hasLoggedStorageWarning = true;
+      }
+    }
+  }
+
+  return defaultValue;
+}
 
 function getLocalStorage() {
   if (typeof window === 'undefined') return null;
@@ -56,39 +159,48 @@ export async function setWallpaper(wallpaper) {
 }
 
 export async function getUseKaliWallpaper() {
-  const storage = getLocalStorage();
-  if (!storage) return DEFAULT_SETTINGS.useKaliWallpaper;
-  const stored = storage.getItem('use-kali-wallpaper');
-  return stored === null ? DEFAULT_SETTINGS.useKaliWallpaper : stored === 'true';
+  return loadSetting({
+    idbKey: 'use-kali-wallpaper',
+    defaultValue: DEFAULT_SETTINGS.useKaliWallpaper,
+    isValid: (value) => typeof value === 'boolean',
+    parseLocal: (raw) => raw === 'true',
+    serializeLocal: (value) => (value ? 'true' : 'false'),
+  });
 }
 
 export async function setUseKaliWallpaper(value) {
-  const storage = getLocalStorage();
-  if (!storage) return;
-  storage.setItem('use-kali-wallpaper', value ? 'true' : 'false');
+  await setWithFallback(
+    'use-kali-wallpaper',
+    'use-kali-wallpaper',
+    value,
+    (val) => (val ? 'true' : 'false')
+  );
 }
 
 export async function getDensity() {
-  const storage = getLocalStorage();
-  if (!storage) return DEFAULT_SETTINGS.density;
-  return storage.getItem('density') || DEFAULT_SETTINGS.density;
+  return loadSetting({
+    idbKey: 'density',
+    defaultValue: DEFAULT_SETTINGS.density,
+    isValid: (value) => value === 'regular' || value === 'compact',
+    parseLocal: (raw) => raw,
+    serializeLocal: (value) => value,
+  });
 }
 
 export async function setDensity(density) {
-  const storage = getLocalStorage();
-  if (!storage) return;
-  storage.setItem('density', density);
+  await setWithFallback('density', 'density', density, (value) => value);
 }
 
 export async function getReducedMotion() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.reducedMotion;
-  const storage = getLocalStorage();
-  if (storage) {
-    const stored = storage.getItem('reduced-motion');
-    if (stored !== null) {
-      return stored === 'true';
-    }
-  }
+  const stored = await loadSetting({
+    idbKey: 'reduced-motion',
+    defaultValue: undefined,
+    isValid: (value) => typeof value === 'boolean',
+    parseLocal: (raw) => raw === 'true',
+    serializeLocal: (value) => (value ? 'true' : 'false'),
+  });
+  if (typeof stored === 'boolean') return stored;
   if (typeof window.matchMedia === 'function') {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
@@ -96,93 +208,133 @@ export async function getReducedMotion() {
 }
 
 export async function setReducedMotion(value) {
-  const storage = getLocalStorage();
-  if (!storage) return;
-  storage.setItem('reduced-motion', value ? 'true' : 'false');
+  await setWithFallback(
+    'reduced-motion',
+    'reduced-motion',
+    value,
+    (val) => (val ? 'true' : 'false')
+  );
 }
 
 export async function getFontScale() {
-  const storage = getLocalStorage();
-  if (!storage) return DEFAULT_SETTINGS.fontScale;
-  const stored = storage.getItem('font-scale');
-  return stored ? parseFloat(stored) : DEFAULT_SETTINGS.fontScale;
+  return loadSetting({
+    idbKey: 'font-scale',
+    defaultValue: DEFAULT_SETTINGS.fontScale,
+    isValid: (value) => typeof value === 'number' && !Number.isNaN(value),
+    parseLocal: (raw) => {
+      const parsed = parseFloat(raw);
+      return Number.isNaN(parsed) ? undefined : parsed;
+    },
+    serializeLocal: (value) => String(value),
+  });
 }
 
 export async function setFontScale(scale) {
-  const storage = getLocalStorage();
-  if (!storage) return;
-  storage.setItem('font-scale', String(scale));
+  await setWithFallback('font-scale', 'font-scale', scale, (value) => String(value));
 }
 
 export async function getHighContrast() {
-  const storage = getLocalStorage();
-  if (!storage) return DEFAULT_SETTINGS.highContrast;
-  return storage.getItem('high-contrast') === 'true';
+  return loadSetting({
+    idbKey: 'high-contrast',
+    defaultValue: DEFAULT_SETTINGS.highContrast,
+    isValid: (value) => typeof value === 'boolean',
+    parseLocal: (raw) => raw === 'true',
+    serializeLocal: (value) => (value ? 'true' : 'false'),
+  });
 }
 
 export async function setHighContrast(value) {
-  const storage = getLocalStorage();
-  if (!storage) return;
-  storage.setItem('high-contrast', value ? 'true' : 'false');
+  await setWithFallback(
+    'high-contrast',
+    'high-contrast',
+    value,
+    (val) => (val ? 'true' : 'false')
+  );
 }
 
 export async function getLargeHitAreas() {
-  const storage = getLocalStorage();
-  if (!storage) return DEFAULT_SETTINGS.largeHitAreas;
-  return storage.getItem('large-hit-areas') === 'true';
+  return loadSetting({
+    idbKey: 'large-hit-areas',
+    defaultValue: DEFAULT_SETTINGS.largeHitAreas,
+    isValid: (value) => typeof value === 'boolean',
+    parseLocal: (raw) => raw === 'true',
+    serializeLocal: (value) => (value ? 'true' : 'false'),
+  });
 }
 
 export async function setLargeHitAreas(value) {
-  const storage = getLocalStorage();
-  if (!storage) return;
-  storage.setItem('large-hit-areas', value ? 'true' : 'false');
+  await setWithFallback(
+    'large-hit-areas',
+    'large-hit-areas',
+    value,
+    (val) => (val ? 'true' : 'false')
+  );
 }
 
 export async function getHaptics() {
-  const storage = getLocalStorage();
-  if (!storage) return DEFAULT_SETTINGS.haptics;
-  const val = storage.getItem('haptics');
-  return val === null ? DEFAULT_SETTINGS.haptics : val === 'true';
+  return loadSetting({
+    idbKey: 'haptics',
+    defaultValue: DEFAULT_SETTINGS.haptics,
+    isValid: (value) => typeof value === 'boolean',
+    parseLocal: (raw) => raw === 'true',
+    serializeLocal: (value) => (value ? 'true' : 'false'),
+  });
 }
 
 export async function setHaptics(value) {
-  const storage = getLocalStorage();
-  if (!storage) return;
-  storage.setItem('haptics', value ? 'true' : 'false');
+  await setWithFallback('haptics', 'haptics', value, (val) => (val ? 'true' : 'false'));
 }
 
 export async function getPongSpin() {
-  const storage = getLocalStorage();
-  if (!storage) return DEFAULT_SETTINGS.pongSpin;
-  const val = storage.getItem('pong-spin');
-  return val === null ? DEFAULT_SETTINGS.pongSpin : val === 'true';
+  return loadSetting({
+    idbKey: 'pong-spin',
+    defaultValue: DEFAULT_SETTINGS.pongSpin,
+    isValid: (value) => typeof value === 'boolean',
+    parseLocal: (raw) => raw === 'true',
+    serializeLocal: (value) => (value ? 'true' : 'false'),
+  });
 }
 
 export async function setPongSpin(value) {
-  const storage = getLocalStorage();
-  if (!storage) return;
-  storage.setItem('pong-spin', value ? 'true' : 'false');
+  await setWithFallback('pong-spin', 'pong-spin', value, (val) => (val ? 'true' : 'false'));
 }
 
 export async function getAllowNetwork() {
-  const storage = getLocalStorage();
-  if (!storage) return DEFAULT_SETTINGS.allowNetwork;
-  return storage.getItem('allow-network') === 'true';
+  return loadSetting({
+    idbKey: 'allow-network',
+    defaultValue: DEFAULT_SETTINGS.allowNetwork,
+    isValid: (value) => typeof value === 'boolean',
+    parseLocal: (raw) => raw === 'true',
+    serializeLocal: (value) => (value ? 'true' : 'false'),
+  });
 }
 
 export async function setAllowNetwork(value) {
-  const storage = getLocalStorage();
-  if (!storage) return;
-  storage.setItem('allow-network', value ? 'true' : 'false');
+  await setWithFallback(
+    'allow-network',
+    'allow-network',
+    value,
+    (val) => (val ? 'true' : 'false')
+  );
 }
 
 export async function resetSettings() {
+  if (typeof window === 'undefined') return;
   const storage = getLocalStorage();
-  if (!storage) return;
   await Promise.all([
-    del('accent'),
-    del('bg-image'),
+    safeIdbDel('accent'),
+    safeIdbDel('bg-image'),
+    safeIdbDel('use-kali-wallpaper'),
+    safeIdbDel('density'),
+    safeIdbDel('reduced-motion'),
+    safeIdbDel('font-scale'),
+    safeIdbDel('high-contrast'),
+    safeIdbDel('large-hit-areas'),
+    safeIdbDel('pong-spin'),
+    safeIdbDel('allow-network'),
+    safeIdbDel('haptics'),
   ]);
+  if (!storage) return;
   storage.removeItem('density');
   storage.removeItem('reduced-motion');
   storage.removeItem('font-scale');
