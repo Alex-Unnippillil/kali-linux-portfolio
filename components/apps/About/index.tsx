@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Head from 'next/head';
 import ReactGA from 'react-ga4';
@@ -10,149 +10,218 @@ import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
 
-class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
-  screens: Record<string, React.ReactNode> = {};
+type SectionId = 'about' | 'education' | 'skills' | 'certs' | 'projects' | 'resume';
 
-  constructor(props: unknown) {
-    super(props);
-    this.state = {
-      screen: <></>,
-      active_screen: 'about',
-      navbar: false,
-    };
-  }
+type Section = {
+  id: SectionId;
+  label: string;
+  icon: string;
+  alt: string;
+};
 
-  componentDidMount() {
-    this.screens = {
-      about: <About />,
+type SkillBadge = {
+  src: string;
+  alt: string;
+  description: string;
+};
+
+type SkillsData = {
+  networkingSecurity: SkillBadge[];
+  softwaresOperating: SkillBadge[];
+  languagesTools: SkillBadge[];
+  frameworksLibraries: SkillBadge[];
+};
+
+type Project = {
+  name: string;
+  date: string;
+  link: string;
+  description: string[];
+  domains?: string[];
+};
+
+type AboutData = {
+  sections: Section[];
+  skills: SkillsData;
+  milestones: { year: string; description: string }[];
+  badges: { date: string; count: number }[];
+  projects: Project[];
+};
+
+type SectionContentMap = Record<SectionId, JSX.Element>;
+
+const aboutData: AboutData = data as AboutData;
+const DEFAULT_SECTION: SectionId =
+  aboutData.sections.find((section) => section.id === 'about')?.id ??
+  aboutData.sections[0]?.id ??
+  'about';
+
+interface SectionTabListProps {
+  sections: Section[];
+  activeSection: SectionId;
+  onSelect: (sectionId: SectionId) => void;
+}
+
+const SectionTabList: React.FC<SectionTabListProps> = ({ sections, activeSection, onSelect }) => (
+  <>
+    {sections.map((section) => (
+      <div
+        key={section.id}
+        id={section.id}
+        role="tab"
+        aria-selected={activeSection === section.id}
+        tabIndex={activeSection === section.id ? 0 : -1}
+        onFocus={() => onSelect(section.id)}
+        onClick={() => onSelect(section.id)}
+        className={
+          (activeSection === section.id
+            ? ' bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95'
+            : ' hover:bg-gray-50 hover:bg-opacity-5 ') +
+          ' w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5'
+        }
+      >
+        <Image
+          className="w-3 md:w-4 rounded border border-gray-600"
+          alt={section.alt}
+          src={section.icon}
+          width={16}
+          height={16}
+          sizes="16px"
+        />
+        <span className=" ml-1 md:ml-2 text-gray-50 ">{section.label}</span>
+      </div>
+    ))}
+  </>
+);
+
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: 'Alex Unnippillil',
+  url: 'https://unnippillil.com',
+} as const;
+
+const AboutAlex: React.FC = () => {
+  const [activeSection, setActiveSection] = useState<SectionId>(DEFAULT_SECTION);
+  const [isNavbarVisible, setIsNavbarVisible] = useState(false);
+
+  const sections = aboutData.sections;
+
+  const screens = useMemo<SectionContentMap>(
+    () => ({
+      about: <About />, // The about section does not require external data
       education: <Education />,
-      skills: <Skills skills={data.skills} />,
+      skills: <Skills skills={aboutData.skills} />,
       certs: <Certs />,
-      projects: <Projects projects={data.projects} />,
+      projects: <Projects projects={aboutData.projects} />,
       resume: <Resume />,
-    };
-
-    let lastVisitedScreen = localStorage.getItem('about-section');
-    if (!lastVisitedScreen) {
-      lastVisitedScreen = 'about';
-    }
-
-    this.changeScreen({ id: lastVisitedScreen } as unknown as EventTarget & { id: string });
-  }
-
-  changeScreen = (e: any) => {
-    const screen = e.id || e.target.id;
-    localStorage.setItem('about-section', screen);
-    ReactGA.send({ hitType: 'pageview', page: `/${screen}`, title: 'Custom Title' });
-    this.setState({ screen: this.screens[screen], active_screen: screen });
-  };
-
-  showNavBar = () => {
-    this.setState({ navbar: !this.state.navbar });
-  };
-
-  renderNavLinks = () => (
-    <>
-      {data.sections.map((section) => (
-        <div
-          key={section.id}
-          id={section.id}
-          role="tab"
-          aria-selected={this.state.active_screen === section.id}
-          tabIndex={this.state.active_screen === section.id ? 0 : -1}
-          onFocus={this.changeScreen}
-          className={
-            (this.state.active_screen === section.id
-              ? ' bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95'
-              : ' hover:bg-gray-50 hover:bg-opacity-5 ') +
-            ' w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5'
-          }
-        >
-          <Image
-            className="w-3 md:w-4 rounded border border-gray-600"
-            alt={section.alt}
-            src={section.icon}
-            width={16}
-            height={16}
-            sizes="16px"
-          />
-          <span className=" ml-1 md:ml-2 text-gray-50 ">{section.label}</span>
-        </div>
-      ))}
-    </>
+    }),
+    []
   );
 
-  handleNavKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    const tabs = Array.from(
-      e.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]')
-    );
+  const handleSelectSection = useCallback(
+    (sectionId: SectionId) => {
+      if (!screens[sectionId]) {
+        return;
+      }
+      setActiveSection(sectionId);
+    },
+    [screens]
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const storedSection = window.localStorage.getItem('about-section') as SectionId | null;
+    if (storedSection && screens[storedSection]) {
+      setActiveSection(storedSection);
+    }
+  }, [screens]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem('about-section', activeSection);
+    ReactGA.send({ hitType: 'pageview', page: `/${activeSection}`, title: 'Custom Title' });
+  }, [activeSection]);
+
+  const handleNavKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    const tabs = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]'));
+    if (!tabs.length) {
+      return;
+    }
+
     let index = tabs.indexOf(document.activeElement as HTMLElement);
-    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-      e.preventDefault();
+    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+      event.preventDefault();
       index = (index + 1) % tabs.length;
-    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-      e.preventDefault();
+    } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+      event.preventDefault();
       index = (index - 1 + tabs.length) % tabs.length;
     } else {
       return;
     }
-    tabs.forEach((tab, i) => (tab.tabIndex = i === index ? 0 : -1));
+
+    tabs.forEach((tab, tabIndex) => {
+      tab.tabIndex = tabIndex === index ? 0 : -1;
+    });
     tabs[index].focus();
-  };
+  }, []);
 
-  render() {
-    const structured = {
-      '@context': 'https://schema.org',
-      '@type': 'Person',
-      name: 'Alex Unnippillil',
-      url: 'https://unnippillil.com',
-    };
-    const nonce = getCspNonce();
+  const toggleNavbar = useCallback(() => {
+    setIsNavbarVisible((visible) => !visible);
+  }, []);
 
-    return (
-      <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
-        <Head>
-          <title>About</title>
-          <script
-            type="application/ld+json"
-            nonce={nonce}
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
-          />
-        </Head>
+  const nonce = getCspNonce();
+  const activeScreen = screens[activeSection];
+
+  return (
+    <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
+      <Head>
+        <title>About</title>
+        <script
+          type="application/ld+json"
+          nonce={nonce}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+      </Head>
+      <div
+        className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black"
+        role="tablist"
+        aria-orientation="vertical"
+        onKeyDown={handleNavKeyDown}
+      >
+        <SectionTabList sections={sections} activeSection={activeSection} onSelect={handleSelectSection} />
+      </div>
+      <div
+        onClick={toggleNavbar}
+        className="md:hidden flex flex-col items-center justify-center absolute bg-ub-cool-grey rounded w-6 h-6 top-1 left-1"
+      >
+        <div className=" w-3.5 border-t border-white" />
+        <div className=" w-3.5 border-t border-white" style={{ marginTop: '2pt', marginBottom: '2pt' }} />
+        <div className=" w-3.5 border-t border-white" />
         <div
-          className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black"
+          className={
+            (isNavbarVisible ? ' visible animateShow z-30 ' : ' invisible ') +
+            ' md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20'
+          }
           role="tablist"
           aria-orientation="vertical"
-          onKeyDown={this.handleNavKeyDown}
+          onKeyDown={handleNavKeyDown}
         >
-          {this.renderNavLinks()}
+          <SectionTabList sections={sections} activeSection={activeSection} onSelect={handleSelectSection} />
         </div>
-        <div
-          onClick={this.showNavBar}
-          className="md:hidden flex flex-col items-center justify-center absolute bg-ub-cool-grey rounded w-6 h-6 top-1 left-1"
-        >
-          <div className=" w-3.5 border-t border-white" />
-          <div className=" w-3.5 border-t border-white" style={{ marginTop: '2pt', marginBottom: '2pt' }} />
-          <div className=" w-3.5 border-t border-white" />
-          <div
-            className={
-              (this.state.navbar ? ' visible animateShow z-30 ' : ' invisible ') +
-              ' md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20'
-            }
-            role="tablist"
-            aria-orientation="vertical"
-            onKeyDown={this.handleNavKeyDown}
-          >
-            {this.renderNavLinks()}
-          </div>
-        </div>
-        <div className="flex flex-col w-3/4 md:w-4/5 justify-start items-center flex-grow bg-ub-grey overflow-y-auto windowMainScreen">
-          {this.state.screen}
-        </div>
-      </main>
-    );
-  }
-}
+      </div>
+      <div className="flex flex-col w-3/4 md:w-4/5 justify-start items-center flex-grow bg-ub-grey overflow-y-auto windowMainScreen">
+        {activeScreen}
+      </div>
+    </main>
+  );
+};
 
 export default function AboutApp() {
   return (
@@ -251,7 +320,12 @@ function About() {
   );
 }
 
-const workerApps = [
+interface WorkerApp {
+  id: string;
+  label: string;
+}
+
+const workerApps: WorkerApp[] = [
   { id: 'hydra', label: 'Hydra' },
   { id: 'john', label: 'John the Ripper' },
   { id: 'metasploit', label: 'Metasploit' },
@@ -260,16 +334,19 @@ const workerApps = [
 ];
 
 function WorkerStatus() {
-  const [status, setStatus] = React.useState<Record<string, string>>({});
+  const [status, setStatus] = useState<Record<string, string>>({});
 
-  React.useEffect(() => {
+  useEffect(() => {
     workerApps.forEach((app) => {
       fetch(`/api/${app.id}`, { method: 'HEAD' })
-        .then((res) => {
-          setStatus((s) => ({ ...s, [app.id]: res.status < 500 ? 'Online' : 'Offline' }));
+        .then((response) => {
+          setStatus((current) => ({
+            ...current,
+            [app.id]: response.status < 500 ? 'Online' : 'Offline',
+          }));
         })
         .catch(() => {
-          setStatus((s) => ({ ...s, [app.id]: 'Offline' }));
+          setStatus((current) => ({ ...current, [app.id]: 'Offline' }));
         });
     });
   }, []);
@@ -342,10 +419,20 @@ function Education() {
   );
 }
 
-const SkillSection = ({ title, badges }: { title: string; badges: { src: string; alt: string; description: string }[] }) => {
-  const [filter, setFilter] = React.useState('');
-  const [selected, setSelected] = React.useState<any>(null);
-  const filteredBadges = badges.filter((b) => b.alt.toLowerCase().includes(filter.toLowerCase()));
+interface SkillSectionProps {
+  title: string;
+  badges: SkillBadge[];
+}
+
+const SkillSection: React.FC<SkillSectionProps> = ({ title, badges }) => {
+  const [filter, setFilter] = useState('');
+  const [selectedBadge, setSelectedBadge] = useState<SkillBadge | null>(null);
+
+  const filteredBadges = useMemo(
+    () => badges.filter((badge) => badge.alt.toLowerCase().includes(filter.toLowerCase())),
+    [badges, filter]
+  );
+
   return (
     <div className="px-2 w-full">
       <div className="text-sm text-center md:text-base font-bold">{title}</div>
@@ -354,7 +441,8 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
         placeholder="Filter..."
         className="mt-2 w-full px-2 py-1 rounded text-black"
         value={filter}
-        onChange={(e) => setFilter(e.target.value)}
+        aria-label={`${title} filter`}
+        onChange={(event) => setFilter(event.target.value)}
       />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map((badge) => (
@@ -364,16 +452,19 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
             src={badge.src}
             alt={badge.alt}
             title={badge.description}
-            onClick={() => setSelected(badge)}
+            onClick={() => setSelectedBadge(badge)}
           />
         ))}
       </div>
-      {selected && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" onClick={() => setSelected(null)}>
-          <div className="bg-ub-cool-grey p-4 rounded max-w-xs" onClick={(e) => e.stopPropagation()}>
-            <div className="font-bold mb-2 text-center">{selected.alt}</div>
-            <p className="text-sm text-center">{selected.description}</p>
-            <button className="mt-2 px-2 py-1 bg-ubt-blue rounded" onClick={() => setSelected(null)}>
+      {selectedBadge && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+          onClick={() => setSelectedBadge(null)}
+        >
+          <div className="bg-ub-cool-grey p-4 rounded max-w-xs" onClick={(event) => event.stopPropagation()}>
+            <div className="font-bold mb-2 text-center">{selectedBadge.alt}</div>
+            <p className="text-sm text-center">{selectedBadge.description}</p>
+            <button className="mt-2 px-2 py-1 bg-ubt-blue rounded" onClick={() => setSelectedBadge(null)}>
               Close
             </button>
           </div>
@@ -383,7 +474,11 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
   );
 };
 
-function Skills({ skills }: { skills: any }) {
+interface SkillsProps {
+  skills: SkillsData;
+}
+
+function Skills({ skills }: SkillsProps) {
   const { networkingSecurity, softwaresOperating, languagesTools, frameworksLibraries } = skills;
   return (
     <>
@@ -419,8 +514,12 @@ function Skills({ skills }: { skills: any }) {
   );
 }
 
-function Projects({ projects }: { projects: any[] }) {
-  const tag_colors: Record<string, string> = {
+interface ProjectsProps {
+  projects: Project[];
+}
+
+function Projects({ projects }: ProjectsProps) {
+  const tagColors: Record<string, string> = {
     python: 'green-400',
     javascript: 'yellow-300',
     html5: 'red-400',
@@ -464,23 +563,21 @@ function Projects({ projects }: { projects: any[] }) {
                 ))}
               </ul>
               <div className="flex flex-wrap items-start justify-start text-xs py-2">
-                {project.domains
-                  ? project.domains.map((domain: string) => {
-                      const borderColorClass = `border-${tag_colors[domain]}`;
-                      const textColorClass = `text-${tag_colors[domain]}`;
-                      return (
-                        <a
-                          key={domain}
-                          href={project.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`px-1.5 py-0.5 w-max border ${borderColorClass} ${textColorClass} m-1 rounded-full`}
-                        >
-                          {domain}
-                        </a>
-                      );
-                    })
-                  : null}
+                {(project.domains ?? []).map((domain) => {
+                  const normalizedDomain = domain.toLowerCase();
+                  const color = tagColors[normalizedDomain] ?? 'gray-400';
+                  return (
+                    <a
+                      key={domain}
+                      href={project.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`px-1.5 py-0.5 w-max border border-${color} text-${color} m-1 rounded-full`}
+                    >
+                      {domain}
+                    </a>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -497,9 +594,11 @@ function Resume() {
 
   const shareContact = async () => {
     const vcardUrl = '/assets/alex-unnippillil.vcf';
-    if (navigator.share) {
+    if ('share' in navigator) {
       try {
-        await navigator.share({
+        await (
+          navigator as Navigator & { share: (data: ShareData) => Promise<void> }
+        ).share({
           title: 'Alex Unnippillil Contact',
           url: window.location.origin + vcardUrl,
         });
