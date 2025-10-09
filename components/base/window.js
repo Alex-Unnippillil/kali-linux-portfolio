@@ -100,6 +100,15 @@ export class Window extends Component {
         }
     }
 
+    componentDidUpdate(_prevProps, prevState) {
+        if (
+            (prevState.width !== this.state.width || prevState.height !== this.state.height) &&
+            typeof this.props.onSizeChange === 'function'
+        ) {
+            this.props.onSizeChange(this.state.width, this.state.height);
+        }
+    }
+
     componentWillUnmount() {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
