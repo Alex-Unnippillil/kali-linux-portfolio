@@ -81,6 +81,10 @@ export class Desktop extends Component {
         this.preventNextIconClick = false;
         this.savedIconPositions = {};
 
+        this.windowPreviewCache = new Map();
+        this.switcherRequestId = 0;
+        this._isMounted = false;
+
         this.defaultIconDimensions = { width: 96, height: 88 };
         this.defaultIconGridSpacing = { row: 112, column: 128 };
         this.defaultDesktopPadding = { top: DESKTOP_TOP_PADDING, right: 24, bottom: 120, left: 24 };
@@ -140,6 +144,65 @@ export class Desktop extends Component {
             }
         });
         return merged;
+    };
+
+    captureWindowPreview = async (id) => {
+        if (typeof document === 'undefined') return null;
+        const node = document.getElementById(id);
+        if (!node) return null;
+        const target = node.querySelector('.windowMainScreen') || node;
+        if (!(target instanceof HTMLElement)) return null;
+        const rect = typeof target.getBoundingClientRect === 'function'
+            ? target.getBoundingClientRect()
+            : null;
+        if (!rect || !rect.width || !rect.height) return null;
+
+        try {
+            const width = Math.max(1, Math.round(rect.width));
+            const height = Math.max(1, Math.round(rect.height));
+            const dataUrl = await toPng(target, {
+                cacheBust: true,
+                pixelRatio: 1,
+                width,
+                height,
+            });
+            return dataUrl;
+        } catch (error) {
+            return null;
+        }
+    };
+
+    refreshWindowPreview = async (id) => {
+        const snapshot = await this.captureWindowPreview(id);
+        if (snapshot) {
+            this.windowPreviewCache.set(id, snapshot);
+        }
+        return snapshot;
+    };
+
+    getWindowPreviewSource = async (id, fallbackImage = null) => {
+        const cached = this.windowPreviewCache.get(id) || null;
+        let preview = cached;
+        const isMinimized = !!this.state.minimized_windows[id];
+
+        if (!isMinimized) {
+            const fresh = await this.refreshWindowPreview(id);
+            if (fresh) {
+                preview = fresh;
+            }
+        }
+
+        if (!preview && fallbackImage) {
+            preview = fallbackImage;
+            this.windowPreviewCache.set(id, fallbackImage);
+        }
+
+        return preview || null;
+    };
+
+    prepareWindowPreview = (id) => {
+        if (typeof window === 'undefined') return;
+        Promise.resolve(this.refreshWindowPreview(id)).catch(() => {});
     };
 
     setupPointerMediaWatcher = () => {
@@ -844,6 +907,7 @@ export class Desktop extends Component {
         if (workspaceId === this.state.activeWorkspace) return;
         if (workspaceId < 0 || workspaceId >= this.state.workspaces.length) return;
         const snapshot = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
+        this.switcherRequestId += 1;
         this.setState({
             activeWorkspace: workspaceId,
             focused_windows: { ...snapshot.focused_windows },
@@ -901,6 +965,7 @@ export class Desktop extends Component {
     };
 
     componentDidMount() {
+        this._isMounted = true;
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
@@ -956,6 +1021,9 @@ export class Desktop extends Component {
     }
 
     componentWillUnmount() {
+        this._isMounted = false;
+        this.switcherRequestId += 1;
+        this.windowPreviewCache.clear();
         this.removeEventListeners();
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
@@ -1200,21 +1268,63 @@ export class Desktop extends Component {
         this.focus(windows[next]);
     }
 
-    openWindowSwitcher = () => {
-        const windows = this.getActiveStack()
-            .filter(id => this.state.closed_windows[id] === false)
-            .map(id => apps.find(a => a.id === id))
-            .filter(Boolean);
-        if (windows.length) {
-            this.setState({ showWindowSwitcher: true, switcherWindows: windows });
+    openWindowSwitcher = async () => {
+        const stack = this.getActiveStack()
+            .filter(id => this.state.closed_windows[id] === false);
+        if (!stack.length) return;
+
+        const requestId = ++this.switcherRequestId;
+        this.setState({ showWindowSwitcher: true, switcherWindows: [] });
+
+        const createSummary = (id, appMeta, overridePreview = null) => {
+            const subtitle = (appMeta && typeof appMeta.subtitle === 'string') ? appMeta.subtitle : null;
+            return {
+                id,
+                title: appMeta?.title || id,
+                icon: appMeta?.icon || null,
+                subtitle,
+                preview: overridePreview,
+            };
+        };
+
+        try {
+            const windowSummaries = await Promise.all(
+                stack.map(async (id) => {
+                    const appMeta = apps.find(a => a.id === id);
+                    const fallbackImage = typeof appMeta?.preview === 'string'
+                        ? appMeta.preview
+                        : typeof appMeta?.thumbnail === 'string'
+                            ? appMeta.thumbnail
+                            : null;
+                    const preview = await this.getWindowPreviewSource(id, fallbackImage);
+                    return createSummary(id, appMeta, preview || null);
+                })
+            );
+
+            if (!this._isMounted || this.switcherRequestId !== requestId) {
+                return;
+            }
+
+            this.setState({ switcherWindows: windowSummaries });
+        } catch (error) {
+            if (!this._isMounted || this.switcherRequestId !== requestId) {
+                return;
+            }
+            const fallbackSummaries = stack.map((id) => {
+                const appMeta = apps.find(a => a.id === id);
+                return createSummary(id, appMeta, null);
+            });
+            this.setState({ switcherWindows: fallbackSummaries });
         }
     }
 
     closeWindowSwitcher = () => {
+        this.switcherRequestId += 1;
         this.setState({ showWindowSwitcher: false, switcherWindows: [] });
     }
 
     selectWindow = (id) => {
+        this.switcherRequestId += 1;
         this.setState({ showWindowSwitcher: false, switcherWindows: [] }, () => {
             this.openApp(id);
         });
@@ -1570,6 +1680,7 @@ export class Desktop extends Component {
     }
 
     hasMinimised = (objId) => {
+        this.prepareWindowPreview(objId);
         let minimized_windows = this.state.minimized_windows;
         var focused_windows = this.state.focused_windows;
 
@@ -1723,6 +1834,7 @@ export class Desktop extends Component {
     }
 
     closeApp = async (objId) => {
+        this.switcherRequestId += 1;
 
         // capture window snapshot
         let image = null;
@@ -1752,6 +1864,8 @@ export class Desktop extends Component {
         });
         safeLocalStorage?.setItem('window-trash', JSON.stringify(trash));
         this.updateTrashIcon();
+
+        this.windowPreviewCache.delete(objId);
 
         // remove app from the app stack
         const stack = this.getActiveStack();

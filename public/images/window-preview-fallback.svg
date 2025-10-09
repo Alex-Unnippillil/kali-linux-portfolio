@@ -1,0 +1,21 @@
+<svg width="320" height="200" viewBox="0 0 320 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="320" height="200" rx="20" fill="#0F172A" />
+  <rect x="32" y="40" width="256" height="120" rx="16" fill="url(#windowGradient)" />
+  <g opacity="0.6">
+    <rect x="52" y="60" width="96" height="12" rx="6" fill="white" opacity="0.6" />
+    <rect x="52" y="84" width="168" height="12" rx="6" fill="white" opacity="0.35" />
+    <rect x="52" y="108" width="132" height="12" rx="6" fill="white" opacity="0.25" />
+    <rect x="52" y="132" width="96" height="12" rx="6" fill="white" opacity="0.2" />
+  </g>
+  <g opacity="0.8">
+    <circle cx="64" cy="48" r="6" fill="#F87171" />
+    <circle cx="84" cy="48" r="6" fill="#FBBF24" />
+    <circle cx="104" cy="48" r="6" fill="#34D399" />
+  </g>
+  <defs>
+    <linearGradient id="windowGradient" x1="32" y1="40" x2="288" y2="160" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1F2937" />
+      <stop offset="1" stop-color="#111827" />
+    </linearGradient>
+  </defs>
+</svg>
