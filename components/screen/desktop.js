@@ -73,6 +73,7 @@ export class Desktop extends Component {
                 label: `Workspace ${index + 1}`,
             })),
             draggingIconId: null,
+            clipboardShortcut: null,
         }
 
         this.desktopRef = React.createRef();
@@ -98,6 +99,11 @@ export class Desktop extends Component {
         this.openSettingsTarget = null;
         this.openSettingsClickHandler = null;
         this.openSettingsListenerAttached = false;
+
+        this.lastPointerPosition = null;
+        this.clipboardReadRequest = 0;
+        this.urlShortcutStorageKey = 'desktop_url_shortcuts';
+        this.isMountedFlag = false;
 
     }
 
@@ -586,6 +592,55 @@ export class Desktop extends Component {
         return this.clampIconPosition(x, y);
     };
 
+    setLastPointerPosition = (pageX, pageY) => {
+        if (!Number.isFinite(pageX) || !Number.isFinite(pageY)) {
+            this.lastPointerPosition = null;
+            return;
+        }
+        this.lastPointerPosition = { pageX, pageY };
+    };
+
+    getClientPointFromPage = (pageX, pageY) => {
+        if (!Number.isFinite(pageX) || !Number.isFinite(pageY)) {
+            return null;
+        }
+        const scrollX = typeof window !== 'undefined' ? (window.pageXOffset ?? window.scrollX ?? 0) : 0;
+        const scrollY = typeof window !== 'undefined' ? (window.pageYOffset ?? window.scrollY ?? 0) : 0;
+        return {
+            clientX: pageX - scrollX,
+            clientY: pageY - scrollY,
+        };
+    };
+
+    computeIconPositionFromPage = (pageX, pageY) => {
+        const client = this.getClientPointFromPage(pageX, pageY);
+        const rect = client && this.getDesktopRect();
+        if (!client || !rect) {
+            return null;
+        }
+        const offsetX = client.clientX - rect.left - this.iconDimensions.width / 2;
+        const offsetY = client.clientY - rect.top - this.iconDimensions.height / 2;
+        const snapped = this.snapIconPosition(offsetX, offsetY);
+        return this.clampIconPosition(snapped.x, snapped.y);
+    };
+
+    getPasteTargetPosition = () => {
+        if (this.lastPointerPosition) {
+            const position = this.computeIconPositionFromPage(
+                this.lastPointerPosition.pageX,
+                this.lastPointerPosition.pageY,
+            );
+            if (position) {
+                return position;
+            }
+        }
+        const desktopApps = this.state.desktop_apps || [];
+        if (desktopApps.length) {
+            return this.computeGridPosition(desktopApps.length);
+        }
+        return this.computeGridPosition(0);
+    };
+
     isValidIconPosition = (position) => {
         if (!position) return false;
         const { x, y } = position;
@@ -904,6 +959,8 @@ export class Desktop extends Component {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
+        this.isMountedFlag = true;
+
         if (typeof window !== 'undefined') {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
@@ -934,10 +991,12 @@ export class Desktop extends Component {
         this.setEventListeners();
         this.checkForNewFolders();
         this.checkForAppShortcuts();
+        this.checkForUrlShortcuts();
         this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         window.addEventListener('resize', this.handleViewportResize);
         document.addEventListener('keydown', this.handleGlobalShortcut);
+        document.addEventListener('paste', this.handleDocumentPaste);
         window.addEventListener('open-app', this.handleOpenAppEvent);
         this.setupPointerMediaWatcher();
         this.setupGestureListeners();
@@ -956,9 +1015,11 @@ export class Desktop extends Component {
     }
 
     componentWillUnmount() {
+        this.isMountedFlag = false;
         this.removeEventListeners();
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
+        document.removeEventListener('paste', this.handleDocumentPaste);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
         window.removeEventListener('resize', this.handleViewportResize);
@@ -1059,6 +1120,461 @@ export class Desktop extends Component {
         const fallback = dragState?.lastPosition || dragState?.startPosition || { x: 0, y: 0 };
         const snapped = this.snapIconPosition(fallback.x, fallback.y);
         return this.clampIconPosition(snapped.x, snapped.y);
+    };
+
+    normalizeAppId = (value) => {
+        if (typeof value !== 'string') return null;
+        const trimmed = value.trim().toLowerCase();
+        if (!trimmed) return null;
+        return this.validAppIds.has(trimmed) ? trimmed : null;
+    };
+
+    normaliseUrl = (value) => {
+        if (typeof value !== 'string') return null;
+        const trimmed = value.trim();
+        if (!trimmed) return null;
+        try {
+            const hasProtocol = /^[a-z][a-z0-9+.-]*:/i.test(trimmed);
+            const candidate = hasProtocol ? trimmed : `https://${trimmed}`;
+            const url = new URL(candidate);
+            if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+                return null;
+            }
+            const hostname = url.hostname || '';
+            const isLocalhost = hostname.toLowerCase() === 'localhost';
+            if (!isLocalhost && !hostname.includes('.')) {
+                return null;
+            }
+            return url.toString();
+        } catch (e) {
+            return null;
+        }
+    };
+
+    parseClipboardPayload = (text) => {
+        if (typeof text !== 'string') return null;
+        const trimmed = text.trim();
+        if (!trimmed) return null;
+
+        const firstLine = trimmed.split(/\r?\n/)[0]?.trim() ?? trimmed;
+
+        const checkAppId = (candidate) => {
+            const id = this.normalizeAppId(candidate);
+            if (id) {
+                return { type: 'app', id };
+            }
+            return null;
+        };
+
+        const directApp = checkAppId(firstLine);
+        if (directApp) return directApp;
+
+        if (/^app:/i.test(firstLine)) {
+            const prefixed = firstLine.replace(/^app:/i, '').trim();
+            const prefixedResult = checkAppId(prefixed);
+            if (prefixedResult) return prefixedResult;
+        }
+
+        if (firstLine.startsWith('{') || firstLine.startsWith('[')) {
+            try {
+                const parsed = JSON.parse(firstLine);
+                if (typeof parsed === 'string') {
+                    const fromString = checkAppId(parsed);
+                    if (fromString) return fromString;
+                }
+                if (parsed && typeof parsed === 'object') {
+                    if (typeof parsed.appId === 'string') {
+                        const fromField = checkAppId(parsed.appId);
+                        if (fromField) return fromField;
+                    }
+                    if (typeof parsed.id === 'string' && parsed.type === 'app') {
+                        const fromId = checkAppId(parsed.id);
+                        if (fromId) return fromId;
+                    }
+                    if (typeof parsed.url === 'string') {
+                        const url = this.normaliseUrl(parsed.url);
+                        if (url) {
+                            const title = typeof parsed.title === 'string' ? parsed.title.trim() : undefined;
+                            return { type: 'url', url, title: title && title.length ? title : undefined };
+                        }
+                    }
+                }
+            } catch (e) {
+                // ignore JSON parse errors
+            }
+        }
+
+        const url = this.normaliseUrl(firstLine);
+        if (url) {
+            return { type: 'url', url };
+        }
+
+        return null;
+    };
+
+    extractClipboardPayload = (event) => {
+        if (!event || typeof event.clipboardData?.getData !== 'function') {
+            return null;
+        }
+        const types = ['text/plain', 'text'];
+        for (let i = 0; i < types.length; i += 1) {
+            const text = event.clipboardData.getData(types[i]);
+            if (text) {
+                const payload = this.parseClipboardPayload(text);
+                if (payload) return payload;
+            }
+        }
+        return null;
+    };
+
+    updateClipboardShortcutState = (payload) => {
+        if (!this.isMountedFlag) return;
+        this.setState((prevState) => {
+            const current = prevState.clipboardShortcut;
+            if (!current && !payload) {
+                return null;
+            }
+            if (
+                current &&
+                payload &&
+                current.type === payload.type &&
+                current.id === payload.id &&
+                current.url === payload.url
+            ) {
+                return null;
+            }
+            return { clipboardShortcut: payload };
+        });
+    };
+
+    refreshClipboardShortcutState = async () => {
+        if (typeof navigator === 'undefined' || !navigator.clipboard || typeof navigator.clipboard.readText !== 'function') {
+            this.updateClipboardShortcutState(null);
+            return null;
+        }
+        const requestId = ++this.clipboardReadRequest;
+        try {
+            const text = await navigator.clipboard.readText();
+            if (requestId !== this.clipboardReadRequest) {
+                return null;
+            }
+            const payload = this.parseClipboardPayload(text);
+            this.updateClipboardShortcutState(payload);
+            return payload;
+        } catch (e) {
+            if (requestId === this.clipboardReadRequest) {
+                this.updateClipboardShortcutState(null);
+            }
+            return null;
+        }
+    };
+
+    isEditableTarget = (element) => {
+        if (!element || typeof element !== 'object') return false;
+        const tagName = element.tagName ? element.tagName.toLowerCase() : '';
+        if (tagName === 'input' || tagName === 'textarea' || element.isContentEditable) {
+            return true;
+        }
+        if (typeof element.closest === 'function') {
+            const editableAncestor = element.closest('[contenteditable="true"],[contenteditable=""],[data-allow-desktop-paste="false"]');
+            if (editableAncestor) {
+                return editableAncestor !== null;
+            }
+        }
+        return false;
+    };
+
+    getUrlShortcutTitle = (url, title) => {
+        if (typeof title === 'string' && title.trim().length) {
+            return title.trim();
+        }
+        try {
+            const parsed = new URL(url);
+            return parsed.hostname.replace(/^www\./i, '') || url;
+        } catch (e) {
+            return url;
+        }
+    };
+
+    generateUrlShortcutId = (url) => {
+        let hash = 0;
+        for (let i = 0; i < url.length; i += 1) {
+            hash = (hash << 5) - hash + url.charCodeAt(i);
+            hash |= 0;
+        }
+        const base = `web-${Math.abs(hash).toString(36)}`;
+        let candidate = base;
+        let suffix = 1;
+        const idExists = (id) => this.validAppIds.has(id) || apps.some((app) => app.id === id);
+        while (idExists(candidate)) {
+            candidate = `${base}-${suffix}`;
+            suffix += 1;
+        }
+        return candidate;
+    };
+
+    getStoredUrlShortcuts = () => {
+        if (!safeLocalStorage) return [];
+        try {
+            const raw = safeLocalStorage.getItem(this.urlShortcutStorageKey);
+            if (!raw) {
+                return [];
+            }
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            return [];
+        }
+    };
+
+    setStoredUrlShortcuts = (entries) => {
+        if (!safeLocalStorage) return;
+        try {
+            safeLocalStorage.setItem(this.urlShortcutStorageKey, JSON.stringify(entries));
+        } catch (e) {
+            // ignore storage write errors
+        }
+    };
+
+    registerUrlShortcut = (entry) => {
+        if (!entry || typeof entry !== 'object') return false;
+        const { id: rawId, url: rawUrl } = entry;
+        if (typeof rawId !== 'string' || !rawId.trim()) return false;
+        const normalisedUrl = this.normaliseUrl(rawUrl);
+        if (!normalisedUrl) return false;
+        const id = rawId.trim();
+        const title = this.getUrlShortcutTitle(normalisedUrl, entry.title);
+
+        let updated = false;
+        const existingIndex = apps.findIndex((app) => app.id === id);
+        if (existingIndex !== -1) {
+            const existing = apps[existingIndex];
+            if (existing.title !== title) {
+                existing.title = title;
+                updated = true;
+            }
+            if (existing.icon !== '/themes/Yaru/apps/firefox.svg') {
+                existing.icon = '/themes/Yaru/apps/firefox.svg';
+                updated = true;
+            }
+            if (!existing.screen) {
+                existing.screen = this.createWebShortcutScreen(normalisedUrl, title);
+                updated = true;
+            }
+            if (!existing.desktop_shortcut) {
+                existing.desktop_shortcut = true;
+                updated = true;
+            }
+        } else {
+            apps.push({
+                id,
+                title,
+                icon: '/themes/Yaru/apps/firefox.svg',
+                disabled: false,
+                favourite: false,
+                desktop_shortcut: true,
+                screen: this.createWebShortcutScreen(normalisedUrl, title),
+                resizable: true,
+                allowMaximize: true,
+            });
+            updated = true;
+        }
+
+        this.validAppIds.add(id);
+        return updated;
+    };
+
+    createWebShortcutScreen = (url, title) => {
+        const WebShortcutWindow = () => (
+            <div className="flex h-full flex-col bg-ub-cool-grey text-gray-100">
+                <div className="flex items-center justify-between border-b border-gray-800 bg-gray-900 px-4 py-2 text-sm">
+                    <span className="truncate" title={title}>{title}</span>
+                    <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-ubt-blue hover:underline focus:underline"
+                    >
+                        Open in browser
+                    </a>
+                </div>
+                <iframe
+                    key={url}
+                    src={url}
+                    title={title}
+                    className="flex-1 border-0 bg-black"
+                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture"
+                />
+            </div>
+        );
+        WebShortcutWindow.displayName = 'WebShortcutWindow';
+        return WebShortcutWindow;
+    };
+
+    createAppShortcut = (appId, position) => {
+        const id = this.normalizeAppId(appId);
+        if (!id) return false;
+        const appIndex = apps.findIndex((app) => app.id === id);
+        if (appIndex === -1) return false;
+        apps[appIndex].desktop_shortcut = true;
+        let shortcuts = [];
+        try { shortcuts = JSON.parse(safeLocalStorage?.getItem('app_shortcuts') || '[]'); } catch (e) { shortcuts = []; }
+        if (!shortcuts.includes(id)) {
+            shortcuts.push(id);
+            safeLocalStorage?.setItem('app_shortcuts', JSON.stringify(shortcuts));
+        }
+        this.updateAppsData();
+        if (position) {
+            this.updateIconPosition(id, position.x, position.y, true);
+        }
+        return true;
+    };
+
+    createUrlShortcut = (url, title, position) => {
+        const normalisedUrl = this.normaliseUrl(url);
+        if (!normalisedUrl) return false;
+        const stored = this.getStoredUrlShortcuts();
+        let entryIndex = stored.findIndex((item) => item && item.url === normalisedUrl);
+        let entry = entryIndex !== -1 ? { ...stored[entryIndex] } : null;
+        const displayTitle = this.getUrlShortcutTitle(normalisedUrl, title || entry?.title);
+
+        if (!entry) {
+            entry = {
+                id: this.generateUrlShortcutId(normalisedUrl),
+                url: normalisedUrl,
+                title: displayTitle,
+            };
+            stored.push(entry);
+            entryIndex = stored.length - 1;
+        } else if (entry.title !== displayTitle) {
+            entry.title = displayTitle;
+            stored[entryIndex] = entry;
+        }
+
+        this.setStoredUrlShortcuts(stored);
+        const registered = this.registerUrlShortcut(entry);
+        if (registered || !this.state.desktop_apps.includes(entry.id)) {
+            this.updateAppsData();
+        }
+        if (position) {
+            this.updateIconPosition(entry.id, position.x, position.y, true);
+        }
+        return true;
+    };
+
+    createShortcutFromPayload = (payload, options = {}) => {
+        if (!payload) return false;
+        const position = options?.position || null;
+        switch (payload.type) {
+            case 'app':
+                return this.createAppShortcut(payload.id, position);
+            case 'url':
+                return this.createUrlShortcut(payload.url, payload.title, position);
+            default:
+                return false;
+        }
+    };
+
+    checkForUrlShortcuts = () => {
+        if (!safeLocalStorage) return;
+        if (!safeLocalStorage.getItem(this.urlShortcutStorageKey)) {
+            safeLocalStorage.setItem(this.urlShortcutStorageKey, JSON.stringify([]));
+        }
+        const storedEntries = this.getStoredUrlShortcuts();
+        const map = new Map();
+        storedEntries.forEach((entry) => {
+            if (!entry || typeof entry !== 'object') return;
+            const normalisedUrl = this.normaliseUrl(entry.url);
+            if (!normalisedUrl || map.has(normalisedUrl)) return;
+            const id = typeof entry.id === 'string' && entry.id.trim().length
+                ? entry.id.trim()
+                : this.generateUrlShortcutId(normalisedUrl);
+            const title = this.getUrlShortcutTitle(normalisedUrl, entry.title);
+            map.set(normalisedUrl, { id, url: normalisedUrl, title });
+        });
+
+        const normalisedEntries = Array.from(map.values());
+        this.setStoredUrlShortcuts(normalisedEntries);
+
+        let updated = false;
+        normalisedEntries.forEach((entry) => {
+            if (this.registerUrlShortcut(entry)) {
+                updated = true;
+            }
+        });
+
+        if (updated) {
+            this.updateAppsData();
+        }
+    };
+
+    handleContextPaste = async () => {
+        let payload = this.state.clipboardShortcut;
+        if (!payload) {
+            payload = await this.refreshClipboardShortcutState();
+        }
+        if (!payload) return;
+        const position = this.getPasteTargetPosition();
+        if (this.createShortcutFromPayload(payload, { position })) {
+            this.hideAllContextMenu();
+            this.updateClipboardShortcutState(null);
+        }
+    };
+
+    handleDesktopPointer = (event) => {
+        if (!event) return;
+        const pageX = Number.isFinite(event.pageX) ? event.pageX : Number.isFinite(event.clientX)
+            ? event.clientX + ((typeof window !== 'undefined' ? window.pageXOffset ?? window.scrollX ?? 0 : 0))
+            : null;
+        const pageY = Number.isFinite(event.pageY) ? event.pageY : Number.isFinite(event.clientY)
+            ? event.clientY + ((typeof window !== 'undefined' ? window.pageYOffset ?? window.scrollY ?? 0 : 0))
+            : null;
+        if (!Number.isFinite(pageX) || !Number.isFinite(pageY)) return;
+        const contextTarget = typeof event.target?.closest === 'function'
+            ? event.target.closest('[data-context]')
+            : null;
+        if (contextTarget?.dataset?.context === 'desktop-area') {
+            this.setLastPointerPosition(pageX, pageY);
+        }
+    };
+
+    handleDocumentPaste = (event) => {
+        const payload = this.extractClipboardPayload(event);
+        this.updateClipboardShortcutState(payload);
+        if (!payload) return;
+
+        if (Number.isFinite(event?.pageX) && Number.isFinite(event?.pageY)) {
+            this.setLastPointerPosition(event.pageX, event.pageY);
+        }
+
+        const target = event.target;
+        if (this.isEditableTarget(target)) {
+            return;
+        }
+
+        const desktopNode = this.desktopRef?.current;
+        if (!desktopNode) return;
+
+        const contextNode = typeof target?.closest === 'function'
+            ? target.closest('[data-context]')
+            : null;
+
+        const isDesktopTarget =
+            (contextNode && contextNode.dataset && contextNode.dataset.context === 'desktop-area') ||
+            target === document.body ||
+            target === document;
+
+        if (!isDesktopTarget) {
+            return;
+        }
+
+        event.preventDefault();
+        const position = this.getPasteTargetPosition();
+        if (this.createShortcutFromPayload(payload, { position })) {
+            this.hideAllContextMenu();
+            this.updateClipboardShortcutState(null);
+        }
     };
 
     checkForNewFolders = () => {
@@ -1226,6 +1742,9 @@ export class Desktop extends Component {
         const target = e.target.closest('[data-context]');
         const context = target ? target.dataset.context : null;
         const appId = target ? target.dataset.appId : null;
+        if (context === 'desktop-area' && Number.isFinite(e.pageX) && Number.isFinite(e.pageY)) {
+            this.setLastPointerPosition(e.pageX, e.pageY);
+        }
         switch (context) {
             case "desktop-area":
                 ReactGA.event({
@@ -1269,6 +1788,7 @@ export class Desktop extends Component {
         switch (context) {
             case "desktop-area":
                 ReactGA.event({ category: `Context Menu`, action: `Opened Desktop Context Menu` });
+                this.setLastPointerPosition(fakeEvent.pageX, fakeEvent.pageY);
                 this.showContextMenu(fakeEvent, "desktop");
                 break;
             case "app":
@@ -1288,6 +1808,10 @@ export class Desktop extends Component {
     showContextMenu = (e, menuName /* context menu name */) => {
         let { posx, posy } = this.getMenuPosition(e);
         let contextMenu = document.getElementById(`${menuName}-menu`);
+
+        if (menuName === 'desktop') {
+            this.refreshClipboardShortcutState();
+        }
 
         const menuWidth = contextMenu.offsetWidth;
         const menuHeight = contextMenu.offsetHeight;
@@ -1960,6 +2484,7 @@ export class Desktop extends Component {
                 ref={this.desktopRef}
                 className={" min-h-screen h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent"}
                 style={{ paddingTop: DESKTOP_TOP_PADDING, minHeight: '100dvh' }}
+                onPointerDown={this.handleDesktopPointer}
             >
 
                 {/* Window Area */}
@@ -1984,6 +2509,8 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    canPaste={Boolean(this.state.clipboardShortcut)}
+                    onPaste={this.handleContextPaste}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
