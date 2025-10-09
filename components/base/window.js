@@ -18,6 +18,7 @@ import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET, WINDOW_TOP_INSET } from '../../
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
 const EDGE_THRESHOLD_RATIO = 0.05;
+const WINDOW_MINIMIZE_SCALE = 0.86;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -79,6 +80,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._pendingAnimationTimeouts = new Set();
     }
 
     componentDidMount() {
@@ -100,6 +102,12 @@ export class Window extends Component {
         }
     }
 
+    componentDidUpdate(prevProps) {
+        if (prevProps.minimized && !this.props.minimized) {
+            this.handleRestoreFromMinimize();
+        }
+    }
+
     componentWillUnmount() {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
@@ -111,6 +119,7 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.clearAnimationTimeouts();
     }
 
     setDefaultWindowDimenstion = () => {
@@ -318,6 +327,139 @@ export class Window extends Component {
         }
     }
 
+    prefersReducedMotion = () => {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+        try {
+            return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    parseAnimationTime = (value) => {
+        const trimmed = typeof value === 'string' ? value.trim() : '';
+        if (!trimmed) return 0;
+        if (trimmed.endsWith('ms')) {
+            const parsed = parseFloat(trimmed.slice(0, -2));
+            return Number.isFinite(parsed) ? parsed : 0;
+        }
+        if (trimmed.endsWith('s')) {
+            const parsed = parseFloat(trimmed.slice(0, -1));
+            return Number.isFinite(parsed) ? parsed * 1000 : 0;
+        }
+        const parsed = parseFloat(trimmed);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    getAnimationTotalDuration = (node) => {
+        if (typeof window === 'undefined' || !node) return 0;
+        const styles = window.getComputedStyle(node);
+        const durations = styles.animationDuration ? styles.animationDuration.split(',').map(this.parseAnimationTime) : [];
+        const delays = styles.animationDelay ? styles.animationDelay.split(',').map(this.parseAnimationTime) : [];
+        const totals = durations.map((duration, index) => {
+            const delay = index < delays.length ? delays[index] : delays[delays.length - 1] || 0;
+            return duration + delay;
+        });
+        if (!totals.length) return 0;
+        return totals.reduce((max, value) => (value > max ? value : max), 0);
+    }
+
+    clearAnimationTimeouts = () => {
+        if (!this._pendingAnimationTimeouts || typeof window === 'undefined') return;
+        this._pendingAnimationTimeouts.forEach((timeoutId) => {
+            clearTimeout(timeoutId);
+        });
+        this._pendingAnimationTimeouts.clear();
+    }
+
+    scheduleClassRemoval = (node, className) => {
+        if (!node) return;
+        if (typeof window === 'undefined') {
+            node.classList.remove(className);
+            return;
+        }
+        const timeoutId = window.setTimeout(() => {
+            node.classList.remove(className);
+            if (this._pendingAnimationTimeouts) {
+                this._pendingAnimationTimeouts.delete(timeoutId);
+            }
+        }, 0);
+        if (this._pendingAnimationTimeouts) {
+            this._pendingAnimationTimeouts.add(timeoutId);
+        }
+    }
+
+    waitForAnimation = (node, className) => {
+        if (!node) return Promise.resolve();
+        return new Promise((resolve) => {
+            let resolved = false;
+            let timeoutId = null;
+            const cleanup = () => {
+                if (resolved) return;
+                resolved = true;
+                node.removeEventListener('animationend', handleAnimationEnd);
+                if (timeoutId !== null) {
+                    clearTimeout(timeoutId);
+                    if (this._pendingAnimationTimeouts) {
+                        this._pendingAnimationTimeouts.delete(timeoutId);
+                    }
+                    timeoutId = null;
+                }
+                resolve();
+            };
+            const handleAnimationEnd = (event) => {
+                if (event.target === node) {
+                    cleanup();
+                }
+            };
+
+            node.addEventListener('animationend', handleAnimationEnd);
+            node.classList.add(className);
+
+            if (typeof window !== 'undefined') {
+                const total = this.getAnimationTotalDuration(node);
+                const fallback = Math.max(total, 0) + 50;
+                timeoutId = window.setTimeout(cleanup, fallback);
+                if (this._pendingAnimationTimeouts) {
+                    this._pendingAnimationTimeouts.add(timeoutId);
+                }
+            }
+        });
+    }
+
+    prepareWindowAnimation = (node) => {
+        if (!node || typeof window === 'undefined') return;
+        const computed = window.getComputedStyle(node);
+        const fallbackX = node.style.getPropertyValue('--window-transform-x') || '0px';
+        const fallbackY = node.style.getPropertyValue('--window-transform-y') || '0px';
+        const fallbackTransform = `translate(${fallbackX}, ${fallbackY})`;
+        const baseTransform = computed.transform && computed.transform !== 'none'
+            ? computed.transform
+            : fallbackTransform;
+        const minimizedTransform = `${baseTransform} scale(${WINDOW_MINIMIZE_SCALE})`;
+        node.style.setProperty('--window-animation-start-transform', baseTransform);
+        node.style.setProperty('--window-animation-end-transform', minimizedTransform);
+    }
+
+    clearAnimationClasses = (node) => {
+        if (!node) return;
+        node.classList.remove(styles.windowFrameMinimizing);
+        node.classList.remove(styles.windowFrameRestoring);
+    }
+
+    handleRestoreFromMinimize = () => {
+        const node = this.getWindowNode();
+        if (!node) return;
+        this.clearAnimationClasses(node);
+        if (this.prefersReducedMotion()) {
+            return;
+        }
+        this.prepareWindowAnimation(node);
+        this.waitForAnimation(node, styles.windowFrameRestoring).then(() => {
+            this.scheduleClassRemoval(node, styles.windowFrameRestoring);
+        });
+    }
+
     unsnapWindow = () => {
         if (!this.state.snapped) return;
         const node = this.getWindowNode();
@@ -464,14 +606,28 @@ export class Window extends Component {
         this.props.focus(this.id);
     }
 
-    minimizeWindow = () => {
+    minimizeWindow = async () => {
         this.setWinowsPosition();
+        const node = this.getWindowNode();
+        if (!node) {
+            this.props.hasMinimised(this.id);
+            return;
+        }
+        this.clearAnimationClasses(node);
+        if (this.prefersReducedMotion()) {
+            this.props.hasMinimised(this.id);
+            return;
+        }
+        this.prepareWindowAnimation(node);
+        await this.waitForAnimation(node, styles.windowFrameMinimizing);
         this.props.hasMinimised(this.id);
+        this.scheduleClassRemoval(node, styles.windowFrameMinimizing);
     }
 
     restoreWindow = () => {
         const node = this.getWindowNode();
         if (!node) return;
+        this.clearAnimationClasses(node);
         this.setDefaultWindowDimenstion();
         // get previous position
         const posx = node.style.getPropertyValue("--window-transform-x") || `${this.startX}px`;
