@@ -16,12 +16,13 @@ The desktop shell now exposes responsive breakpoints and gesture affordances so 
 
 ## Gestures
 
-Two touch gestures are available when the shell detects a coarse pointer:
+Three touch gestures are available when the shell detects a coarse pointer:
 
 - **Swipe-to-snap:** a quick single-finger horizontal swipe on the focused window dispatches the same shortcut as <kbd>Super</kbd>+<kbd>Arrow</kbd> and snaps the window left or right.
 - **Three-finger overview:** a three-finger upward swipe opens the window switcher/overview. Lifting all three fingers resets the gesture state.
+- **Three-finger workspace switcher:** a fast horizontal motion with three fingers rotates between workspaces (left swipe → next workspace, right swipe → previous) and plays a short haptic/audio pulse when the transition lands.
 
-Both gestures rely on low-latency thresholds and ignore slow drags to avoid conflicting with window moves.
+All gestures rely on low-latency thresholds and ignore slow drags to avoid conflicting with window moves.
 
 ## Convertible testing notes
 
@@ -30,5 +31,6 @@ Testing used Chrome DevTools' device emulation to toggle `pointer: coarse`, adju
 1. Opening DevTools → Rendering → Emulate CSS media feature → set `pointer` to `coarse`.
 2. Reloading the desktop and verifying enlarged dock buttons and desktop icons.
 3. Using the touch emulator (or a touchscreen) to swipe windows for snap and a three-finger upward motion to open the overview.
+4. Performing three-finger horizontal swipes to rotate through workspaces and confirming the haptic ping (vibration if available, otherwise the short tone) fires on each switch.
 
 Documenting the procedure ensures QA for actual 2-in-1 hardware can replay the steps and compare against emulated results.

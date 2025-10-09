@@ -19,6 +19,7 @@ import AppMenu from '../context-menus/app-menu';
 import TaskbarMenu from '../context-menus/taskbar-menu';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
+import { vibrate } from '../apps/Games/common/haptics';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING } from '../../utils/uiConstants';
@@ -89,7 +90,9 @@ export class Desktop extends Component {
         this.iconGridSpacing = { ...this.defaultIconGridSpacing };
         this.desktopPadding = { ...this.defaultDesktopPadding };
 
-        this.gestureState = { pointer: null, overview: null };
+        this.gestureState = { pointer: null, overview: null, workspace: null };
+
+        this.workspaceToneContext = null;
 
         this.currentPointerIsCoarse = false;
 
@@ -339,6 +342,7 @@ export class Desktop extends Component {
         this.gestureRoot = null;
         this.gestureState.pointer = null;
         this.gestureState.overview = null;
+        this.gestureState.workspace = null;
     };
 
     handleShellPointerDown = (event) => {
@@ -379,6 +383,9 @@ export class Desktop extends Component {
         if (distance < 120 || verticalDrift > 90 || duration > 600) {
             return;
         }
+        if (distance <= verticalDrift * 1.2) {
+            return;
+        }
         const velocity = distance / Math.max(duration, 1);
         if (velocity < 0.35) {
             return;
@@ -401,15 +408,26 @@ export class Desktop extends Component {
         if (event.touches && event.touches.length > 1) {
             this.gestureState.pointer = null;
         }
-        if (!event.touches || event.touches.length !== 3) return;
+        if (!event.touches || event.touches.length !== 3) {
+            this.gestureState.overview = null;
+            this.gestureState.workspace = null;
+            return;
+        }
         const centroid = this.computeTouchCentroid(event.touches);
         if (!centroid) return;
-        this.gestureState.overview = {
+        const timestamp = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        const gesture = {
+            startX: centroid.x,
             startY: centroid.y,
+            lastX: centroid.x,
             lastY: centroid.y,
-            startTime: typeof performance !== 'undefined' ? performance.now() : Date.now(),
+            startTime: timestamp,
             triggered: false,
+            workspaceTriggered: false,
+            axis: null,
         };
+        this.gestureState.overview = gesture;
+        this.gestureState.workspace = gesture;
     };
 
     handleShellTouchMove = (event) => {
@@ -417,7 +435,31 @@ export class Desktop extends Component {
         if (!gesture) return;
         const centroid = this.computeTouchCentroid(event.touches);
         if (!centroid) return;
+        gesture.lastX = centroid.x;
         gesture.lastY = centroid.y;
+
+        const deltaX = centroid.x - gesture.startX;
+        const deltaY = gesture.startY - centroid.y;
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(deltaY);
+
+        if (!gesture.axis) {
+            if (absX > 40 && absX > absY + 10) {
+                gesture.axis = 'horizontal';
+            } else if (absY > 40 && absY >= absX) {
+                gesture.axis = 'vertical';
+            }
+        }
+
+        if (gesture.axis === 'horizontal' && !gesture.workspaceTriggered) {
+            const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+            const duration = now - gesture.startTime;
+            if (absX > 90 && duration < 800) {
+                const direction = deltaX < 0 ? 1 : -1;
+                this.shiftWorkspace(direction);
+                gesture.workspaceTriggered = true;
+            }
+        }
     };
 
     handleShellTouchEnd = (event) => {
@@ -428,21 +470,38 @@ export class Desktop extends Component {
         if (event.touches && event.touches.length > 0) {
             return;
         }
-        const deltaY = gesture.startY - (gesture.lastY ?? gesture.startY);
+        const lastX = gesture.lastX ?? gesture.startX;
+        const lastY = gesture.lastY ?? gesture.startY;
+        const deltaX = lastX - gesture.startX;
+        const deltaY = gesture.startY - lastY;
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(deltaY);
         const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
         const duration = now - gesture.startTime;
-        const shouldTrigger = deltaY > 60 || (deltaY > 40 && duration < 400);
-        if (shouldTrigger && !gesture.triggered) {
-            if (!this.state.showWindowSwitcher) {
-                this.openWindowSwitcher();
+        if (!gesture.workspaceTriggered) {
+            const horizontalLikely = gesture.axis === 'horizontal' || (absX > absY + 20);
+            if (horizontalLikely && absX > 90 && duration < 800) {
+                const direction = deltaX < 0 ? 1 : -1;
+                this.shiftWorkspace(direction);
+                gesture.workspaceTriggered = true;
             }
-            gesture.triggered = true;
+        }
+        if (!gesture.workspaceTriggered) {
+            const shouldTrigger = deltaY > 60 || (deltaY > 40 && duration < 400);
+            if (shouldTrigger && !gesture.triggered) {
+                if (!this.state.showWindowSwitcher) {
+                    this.openWindowSwitcher();
+                }
+                gesture.triggered = true;
+            }
         }
         this.gestureState.overview = null;
+        this.gestureState.workspace = null;
     };
 
     handleShellTouchCancel = () => {
         this.gestureState.overview = null;
+        this.gestureState.workspace = null;
     };
 
     dispatchWindowCommand = (windowId, key) => {
@@ -855,14 +914,56 @@ export class Desktop extends Component {
         }, () => {
             this.broadcastWorkspaceState();
             this.giveFocusToLastApp();
+            this.emitWorkspaceFeedback();
         });
     };
 
     shiftWorkspace = (direction) => {
         const { activeWorkspace, workspaces } = this.state;
         const count = workspaces.length;
+        if (!count) return;
         const next = (activeWorkspace + direction + count) % count;
         this.switchWorkspace(next);
+    };
+
+    emitWorkspaceFeedback = () => {
+        if (typeof window === 'undefined') return;
+        try {
+            vibrate(35);
+        } catch {
+            // ignore vibration errors
+        }
+        this.playWorkspaceTone();
+    };
+
+    playWorkspaceTone = () => {
+        if (typeof window === 'undefined') return;
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextCtor) return;
+        try {
+            if (!this.workspaceToneContext) {
+                this.workspaceToneContext = new AudioContextCtor();
+            }
+            const ctx = this.workspaceToneContext;
+            if (!ctx) return;
+            if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
+                ctx.resume();
+            }
+            const now = ctx.currentTime;
+            const oscillator = ctx.createOscillator();
+            const gain = ctx.createGain();
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(520, now);
+            gain.gain.setValueAtTime(0.0001, now);
+            gain.gain.exponentialRampToValueAtTime(0.045, now + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+            oscillator.connect(gain);
+            gain.connect(ctx.destination);
+            oscillator.start(now);
+            oscillator.stop(now + 0.3);
+        } catch {
+            // ignore audio errors
+        }
     };
 
     getActiveStack = () => {
@@ -970,6 +1071,10 @@ export class Desktop extends Component {
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
+        if (this.workspaceToneContext && typeof this.workspaceToneContext.close === 'function') {
+            this.workspaceToneContext.close().catch(() => {});
+        }
+        this.workspaceToneContext = null;
     }
 
     handleExternalTaskbarCommand = (event) => {
