@@ -23,6 +23,23 @@ function TaskbarMenu(props) {
         props.onCloseMenu && props.onCloseMenu();
     };
 
+    const handleMove = (workspaceId) => {
+        if (typeof workspaceId !== 'number') return;
+        if (typeof props.onMoveToWorkspace === 'function') {
+            props.onMoveToWorkspace(workspaceId);
+        }
+        props.onCloseMenu && props.onCloseMenu();
+    };
+
+    const moveTargets = Array.isArray(props.workspaces)
+        ? props.workspaces.filter(
+            (workspace) =>
+                workspace &&
+                typeof workspace.id === 'number' &&
+                workspace.id !== props.currentWorkspaceId,
+          )
+        : [];
+
     return (
         <div
             id="taskbar-menu"
@@ -30,7 +47,7 @@ function TaskbarMenu(props) {
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}
-            className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-40 context-menu-bg border text-left border-gray-900 rounded text-white py-2 absolute z-50 text-sm'}
+            className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-48 context-menu-bg border text-left border-gray-900 rounded text-white py-2 absolute z-50 text-sm'}
         >
             <button
                 type="button"
@@ -50,6 +67,26 @@ function TaskbarMenu(props) {
             >
                 <span className="ml-5">Close</span>
             </button>
+            {moveTargets.length > 0 && (
+                <div
+                    role="group"
+                    aria-label="Move window to workspace"
+                    className="mt-2 border-t border-gray-800 pt-2"
+                >
+                    {moveTargets.map((workspace) => (
+                        <button
+                            key={workspace.id}
+                            type="button"
+                            onClick={() => handleMove(workspace.id)}
+                            role="menuitem"
+                            aria-label={`Move to ${workspace.label}`}
+                            className="w-full text-left cursor-default py-0.5 hover:bg-gray-700"
+                        >
+                            <span className="ml-5">Move to {workspace.label}</span>
+                        </button>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
