@@ -7,6 +7,7 @@ import {
   buildAppMetadata,
   loadAppRegistry,
 } from '../../lib/appRegistry';
+import { filterAndRankApps } from '../../lib/appSearch';
 
 const AppsPage = () => {
   const [apps, setApps] = useState([]);
@@ -27,13 +28,8 @@ const AppsPage = () => {
   }, []);
 
   const filteredApps = useMemo(
-    () =>
-      apps.filter(
-        (app) =>
-          !app.disabled &&
-          app.title.toLowerCase().includes(query.toLowerCase()),
-      ),
-    [apps, query],
+    () => filterAndRankApps(apps, metadata, query),
+    [apps, metadata, query],
   );
 
   return (

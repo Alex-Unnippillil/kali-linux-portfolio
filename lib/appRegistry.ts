@@ -3,13 +3,15 @@ export type AppMetadata = {
   description: string;
   path: string;
   keyboard: string[];
+  keywords: string[];
   icon?: string;
 };
 
-type AppEntry = {
+export type AppEntry = {
   id: string;
   title: string;
   icon?: string;
+  disabled?: boolean;
 };
 
 const DEFAULT_KEYBOARD_HINTS = [
@@ -26,10 +28,12 @@ const metadataOverrides: Partial<Record<string, Partial<AppMetadata>>> = {
       'Ctrl+L — Clear terminal output',
       'Arrow keys — Navigate history',
     ],
+    keywords: ['shell', 'cli', 'command line', 'bash', 'zsh'],
   },
   firefox: {
     description: 'Lightweight Firefox-inspired web view that loads a single sandboxed iframe.',
     keyboard: ['Ctrl+L — Focus address bar', 'Enter — Navigate to URL'],
+    keywords: ['browser', 'firefox', 'web'],
   },
   vscode: {
     description: 'VS Code remote workspace embedded via StackBlitz iframe for quick code editing.',
@@ -38,6 +42,7 @@ const metadataOverrides: Partial<Record<string, Partial<AppMetadata>>> = {
       'Ctrl+Shift+P — Command palette',
       'Ctrl+B — Toggle sidebar',
     ],
+    keywords: ['code editor', 'ide', 'development'],
   },
   spotify: {
     description: 'Spotify-inspired player that streams curated demo playlists without external calls.',
@@ -46,9 +51,11 @@ const metadataOverrides: Partial<Record<string, Partial<AppMetadata>>> = {
       'ArrowRight — Skip forward',
       'ArrowLeft — Skip backward',
     ],
+    keywords: ['music', 'audio', 'playlist', 'spotify'],
   },
   settings: {
     description: 'Desktop settings hub with themes, key bindings, and personalization options.',
+    keywords: ['preferences', 'theme', 'configuration'],
   },
   'security-tools': {
     description: 'Unified console aggregating repeater, log viewers, and lab-only detection fixtures.',
@@ -57,18 +64,23 @@ const metadataOverrides: Partial<Record<string, Partial<AppMetadata>>> = {
       'Tab — Cycle tool tabs',
       'Esc — Close overlays',
     ],
+    keywords: ['pentest', 'security', 'forensics', 'toolkit'],
   },
   wireshark: {
     description: 'Packet capture viewer using bundled PCAP fixtures to demonstrate network analysis.',
+    keywords: ['packet', 'sniffer', 'network analysis', 'pcap'],
   },
   metasploit: {
     description: 'Module browser and log replay of the Metasploit framework for safe demonstrations.',
+    keywords: ['exploit', 'framework', 'penetration testing'],
   },
   weather: {
     description: 'Weather dashboard showing forecast data sourced from static fixtures.',
+    keywords: ['forecast', 'temperature', 'climate'],
   },
   'mimikatz/offline': {
     description: 'Offline walkthrough of mimikatz credential extraction stages with canned data.',
+    keywords: ['mimikatz', 'credentials', 'security demo'],
   },
 };
 
@@ -81,6 +93,7 @@ export const buildAppMetadata = (app: AppEntry): AppMetadata => {
       override.description ?? `Launch the ${app.title} demo environment.`,
     path: override.path ?? `/apps/${app.id}`,
     keyboard: override.keyboard ?? DEFAULT_KEYBOARD_HINTS,
+    keywords: override.keywords ?? [],
   };
 };
 
