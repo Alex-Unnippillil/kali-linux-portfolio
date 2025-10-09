@@ -198,6 +198,11 @@ const displayHashcat = createDisplay(HashcatApp);
 
 const displayKismet = createDisplay(KismetApp);
 
+const withAllowMultipleDefault = (app) => ({
+  allowMultiple: false,
+  ...app,
+});
+
 // Utilities list used for the "Utilities" folder on the desktop
 const utilityList = [
   {
@@ -272,7 +277,7 @@ const utilityList = [
     desktop_shortcut: false,
     screen: displaySubnetCalculator,
   },
-];
+].map(withAllowMultipleDefault);
 
 export const utilities = utilityList;
 
@@ -595,11 +600,11 @@ const gameList = [
     desktop_shortcut: false,
     screen: displayPinball,
   },
-];
+].map(withAllowMultipleDefault);
 
 export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
 
-const apps = [
+const baseApps = [
   {
     id: 'firefox',
     title: 'Firefox',
@@ -633,6 +638,7 @@ const apps = [
     resizable: true,
     defaultWidth: 68,
     defaultHeight: 72,
+    allowMultiple: true,
   },
   {
     // VSCode app uses a Stack iframe, so no editor dependencies are required
@@ -798,6 +804,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayGedit,
+    allowMultiple: true,
   },
   {
     id: 'converter',
@@ -1064,5 +1071,7 @@ const apps = [
   // Games are included so they appear alongside apps
   ...games,
 ];
+
+const apps = baseApps.map(withAllowMultipleDefault);
 
 export default apps;

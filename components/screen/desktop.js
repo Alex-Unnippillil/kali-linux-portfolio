@@ -93,7 +93,9 @@ export class Desktop extends Component {
 
         this.currentPointerIsCoarse = false;
 
-        this.validAppIds = new Set(apps.map((app) => app.id));
+        this.appConfigMap = new Map(apps.map((app) => [app.id, app]));
+        this.validAppIds = new Set(this.appConfigMap.keys());
+        this.instanceCounters = {};
 
         this.openSettingsTarget = null;
         this.openSettingsClickHandler = null;
@@ -114,6 +116,99 @@ export class Desktop extends Component {
         minimized_windows: { ...state.minimized_windows },
         window_positions: { ...state.window_positions },
     });
+
+    getBaseAppId = (id) => {
+        if (typeof id !== 'string') return id;
+        const separator = id.indexOf('#');
+        return separator === -1 ? id : id.slice(0, separator);
+    };
+
+    getAppConfig = (id) => {
+        const baseId = this.getBaseAppId(id);
+        return this.appConfigMap.get(baseId);
+    };
+
+    formatWindowTitle = (app, windowId) => {
+        if (!app) return typeof windowId === 'string' ? windowId : '';
+        if (app.allowMultiple && typeof windowId === 'string') {
+            const separator = windowId.indexOf('#');
+            if (separator !== -1) {
+                const suffix = windowId.slice(separator + 1);
+                if (suffix) {
+                    return `${app.title} #${suffix}`;
+                }
+            }
+        }
+        return app.title;
+    };
+
+    registerInstanceId = (baseId, instanceId) => {
+        if (!baseId || typeof instanceId !== 'string') return;
+        const separator = instanceId.indexOf('#');
+        if (separator === -1) return;
+        const suffix = instanceId.slice(separator + 1);
+        const numeric = parseInt(suffix, 10);
+        if (Number.isNaN(numeric)) return;
+        const current = this.instanceCounters[baseId] || 0;
+        if (numeric > current) {
+            this.instanceCounters[baseId] = numeric;
+        }
+    };
+
+    generateInstanceId = (baseId) => {
+        let counter = (this.instanceCounters[baseId] || 0) + 1;
+        let candidate = `${baseId}#${counter}`;
+        const closed = this.state.closed_windows || {};
+        while (Object.prototype.hasOwnProperty.call(closed, candidate)) {
+            counter += 1;
+            candidate = `${baseId}#${counter}`;
+        }
+        this.instanceCounters[baseId] = counter;
+        return candidate;
+    };
+
+    findMostRecentWindowId = (baseId) => {
+        if (!baseId) return null;
+        const closed = this.state.closed_windows || {};
+        const stack = this.getActiveStack();
+        for (let index = 0; index < stack.length; index += 1) {
+            const id = stack[index];
+            if (this.getBaseAppId(id) === baseId && closed[id] === false) {
+                return id;
+            }
+        }
+        const ids = Object.keys(closed);
+        for (let index = 0; index < ids.length; index += 1) {
+            const id = ids[index];
+            if (this.getBaseAppId(id) === baseId && closed[id] === false) {
+                return id;
+            }
+        }
+        return null;
+    };
+
+    getOrderedOpenWindowIds = () => {
+        const closed = this.state.closed_windows || {};
+        const openIds = Object.keys(closed).filter((id) => closed[id] === false);
+        if (!openIds.length) return [];
+        const openSet = new Set(openIds);
+        const ordered = [];
+        const seen = new Set();
+        const stack = this.getActiveStack();
+        stack.slice().reverse().forEach((id) => {
+            if (openSet.has(id) && !seen.has(id)) {
+                ordered.push(id);
+                seen.add(id);
+            }
+        });
+        openIds.forEach((id) => {
+            if (!seen.has(id)) {
+                ordered.push(id);
+                seen.add(id);
+            }
+        });
+        return ordered;
+    };
 
     commitWorkspacePartial = (partial, index) => {
         const targetIndex = typeof index === 'number' ? index : this.state.activeWorkspace;
@@ -483,16 +578,21 @@ export class Desktop extends Component {
     };
 
     getRunningAppSummaries = () => {
-        const { closed_windows = {}, minimized_windows = {}, focused_windows = {} } = this.state;
-        return apps
-            .filter((app) => closed_windows[app.id] === false)
-            .map((app) => ({
-                id: app.id,
-                title: app.title,
-                icon: app.icon.replace('./', '/'),
-                isFocused: Boolean(focused_windows[app.id]),
-                isMinimized: Boolean(minimized_windows[app.id]),
-            }));
+        const { minimized_windows = {}, focused_windows = {} } = this.state;
+        return this.getOrderedOpenWindowIds()
+            .map((id) => {
+                const app = this.getAppConfig(id);
+                if (!app) return null;
+                return {
+                    id,
+                    baseId: this.getBaseAppId(id),
+                    title: this.formatWindowTitle(app, id),
+                    icon: app.icon.replace('./', '/'),
+                    isFocused: Boolean(focused_windows[id]),
+                    isMinimized: Boolean(minimized_windows[id]),
+                };
+            })
+            .filter(Boolean);
     };
 
     setWorkspaceState = (updater, callback) => {
@@ -974,31 +1074,48 @@ export class Desktop extends Component {
 
     handleExternalTaskbarCommand = (event) => {
         const detail = event?.detail || {};
-        const appId = detail.appId;
+        const requestedId = detail.appId;
         const action = detail.action || 'toggle';
-        if (!appId || !this.validAppIds.has(appId)) return;
+        const baseId = this.getBaseAppId(requestedId);
+        if (!baseId || !this.validAppIds.has(baseId)) return;
+
+        let targetId = typeof requestedId === 'string' && requestedId.includes('#') ? requestedId : this.findMostRecentWindowId(baseId);
 
         switch (action) {
             case 'minimize':
-                if (!this.state.minimized_windows[appId]) {
-                    this.hasMinimised(appId);
+                if (targetId && !this.state.minimized_windows[targetId]) {
+                    this.hasMinimised(targetId);
                 }
                 break;
             case 'focus':
-                this.focus(appId);
+                if (targetId) {
+                    this.focus(targetId);
+                } else {
+                    this.openApp(baseId);
+                }
                 break;
             case 'open':
-                this.openApp(appId);
+                if (typeof requestedId === 'string' && requestedId.includes('#')) {
+                    this.openApp(requestedId);
+                } else {
+                    this.openApp(baseId);
+                }
                 break;
             case 'toggle':
-            default:
-                if (this.state.minimized_windows[appId]) {
-                    this.openApp(appId);
-                } else if (this.state.focused_windows[appId]) {
-                    this.hasMinimised(appId);
+            default: {
+                if (targetId && this.state.closed_windows[targetId] === false) {
+                    if (this.state.minimized_windows[targetId]) {
+                        this.openApp(targetId);
+                    } else if (this.state.focused_windows[targetId]) {
+                        this.hasMinimised(targetId);
+                    } else {
+                        this.openApp(targetId);
+                    }
                 } else {
-                    this.openApp(appId);
+                    this.openApp(baseId);
                 }
+                break;
+            }
         }
     };
 
@@ -1201,9 +1318,16 @@ export class Desktop extends Component {
     }
 
     openWindowSwitcher = () => {
-        const windows = this.getActiveStack()
-            .filter(id => this.state.closed_windows[id] === false)
-            .map(id => apps.find(a => a.id === id))
+        const windows = this.getOrderedOpenWindowIds()
+            .map((id) => {
+                const app = this.getAppConfig(id);
+                if (!app) return null;
+                return {
+                    id,
+                    title: this.formatWindowTitle(app, id),
+                    icon: app.icon.replace('./', '/'),
+                };
+            })
             .filter(Boolean);
         if (windows.length) {
             this.setState({ showWindowSwitcher: true, switcherWindows: windows });
@@ -1341,6 +1465,9 @@ export class Desktop extends Component {
             safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps));
         }
 
+        this.appConfigMap = new Map(apps.map((app) => [app.id, app]));
+        this.validAppIds = new Set(this.appConfigMap.keys());
+
         const focused_windows = {};
         const closed_windows = {};
         const disabled_apps = {};
@@ -1378,19 +1505,22 @@ export class Desktop extends Component {
     }
 
     updateAppsData = () => {
-        const focused_windows = {};
-        const closed_windows = {};
-        const favourite_apps = {};
-        const minimized_windows = {};
+        this.appConfigMap = new Map(apps.map((app) => [app.id, app]));
+        this.validAppIds = new Set(this.appConfigMap.keys());
+
+        const focused_windows = { ...this.state.focused_windows };
+        const closed_windows = { ...this.state.closed_windows };
+        const favourite_apps = { ...this.state.favourite_apps };
+        const minimized_windows = { ...this.state.minimized_windows };
         const disabled_apps = {};
         const desktop_apps = [];
 
         apps.forEach((app) => {
-            focused_windows[app.id] = this.state.focused_windows[app.id] ?? false;
-            minimized_windows[app.id] = this.state.minimized_windows[app.id] ?? false;
+            focused_windows[app.id] = focused_windows[app.id] ?? false;
+            minimized_windows[app.id] = minimized_windows[app.id] ?? false;
             disabled_apps[app.id] = app.disabled;
-            closed_windows[app.id] = this.state.closed_windows[app.id] ?? true;
-            favourite_apps[app.id] = app.favourite;
+            closed_windows[app.id] = closed_windows[app.id] ?? true;
+            favourite_apps[app.id] = favourite_apps[app.id] ?? app.favourite;
             if (app.desktop_shortcut) desktop_apps.push(app.id);
         });
 
@@ -1415,9 +1545,10 @@ export class Desktop extends Component {
     hasVisibleWindows = () => {
         const closed = this.state.closed_windows || {};
         const minimized = this.state.minimized_windows || {};
-        return Object.keys(closed).some(
-            (id) => this.validAppIds.has(id) && closed[id] === false && !minimized[id],
-        );
+        return Object.keys(closed).some((id) => {
+            const baseId = this.getBaseAppId(id);
+            return this.validAppIds.has(baseId) && closed[id] === false && !minimized[id];
+        });
     };
 
     renderDesktopApps = () => {
@@ -1484,37 +1615,19 @@ export class Desktop extends Component {
     }
 
     renderWindows = () => {
-        const { closed_windows = {}, minimized_windows = {}, focused_windows = {} } = this.state;
+        const { minimized_windows = {}, focused_windows = {} } = this.state;
         const safeTopOffset = measureWindowTopOffset();
-        const stack = this.getActiveStack();
-        const orderedIds = [];
-        const seen = new Set();
-
-        stack.slice().reverse().forEach((id) => {
-            if (closed_windows[id] === false && !seen.has(id)) {
-                orderedIds.push(id);
-                seen.add(id);
-            }
-        });
-
-        apps.forEach((app) => {
-            if (closed_windows[app.id] === false && !seen.has(app.id)) {
-                orderedIds.push(app.id);
-                seen.add(app.id);
-            }
-        });
+        const orderedIds = this.getOrderedOpenWindowIds();
 
         if (!orderedIds.length) return null;
 
-        const appMap = new Map(apps.map((app) => [app.id, app]));
-
         return orderedIds.map((id, index) => {
-            const app = appMap.get(id);
+            const app = this.getAppConfig(id);
             if (!app) return null;
             const pos = this.state.window_positions[id];
             const props = {
-                title: app.title,
-                id: app.id,
+                title: this.formatWindowTitle(app, id),
+                id,
                 screen: app.screen,
                 addFolder: this.addToDesktop,
                 closed: this.closeApp,
@@ -1618,10 +1731,27 @@ export class Desktop extends Component {
     }
 
     openApp = (objId, params) => {
-        if (!this.validAppIds.has(objId)) {
+        const baseId = this.getBaseAppId(objId);
+        if (!this.validAppIds.has(baseId)) {
             console.warn(`Attempted to open unknown app: ${objId}`);
             return;
         }
+
+        const appConfig = this.getAppConfig(baseId) || {};
+        const allowMultiple = Boolean(appConfig.allowMultiple);
+        const requestedHasInstance = typeof objId === 'string' && objId.includes('#');
+        let windowId;
+        if (allowMultiple) {
+            if (requestedHasInstance) {
+                windowId = objId;
+                this.registerInstanceId(baseId, windowId);
+            } else {
+                windowId = this.generateInstanceId(baseId);
+            }
+        } else {
+            windowId = baseId;
+        }
+
         const context = params && typeof params === 'object'
             ? {
                 ...params,
@@ -1629,43 +1759,39 @@ export class Desktop extends Component {
             }
             : undefined;
         const contextState = context
-            ? { ...this.state.window_context, [objId]: context }
+            ? { ...this.state.window_context, [windowId]: context }
             : this.state.window_context;
 
-
-        // google analytics
         ReactGA.event({
             category: `Open App`,
-            action: `Opened ${objId} window`
+            action: `Opened ${windowId} window`
         });
 
-        // if the app is disabled
-        if (this.state.disabled_apps[objId]) return;
+        if (this.state.disabled_apps[baseId]) return;
 
-        // if app is already open, focus it instead of spawning a new window
-        if (this.state.closed_windows[objId] === false) {
-            // if it's minimised, restore its last position
-            if (this.state.minimized_windows[objId]) {
-                this.focus(objId);
-                var r = document.querySelector("#" + objId);
-                r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                let minimized_windows = this.state.minimized_windows;
-                minimized_windows[objId] = false;
-                this.setWorkspaceState({ minimized_windows }, this.saveSession);
+        const existingClosed = this.state.closed_windows[windowId];
+        const closed_windows = { ...this.state.closed_windows };
+        if (!Object.prototype.hasOwnProperty.call(closed_windows, windowId)) {
+            closed_windows[windowId] = true;
+        }
+        const minimized_windows = { ...this.state.minimized_windows };
+        if (!Object.prototype.hasOwnProperty.call(minimized_windows, windowId)) {
+            minimized_windows[windowId] = false;
+        }
+        const favourite_apps = { ...this.state.favourite_apps };
 
-            }
-
+        if (existingClosed === false) {
             const reopen = () => {
-                // if it's minimised, restore its last position
-                if (this.state.minimized_windows[objId]) {
-                    this.focus(objId);
-                    var r = document.querySelector("#" + objId);
-                    r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                    let minimized_windows = this.state.minimized_windows;
-                    minimized_windows[objId] = false;
-                    this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                if (this.state.minimized_windows[windowId]) {
+                    this.focus(windowId);
+                    const element = typeof document !== 'undefined' ? document.getElementById(windowId) : null;
+                    if (element) {
+                        element.style.transform = `translate(${element.style.getPropertyValue('--window-transform-x')},${element.style.getPropertyValue('--window-transform-y')}) scale(1)`;
+                    }
+                    const nextMinimized = { ...this.state.minimized_windows, [windowId]: false };
+                    this.setWorkspaceState({ minimized_windows: nextMinimized }, this.saveSession);
                 } else {
-                    this.focus(objId);
+                    this.focus(windowId);
                     this.saveSession();
                 }
             };
@@ -1675,51 +1801,60 @@ export class Desktop extends Component {
                 reopen();
             }
             return;
-        } else {
-            let closed_windows = this.state.closed_windows;
-            let favourite_apps = this.state.favourite_apps;
-            let frequentApps = [];
-            try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
-            var currentApp = frequentApps.find(app => app.id === objId);
-            if (currentApp) {
-                frequentApps.forEach((app) => {
-                    if (app.id === currentApp.id) {
-                        app.frequency += 1; // increase the frequency if app is found 
-                    }
-                });
-            } else {
-                frequentApps.push({ id: objId, frequency: 1 }); // new app opened
-            }
-
-            frequentApps.sort((a, b) => {
-                if (a.frequency < b.frequency) {
-                    return 1;
-                }
-                if (a.frequency > b.frequency) {
-                    return -1;
-                }
-                return 0; // sort according to decreasing frequencies
-            });
-
-            safeLocalStorage?.setItem('frequentApps', JSON.stringify(frequentApps));
-
-            addRecentApp(objId);
-
-            setTimeout(() => {
-                favourite_apps[objId] = true; // adds opened app to sideBar
-                closed_windows[objId] = false; // openes app's window
-                this.setWorkspaceState({ closed_windows, favourite_apps, allAppsView: false }, () => {
-                    const nextState = { closed_windows, favourite_apps, allAppsView: false };
-                    if (context) {
-                        nextState.window_context = contextState;
-                    }
-                    this.setState(nextState, () => {
-                        this.focus(objId);
-                        this.saveSession();
-                    });
-                });
-            }, 200);
         }
+
+        let frequentApps = [];
+        try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
+        const currentApp = frequentApps.find(app => app.id === baseId);
+        if (currentApp) {
+            frequentApps.forEach((app) => {
+                if (app.id === currentApp.id) {
+                    app.frequency += 1;
+                }
+            });
+        } else {
+            frequentApps.push({ id: baseId, frequency: 1 });
+        }
+
+        frequentApps.sort((a, b) => {
+            if (a.frequency < b.frequency) {
+                return 1;
+            }
+            if (a.frequency > b.frequency) {
+                return -1;
+            }
+            return 0;
+        });
+
+        safeLocalStorage?.setItem('frequentApps', JSON.stringify(frequentApps));
+
+        addRecentApp(baseId);
+
+        if (allowMultiple && windowId.includes('#')) {
+            this.registerInstanceId(baseId, windowId);
+        }
+
+        setTimeout(() => {
+            const nextClosed = { ...closed_windows, [windowId]: false };
+            const nextMinimized = { ...minimized_windows, [windowId]: false };
+            const nextFavourite = { ...favourite_apps, [baseId]: true };
+            const updates = {
+                closed_windows: nextClosed,
+                favourite_apps: nextFavourite,
+                minimized_windows: nextMinimized,
+                allAppsView: false,
+            };
+            this.setWorkspaceState(updates, () => {
+                const nextState = { ...updates };
+                if (context) {
+                    nextState.window_context = contextState;
+                }
+                this.setState(nextState, () => {
+                    this.focus(windowId);
+                    this.saveSession();
+                });
+            });
+        }, 200);
     }
 
     closeApp = async (objId) => {
@@ -1735,8 +1870,12 @@ export class Desktop extends Component {
             }
         }
 
+        const baseId = this.getBaseAppId(objId);
+        const appMeta = this.getAppConfig(objId) || {};
+        const allowMultiple = Boolean(appMeta.allowMultiple);
+        const isInstance = allowMultiple && typeof objId === 'string' && objId.includes('#');
+
         // persist in trash with autopurge
-        const appMeta = apps.find(a => a.id === objId) || {};
         const purgeDays = parseInt(safeLocalStorage?.getItem('trash-purge-days') || '30', 10);
         const ms = purgeDays * 24 * 60 * 60 * 1000;
         const now = Date.now();
@@ -1762,43 +1901,70 @@ export class Desktop extends Component {
 
         this.giveFocusToLastApp();
 
-        // close window
-        let closed_windows = this.state.closed_windows;
-        let favourite_apps = this.state.favourite_apps;
+        const closed_windows = { ...this.state.closed_windows };
+        const favourite_apps = { ...this.state.favourite_apps };
+        const minimized_windows = { ...this.state.minimized_windows };
+        const focused_windows = { ...this.state.focused_windows };
+        const window_positions = { ...this.state.window_positions };
 
-        if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
-        closed_windows[objId] = true; // closes the app's window
+        if (isInstance) {
+            delete closed_windows[objId];
+            delete minimized_windows[objId];
+            delete focused_windows[objId];
+            delete window_positions[objId];
+        } else {
+            closed_windows[objId] = true;
+            minimized_windows[objId] = false;
+            focused_windows[objId] = false;
+        }
 
-        this.setWorkspaceState({ closed_windows, favourite_apps }, this.saveSession);
+        const hasOtherInstances = Object.entries(closed_windows).some(
+            ([id, value]) => this.getBaseAppId(id) === baseId && value === false,
+        );
+        if (!hasOtherInstances && this.initFavourite[baseId] === false) {
+            favourite_apps[baseId] = false;
+        }
+
+        const workspaceUpdates = {
+            closed_windows,
+            favourite_apps,
+            minimized_windows,
+            focused_windows,
+            window_positions,
+        };
+
+        this.setWorkspaceState(workspaceUpdates, this.saveSession);
 
         const window_context = { ...this.state.window_context };
         delete window_context[objId];
-        this.setState({ closed_windows, favourite_apps, window_context }, this.saveSession);
+        this.setState({ ...workspaceUpdates, window_context }, this.saveSession);
     }
 
     pinApp = (id) => {
+        const baseId = this.getBaseAppId(id);
         let favourite_apps = { ...this.state.favourite_apps }
-        favourite_apps[id] = true
-        this.initFavourite[id] = true
-        const app = apps.find(a => a.id === id)
+        favourite_apps[baseId] = true
+        this.initFavourite[baseId] = true
+        const app = this.getAppConfig(baseId)
         if (app) app.favourite = true
         let pinnedApps = [];
         try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        if (!pinnedApps.includes(id)) pinnedApps.push(id)
+        if (!pinnedApps.includes(baseId)) pinnedApps.push(baseId)
         safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }
 
     unpinApp = (id) => {
+        const baseId = this.getBaseAppId(id);
         let favourite_apps = { ...this.state.favourite_apps }
-        if (this.state.closed_windows[id]) favourite_apps[id] = false
-        this.initFavourite[id] = false
-        const app = apps.find(a => a.id === id)
+        if (this.state.closed_windows[baseId]) favourite_apps[baseId] = false
+        this.initFavourite[baseId] = false
+        const app = this.getAppConfig(baseId)
         if (app) app.favourite = false
         let pinnedApps = [];
         try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        pinnedApps = pinnedApps.filter(appId => appId !== id)
+        pinnedApps = pinnedApps.filter(appId => appId !== baseId)
         safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
@@ -1989,7 +2155,7 @@ export class Desktop extends Component {
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu
                     active={this.state.context_menus.app}
-                    pinned={this.initFavourite[this.state.context_app]}
+                    pinned={this.initFavourite[this.getBaseAppId(this.state.context_app)]}
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
                     onClose={this.hideAllContextMenu}
@@ -2012,6 +2178,7 @@ export class Desktop extends Component {
                         this.closeApp(id);
                     }}
                     onCloseMenu={this.hideAllContextMenu}
+                    pinned={this.initFavourite[this.getBaseAppId(this.state.context_app)]}
                 />
 
                 {/* Folder Input Name Bar */}
