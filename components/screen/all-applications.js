@@ -60,6 +60,9 @@ class AllApplications extends React.Component {
             favorites: [],
             recents: [],
         };
+
+        this.containerRef = React.createRef();
+        this.dragState = null;
     }
 
     componentDidMount() {
@@ -121,6 +124,73 @@ class AllApplications extends React.Component {
         });
     };
 
+    handleTileDragStart = (appId, event) => {
+        if (!event) return;
+        if (event.dataTransfer) {
+            try {
+                event.dataTransfer.setData('application/x-app-id', appId);
+                event.dataTransfer.setData('text/plain', appId);
+                event.dataTransfer.effectAllowed = 'copyMove';
+            } catch (e) {
+                // ignore dataTransfer errors
+            }
+        }
+
+        const target = event.currentTarget;
+        const rect = typeof target?.getBoundingClientRect === 'function' ? target.getBoundingClientRect() : null;
+        const offsetX = Number.isFinite(event.clientX) && rect ? event.clientX - rect.left : null;
+        const offsetY = Number.isFinite(event.clientY) && rect ? event.clientY - rect.top : null;
+
+        this.dragState = {
+            appId,
+            offsetX: Number.isFinite(offsetX) ? offsetX : undefined,
+            offsetY: Number.isFinite(offsetY) ? offsetY : undefined,
+            lastPosition: Number.isFinite(event.clientX) && Number.isFinite(event.clientY)
+                ? { clientX: event.clientX, clientY: event.clientY }
+                : null,
+        };
+    };
+
+    handleTileDrag = (event) => {
+        if (!this.dragState || !event) return;
+        if (Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
+            this.dragState.lastPosition = { clientX: event.clientX, clientY: event.clientY };
+        }
+    };
+
+    handleTileDragEnd = (appId, event) => {
+        const state = this.dragState;
+        this.dragState = null;
+
+        if (!event || !state || state.appId !== appId) return;
+
+        const pointX = Number.isFinite(event.clientX) ? event.clientX : state.lastPosition?.clientX;
+        const pointY = Number.isFinite(event.clientY) ? event.clientY : state.lastPosition?.clientY;
+
+        if (!Number.isFinite(pointX) || !Number.isFinite(pointY)) return;
+
+        const container = this.containerRef?.current;
+        let isOutside = true;
+        if (container && typeof container.getBoundingClientRect === 'function') {
+            const rect = container.getBoundingClientRect();
+            isOutside = pointX < rect.left || pointX > rect.right || pointY < rect.top || pointY > rect.bottom;
+        }
+
+        if (!isOutside) return;
+
+        if (typeof window !== 'undefined') {
+            const detail = {
+                appId,
+                clientX: pointX,
+                clientY: pointY,
+                offsetX: state.offsetX,
+                offsetY: state.offsetY,
+                shouldClose: true,
+            };
+            window.dispatchEvent(new CustomEvent('launcher-app-drop', { detail }));
+        }
+    };
+
     renderAppTile = (app) => {
         const isFavorite = this.state.favorites.includes(app.id);
         return (
@@ -147,6 +217,9 @@ class AllApplications extends React.Component {
                     openApp={() => this.openApp(app.id)}
                     disabled={app.disabled}
                     prefetch={app.screen?.prefetch}
+                    onDragStart={(event) => this.handleTileDragStart(app.id, event)}
+                    onDrag={(event) => this.handleTileDrag(event)}
+                    onDragEnd={(event) => this.handleTileDragEnd(app.id, event)}
                 />
             </div>
         );
@@ -191,7 +264,10 @@ class AllApplications extends React.Component {
                     onChange={this.handleChange}
                     aria-label="Search applications"
                 />
-                <div className="flex w-full max-w-5xl flex-col items-stretch px-6 pb-10">
+                <div
+                    className="flex w-full max-w-5xl flex-col items-stretch px-6 pb-10"
+                    ref={this.containerRef}
+                >
                     {this.renderSection('Favorites', favoriteApps)}
                     {this.renderSection('Recent', recentApps)}
                     {groupedApps.map((group, index) =>
