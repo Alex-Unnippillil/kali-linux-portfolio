@@ -114,6 +114,7 @@ describe('Desktop event listeners', () => {
         ['workspace-select', instance.handleExternalWorkspaceSelect],
         ['workspace-request', instance.broadcastWorkspaceState],
         ['taskbar-command', instance.handleExternalTaskbarCommand],
+        ['desktop-show-desktop', instance.handleShowDesktopRequest],
       ])
     );
     expect(docRemoveSpy.mock.calls).toEqual(

@@ -87,4 +87,48 @@ describe('Navbar running apps tray', () => {
     expect(button).toHaveAttribute('data-active', 'false');
     expect(button.querySelector('[data-testid="running-indicator"]')).toBeFalsy();
   });
+
+  it('dispatches show desktop events and reflects desktop state', () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('workspace-state', { detail: workspaceEventDetail }));
+    });
+
+    const desktopButton = screen.getByTestId('show-desktop-button');
+    expect(desktopButton).toHaveAttribute('aria-pressed', 'false');
+    expect(desktopButton).toHaveAttribute('data-active', 'false');
+
+    dispatchSpy.mockClear();
+    fireEvent.click(desktopButton);
+
+    const showEventCall = dispatchSpy.mock.calls.find(([event]) => event.type === 'desktop-show-desktop');
+    expect(showEventCall).toBeTruthy();
+    expect(showEventCall?.[0].detail).toEqual({ action: 'show' });
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('workspace-state', {
+          detail: {
+            ...workspaceEventDetail,
+            runningApps: workspaceEventDetail.runningApps.map((app) => ({
+              ...app,
+              isFocused: false,
+              isMinimized: true,
+            })),
+          },
+        }),
+      );
+    });
+
+    expect(desktopButton).toHaveAttribute('aria-pressed', 'true');
+    expect(desktopButton).toHaveAttribute('data-active', 'true');
+
+    dispatchSpy.mockClear();
+    fireEvent.click(desktopButton);
+
+    const hideEventCall = dispatchSpy.mock.calls.find(([event]) => event.type === 'desktop-show-desktop');
+    expect(hideEventCall).toBeTruthy();
+    expect(hideEventCall?.[0].detail).toEqual({ action: 'hide' });
+  });
 });

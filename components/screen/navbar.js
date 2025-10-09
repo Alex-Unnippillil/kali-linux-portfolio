@@ -179,6 +179,84 @@ export default class Navbar extends PureComponent {
                 }
         };
 
+        isDesktopShown = () => {
+                const { runningApps } = this.state;
+                if (!runningApps.length) return true;
+                return runningApps.every((app) => app.isMinimized);
+        };
+
+        dispatchShowDesktopCommand = (action) => {
+                if (typeof window === 'undefined') return;
+                window.dispatchEvent(
+                        new CustomEvent('desktop-show-desktop', {
+                                detail: { action }
+                        })
+                );
+        };
+
+        handleShowDesktopClick = () => {
+                const action = this.isDesktopShown() ? 'hide' : 'show';
+                this.dispatchShowDesktopCommand(action);
+        };
+
+        renderShowDesktopButton = () => {
+                const isDesktopShown = this.isDesktopShown();
+                const title = isDesktopShown ? 'Restore windows' : 'Show desktop';
+                const baseClasses =
+                        'flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]';
+                const stateClasses = isDesktopShown
+                        ? 'border-white/30 bg-white/10 text-white'
+                        : 'border-transparent text-white/80 hover:border-white/20 hover:bg-white/10';
+
+                return (
+                        <button
+                                type="button"
+                                aria-label={title}
+                                aria-pressed={isDesktopShown}
+                                data-active={isDesktopShown ? 'true' : 'false'}
+                                data-testid="show-desktop-button"
+                                onClick={this.handleShowDesktopClick}
+                                title={title}
+                                className={`${baseClasses} ${stateClasses}`}
+                        >
+                                <span className="sr-only">{title}</span>
+                                <span aria-hidden="true" className="flex items-center gap-2 md:gap-1">
+                                        <svg
+                                                className="h-3.5 w-3.5 text-current md:h-4 md:w-4"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                        >
+                                                <rect
+                                                        x="3"
+                                                        y="4"
+                                                        width="18"
+                                                        height="13"
+                                                        rx="1.5"
+                                                        stroke="currentColor"
+                                                        strokeWidth="1.5"
+                                                />
+                                                <path
+                                                        d="M8 20h8"
+                                                        stroke="currentColor"
+                                                        strokeWidth="1.5"
+                                                        strokeLinecap="round"
+                                                />
+                                                <path
+                                                        d="M12 17v3"
+                                                        stroke="currentColor"
+                                                        strokeWidth="1.5"
+                                                        strokeLinecap="round"
+                                                />
+                                        </svg>
+                                        <span className={`hidden md:inline ${isDesktopShown ? 'text-white' : 'text-white/80'}`}>
+                                                Desktop
+                                        </span>
+                                </span>
+                        </button>
+                );
+        };
+
                 render() {
                         const { workspaces, activeWorkspace } = this.state;
                         return (
@@ -205,6 +283,7 @@ export default class Navbar extends PureComponent {
                                                 <PerformanceGraph />
                                         </div>
                                         <div className="flex items-center gap-4 text-xs md:text-sm">
+                                                {this.renderShowDesktopButton()}
                                                 <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
                                                 <div
                                                         id="status-bar"
