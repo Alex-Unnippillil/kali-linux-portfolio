@@ -220,4 +220,58 @@ describe('Desktop gesture handlers', () => {
 
     document.body.innerHTML = '';
   });
+
+  it('dispatches minimize command on downward swipe gestures', () => {
+    const desktop = new Desktop();
+    desktop.dispatchWindowCommand = jest.fn().mockReturnValue(true);
+    desktop.focus = jest.fn();
+    desktop.setState = jest.fn();
+    desktop.setWorkspaceState = jest.fn();
+
+    desktop.gestureState.pointer = {
+      pointerId: 4,
+      windowId: 'win-swipe',
+      startX: 100,
+      startY: 100,
+      lastX: 120,
+      lastY: 260,
+      startTime: 0,
+    } as any;
+
+    const perfSpy = jest.spyOn(performance, 'now').mockReturnValue(200);
+
+    desktop.handleShellPointerUp({ pointerId: 4 } as PointerEvent);
+
+    expect(desktop.dispatchWindowCommand).toHaveBeenCalledWith('win-swipe', 'minimizeWindow');
+    expect(desktop.focus).not.toHaveBeenCalled();
+
+    perfSpy.mockRestore();
+  });
+
+  it('dispatches restore command on upward swipe gestures and refocuses the window', () => {
+    const desktop = new Desktop();
+    desktop.dispatchWindowCommand = jest.fn().mockReturnValue(true);
+    desktop.focus = jest.fn();
+    desktop.setState = jest.fn();
+    desktop.setWorkspaceState = jest.fn();
+
+    desktop.gestureState.pointer = {
+      pointerId: 5,
+      windowId: 'win-restore',
+      startX: 120,
+      startY: 220,
+      lastX: 150,
+      lastY: 60,
+      startTime: 0,
+    } as any;
+
+    const perfSpy = jest.spyOn(performance, 'now').mockReturnValue(180);
+
+    desktop.handleShellPointerUp({ pointerId: 5 } as PointerEvent);
+
+    expect(desktop.dispatchWindowCommand).toHaveBeenCalledWith('win-restore', 'restoreWindow');
+    expect(desktop.focus).toHaveBeenCalledWith('win-restore');
+
+    perfSpy.mockRestore();
+  });
 });
