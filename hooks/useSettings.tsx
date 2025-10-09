@@ -22,6 +22,12 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getScreenLocked as loadScreenLocked,
+  setScreenLocked as saveScreenLocked,
+  getHasCompletedBoot as loadHasCompletedBoot,
+  setHasCompletedBoot as saveHasCompletedBoot,
+  getShutdown as loadShutdown,
+  setShutdown as saveShutdown,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
@@ -66,6 +72,9 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  screenLocked: boolean;
+  hasCompletedBoot: boolean;
+  isShutDown: boolean;
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
@@ -78,6 +87,9 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setScreenLocked: (value: boolean) => void;
+  setHasCompletedBoot: (value: boolean) => void;
+  setIsShutDown: (value: boolean) => void;
   setTheme: (value: string) => void;
 }
 
@@ -94,6 +106,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  screenLocked: defaults.screenLocked,
+  hasCompletedBoot: defaults.hasCompletedBoot,
+  isShutDown: defaults.isShutDown,
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
@@ -106,6 +121,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
+  setScreenLocked: () => {},
+  setHasCompletedBoot: () => {},
+  setIsShutDown: () => {},
   setTheme: () => {},
 });
 
@@ -121,6 +139,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [screenLocked, setScreenLocked] = useState<boolean>(defaults.screenLocked);
+  const [hasCompletedBoot, setHasCompletedBoot] = useState<boolean>(defaults.hasCompletedBoot);
+  const [isShutDown, setIsShutDown] = useState<boolean>(defaults.isShutDown);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -137,6 +158,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setScreenLocked(await loadScreenLocked());
+      setHasCompletedBoot(await loadHasCompletedBoot());
+      setIsShutDown(await loadShutdown());
       setTheme(loadTheme());
     })();
   }, []);
@@ -250,6 +274,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveScreenLocked(screenLocked);
+  }, [screenLocked]);
+
+  useEffect(() => {
+    saveHasCompletedBoot(hasCompletedBoot);
+  }, [hasCompletedBoot]);
+
+  useEffect(() => {
+    saveShutdown(isShutDown);
+  }, [isShutDown]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
   return (
@@ -267,6 +303,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        screenLocked,
+        hasCompletedBoot,
+        isShutDown,
         theme,
         setAccent,
         setWallpaper,
@@ -279,6 +318,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setScreenLocked,
+        setHasCompletedBoot,
+        setIsShutDown,
         setTheme,
       }}
     >

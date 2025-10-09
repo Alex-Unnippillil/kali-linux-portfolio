@@ -15,7 +15,15 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  screenLocked: false,
+  hasCompletedBoot: false,
+  isShutDown: false,
 };
+
+const SCREEN_LOCKED_KEY = 'screen-locked';
+const SHUTDOWN_KEY = 'shut-down';
+const BOOT_COMPLETED_KEY = 'has-completed-boot';
+const LEGACY_BOOT_KEY = 'booting_screen';
 
 let hasLoggedStorageWarning = false;
 
@@ -66,6 +74,56 @@ export async function setUseKaliWallpaper(value) {
   const storage = getLocalStorage();
   if (!storage) return;
   storage.setItem('use-kali-wallpaper', value ? 'true' : 'false');
+}
+
+export async function getScreenLocked() {
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.screenLocked;
+  const stored = storage.getItem(SCREEN_LOCKED_KEY);
+  return stored === null ? DEFAULT_SETTINGS.screenLocked : stored === 'true';
+}
+
+export async function setScreenLocked(value) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem(SCREEN_LOCKED_KEY, value ? 'true' : 'false');
+}
+
+export async function getShutdown() {
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.isShutDown;
+  const stored = storage.getItem(SHUTDOWN_KEY);
+  return stored === null ? DEFAULT_SETTINGS.isShutDown : stored === 'true';
+}
+
+export async function setShutdown(value) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem(SHUTDOWN_KEY, value ? 'true' : 'false');
+}
+
+export async function getHasCompletedBoot() {
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.hasCompletedBoot;
+  const stored = storage.getItem(BOOT_COMPLETED_KEY);
+  if (stored !== null) {
+    return stored === 'true';
+  }
+  const legacy = storage.getItem(LEGACY_BOOT_KEY);
+  if (legacy !== null) {
+    storage.setItem(BOOT_COMPLETED_KEY, 'true');
+    return true;
+  }
+  return DEFAULT_SETTINGS.hasCompletedBoot;
+}
+
+export async function setHasCompletedBoot(value) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem(BOOT_COMPLETED_KEY, value ? 'true' : 'false');
+  if (value) {
+    storage.setItem(LEGACY_BOOT_KEY, 'false');
+  }
 }
 
 export async function getDensity() {
@@ -192,6 +250,9 @@ export async function resetSettings() {
   storage.removeItem('allow-network');
   storage.removeItem('haptics');
   storage.removeItem('use-kali-wallpaper');
+  storage.removeItem(SCREEN_LOCKED_KEY);
+  storage.removeItem(SHUTDOWN_KEY);
+  storage.removeItem(BOOT_COMPLETED_KEY);
 }
 
 export async function exportSettings() {
@@ -207,6 +268,9 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    screenLocked,
+    hasCompletedBoot,
+    isShutDown,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -219,6 +283,9 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getScreenLocked(),
+    getHasCompletedBoot(),
+    getShutdown(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -233,6 +300,9 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     useKaliWallpaper,
+    screenLocked,
+    hasCompletedBoot,
+    isShutDown,
     theme,
   });
 }
@@ -259,6 +329,9 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    screenLocked,
+    hasCompletedBoot,
+    isShutDown,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -271,6 +344,9 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (screenLocked !== undefined) await setScreenLocked(screenLocked);
+  if (hasCompletedBoot !== undefined) await setHasCompletedBoot(hasCompletedBoot);
+  if (isShutDown !== undefined) await setShutdown(isShutDown);
   if (theme !== undefined) setTheme(theme);
 }
 
