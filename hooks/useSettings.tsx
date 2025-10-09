@@ -23,9 +23,10 @@ import {
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
   defaults,
+  type DensitySetting,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
-type Density = 'regular' | 'compact';
+type Density = DensitySetting;
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -86,7 +87,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   wallpaper: defaults.wallpaper,
   bgImageName: defaults.wallpaper,
   useKaliWallpaper: defaults.useKaliWallpaper,
-  density: defaults.density as Density,
+  density: defaults.density,
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
   highContrast: defaults.highContrast,
@@ -113,7 +114,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [useKaliWallpaper, setUseKaliWallpaper] = useState<boolean>(defaults.useKaliWallpaper);
-  const [density, setDensity] = useState<Density>(defaults.density as Density);
+  const [density, setDensity] = useState<Density>(defaults.density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
