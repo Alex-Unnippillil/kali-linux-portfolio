@@ -13,6 +13,7 @@ import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import NotificationCenter from '../components/common/NotificationCenter';
+import NotificationClientBridge from '../components/common/NotificationClientBridge';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import Script from 'next/script';
@@ -159,6 +160,7 @@ function MyApp(props) {
         </a>
         <SettingsProvider>
           <NotificationCenter>
+            <NotificationClientBridge />
             <PipPortalProvider>
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
