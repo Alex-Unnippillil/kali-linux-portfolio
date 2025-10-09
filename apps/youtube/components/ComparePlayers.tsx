@@ -39,6 +39,7 @@ const ComparePlayers = () => {
 
   useEffect(() => {
     if (!ready || !leftId || !leftDiv.current) return;
+    if (!window.YT || typeof window.YT.Player !== 'function') return;
     const player = new window.YT.Player(leftDiv.current, {
       host: 'https://www.youtube-nocookie.com',
       videoId: leftId,
@@ -49,6 +50,7 @@ const ComparePlayers = () => {
 
   useEffect(() => {
     if (!ready || !rightId || !rightDiv.current) return;
+    if (!window.YT || typeof window.YT.Player !== 'function') return;
     const player = new window.YT.Player(rightDiv.current, {
       host: 'https://www.youtube-nocookie.com',
       videoId: rightId,
@@ -85,12 +87,14 @@ const ComparePlayers = () => {
           placeholder="Left video ID or URL"
           value={leftId}
           onChange={(e) => setLeftId(parseVideoId(e.target.value))}
+          aria-label="Left video ID or URL"
         />
         <input
           className="w-full rounded bg-gray-800 p-2"
           placeholder="Right video ID or URL"
           value={rightId}
           onChange={(e) => setRightId(parseVideoId(e.target.value))}
+          aria-label="Right video ID or URL"
         />
       </div>
       <div className="flex flex-col gap-4 md:flex-row">

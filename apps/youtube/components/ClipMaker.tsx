@@ -38,6 +38,7 @@ export default function ClipMaker() {
 
   useEffect(() => {
     if (!ready || !containerRef.current || !videoId) return;
+    if (!window.YT || typeof window.YT.Player !== 'function') return;
     if (playerRef.current) {
       playerRef.current.destroy();
     }
@@ -76,6 +77,7 @@ export default function ClipMaker() {
         onChange={(e) => setVideoId(extractVideoId(e.target.value))}
         placeholder="YouTube URL or ID"
         className="w-full rounded bg-gray-800 p-2 text-black focus:text-white"
+        aria-label="YouTube URL or ID"
       />
       <div ref={containerRef} className="aspect-video w-full bg-black" />
       <div className="flex gap-2">
