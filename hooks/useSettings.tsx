@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+  useCallback,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -24,8 +32,10 @@ import {
   setHaptics as saveHaptics,
   defaults,
 } from '../utils/settingsStore';
-import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import { THEME_KEY, getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
+
+type SettingsChangeListener = (event: StorageEvent) => void;
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -79,6 +89,7 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  subscribeToCrossTabChanges: (listener: SettingsChangeListener) => () => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -107,6 +118,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  subscribeToCrossTabChanges: () => () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -123,23 +135,55 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
+  const listenersRef = useRef<Set<SettingsChangeListener>>(new Set());
+
+  const subscribeToCrossTabChanges = useCallback(
+    (listener: SettingsChangeListener) => {
+      listenersRef.current.add(listener);
+      return () => {
+        listenersRef.current.delete(listener);
+      };
+    },
+    []
+  );
+
+  const notifyCrossTabListeners = useCallback((event: StorageEvent) => {
+    listenersRef.current.forEach((listener) => {
+      listener(event);
+    });
+  }, []);
+
+  const refreshAllSettings = useCallback(async () => {
+    setAccent(await loadAccent());
+    setWallpaper(await loadWallpaper());
+    setUseKaliWallpaper(await loadUseKaliWallpaper());
+    setDensity((await loadDensity()) as Density);
+    setReducedMotion(await loadReducedMotion());
+    setFontScale(await loadFontScale());
+    setHighContrast(await loadHighContrast());
+    setLargeHitAreas(await loadLargeHitAreas());
+    setPongSpin(await loadPongSpin());
+    setAllowNetwork(await loadAllowNetwork());
+    setHaptics(await loadHaptics());
+    setTheme(loadTheme());
+  }, [
+    setAccent,
+    setWallpaper,
+    setUseKaliWallpaper,
+    setDensity,
+    setReducedMotion,
+    setFontScale,
+    setHighContrast,
+    setLargeHitAreas,
+    setPongSpin,
+    setAllowNetwork,
+    setHaptics,
+    setTheme,
+  ]);
 
   useEffect(() => {
-    (async () => {
-      setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
-      setUseKaliWallpaper(await loadUseKaliWallpaper());
-      setDensity((await loadDensity()) as Density);
-      setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
-      setHighContrast(await loadHighContrast());
-      setLargeHitAreas(await loadLargeHitAreas());
-      setPongSpin(await loadPongSpin());
-      setAllowNetwork(await loadAllowNetwork());
-      setHaptics(await loadHaptics());
-      setTheme(loadTheme());
-    })();
-  }, []);
+    void refreshAllSettings();
+  }, [refreshAllSettings]);
 
   useEffect(() => {
     saveTheme(theme);
@@ -250,6 +294,79 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const storageHandlers: Record<string, () => Promise<void> | void> = {
+      'use-kali-wallpaper': async () => {
+        setUseKaliWallpaper(await loadUseKaliWallpaper());
+      },
+      density: async () => {
+        setDensity((await loadDensity()) as Density);
+      },
+      'reduced-motion': async () => {
+        setReducedMotion(await loadReducedMotion());
+      },
+      'font-scale': async () => {
+        setFontScale(await loadFontScale());
+      },
+      'high-contrast': async () => {
+        setHighContrast(await loadHighContrast());
+      },
+      'large-hit-areas': async () => {
+        setLargeHitAreas(await loadLargeHitAreas());
+      },
+      'pong-spin': async () => {
+        setPongSpin(await loadPongSpin());
+      },
+      'allow-network': async () => {
+        setAllowNetwork(await loadAllowNetwork());
+      },
+      haptics: async () => {
+        setHaptics(await loadHaptics());
+      },
+      [THEME_KEY]: () => {
+        setTheme(loadTheme());
+      },
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.storageArea !== window.localStorage) return;
+
+      if (!event.key) {
+        void refreshAllSettings().then(() => {
+          notifyCrossTabListeners(event);
+        });
+        return;
+      }
+
+      const handler = storageHandlers[event.key];
+      if (!handler) return;
+
+      Promise.resolve(handler()).then(() => {
+        notifyCrossTabListeners(event);
+      });
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [
+    notifyCrossTabListeners,
+    refreshAllSettings,
+    setAllowNetwork,
+    setDensity,
+    setFontScale,
+    setHaptics,
+    setHighContrast,
+    setLargeHitAreas,
+    setPongSpin,
+    setReducedMotion,
+    setTheme,
+    setUseKaliWallpaper,
+  ]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
   return (
@@ -280,6 +397,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        subscribeToCrossTabChanges,
       }}
     >
       {children}
