@@ -1,10 +1,31 @@
 import React, { Component } from 'react'
 import Image from 'next/image'
 
+const DEFAULT_PREFETCH_INDICATOR = (
+    <span
+        data-testid="prefetch-indicator"
+        className="mt-1 text-[0.625rem] font-medium tracking-wide text-cyan-100 opacity-90 animate-pulse"
+        role="status"
+        aria-live="polite"
+    >
+        Prefetching…
+    </span>
+)
+
 export class UbuntuApp extends Component {
     constructor() {
         super();
-        this.state = { launching: false, dragging: false, prefetched: false };
+        this.state = { launching: false, dragging: false, prefetched: false, prefetching: false };
+        this._isUnmounted = false;
+    }
+
+    componentWillUnmount() {
+        this._isUnmounted = true;
+    }
+
+    safeSetState = (updater) => {
+        if (this._isUnmounted) return;
+        this.setState(updater);
     }
 
     handleDragStart = () => {
@@ -24,9 +45,35 @@ export class UbuntuApp extends Component {
     }
 
     handlePrefetch = () => {
-        if (!this.state.prefetched && typeof this.props.prefetch === 'function') {
-            this.props.prefetch();
-            this.setState({ prefetched: true });
+        if (this.state.prefetched || this.state.prefetching) return;
+
+        if (typeof this.props.prefetch === 'function') {
+            this.safeSetState({ prefetching: true });
+
+            let prefetchResult;
+
+            try {
+                prefetchResult = this.props.prefetch();
+            } catch (error) {
+                this.safeSetState({ prefetching: false });
+                return;
+            }
+
+            const markComplete = (didPrefetch) => {
+                if (didPrefetch) {
+                    this.safeSetState({ prefetched: true, prefetching: false });
+                } else {
+                    this.safeSetState({ prefetching: false });
+                }
+            };
+
+            if (prefetchResult && typeof prefetchResult.then === 'function') {
+                prefetchResult
+                    .then(() => markComplete(true))
+                    .catch(() => markComplete(false));
+            } else {
+                markComplete(true);
+            }
         }
     }
 
@@ -51,9 +98,17 @@ export class UbuntuApp extends Component {
             onPointerMove,
             onPointerCancel,
             style,
+            prefetchIndicator,
         } = this.props;
 
         const dragging = this.state.dragging || isBeingDragged;
+
+        const shouldShowPrefetchIndicator = this.state.prefetching && !this.state.prefetched;
+
+        const indicatorContent =
+            Object.prototype.hasOwnProperty.call(this.props, 'prefetchIndicator')
+                ? prefetchIndicator
+                : DEFAULT_PREFETCH_INDICATOR;
 
         const handlePointerUp = (event) => {
             if (typeof this.props.onPointerUp === 'function') {
@@ -101,6 +156,8 @@ export class UbuntuApp extends Component {
                 tabIndex={this.props.disabled ? -1 : 0}
                 onMouseEnter={this.handlePrefetch}
                 onFocus={this.handlePrefetch}
+                aria-busy={shouldShowPrefetchIndicator || undefined}
+                data-prefetching={shouldShowPrefetchIndicator ? 'true' : undefined}
             >
                 <Image
                     width={48}
@@ -115,7 +172,7 @@ export class UbuntuApp extends Component {
                     sizes="(max-width: 768px) 48px, 64px"
                 />
                 {this.props.displayName || this.props.name}
-
+                {shouldShowPrefetchIndicator && indicatorContent}
             </div>
         )
     }
