@@ -1,3 +1,4 @@
+/* eslint-disable react/display-name */
 import React from 'react';
 import { render } from '@testing-library/react';
 import { Desktop } from '../components/screen/desktop';
@@ -69,7 +70,6 @@ describe('Desktop event listeners', () => {
         value: originalMatchMedia,
       });
     } else {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error matchMedia can be removed for the test cleanup
       delete window.matchMedia;
     }
@@ -114,6 +114,7 @@ describe('Desktop event listeners', () => {
         ['workspace-select', instance.handleExternalWorkspaceSelect],
         ['workspace-request', instance.broadcastWorkspaceState],
         ['taskbar-command', instance.handleExternalTaskbarCommand],
+        ['workspace-rename', instance.handleExternalWorkspaceRename],
       ])
     );
     expect(docRemoveSpy.mock.calls).toEqual(

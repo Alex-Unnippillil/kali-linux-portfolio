@@ -31,6 +31,9 @@ import {
 } from '../../utils/windowLayout';
 
 
+const WORKSPACE_LABEL_STORAGE_KEY = 'workspace_labels';
+
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -482,6 +485,76 @@ export class Desktop extends Component {
         });
     };
 
+    persistWorkspaceLabels = (workspaces = this.state.workspaces) => {
+        if (!safeLocalStorage) return;
+        try {
+            const payload = {};
+            workspaces.forEach((workspace) => {
+                payload[workspace.id] = workspace.label;
+            });
+            safeLocalStorage.setItem(WORKSPACE_LABEL_STORAGE_KEY, JSON.stringify(payload));
+        } catch (error) {
+            // ignore storage failures
+        }
+    };
+
+    restoreWorkspaceLabels = (callback) => {
+        if (!safeLocalStorage) {
+            if (typeof callback === 'function') callback();
+            return;
+        }
+
+        let stored;
+        try {
+            stored = safeLocalStorage.getItem(WORKSPACE_LABEL_STORAGE_KEY);
+        } catch (error) {
+            if (typeof callback === 'function') callback();
+            return;
+        }
+
+        if (!stored) {
+            if (typeof callback === 'function') callback();
+            return;
+        }
+
+        let parsed;
+        try {
+            parsed = JSON.parse(stored);
+        } catch (error) {
+            if (typeof callback === 'function') callback();
+            return;
+        }
+
+        if (!parsed || typeof parsed !== 'object') {
+            if (typeof callback === 'function') callback();
+            return;
+        }
+
+        const labelsRecord = parsed;
+        let changed = false;
+        const nextWorkspaces = this.state.workspaces.map((workspace) => {
+            const raw = labelsRecord[workspace.id];
+            const candidate = typeof raw === 'string' ? raw.trim() : '';
+            if (candidate && candidate !== workspace.label) {
+                changed = true;
+                return { ...workspace, label: candidate };
+            }
+            return workspace;
+        });
+
+        if (!changed) {
+            if (typeof callback === 'function') callback();
+            return;
+        }
+
+        this.setState({ workspaces: nextWorkspaces }, () => {
+            this.persistWorkspaceLabels(nextWorkspaces);
+            if (typeof callback === 'function') {
+                callback();
+            }
+        });
+    };
+
     getRunningAppSummaries = () => {
         const { closed_windows = {}, minimized_windows = {}, focused_windows = {} } = this.state;
         return apps
@@ -890,6 +963,28 @@ export class Desktop extends Component {
         }
     };
 
+    handleExternalWorkspaceRename = (event) => {
+        const detail = event?.detail || {};
+        const workspaceIdCandidate =
+            typeof detail.workspaceId === 'number' ? detail.workspaceId : Number(detail.workspaceId);
+        const label = typeof detail.label === 'string' ? detail.label.trim() : '';
+
+        if (!Number.isInteger(workspaceIdCandidate) || workspaceIdCandidate < 0) return;
+        if (!label) return;
+
+        this.setState((prevState) => {
+            const target = prevState.workspaces.find((workspace) => workspace.id === workspaceIdCandidate);
+            if (!target || target.label === label) return null;
+
+            const nextWorkspaces = prevState.workspaces.map((workspace) =>
+                workspace.id === workspaceIdCandidate ? { ...workspace, label } : workspace,
+            );
+
+            this.persistWorkspaceLabels(nextWorkspaces);
+            return { workspaces: nextWorkspaces };
+        });
+    };
+
     broadcastWorkspaceState = () => {
         if (typeof window === 'undefined') return;
         const detail = {
@@ -908,7 +1003,12 @@ export class Desktop extends Component {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
-            this.broadcastWorkspaceState();
+            window.addEventListener('workspace-rename', this.handleExternalWorkspaceRename);
+            this.restoreWorkspaceLabels(() => {
+                this.broadcastWorkspaceState();
+            });
+        } else {
+            this.restoreWorkspaceLabels();
         }
 
         this.savedIconPositions = this.loadDesktopIconPositions();
@@ -967,6 +1067,7 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.removeEventListener('workspace-rename', this.handleExternalWorkspaceRename);
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
