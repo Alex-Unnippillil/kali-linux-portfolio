@@ -23,6 +23,33 @@ const computeSnappedHeightPercent = () => {
   return (availableHeight / window.innerHeight) * 100;
 };
 
+const computeTopSnapHeightPercent = () => {
+  const topOffset = measureWindowTopOffset();
+  const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
+  const availableHeight = window.innerHeight - topOffset - SNAP_BOTTOM_INSET - safeBottom;
+  const topHeight = Math.min(availableHeight, Math.max(window.innerHeight / 2, 0));
+  return (topHeight / window.innerHeight) * 100;
+};
+
+const computeBottomSnapHeightPercent = () => {
+  const topOffset = measureWindowTopOffset();
+  const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
+  const availableHeight = window.innerHeight - topOffset - SNAP_BOTTOM_INSET - safeBottom;
+  const topHeight = Math.min(availableHeight, Math.max(window.innerHeight / 2, 0));
+  const bottomHeight = Math.min(topHeight, Math.max(availableHeight - topHeight, 0));
+  return (bottomHeight / window.innerHeight) * 100;
+};
+
+const getBottomSnapOffset = () => {
+  const topOffset = measureWindowTopOffset();
+  const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
+  const availableHeight = window.innerHeight - topOffset - SNAP_BOTTOM_INSET - safeBottom;
+  const topHeight = Math.min(availableHeight, Math.max(window.innerHeight / 2, 0));
+  const bottomHeight = Math.min(topHeight, Math.max(availableHeight - topHeight, 0));
+  const bottomTop = topOffset + Math.max(availableHeight - bottomHeight, 0);
+  return bottomTop - DESKTOP_TOP_PADDING;
+};
+
 const getSnapOffsetTop = () => measureWindowTopOffset() - DESKTOP_TOP_PADDING;
 
 const setViewport = (width: number, height: number) => {
@@ -379,6 +406,173 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBeNull();
     expect(ref.current!.state.width).toBe(60);
     expect(ref.current!.state.height).toBe(85);
+  });
+
+  it('snaps window to the top-left quadrant with Alt+Shift+ArrowUp', () => {
+    jest.useFakeTimers();
+    try {
+      setViewport(1440, 900);
+      const ref = React.createRef<any>();
+      render(
+        <Window
+          id="test-window"
+          title="Test"
+          screen={() => <div>content</div>}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          openApp={() => {}}
+          ref={ref}
+        />
+      );
+
+      const winEl = document.getElementById('test-window')!;
+      winEl.getBoundingClientRect = () => ({
+        left: 120,
+        top: 150,
+        right: 220,
+        bottom: 250,
+        width: 100,
+        height: 100,
+        x: 120,
+        y: 150,
+        toJSON: () => {}
+      });
+
+      act(() => {
+        ref.current!.handleKeyDown({
+          key: 'ArrowUp',
+          altKey: true,
+          shiftKey: true,
+          preventDefault: jest.fn(),
+          stopPropagation: jest.fn(),
+        } as any);
+      });
+
+      act(() => {
+        jest.advanceTimersByTime(60);
+      });
+
+      expect(ref.current!.state.snapped).toBe('top-left');
+      expect(ref.current!.state.width).toBeCloseTo(50, 2);
+      const topHeightPercent = computeTopSnapHeightPercent();
+      expect(ref.current!.state.height).toBeCloseTo(topHeightPercent, 2);
+      expect(winEl.style.transform).toBe('translate(0px, 0px)');
+      expect(ref.current!.state.liveRegionMessage).toBe('Snapped window to the top-left quadrant');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('snaps window to the bottom-right quadrant with Alt+Shift+ArrowDown', () => {
+    jest.useFakeTimers();
+    try {
+      setViewport(1600, 900);
+      const ref = React.createRef<any>();
+      render(
+        <Window
+          id="test-window"
+          title="Test"
+          screen={() => <div>content</div>}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          openApp={() => {}}
+          ref={ref}
+        />
+      );
+
+      const winEl = document.getElementById('test-window')!;
+      winEl.getBoundingClientRect = () => ({
+        left: 80,
+        top: 120,
+        right: 180,
+        bottom: 220,
+        width: 100,
+        height: 100,
+        x: 80,
+        y: 120,
+        toJSON: () => {}
+      });
+
+      act(() => {
+        ref.current!.handleKeyDown({
+          key: 'ArrowDown',
+          altKey: true,
+          shiftKey: true,
+          preventDefault: jest.fn(),
+          stopPropagation: jest.fn(),
+        } as any);
+      });
+
+      act(() => {
+        jest.advanceTimersByTime(60);
+      });
+
+      expect(ref.current!.state.snapped).toBe('bottom-right');
+      expect(ref.current!.state.width).toBeCloseTo(50, 2);
+      const bottomHeightPercent = computeBottomSnapHeightPercent();
+      expect(ref.current!.state.height).toBeCloseTo(bottomHeightPercent, 2);
+      const expectedLeft = window.innerWidth / 2;
+      const expectedTop = getBottomSnapOffset();
+      expect(winEl.style.transform).toBe(`translate(${expectedLeft}px, ${expectedTop}px)`);
+      expect(ref.current!.state.liveRegionMessage).toBe('Snapped window to the bottom-right quadrant');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('does not trigger snap shortcuts while minimized', () => {
+    jest.useFakeTimers();
+    try {
+      setViewport(1280, 800);
+      const ref = React.createRef<any>();
+      render(
+        <Window
+          id="test-window"
+          title="Test"
+          screen={() => <div>content</div>}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          openApp={() => {}}
+          minimized
+          ref={ref}
+        />
+      );
+
+      const winEl = document.getElementById('test-window')!;
+      winEl.getBoundingClientRect = () => ({
+        left: 0,
+        top: 0,
+        right: 100,
+        bottom: 100,
+        width: 100,
+        height: 100,
+        x: 0,
+        y: 0,
+        toJSON: () => {}
+      });
+
+      act(() => {
+        ref.current!.handleKeyDown({
+          key: 'ArrowRight',
+          altKey: true,
+          shiftKey: true,
+          preventDefault: jest.fn(),
+          stopPropagation: jest.fn(),
+        } as any);
+      });
+
+      act(() => {
+        jest.advanceTimersByTime(60);
+      });
+
+      expect(ref.current!.state.snapped).toBeNull();
+      expect(ref.current!.state.liveRegionMessage).toBe('');
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('releases snap when starting drag', () => {

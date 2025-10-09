@@ -16,6 +16,12 @@
    - **Alt + ArrowRight** snaps it to the right half.
    - **Alt + ArrowUp** snaps it to the top half.
    - **Alt + ArrowDown** restores the window to its previous size and position.
+2. Hold **Alt + Shift** for the quadrant layouts:
+   - **Alt + Shift + ArrowUp** snaps to the top-left quadrant.
+   - **Alt + Shift + ArrowRight** snaps to the top-right quadrant.
+   - **Alt + Shift + ArrowDown** snaps to the bottom-right quadrant.
+   - **Alt + Shift + ArrowLeft** snaps to the bottom-left quadrant.
+3. Confirm shortcuts are ignored while the window is minimized and that each snap announces its new position via the hidden live region.
 
 ## Focus
 1. After resizing or snapping, press **Tab** to move focus inside the window.
