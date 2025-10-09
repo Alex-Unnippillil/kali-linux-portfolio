@@ -5,6 +5,10 @@ import {
   clampWindowTopPosition,
   measureWindowTopOffset,
 } from "../../utils/windowLayout";
+import type {
+  ClampedWindowPosition,
+  WindowPosition,
+} from "../../utils/windowLayout";
 
 type BaseWindowProps = React.ComponentProps<typeof BaseWindow>;
 // BaseWindow is a class component, so the instance type exposes helper methods.
@@ -18,7 +22,7 @@ const parsePx = (value?: string | null): number | null => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const readNodePosition = (node: HTMLElement): { x: number; y: number } | null => {
+const readNodePosition = (node: HTMLElement): WindowPosition | null => {
   const style = node.style as CSSStyleDeclaration | undefined;
   if (!style) {
     return null;
@@ -50,6 +54,7 @@ const readNodePosition = (node: HTMLElement): { x: number; y: number } | null =>
 const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
   (props, forwardedRef) => {
     const innerRef = useRef<BaseWindowInstance>(null);
+    const { initialX, initialY, onPositionChange } = props;
 
     const assignRef = useCallback(
       (instance: BaseWindowInstance) => {
@@ -75,12 +80,12 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       const rect = node.getBoundingClientRect();
       const topOffset = measureWindowTopOffset();
       const storedPosition = readNodePosition(node);
-      const fallbackPosition = {
-        x: typeof props.initialX === "number" ? props.initialX : 0,
-        y: clampWindowTopPosition(props.initialY, topOffset),
+      const fallbackPosition: WindowPosition = {
+        x: typeof initialX === "number" ? initialX : 0,
+        y: clampWindowTopPosition(initialY, topOffset),
       };
       const currentPosition = storedPosition || fallbackPosition;
-      const clamped = clampWindowPositionWithinViewport(currentPosition, rect, {
+      const clamped: ClampedWindowPosition | null = clampWindowPositionWithinViewport(currentPosition, rect, {
         viewportWidth: window.innerWidth,
         viewportHeight: window.innerHeight,
         topOffset,
@@ -99,10 +104,10 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
         (node.style as unknown as Record<string, string>)["--window-transform-y"] = `${clamped.y}px`;
       }
 
-      if (typeof props.onPositionChange === "function") {
-        props.onPositionChange(clamped.x, clamped.y);
+      if (typeof onPositionChange === "function") {
+        onPositionChange(clamped.x, clamped.y);
       }
-    }, [props.initialX, props.initialY, props.onPositionChange]);
+    }, [initialX, initialY, onPositionChange]);
 
     useEffect(() => {
       if (typeof window === "undefined") return undefined;
