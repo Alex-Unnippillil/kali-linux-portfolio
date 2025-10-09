@@ -1,5 +1,6 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import Window from '../components/desktop/Window';
 import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET } from '../utils/uiConstants';
 import { measureSafeAreaInset, measureWindowTopOffset } from '../utils/windowLayout';
@@ -29,6 +30,13 @@ const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: width });
   Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: height });
 };
+
+const renderInDesktop = (ui: React.ReactNode) =>
+  render(
+    <div id="desktop">
+      <div id="window-area">{ui}</div>
+    </div>,
+  );
 
 beforeEach(() => {
   setViewport(1440, 900);
@@ -666,5 +674,157 @@ describe('Window overlay inert behaviour', () => {
 
     document.body.removeChild(root);
     document.body.removeChild(opener);
+  });
+});
+
+describe('Window accessibility enhancements', () => {
+  const baseProps = {
+    focus: () => {},
+    hasMinimised: () => {},
+    closed: () => {},
+    openApp: () => {},
+  };
+
+  it('traps focus within the active window', async () => {
+    const user = userEvent.setup();
+    renderInDesktop(
+      <Window
+        id="trap-window"
+        title="Trap"
+        screen={() => (
+          <div>
+            <button type="button">Primary action</button>
+            <button type="button">Secondary action</button>
+          </div>
+        )}
+        {...baseProps}
+        isFocused
+        minimized={false}
+      />,
+    );
+
+    const dialog = screen.getByRole('dialog', { name: 'Trap' });
+    const selector = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const focusables = Array.from(dialog.querySelectorAll<HTMLElement>(selector));
+    const first = screen.getByRole('button', { name: /primary action/i });
+
+    first.focus();
+    for (let i = 0; i < focusables.length; i += 1) {
+      await user.tab();
+      expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    }
+
+    expect(first).toHaveFocus();
+
+    for (let i = 0; i < focusables.length; i += 1) {
+      await user.tab({ shift: true });
+      expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    }
+
+    expect(first).toHaveFocus();
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+  });
+
+  it('toggles aria-modal and background inert attributes with focus changes', () => {
+    const firstScreen = () => <button type="button">First window button</button>;
+    const secondScreen = () => <button type="button">Second window button</button>;
+
+    const { rerender } = renderInDesktop(
+      <>
+        <Window
+          id="first-window"
+          title="First"
+          screen={firstScreen}
+          {...baseProps}
+          isFocused
+          minimized={false}
+        />
+        <Window
+          id="second-window"
+          title="Second"
+          screen={secondScreen}
+          {...baseProps}
+          minimized={false}
+        />
+      </>,
+    );
+
+    const active = screen.getByRole('dialog', { name: 'First' }) as HTMLElement;
+    const background = document.getElementById('second-window') as HTMLElement;
+
+    expect(active).toHaveAttribute('aria-modal', 'true');
+    expect(background).toHaveAttribute('aria-modal', 'false');
+    expect(background).toHaveAttribute('aria-hidden', 'true');
+    expect(background).toHaveAttribute('inert');
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('context-menu-open'));
+    });
+    expect(active).toHaveAttribute('inert');
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('context-menu-close'));
+    });
+    expect(active).not.toHaveAttribute('inert');
+
+    rerender(
+      <div id="desktop">
+        <div id="window-area">
+          <Window
+            id="first-window"
+            title="First"
+            screen={firstScreen}
+            {...baseProps}
+            minimized={false}
+          />
+          <Window
+            id="second-window"
+            title="Second"
+            screen={secondScreen}
+            {...baseProps}
+            isFocused
+            minimized={false}
+          />
+        </div>
+      </div>,
+    );
+
+    const newlyActive = screen.getByRole('dialog', { name: 'Second' });
+    const newlyBackground = document.getElementById('first-window') as HTMLElement;
+
+    expect(newlyActive).toHaveAttribute('aria-modal', 'true');
+    expect(newlyBackground).toHaveAttribute('aria-hidden', 'true');
+    expect(newlyBackground).toHaveAttribute('inert');
+
+    rerender(
+      <div id="desktop">
+        <div id="window-area">
+          <Window
+            id="first-window"
+            title="First"
+            screen={firstScreen}
+            {...baseProps}
+            minimized={false}
+          />
+          <Window
+            id="second-window"
+            title="Second"
+            screen={secondScreen}
+            {...baseProps}
+            minimized={false}
+          />
+        </div>
+      </div>,
+    );
+
+    const first = document.getElementById('first-window') as HTMLElement;
+    const second = document.getElementById('second-window') as HTMLElement;
+
+    expect(first).toHaveAttribute('aria-modal', 'false');
+    expect(first).not.toHaveAttribute('aria-hidden');
+    expect(first).not.toHaveAttribute('inert');
+    expect(second).toHaveAttribute('aria-modal', 'false');
+    expect(second).not.toHaveAttribute('aria-hidden');
+    expect(second).not.toHaveAttribute('inert');
   });
 });

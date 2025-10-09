@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import BaseWindow from "../base/window";
 import {
   clampWindowPositionWithinViewport,
   clampWindowTopPosition,
   measureWindowTopOffset,
 } from "../../utils/windowLayout";
+import useFocusTrap from "../../hooks/useFocusTrap";
 
 type BaseWindowProps = React.ComponentProps<typeof BaseWindow>;
 // BaseWindow is a class component, so the instance type exposes helper methods.
@@ -50,10 +51,14 @@ const readNodePosition = (node: HTMLElement): { x: number; y: number } | null =>
 const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
   (props, forwardedRef) => {
     const innerRef = useRef<BaseWindowInstance>(null);
+    const focusTrapRef = useRef<HTMLElement | null>(null);
 
     const assignRef = useCallback(
       (instance: BaseWindowInstance) => {
         innerRef.current = instance;
+        focusTrapRef.current = instance && typeof instance.getWindowNode === "function"
+          ? instance.getWindowNode()
+          : null;
         if (!forwardedRef) return;
         if (typeof forwardedRef === "function") {
           forwardedRef(instance);
@@ -112,6 +117,21 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
         window.removeEventListener("resize", handler);
       };
     }, [clampToViewport]);
+
+    const trapActive = useMemo(() => {
+      const instance = innerRef.current as any;
+      const isClosed = Boolean(instance?.state?.closed);
+      return Boolean(props.isFocused && !props.minimized && !isClosed);
+    }, [props.isFocused, props.minimized]);
+
+    useEffect(() => {
+      const node = innerRef.current && typeof innerRef.current.getWindowNode === "function"
+        ? innerRef.current.getWindowNode()
+        : null;
+      focusTrapRef.current = node;
+    }, [props.id, props.isFocused, props.minimized]);
+
+    useFocusTrap(focusTrapRef as React.RefObject<HTMLElement>, trapActive);
 
     return <BaseWindow ref={assignRef} {...props} />;
   },
