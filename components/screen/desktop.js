@@ -31,6 +31,9 @@ import {
 } from '../../utils/windowLayout';
 
 
+const WORKSPACE_TRANSITION_DURATION = 200;
+
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -73,6 +76,8 @@ export class Desktop extends Component {
                 label: `Workspace ${index + 1}`,
             })),
             draggingIconId: null,
+            pendingWorkspace: null,
+            workspaceTransition: null,
         }
 
         this.desktopRef = React.createRef();
@@ -98,6 +103,10 @@ export class Desktop extends Component {
         this.openSettingsTarget = null;
         this.openSettingsClickHandler = null;
         this.openSettingsListenerAttached = false;
+
+        this.workspaceTransitionTimeout = null;
+        this.workspaceTransitionCleanupTimeout = null;
+        this.reducedMotionMedia = null;
 
     }
 
@@ -840,9 +849,42 @@ export class Desktop extends Component {
         });
     };
 
-    switchWorkspace = (workspaceId) => {
-        if (workspaceId === this.state.activeWorkspace) return;
-        if (workspaceId < 0 || workspaceId >= this.state.workspaces.length) return;
+    getWorkspaceTransitionDuration = () => WORKSPACE_TRANSITION_DURATION;
+
+    getReducedMotionQuery = () => {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+            return null;
+        }
+        if (!this.reducedMotionMedia) {
+            this.reducedMotionMedia = window.matchMedia('(prefers-reduced-motion: reduce)');
+        }
+        return this.reducedMotionMedia;
+    };
+
+    prefersReducedMotion = () => {
+        const query = this.getReducedMotionQuery();
+        return Boolean(query?.matches);
+    };
+
+    cancelWorkspaceAnimation = () => {
+        if (this.workspaceTransitionTimeout) {
+            clearTimeout(this.workspaceTransitionTimeout);
+            this.workspaceTransitionTimeout = null;
+        }
+        if (this.workspaceTransitionCleanupTimeout) {
+            clearTimeout(this.workspaceTransitionCleanupTimeout);
+            this.workspaceTransitionCleanupTimeout = null;
+        }
+    };
+
+    resolveWorkspaceDirection = (workspaceId) => {
+        if (workspaceId === this.state.activeWorkspace) {
+            return 'forward';
+        }
+        return workspaceId > this.state.activeWorkspace ? 'forward' : 'backward';
+    };
+
+    applyWorkspaceState = (workspaceId, extraState = {}, callback) => {
         const snapshot = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
         this.setState({
             activeWorkspace: workspaceId,
@@ -852,10 +894,59 @@ export class Desktop extends Component {
             window_positions: { ...snapshot.window_positions },
             showWindowSwitcher: false,
             switcherWindows: [],
+            ...extraState,
         }, () => {
             this.broadcastWorkspaceState();
             this.giveFocusToLastApp();
+            if (typeof callback === 'function') {
+                callback();
+            }
         });
+    };
+
+    switchWorkspace = (workspaceId) => {
+        if (workspaceId === this.state.activeWorkspace) return;
+        if (workspaceId < 0 || workspaceId >= this.state.workspaces.length) return;
+
+        const duration = this.getWorkspaceTransitionDuration();
+        const direction = this.resolveWorkspaceDirection(workspaceId);
+
+        this.cancelWorkspaceAnimation();
+
+        if (this.prefersReducedMotion() || duration <= 0) {
+            this.applyWorkspaceState(workspaceId, {
+                pendingWorkspace: null,
+                workspaceTransition: null,
+            });
+            return;
+        }
+
+        this.setState({
+            pendingWorkspace: workspaceId,
+            workspaceTransition: { phase: 'exit', direction },
+        });
+
+        this.workspaceTransitionTimeout = setTimeout(() => {
+            this.workspaceTransitionTimeout = null;
+            this.applyWorkspaceState(workspaceId, {
+                pendingWorkspace: null,
+                workspaceTransition: { phase: 'enter', direction },
+            }, () => {
+                this.workspaceTransitionCleanupTimeout = setTimeout(() => {
+                    this.workspaceTransitionCleanupTimeout = null;
+                    this.setState((prevState) => {
+                        if (
+                            !prevState.workspaceTransition ||
+                            prevState.workspaceTransition.phase !== 'enter' ||
+                            prevState.workspaceTransition.direction !== direction
+                        ) {
+                            return null;
+                        }
+                        return { workspaceTransition: null };
+                    });
+                }, duration);
+            });
+        }, duration);
     };
 
     shiftWorkspace = (direction) => {
@@ -963,6 +1054,7 @@ export class Desktop extends Component {
         window.removeEventListener('open-app', this.handleOpenAppEvent);
         window.removeEventListener('resize', this.handleViewportResize);
         this.detachIconKeyboardListeners();
+        this.cancelWorkspaceAnimation();
         if (typeof window !== 'undefined') {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
@@ -1953,6 +2045,16 @@ export class Desktop extends Component {
     };
 
     render() {
+        const { workspaceTransition } = this.state;
+        const workspaceTransitionClassName = [
+            'workspace-transition',
+            workspaceTransition ? 'workspace-transition--animating' : '',
+            workspaceTransition?.phase ? `workspace-transition--${workspaceTransition.phase}` : '',
+            workspaceTransition?.direction ? `workspace-transition--${workspaceTransition.direction}` : '',
+        ].filter(Boolean).join(' ');
+        const workspaceTransitionStyle = workspaceTransition
+            ? { '--workspace-transition-duration': `${this.getWorkspaceTransitionDuration()}ms` }
+            : undefined;
         return (
             <main
                 id="desktop"
@@ -1961,84 +2063,90 @@ export class Desktop extends Component {
                 className={" min-h-screen h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent"}
                 style={{ paddingTop: DESKTOP_TOP_PADDING, minHeight: '100dvh' }}
             >
-
-                {/* Window Area */}
                 <div
-                    id="window-area"
-                    role="main"
-                    className="absolute h-full w-full bg-transparent"
-                    data-context="desktop-area"
+                    className={workspaceTransitionClassName}
+                    style={workspaceTransitionStyle}
                 >
-                    {this.renderWindows()}
-                </div>
+                    <div className="workspace-transition__content">
+                        {/* Window Area */}
+                        <div
+                            id="window-area"
+                            role="main"
+                            className="absolute h-full w-full bg-transparent"
+                            data-context="desktop-area"
+                        >
+                            {this.renderWindows()}
+                        </div>
 
-                {/* Background Image */}
-                <BackgroundImage />
+                        {/* Background Image */}
+                        <BackgroundImage />
 
-                {/* Desktop Apps */}
-                {this.renderDesktopApps()}
+                        {/* Desktop Apps */}
+                        {this.renderDesktopApps()}
 
-                {/* Context Menus */}
-                <DesktopMenu
-                    active={this.state.context_menus.desktop}
-                    openApp={this.openApp}
-                    addNewFolder={this.addNewFolder}
-                    openShortcutSelector={this.openShortcutSelector}
-                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
-                />
-                <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
-                <AppMenu
-                    active={this.state.context_menus.app}
-                    pinned={this.initFavourite[this.state.context_app]}
-                    pinApp={() => this.pinApp(this.state.context_app)}
-                    unpinApp={() => this.unpinApp(this.state.context_app)}
-                    onClose={this.hideAllContextMenu}
-                />
-                <TaskbarMenu
-                    active={this.state.context_menus.taskbar}
-                    minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
-                    onMinimize={() => {
-                        const id = this.state.context_app;
-                        if (!id) return;
-                        if (this.state.minimized_windows[id]) {
-                            this.openApp(id);
-                        } else {
-                            this.hasMinimised(id);
+                        {/* Context Menus */}
+                        <DesktopMenu
+                            active={this.state.context_menus.desktop}
+                            openApp={this.openApp}
+                            addNewFolder={this.addNewFolder}
+                            openShortcutSelector={this.openShortcutSelector}
+                            clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                        />
+                        <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
+                        <AppMenu
+                            active={this.state.context_menus.app}
+                            pinned={this.initFavourite[this.state.context_app]}
+                            pinApp={() => this.pinApp(this.state.context_app)}
+                            unpinApp={() => this.unpinApp(this.state.context_app)}
+                            onClose={this.hideAllContextMenu}
+                        />
+                        <TaskbarMenu
+                            active={this.state.context_menus.taskbar}
+                            minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
+                            onMinimize={() => {
+                                const id = this.state.context_app;
+                                if (!id) return;
+                                if (this.state.minimized_windows[id]) {
+                                    this.openApp(id);
+                                } else {
+                                    this.hasMinimised(id);
+                                }
+                            }}
+                            onClose={() => {
+                                const id = this.state.context_app;
+                                if (!id) return;
+                                this.closeApp(id);
+                            }}
+                            onCloseMenu={this.hideAllContextMenu}
+                        />
+
+                        {/* Folder Input Name Bar */}
+                        {
+                            (this.state.showNameBar
+                                ? this.renderNameBar()
+                                : null
+                            )
                         }
-                    }}
-                    onClose={() => {
-                        const id = this.state.context_app;
-                        if (!id) return;
-                        this.closeApp(id);
-                    }}
-                    onCloseMenu={this.hideAllContextMenu}
-                />
 
-                {/* Folder Input Name Bar */}
-                {
-                    (this.state.showNameBar
-                        ? this.renderNameBar()
-                        : null
-                    )
-                }
+                        { this.state.allAppsView ?
+                            <AllApplications apps={apps}
+                                games={games}
+                                recentApps={this.getActiveStack()}
+                                openApp={this.openApp} /> : null}
 
-                { this.state.allAppsView ?
-                    <AllApplications apps={apps}
-                        games={games}
-                        recentApps={this.getActiveStack()}
-                        openApp={this.openApp} /> : null}
+                        { this.state.showShortcutSelector ?
+                            <ShortcutSelector apps={apps}
+                                games={games}
+                                onSelect={this.addShortcutToDesktop}
+                                onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
 
-                { this.state.showShortcutSelector ?
-                    <ShortcutSelector apps={apps}
-                        games={games}
-                        onSelect={this.addShortcutToDesktop}
-                        onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
-
-                { this.state.showWindowSwitcher ?
-                    <WindowSwitcher
-                        windows={this.state.switcherWindows}
-                        onSelect={this.selectWindow}
-                        onClose={this.closeWindowSwitcher} /> : null}
+                        { this.state.showWindowSwitcher ?
+                            <WindowSwitcher
+                                windows={this.state.switcherWindows}
+                                onSelect={this.selectWindow}
+                                onClose={this.closeWindowSwitcher} /> : null}
+                    </div>
+                </div>
 
             </main>
         );

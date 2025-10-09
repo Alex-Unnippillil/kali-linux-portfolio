@@ -9,4 +9,87 @@
   --window-motion-ease-maximize: cubic-bezier(0.2, 0.8, 0.4, 1);
   --window-motion-duration-snap-preview: var(--window-motion-duration-snap);
   --window-motion-ease-snap-preview: var(--window-motion-ease-snap);
+  --workspace-transition-duration: 200ms;
+  --workspace-transition-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --workspace-transition-distance: 24px;
+}
+
+.workspace-transition {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.workspace-transition__content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.workspace-transition--animating .workspace-transition__content {
+  will-change: opacity, transform;
+}
+
+.workspace-transition--exit.workspace-transition--forward .workspace-transition__content {
+  animation: workspace-slide-exit-forward var(--workspace-transition-duration)
+    var(--workspace-transition-ease) forwards;
+}
+
+.workspace-transition--exit.workspace-transition--backward .workspace-transition__content {
+  animation: workspace-slide-exit-backward var(--workspace-transition-duration)
+    var(--workspace-transition-ease) forwards;
+}
+
+.workspace-transition--enter.workspace-transition--forward .workspace-transition__content {
+  animation: workspace-slide-enter-forward var(--workspace-transition-duration)
+    var(--workspace-transition-ease) forwards;
+}
+
+.workspace-transition--enter.workspace-transition--backward .workspace-transition__content {
+  animation: workspace-slide-enter-backward var(--workspace-transition-duration)
+    var(--workspace-transition-ease) forwards;
+}
+
+@keyframes workspace-slide-exit-forward {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(calc(-1 * var(--workspace-transition-distance)));
+  }
+}
+
+@keyframes workspace-slide-exit-backward {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(var(--workspace-transition-distance));
+  }
+}
+
+@keyframes workspace-slide-enter-forward {
+  from {
+    opacity: 0;
+    transform: translateX(var(--workspace-transition-distance));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes workspace-slide-enter-backward {
+  from {
+    opacity: 0;
+    transform: translateX(calc(-1 * var(--workspace-transition-distance)));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
