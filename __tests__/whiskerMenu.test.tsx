@@ -67,3 +67,49 @@ describe('WhiskerMenu touch pointer behavior', () => {
     });
   });
 });
+
+describe('WhiskerMenu favorites reordering', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it('persists reordered favorites across sessions', async () => {
+    const { unmount } = render(<WhiskerMenu />);
+
+    fireEvent.click(screen.getByRole('button', { name: /applications/i }));
+
+    const initialShortcuts = await screen.findAllByTestId(/favorite-shortcut-/);
+    const initialOrder = initialShortcuts
+      .map((button) => button.getAttribute('data-app-id'))
+      .filter((id): id is string => Boolean(id));
+
+    expect(initialOrder.length).toBeGreaterThan(1);
+
+    fireEvent.keyDown(initialShortcuts[0], { key: 'ArrowRight', ctrlKey: true });
+
+    await waitFor(() => {
+      const stored = JSON.parse(window.localStorage.getItem('pinnedApps') ?? '[]');
+      expect(stored[0]).toBe(initialOrder[1]);
+    });
+
+    const reorderedShortcuts = await screen.findAllByTestId(/favorite-shortcut-/);
+    const reorderedOrder = reorderedShortcuts
+      .map((button) => button.getAttribute('data-app-id'))
+      .filter((id): id is string => Boolean(id));
+
+    expect(reorderedOrder[0]).toBe(initialOrder[1]);
+    expect(reorderedOrder[1]).toBe(initialOrder[0]);
+
+    unmount();
+
+    render(<WhiskerMenu />);
+    fireEvent.click(screen.getByRole('button', { name: /applications/i }));
+
+    const persistedShortcuts = await screen.findAllByTestId(/favorite-shortcut-/);
+    const persistedOrder = persistedShortcuts
+      .map((button) => button.getAttribute('data-app-id'))
+      .filter((id): id is string => Boolean(id));
+
+    expect(persistedOrder.slice(0, reorderedOrder.length)).toEqual(reorderedOrder.slice(0, persistedOrder.length));
+  });
+});

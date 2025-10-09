@@ -7,7 +7,7 @@ const BackgroundImage = dynamic(
     () => import('../util-components/background-image'),
     { ssr: false }
 );
-import apps, { games } from '../../apps.config';
+import apps, { games, defaultPinnedAppIds } from '../../apps.config';
 import Window from '../desktop/Window';
 import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
@@ -29,6 +29,14 @@ import {
     getSafeAreaInsets,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
+import {
+    applyPinnedState,
+    dispatchPinnedAppsChange,
+    PINNED_APPS_EVENT,
+    readPinnedAppIds,
+    sanitizePinnedAppIds,
+    writePinnedAppIds,
+} from '../../utils/pinnedApps';
 
 
 export class Desktop extends Component {
@@ -45,6 +53,9 @@ export class Desktop extends Component {
         ]);
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.allAppIds = apps.map((app) => app.id);
+        this.defaultPinnedAppIds = Array.isArray(defaultPinnedAppIds) ? [...defaultPinnedAppIds] : [];
+        this.pinnedAppIds = [];
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -73,6 +84,7 @@ export class Desktop extends Component {
                 label: `Workspace ${index + 1}`,
             })),
             draggingIconId: null,
+            pinned_app_order: [],
         }
 
         this.desktopRef = React.createRef();
@@ -908,6 +920,7 @@ export class Desktop extends Component {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.addEventListener(PINNED_APPS_EVENT, this.handleExternalPinnedAppsChange);
             this.broadcastWorkspaceState();
         }
 
@@ -967,6 +980,7 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.removeEventListener(PINNED_APPS_EVENT, this.handleExternalPinnedAppsChange);
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
@@ -1331,15 +1345,34 @@ export class Desktop extends Component {
         }
     }
 
-    fetchAppsData = (callback) => {
-        let pinnedApps = safeLocalStorage?.getItem('pinnedApps');
-        if (pinnedApps) {
-            pinnedApps = JSON.parse(pinnedApps);
-            apps.forEach(app => { app.favourite = pinnedApps.includes(app.id); });
-        } else {
-            pinnedApps = apps.filter(app => app.favourite).map(app => app.id);
-            safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps));
+    arePinnedOrdersEqual = (a = [], b = []) => {
+        if (!Array.isArray(a) || !Array.isArray(b)) return false;
+        if (a.length !== b.length) return false;
+        for (let index = 0; index < a.length; index += 1) {
+            if (a[index] !== b[index]) {
+                return false;
+            }
         }
+        return true;
+    }
+
+    handleExternalPinnedAppsChange = (event) => {
+        const detail = event?.detail;
+        const ids = Array.isArray(detail?.ids) ? detail.ids : null;
+        if (!ids) return;
+        const sanitized = sanitizePinnedAppIds(ids, this.allAppIds);
+        if (this.arePinnedOrdersEqual(this.pinnedAppIds, sanitized)) {
+            return;
+        }
+        this.pinnedAppIds = sanitized;
+        applyPinnedState(apps, sanitized);
+        this.setState({ pinned_app_order: sanitized });
+    }
+
+    fetchAppsData = (callback) => {
+        const pinnedIds = readPinnedAppIds(this.allAppIds, this.defaultPinnedAppIds);
+        applyPinnedState(apps, pinnedIds);
+        this.pinnedAppIds = pinnedIds;
 
         const focused_windows = {};
         const closed_windows = {};
@@ -1375,6 +1408,9 @@ export class Desktop extends Component {
             if (typeof callback === 'function') callback();
         });
         this.initFavourite = { ...favourite_apps };
+        this.setState({ pinned_app_order: pinnedIds }, () => {
+            dispatchPinnedAppsChange(pinnedIds);
+        });
     }
 
     updateAppsData = () => {
@@ -1777,31 +1813,35 @@ export class Desktop extends Component {
     }
 
     pinApp = (id) => {
-        let favourite_apps = { ...this.state.favourite_apps }
-        favourite_apps[id] = true
-        this.initFavourite[id] = true
-        const app = apps.find(a => a.id === id)
-        if (app) app.favourite = true
-        let pinnedApps = [];
-        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        if (!pinnedApps.includes(id)) pinnedApps.push(id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
-        this.setState({ favourite_apps }, () => { this.saveSession(); })
-        this.hideAllContextMenu()
+        let favourite_apps = { ...this.state.favourite_apps };
+        favourite_apps[id] = true;
+        this.initFavourite[id] = true;
+        const current = Array.isArray(this.pinnedAppIds) ? this.pinnedAppIds : [];
+        const nextOrder = current.includes(id) ? current : [...current, id];
+        const sanitized = writePinnedAppIds(nextOrder, this.allAppIds);
+        this.pinnedAppIds = sanitized;
+        applyPinnedState(apps, sanitized);
+        this.setState({ favourite_apps, pinned_app_order: sanitized }, () => {
+            this.saveSession();
+            dispatchPinnedAppsChange(sanitized);
+        });
+        this.hideAllContextMenu();
     }
 
     unpinApp = (id) => {
-        let favourite_apps = { ...this.state.favourite_apps }
-        if (this.state.closed_windows[id]) favourite_apps[id] = false
-        this.initFavourite[id] = false
-        const app = apps.find(a => a.id === id)
-        if (app) app.favourite = false
-        let pinnedApps = [];
-        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        pinnedApps = pinnedApps.filter(appId => appId !== id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
-        this.setState({ favourite_apps }, () => { this.saveSession(); })
-        this.hideAllContextMenu()
+        let favourite_apps = { ...this.state.favourite_apps };
+        if (this.state.closed_windows[id]) favourite_apps[id] = false;
+        this.initFavourite[id] = false;
+        const current = Array.isArray(this.pinnedAppIds) ? this.pinnedAppIds : [];
+        const nextOrder = current.filter(appId => appId !== id);
+        const sanitized = writePinnedAppIds(nextOrder, this.allAppIds);
+        this.pinnedAppIds = sanitized;
+        applyPinnedState(apps, sanitized);
+        this.setState({ favourite_apps, pinned_app_order: sanitized }, () => {
+            this.saveSession();
+            dispatchPinnedAppsChange(sanitized);
+        });
+        this.hideAllContextMenu();
     }
 
     focus = (objId) => {
