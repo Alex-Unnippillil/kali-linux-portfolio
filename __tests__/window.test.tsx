@@ -30,6 +30,19 @@ const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: height });
 };
 
+if (typeof window !== 'undefined') {
+  if (!window.requestAnimationFrame) {
+    window.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+      return window.setTimeout(() => callback(performance.now()), 16);
+    }) as typeof window.requestAnimationFrame;
+  }
+  if (!window.cancelAnimationFrame) {
+    window.cancelAnimationFrame = ((handle: number) => {
+      window.clearTimeout(handle);
+    }) as typeof window.cancelAnimationFrame;
+  }
+}
+
 beforeEach(() => {
   setViewport(1440, 900);
   measureSafeAreaInsetMock.mockReturnValue(0);
@@ -428,6 +441,133 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBeNull();
     expect(ref.current!.state.width).toBe(60);
     expect(ref.current!.state.height).toBe(85);
+  });
+});
+
+describe('Window usage optimization', () => {
+  it('shrinks window with requestAnimationFrame until usage threshold', () => {
+    const callbacks = new Map<number, FrameRequestCallback>();
+    let nextId = 1;
+    const rafSpy = jest
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback: FrameRequestCallback) => {
+        const id = nextId++;
+        callbacks.set(id, callback);
+        return id;
+      });
+    const cancelSpy = jest
+      .spyOn(window, 'cancelAnimationFrame')
+      .mockImplementation((id: number) => {
+        callbacks.delete(id);
+      });
+
+    const ref = React.createRef<any>();
+    try {
+      render(
+        <Window
+          id="test-window"
+          title="Test"
+          screen={() => <div style={{ width: '100%', height: '100%' }}>content</div>}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          openApp={() => {}}
+          ref={ref}
+        />
+      );
+
+      const instance = ref.current!;
+      const initialWidth = instance.state.width;
+      const initialHeight = instance.state.height;
+      const usageSequence = [40, 45, 55, 60, 70, 75, 78, 79, 81];
+      const usageMock = jest.fn(() => {
+        const value = usageSequence.shift();
+        return value === undefined ? 100 : value;
+      });
+      instance.computeContentUsage = usageMock;
+
+      const flushFrames = () => {
+        while (callbacks.size) {
+          const frames = Array.from(callbacks.values());
+          callbacks.clear();
+          frames.forEach((frame) => {
+            act(() => {
+              frame(performance.now());
+            });
+          });
+        }
+      };
+
+      act(() => {
+        instance.optimizeWindow();
+      });
+
+      flushFrames();
+
+      expect(instance.state.width).toBeLessThan(initialWidth);
+      expect(instance.state.height).toBeLessThan(initialHeight);
+      expect(instance.state.width).toBeGreaterThanOrEqual(20);
+      expect(instance.state.height).toBeGreaterThanOrEqual(20);
+      expect(usageMock).toHaveBeenCalled();
+      expect(cancelSpy).toHaveBeenCalled();
+    } finally {
+      rafSpy.mockRestore();
+      cancelSpy.mockRestore();
+    }
+  });
+
+  it('cancels pending animation frame when unmounted', () => {
+    const callbacks = new Map<number, FrameRequestCallback>();
+    let nextId = 1;
+    const rafSpy = jest
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback: FrameRequestCallback) => {
+        const id = nextId++;
+        callbacks.set(id, callback);
+        return id;
+      });
+    const cancelSpy = jest
+      .spyOn(window, 'cancelAnimationFrame')
+      .mockImplementation((id: number) => {
+        callbacks.delete(id);
+      });
+
+    const ref = React.createRef<any>();
+    const cleanupSpies = () => {
+      rafSpy.mockRestore();
+      cancelSpy.mockRestore();
+    };
+
+    try {
+      const { unmount } = render(
+        <Window
+          id="test-window"
+          title="Test"
+          screen={() => <div>content</div>}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          openApp={() => {}}
+          ref={ref}
+        />
+      );
+
+      const instance = ref.current!;
+      instance.computeContentUsage = jest.fn(() => 10);
+
+      act(() => {
+        instance.optimizeWindow();
+      });
+
+      expect(callbacks.size).toBeGreaterThan(0);
+
+      unmount();
+
+      expect(cancelSpy).toHaveBeenCalled();
+      expect(callbacks.size).toBe(0);
+    } finally {
+      cleanupSpies();
+    }
   });
 });
 

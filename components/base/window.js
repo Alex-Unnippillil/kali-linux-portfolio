@@ -77,6 +77,7 @@ export class Window extends Component {
         }
         this.windowRef = React.createRef();
         this._usageTimeout = null;
+        this._shrinkFrame = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
     }
@@ -111,6 +112,7 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.cancelUsageOptimization();
     }
 
     setDefaultWindowDimenstion = () => {
@@ -185,6 +187,17 @@ export class Window extends Component {
         }, 200);
     }
 
+    cancelUsageOptimization = () => {
+        if (this._shrinkFrame !== null) {
+            if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+                window.cancelAnimationFrame(this._shrinkFrame);
+            } else if (typeof cancelAnimationFrame === 'function') {
+                cancelAnimationFrame(this._shrinkFrame);
+            }
+            this._shrinkFrame = null;
+        }
+    }
+
     optimizeWindow = () => {
         const root = this.getWindowNode();
         if (!root) return;
@@ -193,19 +206,35 @@ export class Window extends Component {
 
         container.style.padding = '0px';
 
+        this.cancelUsageOptimization();
+
+        if (this.computeContentUsage() >= 80) {
+            return;
+        }
+
         const shrink = () => {
+            this.cancelUsageOptimization();
             const usage = this.computeContentUsage();
-            if (usage >= 80) return;
+            if (usage >= 80) {
+                return;
+            }
             this.setState(prev => ({
                 width: Math.max(prev.width - 1, 20),
                 height: Math.max(prev.height - 1, 20)
             }), () => {
                 if (this.computeContentUsage() < 80) {
-                    setTimeout(shrink, 50);
+                    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                        this._shrinkFrame = window.requestAnimationFrame(shrink);
+                    }
+                } else {
+                    this.cancelUsageOptimization();
                 }
             });
         };
-        shrink();
+
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            this._shrinkFrame = window.requestAnimationFrame(shrink);
+        }
     }
 
     getOverlayRoot = () => {
