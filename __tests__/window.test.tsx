@@ -454,6 +454,36 @@ describe('Window maximize behavior', () => {
     const winEl = document.getElementById('test-window') as HTMLElement | null;
     expect(winEl?.style.transform).toBe(`translate(-1pt, ${safeTop - DESKTOP_TOP_PADDING}px)`);
   });
+
+  it('toggles maximize state via titlebar double-click', () => {
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const titlebar = screen.getByText('Test').parentElement as HTMLElement;
+
+    act(() => {
+      fireEvent.doubleClick(titlebar);
+    });
+
+    expect(ref.current?.state.maximized).toBe(true);
+
+    act(() => {
+      fireEvent.doubleClick(titlebar);
+    });
+
+    expect(ref.current?.state.maximized).toBe(false);
+  });
 });
 
 describe('Window keyboard dragging', () => {

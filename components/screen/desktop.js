@@ -99,6 +99,8 @@ export class Desktop extends Component {
         this.openSettingsClickHandler = null;
         this.openSettingsListenerAttached = false;
 
+        this.windowRefs = new Map();
+
     }
 
     createEmptyWorkspaceState = () => ({
@@ -1483,6 +1485,22 @@ export class Desktop extends Component {
         );
     }
 
+    assignWindowRef = (id) => (instance) => {
+        if (instance) {
+            this.windowRefs.set(id, instance);
+        } else {
+            this.windowRefs.delete(id);
+        }
+    }
+
+    handleWindowTitlebarDoubleClick = (id, instance) => {
+        const target = instance || this.windowRefs.get(id);
+        if (!target || typeof target.maximizeWindow !== 'function') {
+            return;
+        }
+        target.maximizeWindow();
+    }
+
     renderWindows = () => {
         const { closed_windows = {}, minimized_windows = {}, focused_windows = {} } = this.state;
         const safeTopOffset = measureWindowTopOffset();
@@ -1535,7 +1553,12 @@ export class Desktop extends Component {
                 zIndex: 200 + index,
             };
 
-            return <Window key={id} {...props} />;
+            return <Window
+                key={id}
+                {...props}
+                ref={this.assignWindowRef(id)}
+                onTitlebarDoubleClick={this.handleWindowTitlebarDoubleClick}
+            />;
         }).filter(Boolean);
     }
 
