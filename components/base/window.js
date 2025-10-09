@@ -64,6 +64,7 @@ export class Window extends Component {
             height: props.defaultHeight || 85,
             closed: false,
             maximized: false,
+            shaded: false,
             parentSize: {
                 height: 100,
                 width: 100
@@ -79,6 +80,20 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+    }
+
+    getWindowHeightPx = (viewportHeight) => {
+        if (this.state.shaded) {
+            const node = this.getWindowNode();
+            if (node && typeof node.getBoundingClientRect === 'function') {
+                const rect = node.getBoundingClientRect();
+                if (rect && typeof rect.height === 'number' && rect.height > 0) {
+                    return rect.height;
+                }
+            }
+            return DEFAULT_WINDOW_TOP_OFFSET;
+        }
+        return viewportHeight * (this.state.height / 100.0);
     }
 
     componentDidMount() {
@@ -139,7 +154,7 @@ export class Window extends Component {
         const topInset = typeof window !== 'undefined'
             ? measureWindowTopOffset()
             : DEFAULT_WINDOW_TOP_OFFSET;
-        const windowHeightPx = viewportHeight * (this.state.height / 100.0);
+        const windowHeightPx = this.getWindowHeightPx(viewportHeight);
         const windowWidthPx = viewportWidth * (this.state.width / 100.0);
         const safeAreaBottom = Math.max(0, measureSafeAreaInset('bottom'));
         const availableVertical = Math.max(viewportHeight - topInset - SNAP_BOTTOM_INSET - safeAreaBottom, 0);
@@ -274,6 +289,13 @@ export class Window extends Component {
             this.unsnapWindow();
         }
         this.setState({ cursorType: "cursor-move", grabbed: true })
+    }
+
+    handleTitleBarAuxClick = (event) => {
+        if (event && event.button === 1) {
+            event.preventDefault();
+            this.toggleShade();
+        }
     }
 
     changeCursorToDefault = () => {
@@ -487,7 +509,7 @@ export class Window extends Component {
         }
 
         node.style.transform = endTransform;
-        this.setState({ maximized: false });
+        this.setState({ maximized: false, shaded: false });
     }
 
     maximizeWindow = () => {
@@ -512,8 +534,19 @@ export class Window extends Component {
                 const translateYOffset = topOffset - DESKTOP_TOP_PADDING;
                 node.style.transform = `translate(-1pt, ${translateYOffset}px)`;
             }
-            this.setState({ maximized: true, height: heightPercent, width: 100.2 });
+            this.setState({ maximized: true, shaded: false, height: heightPercent, width: 100.2 });
         }
+    }
+
+    toggleShade = () => {
+        this.setState((prev) => ({
+            shaded: !prev.shaded,
+            snapPreview: null,
+            snapPosition: null,
+        }), () => {
+            this.focusWindow();
+            this.resizeBoundries();
+        });
     }
 
     closeWindow = () => {
@@ -674,7 +707,11 @@ export class Window extends Component {
                 >
                     <div
                         ref={this.windowRef}
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%`, zIndex: computedZIndex }}
+                        style={{
+                            width: `${this.state.width}%`,
+                            height: this.state.shaded ? 'auto' : `${this.state.height}%`,
+                            zIndex: computedZIndex,
+                        }}
                         className={[
                             this.state.cursorType,
                             this.state.closed ? 'closed-window' : '',
@@ -693,6 +730,7 @@ export class Window extends Component {
                         onKeyDown={this.handleKeyDown}
                         onPointerDown={this.focusWindow}
                         onFocus={this.focusWindow}
+                        data-shaded={this.state.shaded ? 'true' : 'false'}
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
@@ -702,6 +740,7 @@ export class Window extends Component {
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
                             onPointerDown={this.focusWindow}
+                            onAuxClick={this.handleTitleBarAuxClick}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -717,7 +756,8 @@ export class Window extends Component {
                             : <WindowMainScreen screen={this.props.screen} title={this.props.title}
                                 addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
                                 openApp={this.props.openApp}
-                                context={this.props.context} />)}
+                                context={this.props.context}
+                                collapsed={this.state.shaded} />)}
                     </div>
                 </Draggable >
             </>
@@ -728,7 +768,12 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onAuxClick }) {
+    const handleAuxClick = (event) => {
+        if (typeof onAuxClick === 'function') {
+            onAuxClick(event);
+        }
+    };
     return (
         <div
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
@@ -738,6 +783,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown 
             onKeyDown={onKeyDown}
             onBlur={onBlur}
             onPointerDown={onPointerDown}
+            onAuxClick={handleAuxClick}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
@@ -892,8 +938,16 @@ export class WindowMainScreen extends Component {
         }, 3000);
     }
     render() {
+        const collapsed = this.props.collapsed;
+        const collapsedClass = collapsed ? ' pointer-events-none h-0 min-h-0 flex-grow-0 flex-shrink-0' : '';
+        const collapsedStyle = collapsed ? { height: 0, flexGrow: 0, flexShrink: 0 } : {};
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
+            <div
+                className={("w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")) + collapsedClass}
+                style={collapsedStyle}
+                data-collapsed={collapsed ? 'true' : 'false'}
+                aria-hidden={collapsed}
+            >
                 {this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
             </div>
         )
