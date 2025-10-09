@@ -1,6 +1,14 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+
+import {
+  createClear,
+  createReset,
+  resolveInitial,
+  type InitialValue,
+  type PersistentStateValidator,
+} from './persistentStateShared';
 
 /**
  * Persist state in localStorage.
@@ -11,11 +19,10 @@ import { useState, useEffect } from 'react';
  */
 export default function usePersistentState<T>(
   key: string,
-  initial: T | (() => T),
-  validator?: (value: unknown) => value is T,
+  initial: InitialValue<T>,
+  validator?: PersistentStateValidator<T>,
 ) {
-  const getInitial = () =>
-    typeof initial === 'function' ? (initial as () => T)() : initial;
+  const getInitial = () => resolveInitial(initial);
 
   const [state, setState] = useState<T>(() => {
     if (typeof window === 'undefined') return getInitial();
@@ -41,18 +48,19 @@ export default function usePersistentState<T>(
     }
   }, [key, state]);
 
-  const reset = () => setState(getInitial());
-  const clear = () => {
-    try {
-      window.localStorage.removeItem(key);
-    } catch {
-      // ignore remove errors
-    }
-    reset();
-  };
+  const reset = useMemo(() => createReset(initial, setState), [initial, setState]);
+  const clear = useMemo(
+    () =>
+      createClear(reset, () => {
+        window.localStorage.removeItem(key);
+      }),
+    [key, reset],
+  );
 
   return [state, setState, reset, clear] as const;
 }
+
+export type { PersistentStateValidator } from './persistentStateShared';
 
 export const useSnapSetting = () =>
   usePersistentState<boolean>(
