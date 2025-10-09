@@ -2038,7 +2038,9 @@ export class Desktop extends Component {
                     <WindowSwitcher
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
-                        onClose={this.closeWindowSwitcher} /> : null}
+                        onClose={this.closeWindowSwitcher}
+                        onMinimizeWindow={this.hasMinimised}
+                        onCloseWindow={this.closeApp} /> : null}
 
             </main>
         );
