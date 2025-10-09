@@ -168,6 +168,20 @@ export default class Navbar extends PureComponent {
                 }
         };
 
+        handleWorkspaceRename = (workspaceId, label) => {
+                if (typeof workspaceId !== 'number') return;
+                if (typeof label !== 'string') return;
+                const trimmed = label.trim();
+                if (!trimmed) return;
+                if (typeof window !== 'undefined') {
+                        window.dispatchEvent(
+                                new CustomEvent('workspace-rename', {
+                                        detail: { workspaceId, label: trimmed },
+                                }),
+                        );
+                }
+        };
+
         handleStatusToggle = () => {
                 this.setState((state) => ({ status_card: !state.status_card }));
         };
@@ -199,6 +213,7 @@ export default class Navbar extends PureComponent {
                                                                 workspaces={workspaces}
                                                                 activeWorkspace={activeWorkspace}
                                                                 onSelect={this.handleWorkspaceSelect}
+                                                                onRename={this.handleWorkspaceRename}
                                                         />
                                                 )}
                                                 {this.renderRunningApps()}
