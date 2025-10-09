@@ -1,8 +1,12 @@
 import ReactGA from 'react-ga4';
 
-type EventInput = Parameters<typeof ReactGA.event>[0];
+type EventArgs = Parameters<typeof ReactGA.event>;
+type EventInput = EventArgs[0];
 
-const safeEvent = (...args: Parameters<typeof ReactGA.event>): void => {
+let analyticsReady = false;
+const eventQueue: EventArgs[] = [];
+
+const safeEvent = (...args: EventArgs): void => {
   try {
     const eventFn = ReactGA.event;
     if (typeof eventFn === 'function') {
@@ -13,7 +17,30 @@ const safeEvent = (...args: Parameters<typeof ReactGA.event>): void => {
   }
 };
 
+const drainQueue = (): void => {
+  if (!analyticsReady) return;
+
+  while (eventQueue.length > 0) {
+    const args = eventQueue.shift();
+    if (args) {
+      safeEvent(...args);
+    }
+  }
+};
+
+export const signalAnalyticsReady = (): void => {
+  if (analyticsReady) return;
+
+  analyticsReady = true;
+  drainQueue();
+};
+
 export const logEvent = (event: EventInput): void => {
+  if (!analyticsReady) {
+    eventQueue.push([event]);
+    return;
+  }
+
   safeEvent(event);
 };
 
