@@ -80,6 +80,8 @@ curl -X POST http://localhost:3000/api/dummy
 Copy from `.env.local.example` and fill as needed.
 
 * `NEXT_PUBLIC_ENABLE_ANALYTICS`: `"true"` to emit client analytics.
+* `NEXT_PUBLIC_WEB_VITALS_ENVS`: comma-separated Vercel envs (e.g., `preview,production`) allowed to send Web Vitals.
+* `NEXT_PUBLIC_WEB_VITALS_METRICS`: comma-separated Web Vitals (e.g., `LCP,INP,CLS,TTFB`) forwarded to analytics.
 * `FEATURE_TOOL_APIS`: `"enabled"` or `"disabled"` to toggle simulated tool APIs.
 * `RECAPTCHA_SECRET`, `NEXT_PUBLIC_RECAPTCHA_*`: if contact form protection is enabled.
 * `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`: only if Supabase features are used.
