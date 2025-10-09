@@ -79,6 +79,8 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._desktopResizeObserver = null;
+        this._resizeObserverTarget = null;
     }
 
     componentDidMount() {
@@ -95,6 +97,7 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = this.getWindowNode();
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        this.observeDesktopRoot();
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -108,6 +111,7 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = this.getWindowNode();
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        this.disconnectDesktopObserver();
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -133,9 +137,15 @@ export class Window extends Component {
         }
     }
 
-    resizeBoundries = () => {
-        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
-        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+    resizeBoundries = (dimensions = {}) => {
+        const fallbackHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        const fallbackWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+        const viewportHeight = typeof dimensions.height === 'number' && dimensions.height > 0
+            ? dimensions.height
+            : fallbackHeight;
+        const viewportWidth = typeof dimensions.width === 'number' && dimensions.width > 0
+            ? dimensions.width
+            : fallbackWidth;
         const topInset = typeof window !== 'undefined'
             ? measureWindowTopOffset()
             : DEFAULT_WINDOW_TOP_OFFSET;
@@ -158,6 +168,58 @@ export class Window extends Component {
                 this.scheduleUsageCheck();
             }
         });
+    }
+
+    observeDesktopRoot = () => {
+        if (typeof window === 'undefined') return;
+        const ResizeObserverCtor = window.ResizeObserver || globalThis.ResizeObserver;
+        if (typeof ResizeObserverCtor !== 'function') return;
+        const desktopRoot = document.getElementById('desktop');
+        if (!desktopRoot) return;
+
+        if (this._desktopResizeObserver && typeof this._desktopResizeObserver.disconnect === 'function') {
+            this._desktopResizeObserver.disconnect();
+        }
+
+        const observer = new ResizeObserverCtor((entries = []) => {
+            if (!entries.length) {
+                this.resizeBoundries();
+                return;
+            }
+            const entry = entries[entries.length - 1];
+            const rect = entry && entry.contentRect ? entry.contentRect : null;
+            if (rect && (typeof rect.width === 'number' || typeof rect.height === 'number')) {
+                this.resizeBoundries({ width: rect.width, height: rect.height });
+            } else {
+                this.resizeBoundries();
+            }
+        });
+
+        if (typeof observer.observe === 'function') {
+            observer.observe(desktopRoot);
+        }
+
+        this._desktopResizeObserver = observer;
+        this._resizeObserverTarget = desktopRoot;
+
+        if (typeof desktopRoot.getBoundingClientRect === 'function') {
+            const rect = desktopRoot.getBoundingClientRect();
+            if (rect && (rect.width > 0 || rect.height > 0)) {
+                this.resizeBoundries({ width: rect.width, height: rect.height });
+            }
+        }
+    }
+
+    disconnectDesktopObserver = () => {
+        if (!this._desktopResizeObserver) return;
+        if (this._resizeObserverTarget && typeof this._desktopResizeObserver.unobserve === 'function') {
+            this._desktopResizeObserver.unobserve(this._resizeObserverTarget);
+        }
+        if (typeof this._desktopResizeObserver.disconnect === 'function') {
+            this._desktopResizeObserver.disconnect();
+        }
+        this._desktopResizeObserver = null;
+        this._resizeObserverTarget = null;
     }
 
     computeContentUsage = () => {

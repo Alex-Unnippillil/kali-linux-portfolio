@@ -4,6 +4,38 @@ import Window from '../components/desktop/Window';
 import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET } from '../utils/uiConstants';
 import { measureSafeAreaInset, measureWindowTopOffset } from '../utils/windowLayout';
 
+type MockObserverEntry = { contentRect: { width: number; height: number } };
+
+const mockResizeObservers: MockResizeObserver[] = [];
+
+class MockResizeObserver {
+  private readonly callback: (entries: MockObserverEntry[]) => void;
+
+  constructor(callback: (entries: MockObserverEntry[]) => void) {
+    this.callback = callback;
+    mockResizeObservers.push(this);
+  }
+
+  observe(): void {}
+
+  unobserve(): void {}
+
+  disconnect(): void {}
+
+  trigger(entry: MockObserverEntry): void {
+    this.callback([entry]);
+  }
+}
+
+const getLastObserver = () => mockResizeObservers[mockResizeObservers.length - 1] ?? null;
+
+beforeAll(() => {
+  (globalThis as any).ResizeObserver = MockResizeObserver;
+  if (typeof window !== 'undefined') {
+    (window as any).ResizeObserver = MockResizeObserver;
+  }
+});
+
 jest.mock('../utils/windowLayout', () => {
   const actual = jest.requireActual('../utils/windowLayout');
   return {
@@ -34,6 +66,14 @@ beforeEach(() => {
   setViewport(1440, 900);
   measureSafeAreaInsetMock.mockReturnValue(0);
   measureWindowTopOffsetMock.mockReturnValue(DESKTOP_TOP_PADDING);
+});
+
+afterEach(() => {
+  mockResizeObservers.length = 0;
+  const desktopRoot = document.getElementById('desktop');
+  if (desktopRoot && desktopRoot.parentNode) {
+    desktopRoot.parentNode.removeChild(desktopRoot);
+  }
 });
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
@@ -184,6 +224,72 @@ describe('Window snapping preview', () => {
     expect(ref.current!.state.snapPosition).toBe('top');
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toHaveStyle(`height: ${window.innerHeight / 2}px`);
+  });
+});
+
+describe('Desktop resize adjustments', () => {
+  it('updates snap preview bounds after ResizeObserver callback', () => {
+    setViewport(1280, 720);
+    const desktopRoot = document.createElement('div');
+    desktopRoot.id = 'desktop';
+    desktopRoot.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      right: 1280,
+      bottom: 720,
+      width: 1280,
+      height: 720,
+      x: 0,
+      y: 0,
+      toJSON: () => {}
+    });
+    document.body.appendChild(desktopRoot);
+
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />,
+      { container: desktopRoot, baseElement: desktopRoot }
+    );
+
+    const observer = getLastObserver();
+    expect(observer).not.toBeNull();
+    const updatedTopInset = DESKTOP_TOP_PADDING + 32;
+    measureWindowTopOffsetMock.mockReturnValue(updatedTopInset);
+
+    act(() => {
+      observer!.trigger({ contentRect: { width: 1280, height: 720 } });
+    });
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 24,
+      top: updatedTopInset,
+      right: 124,
+      bottom: updatedTopInset + 100,
+      width: 100,
+      height: 100,
+      x: 24,
+      y: updatedTopInset,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+
+    const preview = screen.getByTestId('snap-preview');
+    expect(preview).toHaveStyle(`top: ${updatedTopInset}px`);
+    expect(preview).toHaveStyle(`height: ${window.innerHeight / 2}px`);
+    expect(ref.current!.state.safeAreaTop).toBe(updatedTopInset);
   });
 });
 
