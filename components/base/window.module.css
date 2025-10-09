@@ -83,3 +83,41 @@
   height: calc(100% + 10px);
   width: calc(100% - 10px);
 }
+
+.windowFrameTransparent {
+  background-color: rgba(22, 32, 44, 0.72);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+
+.windowFrameTransparent .windowMainScreen {
+  background-color: rgba(18, 26, 37, 0.58) !important;
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+}
+
+.windowFrameTransparent .windowTitlebar {
+  background-color: rgba(44, 64, 88, 0.78) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.windowFrameSticky {
+  box-shadow: 0 0 0 2px rgba(125, 211, 252, 0.45), var(--shadow-2);
+}
+
+.windowFrameSticky::before {
+  opacity: 1;
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.9), rgba(14, 165, 233, 0.9));
+}
+
+.windowFrameNotificationsMuted::after {
+  content: '🔕';
+  position: absolute;
+  bottom: 6px;
+  right: 10px;
+  font-size: 0.75rem;
+  opacity: 0.9;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.45));
+  z-index: 3;
+}

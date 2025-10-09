@@ -1,5 +1,5 @@
 import React, { act } from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Window from '../components/desktop/Window';
 import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET } from '../utils/uiConstants';
 import { measureSafeAreaInset, measureWindowTopOffset } from '../utils/windowLayout';
@@ -666,5 +666,74 @@ describe('Window overlay inert behaviour', () => {
 
     document.body.removeChild(root);
     document.body.removeChild(opener);
+  });
+});
+
+describe('Window overflow menu', () => {
+  const renderControlledWindow = () => {
+    const Wrapper: React.FC = () => {
+      const [context, setContext] = React.useState<Record<string, any>>({});
+      return (
+        <Window
+          id="test-window"
+          title="Test"
+          screen={() => <div>content</div>}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          closed={() => {}}
+          openApp={() => {}}
+          isFocused
+          context={context}
+          onContextChange={(updater) => {
+            setContext((prev) => {
+              const base = prev || {};
+              if (typeof updater === 'function') {
+                return updater({ ...base });
+              }
+              return { ...base, ...updater };
+            });
+          }}
+        />
+      );
+    };
+
+    render(<Wrapper />);
+  };
+
+  it('toggles window context flags via overflow menu', async () => {
+    renderControlledWindow();
+    const windowNode = () => document.getElementById('test-window') as HTMLElement;
+
+    const optionsButton = screen.getByRole('button', { name: /more window options/i });
+
+    fireEvent.click(optionsButton);
+    const transparentItem = screen.getByRole('menuitemcheckbox', { name: /transparent window/i });
+    fireEvent.click(transparentItem);
+
+    await waitFor(() => {
+      expect(windowNode()).toHaveClass('windowFrameTransparent');
+    });
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+
+    fireEvent.click(optionsButton);
+    const transparentItemActive = screen.getByRole('menuitemcheckbox', { name: /transparent window/i });
+    expect(transparentItemActive).toHaveAttribute('aria-checked', 'true');
+    const stickyItem = screen.getByRole('menuitemcheckbox', { name: /stick to desktop/i });
+    fireEvent.click(stickyItem);
+
+    await waitFor(() => {
+      const node = windowNode();
+      expect(node).toHaveClass('windowFrameSticky');
+      expect(node.style.zIndex).toBe('1002');
+    });
+
+    fireEvent.click(optionsButton);
+    const notificationsItem = screen.getByRole('menuitemcheckbox', { name: /notifications/i });
+    fireEvent.click(notificationsItem);
+
+    await waitFor(() => {
+      expect(windowNode()).toHaveClass('windowFrameNotificationsMuted');
+    });
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 });

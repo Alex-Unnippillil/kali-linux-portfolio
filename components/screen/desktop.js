@@ -31,6 +31,55 @@ import {
 } from '../../utils/windowLayout';
 
 
+const sanitizeWindowContext = (context) => {
+    if (!context || typeof context !== 'object') return {};
+    const next = { ...context };
+    if ('transparent' in next && next.transparent !== true) {
+        delete next.transparent;
+    }
+    if ('sticky' in next && next.sticky !== true) {
+        delete next.sticky;
+    }
+    if ('notifications' in next) {
+        if (next.notifications === false) {
+            // keep muted state
+        } else if (next.notifications === true || next.notifications === undefined) {
+            delete next.notifications;
+        }
+    }
+    return next;
+};
+
+const shallowEqualContext = (a = {}, b = {}) => {
+    const keysA = Object.keys(a);
+    const keysB = Object.keys(b);
+    if (keysA.length !== keysB.length) return false;
+    for (const key of keysA) {
+        if (a[key] !== b[key]) return false;
+    }
+    return true;
+};
+
+const mergeWindowContext = (map, id, update) => {
+    if (!update || typeof update !== 'object') {
+        return map;
+    }
+    const current = map[id] || {};
+    const sanitizedCurrent = sanitizeWindowContext(current);
+    const next = sanitizeWindowContext({ ...sanitizedCurrent, ...update });
+    if (shallowEqualContext(sanitizedCurrent, next)) {
+        return map;
+    }
+    const nextMap = { ...map };
+    if (Object.keys(next).length === 0) {
+        delete nextMap[id];
+    } else {
+        nextMap[id] = next;
+    }
+    return nextMap;
+};
+
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -1532,6 +1581,7 @@ export class Desktop extends Component {
                 onPositionChange: (x, y) => this.updateWindowPosition(id, x, y),
                 snapEnabled: this.props.snapEnabled,
                 context: this.state.window_context[id],
+                onContextChange: (updater) => this.updateWindowContext(id, updater),
                 zIndex: 200 + index,
             };
 
@@ -1617,6 +1667,32 @@ export class Desktop extends Component {
         }
     }
 
+    updateWindowContext = (id, updater) => {
+        if (!id) return;
+        this.setState((prev) => {
+            const prevMap = prev.window_context || {};
+            const current = prevMap[id] || {};
+            const base = sanitizeWindowContext(current);
+            const nextRaw = typeof updater === 'function'
+                ? updater({ ...base })
+                : { ...base, ...updater };
+            if (!nextRaw || typeof nextRaw !== 'object') {
+                return null;
+            }
+            const next = sanitizeWindowContext(nextRaw);
+            if (shallowEqualContext(base, next)) {
+                return null;
+            }
+            const window_context = { ...prevMap };
+            if (Object.keys(next).length === 0) {
+                delete window_context[id];
+            } else {
+                window_context[id] = next;
+            }
+            return { window_context };
+        });
+    }
+
     openApp = (objId, params) => {
         if (!this.validAppIds.has(objId)) {
             console.warn(`Attempted to open unknown app: ${objId}`);
@@ -1629,8 +1705,9 @@ export class Desktop extends Component {
             }
             : undefined;
         const contextState = context
-            ? { ...this.state.window_context, [objId]: context }
+            ? mergeWindowContext(this.state.window_context, objId, context)
             : this.state.window_context;
+        const contextChanged = contextState !== this.state.window_context;
 
 
         // google analytics
@@ -1669,7 +1746,7 @@ export class Desktop extends Component {
                     this.saveSession();
                 }
             };
-            if (context) {
+            if (context && contextChanged) {
                 this.setState({ window_context: contextState }, reopen);
             } else {
                 reopen();
@@ -1710,7 +1787,7 @@ export class Desktop extends Component {
                 closed_windows[objId] = false; // openes app's window
                 this.setWorkspaceState({ closed_windows, favourite_apps, allAppsView: false }, () => {
                     const nextState = { closed_windows, favourite_apps, allAppsView: false };
-                    if (context) {
+                    if (contextChanged) {
                         nextState.window_context = contextState;
                     }
                     this.setState(nextState, () => {

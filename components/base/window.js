@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Component } from 'react';
+import React, { Component, useCallback, useEffect, useRef, useState } from 'react';
 import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
@@ -43,6 +43,8 @@ const computeSnapRegions = (viewportWidth, viewportHeight, topInset = DEFAULT_WI
 
     };
 };
+
+const STICKY_Z_INDEX_BASE = 1000;
 
 export class Window extends Component {
     constructor(props) {
@@ -633,9 +635,16 @@ export class Window extends Component {
     }
 
     render() {
-        const computedZIndex = typeof this.props.zIndex === 'number'
+        const context = this.props.context || {};
+        const transparent = context.transparent === true;
+        const sticky = context.sticky === true;
+        const notificationsMuted = context.notifications === false;
+        const computedZIndexBase = typeof this.props.zIndex === 'number'
             ? this.props.zIndex
             : (this.props.isFocused ? 30 : 20);
+        const computedZIndex = sticky
+            ? STICKY_Z_INDEX_BASE + (this.props.isFocused ? 2 : 0)
+            : computedZIndexBase;
 
         return (
             <>
@@ -685,6 +694,9 @@ export class Window extends Component {
                             styles.windowFrame,
                             this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
                             this.state.maximized ? styles.windowFrameMaximized : '',
+                            transparent ? styles.windowFrameTransparent : '',
+                            sticky ? styles.windowFrameSticky : '',
+                            notificationsMuted ? styles.windowFrameNotificationsMuted : '',
                         ].filter(Boolean).join(' ')}
                         id={this.id}
                         role="dialog"
@@ -711,6 +723,8 @@ export class Window extends Component {
                             id={this.id}
                             allowMaximize={this.props.allowMaximize !== false}
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
+                            context={this.props.context}
+                            onContextChange={this.props.onContextChange}
                         />
                         {(this.id === "settings"
                             ? <Settings />
@@ -788,13 +802,101 @@ export class WindowXBorder extends Component {
 export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
+    const [menuOpen, setMenuOpen] = useState(false);
+    const menuRef = useRef(null);
+    const menuButtonRef = useRef(null);
+    const closeMenu = useCallback(() => setMenuOpen(false), []);
+    const context = props.context || {};
+    const transparentEnabled = context.transparent === true;
+    const stickyEnabled = context.sticky === true;
+    const notificationsEnabled = context.notifications !== false;
+    const menuItems = [
+        {
+            key: 'transparent',
+            label: 'Transparent window',
+            active: transparentEnabled,
+            status: transparentEnabled ? 'On' : 'Off',
+            description: 'Blend the chrome with the wallpaper.',
+        },
+        {
+            key: 'sticky',
+            label: 'Stick to desktop',
+            active: stickyEnabled,
+            status: stickyEnabled ? 'Pinned' : 'Floating',
+            description: 'Keep this window above others.',
+        },
+        {
+            key: 'notifications',
+            label: 'Notifications',
+            active: notificationsEnabled,
+            status: notificationsEnabled ? 'Enabled' : 'Muted',
+            description: 'Toggle alerts from this window.',
+        },
+    ];
+
+    useEffect(() => {
+        if (!menuOpen || typeof document === 'undefined') {
+            return undefined;
+        }
+        const handlePointer = (event) => {
+            const target = event.target;
+            if (!(target instanceof Node)) {
+                closeMenu();
+                return;
+            }
+            if (menuRef.current && menuRef.current.contains(target)) return;
+            if (menuButtonRef.current && menuButtonRef.current.contains(target)) return;
+            closeMenu();
+        };
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                closeMenu();
+            }
+        };
+        document.addEventListener('mousedown', handlePointer);
+        document.addEventListener('touchstart', handlePointer);
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.removeEventListener('mousedown', handlePointer);
+            document.removeEventListener('touchstart', handlePointer);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [menuOpen, closeMenu]);
+
+    const handleToggle = useCallback((key) => {
+        if (typeof props.onContextChange === 'function') {
+            props.onContextChange((prevState = {}) => {
+                const nextState = { ...prevState };
+                if (key === 'transparent') {
+                    const current = nextState.transparent === true;
+                    nextState.transparent = !current;
+                } else if (key === 'sticky') {
+                    const current = nextState.sticky === true;
+                    nextState.sticky = !current;
+                } else if (key === 'notifications') {
+                    const current = nextState.notifications === undefined
+                        ? true
+                        : nextState.notifications !== false;
+                    nextState.notifications = !current;
+                } else {
+                    nextState[key] = !nextState[key];
+                }
+                return nextState;
+            });
+        }
+        closeMenu();
+    }, [props.onContextChange, closeMenu]);
+
+    const menuId = `window-menu-${props.id}`;
+    const buttonId = `${menuId}-button`;
+
     return (
-        <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[8.25rem]`}>
+        <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[10.5rem]`}>
             {pipSupported && props.pip && (
                 <button
                     type="button"
                     aria-label="Window pin"
-                    className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                    className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                     onClick={togglePin}
                 >
                     <NextImage
@@ -807,6 +909,56 @@ export function WindowEditButtons(props) {
                     />
                 </button>
             )}
+            <div className="relative flex items-center">
+                <button
+                    type="button"
+                    aria-label="More window options"
+                    aria-haspopup="menu"
+                    aria-expanded={menuOpen}
+                    aria-controls={menuId}
+                    className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                    onClick={() => setMenuOpen((open) => !open)}
+                    ref={menuButtonRef}
+                    title="Window options"
+                    id={buttonId}
+                >
+                    <span aria-hidden="true" className="text-base leading-none -mt-px">⋮</span>
+                </button>
+                {menuOpen && (
+                    <div
+                        ref={menuRef}
+                        id={menuId}
+                        role="menu"
+                        aria-labelledby={buttonId}
+                        className="absolute right-0 top-full mt-2 w-56 rounded-md border border-white/10 bg-ub-window-title bg-opacity-95 text-white shadow-xl backdrop-blur-md z-50"
+                    >
+                        <div className="py-2">
+                            {menuItems.map((item) => (
+                                <button
+                                    key={item.key}
+                                    type="button"
+                                    role="menuitemcheckbox"
+                                    aria-checked={item.active}
+                                    className={`group flex w-full items-start gap-2 px-3 py-2 text-left text-xs transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 ${item.active ? 'bg-white/10' : 'hover:bg-white/10'}`}
+                                    onClick={() => handleToggle(item.key)}
+                                >
+                                    <span
+                                        aria-hidden="true"
+                                        className={`mt-0.5 text-[0.65rem] leading-none ${item.active ? 'opacity-100' : 'opacity-0 group-hover:opacity-60'}`}
+                                    >
+                                        ✓
+                                    </span>
+                                    <span className="flex flex-col">
+                                        <span className="font-semibold tracking-wide">{item.label}</span>
+                                        <span className="text-[0.65rem] uppercase tracking-wide opacity-70">{item.status}</span>
+                                        <span className="mt-1 text-[0.65rem] leading-4 opacity-70">{item.description}</span>
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
             <button
                 type="button"
                 aria-label="Window minimize"
