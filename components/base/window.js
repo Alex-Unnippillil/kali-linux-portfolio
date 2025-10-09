@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Component } from 'react';
+import React, { Component, useCallback, useEffect, useRef, useState } from 'react';
 import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
@@ -42,6 +42,50 @@ const computeSnapRegions = (viewportWidth, viewportHeight, topInset = DEFAULT_WI
         top: { left: 0, top: normalizedTopInset, width: viewportWidth, height: topHeight },
 
     };
+};
+
+const createTransparentDragElement = () => {
+    if (typeof document === 'undefined') {
+        return null;
+    }
+
+    const element = document.createElement('div');
+    element.style.width = '1px';
+    element.style.height = '1px';
+    element.style.opacity = '0';
+    element.style.position = 'fixed';
+    element.style.top = '0';
+    element.style.left = '0';
+    element.style.pointerEvents = 'none';
+
+    return element;
+};
+
+const useTransparentDragImage = () => {
+    const dragImageRef = useRef(null);
+
+    useEffect(() => {
+        if (typeof document === 'undefined') {
+            return undefined;
+        }
+
+        const element = createTransparentDragElement();
+        if (!element) {
+            return undefined;
+        }
+
+        document.body.appendChild(element);
+        dragImageRef.current = element;
+
+        return () => {
+            if (element.parentNode) {
+                element.parentNode.removeChild(element);
+            }
+            dragImageRef.current = null;
+        };
+    }, []);
+
+    return dragImageRef;
 };
 
 export class Window extends Component {
@@ -729,8 +773,19 @@ export default Window
 
 // Window's title bar
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }) {
+    const titleBarRef = useRef(null);
+
+    useEffect(() => {
+        if (!titleBarRef.current) {
+            return;
+        }
+
+        titleBarRef.current.dataset.grabbed = grabbed ? 'true' : 'false';
+    }, [grabbed]);
+
     return (
         <div
+            ref={titleBarRef}
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
             tabIndex={0}
             role="button"
@@ -745,44 +800,43 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown 
 }
 
 // Window's Borders
-export class WindowYBorder extends Component {
-    componentDidMount() {
-        // Use the browser's Image constructor rather than the imported Next.js
-        // Image component to avoid runtime errors when running in tests.
+export function WindowYBorder({ resize }) {
+    const dragImageRef = useTransparentDragImage();
 
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
-    }
-    render() {
-            return (
-                <div
-                    className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
+    const handleDragStart = useCallback((event) => {
+        const dragImage = dragImageRef.current;
+        if (dragImage && event.dataTransfer && typeof event.dataTransfer.setDragImage === 'function') {
+            event.dataTransfer.setDragImage(dragImage, 0, 0);
         }
-    }
+    }, [dragImageRef]);
 
-export class WindowXBorder extends Component {
-    componentDidMount() {
-        // Use the global Image constructor instead of Next.js Image component
+    return (
+        <div
+            className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
+            onDragStart={handleDragStart}
+            onDrag={resize}
+        ></div>
+    );
+}
 
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
-    }
-    render() {
-            return (
-                <div
-                    className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
+export function WindowXBorder({ resize }) {
+    const dragImageRef = useTransparentDragImage();
+
+    const handleDragStart = useCallback((event) => {
+        const dragImage = dragImageRef.current;
+        if (dragImage && event.dataTransfer && typeof event.dataTransfer.setDragImage === 'function') {
+            event.dataTransfer.setDragImage(dragImage, 0, 0);
         }
-    }
+    }, [dragImageRef]);
+
+    return (
+        <div
+            className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
+            onDragStart={handleDragStart}
+            onDrag={resize}
+        ></div>
+    );
+}
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
@@ -879,23 +933,22 @@ export function WindowEditButtons(props) {
 }
 
 // Window's Main Screen
-export class WindowMainScreen extends Component {
-    constructor() {
-        super();
-        this.state = {
-            setDarkBg: false,
-        }
-    }
-    componentDidMount() {
-        setTimeout(() => {
-            this.setState({ setDarkBg: true });
+export function WindowMainScreen({ screen, addFolder, openApp, context }) {
+    const [setDarkBg, setSetDarkBg] = useState(false);
+
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            setSetDarkBg(true);
         }, 3000);
-    }
-    render() {
-        return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
-                {this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
-            </div>
-        )
-    }
+
+        return () => {
+            clearTimeout(timeout);
+        };
+    }, []);
+
+    return (
+        <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}> 
+            {screen(addFolder, openApp, context)}
+        </div>
+    )
 }
