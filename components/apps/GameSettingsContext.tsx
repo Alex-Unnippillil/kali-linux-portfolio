@@ -1,5 +1,5 @@
 import React, { createContext, useContext } from 'react';
-import usePersistedState from '../../hooks/usePersistedState';
+import usePersistentState from '../../hooks/usePersistentState';
 
 type Difficulty = 'easy' | 'normal' | 'hard';
 type PaletteName = 'default' | 'protanopia' | 'deuteranopia' | 'tritanopia';
@@ -20,14 +20,14 @@ interface Settings {
 const SettingsContext = createContext<Settings | undefined>(undefined);
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [difficulty, setDifficulty] = usePersistedState<Difficulty>('settings:difficulty', 'normal');
-  const [assists, setAssists] = usePersistedState('settings:assists', true);
-  const [palette, setPalette] = usePersistedState<PaletteName>(
+  const [difficulty, setDifficulty] = usePersistentState<Difficulty>('settings:difficulty', 'normal');
+  const [assists, setAssists] = usePersistentState('settings:assists', true);
+  const [palette, setPalette] = usePersistentState<PaletteName>(
     'settings:palette',
     'default',
   );
-  const [highContrast, setHighContrast] = usePersistedState('settings:highContrast', false);
-  const [quality, setQuality] = usePersistedState('settings:quality', 1);
+  const [highContrast, setHighContrast] = usePersistentState('settings:highContrast', false);
+  const [quality, setQuality] = usePersistentState('settings:quality', 1);
 
   return (
     <SettingsContext.Provider

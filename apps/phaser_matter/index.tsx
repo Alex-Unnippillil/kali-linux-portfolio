@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Phaser from 'phaser';
 import { GameState } from './gameLogic';
-import usePersistedState from '../../hooks/usePersistedState';
+import usePersistentState from '../../hooks/usePersistentState';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 type Action = 'left' | 'right' | 'jump';
@@ -40,17 +40,17 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
     jumpPressed: false,
   });
 
-  const [keyMap, setKeyMap] = usePersistedState<Record<Action, string>>('phaser-keys', {
+  const [keyMap, setKeyMap] = usePersistentState<Record<Action, string>>('phaser-keys', {
     left: 'ArrowLeft',
     right: 'ArrowRight',
     jump: 'Space',
   });
-  const [padMap, setPadMap] = usePersistedState<Record<Action, number>>('phaser-pad', {
+  const [padMap, setPadMap] = usePersistentState<Record<Action, number>>('phaser-pad', {
     left: 14,
     right: 15,
     jump: 0,
   });
-  const [bufferWindow, setBufferWindow] = usePersistedState<number>('phaser-buffer', 100);
+  const [bufferWindow, setBufferWindow] = usePersistentState<number>('phaser-buffer', 100);
   const bufferRef = useRef(bufferWindow);
   useEffect(() => {
     bufferRef.current = bufferWindow;

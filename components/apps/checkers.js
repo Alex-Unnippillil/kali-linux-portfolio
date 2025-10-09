@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import GameLayout from './GameLayout';
-import usePersistedState from '../../hooks/usePersistedState';
+import usePersistentState from '../../hooks/usePersistentState';
 import {
   createBoard,
   getPieceMoves,
@@ -122,7 +122,7 @@ const Checkers = () => {
   const [difficulty, setDifficulty] = useState('hard');
   const [wins, setWins] = useState({ player: 0, ai: 0 });
   const [winner, setWinner] = useState(null);
-  const [requireCapture, setRequireCapture] = usePersistedState(
+  const [requireCapture, setRequireCapture] = usePersistentState(
     'checkersRequireCapture',
     true,
   );

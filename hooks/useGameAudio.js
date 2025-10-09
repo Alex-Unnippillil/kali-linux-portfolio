@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from 'react';
-import usePersistedState from './usePersistedState';
+import usePersistentState from './usePersistentState';
 
 /**
  * Global game audio hook.  Lazily creates an `AudioContext` in response to the
@@ -22,7 +22,7 @@ export default function useGameAudio() {
 
   // Global mute is persisted across the portfolio, but per‑game volume lives
   // only for the lifetime of the hook instance.
-  const [muted, setMuted] = usePersistedState('settings:audioMuted', false);
+  const [muted, setMuted] = usePersistentState('settings:audioMuted', false);
   const [gameVolume, setGameVolume] = useState(1);
   const [ready, setReady] = useState(false);
 

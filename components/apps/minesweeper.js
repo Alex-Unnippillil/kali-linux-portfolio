@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import GameLayout from './GameLayout';
-import usePersistedState from '../../hooks/usePersistedState';
+import usePersistentState from '../../hooks/usePersistentState';
 import calculate3BV from '../../games/minesweeper/metrics';
 import { serializeBoard, deserializeBoard } from '../../games/minesweeper/save';
 import { getDailySeed } from '../../utils/dailySeed';
@@ -200,11 +200,11 @@ const Minesweeper = () => {
   const [sound, setSound] = useState(true);
   const [ariaMessage, setAriaMessage] = useState('');
   const prefersReducedMotion = useRef(false);
-  const [showRisk, setShowRisk] = usePersistedState(
+  const [showRisk, setShowRisk] = usePersistentState(
     'minesweeperAssist',
     false,
   );
-  const [useQuestionMarks, setUseQuestionMarks] = usePersistedState(
+  const [useQuestionMarks, setUseQuestionMarks] = usePersistentState(
     'minesweeperQuestion',
     false,
   );
