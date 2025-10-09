@@ -100,6 +100,12 @@ See `.env.local.example` for the full list.
 - Run `yarn lint` and `yarn test` before committing changes.
 - For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
 
+### Keyboard Shortcuts Overlay
+
+- Press the shortcut defined in **Settings → Keyboard** (defaults to `?`) to open the in-app shortcuts overlay.
+- Use the filter field to match shortcuts by key chord or description; matching text is highlighted and conflicting bindings remain flagged.
+- The **Export JSON** action respects the current filter so you can share just the subset you searched for.
+
 ---
 
 ## Speed Insights
