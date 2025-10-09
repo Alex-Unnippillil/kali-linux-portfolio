@@ -59,6 +59,7 @@ class AllApplications extends React.Component {
             unfilteredApps: [],
             favorites: [],
             recents: [],
+            focusedAppId: null,
         };
     }
 
@@ -80,7 +81,18 @@ class AllApplications extends React.Component {
             unfilteredApps: combined,
             favorites,
             recents,
+            focusedAppId: null,
+        }, () => {
+            if (this.props.focusAppId) {
+                this.focusApp(this.props.focusAppId);
+            }
         });
+    }
+
+    componentDidUpdate(prevProps) {
+        if (this.props.focusAppId && this.props.focusAppId !== prevProps.focusAppId) {
+            this.focusApp(this.props.focusAppId);
+        }
     }
 
     handleChange = (e) => {
@@ -92,7 +104,27 @@ class AllApplications extends React.Component {
                 : unfilteredApps.filter((app) =>
                       app.title.toLowerCase().includes(value.toLowerCase())
                   );
-        this.setState({ query: value, apps });
+        this.setState({ query: value, apps, focusedAppId: null });
+    };
+
+    focusApp = (appId) => {
+        if (!appId) return;
+        this.setState((state) => {
+            const target = state.unfilteredApps.find((app) => app.id === appId);
+            if (!target) {
+                return { focusedAppId: null };
+            }
+            return {
+                query: target.title,
+                apps: [target],
+                focusedAppId: appId,
+            };
+        }, () => {
+            const node = document.getElementById(`app-${appId}`);
+            if (node && typeof node.focus === 'function') {
+                node.focus();
+            }
+        });
     };
 
     openApp = (id) => {
@@ -123,8 +155,13 @@ class AllApplications extends React.Component {
 
     renderAppTile = (app) => {
         const isFavorite = this.state.favorites.includes(app.id);
+        const isFocused = this.state.focusedAppId === app.id;
         return (
-            <div key={app.id} className="relative flex w-full justify-center">
+            <div
+                key={app.id}
+                className={`relative flex w-full justify-center ${isFocused ? 'outline outline-2 outline-white/70 rounded-md' : ''}`}
+                aria-current={isFocused ? 'true' : undefined}
+            >
                 <button
                     type="button"
                     aria-pressed={isFavorite}

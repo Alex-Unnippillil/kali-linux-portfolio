@@ -68,6 +68,7 @@ export class Desktop extends Component {
             showWindowSwitcher: false,
             switcherWindows: [],
             activeWorkspace: 0,
+            launcherFocusId: null,
             workspaces: Array.from({ length: this.workspaceCount }, (_, index) => ({
                 id: index,
                 label: `Workspace ${index + 1}`,
@@ -94,6 +95,11 @@ export class Desktop extends Component {
         this.currentPointerIsCoarse = false;
 
         this.validAppIds = new Set(apps.map((app) => app.id));
+
+        this.baseAppMap = new Map(apps.map((app) => [app.id, app]));
+        this.dynamicAppRegistry = new Map();
+        this.instanceOrigins = new Map();
+        this.instanceCounters = {};
 
         this.openSettingsTarget = null;
         this.openSettingsClickHandler = null;
@@ -482,17 +488,175 @@ export class Desktop extends Component {
         });
     };
 
+    getAppEntryMap = () => {
+        const map = new Map(this.baseAppMap);
+        this.dynamicAppRegistry.forEach((app, id) => {
+            map.set(id, app);
+        });
+        return map;
+    };
+
+    getAppDefinition = (id) => {
+        if (!id) return null;
+        return this.dynamicAppRegistry.get(id) || this.baseAppMap.get(id) || null;
+    };
+
+    resolveBaseAppId = (id) => {
+        if (typeof id !== 'string') return id;
+        const [base] = id.split('#');
+        return base;
+    };
+
     getRunningAppSummaries = () => {
         const { closed_windows = {}, minimized_windows = {}, focused_windows = {} } = this.state;
-        return apps
+        const entries = Array.from(this.getAppEntryMap().values());
+        return entries
             .filter((app) => closed_windows[app.id] === false)
             .map((app) => ({
                 id: app.id,
                 title: app.title,
-                icon: app.icon.replace('./', '/'),
+                icon: typeof app.icon === 'string' ? app.icon.replace('./', '/') : '',
                 isFocused: Boolean(focused_windows[app.id]),
                 isMinimized: Boolean(minimized_windows[app.id]),
             }));
+    };
+
+    createAppInstance = (baseId) => {
+        if (!baseId) return null;
+        const appDefinition = this.getAppDefinition(baseId);
+        if (!appDefinition) {
+            console.warn(`Attempted to create instance for unknown app: ${baseId}`);
+            return null;
+        }
+        let counter = this.instanceCounters[baseId] ?? 1;
+        let instanceId = `${baseId}#${counter}`;
+        while (this.validAppIds.has(instanceId) || this.dynamicAppRegistry.has(instanceId)) {
+            counter += 1;
+            instanceId = `${baseId}#${counter}`;
+        }
+        this.instanceCounters[baseId] = counter + 1;
+        const cloned = {
+            ...appDefinition,
+            id: instanceId,
+            title: `${appDefinition.title} (${counter})`,
+            favourite: false,
+            desktop_shortcut: false,
+        };
+        this.dynamicAppRegistry.set(instanceId, cloned);
+        this.instanceOrigins.set(instanceId, baseId);
+        this.validAppIds.add(instanceId);
+        return instanceId;
+    };
+
+    placeWindowInWorkspace = (id, workspaceId, options = {}) => {
+        if (!this.validAppIds.has(id)) return;
+        if (workspaceId < 0 || workspaceId >= this.state.workspaces.length) return;
+        const snapshot = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
+        const nextSnapshot = this.cloneWorkspaceState(snapshot);
+        nextSnapshot.closed_windows[id] = false;
+        nextSnapshot.focused_windows[id] = false;
+        nextSnapshot.minimized_windows[id] = false;
+        const defaultPosition = { x: 60, y: measureWindowTopOffset() };
+        const position = options.position || nextSnapshot.window_positions[id] || defaultPosition;
+        nextSnapshot.window_positions[id] = position;
+        this.workspaceSnapshots[workspaceId] = nextSnapshot;
+        if (!this.workspaceStacks[workspaceId]) {
+            this.workspaceStacks[workspaceId] = [];
+        }
+        const stack = this.workspaceStacks[workspaceId];
+        const existingIndex = stack.indexOf(id);
+        if (existingIndex !== -1) stack.splice(existingIndex, 1);
+        stack.unshift(id);
+
+        if (workspaceId === this.state.activeWorkspace) {
+            this.setWorkspaceState((prevState) => ({
+                closed_windows: { ...prevState.closed_windows, [id]: false },
+                focused_windows: { ...prevState.focused_windows, [id]: false },
+                minimized_windows: { ...prevState.minimized_windows, [id]: false },
+                window_positions: { ...prevState.window_positions, [id]: position },
+            }), () => {
+                this.focus(id);
+                this.saveSession();
+                this.broadcastWorkspaceState();
+            });
+        } else {
+            this.saveSession();
+            this.broadcastWorkspaceState();
+        }
+    };
+
+    cleanupAppInstance = (id) => {
+        if (!this.instanceOrigins.has(id)) return;
+        this.instanceOrigins.delete(id);
+        this.dynamicAppRegistry.delete(id);
+        this.validAppIds.delete(id);
+        this.workspaceStacks.forEach((stack, index) => {
+            if (!Array.isArray(stack)) return;
+            const position = stack.indexOf(id);
+            if (position !== -1) {
+                stack.splice(position, 1);
+            }
+        });
+        this.workspaceSnapshots = this.workspaceSnapshots.map((snapshot) => {
+            if (!snapshot) return snapshot;
+            const nextSnapshot = this.cloneWorkspaceState(snapshot);
+            delete nextSnapshot.closed_windows[id];
+            delete nextSnapshot.focused_windows[id];
+            delete nextSnapshot.minimized_windows[id];
+            delete nextSnapshot.window_positions[id];
+            return nextSnapshot;
+        });
+        this.setState((prevState) => {
+            const nextClosed = { ...prevState.closed_windows };
+            const nextFavourite = { ...prevState.favourite_apps };
+            const nextMinimized = { ...prevState.minimized_windows };
+            const nextFocused = { ...prevState.focused_windows };
+            const nextPositions = { ...prevState.window_positions };
+            const nextContext = { ...prevState.window_context };
+            delete nextClosed[id];
+            delete nextFavourite[id];
+            delete nextMinimized[id];
+            delete nextFocused[id];
+            delete nextPositions[id];
+            delete nextContext[id];
+            return {
+                closed_windows: nextClosed,
+                favourite_apps: nextFavourite,
+                minimized_windows: nextMinimized,
+                focused_windows: nextFocused,
+                window_positions: nextPositions,
+                window_context: nextContext,
+            };
+        }, () => {
+            this.saveSession();
+            this.broadcastWorkspaceState();
+        });
+    };
+
+    openNewAppInstance = (appId) => {
+        const baseId = this.resolveBaseAppId(appId);
+        const instanceId = this.createAppInstance(baseId);
+        if (!instanceId) return;
+        this.placeWindowInWorkspace(instanceId, this.state.activeWorkspace);
+    };
+
+    assignAppToWorkspace = (appId, workspaceId) => {
+        const target = Number(workspaceId);
+        if (!Number.isInteger(target)) return;
+        if (target < 0 || target >= this.state.workspaces.length) return;
+        const baseId = this.resolveBaseAppId(appId);
+        if (target === this.state.activeWorkspace) {
+            this.openApp(baseId);
+            return;
+        }
+        const instanceId = this.createAppInstance(baseId);
+        if (!instanceId) return;
+        this.placeWindowInWorkspace(instanceId, target);
+    };
+
+    viewAppDetails = (appId) => {
+        const baseId = this.resolveBaseAppId(appId);
+        this.setState({ allAppsView: true, launcherFocusId: baseId });
     };
 
     setWorkspaceState = (updater, callback) => {
@@ -1497,7 +1661,7 @@ export class Desktop extends Component {
             }
         });
 
-        apps.forEach((app) => {
+        this.getAppEntryMap().forEach((app) => {
             if (closed_windows[app.id] === false && !seen.has(app.id)) {
                 orderedIds.push(app.id);
                 seen.add(app.id);
@@ -1506,7 +1670,7 @@ export class Desktop extends Component {
 
         if (!orderedIds.length) return null;
 
-        const appMap = new Map(apps.map((app) => [app.id, app]));
+        const appMap = this.getAppEntryMap();
 
         return orderedIds.map((id, index) => {
             const app = appMap.get(id);
@@ -1553,7 +1717,9 @@ export class Desktop extends Component {
 
     saveSession = () => {
         if (!this.props.setSession) return;
-        const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
+        const openWindows = Object.keys(this.state.closed_windows).filter(
+            id => this.state.closed_windows[id] === false && !this.instanceOrigins.has(id)
+        );
         const safeTopOffset = measureWindowTopOffset();
         const windows = openWindows.map(id => {
             const position = this.state.window_positions[id] || {};
@@ -1724,6 +1890,8 @@ export class Desktop extends Component {
 
     closeApp = async (objId) => {
 
+        const isInstance = this.instanceOrigins.has(objId);
+
         // capture window snapshot
         let image = null;
         const node = document.getElementById(objId);
@@ -1736,7 +1904,7 @@ export class Desktop extends Component {
         }
 
         // persist in trash with autopurge
-        const appMeta = apps.find(a => a.id === objId) || {};
+        const appMeta = this.getAppDefinition(objId) || {};
         const purgeDays = parseInt(safeLocalStorage?.getItem('trash-purge-days') || '30', 10);
         const ms = purgeDays * 24 * 60 * 60 * 1000;
         const now = Date.now();
@@ -1769,11 +1937,17 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setWorkspaceState({ closed_windows, favourite_apps }, this.saveSession);
+        this.setWorkspaceState({ closed_windows, favourite_apps });
 
         const window_context = { ...this.state.window_context };
         delete window_context[objId];
-        this.setState({ closed_windows, favourite_apps, window_context }, this.saveSession);
+        this.setState({ closed_windows, favourite_apps, window_context }, () => {
+            if (isInstance) {
+                this.cleanupAppInstance(objId);
+            } else {
+                this.saveSession();
+            }
+        });
     }
 
     pinApp = (id) => {
@@ -1878,7 +2052,7 @@ export class Desktop extends Component {
     addToDesktop = (folder_name) => {
         folder_name = folder_name.trim();
         let folder_id = folder_name.replace(/\s+/g, '-').toLowerCase();
-        apps.push({
+        const newApp = {
             id: `new-folder-${folder_id}`,
             title: folder_name,
             icon: '/themes/Yaru/system/folder.png',
@@ -1886,7 +2060,9 @@ export class Desktop extends Component {
             favourite: false,
             desktop_shortcut: true,
             screen: () => { },
-        });
+        };
+        apps.push(newApp);
+        this.baseAppMap.set(newApp.id, newApp);
         // store in local storage
         let new_folders = [];
         try { new_folders = JSON.parse(safeLocalStorage?.getItem('new_folders') || '[]'); } catch (e) { new_folders = []; }
@@ -1896,7 +2072,9 @@ export class Desktop extends Component {
         this.setState({ showNameBar: false }, this.updateAppsData);
     };
 
-    showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }); };
+    showAllApps = () => {
+        this.setState((state) => ({ allAppsView: !state.allAppsView, launcherFocusId: null }));
+    };
 
     renderNameBar = () => {
         const handleSubmit = (event) => {
@@ -1992,6 +2170,10 @@ export class Desktop extends Component {
                     pinned={this.initFavourite[this.state.context_app]}
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
+                    onOpenNewInstance={this.state.context_app ? () => this.openNewAppInstance(this.state.context_app) : undefined}
+                    workspaces={this.state.workspaces}
+                    onAssignWorkspace={this.state.context_app ? (workspaceId) => this.assignAppToWorkspace(this.state.context_app, workspaceId) : undefined}
+                    onViewDetails={this.state.context_app ? () => this.viewAppDetails(this.state.context_app) : undefined}
                     onClose={this.hideAllContextMenu}
                 />
                 <TaskbarMenu
@@ -2026,7 +2208,9 @@ export class Desktop extends Component {
                     <AllApplications apps={apps}
                         games={games}
                         recentApps={this.getActiveStack()}
-                        openApp={this.openApp} /> : null}
+                        openApp={this.openApp}
+                        focusAppId={this.state.launcherFocusId}
+                    /> : null}
 
                 { this.state.showShortcutSelector ?
                     <ShortcutSelector apps={apps}
