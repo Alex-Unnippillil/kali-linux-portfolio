@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/desktop/Window';
+import styles from '../components/base/window.module.css';
 import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET } from '../utils/uiConstants';
 import { measureSafeAreaInset, measureWindowTopOffset } from '../utils/windowLayout';
 
@@ -47,7 +48,7 @@ describe('Window lifecycle', () => {
   it('invokes callbacks on close', () => {
     jest.useFakeTimers();
     const closed = jest.fn();
-  
+
     render(
       <Window
         id="test-window"
@@ -68,6 +69,132 @@ describe('Window lifecycle', () => {
     });
 
     expect(closed).toHaveBeenCalledWith('test-window');
+    jest.useRealTimers();
+  });
+});
+
+describe('Window minimize animations', () => {
+  it('applies minimizing class until animation completes', async () => {
+    jest.useFakeTimers();
+    const hasMinimised = jest.fn();
+    const ref = React.createRef<any>();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={hasMinimised}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+
+    await act(async () => {
+      const promise = ref.current!.minimizeWindow();
+      expect(winEl.classList.contains(styles.windowFrameMinimizing)).toBe(true);
+      expect(hasMinimised).not.toHaveBeenCalled();
+      fireEvent.animationEnd(winEl);
+      await promise;
+    });
+
+    expect(hasMinimised).toHaveBeenCalledWith('test-window');
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
+    expect(winEl.classList.contains(styles.windowFrameMinimizing)).toBe(false);
+    jest.useRealTimers();
+  });
+
+  it('skips animation when prefers-reduced-motion is enabled', async () => {
+    const hasMinimised = jest.fn();
+    const ref = React.createRef<any>();
+    const originalMatchMedia = window.matchMedia;
+    const mockMatchMedia = jest
+      .spyOn(window, 'matchMedia')
+      .mockImplementation((query: string) => ({
+        matches: query === '(prefers-reduced-motion: reduce)',
+        media: query,
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+        addListener: jest.fn(),
+        removeListener: jest.fn(),
+        dispatchEvent: jest.fn(),
+      }) as unknown as MediaQueryList);
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={hasMinimised}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+
+    await act(async () => {
+      await ref.current!.minimizeWindow();
+    });
+
+    expect(hasMinimised).toHaveBeenCalledWith('test-window');
+    expect(winEl.classList.contains(styles.windowFrameMinimizing)).toBe(false);
+    mockMatchMedia.mockRestore();
+    window.matchMedia = originalMatchMedia;
+  });
+
+  it('applies restoring class when minimized prop is cleared', async () => {
+    jest.useFakeTimers();
+    const { rerender } = render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        minimized
+        closed={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    expect(winEl.classList.contains(styles.windowFrameRestoring)).toBe(false);
+
+    act(() => {
+      rerender(
+        <Window
+          id="test-window"
+          title="Test"
+          screen={() => <div>content</div>}
+          focus={() => {}}
+          hasMinimised={() => {}}
+          minimized={false}
+          closed={() => {}}
+          openApp={() => {}}
+        />
+      );
+    });
+
+    expect(winEl.classList.contains(styles.windowFrameRestoring)).toBe(true);
+
+    await act(async () => {
+      fireEvent.animationEnd(winEl);
+    });
+
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
+
+    expect(winEl.classList.contains(styles.windowFrameRestoring)).toBe(false);
     jest.useRealTimers();
   });
 });

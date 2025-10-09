@@ -8,6 +8,8 @@
   --window-motion-transform-easing: var(--window-motion-ease-restore);
   --window-motion-opacity-duration: var(--window-motion-duration-minimize);
   --window-motion-opacity-easing: var(--window-motion-ease-minimize);
+  --window-animation-start-transform: translate(0px, 0px);
+  --window-animation-end-transform: translate(0px, 0px);
   transition:
     transform var(--window-motion-transform-duration) var(--window-motion-transform-easing),
     filter var(--motion-fast) ease,
@@ -56,6 +58,43 @@
   visibility: hidden;
   pointer-events: none;
   transition-delay: 0s, 0s, 0s, 0s, var(--window-motion-opacity-duration);
+}
+
+.windowFrameMinimizing {
+  animation: windowFrameMinimize var(--window-motion-duration-minimize) var(--window-motion-ease-minimize) forwards;
+}
+
+.windowFrameRestoring {
+  animation: windowFrameRestore var(--window-motion-duration-restore) var(--window-motion-ease-restore) forwards;
+}
+
+@keyframes windowFrameMinimize {
+  from {
+    transform: var(--window-animation-start-transform);
+    opacity: 1;
+  }
+  to {
+    transform: var(--window-animation-end-transform);
+    opacity: 0;
+  }
+}
+
+@keyframes windowFrameRestore {
+  from {
+    transform: var(--window-animation-end-transform);
+    opacity: 0;
+  }
+  to {
+    transform: var(--window-animation-start-transform);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .windowFrameMinimizing,
+  .windowFrameRestoring {
+    animation: none;
+  }
 }
 
 .snapPreview {
