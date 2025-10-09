@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 /**
  * Persist state in localStorage.
@@ -14,8 +14,10 @@ export default function usePersistentState<T>(
   initial: T | (() => T),
   validator?: (value: unknown) => value is T,
 ) {
-  const getInitial = () =>
-    typeof initial === 'function' ? (initial as () => T)() : initial;
+  const getInitial = useCallback(
+    () => (typeof initial === 'function' ? (initial as () => T)() : initial),
+    [initial],
+  );
 
   const [state, setState] = useState<T>(() => {
     if (typeof window === 'undefined') return getInitial();
@@ -40,6 +42,34 @@ export default function usePersistentState<T>(
       // ignore write errors
     }
   }, [key, state]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.storageArea && event.storageArea !== window.localStorage) return;
+      if (event.key !== key) return;
+
+      if (event.newValue === null) {
+        setState(getInitial());
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(event.newValue);
+        if (!validator || validator(parsed)) {
+          setState(parsed as T);
+        }
+      } catch {
+        // ignore parse errors from other tabs
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [getInitial, key, validator]);
 
   const reset = () => setState(getInitial());
   const clear = () => {
