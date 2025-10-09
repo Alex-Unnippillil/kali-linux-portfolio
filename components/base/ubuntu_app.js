@@ -51,6 +51,9 @@ export class UbuntuApp extends Component {
             onPointerMove,
             onPointerCancel,
             style,
+            tabIndex: providedTabIndex,
+            ariaSetSize,
+            ariaPosInSet,
         } = this.props;
 
         const dragging = this.state.dragging || isBeingDragged;
@@ -78,6 +81,13 @@ export class UbuntuApp extends Component {
             ...style,
         };
 
+        const resolvedTabIndex =
+            typeof providedTabIndex === 'number'
+                ? providedTabIndex
+                : this.props.disabled
+                    ? -1
+                    : 0;
+
         return (
             <div
                 role="button"
@@ -85,6 +95,9 @@ export class UbuntuApp extends Component {
                 aria-disabled={this.props.disabled}
                 data-context="app"
                 data-app-id={this.props.id}
+                data-roving-focus="true"
+                aria-setsize={ariaSetSize}
+                aria-posinset={ariaPosInSet}
                 draggable={draggable}
                 onDragStart={this.handleDragStart}
                 onDragEnd={this.handleDragEnd}
@@ -98,7 +111,7 @@ export class UbuntuApp extends Component {
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
-                tabIndex={this.props.disabled ? -1 : 0}
+                tabIndex={resolvedTabIndex}
                 onMouseEnter={this.handlePrefetch}
                 onFocus={this.handlePrefetch}
             >
