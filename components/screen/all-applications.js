@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useId, useRef } from 'react';
 import UbuntuApp from '../base/ubuntu_app';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 
 const FAVORITES_KEY = 'launcherFavorites';
 const RECENTS_KEY = 'recentApps';
@@ -48,6 +49,35 @@ const chunkApps = (apps, size) => {
         chunks.push(apps.slice(i, i + size));
     }
     return chunks;
+};
+
+const AppSection = ({ title, apps, renderAppTile }) => {
+    const gridRef = useRef(null);
+    const headingId = useId();
+
+    useRovingTabIndex(gridRef, apps.length > 0, 'grid');
+
+    if (!apps.length) return null;
+
+    return (
+        <section aria-labelledby={headingId} className="mb-8 w-full">
+            <h2
+                id={headingId}
+                className="mb-3 text-sm font-semibold uppercase tracking-wider text-white/70"
+            >
+                {title}
+            </h2>
+            <div
+                ref={gridRef}
+                role="grid"
+                aria-labelledby={headingId}
+                data-roving-columns="3"
+                className="grid grid-cols-3 gap-6 place-items-center pb-6 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8"
+            >
+                {apps.map((app, index) => renderAppTile(app, index, apps.length))}
+            </div>
+        </section>
+    );
 };
 
 class AllApplications extends React.Component {
@@ -121,7 +151,7 @@ class AllApplications extends React.Component {
         });
     };
 
-    renderAppTile = (app) => {
+    renderAppTile = (app, index, total) => {
         const isFavorite = this.state.favorites.includes(app.id);
         return (
             <div key={app.id} className="relative flex w-full justify-center">
@@ -147,22 +177,22 @@ class AllApplications extends React.Component {
                     openApp={() => this.openApp(app.id)}
                     disabled={app.disabled}
                     prefetch={app.screen?.prefetch}
+                    tabIndex={index === 0 ? 0 : -1}
+                    ariaPosInSet={index + 1}
+                    ariaSetSize={total}
                 />
             </div>
         );
     };
 
     renderSection = (title, apps) => {
-        if (!apps.length) return null;
         return (
-            <section key={title} aria-label={`${title} apps`} className="mb-8 w-full">
-                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-white/70">
-                    {title}
-                </h2>
-                <div className="grid grid-cols-3 gap-6 place-items-center pb-6 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-                    {apps.map((app) => this.renderAppTile(app))}
-                </div>
-            </section>
+            <AppSection
+                key={title}
+                title={`${title} apps`}
+                apps={apps}
+                renderAppTile={this.renderAppTile}
+            />
         );
     };
 
