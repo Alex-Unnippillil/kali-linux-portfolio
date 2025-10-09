@@ -142,6 +142,11 @@ export class Desktop extends Component {
         return merged;
     };
 
+    normalizeIconPath = (icon) => {
+        if (typeof icon !== 'string' || icon.length === 0) return undefined;
+        return icon.startsWith('./') ? icon.replace('./', '/') : icon;
+    };
+
     setupPointerMediaWatcher = () => {
         if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
             this.configureTouchTargets(false);
@@ -489,7 +494,7 @@ export class Desktop extends Component {
             .map((app) => ({
                 id: app.id,
                 title: app.title,
-                icon: app.icon.replace('./', '/'),
+                icon: this.normalizeIconPath(app.icon),
                 isFocused: Boolean(focused_windows[app.id]),
                 isMinimized: Boolean(minimized_windows[app.id]),
             }));
@@ -1203,7 +1208,15 @@ export class Desktop extends Component {
     openWindowSwitcher = () => {
         const windows = this.getActiveStack()
             .filter(id => this.state.closed_windows[id] === false)
-            .map(id => apps.find(a => a.id === id))
+            .map(id => {
+                const app = apps.find(a => a.id === id);
+                if (!app) return null;
+                return {
+                    id: app.id,
+                    title: app.title,
+                    icon: this.normalizeIconPath(app.icon),
+                };
+            })
             .filter(Boolean);
         if (windows.length) {
             this.setState({ showWindowSwitcher: true, switcherWindows: windows });
