@@ -354,6 +354,23 @@ const NotificationBell: React.FC = () => {
                                   {notification.body}
                                 </p>
                               )}
+                              {notification.actions && notification.actions.length > 0 && (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {notification.actions.map(action => (
+                                    <button
+                                      key={action.id}
+                                      type="button"
+                                      onClick={() => {
+                                        action.onSelect?.();
+                                        closePanel();
+                                      }}
+                                      className="rounded bg-ubb-orange px-2 py-1 text-[0.7rem] font-semibold uppercase tracking-wide text-white transition hover:bg-ubb-orange/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
+                                    >
+                                      {action.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                               <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[0.65rem] uppercase tracking-wide text-ubt-grey text-opacity-70">
                                 <span>{notification.appId}</span>
                                 <time dateTime={notification.formattedTime}>{notification.readableTime}</time>
