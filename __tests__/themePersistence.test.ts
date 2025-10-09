@@ -1,6 +1,30 @@
-import { renderHook, act } from '@testing-library/react';
+const LOADED_ACCENT = '#805ad5';
+
+jest.mock('../utils/settingsStore', () => {
+  const actual = jest.requireActual('../utils/settingsStore');
+  return {
+    ...actual,
+    getAccent: jest.fn().mockResolvedValue('#805ad5'),
+  };
+});
+
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { SettingsProvider, useSettings } from '../hooks/useSettings';
 import { getTheme, getUnlockedThemes, setTheme } from '../utils/theme';
+
+
+const shadeColor = (color: string, percent: number): string => {
+  const f = parseInt(color.slice(1), 16);
+  const t = percent < 0 ? 0 : 255;
+  const p = Math.abs(percent);
+  const R = f >> 16;
+  const G = (f >> 8) & 0x00ff;
+  const B = f & 0x0000ff;
+  const newR = Math.round((t - R) * p) + R;
+  const newG = Math.round((t - G) * p) + G;
+  const newB = Math.round((t - B) * p) + B;
+  return `#${(0x1000000 + newR * 0x10000 + newG * 0x100 + newB).toString(16).slice(1)}`;
+};
 
 
 describe('theme persistence and unlocking', () => {
@@ -68,5 +92,71 @@ describe('theme persistence and unlocking', () => {
     // @ts-ignore
     window.matchMedia = jest.fn().mockReturnValue({ matches: false });
     expect(getTheme()).toBe('default');
+  });
+
+  test('accent updates are flushed through throttled CSS variable queue', async () => {
+    const originalRaf = window.requestAnimationFrame;
+    const originalCancel = window.cancelAnimationFrame;
+
+    let nextFrameHandle = 1;
+    const scheduledFrames = new Map<number, ReturnType<typeof setTimeout>>();
+
+    window.requestAnimationFrame = jest.fn((cb: FrameRequestCallback) => {
+      const handle = nextFrameHandle++;
+      const timeoutId = setTimeout(() => {
+        scheduledFrames.delete(handle);
+        cb(0);
+      }, 0);
+      scheduledFrames.set(handle, timeoutId);
+      return handle;
+    });
+    window.cancelAnimationFrame = jest.fn((handle: number) => {
+      const timeoutId = scheduledFrames.get(handle);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        scheduledFrames.delete(handle);
+      }
+    });
+
+    const { result } = renderHook(() => useSettings(), {
+      wrapper: SettingsProvider,
+    });
+
+    await waitFor(() => {
+      expect(result.current.accent).toBe(LOADED_ACCENT);
+    });
+
+    const rafMock = window.requestAnimationFrame as jest.Mock;
+    const initialRafCalls = rafMock.mock.calls.length;
+
+    await waitFor(() => {
+      expect(document.documentElement.style.getPropertyValue('--color-accent')).toBe(
+        LOADED_ACCENT
+      );
+    });
+
+    const newAccent = '#38a169';
+    const expectedBorder = shadeColor(newAccent, -0.2);
+
+    act(() => result.current.setAccent(newAccent));
+
+    expect(result.current.accent).toBe(newAccent);
+
+    const afterSetRafCalls = rafMock.mock.calls.length;
+    expect(afterSetRafCalls).toBeGreaterThan(initialRafCalls);
+
+    await waitFor(() => {
+      expect(document.documentElement.style.getPropertyValue('--color-accent')).toBe(
+        newAccent
+      );
+    });
+    await waitFor(() => {
+      expect(
+        document.documentElement.style.getPropertyValue('--color-ub-border-orange')
+      ).toBe(expectedBorder);
+    });
+
+    window.requestAnimationFrame = originalRaf;
+    window.cancelAnimationFrame = originalCancel;
   });
 });

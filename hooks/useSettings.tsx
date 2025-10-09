@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useRef,
+  useCallback,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -124,6 +132,79 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
+  const cssVarQueueRef = useRef<Record<string, string>>({});
+  const appliedCssVarsRef = useRef<Record<string, string>>({});
+  const cssVarFrameRef = useRef<number | null>(null);
+
+  const flushCssVarQueue = useCallback(() => {
+    if (typeof document === 'undefined') return;
+    const entries = Object.entries(cssVarQueueRef.current);
+    cssVarQueueRef.current = {};
+    if (!entries.length) {
+      return;
+    }
+    const { style } = document.documentElement;
+    entries.forEach(([key, value]) => {
+      if (appliedCssVarsRef.current[key] !== value) {
+        style.setProperty(key, value);
+        appliedCssVarsRef.current[key] = value;
+      }
+    });
+  }, []);
+
+  const queueCssVariables = useCallback(
+    (vars: Record<string, string>) => {
+      if (typeof document === 'undefined') return;
+      let hasNewEntry = false;
+      Object.entries(vars).forEach(([key, value]) => {
+        if (appliedCssVarsRef.current[key] !== value) {
+          cssVarQueueRef.current[key] = value;
+          hasNewEntry = true;
+        }
+      });
+
+      if (!hasNewEntry) {
+        return;
+      }
+
+      if (cssVarFrameRef.current != null) {
+        return;
+      }
+
+      const raf =
+        typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function'
+          ? window.requestAnimationFrame
+          : null;
+
+      if (raf) {
+        cssVarFrameRef.current = -1;
+        const frameId = raf(() => {
+          cssVarFrameRef.current = null;
+          flushCssVarQueue();
+        });
+
+        if (cssVarFrameRef.current !== null) {
+          cssVarFrameRef.current = frameId;
+        }
+      } else {
+        flushCssVarQueue();
+      }
+    },
+    [flushCssVarQueue]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (
+        cssVarFrameRef.current != null &&
+        typeof window !== 'undefined' &&
+        typeof window.cancelAnimationFrame === 'function'
+      ) {
+        window.cancelAnimationFrame(cssVarFrameRef.current);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     (async () => {
       setAccent(await loadAccent());
@@ -156,11 +237,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       '--color-selection': accent,
       '--color-control-accent': accent,
     };
-    Object.entries(vars).forEach(([key, value]) => {
-      document.documentElement.style.setProperty(key, value);
-    });
+    queueCssVariables(vars);
     saveAccent(accent);
-  }, [accent]);
+  }, [accent, queueCssVariables]);
 
   useEffect(() => {
     saveWallpaper(wallpaper);
@@ -190,11 +269,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       },
     };
     const vars = spacing[density];
-    Object.entries(vars).forEach(([key, value]) => {
-      document.documentElement.style.setProperty(key, value);
-    });
+    queueCssVariables(vars);
     saveDensity(density);
-  }, [density]);
+  }, [density, queueCssVariables]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('reduced-motion', reducedMotion);
@@ -202,9 +279,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [reducedMotion]);
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
+    queueCssVariables({ '--font-multiplier': fontScale.toString() });
     saveFontScale(fontScale);
-  }, [fontScale]);
+  }, [fontScale, queueCssVariables]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('high-contrast', highContrast);
