@@ -1,308 +1,277 @@
-# Kali Linux Portfolio 
+# Kali Linux Portfolio
 
-A desktop-style portfolio built with Next.js and Tailwind that emulates a Kali/Ubuntu UI with windows, a dock, context menus, and a rich catalog of **security-tool simulations**, **utilities**, and **retro games**. This README is tailored for a professional full-stack engineer preparing **production deployment** and ongoing maintenance.
+A desktop-style portfolio built with Next.js and Tailwind that recreates the look and feel of a Kali/Ubuntu workstation. It ships with resizable windows, a dock, context menus, and a catalog of **security tool simulations**, **utilities**, and **retro games**. This document is aimed at engineers preparing production deployments or long-term maintenance.
 
-> Repo homepage: https://unnippillil.com/
-
----
-
-## ⚠️ Disclaimer & Risk Overview
-
-This repository showcases **static, non-operational simulations** of security tools for educational purposes only. Running real offensive commands against systems without explicit authorization is illegal and can cause damage or service disruption.
-
-**Potential Risks**
-- Network scans may trigger intrusion detection and block your IP.
-- Brute-force attempts can lock accounts or corrupt data.
-- Sample outputs are canned and not from live targets.
-
-Always test inside controlled labs and obtain written permission before performing any security assessment.
+> Production site: https://unnippillil.com/
 
 ---
 
-## Setup
+## Table of Contents
+1. [Legal Notice & Risk Overview](#legal-notice--risk-overview)
+2. [Quick Start](#quick-start)
+3. [Project Architecture](#project-architecture)
+4. [Desktop UX](#desktop-ux)
+5. [App Catalog](#app-catalog)
+6. [Configuration & Environment](#configuration--environment)
+7. [Deployment Guides](#deployment-guides)
+8. [Quality Gates & Tooling](#quality-gates--tooling)
+9. [Security Hardening](#security-hardening)
+10. [Troubleshooting](#troubleshooting)
+11. [License](#license)
 
-### Requirements
-- **Node.js 20.19.5** (repo includes `.nvmrc`; run `nvm use`)
-- **Yarn** or **npm**
-- Recommended: **pnpm** if you prefer stricter hoisting; update lock/config accordingly.
+---
 
-### Install & Run (Dev)
+## Legal Notice & Risk Overview
+
+This repository showcases **static, non-operational simulations** of common security tools. The demo UI is intended for education, portfolio review, and safe experimentation only. Running real offensive tooling against systems without explicit authorization is illegal and may cause damage or service disruption.
+
+**Potential risks when adapting this project**
+- Triggering IDS/IPS systems if real network scans are introduced.
+- Locking user accounts or corrupting data if password brute-force logic is enabled.
+- Confusing end users if canned output is mistaken for live data.
+
+Always run experiments inside a controlled lab and obtain written permission before performing any security assessment. Do **not** add real exploitation logic or uncontrolled outbound traffic to this project.
+
+---
+
+## Quick Start
+
+### Prerequisites
+- **Node.js 20.19.5** (tracked in [`.nvmrc`](./.nvmrc)); install via `nvm install`.
+- **Yarn** (the repo ships with `yarn.lock`). Other package managers are not supported by CI.
+- Copy `.env.local.example` to `.env.local` and fill in any keys for the features you intend to test.
+
+### Install & Run (Development)
 ```bash
-cp .env.local.example .env.local  # populate with required keys
-nvm install  # installs Node 20.19.5 from .nvmrc if needed
-nvm use
+nvm install          # Ensures Node 20.19.5 is available
+nvm use              # Activates the matching runtime
+cp .env.local.example .env.local
+# Populate keys: analytics, EmailJS, Supabase, etc.
 yarn install
-yarn dev
+yarn dev             # Starts Next.js with hot reload
 ```
 
-### Production Build
-Serverful deployments run the built Next.js server so all API routes are available.
+### Production Build (Serverful)
+Serverful deployments run the compiled Next.js server so API stubs are available.
 ```bash
-yarn build && yarn start
+yarn build
+yarn start           # Boots the production server on port 3000 by default
 ```
-The service worker is automatically generated during `next build` via [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa).
-After the server starts, exercise an API route to confirm server-side functionality:
+After the server starts, probe any API stub to verify server routes are alive:
 ```bash
 curl -X POST http://localhost:3000/api/dummy
 ```
 
-### Static Export (for GitHub Pages / S3 Websites)
-This project supports static export. Serverless API routes will not be available; the UI falls back to demo data or hides features.
+### Static Export (GitHub Pages, S3, etc.)
+The project supports fully static export. API routes are omitted, so the UI falls back to demo data or hides unsupported actions.
 ```bash
-yarn export && npx serve out
-
+yarn export               # Builds static output into ./out with NEXT_PUBLIC_STATIC_EXPORT=true
+npx serve out             # Optional: serve the exported site locally
 ```
-Verify that features relying on `/api/*` return 404 or other placeholders when served statically.
+Verify that features relying on `/api/*` degrade gracefully when served statically.
 
-### Install as PWA for Sharing
+### Install as a Progressive Web App
+1. Open the deployed site in a supported browser (Chrome, Edge, Brave, etc.).
+2. Use the browser’s **Install** / **Add to Home Screen** action.
+3. On mobile, share text/links to the installed app to create sticky notes automatically.
 
-To send text or links directly into the Sticky Notes app:
-
-1. Open the site in a supported browser (Chrome, Edge, etc.).
-2. Use the browser's **Install** or **Add to Home screen** option.
-3. After installation, use the system **Share** action and select "Kali Linux Portfolio".
-4. The shared content will appear as a new note.
-
-### Service Worker (SW)
-
-- Generated via [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa); output is `public/sw.js`.
-- Only assets under `public/` are precached.
-- Dynamic routes or API responses are not cached.
-- Future work may use `injectManifest` for finer control.
+The service worker is generated during `next build` by [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa) and outputs to `public/sw.js`.
 
 ---
 
-## Environment Variables
-
-Copy `.env.local.example` to `.env.local` and fill in required API keys:
-
-- `NEXT_PUBLIC_ENABLE_ANALYTICS` – enable client-side analytics when set to `true`.
-- `FEATURE_TOOL_APIS` – toggle simulated tool APIs (`enabled` or `disabled`).
-- `RECAPTCHA_SECRET` and related `NEXT_PUBLIC_RECAPTCHA_*` keys for contact form spam protection.
-- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` – Supabase credentials. When unset, Supabase-backed APIs and features are disabled.
-
-See `.env.local.example` for the full list.
-
----
-
-## Scripts
-
-- `yarn install` – install project dependencies.
-- `yarn dev` – start the development server with hot reloading.
-- `yarn test` – run the test suite.
-- `yarn lint` – check code for linting issues.
-- `yarn export` – generate a static export in the `out/` directory.
-
----
-
-## Local Development Tips
-
-- Run `yarn lint` and `yarn test` before committing changes.
-- For manual smoke tests, start `yarn dev` and in another terminal run `yarn smoke` to visit every `/apps/*` route.
-
----
-
-## Speed Insights
-
-- Enable Speed Insights in the Vercel project dashboard.
-- `<SpeedInsights />` is rendered in [`pages/_app.jsx`](./pages/_app.jsx) alongside `<Analytics />`.
-- Validate collection by requesting `/_vercel/speed-insights/script.js` from a deployed build.
-- No metrics are collected in development mode; ad blockers or network filters can block the script.
-
-See Vercel's [Speed Insights Quickstart](https://vercel.com/docs/speed-insights/quickstart) and [troubleshooting guide](https://vercel.com/docs/speed-insights/troubleshooting) for more information.
-
----
-
-## Tech Stack
-
-- **Next.js 15** (app uses `/pages` routing) + **TypeScript** in parts
-- **Tailwind CSS** with custom Ubuntu/Kali theme tokens (`styles/index.css`, `tailwind.config.js`)
-- **React GA4** via a thin wrapper in `utils/analytics.ts`
-- **Vercel Analytics** (`@vercel/analytics`)
-- **EmailJS** for the contact (“Gedit”) app
-- Simple in-memory rate limiter for the contact API (not distributed across instances)
-- Client-side only **simulations** of security tools (no real exploitation)
-- A large set of games rendered in-browser (Canvas/DOM), with a shared `GameLayout`
-
-### Gamepad Input & Remapping
-
-Games can listen for normalized gamepad events via `utils/gamepad.ts`. The manager polls
-`navigator.getGamepads`, emits button and axis changes, and triggers haptic feedback
-through `gamepad.vibrationActuator` where available. Key bindings configured with
-`components/apps/Games/common/input-remap` are persisted in the browser's Origin Private
-File System (OPFS) so players can store per-game profiles.
-
----
-
-## App Shell & Architecture
+## Project Architecture
 
 ```
 pages/
-  _app.jsx               # global providers (Legal banner, GA init, Vercel Analytics)
-  _document.jsx
-  index.jsx              # mounts <Ubuntu />
-  api/                   # (dev/server) stub routes for demo-only features
-  apps/                  # a few example pages
+  _app.jsx            # Global providers (desktop shell, analytics, legal banner)
+  _document.jsx       # HTML scaffold
+  index.jsx           # Mounts <Ubuntu /> desktop
+  api/                # Demo-only API routes (disabled during static export)
+  apps/               # Example conventional pages
 
 components/
-  ubuntu.tsx             # state: boot, lock, desktop; wires screens & navbar
-  base/                  # window system, app base component
-  screen/                # booting_screen, desktop, lock_screen, navbar
-  apps/                  # the catalog (games, utilities, “security” sims, media)
-  SEO/Meta.js            # meta tags and JSON-LD
-  util-components/       # shared UI helpers
-
-public/
-  images/                # wallpapers, icons
-  apps/platformer/       # static assets for games
-  chess/, checkers-worker.js, …
+  ubuntu.tsx          # Boot → lock → desktop state machine
+  base/               # Window frame, chrome, and focus manager
+  screen/             # Boot splash, lock screen, desktop, navbar
+  apps/               # App catalog: games, utilities, and security simulations
+  context-menus/      # Desktop and dock context menus
+  SEO/Meta.js         # Structured metadata helpers
+  util-components/    # Reusable UI primitives (buttons, layout helpers, etc.)
 
 hooks/
-  usePersistentState.ts, useAssetLoader.ts, useCanvasResize.ts, …
+  usePersistentState.ts   # Validated localStorage state with reset helper
+  useSettings.tsx         # User preferences (theme, wallpaper, accent)
+  useAssetLoader.ts       # Lazy asset loading for canvas games
+  useCanvasResize.ts      # Responsive canvas sizing for games
 
-pages/api/
-  hydra.js, john.js, metasploit.js, radare2.js   # demo stubs (disabled in static export)
+public/
+  images/             # Wallpapers, icons, avatars
+  apps/               # Static assets for games (sprites, sounds, levels)
+  sw.js               # Generated service worker after `next build`
 
-__tests__/
-  *.test.(ts|tsx|js)      # smoke tests & per-app logic tests
-
-.github/workflows/
-  gh-deploy.yml           # GitHub Pages export pipeline
+__tests__/            # Jest unit tests, smoke tests, utilities
+playwright/           # Playwright helpers for end-to-end testing
+.github/workflows/    # GitHub Actions (static export pipeline, lint/test gates)
 ```
 
-**Windowing model.** The desktop (`components/screen/desktop.js`) manages:
-- z-ordering and focus of windows
-- global context menus (`components/context-menus/`)
-- favorites vs “All Applications” grid
-- analytics events for user actions
+**Windowing model.** `components/screen/desktop.js` maintains the global window registry, handles z-index ordering, and orchestrates dock shortcuts, favorites, and analytics events.
 
-**App registry.** `apps.config.js` registers apps using dynamic imports to keep the initial bundle lean:
-```ts
-import dynamic from 'next/dynamic';
+**Dynamic app registry.** [`apps.config.js`](./apps.config.js) registers desktop apps with `createDynamicApp`, wrapping heavy apps in dynamic imports to reduce the initial bundle. Each app exports a `prefetch()` helper so tiles can warm bundles on hover or keyboard focus.
 
-const SudokuApp = dynamic(() => import('./components/apps/sudoku'));
-export const displaySudoku = () => <SudokuApp />;
-```
-Heavy apps are wrapped with **dynamic import** and most games share a `GameLayout` with a help overlay.
-
-### Prefetching dynamic apps
-Dynamic app modules include a `webpackPrefetch` hint and expose a `prefetch()` helper. Desktop tiles call this helper on hover or
-keyboard focus so bundles are warmed before launch. When adding a new app, export a default component and register it with
-`createDynamicApp` to opt into this behaviour.
+**Game layout.** Games share `components/apps/GameLayout.tsx`, which renders a standardized header, help toggle, and status footer. Gamepad bindings live in `components/apps/Games/common/input-remap` and persist to the Origin Private File System (OPFS) via `utils/opfs.ts`.
 
 ---
 
-## Environment Variables
+## Desktop UX
 
-Copy `.env.local.example` to `.env.local` and fill in required values.
+- **Boot & Lock Flow** – The desktop boots through a splash animation, transitions to a lock screen, and finally reveals the workspace. Auth is simulated; unlocking simply animates the transition.
+- **Window Controls** – Windows are draggable, resizable, and keyboard focusable. Header controls hook into desktop state to minimize, maximize, or close.
+- **Context Menus** – Right-click menus are powered by `components/context-menus/desktopContextMenu.tsx` and adjust options based on selection (wallpapers, new notes, etc.).
+- **Dock & Favorites** – Dock entries and “All Applications” tiles are sourced from `apps.config.js`. Favorites persist through `usePersistentState`.
+- **Terminal** – `/apps/terminal` emulates a shell with commands like `help`, `clear`, `whoami`, and canned security tool outputs.
+- **Gamepad Support** – `utils/gamepad.ts` polls `navigator.getGamepads()` and normalizes input. Games may expose haptic feedback via `gamepad.vibrationActuator` where available.
 
-| Name | Purpose |
+---
+
+## App Catalog
+
+### Utilities & Media
+| App | Route | Category |
+| --- | --- | --- |
+| Alex | `/apps/alex` | Utility / Media |
+| Firefox | `/apps/firefox` | Utility / Media |
+| VS Code | `/apps/vscode` | StackBlitz IDE embed |
+| Spotify | `/apps/spotify` | Utility / Media |
+| YouTube | `/apps/youtube` | Utility / Media |
+| Weather | `/apps/weather` | Utility / Media |
+| X / Twitter | `/apps/x` | Utility / Media |
+| Todoist | `/apps/todoist` | Utility / Media |
+| Gedit | `/apps/gedit` | Utility / Media (contact form) |
+| Settings | `/apps/settings` | Utility / Media |
+| Trash | `/apps/trash` | Utility / Media |
+| Project Gallery | `/apps/project-gallery` | Utility / Media |
+| Quote | `/apps/quote` | Utility / Media |
+
+The Spotify app lets users map moods to playlists, persist preferences in OPFS, and recall the last session automatically.
+
+### Games
+| Game | Route |
 | --- | --- |
-| `NEXT_PUBLIC_TRACKING_ID` | GA4 measurement ID (e.g., `G-XXXXXXX`). |
-| `NEXT_PUBLIC_SERVICE_ID` | EmailJS service id. |
-| `NEXT_PUBLIC_TEMPLATE_ID` | EmailJS template id. |
-| `NEXT_PUBLIC_USER_ID` | EmailJS public key / user id. |
-| `NEXT_PUBLIC_YOUTUBE_API_KEY` | Used by the YouTube app for search/embed enhancements. |
-| `NEXT_PUBLIC_BEEF_URL` | Optional URL for the BeEF demo iframe (if used). |
-| `NEXT_PUBLIC_GHIDRA_URL` | Optional URL for a remote Ghidra Web interface. |
-| `NEXT_PUBLIC_GHIDRA_WASM` | Optional URL for a Ghidra WebAssembly build. |
-| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | ReCAPTCHA site key used on the client. |
-| `RECAPTCHA_SECRET` | ReCAPTCHA secret key for server-side verification. |
-| `SUPABASE_URL` | Supabase project URL for server-side access. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key for privileged operations. |
-| `SUPABASE_ANON_KEY` | Supabase anonymous key for server-side reads. |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL exposed to the client. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public Supabase anonymous key used on the client. |
-| `ADMIN_READ_KEY` | Secret key required by admin message APIs. Configure this directly as an environment variable (e.g., in the Vercel dashboard). |
-| `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
-| `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` to disable server APIs. |
-| `NEXT_PUBLIC_SHOW_BETA` | Set to `1` to display a small beta badge in the UI. |
-| `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
-| `FEATURE_HYDRA` | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`. |
+| 2048 | `/apps/2048` |
+| Asteroids | `/apps/asteroids` |
+| Battleship | `/apps/battleship` |
+| Blackjack | `/apps/blackjack` |
+| Breakout | `/apps/breakout` |
+| Candy Crush | `/apps/candy-crush` |
+| Car Racer | `/apps/car-racer` |
+| Checkers | `/apps/checkers` |
+| Chess | `/apps/chess` |
+| Connect Four | `/apps/connect-four` |
+| Flappy Bird | `/apps/flappy-bird` |
+| Frogger | `/apps/frogger` |
+| Gomoku | `/apps/gomoku` |
+| Hangman | `/apps/hangman` |
+| Memory | `/apps/memory` |
+| Minesweeper | `/apps/minesweeper` |
+| Nonogram | `/apps/nonogram` |
+| Pacman | `/apps/pacman` |
+| Pinball | `/apps/pinball` |
+| Platformer | `/apps/platformer` |
+| Pong | `/apps/pong` |
+| Reversi | `/apps/reversi` |
+| Simon | `/apps/simon` |
+| Snake | `/apps/snake` |
+| Sokoban | `/apps/sokoban` |
+| Solitaire | `/apps/solitaire` |
+| Space Invaders | `/apps/space-invaders` |
+| Sudoku | `/apps/sudoku` |
+| Tetris | `/apps/tetris` |
+| Tic Tac Toe | `/apps/tictactoe` |
+| Tower Defense | `/apps/tower-defense` |
+| Word Search | `/apps/word-search` |
+| Wordle | `/apps/wordle` |
 
-> In production (Vercel/GitHub Actions), set these as **environment variables or repo secrets**. See **CI/CD** below.
-
----
-
-## Security Headers & CSP
-
-Defined in `next.config.js`. See [CSP External Domains](#csp-external-domains) for allowed hostnames:
-
-- **Content-Security-Policy (CSP)** (string built from `ContentSecurityPolicy[]`; see [CSP External Domains](#csp-external-domains))
-- `X-Content-Type-Options: nosniff`
-- `Referrer-Policy: strict-origin-when-cross-origin`
-- `Permissions-Policy: camera=(), microphone=(), geolocation=()`
-- `X-Frame-Options: SAMEORIGIN`
-
-### CSP External Domains
-
-These external domains are whitelisted in the default CSP. Update this list whenever `next.config.js` changes.
-
-| Domain | Purpose |
+### Security Tools (Simulated)
+| Tool | Route |
 | --- | --- |
-| `platform.twitter.com` | Twitter widgets and scripts |
-| `syndication.twitter.com` | Twitter embed scripts |
-| `cdn.syndication.twimg.com` | Twitter asset CDN |
-| `*.twitter.com` | Additional Twitter content |
-| `*.x.com` | X (Twitter) domain equivalents |
-| `*.google.com` | Legacy Google embeds and analytics |
-| `example.com` | Firefox app example origin |
-| `developer.mozilla.org` | Firefox app default home page |
-| `en.wikipedia.org` | Firefox app example origin |
-| `cdn.jsdelivr.net` | Math.js library |
-| `cdnjs.cloudflare.com` | PDF.js worker |
-| `stackblitz.com` | StackBlitz IDE embeds |
-| `www.youtube.com` | YouTube IFrame API |
-| `www.youtube-nocookie.com` | YouTube video embeds (privacy-enhanced) |
-| `open.spotify.com` | Spotify embeds |
-| `vercel.live` | Vercel toolbar |
+| Autopsy | `/apps/autopsy` |
+| BeEF | `/apps/beef` |
+| Bluetooth Tools | `/apps/bluetooth` |
+| dsniff | `/apps/dsniff` |
+| Ettercap | `/apps/ettercap` |
+| Ghidra | `/apps/ghidra` |
+| Hashcat | `/apps/hashcat` |
+| Hydra | `/apps/hydra` |
+| John the Ripper | `/apps/john` |
+| Kismet | `/apps/kismet` |
+| Metasploit | `/apps/metasploit` |
+| Metasploit Post | `/apps/metasploit-post` |
+| Mimikatz | `/apps/mimikatz` |
+| Nessus | `/apps/nessus` |
+| Nmap NSE | `/apps/nmap-nse` |
+| OpenVAS | `/apps/openvas` |
+| Radare2 | `/apps/radare2` |
+| Reaver | `/apps/reaver` |
+| Recon-ng | `/apps/reconng` |
+| Volatility | `/apps/volatility` |
+| Wireshark | `/apps/wireshark` |
 
-**Notes for prod hardening**
-- Review `connect-src` and `frame-src` to ensure only required domains are present for your deployment.
-- Consider removing `'unsafe-inline'` from `style-src` once all inline styles are eliminated.
-- If deploying on a domain that serves a PDF resume via `<object>`, keep `X-Frame-Options: SAMEORIGIN`. Otherwise you can rely on CSP `frame-ancestors` instead.
+All security-oriented apps are **non-operational** and render curated walkthroughs, faux output, or embedded documentation. They must never perform real exploitation or network activity.
 
 ---
 
-## Deployment
+## Configuration & Environment
 
-### Static export (GitHub Pages)
-Workflow: `.github/workflows/gh-deploy.yml`:
- - Installs Node, runs `yarn export`, adds `.nojekyll`, and deploys `./out` → `gh-pages` branch.
- - Uses **Node 20.19.5** to match `package.json`.
-- Required env variables (GitHub Secrets):
-  - `NEXT_PUBLIC_TRACKING_ID`
-  - `NEXT_PUBLIC_SERVICE_ID`
-  - `NEXT_PUBLIC_TEMPLATE_ID`
-  - `NEXT_PUBLIC_USER_ID`
-  - `NEXT_PUBLIC_YOUTUBE_API_KEY`
-  - `NEXT_PUBLIC_BEEF_URL`
-  - `NEXT_PUBLIC_GHIDRA_URL`
-  - `NEXT_PUBLIC_GHIDRA_WASM`
-  - `NEXT_PUBLIC_UI_EXPERIMENTS`
+### Environment Variables
+Copy `.env.local.example` to `.env.local` and populate the keys relevant to your deployment.
 
-### Vercel deployment
-- Create a Vercel project and connect this repo.
-- Required env variables (Project Settings):
-  - `NEXT_PUBLIC_TRACKING_ID`
-  - `NEXT_PUBLIC_SERVICE_ID`
-  - `NEXT_PUBLIC_TEMPLATE_ID`
-  - `NEXT_PUBLIC_USER_ID`
-  - `NEXT_PUBLIC_YOUTUBE_API_KEY`
-  - `NEXT_PUBLIC_BEEF_URL`
-  - `NEXT_PUBLIC_GHIDRA_URL`
-  - `NEXT_PUBLIC_GHIDRA_WASM`
-  - `NEXT_PUBLIC_UI_EXPERIMENTS`
-  - `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`
-  - `RECAPTCHA_SECRET`
-  - `ADMIN_READ_KEY` (set manually in Vercel or your host)
-- Build command: `yarn build`
-- Output: Next.js (serverless by default on Vercel).
-- If you keep API routes, Vercel deploys them as serverless functions. For a static build, disable API routes or feature-flag those apps.
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_ENABLE_ANALYTICS` | Toggles Google Analytics 4 tracking on the client. |
+| `NEXT_PUBLIC_TRACKING_ID` | GA4 Measurement ID (`G-XXXXXXX`). |
+| `NEXT_PUBLIC_SERVICE_ID` / `NEXT_PUBLIC_TEMPLATE_ID` / `NEXT_PUBLIC_USER_ID` | EmailJS identifiers for the Gedit contact app. |
+| `NEXT_PUBLIC_YOUTUBE_API_KEY` | Enables enhanced search within the YouTube app. |
+| `NEXT_PUBLIC_BEEF_URL` / `NEXT_PUBLIC_GHIDRA_URL` / `NEXT_PUBLIC_GHIDRA_WASM` | Optional remote iframe targets for simulated tooling. |
+| `NEXT_PUBLIC_UI_EXPERIMENTS` | Enables experimental UI heuristics. |
+| `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during static export to disable server APIs. |
+| `NEXT_PUBLIC_SHOW_BETA` | Displays a beta badge when truthy. |
+| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | Client-side ReCAPTCHA key used by the contact form. |
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client-side Supabase credentials (optional). |
+| `FEATURE_TOOL_APIS` | `enabled` or `disabled`; wraps all tool API routes. |
+| `FEATURE_HYDRA` | Additional toggle for `/api/hydra` demo route. |
+| `RECAPTCHA_SECRET` | Server-side verification for ReCAPTCHA. |
+| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_ANON_KEY` | Server-side Supabase credentials. |
+| `ADMIN_READ_KEY` | Secret used by admin message APIs; configure in the hosting platform. |
 
-### Docker image build/run
+> Never commit secrets. Use local `.env.local`, CI secrets, or host-level configuration.
+
+### Feature Flags & Static Export
+Set `NEXT_PUBLIC_STATIC_EXPORT=true` during `yarn export` to disable API routes. UI components should guard their behaviour with the flag or the presence of required environment variables.
+
+### Analytics
+`utils/analytics.ts` wraps GA4. Analytics only fire when `NEXT_PUBLIC_ENABLE_ANALYTICS` is truthy. The project also renders `<Analytics />` and `<SpeedInsights />` from `@vercel/analytics` inside `_app.jsx`.
+
+---
+
+## Deployment Guides
+
+### GitHub Pages (Static Export)
+Workflow: [`.github/workflows/gh-deploy.yml`](./.github/workflows/gh-deploy.yml)
+1. Installs Node 20.19.5 to match `.nvmrc` and `package.json`.
+2. Runs `yarn install`, `yarn export`, and copies `out/` to the `gh-pages` branch.
+3. Creates `.nojekyll` to bypass GitHub Pages Jekyll processing.
+
+Required secrets include any public keys needed at build time (GA, EmailJS, optional tool URLs, UI experiments).
+
+### Vercel (Serverless)
+- Connect the repository to a Vercel project.
+- Build command: `yarn build`.
+- Runtime: Next.js 15.5 (serverless functions handle API stubs).
+- Configure environment variables in the Vercel dashboard: analytics IDs, EmailJS keys, optional Supabase values, ReCAPTCHA keys, `ADMIN_READ_KEY`, and any tool URLs.
+- If you prefer a static deployment on Vercel, run `yarn export` and serve the output with a static hosting provider or Vercel’s static project type.
+
+### Docker
 ```Dockerfile
-# node:20-alpine
 FROM node:20-alpine AS build
 WORKDIR /app
 COPY package.json yarn.lock ./
@@ -315,16 +284,11 @@ WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /app ./
 EXPOSE 3000
-CMD ["yarn","start","-p","3000"]
+CMD ["yarn", "start", "-p", "3000"]
 ```
-
-Build the image:
+Build and run locally:
 ```bash
 docker build -t kali-portfolio .
-```
-
-Run the container:
-```bash
 docker run -p 3000:3000 \
   -e NEXT_PUBLIC_TRACKING_ID=... \
   -e NEXT_PUBLIC_SERVICE_ID=... \
@@ -337,192 +301,86 @@ docker run -p 3000:3000 \
   -e NEXT_PUBLIC_UI_EXPERIMENTS=... \
   kali-portfolio
 ```
+Add any additional variables required by your configuration (ReCAPTCHA, Supabase, etc.).
 
 ---
 
-## Testing
+## Quality Gates & Tooling
 
-Jest is configured via `jest.config.js` with a **jsdom** environment and helpers in `jest.setup.ts`:
-- Mocks for `Image`, `OffscreenCanvas`, `AudioContext`, `Worker`, etc.
-- `__tests__/apps.smoke.test.tsx` dynamically imports each app and renders it to catch runtime errors.
-- Per-app logic tests (e.g., `blackjack.test.ts`, `sokoban.test.ts`, `nonogram.test.ts`).
+| Command | Purpose |
+| --- | --- |
+| `yarn lint` | ESLint (configured via `eslint.config.mjs`). |
+| `yarn test` | Jest unit tests (jsdom environment; see `jest.setup.ts`). |
+| `yarn test:watch` | Watch mode for Jest. |
+| `yarn smoke` | Manual smoke runner that opens each `/apps/*` route in a headless browser. |
+| `npx playwright test` | Playwright end-to-end suite (optional locally, required in E2E CI runs). |
 
-Commands:
-```bash
-yarn test
-yarn test:watch
-yarn lint
-```
+Additional guidance:
+- Fix lint and type issues instead of silencing rules.
+- Co-locate new tests with related code under `__tests__/` or feature folders.
+- Before PRs, confirm the static export still loads critical screens.
+- For major UI updates, capture screenshots or short clips for reviewers.
 
----
-
-## Feature Overview
-
-Browse all apps, games, and security tool demos at `/apps`, which presents a searchable grid built from `apps.config.js`.
-
-### Utilities & Media
-| App | Route | Category |
-| --- | --- | --- |
-| Alex | /apps/alex | Utility / Media |
-| Firefox | /apps/firefox | Utility / Media |
-| VS Code | /apps/vscode | StackBlitz IDE embed |
-| Spotify | /apps/spotify | Utility / Media |
-| Youtube | /apps/youtube | Utility / Media |
-| Weather | /apps/weather | Utility / Media |
-| X / Twitter | /apps/x | Utility / Media |
-| Todoist | /apps/todoist | Utility / Media |
-| Gedit | /apps/gedit | Utility / Media |
-| Settings | /apps/settings | Utility / Media |
-| Trash | /apps/trash | Utility / Media |
-| Project Gallery | /apps/project-gallery | Utility / Media |
-| Quote | /apps/quote | Utility / Media |
-
-> The VS Code app now embeds a StackBlitz IDE via iframe instead of the local Monaco editor.
-
-The Spotify app lets you customize a mood-to-playlist mapping. Use the in-app form to
-add, reorder, or delete moods; selections persist in the browser's Origin Private File
-System so your choices restore on load. The last mood played is remembered, and
-play/pause and track controls include keyboard hotkeys.
-
-### Terminal Commands
-- `clear` – clears the terminal display.
-- `help` – lists available commands.
-
-### Games
-| Game | Route | Category |
-| --- | --- | --- |
-| 2048 | /apps/2048 | Game |
-| Asteroids | /apps/asteroids | Game |
-| Battleship | /apps/battleship | Game |
-| Blackjack | /apps/blackjack | Game |
-| Breakout | /apps/breakout | Game |
-| Candy Crush | /apps/candy-crush | Game |
-| Car Racer | /apps/car-racer | Game - ghost replays, lane assist, drift scoring |
-| Checkers | /apps/checkers | Game |
-| Chess | /apps/chess | Game |
-| Connect Four | /apps/connect-four | Game |
-| Flappy Bird | /apps/flappy-bird | Game |
-| Frogger | /apps/frogger | Game |
-| Gomoku | /apps/gomoku | Game |
-| Hangman | /apps/hangman | Game |
-| Memory | /apps/memory | Game |
-| Minesweeper | /apps/minesweeper | Game |
-| Nonogram | /apps/nonogram | Game |
-| Pacman | /apps/pacman | Game |
-| Pinball | /apps/pinball | Game |
-| Platformer | /apps/platformer | Game |
-| Pong | /apps/pong | Game |
-| Reversi | /apps/reversi | Game |
-| Simon | /apps/simon | Game |
-| Snake | /apps/snake | Game |
-| Sokoban | /apps/sokoban | Game |
-| Solitaire | /apps/solitaire | Game |
-| Space Invaders | /apps/space-invaders | Game |
-| Sudoku | /apps/sudoku | Game |
-| Tetris | /apps/tetris | Game |
-| Tic Tac Toe | /apps/tictactoe | Game |
-| Tower Defense | /apps/tower-defense | Game |
-| Word Search | /apps/word-search | Game |
-| Wordle | /apps/wordle | Game |
-
-### Security Tools (Simulated)
-| Tool | Route | Category |
-| --- | --- | --- |
-| Autopsy | /apps/autopsy | Security Tool (simulated) |
-| BeEF | /apps/beef | Security Tool (simulated) |
-| Bluetooth Tools | /apps/bluetooth | Security Tool (simulated) |
-| dsniff | /apps/dsniff | Security Tool (simulated) |
-| Ettercap | /apps/ettercap | Security Tool (simulated) |
-| Ghidra | /apps/ghidra | Security Tool (simulated) |
-| Hashcat | /apps/hashcat | Security Tool (simulated) |
-| Hydra | /apps/hydra | Security Tool (simulated) |
-| John the Ripper | /apps/john | Security Tool (simulated) |
-| Kismet | /apps/kismet | Security Tool (simulated) |
-| Metasploit | /apps/metasploit | Security Tool (simulated) |
-| Metasploit Post | /apps/metasploit-post | Security Tool (simulated) |
-| Mimikatz | /apps/mimikatz | Security Tool (simulated) |
-| Nessus | /apps/nessus | Security Tool (simulated) |
-| Nmap NSE | /apps/nmap-nse | Security Tool (simulated) |
-| OpenVAS | /apps/openvas | Security Tool (simulated) |
-| Radare2 | /apps/radare2 | Security Tool (simulated) |
-| Reaver | /apps/reaver | Security Tool (simulated) |
-| Recon-ng | /apps/reconng | Security Tool (simulated) |
-| Volatility | /apps/volatility | Security Tool (simulated) |
-| Wireshark | /apps/wireshark | Security Tool (simulated, lab use only) |
-
-> All security apps are **non-operational simulations** intended for education/demos. They **do not** execute exploits and should not be used for any unauthorized activity.
-> All reports and feed data are canned examples and not generated from live systems.
+Accessibility and performance checks using Lighthouse or Pa11y (`pa11yci.json`) are encouraged for desktop shell changes.
 
 ---
 
-## Notable Components
+## Security Hardening
 
-- **`components/base/window.js`** - draggable, focusable window with header controls; integrates with desktop z-index.
-- **`components/screen/*`** - lock screen, boot splash, navbar, app grid.
-- **`hooks/usePersistentState.ts`** - localStorage-backed state with validation + reset helper.
-- **`hooks/useSettings.tsx`** - global settings context exposing theme, accent, wallpaper and other preferences with persistence.
-- **`components/apps/GameLayout.tsx`** - standardized layout and help toggle for games.
-- **`components/apps/radare2`** - dual hex/disassembly panes with seek/find/xref; graph mode from JSON fixtures; per-file notes and bookmarks.
-- **`components/common/PipPortal.tsx`** - renders arbitrary UI inside a Document Picture-in-Picture window. See [`docs/pip-portal.md`](./docs/pip-portal.md).
+### Security Headers & CSP
+Default headers are configured in [`next.config.js`](./next.config.js):
+- `Content-Security-Policy`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+- `X-Frame-Options: SAMEORIGIN`
 
----
+CSP whitelists hosts such as `*.twitter.com`, `cdn.jsdelivr.net`, `cdnjs.cloudflare.com`, `stackblitz.com`, `www.youtube.com`, and `vercel.live`. Update the whitelist whenever you embed a new external resource. Consider removing `'unsafe-inline'` from `style-src` once inline styles are eliminated.
 
-## Adding a New App
-
-1. Create your component under `components/apps/my-app/index.tsx`.
-2. Register it in `apps.config.js` using dynamic import:
-   ```ts
-   const MyApp = dynamic(() => import('./components/apps/my-app'));
-   export const displayMyApp = () => <MyApp />;
-   ```
-3. Add metadata (icon, title) where appropriate.
-4. If the app needs persistent state, use `usePersistentState(key, initial, validator)`.
-5. If the app embeds external sites, **whitelist** the domain in `next.config.js` CSP (`connect-src`, `frame-src`, `img-src`) and `images.domains`.
-
----
-
-## Production Hardening Checklist
-
-- [x] **Pin Node to 20.19.5** across runtime and CI.
-- [ ] **Track Node.js `DEP0170` deprecation** for custom protocol URLs; update tooling/dependencies when Node fully removes support and ensure `yarn install` runs without related warnings.
-- [ ] **Tighten CSP** (`connect-src`, `frame-src`, remove `http:` and `'unsafe-inline'`).
-- [ ] **Set env vars** in the hosting platform; rotate EmailJS keys regularly.
-- [ ] **Disable/flag API demo routes** for production or protect behind feature flags.
-- [ ] **Rate-limit** any future server routes; validate and sanitize inputs.
-- [ ] **Turn on HTTPS/HSTS** at the edge (Vercel / CDN / reverse proxy).
-- [ ] **Monitor** with GA4 and server logs; track errors (consider Sentry).
-- [ ] **Accessibility pass** (semantic labels, focus order, contrast); fix any Lighthouse issues.
-- [ ] **Perf budget** for initial JS; keep heavy apps dynamically imported and idle-loaded.
-- [ ] **Backup** any hosted static assets (wallpapers, levels, JSON data).
+### Production Checklist
+- [x] Pin Node.js to 20.19.5 across local, CI, and hosting environments.
+- [ ] Track Node.js `DEP0170` deprecations for custom protocol URLs and update dependencies accordingly.
+- [ ] Rotate EmailJS and other public keys regularly.
+- [ ] Tighten CSP (`connect-src`, `frame-src`, remove unused domains or protocols).
+- [ ] Disable or feature-flag demo API routes in production.
+- [ ] Rate-limit any future server routes and sanitize input.
+- [ ] Enforce HTTPS and HSTS at the edge (Vercel, CDN, or reverse proxy).
+- [ ] Add error monitoring (e.g., Sentry) and review analytics dashboards.
+- [ ] Run accessibility and Lighthouse audits before launch.
+- [ ] Keep dynamic imports for heavy apps to protect initial load performance.
+- [ ] Back up large static assets (wallpapers, JSON datasets) used by the portfolio.
 
 ---
 
-## Known Constraints
+## Troubleshooting
 
-- **Static export** disables Next API routes; security/demo apps requiring `/api/*` will be stubbed client-side.
-- Some embeds (e.g., arbitrary external sites in the **Firefox** app) may refuse to render in iframes due to **X-Frame-Options** or CSP set by the target site.
+| Symptom | Fix |
+| --- | --- |
+| Blank app grid after static export | Ensure `NEXT_PUBLIC_STATIC_EXPORT=true` and that apps depending on `/api/*` are behind feature flags or demo data fallbacks. |
+| Service worker ignores new assets | Clear site data or bump the cache version in the PWA config. |
+| Gamepad input not detected | Confirm the browser supports `navigator.getGamepads()` and update bindings in `components/apps/Games/common/input-remap`. |
+| Analytics not reporting | Verify `NEXT_PUBLIC_ENABLE_ANALYTICS` is `true`, confirm GA scripts load, and check ad blockers. |
+| External embeds refuse to load | The remote site may send `X-Frame-Options` or restrictive CSP headers. Provide alternative content or documentation in-app. |
 
 ---
 
 ## License
 
-See [`LICENSE`](./LICENSE).
+Distributed under the [MIT License](./LICENSE).
 
 ---
 
-*Generated on 2025-08-26*
-
+_Last updated: 2025-10-09_
 
 ---
 
-## Calculator Syntax
+## Calculator Syntax Appendix
 
-The calculator supports a subset of math.js expressions with the following features:
+The calculator app supports a subset of math.js expressions:
 
-- Operators: `+`, `-`, `*`, `/`, and `^` with standard precedence and parenthesis grouping.
-- Built-in functions such as `sin`, `cos`, `tan`, `sqrt`, `abs`, `ceil`, `floor`, `round`, `exp`, and `log`.
-- Unit suffixes like `cm`, `m`, `in`, or `ft` allowing mixed-unit arithmetic (e.g. `2m + 30cm`).
+- Operators: `+`, `-`, `*`, `/`, `^`, and parenthesis grouping.
+- Built-in functions: `sin`, `cos`, `tan`, `sqrt`, `abs`, `ceil`, `floor`, `round`, `exp`, `log`, and more per math.js defaults.
+- Unit-aware math: suffix values with units like `cm`, `m`, `in`, or `ft` to mix measurements (`2m + 30cm`).
 - The previous answer is accessible via `Ans`.
 
 Invalid syntax is highlighted in the calculator input, selecting the character where parsing failed.
-
