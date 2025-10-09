@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Head from 'next/head';
 import ReactGA from 'react-ga4';
@@ -9,60 +9,77 @@ import SafetyNote from './SafetyNote';
 import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
+import usePersistentState from '../../../hooks/usePersistentState';
 
-class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
-  screens: Record<string, React.ReactNode> = {};
-
-  constructor(props: unknown) {
-    super(props);
-    this.state = {
-      screen: <></>,
-      active_screen: 'about',
-      navbar: false,
-    };
-  }
-
-  componentDidMount() {
-    this.screens = {
+function AboutAlex() {
+  const sections = useMemo(
+    () => ({
       about: <About />,
       education: <Education />,
       skills: <Skills skills={data.skills} />,
       certs: <Certs />,
       projects: <Projects projects={data.projects} />,
       resume: <Resume />,
-    };
+    }),
+    [],
+  );
+  const sectionIds = useMemo(() => new Set(Object.keys(sections)), [sections]);
+  const isValidSection = useCallback(
+    (value: unknown): value is string => typeof value === 'string' && sectionIds.has(value),
+    [sectionIds],
+  );
+  const [activeScreen, setActiveScreen] = usePersistentState<string>('about-section', 'about', isValidSection);
+  const [navbar, setNavbar] = useState(false);
+  const currentScreen = sections[activeScreen] ?? sections.about;
 
-    let lastVisitedScreen = localStorage.getItem('about-section');
-    if (!lastVisitedScreen) {
-      lastVisitedScreen = 'about';
+  useEffect(() => {
+    ReactGA.send({ hitType: 'pageview', page: `/${activeScreen}`, title: 'Custom Title' });
+  }, [activeScreen]);
+
+  const changeScreen = useCallback(
+    (event: React.SyntheticEvent<HTMLElement>) => {
+      const screen = event.currentTarget.id;
+      if (!sectionIds.has(screen)) return;
+      setActiveScreen(screen);
+    },
+    [sectionIds, setActiveScreen],
+  );
+
+  const showNavBar = useCallback(() => {
+    setNavbar((prev) => !prev);
+  }, []);
+
+  const handleNavKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const tabs = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]'));
+    let index = tabs.indexOf(document.activeElement as HTMLElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      index = (index + 1) % tabs.length;
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      index = (index - 1 + tabs.length) % tabs.length;
+    } else {
+      return;
     }
+    tabs.forEach((tab, i) => {
+      tab.tabIndex = i === index ? 0 : -1;
+    });
+    tabs[index].focus();
+  }, []);
 
-    this.changeScreen({ id: lastVisitedScreen } as unknown as EventTarget & { id: string });
-  }
-
-  changeScreen = (e: any) => {
-    const screen = e.id || e.target.id;
-    localStorage.setItem('about-section', screen);
-    ReactGA.send({ hitType: 'pageview', page: `/${screen}`, title: 'Custom Title' });
-    this.setState({ screen: this.screens[screen], active_screen: screen });
-  };
-
-  showNavBar = () => {
-    this.setState({ navbar: !this.state.navbar });
-  };
-
-  renderNavLinks = () => (
-    <>
-      {data.sections.map((section) => (
+  const renderNavLinks = useCallback(
+    () =>
+      data.sections.map((section) => (
         <div
           key={section.id}
           id={section.id}
           role="tab"
-          aria-selected={this.state.active_screen === section.id}
-          tabIndex={this.state.active_screen === section.id ? 0 : -1}
-          onFocus={this.changeScreen}
+          aria-selected={activeScreen === section.id}
+          tabIndex={activeScreen === section.id ? 0 : -1}
+          onFocus={changeScreen}
+          onClick={changeScreen}
           className={
-            (this.state.active_screen === section.id
+            (activeScreen === section.id
               ? ' bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95'
               : ' hover:bg-gray-50 hover:bg-opacity-5 ') +
             ' w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5'
@@ -78,80 +95,60 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
           />
           <span className=" ml-1 md:ml-2 text-gray-50 ">{section.label}</span>
         </div>
-      ))}
-    </>
+      )),
+    [activeScreen, changeScreen],
   );
 
-  handleNavKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    const tabs = Array.from(
-      e.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]')
-    );
-    let index = tabs.indexOf(document.activeElement as HTMLElement);
-    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-      e.preventDefault();
-      index = (index + 1) % tabs.length;
-    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-      e.preventDefault();
-      index = (index - 1 + tabs.length) % tabs.length;
-    } else {
-      return;
-    }
-    tabs.forEach((tab, i) => (tab.tabIndex = i === index ? 0 : -1));
-    tabs[index].focus();
+  const structured = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: 'Alex Unnippillil',
+    url: 'https://unnippillil.com',
   };
+  const nonce = getCspNonce();
 
-  render() {
-    const structured = {
-      '@context': 'https://schema.org',
-      '@type': 'Person',
-      name: 'Alex Unnippillil',
-      url: 'https://unnippillil.com',
-    };
-    const nonce = getCspNonce();
-
-    return (
-      <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
-        <Head>
-          <title>About</title>
-          <script
-            type="application/ld+json"
-            nonce={nonce}
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
-          />
-        </Head>
+  return (
+    <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
+      <Head>
+        <title>About</title>
+        <script
+          type="application/ld+json"
+          nonce={nonce}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
+        />
+      </Head>
+      <div
+        className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black"
+        role="tablist"
+        aria-orientation="vertical"
+        onKeyDown={handleNavKeyDown}
+      >
+        {renderNavLinks()}
+      </div>
+      <div
+        onClick={showNavBar}
+        className="md:hidden flex flex-col items-center justify-center absolute bg-ub-cool-grey rounded w-6 h-6 top-1 left-1"
+      >
+        <div className=" w-3.5 border-t border-white" />
+        <div className=" w-3.5 border-t border-white" style={{ marginTop: '2pt', marginBottom: '2pt' }} />
+        <div className=" w-3.5 border-t border-white" />
         <div
-          className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black"
+          className={
+            (navbar ? ' visible animateShow z-30 ' : ' invisible ') +
+            ' md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20'
+          }
           role="tablist"
           aria-orientation="vertical"
-          onKeyDown={this.handleNavKeyDown}
+          onKeyDown={handleNavKeyDown}
         >
-          {this.renderNavLinks()}
+          {renderNavLinks()}
         </div>
-        <div
-          onClick={this.showNavBar}
-          className="md:hidden flex flex-col items-center justify-center absolute bg-ub-cool-grey rounded w-6 h-6 top-1 left-1"
-        >
-          <div className=" w-3.5 border-t border-white" />
-          <div className=" w-3.5 border-t border-white" style={{ marginTop: '2pt', marginBottom: '2pt' }} />
-          <div className=" w-3.5 border-t border-white" />
-          <div
-            className={
-              (this.state.navbar ? ' visible animateShow z-30 ' : ' invisible ') +
-              ' md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20'
-            }
-            role="tablist"
-            aria-orientation="vertical"
-            onKeyDown={this.handleNavKeyDown}
-          >
-            {this.renderNavLinks()}
-          </div>
-        </div>
-        <div className="flex flex-col w-3/4 md:w-4/5 justify-start items-center flex-grow bg-ub-grey overflow-y-auto windowMainScreen">
-          {this.state.screen}
-        </div>
-      </main>
-    );
-  }
+      </div>
+      <div className="flex flex-col w-3/4 md:w-4/5 justify-start items-center flex-grow bg-ub-grey overflow-y-auto windowMainScreen">
+        {currentScreen}
+      </div>
+    </main>
+  );
 }
 
 export default function AboutApp() {
