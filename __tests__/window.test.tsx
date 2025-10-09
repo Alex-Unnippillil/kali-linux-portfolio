@@ -431,6 +431,110 @@ describe('Window snapping finalize and release', () => {
   });
 });
 
+describe('Window resizing handles', () => {
+  it('updates width and height when dragging the bottom-right corner', () => {
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 120,
+      top: 160,
+      right: 760,
+      bottom: 640,
+      width: 640,
+      height: 480,
+      x: 120,
+      y: 160,
+      toJSON: () => {},
+    });
+
+    const handle = screen.getByLabelText('Resize window from bottom-right corner');
+
+    act(() => {
+      fireEvent.pointerDown(handle, { pointerId: 1, clientX: 760, clientY: 640, button: 0 });
+    });
+    const instance = ref.current as any;
+    act(() => {
+      instance.handleResizePointerMove({ clientX: 820, clientY: 700 });
+    });
+    act(() => {
+      instance.endResizeSession();
+    });
+
+    const expectedWidth = ((640 + 60) / window.innerWidth) * 100;
+    const expectedHeight = ((480 + 60) / window.innerHeight) * 100;
+
+    expect(ref.current!.state.width).toBeCloseTo(expectedWidth, 5);
+    expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 5);
+  });
+
+  it('adjusts translation when resizing from the top-left corner', () => {
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')! as HTMLElement;
+    winEl.style.transform = 'translate(200px, 180px)';
+    winEl.style.setProperty('--window-transform-x', '200px');
+    winEl.style.setProperty('--window-transform-y', '180px');
+    winEl.getBoundingClientRect = () => ({
+      left: 200,
+      top: 180,
+      right: 600,
+      bottom: 480,
+      width: 400,
+      height: 300,
+      x: 200,
+      y: 180,
+      toJSON: () => {},
+    });
+
+    const handle = screen.getByLabelText('Resize window from top-left corner');
+
+    act(() => {
+      fireEvent.pointerDown(handle, { pointerId: 2, clientX: 200, clientY: 180, button: 0 });
+    });
+    const instance = ref.current as any;
+    act(() => {
+      instance.handleResizePointerMove({ clientX: 160, clientY: 150 });
+    });
+    act(() => {
+      instance.endResizeSession();
+    });
+
+    const expectedWidth = ((400 + 40) / window.innerWidth) * 100;
+    const expectedHeight = ((300 + 30) / window.innerHeight) * 100;
+
+    expect(ref.current!.state.width).toBeCloseTo(expectedWidth, 5);
+    expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 5);
+    expect(winEl.style.transform).toBe('translate(160px, 150px)');
+    expect(winEl.style.getPropertyValue('--window-transform-x')).toBe('160px');
+    expect(winEl.style.getPropertyValue('--window-transform-y')).toBe('150px');
+  });
+});
+
 describe('Window maximize behavior', () => {
   it('respects safe-area aware top offset when maximizing', () => {
     const safeTop = DESKTOP_TOP_PADDING + 48;
