@@ -40,17 +40,24 @@ class ShortcutSelector extends React.Component {
 
     renderApps = () => {
         const apps = this.state.apps || [];
-        return apps.map((app) => (
-            <UbuntuApp
-                key={app.id}
-                name={app.title}
-                id={app.id}
-                icon={app.icon}
-                openApp={() => this.selectApp(app.id)}
-                disabled={app.disabled}
-                prefetch={app.screen?.prefetch}
-            />
-        ));
+        const { closedWindows = {}, minimizedWindows = {} } = this.props;
+        return apps.map((app) => {
+            const isRunning = closedWindows[app.id] === false;
+            const isMinimized = isRunning && Boolean(minimizedWindows[app.id]);
+            return (
+                <UbuntuApp
+                    key={app.id}
+                    name={app.title}
+                    id={app.id}
+                    icon={app.icon}
+                    openApp={() => this.selectApp(app.id)}
+                    disabled={app.disabled}
+                    prefetch={app.screen?.prefetch}
+                    isRunning={isRunning}
+                    isMinimized={isMinimized}
+                />
+            );
+        });
     };
 
     render() {
