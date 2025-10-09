@@ -8,6 +8,7 @@ import {
   defaults,
   exportSettings as exportSettingsData,
   importSettings as importSettingsData,
+  type SettingsImportPayload,
 } from "../../utils/settingsStore";
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
@@ -74,7 +75,7 @@ export default function Settings() {
     const text = await file.text();
     await importSettingsData(text);
     try {
-      const parsed = JSON.parse(text);
+      const parsed = JSON.parse(text) as SettingsImportPayload;
       if (parsed.accent !== undefined) setAccent(parsed.accent);
       if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
       if (parsed.density !== undefined) setDensity(parsed.density);
@@ -100,7 +101,7 @@ export default function Settings() {
     window.localStorage.clear();
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
-    setDensity(defaults.density as any);
+    setDensity(defaults.density);
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
@@ -157,15 +158,23 @@ export default function Settings() {
             </div>
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey flex items-center">
+            <div className="flex items-center text-ubt-grey">
               <input
+                id="use-kali-wallpaper"
                 type="checkbox"
                 checked={useKaliWallpaper}
                 onChange={(e) => setUseKaliWallpaper(e.target.checked)}
                 className="mr-2"
+                aria-labelledby="use-kali-wallpaper-label"
               />
-              Kali Gradient Wallpaper
-            </label>
+              <label
+                id="use-kali-wallpaper-label"
+                htmlFor="use-kali-wallpaper"
+                className="cursor-pointer"
+              >
+                Kali Gradient Wallpaper
+              </label>
+            </div>
           </div>
           {useKaliWallpaper && (
             <p className="text-center text-xs text-ubt-grey/70 px-6 -mt-2 mb-4">
