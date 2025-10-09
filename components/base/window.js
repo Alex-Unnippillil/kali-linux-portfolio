@@ -95,6 +95,7 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = this.getWindowNode();
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        root?.addEventListener('desktop-apply-layout', this.handleApplyLayout);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -108,6 +109,7 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = this.getWindowNode();
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        root?.removeEventListener('desktop-apply-layout', this.handleApplyLayout);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -448,6 +450,94 @@ export class Window extends Component {
             this.applyEdgeResistance(data.node, data);
         }
         this.checkSnapPreview();
+    }
+
+    handleApplyLayout = (event) => {
+        const detail = event?.detail;
+        if (!detail) return;
+        const node = this.getWindowNode();
+        if (!node) return;
+
+        const parseStoredPosition = (value, fallback) => {
+            if (typeof value === 'string') {
+                const parsed = parseFloat(value);
+                if (Number.isFinite(parsed)) {
+                    return parsed;
+                }
+            }
+            if (typeof value === 'number' && Number.isFinite(value)) {
+                return value;
+            }
+            return fallback;
+        };
+
+        const safeTop = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const updatePayload = {};
+        let sizeChanged = false;
+
+        if (typeof detail.widthPercent === 'number' && Number.isFinite(detail.widthPercent)) {
+            const widthPercent = clamp(detail.widthPercent, 10, 100.2);
+            if (this.state.width !== widthPercent) {
+                updatePayload.width = widthPercent;
+                sizeChanged = true;
+            }
+        }
+
+        if (typeof detail.heightPercent === 'number' && Number.isFinite(detail.heightPercent)) {
+            const heightPercent = clamp(detail.heightPercent, 10, 100);
+            if (this.state.height !== heightPercent) {
+                updatePayload.height = heightPercent;
+                sizeChanged = true;
+            }
+        }
+
+        if (this.state.maximized) {
+            updatePayload.maximized = false;
+        }
+        if (this.state.snapped) {
+            updatePayload.snapped = null;
+            updatePayload.lastSize = null;
+        }
+        if (this.state.snapPreview || this.state.snapPosition) {
+            updatePayload.snapPreview = null;
+            updatePayload.snapPosition = null;
+        }
+        if (this.state.cursorType !== 'cursor-default') {
+            updatePayload.cursorType = 'cursor-default';
+        }
+        if (this.state.grabbed) {
+            updatePayload.grabbed = false;
+        }
+
+        const applyState = Object.keys(updatePayload).length > 0;
+        if (applyState) {
+            this.setState(updatePayload, () => {
+                if (sizeChanged) {
+                    this.resizeBoundries();
+                }
+            });
+        } else if (sizeChanged) {
+            this.resizeBoundries();
+        }
+
+        const hasX = typeof detail.x === 'number' && Number.isFinite(detail.x);
+        const hasY = typeof detail.y === 'number' && Number.isFinite(detail.y);
+        if (!hasX && !hasY) {
+            return;
+        }
+
+        const storedX = node.style.getPropertyValue('--window-transform-x');
+        const storedY = node.style.getPropertyValue('--window-transform-y');
+        const fallbackX = parseStoredPosition(storedX, this.startX);
+        const fallbackY = parseStoredPosition(storedY, this.startY);
+        const nextX = hasX ? detail.x : fallbackX;
+        const rawY = hasY ? detail.y : fallbackY;
+        const nextY = clampWindowTopPosition(rawY, safeTop);
+
+        node.style.setProperty('--window-transform-x', `${nextX}px`);
+        node.style.setProperty('--window-transform-y', `${nextY}px`);
+        this.setTransformMotionPreset(node, 'snap');
+        node.style.transform = `translate(${nextX}px, ${nextY}px)`;
     }
 
     handleStop = () => {

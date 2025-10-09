@@ -27,6 +27,7 @@ import {
     clampWindowPositionWithinViewport,
     clampWindowTopPosition,
     getSafeAreaInsets,
+    computeTiledLayout,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 
@@ -42,6 +43,7 @@ export class Desktop extends Component {
             'closed_windows',
             'minimized_windows',
             'window_positions',
+            'window_layouts',
         ]);
         this.initFavourite = {};
         this.allWindowClosed = false;
@@ -53,6 +55,7 @@ export class Desktop extends Component {
             favourite_apps: {},
             minimized_windows: {},
             window_positions: {},
+            window_layouts: {},
             desktop_apps: [],
             desktop_icon_positions: {},
             window_context: {},
@@ -106,6 +109,7 @@ export class Desktop extends Component {
         closed_windows: {},
         minimized_windows: {},
         window_positions: {},
+        window_layouts: {},
     });
 
     cloneWorkspaceState = (state) => ({
@@ -113,6 +117,7 @@ export class Desktop extends Component {
         closed_windows: { ...state.closed_windows },
         minimized_windows: { ...state.minimized_windows },
         window_positions: { ...state.window_positions },
+        window_layouts: { ...state.window_layouts },
     });
 
     commitWorkspacePartial = (partial, index) => {
@@ -466,6 +471,7 @@ export class Desktop extends Component {
                 closed_windows: this.mergeWorkspaceMaps(existing.closed_windows, baseState.closed_windows, validKeys),
                 minimized_windows: this.mergeWorkspaceMaps(existing.minimized_windows, baseState.minimized_windows, validKeys),
                 window_positions: this.mergeWorkspaceMaps(existing.window_positions, baseState.window_positions, validKeys),
+                window_layouts: this.mergeWorkspaceMaps(existing.window_layouts, baseState.window_layouts, validKeys),
             };
         });
     };
@@ -850,6 +856,7 @@ export class Desktop extends Component {
             closed_windows: { ...snapshot.closed_windows },
             minimized_windows: { ...snapshot.minimized_windows },
             window_positions: { ...snapshot.window_positions },
+            window_layouts: { ...snapshot.window_layouts },
             showWindowSwitcher: false,
             switcherWindows: [],
         }, () => {
@@ -1362,6 +1369,7 @@ export class Desktop extends Component {
             closed_windows,
             minimized_windows,
             window_positions: this.state.window_positions || {},
+            window_layouts: this.state.window_layouts || {},
         };
         this.updateWorkspaceSnapshots(workspaceState);
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
@@ -1399,6 +1407,7 @@ export class Desktop extends Component {
             closed_windows,
             minimized_windows,
             window_positions: this.state.window_positions || {},
+            window_layouts: this.state.window_layouts || {},
         };
         this.updateWorkspaceSnapshots(workspaceState);
         this.setWorkspaceState({
@@ -1549,6 +1558,103 @@ export class Desktop extends Component {
         this.setWorkspaceState(prev => ({
             window_positions: { ...prev.window_positions, [id]: { x: nextX, y: nextY } }
         }), this.saveSession);
+    }
+
+    applyWindowLayout = ({ id, x, y, widthPercent, heightPercent }) => {
+        if (!id || typeof document === 'undefined') return;
+        const node = document.getElementById(id);
+        if (!node) return;
+        const detail = {
+            x,
+            y,
+            widthPercent,
+            heightPercent,
+        };
+        let event;
+        try {
+            event = new CustomEvent('desktop-apply-layout', { detail });
+        } catch (error) {
+            if (typeof document.createEvent === 'function') {
+                event = document.createEvent('CustomEvent');
+                event.initCustomEvent('desktop-apply-layout', true, true, detail);
+            }
+        }
+        if (event) {
+            node.dispatchEvent(event);
+        }
+    }
+
+    scheduleLayoutApplication = (assignments) => {
+        if (!Array.isArray(assignments) || assignments.length === 0) return;
+        const apply = () => {
+            assignments.forEach((assignment) => {
+                this.applyWindowLayout(assignment);
+            });
+        };
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(apply);
+        } else {
+            apply();
+        }
+    }
+
+    tileWindows = () => {
+        this.hideAllContextMenu();
+        if (typeof window === 'undefined') return;
+        const { closed_windows = {}, minimized_windows = {} } = this.state;
+        const openIds = Object.keys(closed_windows).filter((id) => closed_windows[id] === false && !minimized_windows[id]);
+        if (!openIds.length) return;
+
+        const viewportWidth = typeof window.innerWidth === 'number' ? window.innerWidth : 0;
+        const viewportHeight = typeof window.innerHeight === 'number' ? window.innerHeight : 0;
+        if (!viewportWidth || !viewportHeight) return;
+
+        const safeAreas = getSafeAreaInsets();
+        const layouts = computeTiledLayout(openIds.length, {
+            viewportWidth,
+            viewportHeight,
+            topOffset: measureWindowTopOffset(),
+            bottomInset: safeAreas.bottom,
+        });
+        if (!layouts.length) return;
+
+        const assignments = openIds.map((id, index) => {
+            const layout = layouts[Math.min(index, layouts.length - 1)];
+            return {
+                id,
+                x: layout.x,
+                y: layout.y,
+                widthPercent: layout.widthPercent,
+                heightPercent: layout.heightPercent,
+            };
+        });
+
+        assignments.forEach(({ id, x, y }) => {
+            this.updateWindowPosition(id, x, y);
+        });
+
+        let layoutChanged = false;
+        this.setWorkspaceState((prevState) => {
+            const baseLayouts = prevState.window_layouts || {};
+            const nextLayouts = { ...baseLayouts };
+            let changed = false;
+            assignments.forEach(({ id, widthPercent, heightPercent }) => {
+                const existing = nextLayouts[id] || {};
+                if (existing.width !== widthPercent || existing.height !== heightPercent) {
+                    nextLayouts[id] = { width: widthPercent, height: heightPercent };
+                    changed = true;
+                }
+            });
+            layoutChanged = changed;
+            if (!changed) return null;
+            return { window_layouts: nextLayouts };
+        }, () => {
+            this.scheduleLayoutApplication(assignments);
+        });
+
+        if (!layoutChanged) {
+            this.scheduleLayoutApplication(assignments);
+        }
     }
 
     saveSession = () => {
@@ -1769,11 +1875,16 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setWorkspaceState({ closed_windows, favourite_apps }, this.saveSession);
+        const window_layouts = { ...this.state.window_layouts };
+        if (Object.prototype.hasOwnProperty.call(window_layouts, objId)) {
+            delete window_layouts[objId];
+        }
+
+        this.setWorkspaceState({ closed_windows, favourite_apps, window_layouts }, this.saveSession);
 
         const window_context = { ...this.state.window_context };
         delete window_context[objId];
-        this.setState({ closed_windows, favourite_apps, window_context }, this.saveSession);
+        this.setState({ closed_windows, favourite_apps, window_context, window_layouts }, this.saveSession);
     }
 
     pinApp = (id) => {
@@ -1984,6 +2095,7 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    tileWindows={this.tileWindows}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
