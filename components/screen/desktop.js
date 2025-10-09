@@ -27,6 +27,7 @@ import {
     clampWindowPositionWithinViewport,
     clampWindowTopPosition,
     getSafeAreaInsets,
+    updateDocumentSafeAreaProperties,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 
@@ -187,12 +188,13 @@ export class Desktop extends Component {
         const basePadding = isCoarse
             ? { top: 72, right: 32, bottom: 168, left: 32 }
             : { ...this.defaultDesktopPadding };
-        const safeArea = getSafeAreaInsets();
+        const { insets: safeArea } = updateDocumentSafeAreaProperties() || {};
+        const resolvedSafeArea = safeArea || getSafeAreaInsets();
         const nextPadding = {
-            top: basePadding.top + safeArea.top,
-            right: basePadding.right + safeArea.right,
-            bottom: basePadding.bottom + safeArea.bottom,
-            left: basePadding.left + safeArea.left,
+            top: basePadding.top + resolvedSafeArea.top,
+            right: basePadding.right + resolvedSafeArea.right,
+            bottom: basePadding.bottom + resolvedSafeArea.bottom,
+            left: basePadding.left + resolvedSafeArea.left,
         };
 
         const changed =

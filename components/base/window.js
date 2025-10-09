@@ -10,6 +10,7 @@ import {
     clampWindowTopPosition,
     DEFAULT_WINDOW_TOP_OFFSET,
     measureSafeAreaInset,
+    updateDocumentSafeAreaProperties,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
@@ -134,6 +135,7 @@ export class Window extends Component {
     }
 
     resizeBoundries = () => {
+        updateDocumentSafeAreaProperties();
         const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
         const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
         const topInset = typeof window !== 'undefined'
