@@ -62,6 +62,21 @@
   transition: opacity var(--window-motion-duration-snap-preview) var(--window-motion-ease-snap-preview);
 }
 
+.snapPreviewGlass {
+  border-radius: 8px;
+  border: 1px solid rgba(64, 145, 255, 0.8);
+  background: linear-gradient(
+    135deg,
+    rgba(64, 145, 255, 0.28) 0%,
+    rgba(64, 145, 255, 0.16) 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(125, 185, 255, 0.45),
+    0 24px 48px rgba(15, 23, 42, 0.35);
+  backdrop-filter: brightness(1.1) saturate(1.2);
+  -webkit-backdrop-filter: brightness(1.1) saturate(1.2);
+}
+
 .windowTitlebar {
   height: 28px;
   border-top-left-radius: calc(var(--radius-6) - 1px);

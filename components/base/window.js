@@ -671,14 +671,14 @@ export class Window extends Component {
                 {this.state.snapPreview && (
                     <div
                         data-testid="snap-preview"
-                        className={`fixed border-2 border-dashed border-white bg-white bg-opacity-10 pointer-events-none z-40 transition-opacity ${styles.snapPreview}`}
+                        className={`fixed pointer-events-none z-40 transition-opacity ${styles.snapPreview} ${styles.snapPreviewGlass}`}
                         style={{
                             left: `${this.state.snapPreview.left}px`,
                             top: `${this.state.snapPreview.top}px`,
                             width: `${this.state.snapPreview.width}px`,
                             height: `${this.state.snapPreview.height}px`,
-                            backdropFilter: 'brightness(1.2)',
-                            WebkitBackdropFilter: 'brightness(1.2)'
+                            backdropFilter: 'brightness(1.1) saturate(1.2)',
+                            WebkitBackdropFilter: 'brightness(1.1) saturate(1.2)'
 
                         }}
                     />
