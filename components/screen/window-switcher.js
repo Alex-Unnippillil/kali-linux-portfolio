@@ -56,6 +56,19 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
     setSelected(0);
   };
 
+  const handleSelectWindow = (windowId) => {
+    if (typeof onSelect === 'function') {
+      onSelect(windowId);
+    }
+  };
+
+  const handleActivateSelection = () => {
+    const win = filtered[selected];
+    if (win) {
+      handleSelectWindow(win.id);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 text-white">
       <div className="bg-ub-grey p-4 rounded w-3/4 md:w-1/3">
@@ -63,7 +76,13 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
           ref={inputRef}
           value={query}
           onChange={handleChange}
-          onKeyDown={handleKeyDown}
+          onKeyDown={(e) => {
+            handleKeyDown(e);
+            if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar' || e.key === 'Space') {
+              e.preventDefault();
+              handleActivateSelection();
+            }
+          }}
           className="w-full mb-4 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
           placeholder="Search windows"
         />
@@ -71,9 +90,22 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
           {filtered.map((w, i) => (
             <li
               key={w.id}
-              className={`px-2 py-1 rounded ${i === selected ? 'bg-ub-orange text-black' : ''}`}
             >
-              {w.title}
+              <button
+                type="button"
+                onClick={() => handleSelectWindow(w.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar' || e.key === 'Space') {
+                    e.preventDefault();
+                    handleSelectWindow(w.id);
+                  }
+                }}
+                className={`w-full text-left px-2 py-1 rounded ${
+                  i === selected ? 'bg-ub-orange text-black' : ''
+                }`}
+              >
+                {w.title}
+              </button>
             </li>
           ))}
         </ul>
