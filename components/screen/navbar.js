@@ -184,10 +184,10 @@ export default class Navbar extends PureComponent {
                         return (
                                 <div
                                         className="main-navbar-vp fixed inset-x-0 top-0 z-50 flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
-                                        style={{
+                                style={{
                                                 minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
-                                                paddingTop: `calc(var(--safe-area-top, 0px) + 0.5rem)`,
-                                                paddingBottom: '0.5rem',
+                                                paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
+                                                paddingBottom: '0.25rem',
                                                 paddingLeft: `calc(0.75rem + var(--safe-area-left, 0px))`,
                                                 paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
                                         }}
