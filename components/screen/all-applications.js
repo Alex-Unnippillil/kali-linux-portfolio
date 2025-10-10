@@ -108,6 +108,13 @@ class AllApplications extends React.Component {
         });
     };
 
+    handleClose = () => {
+        const { onClose } = this.props;
+        if (typeof onClose === 'function') {
+            onClose();
+        }
+    };
+
     handleToggleFavorite = (event, id) => {
         event.preventDefault();
         event.stopPropagation();
@@ -184,13 +191,23 @@ class AllApplications extends React.Component {
 
         return (
             <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
-                <input
-                    className="mt-10 mb-8 w-2/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none md:w-1/3"
-                    placeholder="Search"
-                    value={this.state.query}
-                    onChange={this.handleChange}
-                    aria-label="Search applications"
-                />
+                <div className="mt-10 mb-6 flex w-full max-w-5xl items-center gap-4 px-6">
+                    <input
+                        className="flex-1 rounded bg-black bg-opacity-20 px-4 py-2 text-white focus:outline-none"
+                        placeholder="Search"
+                        value={this.state.query}
+                        onChange={this.handleChange}
+                        aria-label="Search applications"
+                    />
+                    <button
+                        type="button"
+                        onClick={this.handleClose}
+                        aria-label="Close"
+                        className="rounded bg-white/20 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                    >
+                        Close
+                    </button>
+                </div>
                 <div className="flex w-full max-w-5xl flex-col items-stretch px-6 pb-10">
                     {this.renderSection('Favorites', favoriteApps)}
                     {this.renderSection('Recent', recentApps)}
