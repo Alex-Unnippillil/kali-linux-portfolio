@@ -13,8 +13,10 @@ function BootingScreen(props) {
 
     return (
         <div
-            role="status"
-            aria-live="polite"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="booting-screen-title"
+            aria-describedby="booting-screen-status"
             aria-busy={props.visible}
             style={{
                 ...(isVisible ? { zIndex: '100' } : { zIndex: '-20' }),
@@ -30,7 +32,12 @@ function BootingScreen(props) {
                 </div>
 
                 <div className="relative flex flex-col items-center gap-6 px-6 text-center">
-                    <span className="text-xs uppercase tracking-[0.5em] text-slate-400">Initializing workspace</span>
+                    <span
+                        id="booting-screen-title"
+                        className="text-xs uppercase tracking-[0.5em] text-slate-400"
+                    >
+                        Initializing workspace
+                    </span>
                     <div className={`${visibilityClass} relative`}>
                         <div className="absolute -inset-6 rounded-full bg-sky-500/20 blur-3xl" aria-hidden />
                         <Image
@@ -67,14 +74,21 @@ function BootingScreen(props) {
                         )}
                     </button>
 
-                    <ul className="flex flex-col gap-2 text-sm text-slate-300">
-                        {bootMessages.map((message) => (
-                            <li key={message} className="flex items-center gap-3">
-                                <span className="inline-flex h-2 w-2 rounded-full bg-sky-400/70 shadow-[0_0_12px_rgba(56,189,248,0.7)] animate-[pulse_2s_ease-in-out_infinite]" aria-hidden />
-                                <span>{message}</span>
-                            </li>
-                        ))}
-                    </ul>
+                    <div
+                        id="booting-screen-status"
+                        role="status"
+                        aria-live="polite"
+                        className="flex flex-col gap-2 text-sm text-slate-300"
+                    >
+                        <ul>
+                            {bootMessages.map((message) => (
+                                <li key={message} className="flex items-center gap-3">
+                                    <span className="inline-flex h-2 w-2 rounded-full bg-sky-400/70 shadow-[0_0_12px_rgba(56,189,248,0.7)] animate-[pulse_2s_ease-in-out_infinite]" aria-hidden />
+                                    <span>{message}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
                 </div>
 
                 <div className="relative mb-6 flex gap-4 text-xs uppercase tracking-[0.4em] text-slate-500">
