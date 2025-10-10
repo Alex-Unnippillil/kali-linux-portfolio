@@ -69,9 +69,19 @@ function DesktopMenu(props) {
                 <span className="ml-5">Create Shortcut...</span>
             </button>
             <Devider />
-            <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
+            <button
+                onClick={props.onPaste}
+                type="button"
+                role="menuitem"
+                aria-label="Paste"
+                disabled={!props.canPaste}
+                aria-disabled={props.canPaste ? undefined : "true"}
+                className={(props.canPaste
+                    ? "hover:bg-ub-warm-grey hover:bg-opacity-20"
+                    : "text-gray-400 cursor-default") + " w-full text-left py-0.5 mb-1.5"}
+            >
                 <span className="ml-5">Paste</span>
-            </div>
+            </button>
             <Devider />
             <div role="menuitem" aria-label="Show Desktop in Files" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
                 <span className="ml-5">Show Desktop in Files</span>
