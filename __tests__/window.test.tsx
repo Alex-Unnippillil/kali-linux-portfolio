@@ -17,12 +17,15 @@ jest.mock('../utils/windowLayout', () => {
 const measureSafeAreaInsetMock = measureSafeAreaInset as jest.MockedFunction<typeof measureSafeAreaInset>;
 const measureWindowTopOffsetMock = measureWindowTopOffset as jest.MockedFunction<typeof measureWindowTopOffset>;
 
-const computeSnappedHeightPercent = () => {
+const computeAvailableHeightPx = () => {
   const topOffset = measureWindowTopOffset();
   const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
-  const availableHeight = window.innerHeight - topOffset - SNAP_BOTTOM_INSET - safeBottom;
-  return (availableHeight / window.innerHeight) * 100;
+  return window.innerHeight - topOffset - SNAP_BOTTOM_INSET - safeBottom;
 };
+
+const computeSnappedHeightPercent = () => (computeAvailableHeightPx() / window.innerHeight) * 100;
+
+const computeQuarterHeightPercent = () => computeSnappedHeightPercent() / 2;
 
 const getSnapOffsetTop = () => measureWindowTopOffset() - DESKTOP_TOP_PADDING;
 
@@ -185,7 +188,88 @@ describe('Window snapping preview', () => {
 
     expect(ref.current!.state.snapPosition).toBe('top');
     const preview = screen.getByTestId('snap-preview');
-    expect(preview).toHaveStyle(`height: ${window.innerHeight / 2}px`);
+    expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx()}px`);
+  });
+
+  it('shows corner preview when dragged near the top-left edge', () => {
+    setViewport(1600, 900);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 4,
+      top: 6,
+      right: 104,
+      bottom: 106,
+      width: 100,
+      height: 100,
+      x: 4,
+      y: 6,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+
+    expect(ref.current!.state.snapPosition).toBe('top-left');
+    const preview = screen.getByTestId('snap-preview');
+    expect(preview).toHaveStyle(`width: ${window.innerWidth / 2}px`);
+    expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx() / 2}px`);
+  });
+
+  it('shows corner preview when dragged near the bottom-right edge', () => {
+    setViewport(1600, 900);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 1490,
+      top: 770,
+      right: 1590,
+      bottom: 870,
+      width: 100,
+      height: 100,
+      x: 1490,
+      y: 770,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+
+    expect(ref.current!.state.snapPosition).toBe('bottom-right');
+    const preview = screen.getByTestId('snap-preview');
+    expect(preview).toHaveStyle(`left: ${window.innerWidth / 2}px`);
+    expect(preview).toHaveStyle(
+      `top: ${measureWindowTopOffset() + computeAvailableHeightPx() / 2}px`
+    );
+    expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx() / 2}px`);
   });
 });
 
@@ -316,9 +400,96 @@ describe('Window snapping finalize and release', () => {
 
     expect(ref.current!.state.snapped).toBe('top');
     expect(ref.current!.state.width).toBeCloseTo(100, 2);
-    expect(ref.current!.state.height).toBeCloseTo(50, 2);
+    expect(ref.current!.state.height).toBeCloseTo(computeSnappedHeightPercent(), 5);
     const topSnapOffset = getSnapOffsetTop();
     expect(winEl.style.transform).toBe(`translate(0px, ${topSnapOffset}px)`);
+  });
+
+  it('snaps window on drag stop near the top-left corner', () => {
+    setViewport(1440, 900);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 6,
+      top: 8,
+      right: 106,
+      bottom: 208,
+      width: 100,
+      height: 200,
+      x: 6,
+      y: 8,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(ref.current!.state.snapped).toBe('top-left');
+    expect(ref.current!.state.width).toBeCloseTo(50, 2);
+    expect(ref.current!.state.height).toBeCloseTo(computeQuarterHeightPercent(), 5);
+    const snapOffset = getSnapOffsetTop();
+    expect(winEl.style.transform).toBe(`translate(0px, ${snapOffset}px)`);
+  });
+
+  it('snaps window on drag stop near the bottom-right corner', () => {
+    setViewport(1600, 900);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 1500,
+      top: 760,
+      right: 1600,
+      bottom: 860,
+      width: 100,
+      height: 100,
+      x: 1500,
+      y: 760,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(ref.current!.state.snapped).toBe('bottom-right');
+    expect(ref.current!.state.width).toBeCloseTo(50, 2);
+    expect(ref.current!.state.height).toBeCloseTo(computeQuarterHeightPercent(), 5);
+    const expectedX = window.innerWidth / 2;
+    const expectedY = getSnapOffsetTop() + computeAvailableHeightPx() / 2;
+    expect(winEl.style.transform).toBe(`translate(${expectedX}px, ${expectedY}px)`);
   });
 
   it('releases snap with Alt+ArrowDown restoring size', () => {
