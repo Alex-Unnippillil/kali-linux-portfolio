@@ -4,6 +4,13 @@ import logger from '../../utils/logger'
 function DesktopMenu(props) {
 
     const [isFullScreen, setIsFullScreen] = useState(false)
+    const iconSizePreset = props.iconSizePreset || 'medium'
+    const setIconSizePreset = typeof props.setIconSizePreset === 'function' ? props.setIconSizePreset : () => { }
+    const iconSizeOptions = [
+        { value: 'small', label: 'Small Icons' },
+        { value: 'medium', label: 'Medium Icons' },
+        { value: 'large', label: 'Large Icons' },
+    ]
 
     useEffect(() => {
         document.addEventListener('fullscreenchange', checkFullScreen);
@@ -68,6 +75,31 @@ function DesktopMenu(props) {
             >
                 <span className="ml-5">Create Shortcut...</span>
             </button>
+            <Devider />
+            <div className="px-5 pb-1 text-xs tracking-wide uppercase text-ub-warm-grey text-opacity-80">
+                View
+            </div>
+            {iconSizeOptions.map((option) => {
+                const isActive = iconSizePreset === option.value
+                return (
+                    <button
+                        key={option.value}
+                        onClick={() => setIconSizePreset(option.value)}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={isActive}
+                        className={(isActive ? " text-ubt-blue " : "") + " group w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 flex items-center justify-between"}
+                    >
+                        <span className="ml-5">{option.label}</span>
+                        <span
+                            aria-hidden="true"
+                            className={(isActive ? " opacity-100 " : " opacity-0 group-hover:opacity-60 group-focus-visible:opacity-60 ") + " mr-5 text-xs transition-opacity"}
+                        >
+                            ✓
+                        </span>
+                    </button>
+                )
+            })}
             <Devider />
             <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
                 <span className="ml-5">Paste</span>
