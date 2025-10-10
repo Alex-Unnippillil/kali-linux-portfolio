@@ -1406,18 +1406,15 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
-        if (e.altKey && e.key === 'Tab') {
+        if (e.altKey && e.key === 'Tab' && !this.state.showWindowSwitcher) {
             e.preventDefault();
-            if (!this.state.showWindowSwitcher) {
-                this.openWindowSwitcher();
-            }
+            this.openWindowSwitcher();
+        } else if (e.altKey && e.key === 'Tab') {
+            e.preventDefault();
+            this.cycleApps(e.shiftKey ? -1 : 1);
         } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
-        }
-        else if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
         }
         else if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
