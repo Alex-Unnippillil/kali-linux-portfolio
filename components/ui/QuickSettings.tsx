@@ -13,6 +13,10 @@ const QuickSettings = ({ open }: Props) => {
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
 
+  const soundToggleId = 'quick-settings-sound-toggle';
+  const networkToggleId = 'quick-settings-network-toggle';
+  const reduceMotionToggleId = 'quick-settings-reduce-motion-toggle';
+
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
@@ -30,28 +34,44 @@ const QuickSettings = ({ open }: Props) => {
       <div className="px-4 pb-2">
         <button
           className="w-full flex justify-between"
+          aria-pressed={theme === 'dark'}
+          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
           onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
         >
           <span>Theme</span>
           <span>{theme === 'light' ? 'Light' : 'Dark'}</span>
         </button>
       </div>
-      <div className="px-4 pb-2 flex justify-between">
+      <label className="px-4 pb-2 flex justify-between" htmlFor={soundToggleId}>
         <span>Sound</span>
-        <input type="checkbox" checked={sound} onChange={() => setSound(!sound)} />
-      </div>
-      <div className="px-4 pb-2 flex justify-between">
+        <input
+          id={soundToggleId}
+          type="checkbox"
+          checked={sound}
+          aria-label="Sound"
+          onChange={() => setSound(!sound)}
+        />
+      </label>
+      <label className="px-4 pb-2 flex justify-between" htmlFor={networkToggleId}>
         <span>Network</span>
-        <input type="checkbox" checked={online} onChange={() => setOnline(!online)} />
-      </div>
-      <div className="px-4 flex justify-between">
+        <input
+          id={networkToggleId}
+          type="checkbox"
+          checked={online}
+          aria-label="Network"
+          onChange={() => setOnline(!online)}
+        />
+      </label>
+      <label className="px-4 flex justify-between" htmlFor={reduceMotionToggleId}>
         <span>Reduced motion</span>
         <input
+          id={reduceMotionToggleId}
           type="checkbox"
           checked={reduceMotion}
+          aria-label="Reduced motion"
           onChange={() => setReduceMotion(!reduceMotion)}
         />
-      </div>
+      </label>
     </div>
   );
 };
