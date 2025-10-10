@@ -825,7 +825,7 @@ export function WindowEditButtons(props) {
                 <button
                     type="button"
                     aria-label="Window pin"
-                    className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                    className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
                     onClick={togglePin}
                 >
                     <NextImage
@@ -841,7 +841,7 @@ export function WindowEditButtons(props) {
             <button
                 type="button"
                 aria-label="Window minimize"
-                className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
                 onClick={props.minimize}
             >
                 <NextImage
@@ -859,7 +859,7 @@ export function WindowEditButtons(props) {
                         <button
                             type="button"
                             aria-label="Window restore"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                            className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
                             onClick={props.maximize}
                         >
                             <NextImage
@@ -875,7 +875,7 @@ export function WindowEditButtons(props) {
                         <button
                             type="button"
                             aria-label="Window maximize"
-                            className="mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6"
+                            className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
                             onClick={props.maximize}
                         >
                             <NextImage
@@ -893,7 +893,7 @@ export function WindowEditButtons(props) {
                 type="button"
                 id={`close-${props.id}`}
                 aria-label="Window close"
-                className="mx-1 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6"
+                className={`${styles.windowControlButton} mx-1 cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6`}
                 onClick={props.close}
             >
                 <NextImage

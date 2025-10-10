@@ -74,6 +74,17 @@
   height: 28px;
 }
 
+.windowControlButton {
+  outline: none;
+  box-shadow: none;
+  transition: box-shadow var(--motion-fast) ease;
+}
+
+.windowControlButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-window-accent);
+}
+
 .windowYBorder {
   height: calc(100% - 10px);
   width: calc(100% + 10px);
