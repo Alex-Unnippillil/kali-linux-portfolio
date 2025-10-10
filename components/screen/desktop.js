@@ -1898,6 +1898,12 @@ export class Desktop extends Component {
 
     showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }); };
 
+    hideAllApps = () => {
+        if (this.state.allAppsView) {
+            this.setState({ allAppsView: false });
+        }
+    };
+
     renderNameBar = () => {
         const handleSubmit = (event) => {
             event.preventDefault();
@@ -2026,7 +2032,8 @@ export class Desktop extends Component {
                     <AllApplications apps={apps}
                         games={games}
                         recentApps={this.getActiveStack()}
-                        openApp={this.openApp} /> : null}
+                        openApp={this.openApp}
+                        onClose={this.hideAllApps} /> : null}
 
                 { this.state.showShortcutSelector ?
                     <ShortcutSelector apps={apps}
