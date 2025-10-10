@@ -2026,7 +2026,8 @@ export class Desktop extends Component {
                     <AllApplications apps={apps}
                         games={games}
                         recentApps={this.getActiveStack()}
-                        openApp={this.openApp} /> : null}
+                        openApp={this.openApp}
+                        onClose={() => this.setState({ allAppsView: false })} /> : null}
 
                 { this.state.showShortcutSelector ?
                     <ShortcutSelector apps={apps}
