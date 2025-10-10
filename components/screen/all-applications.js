@@ -1,9 +1,9 @@
 import React from 'react';
 import UbuntuApp from '../base/ubuntu_app';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { readRecentAppIds, writeRecentAppIds } from '../../utils/recentStorage';
 
 const FAVORITES_KEY = 'launcherFavorites';
-const RECENTS_KEY = 'recentApps';
 const GROUP_SIZE = 9;
 
 const readStoredIds = (key) => {
@@ -70,10 +70,10 @@ class AllApplications extends React.Component {
         });
         const availableIds = new Set(combined.map((app) => app.id));
         const favorites = sanitizeIds(readStoredIds(FAVORITES_KEY), availableIds);
-        const recents = sanitizeIds(readStoredIds(RECENTS_KEY), availableIds, 10);
+        const recents = sanitizeIds(readRecentAppIds(), availableIds, 10);
 
         persistIds(FAVORITES_KEY, favorites);
-        persistIds(RECENTS_KEY, recents);
+        writeRecentAppIds(recents);
 
         this.setState({
             apps: combined,
@@ -99,7 +99,7 @@ class AllApplications extends React.Component {
         this.setState((state) => {
             const filtered = state.recents.filter((recentId) => recentId !== id);
             const next = [id, ...filtered].slice(0, 10);
-            persistIds(RECENTS_KEY, next);
+            writeRecentAppIds(next);
             return { recents: next };
         }, () => {
             if (typeof this.props.openApp === 'function') {
