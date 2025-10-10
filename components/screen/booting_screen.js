@@ -38,7 +38,7 @@ function BootingScreen(props) {
                             height={360}
                             className="w-48 md:w-64"
                             src="/themes/Yaru/status/icons8-kali-linux.svg"
-                            alt="Ubuntu Logo"
+                            alt="Kali Linux logo"
                             sizes="(max-width: 768px) 12rem, 16rem"
                             priority
                         />
