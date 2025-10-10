@@ -1474,7 +1474,7 @@ export class Desktop extends Component {
                 className="absolute inset-0"
                 aria-hidden={blockIcons ? 'true' : 'false'}
                 style={{
-                    pointerEvents: 'auto',
+                    pointerEvents: blockIcons ? 'none' : 'auto',
                     zIndex: containerZIndex,
                 }}
             >
