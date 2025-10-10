@@ -31,6 +31,13 @@ import {
 } from '../../utils/windowLayout';
 
 
+const DESKTOP_SEARCH_TAGS = {
+    firefox: ['browser', 'web', 'internet', 'explore'],
+    about: ['portfolio', 'profile', 'resume', 'biography'],
+    trash: ['recycle bin', 'deleted items', 'cleanup', 'remove'],
+    gedit: ['contact', 'message', 'email', 'form'],
+};
+
 export class Desktop extends Component {
     constructor() {
         super();
@@ -73,13 +80,19 @@ export class Desktop extends Component {
                 label: `Workspace ${index + 1}`,
             })),
             draggingIconId: null,
+            desktopSearchActive: false,
+            desktopSearchQuery: '',
+            desktopSearchMatches: new Set(),
         }
 
         this.desktopRef = React.createRef();
         this.folderNameInputRef = React.createRef();
+        this.desktopSearchInputRef = React.createRef();
         this.iconDragState = null;
         this.preventNextIconClick = false;
         this.savedIconPositions = {};
+
+        this.desktopSearchRestoreTarget = null;
 
         this.defaultIconDimensions = { width: 96, height: 88 };
         this.defaultIconGridSpacing = { row: 112, column: 128 };
@@ -953,6 +966,15 @@ export class Desktop extends Component {
         ) {
             this.broadcastWorkspaceState();
         }
+        if (this.state.desktopSearchActive && prevState.desktop_apps !== this.state.desktop_apps) {
+            const nextMatches = this.computeDesktopSearchMatches(
+                this.state.desktopSearchQuery,
+                this.state.desktop_apps
+            );
+            if (!this.areSearchSetsEqual(this.state.desktopSearchMatches, nextMatches)) {
+                this.setState({ desktopSearchMatches: nextMatches });
+            }
+        }
     }
 
     componentWillUnmount() {
@@ -1134,8 +1156,187 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleContextKey);
     }
 
+    getDesktopSearchTerms = (id) => {
+        const app = apps.find((item) => item.id === id);
+        if (!app) return [];
+        const providedTags = Array.isArray(app.tags) ? app.tags : [];
+        const extraTags = Array.isArray(DESKTOP_SEARCH_TAGS[id]) ? DESKTOP_SEARCH_TAGS[id] : [];
+        const values = [app.title, app.id, ...providedTags, ...extraTags];
+        return values
+            .map((value) => (typeof value === 'string' ? value.trim().toLowerCase() : ''))
+            .filter(Boolean);
+    }
+
+    computeDesktopSearchMatches = (query, desktopApps = this.state.desktop_apps) => {
+        const list = Array.isArray(desktopApps) ? desktopApps : [];
+        const normalized = typeof query === 'string' ? query.trim().toLowerCase() : '';
+        if (!normalized) {
+            return new Set(list);
+        }
+        return new Set(
+            list.filter((id) => {
+                const terms = this.getDesktopSearchTerms(id);
+                return terms.some((term) => term.includes(normalized));
+            })
+        );
+    }
+
+    areSearchSetsEqual = (a, b) => {
+        if (a === b) return true;
+        if (!a || !b) return false;
+        if (a.size !== b.size) return false;
+        for (const value of a) {
+            if (!b.has(value)) return false;
+        }
+        return true;
+    }
+
+    activateDesktopSearch = () => {
+        if (this.state.desktopSearchActive) {
+            const existing = this.desktopSearchInputRef.current;
+            if (existing) {
+                existing.focus({ preventScroll: true });
+                existing.select();
+            }
+            return;
+        }
+        const activeElement = typeof document !== 'undefined' ? document.activeElement : null;
+        const restoreTarget = activeElement instanceof HTMLElement ? activeElement : null;
+        this.desktopSearchRestoreTarget = restoreTarget;
+        this.setState((prevState) => ({
+            desktopSearchActive: true,
+            desktopSearchQuery: '',
+            desktopSearchMatches: this.computeDesktopSearchMatches('', prevState.desktop_apps),
+        }), () => {
+            const input = this.desktopSearchInputRef.current;
+            if (input) {
+                input.focus({ preventScroll: true });
+                input.select();
+            }
+        });
+    }
+
+    closeDesktopSearch = () => {
+        this.setState({
+            desktopSearchActive: false,
+            desktopSearchQuery: '',
+            desktopSearchMatches: new Set(),
+        }, () => {
+            const restoreTarget = this.desktopSearchRestoreTarget;
+            this.desktopSearchRestoreTarget = null;
+            if (restoreTarget && typeof restoreTarget.focus === 'function') {
+                restoreTarget.focus({ preventScroll: true });
+                return;
+            }
+            const fallbackId = Array.isArray(this.state.desktop_apps) ? this.state.desktop_apps[0] : null;
+            if (fallbackId) {
+                this.focusDesktopIcon(fallbackId);
+            }
+        });
+    }
+
+    handleDesktopSearchChange = (event) => {
+        const value = event?.target?.value ?? '';
+        this.setState((prevState) => ({
+            desktopSearchQuery: value,
+            desktopSearchMatches: this.computeDesktopSearchMatches(value, prevState.desktop_apps),
+        }));
+    }
+
+    focusDesktopIcon = (id) => {
+        if (!id) return;
+        const element = typeof document !== 'undefined' ? document.getElementById('app-' + id) : null;
+        if (element && typeof element.focus === 'function') {
+            element.focus({ preventScroll: true });
+        }
+    }
+
+    handleDesktopSearchKeyDown = (event) => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            this.closeDesktopSearch();
+            return;
+        }
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            const [firstMatch] = this.state.desktopSearchMatches ? Array.from(this.state.desktopSearchMatches) : [];
+            if (firstMatch) {
+                this.focusDesktopIcon(firstMatch);
+                this.closeDesktopSearch();
+            }
+        }
+    }
+
+    renderDesktopSearchHighlight = (label, query) => {
+        if (typeof label !== 'string') return label;
+        const text = label;
+        const normalizedQuery = typeof query === 'string' ? query.trim().toLowerCase() : '';
+        if (!normalizedQuery) return text;
+        const lower = text.toLowerCase();
+        const index = lower.indexOf(normalizedQuery);
+        if (index === -1) return text;
+        const matchLength = normalizedQuery.length;
+        const before = text.slice(0, index);
+        const match = text.slice(index, index + matchLength);
+        const after = text.slice(index + matchLength);
+        return (
+            <>
+                {before}
+                <mark className="rounded bg-amber-300/90 px-0.5 text-black shadow-sm">{match}</mark>
+                {after}
+            </>
+        );
+    }
+
+    renderDesktopSearch = () => {
+        if (!this.state.desktopSearchActive) return null;
+        const query = this.state.desktopSearchQuery || '';
+        const matches = this.state.desktopSearchMatches || new Set();
+        const trimmed = query.trim();
+        const matchCount = trimmed ? matches.size : (Array.isArray(this.state.desktop_apps) ? this.state.desktop_apps.length : 0);
+        const message = trimmed
+            ? `${matchCount} match${matchCount === 1 ? '' : 'es'}`
+            : 'Type to filter by name or tag';
+
+        return (
+            <div className="pointer-events-none absolute inset-x-0 top-6 z-[70] flex justify-center">
+                <div className="pointer-events-auto flex w-full max-w-sm flex-col rounded-xl bg-black/70 p-4 text-sm text-white shadow-xl backdrop-blur">
+                    <div className="flex items-center justify-between gap-2">
+                        <label htmlFor="desktop-search-input" className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                            Search desktop
+                        </label>
+                        <button
+                            type="button"
+                            onClick={this.closeDesktopSearch}
+                            className="rounded-full p-1 text-xs text-white/70 transition hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-300"
+                            aria-label="Close desktop search"
+                        >
+                            ×
+                        </button>
+                    </div>
+                    <input
+                        id="desktop-search-input"
+                        ref={this.desktopSearchInputRef}
+                        type="search"
+                        autoComplete="off"
+                        value={query}
+                        onChange={this.handleDesktopSearchChange}
+                        onKeyDown={this.handleDesktopSearchKeyDown}
+                        className="mt-2 w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-base text-white placeholder-white/40 outline-none transition focus:border-emerald-300/70 focus:ring-2 focus:ring-emerald-400/60"
+                        placeholder="Filter icons…"
+                    />
+                    <p className="mt-2 text-xs text-white/60" aria-live="polite">{message}</p>
+                </div>
+            </div>
+        );
+    }
+
     handleGlobalShortcut = (e) => {
-        if (e.altKey && e.key === 'Tab') {
+        const key = typeof e.key === 'string' ? e.key.toLowerCase() : '';
+        if ((e.ctrlKey || e.metaKey) && key === 'f') {
+            e.preventDefault();
+            this.activateDesktopSearch();
+        } else if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.state.showWindowSwitcher) {
                 this.openWindowSwitcher();
@@ -1421,16 +1622,30 @@ export class Desktop extends Component {
     };
 
     renderDesktopApps = () => {
-        const { desktop_apps: desktopApps, desktop_icon_positions: positions = {}, draggingIconId } = this.state;
+        const {
+            desktop_apps: desktopApps,
+            desktop_icon_positions: positions = {},
+            draggingIconId,
+            desktopSearchActive,
+            desktopSearchQuery,
+            desktopSearchMatches,
+        } = this.state;
         if (!desktopApps || desktopApps.length === 0) return null;
 
         const hasOpenWindows = this.hasVisibleWindows();
         const blockIcons = hasOpenWindows && !draggingIconId;
         const iconBaseZIndex = 15;
         const containerZIndex = blockIcons ? 5 : 15;
+        const normalizedQuery = typeof desktopSearchQuery === 'string' ? desktopSearchQuery.trim().toLowerCase() : '';
+        const filtering = desktopSearchActive && normalizedQuery.length > 0;
+        const matchSet = filtering ? desktopSearchMatches || new Set() : null;
         const icons = desktopApps.map((appId, index) => {
             const app = apps.find((item) => item.id === appId);
             if (!app) return null;
+
+            if (filtering && !(matchSet && matchSet.has(app.id))) {
+                return null;
+            }
 
             const props = {
                 name: app.title,
@@ -1440,6 +1655,16 @@ export class Desktop extends Component {
                 disabled: this.state.disabled_apps[app.id],
                 prefetch: app.screen?.prefetch,
             };
+
+            if (filtering) {
+                props.displayName = this.renderDesktopSearchHighlight(app.title, desktopSearchQuery);
+                props.style = {
+                    boxShadow: '0 0 0 2px rgba(253, 224, 71, 0.75)',
+                    backgroundColor: 'rgba(253, 224, 71, 0.18)',
+                };
+            } else if (desktopSearchActive && !normalizedQuery) {
+                props.displayName = this.renderDesktopSearchHighlight(app.title, desktopSearchQuery);
+            }
 
             const position = positions[appId] || this.computeGridPosition(index);
             const isDragging = draggingIconId === appId;
@@ -1977,6 +2202,7 @@ export class Desktop extends Component {
 
                 {/* Desktop Apps */}
                 {this.renderDesktopApps()}
+                {this.renderDesktopSearch()}
 
                 {/* Context Menus */}
                 <DesktopMenu
