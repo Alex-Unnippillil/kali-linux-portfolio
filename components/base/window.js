@@ -78,6 +78,7 @@ export class Window extends Component {
         this.windowRef = React.createRef();
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
+        this._maximizedAtPointerDown = undefined;
         this._menuOpener = null;
     }
 
@@ -460,7 +461,10 @@ export class Window extends Component {
         }
     }
 
-    focusWindow = () => {
+    focusWindow = (event) => {
+        if (event?.type === 'pointerdown') {
+            this._maximizedAtPointerDown = this.state.maximized;
+        }
         this.props.focus(this.id);
     }
 
@@ -470,6 +474,14 @@ export class Window extends Component {
             event.stopPropagation();
         }
         if (this.props.allowMaximize === false) return;
+        const wasMaximized = this._maximizedAtPointerDown ?? this.state.maximized;
+        this._maximizedAtPointerDown = undefined;
+        if (wasMaximized) {
+            if (this.state.maximized) {
+                this.restoreWindow();
+            }
+            return;
+        }
         if (this.state.maximized) {
             this.restoreWindow();
         } else {
