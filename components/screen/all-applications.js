@@ -81,6 +81,16 @@ class AllApplications extends React.Component {
             favorites,
             recents,
         });
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('keydown', this.handleGlobalKeyDown);
+        }
+    }
+
+    componentWillUnmount() {
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('keydown', this.handleGlobalKeyDown);
+        }
     }
 
     handleChange = (e) => {
@@ -106,6 +116,19 @@ class AllApplications extends React.Component {
                 this.props.openApp(id);
             }
         });
+    };
+
+    handleClose = () => {
+        if (typeof this.props.onClose === 'function') {
+            this.props.onClose();
+        }
+    };
+
+    handleGlobalKeyDown = (event) => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            this.handleClose();
+        }
     };
 
     handleToggleFavorite = (event, id) => {
@@ -183,25 +206,43 @@ class AllApplications extends React.Component {
             groupedApps.some((group) => group.length > 0);
 
         return (
-            <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
-                <input
-                    className="mt-10 mb-8 w-2/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none md:w-1/3"
-                    placeholder="Search"
-                    value={this.state.query}
-                    onChange={this.handleChange}
-                    aria-label="Search applications"
+            <div className="fixed inset-0 z-50">
+                <div
+                    className="absolute inset-0 bg-ub-grey bg-opacity-95"
+                    onClick={this.handleClose}
+                    role="presentation"
+                    aria-hidden="true"
                 />
-                <div className="flex w-full max-w-5xl flex-col items-stretch px-6 pb-10">
-                    {this.renderSection('Favorites', favoriteApps)}
-                    {this.renderSection('Recent', recentApps)}
-                    {groupedApps.map((group, index) =>
-                        group.length ? this.renderSection(`Group ${index + 1}`, group) : null
-                    )}
-                    {!hasResults && (
-                        <p className="mt-6 text-center text-sm text-white/70">
-                            No applications match your search.
-                        </p>
-                    )}
+                <div className="all-apps-anim relative z-10 flex h-full flex-col items-center overflow-y-auto">
+                    <div className="flex w-full max-w-5xl justify-end px-6 pt-6">
+                        <button
+                            type="button"
+                            onClick={this.handleClose}
+                            className="rounded-full border border-white/20 bg-black/40 px-3 py-1 text-sm text-white transition hover:bg-black/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                            aria-label="Close all applications"
+                        >
+                            Close
+                        </button>
+                    </div>
+                    <input
+                        className="mt-4 mb-8 w-2/3 rounded bg-black bg-opacity-20 px-4 py-2 text-white focus:outline-none md:w-1/3"
+                        placeholder="Search"
+                        value={this.state.query}
+                        onChange={this.handleChange}
+                        aria-label="Search applications"
+                    />
+                    <div className="flex w-full max-w-5xl flex-col items-stretch px-6 pb-10">
+                        {this.renderSection('Favorites', favoriteApps)}
+                        {this.renderSection('Recent', recentApps)}
+                        {groupedApps.map((group, index) =>
+                            group.length ? this.renderSection(`Group ${index + 1}`, group) : null
+                        )}
+                        {!hasResults && (
+                            <p className="mt-6 text-center text-sm text-white/70">
+                                No applications match your search.
+                            </p>
+                        )}
+                    </div>
                 </div>
             </div>
         );
