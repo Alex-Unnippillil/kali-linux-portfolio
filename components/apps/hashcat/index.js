@@ -73,25 +73,97 @@ export const detectHashType = (hash) => {
   return type ? type.id : hashTypes[0].id;
 };
 
+const digitChars = '0123456789'.split('');
+const lowerChars = 'abcdefghijklmnopqrstuvwxyz'.split('');
+const upperChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const specialChars = [
+  ' ',
+  '!',
+  '"',
+  '#',
+  '$',
+  '%',
+  '&',
+  "'",
+  '(',
+  ')',
+  '*',
+  '+',
+  ',',
+  '-',
+  '.',
+  '/',
+  ':',
+  ';',
+  '<',
+  '=',
+  '>',
+  '?',
+  '@',
+  '[',
+  '\\',
+  ']',
+  '^',
+  '_',
+  '`',
+  '{',
+  '|',
+  '}',
+  '~',
+];
+
+const maskTokenSets = {
+  '?d': digitChars,
+  '?l': lowerChars,
+  '?u': upperChars,
+  '?s': specialChars,
+};
+
+maskTokenSets['?a'] = [
+  ...maskTokenSets['?l'],
+  ...maskTokenSets['?u'],
+  ...maskTokenSets['?d'],
+  ...maskTokenSets['?s'],
+];
+
 export const generateWordlist = (pattern) => {
+  const mask = pattern || '';
+  if (!mask.length) {
+    return [''];
+  }
+
+  const tokens = [];
+  for (let i = 0; i < mask.length; i++) {
+    if (mask[i] === '?' && i < mask.length - 1) {
+      const token = `?${mask[i + 1]}`;
+      const charset = maskTokenSets[token];
+      if (charset) {
+        tokens.push(charset);
+        i += 1;
+        continue;
+      }
+    }
+    tokens.push([mask[i]]);
+  }
+
   const results = [];
   const max = 1000;
-  const helper = (prefix, rest) => {
-    if (results.length >= max) return;
-    if (!rest.length) {
+
+  const helper = (index, prefix) => {
+    if (results.length >= max) {
+      return;
+    }
+    if (index === tokens.length) {
       results.push(prefix);
       return;
     }
-    const ch = rest[0];
-    if (ch === '?') {
-      for (let i = 0; i < 10 && results.length < max; i++) {
-        helper(prefix + i, rest.slice(1));
-      }
-    } else {
-      helper(prefix + ch, rest.slice(1));
+    const choices = tokens[index];
+    for (let j = 0; j < choices.length && results.length < max; j++) {
+      helper(index + 1, prefix + choices[j]);
     }
   };
-  helper('', pattern || '');
+
+  helper(0, '');
   return results;
 };
 
