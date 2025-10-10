@@ -67,3 +67,28 @@ describe('WhiskerMenu touch pointer behavior', () => {
     });
   });
 });
+
+describe('WhiskerMenu accessibility attributes', () => {
+  it('updates aria attributes when the menu toggles', async () => {
+    render(<WhiskerMenu />);
+
+    const button = screen.getByRole('button', { name: /applications/i });
+
+    expect(button).toHaveAttribute('aria-haspopup', 'menu');
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+    expect(button).toHaveAttribute('aria-controls', 'whisker-menu-dropdown');
+
+    fireEvent.click(button);
+
+    const menu = await screen.findByTestId('whisker-menu-dropdown');
+    expect(menu).toHaveAttribute('id', 'whisker-menu-dropdown');
+    expect(button).toHaveAttribute('aria-expanded', 'true');
+
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(button).toHaveAttribute('aria-expanded', 'false');
+      expect(screen.queryByTestId('whisker-menu-dropdown')).not.toBeInTheDocument();
+    });
+  });
+});
