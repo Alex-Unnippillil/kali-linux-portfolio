@@ -75,6 +75,9 @@ export class Desktop extends Component {
             draggingIconId: null,
             keyboardMoveState: null,
             liveRegionMessage: '',
+            selectionRect: null,
+            selectedIconIds: [],
+            isSelecting: false,
         }
 
         this.desktopRef = React.createRef();
@@ -82,6 +85,7 @@ export class Desktop extends Component {
         this.iconDragState = null;
         this.preventNextIconClick = false;
         this.savedIconPositions = {};
+        this.desktopSelection = null;
 
         this.defaultIconDimensions = { width: 96, height: 88 };
         this.defaultIconGridSpacing = { row: 112, column: 128 };
@@ -567,6 +571,219 @@ export class Desktop extends Component {
         return { width: 1280, height: 720 };
     };
 
+    transformClientPointToDesktop = (clientX, clientY) => {
+        const node = this.desktopRef?.current;
+        if (!node) return null;
+        const rect = node.getBoundingClientRect();
+        const x = clientX - rect.left + (node.scrollLeft || 0);
+        const y = clientY - rect.top + (node.scrollTop || 0);
+        return { x, y };
+    };
+
+    normalizeSelectionRect = (origin, current) => {
+        if (!origin || !current) return null;
+        const left = Math.min(origin.x, current.x);
+        const top = Math.min(origin.y, current.y);
+        const width = Math.abs(current.x - origin.x);
+        const height = Math.abs(current.y - origin.y);
+        return {
+            left,
+            top,
+            width,
+            height,
+            right: left + width,
+            bottom: top + height,
+        };
+    };
+
+    areRectsEqual = (a, b) => {
+        if (a === b) return true;
+        if (!a || !b) return false;
+        return (
+            a.left === b.left &&
+            a.top === b.top &&
+            a.width === b.width &&
+            a.height === b.height
+        );
+    };
+
+    areArraysEqual = (a = [], b = []) => {
+        if (a === b) return true;
+        if (!Array.isArray(a) || !Array.isArray(b)) return false;
+        if (a.length !== b.length) return false;
+        for (let i = 0; i < a.length; i += 1) {
+            if (a[i] !== b[i]) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    getIconsWithinRect = (rect) => {
+        if (!rect) return [];
+        const desktopApps = this.state.desktop_apps || [];
+        const positions = this.state.desktop_icon_positions || {};
+        const width = this.iconDimensions.width;
+        const height = this.iconDimensions.height;
+        const selected = [];
+        desktopApps.forEach((id) => {
+            const position = positions[id];
+            if (!position) return;
+            const iconLeft = position.x;
+            const iconTop = position.y;
+            const iconRight = iconLeft + width;
+            const iconBottom = iconTop + height;
+            const intersects = !(
+                iconRight < rect.left ||
+                iconLeft > rect.right ||
+                iconBottom < rect.top ||
+                iconTop > rect.bottom
+            );
+            if (intersects) {
+                selected.push(id);
+            }
+        });
+        return selected;
+    };
+
+    updateSelectionRect = (rect) => {
+        if (!rect) {
+            this.setState({ selectionRect: null });
+            return;
+        }
+        const selected = this.getIconsWithinRect(rect);
+        this.setState((prevState) => {
+            const updates = {};
+            if (!prevState.isSelecting) {
+                updates.isSelecting = true;
+            }
+            if (!this.areRectsEqual(prevState.selectionRect, rect)) {
+                updates.selectionRect = rect;
+            }
+            if (!this.areArraysEqual(prevState.selectedIconIds, selected)) {
+                updates.selectedIconIds = selected;
+            }
+            return Object.keys(updates).length ? updates : null;
+        });
+    };
+
+    clearSelection = () => {
+        this.desktopSelection = null;
+        this.setState({
+            selectionRect: null,
+            selectedIconIds: [],
+            isSelecting: false,
+        });
+    };
+
+    getSelectedIconIds = () => {
+        const selection = Array.isArray(this.state.selectedIconIds)
+            ? this.state.selectedIconIds
+            : [];
+        return selection.filter((id) => this.validAppIds.has(id));
+    };
+
+    openSelectedIcons = () => {
+        const selection = this.getSelectedIconIds();
+        if (!selection.length) return;
+        const targetId = selection[0];
+        if (targetId) {
+            this.openApp(targetId);
+        }
+    };
+
+    removeSelectedIcons = () => {
+        const selection = this.getSelectedIconIds();
+        if (!selection.length) return;
+        this.removeShortcutsFromDesktop(selection);
+    };
+
+    handleDesktopPointerDown = (event) => {
+        if (event.button !== 0) return;
+        if (event.pointerType && event.pointerType !== 'mouse') return;
+        const iconTarget = event.target?.closest?.('[data-app-id]');
+        const windowTarget = event.target?.closest?.('.opened-window');
+        if (iconTarget || windowTarget) return;
+        const contextTarget = event.target?.closest?.('[data-context]');
+        if (contextTarget && contextTarget.dataset.context !== 'desktop-area') return;
+        const interactiveTarget = event.target?.closest?.('button, a, input, textarea, select, [role="button"], [role="menu"], [role="dialog"], [role="listbox"]');
+        if (interactiveTarget) return;
+        const container = event.currentTarget;
+        const origin = this.transformClientPointToDesktop(event.clientX, event.clientY);
+        if (!origin) return;
+        container.setPointerCapture?.(event.pointerId);
+        this.desktopSelection = {
+            pointerId: event.pointerId,
+            origin,
+        };
+        event.preventDefault();
+        this.setState({
+            selectionRect: {
+                left: origin.x,
+                top: origin.y,
+                width: 0,
+                height: 0,
+                right: origin.x,
+                bottom: origin.y,
+            },
+            selectedIconIds: [],
+            isSelecting: true,
+        });
+    };
+
+    handleDesktopPointerMove = (event) => {
+        const selection = this.desktopSelection;
+        if (!selection || selection.pointerId !== event.pointerId) return;
+        const current = this.transformClientPointToDesktop(event.clientX, event.clientY);
+        if (!current) return;
+        event.preventDefault();
+        const rect = this.normalizeSelectionRect(selection.origin, current);
+        if (rect) {
+            this.updateSelectionRect(rect);
+        }
+    };
+
+    finishDesktopSelection = (event) => {
+        if (event?.currentTarget?.releasePointerCapture && this.desktopSelection) {
+            event.currentTarget.releasePointerCapture(this.desktopSelection.pointerId);
+        }
+        this.desktopSelection = null;
+        this.setState({
+            selectionRect: null,
+            isSelecting: false,
+        });
+    };
+
+    handleDesktopPointerUp = (event) => {
+        const selection = this.desktopSelection;
+        if (!selection || selection.pointerId !== event.pointerId) return;
+        event.preventDefault();
+        this.finishDesktopSelection(event);
+    };
+
+    handleDesktopPointerCancel = (event) => {
+        const selection = this.desktopSelection;
+        if (!selection || selection.pointerId !== event.pointerId) return;
+        this.finishDesktopSelection(event);
+    };
+
+    renderSelectionOverlay = () => {
+        const rect = this.state.selectionRect;
+        if (!rect) return null;
+        const style = {
+            position: 'absolute',
+            left: `${rect.left}px`,
+            top: `${rect.top}px`,
+            width: `${rect.width}px`,
+            height: `${rect.height}px`,
+            border: '1px solid rgba(147, 197, 253, 0.9)',
+            backgroundColor: 'rgba(59, 130, 246, 0.25)',
+            pointerEvents: 'none',
+            zIndex: 40,
+        };
+        return <div className="desktop-selection-overlay" style={style} aria-hidden="true" />;
+    };
+
     computeGridMetrics = () => {
         const { width, height } = this.getDesktopBounds();
         const usableHeight = Math.max(
@@ -1003,9 +1220,13 @@ export class Desktop extends Component {
 
     handleIconPointerDown = (event, appId) => {
         if (event.button !== 0) return;
-        if (this.state.keyboardMoveState) {
-            this.setState({ keyboardMoveState: null });
-        }
+        this.setState({
+            keyboardMoveState: null,
+            selectedIconIds: [appId],
+            selectionRect: null,
+            isSelecting: false,
+            draggingIconId: appId,
+        });
         const container = event.currentTarget;
         const rect = container.getBoundingClientRect();
         const offsetX = event.clientX - rect.left;
@@ -1034,7 +1255,6 @@ export class Desktop extends Component {
             startPosition,
             lastPosition: startPosition,
         };
-        this.setState({ draggingIconId: appId });
         this.attachIconKeyboardListeners();
     };
 
@@ -1431,6 +1651,28 @@ export class Desktop extends Component {
                 document.getElementById(id)?.dispatchEvent(event);
             }
         }
+
+        const activeElement = typeof document !== 'undefined' ? document.activeElement : null;
+        const isEditable = activeElement && (
+            activeElement.isContentEditable ||
+            ['INPUT', 'TEXTAREA', 'SELECT'].includes(activeElement.tagName)
+        );
+
+        if (!isEditable && !e.altKey && !e.ctrlKey && !e.metaKey) {
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                const selection = this.getSelectedIconIds();
+                if (selection.length) {
+                    e.preventDefault();
+                    this.removeSelectedIcons();
+                }
+            } else if (e.key === 'Enter') {
+                const selection = this.getSelectedIconIds();
+                if (selection.length) {
+                    e.preventDefault();
+                    this.openSelectedIcons();
+                }
+            }
+        }
     }
 
     getFocusedWindowId = () => {
@@ -1683,6 +1925,16 @@ export class Desktop extends Component {
             desktop_apps,
         }, () => {
             this.ensureIconPositions(desktop_apps);
+            this.setState((prevState) => {
+                const selection = Array.isArray(prevState.selectedIconIds)
+                    ? prevState.selectedIconIds
+                    : [];
+                const filtered = selection.filter((id) => desktop_apps.includes(id));
+                if (this.areArraysEqual(selection, filtered)) {
+                    return null;
+                }
+                return { selectedIconIds: filtered };
+            });
         });
         this.initFavourite = { ...favourite_apps };
     }
@@ -1708,6 +1960,7 @@ export class Desktop extends Component {
         const blockIcons = hasOpenWindows && !draggingIconId;
         const iconBaseZIndex = 15;
         const containerZIndex = blockIcons ? 5 : 15;
+        const selectedIcons = new Set(this.state.selectedIconIds || []);
         const icons = desktopApps.map((appId, index) => {
             const app = this.getAppById(appId);
             if (!app) return null;
@@ -1726,6 +1979,7 @@ export class Desktop extends Component {
                 : (positions[appId] || this.computeGridPosition(index));
             const isKeyboardMoving = Boolean(keyboardMoveState && keyboardMoveState.id === appId);
             const isDragging = draggingIconId === appId || isKeyboardMoving;
+            const isSelected = selectedIcons.has(appId);
             const assistiveHint = this.buildKeyboardMoveHint(app, isKeyboardMoving, position);
             const wrapperStyle = {
                 position: 'absolute',
@@ -1750,6 +2004,7 @@ export class Desktop extends Component {
                         {...props}
                         draggable={false}
                         isBeingDragged={isDragging}
+                        isSelected={isSelected}
                         onKeyDown={(event) => this.handleIconKeyDown(event, app)}
                         onBlur={(event) => this.handleIconBlur(event, app.id)}
                         assistiveHint={assistiveHint}
@@ -1760,15 +2015,24 @@ export class Desktop extends Component {
 
         if (!icons.length) return null;
 
+        const containerProps = {
+            className: 'absolute inset-0',
+            style: {
+                pointerEvents: 'auto',
+                zIndex: containerZIndex,
+            },
+        };
+
+        if (blockIcons) {
+            containerProps['aria-hidden'] = 'true';
+        } else {
+            containerProps['aria-hidden'] = 'false';
+            containerProps.role = 'listbox';
+            containerProps['aria-multiselectable'] = 'true';
+        }
+
         return (
-            <div
-                className="absolute inset-0"
-                aria-hidden={blockIcons ? 'true' : 'false'}
-                style={{
-                    pointerEvents: 'auto',
-                    zIndex: containerZIndex,
-                }}
-            >
+            <div {...containerProps}>
                 {icons}
             </div>
         );
@@ -2095,6 +2359,60 @@ export class Desktop extends Component {
         this.hideAllContextMenu()
     }
 
+    removeShortcutsFromDesktop = (ids = []) => {
+        if (!Array.isArray(ids) || !ids.length) return;
+        const uniqueIds = Array.from(new Set(ids.filter((id) => typeof id === 'string')))
+            .filter((id) => this.validAppIds.has(id));
+        if (!uniqueIds.length) return;
+
+        uniqueIds.forEach((id) => {
+            const index = apps.findIndex((app) => app.id === id);
+            if (index !== -1) {
+                apps[index].desktop_shortcut = false;
+            }
+        });
+
+        if (safeLocalStorage) {
+            try {
+                const stored = JSON.parse(safeLocalStorage.getItem('app_shortcuts') || '[]');
+                const filtered = Array.isArray(stored)
+                    ? stored.filter((shortcutId) => !uniqueIds.includes(shortcutId))
+                    : [];
+                safeLocalStorage.setItem('app_shortcuts', JSON.stringify(filtered));
+            } catch (e) {
+                // ignore read/write errors
+            }
+
+            try {
+                const storedFolders = JSON.parse(safeLocalStorage.getItem('new_folders') || '[]');
+                const filteredFolders = Array.isArray(storedFolders)
+                    ? storedFolders.filter((folder) => folder && !uniqueIds.includes(folder.id))
+                    : [];
+                safeLocalStorage.setItem('new_folders', JSON.stringify(filteredFolders));
+            } catch (e) {
+                // ignore read/write errors
+            }
+        }
+
+        this.setState((prevState) => {
+            const nextPositions = { ...(prevState.desktop_icon_positions || {}) };
+            uniqueIds.forEach((id) => {
+                delete nextPositions[id];
+            });
+            const remainingSelection = (prevState.selectedIconIds || []).filter((id) => !uniqueIds.includes(id));
+            return {
+                desktop_icon_positions: nextPositions,
+                desktop_apps: (prevState.desktop_apps || []).filter((id) => !uniqueIds.includes(id)),
+                selectedIconIds: remainingSelection,
+                selectionRect: null,
+                isSelecting: false,
+            };
+        }, () => {
+            this.persistIconPositions();
+            this.updateAppsData();
+        });
+    };
+
     focus = (objId) => {
         // removes focus from all window and
         // gives focus to window with 'id = objId'
@@ -2251,6 +2569,10 @@ export class Desktop extends Component {
                 ref={this.desktopRef}
                 className={" min-h-screen h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent"}
                 style={{ paddingTop: DESKTOP_TOP_PADDING, minHeight: '100dvh' }}
+                onPointerDown={this.handleDesktopPointerDown}
+                onPointerMove={this.handleDesktopPointerMove}
+                onPointerUp={this.handleDesktopPointerUp}
+                onPointerCancel={this.handleDesktopPointerCancel}
             >
 
                 {/* Window Area */}
@@ -2264,6 +2586,8 @@ export class Desktop extends Component {
 
                 {/* Background Image */}
                 <BackgroundImage />
+
+                {this.renderSelectionOverlay()}
 
                 {/* Desktop Apps */}
                 {this.renderDesktopApps()}

@@ -55,9 +55,11 @@ export class UbuntuApp extends Component {
             onBlur,
             assistiveHint,
             assistiveHintId,
+            isSelected = false,
         } = this.props;
 
         const dragging = this.state.dragging || isBeingDragged;
+        const selected = Boolean(isSelected);
 
         const hintId = assistiveHint ? (assistiveHintId || `app-${this.props.id}-instructions`) : undefined;
 
@@ -84,13 +86,52 @@ export class UbuntuApp extends Component {
             ...style,
         };
 
+        if (selected) {
+            combinedStyle.backgroundColor = 'rgba(59, 130, 246, 0.28)';
+            if (!style || typeof style.boxShadow === 'undefined') {
+                combinedStyle.boxShadow = '0 0 0 1px rgba(147, 197, 253, 0.55)';
+            }
+        } else if (!style || typeof style.boxShadow === 'undefined') {
+            delete combinedStyle.boxShadow;
+        }
+
+        const classNames = [
+            this.state.launching ? 'app-icon-launch' : null,
+            dragging ? 'opacity-70' : null,
+            'm-px',
+            'z-10',
+            'bg-white',
+            'bg-opacity-0',
+            'hover:bg-opacity-20',
+            'focus:bg-white',
+            'focus:bg-opacity-50',
+            'focus:border-yellow-700',
+            'focus:border-opacity-100',
+            'border',
+            'outline-none',
+            'rounded',
+            'select-none',
+            'flex',
+            'flex-col',
+            'justify-start',
+            'items-center',
+            'text-center',
+            'font-normal',
+            'text-white',
+            'transition-hover',
+            'transition-active',
+            selected ? 'border-blue-300 bg-blue-500/30' : 'border-transparent',
+        ].filter(Boolean).join(' ');
+
         return (
             <div
-                role="button"
+                role="option"
                 aria-label={this.props.name}
                 aria-disabled={this.props.disabled}
+                aria-selected={selected ? 'true' : 'false'}
                 data-context="app"
                 data-app-id={this.props.id}
+                data-selected={selected ? 'true' : 'false'}
                 draggable={draggable}
                 onDragStart={this.handleDragStart}
                 onDragEnd={this.handleDragEnd}
@@ -99,8 +140,7 @@ export class UbuntuApp extends Component {
                 onPointerUp={handlePointerUp}
                 onPointerCancel={onPointerCancel}
                 style={combinedStyle}
-                className={(this.state.launching ? " app-icon-launch " : "") + (dragging ? " opacity-70 " : "") +
-                    " m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none flex flex-col justify-start items-center text-center font-normal text-white transition-hover transition-active "}
+                className={classNames}
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
                 onKeyDown={(event) => {
