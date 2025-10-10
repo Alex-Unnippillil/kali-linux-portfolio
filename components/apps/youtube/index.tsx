@@ -35,19 +35,6 @@ type YouTubePlayer = {
   destroy?: () => void;
 };
 
-declare global {
-  interface Window {
-    YT?: {
-      Player: new (
-        element: string | HTMLElement,
-        options?: { events?: { onReady?: (event: { target: YouTubePlayer }) => void } },
-      ) => YouTubePlayer;
-      PlayerState?: Record<string, number>;
-    };
-    onYouTubeIframeAPIReady?: () => void;
-  }
-}
-
 const getTitleForSort = (value?: string) => value ?? '';
 
 const SORT_OPTIONS = [

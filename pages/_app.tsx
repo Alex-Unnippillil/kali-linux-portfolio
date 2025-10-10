@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect } from 'react';
+import type { ReactElement } from 'react';
+import type { AppProps } from 'next/app';
+import Script from 'next/script';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -15,67 +18,87 @@ import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
-import Script from 'next/script';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
-
 import { Ubuntu } from 'next/font/google';
+import type { BeforeSendEvent } from '@vercel/analytics';
+
+type PeriodicSyncPermissionDescriptor = PermissionDescriptor & {
+  name: 'periodic-background-sync';
+};
+
+declare global {
+  interface Window {
+    initA2HS?: () => void;
+    manualRefresh?: () => Promise<void>;
+  }
+
+  interface ServiceWorkerRegistration {
+    periodicSync?: {
+      register: (tag: string, options: { minInterval: number }) => Promise<void>;
+    };
+  }
+}
+
+interface MyAppProps extends AppProps {}
+
+type AnalyticsEventWithMetadata = BeforeSendEvent & {
+  metadata?: (Record<string, unknown> & { email?: unknown }) | undefined;
+};
 
 const ubuntu = Ubuntu({
   subsets: ['latin'],
   weight: ['300', '400', '500', '700'],
 });
 
-
-function MyApp(props) {
-  const { Component, pageProps } = props;
-
-
+function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
       window.initA2HS();
     }
-    const initAnalytics = async () => {
+
+    const initAnalytics = async (): Promise<void> => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
       if (trackingId) {
         const { default: ReactGA } = await import('react-ga4');
         ReactGA.initialize(trackingId);
       }
     };
-    initAnalytics().catch((err) => {
+
+    void initAnalytics().catch((err) => {
       console.error('Analytics initialization failed', err);
     });
 
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
-      // Register PWA service worker generated via @ducanh2912/next-pwa
-      const register = async () => {
+      const register = async (): Promise<void> => {
         try {
           const registration = await navigator.serviceWorker.register('/sw.js');
 
           window.manualRefresh = () => registration.update();
 
-          if ('periodicSync' in registration) {
+          if ('periodicSync' in registration && registration.periodicSync) {
             try {
               const status = await navigator.permissions.query({
                 name: 'periodic-background-sync',
-              });
+              } as PeriodicSyncPermissionDescriptor);
               if (status.state === 'granted') {
                 await registration.periodicSync.register('content-sync', {
                   minInterval: 24 * 60 * 60 * 1000,
                 });
               } else {
-                registration.update();
+                await registration.update();
               }
             } catch {
-              registration.update();
+              await registration.update();
             }
           } else {
-            registration.update();
+            await registration.update();
           }
         } catch (err) {
           console.error('Service worker registration failed', err);
         }
       };
-      register().catch((err) => {
+
+      void register().catch((err) => {
         console.error('Service worker setup failed', err);
       });
     }
@@ -83,18 +106,18 @@ function MyApp(props) {
 
   useEffect(() => {
     const liveRegion = document.getElementById('live-region');
-    if (!liveRegion) return;
+    if (!liveRegion) return undefined;
 
-    const update = (message) => {
+    const update = (message: string): void => {
       liveRegion.textContent = '';
       setTimeout(() => {
         liveRegion.textContent = message;
       }, 100);
     };
 
-    const handleCopy = () => update('Copied to clipboard');
-    const handleCut = () => update('Cut to clipboard');
-    const handlePaste = () => update('Pasted from clipboard');
+    const handleCopy = (): void => update('Copied to clipboard');
+    const handleCut = (): void => update('Cut to clipboard');
+    const handlePaste = (): void => update('Pasted from clipboard');
 
     window.addEventListener('copy', handleCopy);
     window.addEventListener('cut', handleCut);
@@ -103,14 +126,14 @@ function MyApp(props) {
     const { clipboard } = navigator;
     const originalWrite = clipboard?.writeText?.bind(clipboard);
     const originalRead = clipboard?.readText?.bind(clipboard);
-    if (originalWrite) {
-      clipboard.writeText = async (text) => {
+    if (clipboard && originalWrite) {
+      clipboard.writeText = async (text: string): Promise<void> => {
         update('Copied to clipboard');
-        return originalWrite(text);
+        await originalWrite(text);
       };
     }
-    if (originalRead) {
-      clipboard.readText = async () => {
+    if (clipboard && originalRead) {
+      clipboard.readText = async (): Promise<string> => {
         const text = await originalRead();
         update('Pasted from clipboard');
         return text;
@@ -119,17 +142,13 @@ function MyApp(props) {
 
     const OriginalNotification = window.Notification;
     if (OriginalNotification) {
-      const WrappedNotification = function (title, options) {
-        update(`${title}${options?.body ? ' ' + options.body : ''}`);
-        return new OriginalNotification(title, options);
+      const WrappedNotification = class extends OriginalNotification {
+        constructor(title: string, options?: NotificationOptions) {
+          super(title, options);
+          update(`${title}${options?.body ? ` ${options.body}` : ''}`);
+        }
       };
-      WrappedNotification.requestPermission = OriginalNotification.requestPermission.bind(
-        OriginalNotification,
-      );
-      Object.defineProperty(WrappedNotification, 'permission', {
-        get: () => OriginalNotification.permission,
-      });
-      WrappedNotification.prototype = OriginalNotification.prototype;
+
       window.Notification = WrappedNotification;
     }
 
@@ -149,6 +168,7 @@ function MyApp(props) {
 
   return (
     <ErrorBoundary>
+      {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
       <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
         <a
@@ -164,11 +184,13 @@ function MyApp(props) {
               <Component {...pageProps} />
               <ShortcutOverlay />
               <Analytics
-                beforeSend={(e) => {
-                  if (e.url.includes('/admin') || e.url.includes('/private')) return null;
-                  const evt = e;
-                  if (evt.metadata?.email) delete evt.metadata.email;
-                  return e;
+                beforeSend={(event) => {
+                  if (event.url.includes('/admin') || event.url.includes('/private')) return null;
+                  const evt = event as AnalyticsEventWithMetadata;
+                  if (evt.metadata && 'email' in evt.metadata) {
+                    delete evt.metadata.email;
+                  }
+                  return evt;
                 }}
               />
 
@@ -178,12 +200,9 @@ function MyApp(props) {
         </SettingsProvider>
       </div>
     </ErrorBoundary>
-
-
   );
 }
 
 export default MyApp;
 
 export { reportWebVitalsUtil as reportWebVitals };
-

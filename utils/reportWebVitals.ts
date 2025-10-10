@@ -1,17 +1,14 @@
 import ReactGA from 'react-ga4';
+import type { NextWebVitalsMetric } from 'next/app';
 
-interface WebVitalMetric {
-  id: string;
-  name: string;
-  value: number;
-}
+type VitalName = Extract<NextWebVitalsMetric['name'], 'LCP' | 'INP'>;
 
-const thresholds: Record<string, number> = {
+const thresholds: Record<VitalName, number> = {
   LCP: 2500,
   INP: 200,
 };
 
-export const reportWebVitals = ({ id, name, value }: WebVitalMetric): void => {
+export const reportWebVitals = ({ id, name, value }: NextWebVitalsMetric): void => {
   if (process.env.NEXT_PUBLIC_VERCEL_ENV !== 'preview') return;
   if (name !== 'LCP' && name !== 'INP') return;
 
@@ -25,7 +22,7 @@ export const reportWebVitals = ({ id, name, value }: WebVitalMetric): void => {
     nonInteraction: true,
   });
 
-  const threshold = thresholds[name];
+  const threshold = thresholds[name as VitalName];
   if (threshold !== undefined && value > threshold) {
     ReactGA.event({
       category: 'Performance Alert',
