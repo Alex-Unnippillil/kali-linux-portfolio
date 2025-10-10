@@ -29,17 +29,24 @@ const percentOf = (value, total) => {
 };
 
 const computeSnapRegions = (viewportWidth, viewportHeight, topInset = DEFAULT_WINDOW_TOP_OFFSET) => {
-    const halfWidth = viewportWidth / 2;
     const normalizedTopInset = typeof topInset === 'number'
         ? Math.max(topInset, DESKTOP_TOP_PADDING)
         : DEFAULT_WINDOW_TOP_OFFSET;
     const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
     const availableHeight = Math.max(0, viewportHeight - normalizedTopInset - SNAP_BOTTOM_INSET - safeBottom);
-    const topHeight = Math.min(availableHeight, Math.max(viewportHeight / 2, 0));
+    const halfWidth = Math.max(viewportWidth / 2, 0);
+    const halfHeight = Math.max(availableHeight / 2, 0);
+    const rightStart = Math.max(viewportWidth - halfWidth, 0);
+    const bottomStart = normalizedTopInset + halfHeight;
+
     return {
         left: { left: 0, top: normalizedTopInset, width: halfWidth, height: availableHeight },
-        right: { left: viewportWidth - halfWidth, top: normalizedTopInset, width: halfWidth, height: availableHeight },
-        top: { left: 0, top: normalizedTopInset, width: viewportWidth, height: topHeight },
+        right: { left: rightStart, top: normalizedTopInset, width: halfWidth, height: availableHeight },
+        top: { left: 0, top: normalizedTopInset, width: viewportWidth, height: availableHeight },
+        'top-left': { left: 0, top: normalizedTopInset, width: halfWidth, height: halfHeight },
+        'top-right': { left: rightStart, top: normalizedTopInset, width: halfWidth, height: halfHeight },
+        'bottom-left': { left: 0, top: bottomStart, width: halfWidth, height: halfHeight },
+        'bottom-right': { left: rightStart, top: bottomStart, width: halfWidth, height: halfHeight },
 
     };
 };
@@ -398,13 +405,25 @@ export class Window extends Component {
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset);
 
-        let candidate = null;
-        if (rect.top <= topInset + verticalThreshold && regions.top.height > 0) {
+        const nearTop = rect.top <= topInset + verticalThreshold;
+        const nearBottom = viewportHeight - rect.bottom <= verticalThreshold;
+        const nearLeft = rect.left <= horizontalThreshold;
+        const nearRight = viewportWidth - rect.right <= horizontalThreshold;
 
+        let candidate = null;
+        if (nearTop && nearLeft && regions['top-left'].width > 0 && regions['top-left'].height > 0) {
+            candidate = { position: 'top-left', preview: regions['top-left'] };
+        } else if (nearTop && nearRight && regions['top-right'].width > 0 && regions['top-right'].height > 0) {
+            candidate = { position: 'top-right', preview: regions['top-right'] };
+        } else if (nearBottom && nearLeft && regions['bottom-left'].width > 0 && regions['bottom-left'].height > 0) {
+            candidate = { position: 'bottom-left', preview: regions['bottom-left'] };
+        } else if (nearBottom && nearRight && regions['bottom-right'].width > 0 && regions['bottom-right'].height > 0) {
+            candidate = { position: 'bottom-right', preview: regions['bottom-right'] };
+        } else if (nearTop && regions.top.height > 0) {
             candidate = { position: 'top', preview: regions.top };
-        } else if (rect.left <= horizontalThreshold && regions.left.width > 0) {
+        } else if (nearLeft && regions.left.width > 0) {
             candidate = { position: 'left', preview: regions.left };
-        } else if (viewportWidth - rect.right <= horizontalThreshold && regions.right.width > 0) {
+        } else if (nearRight && regions.right.width > 0) {
             candidate = { position: 'right', preview: regions.right };
         }
 
