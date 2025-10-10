@@ -50,6 +50,7 @@ export class Desktop extends Component {
             focused_windows: {},
             closed_windows: {},
             allAppsView: false,
+            allAppsTransitionState: 'exited',
             disabled_apps: {},
             favourite_apps: {},
             minimized_windows: {},
@@ -81,6 +82,7 @@ export class Desktop extends Component {
         this.desktopRef = React.createRef();
         this.folderNameInputRef = React.createRef();
         this.allAppsSearchRef = React.createRef();
+        this.allAppsOverlayRef = React.createRef();
         this.iconDragState = null;
         this.preventNextIconClick = false;
         this.savedIconPositions = {};
@@ -115,6 +117,9 @@ export class Desktop extends Component {
 
         this.previousFocusElement = null;
         this.allAppsTriggerKey = null;
+        this.allAppsCloseTimeout = null;
+        this.allAppsEnterRaf = null;
+        this.allAppsFocusTrapHandler = null;
 
     }
 
@@ -1297,8 +1302,10 @@ export class Desktop extends Component {
         }
 
         if (!prevState.allAppsView && this.state.allAppsView) {
+            this.activateAllAppsFocusTrap();
             this.focusAllAppsSearchInput();
         } else if (prevState.allAppsView && !this.state.allAppsView) {
+            this.deactivateAllAppsFocusTrap();
             this.restoreFocusToPreviousElement();
         }
     }
@@ -1323,6 +1330,15 @@ export class Desktop extends Component {
             clearTimeout(this.liveRegionTimeout);
             this.liveRegionTimeout = null;
         }
+        if (this.allAppsCloseTimeout) {
+            clearTimeout(this.allAppsCloseTimeout);
+            this.allAppsCloseTimeout = null;
+        }
+        if (this.allAppsEnterRaf && typeof cancelAnimationFrame === 'function') {
+            cancelAnimationFrame(this.allAppsEnterRaf);
+            this.allAppsEnterRaf = null;
+        }
+        this.deactivateAllAppsFocusTrap();
     }
 
     handleExternalTaskbarCommand = (event) => {
@@ -1587,6 +1603,19 @@ export class Desktop extends Component {
     }
 
     openAllAppsOverlay = (triggerKey = null) => {
+        if (this.allAppsCloseTimeout) {
+            clearTimeout(this.allAppsCloseTimeout);
+            this.allAppsCloseTimeout = null;
+        }
+
+        const enter = () => {
+            this.setState((state) => {
+                if (!state.allAppsView) return null;
+                return { allAppsTransitionState: 'entered' };
+            });
+            this.allAppsEnterRaf = null;
+        };
+
         if (!this.state.allAppsView) {
             if (typeof document !== 'undefined') {
                 const activeElement = document.activeElement;
@@ -1596,7 +1625,16 @@ export class Desktop extends Component {
                     this.previousFocusElement = null;
                 }
             }
-            this.setState({ allAppsView: true });
+
+            this.setState({ allAppsView: true, allAppsTransitionState: 'entering' }, () => {
+                if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                    this.allAppsEnterRaf = window.requestAnimationFrame(enter);
+                } else {
+                    enter();
+                }
+            });
+        } else {
+            this.setState({ allAppsTransitionState: 'entered' });
         }
         this.allAppsTriggerKey = triggerKey;
     }
@@ -1606,7 +1644,79 @@ export class Desktop extends Component {
             this.allAppsTriggerKey = null;
             return;
         }
-        this.setState({ allAppsView: false });
+        if (this.allAppsCloseTimeout) {
+            clearTimeout(this.allAppsCloseTimeout);
+            this.allAppsCloseTimeout = null;
+        }
+        this.setState({ allAppsView: false, allAppsTransitionState: 'exiting' }, () => {
+            this.allAppsCloseTimeout = setTimeout(() => {
+                this.setState({ allAppsTransitionState: 'exited' });
+                this.allAppsCloseTimeout = null;
+            }, 220);
+        });
+    }
+
+    activateAllAppsFocusTrap = () => {
+        if (this.allAppsFocusTrapHandler || typeof document === 'undefined') return;
+
+        this.allAppsFocusTrapHandler = (event) => {
+            if (event.key !== 'Tab') return;
+            if (!this.state.allAppsView) return;
+
+            const overlay = this.allAppsOverlayRef?.current;
+            if (!overlay) return;
+
+            const focusableSelectors = [
+                'a[href]',
+                'button:not([disabled])',
+                'textarea:not([disabled])',
+                'input:not([type="hidden"]):not([disabled])',
+                'select:not([disabled])',
+                '[tabindex]:not([tabindex="-1"])',
+            ];
+
+            const focusable = Array.from(
+                overlay.querySelectorAll(focusableSelectors.join(','))
+            ).filter((element) => {
+                if (!(element instanceof HTMLElement)) return false;
+                if (element.hasAttribute('disabled')) return false;
+                if (element.getAttribute('aria-hidden') === 'true') return false;
+                if (!overlay.contains(element)) return false;
+                const rect = element.getBoundingClientRect();
+                return rect.width > 0 && rect.height > 0;
+            });
+
+            if (!focusable.length) {
+                event.preventDefault();
+                return;
+            }
+
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+            if (event.shiftKey) {
+                if (!active || active === first || !overlay.contains(active)) {
+                    event.preventDefault();
+                    last.focus();
+                }
+                return;
+            }
+
+            if (!active || active === last || !overlay.contains(active)) {
+                event.preventDefault();
+                first.focus();
+            }
+        };
+
+        document.addEventListener('keydown', this.allAppsFocusTrapHandler, true);
+    }
+
+    deactivateAllAppsFocusTrap = () => {
+        if (this.allAppsFocusTrapHandler && typeof document !== 'undefined') {
+            document.removeEventListener('keydown', this.allAppsFocusTrapHandler, true);
+            this.allAppsFocusTrapHandler = null;
+        }
     }
 
     getFocusedWindowId = () => {
@@ -2558,12 +2668,49 @@ export class Desktop extends Component {
                     )
                 }
 
-                { this.state.allAppsView ?
-                    <AllApplications apps={apps}
-                        games={games}
-                        recentApps={this.getActiveStack()}
-                        openApp={this.openApp}
-                        searchInputRef={this.allAppsSearchRef} /> : null}
+                {
+                    (() => {
+                        const { allAppsView, allAppsTransitionState } = this.state;
+                        const shouldRenderAllApps =
+                            allAppsView || ['entering', 'exiting'].includes(allAppsTransitionState);
+                        if (!shouldRenderAllApps) return null;
+
+                        const overlayActive = allAppsView;
+                        const overlayClasses = [
+                            'fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto px-4 py-12 sm:py-16',
+                            'bg-slate-950/70 backdrop-blur-xl transition-opacity duration-200 ease-out',
+                            overlayActive ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
+                        ].join(' ');
+
+                        const panelClasses = [
+                            'w-full max-w-6xl transform transition-all duration-200 ease-out focus:outline-none',
+                            overlayActive ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 -translate-y-2',
+                        ].join(' ');
+
+                        return (
+                            <div
+                                ref={this.allAppsOverlayRef}
+                                role="dialog"
+                                aria-modal="true"
+                                aria-labelledby="all-apps-overlay-title"
+                                aria-hidden={!overlayActive}
+                                tabIndex={-1}
+                                className={overlayClasses}
+                            >
+                                <div className={panelClasses}>
+                                    <AllApplications
+                                        apps={apps}
+                                        games={games}
+                                        recentApps={this.getActiveStack()}
+                                        openApp={this.openApp}
+                                        searchInputRef={this.allAppsSearchRef}
+                                        headingId="all-apps-overlay-title"
+                                    />
+                                </div>
+                            </div>
+                        );
+                    })()
+                }
 
                 { this.state.showShortcutSelector ?
                     <ShortcutSelector apps={apps}
