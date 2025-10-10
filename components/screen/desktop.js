@@ -73,6 +73,8 @@ export class Desktop extends Component {
                 label: `Workspace ${index + 1}`,
             })),
             draggingIconId: null,
+            keyboardMoveState: null,
+            liveRegionMessage: '',
         }
 
         this.desktopRef = React.createRef();
@@ -93,11 +95,15 @@ export class Desktop extends Component {
 
         this.currentPointerIsCoarse = false;
 
-        this.validAppIds = new Set(apps.map((app) => app.id));
+        this.validAppIds = new Set();
+        this.appMap = new Map();
+        this.refreshAppRegistry();
 
         this.openSettingsTarget = null;
         this.openSettingsClickHandler = null;
         this.openSettingsListenerAttached = false;
+
+        this.liveRegionTimeout = null;
 
     }
 
@@ -586,6 +592,70 @@ export class Desktop extends Component {
         return this.clampIconPosition(x, y);
     };
 
+    refreshAppRegistry() {
+        const nextAppMap = new Map();
+        const nextValidAppIds = new Set();
+        apps.forEach((app) => {
+            nextAppMap.set(app.id, app);
+            nextValidAppIds.add(app.id);
+        });
+        this.appMap = nextAppMap;
+        this.validAppIds = nextValidAppIds;
+    }
+
+    getAppById = (id) => {
+        if (!this.appMap?.has(id)) {
+            const match = apps.find((app) => app.id === id);
+            if (match) {
+                this.appMap.set(id, match);
+                this.validAppIds.add(id);
+            }
+        }
+        return this.appMap.get(id);
+    };
+
+    getDesktopAppIndex = (id) => {
+        const appsOnDesktop = this.state.desktop_apps || [];
+        return appsOnDesktop.indexOf(id);
+    };
+
+    describeKeyboardIconPosition = (position) => {
+        if (!this.isValidIconPosition(position)) {
+            return { column: null, row: null };
+        }
+        const metrics = this.computeGridMetrics();
+        const columnSpacing = Math.max(metrics.columnSpacing || 0, 1);
+        const rowSpacing = Math.max(metrics.rowSpacing || 0, 1);
+        const column = Math.max(1, Math.round((position.x - metrics.offsetX) / columnSpacing) + 1);
+        const row = Math.max(1, Math.round((position.y - metrics.offsetY) / rowSpacing) + 1);
+        return { column, row };
+    };
+
+    buildKeyboardMoveHint = (app, isMoving, position) => {
+        if (!app || this.state.disabled_apps?.[app.id]) {
+            return undefined;
+        }
+        const title = app.title || app.name || 'app';
+        if (isMoving) {
+            let location = '';
+            if (this.isValidIconPosition(position)) {
+                const { column, row } = this.describeKeyboardIconPosition(position);
+                if (column && row) {
+                    location = ` Current position column ${column}, row ${row}.`;
+                }
+            }
+            return `Move mode active for ${title}. Use the arrow keys to reposition. Press Enter to place or Escape to cancel.${location}`;
+        }
+        let location = '';
+        if (this.isValidIconPosition(position)) {
+            const { column, row } = this.describeKeyboardIconPosition(position);
+            if (column && row) {
+                location = ` It is currently in column ${column}, row ${row}.`;
+            }
+        }
+        return `Press Enter to move ${title} with the keyboard. Press Space to open it.${location}`;
+    };
+
     isValidIconPosition = (position) => {
         if (!position) return false;
         const { x, y } = position;
@@ -737,8 +807,205 @@ export class Desktop extends Component {
         });
     };
 
+    startKeyboardIconMove = (appId) => {
+        if (!this.validAppIds.has(appId)) return;
+        if (this.state.disabled_apps?.[appId]) return;
+        const positions = this.state.desktop_icon_positions || {};
+        const currentIndex = this.getDesktopAppIndex(appId);
+        const fallback = currentIndex >= 0 ? this.computeGridPosition(currentIndex) : this.computeGridPosition(0);
+        const currentPosition = positions[appId] || fallback;
+        const basePosition = this.clampIconPosition(currentPosition.x, currentPosition.y);
+        this.setState({
+            keyboardMoveState: {
+                id: appId,
+                origin: basePosition,
+                position: basePosition,
+            },
+        }, () => {
+            this.announceKeyboardMoveStart(appId, basePosition);
+        });
+    };
+
+    moveIconWithKeyboard = (appId, deltaX, deltaY) => {
+        const metrics = this.computeGridMetrics();
+        const stepX = (deltaX || 0) * (metrics.columnSpacing || 0);
+        const stepY = (deltaY || 0) * (metrics.rowSpacing || 0);
+        if (stepX === 0 && stepY === 0) return;
+        this.setState((prevState) => {
+            const moveState = prevState.keyboardMoveState;
+            if (!moveState || moveState.id !== appId || !this.isValidIconPosition(moveState.position)) {
+                return null;
+            }
+            const current = moveState.position;
+            const next = this.clampIconPosition(current.x + stepX, current.y + stepY);
+            if (next.x === current.x && next.y === current.y) {
+                return null;
+            }
+            return {
+                keyboardMoveState: { ...moveState, position: next },
+            };
+        }, () => {
+            const moveState = this.state.keyboardMoveState;
+            if (!moveState || moveState.id !== appId || !this.isValidIconPosition(moveState.position)) {
+                return;
+            }
+            const { position } = moveState;
+            this.updateIconPosition(appId, position.x, position.y, false);
+            this.announceKeyboardPosition(appId, position);
+        });
+    };
+
+    completeKeyboardIconMove = () => {
+        const moveState = this.state.keyboardMoveState;
+        if (!moveState) return;
+        const { id, position } = moveState;
+        this.setState({ keyboardMoveState: null }, () => {
+            if (this.isValidIconPosition(position)) {
+                this.updateIconPosition(id, position.x, position.y, true);
+                this.announceKeyboardPlacement(id, position);
+            } else {
+                this.announceKeyboardPlacement(id, null);
+            }
+        });
+    };
+
+    cancelKeyboardIconMove = () => {
+        const moveState = this.state.keyboardMoveState;
+        if (!moveState) return;
+        const { id, origin } = moveState;
+        this.setState({ keyboardMoveState: null }, () => {
+            if (this.isValidIconPosition(origin)) {
+                this.updateIconPosition(id, origin.x, origin.y, false);
+            }
+            this.announceKeyboardCancel(id);
+        });
+    };
+
+    handleIconKeyDown = (event, app) => {
+        if (!app) return;
+        const appId = app.id;
+        if (!appId || this.state.disabled_apps?.[appId]) return;
+
+        const moveState = this.state.keyboardMoveState;
+        const isMoving = moveState && moveState.id === appId;
+        const key = event.key;
+
+        if (isMoving) {
+            switch (key) {
+                case 'ArrowUp':
+                    event.preventDefault();
+                    this.moveIconWithKeyboard(appId, 0, -1);
+                    return;
+                case 'ArrowDown':
+                    event.preventDefault();
+                    this.moveIconWithKeyboard(appId, 0, 1);
+                    return;
+                case 'ArrowLeft':
+                    event.preventDefault();
+                    this.moveIconWithKeyboard(appId, -1, 0);
+                    return;
+                case 'ArrowRight':
+                    event.preventDefault();
+                    this.moveIconWithKeyboard(appId, 1, 0);
+                    return;
+                case 'Enter':
+                    event.preventDefault();
+                    this.completeKeyboardIconMove();
+                    return;
+                case 'Escape':
+                    event.preventDefault();
+                    this.cancelKeyboardIconMove();
+                    return;
+                case ' ':
+                case 'Spacebar':
+                    event.preventDefault();
+                    return;
+                default:
+                    return;
+            }
+        }
+
+        if (key === 'Enter') {
+            event.preventDefault();
+            this.startKeyboardIconMove(appId);
+            return;
+        }
+
+        if (key === ' ') {
+            event.preventDefault();
+            this.openApp(appId);
+        }
+    };
+
+    handleIconBlur = (_event, appId) => {
+        const moveState = this.state.keyboardMoveState;
+        if (moveState && moveState.id === appId) {
+            this.completeKeyboardIconMove();
+        }
+    };
+
+    announce = (message) => {
+        if (this.liveRegionTimeout) {
+            clearTimeout(this.liveRegionTimeout);
+            this.liveRegionTimeout = null;
+        }
+        this.setState({ liveRegionMessage: '' });
+        if (!message) return;
+        this.liveRegionTimeout = setTimeout(() => {
+            this.setState({ liveRegionMessage: message });
+            this.liveRegionTimeout = null;
+        }, 75);
+    };
+
+    announceKeyboardMoveStart = (appId, position) => {
+        const app = this.getAppById(appId);
+        if (!app) return;
+        const title = app.title || app.name || 'app';
+        let location = '';
+        if (this.isValidIconPosition(position)) {
+            const { column, row } = this.describeKeyboardIconPosition(position);
+            if (column && row) {
+                location = ` Starting position column ${column}, row ${row}.`;
+            }
+        }
+        this.announce(`Moving ${title}. Use arrow keys to reposition. Press Enter to place or Escape to cancel.${location}`);
+    };
+
+    announceKeyboardPosition = (appId, position) => {
+        const app = this.getAppById(appId);
+        if (!app || !this.isValidIconPosition(position)) return;
+        const { column, row } = this.describeKeyboardIconPosition(position);
+        if (!column || !row) return;
+        const title = app.title || app.name || 'app';
+        this.announce(`${title} moved to column ${column}, row ${row}.`);
+    };
+
+    announceKeyboardPlacement = (appId, position) => {
+        const app = this.getAppById(appId);
+        if (!app) return;
+        const title = app.title || app.name || 'app';
+        if (this.isValidIconPosition(position)) {
+            const { column, row } = this.describeKeyboardIconPosition(position);
+            if (column && row) {
+                this.announce(`${title} placed at column ${column}, row ${row}.`);
+                return;
+            }
+        }
+        this.announce(`${title} position unchanged.`);
+    };
+
+    announceKeyboardCancel = (appId) => {
+        const app = this.getAppById(appId);
+        if (!app) return;
+        const title = app.title || app.name || 'app';
+        this.announce(`Cancelled moving ${title}.`);
+    };
+
     handleIconPointerDown = (event, appId) => {
         if (event.button !== 0) return;
+        if (this.state.keyboardMoveState) {
+            this.setState({ keyboardMoveState: null });
+        }
         const container = event.currentTarget;
         const rect = container.getBoundingClientRect();
         const offsetX = event.clientX - rect.left;
@@ -970,6 +1237,10 @@ export class Desktop extends Component {
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
+        if (this.liveRegionTimeout) {
+            clearTimeout(this.liveRegionTimeout);
+            this.liveRegionTimeout = null;
+        }
     }
 
     handleExternalTaskbarCommand = (event) => {
@@ -1332,6 +1603,8 @@ export class Desktop extends Component {
     }
 
     fetchAppsData = (callback) => {
+        this.refreshAppRegistry();
+
         let pinnedApps = safeLocalStorage?.getItem('pinnedApps');
         if (pinnedApps) {
             pinnedApps = JSON.parse(pinnedApps);
@@ -1378,6 +1651,8 @@ export class Desktop extends Component {
     }
 
     updateAppsData = () => {
+        this.refreshAppRegistry();
+
         const focused_windows = {};
         const closed_windows = {};
         const favourite_apps = {};
@@ -1421,7 +1696,12 @@ export class Desktop extends Component {
     };
 
     renderDesktopApps = () => {
-        const { desktop_apps: desktopApps, desktop_icon_positions: positions = {}, draggingIconId } = this.state;
+        const {
+            desktop_apps: desktopApps,
+            desktop_icon_positions: positions = {},
+            draggingIconId,
+            keyboardMoveState,
+        } = this.state;
         if (!desktopApps || desktopApps.length === 0) return null;
 
         const hasOpenWindows = this.hasVisibleWindows();
@@ -1429,7 +1709,7 @@ export class Desktop extends Component {
         const iconBaseZIndex = 15;
         const containerZIndex = blockIcons ? 5 : 15;
         const icons = desktopApps.map((appId, index) => {
-            const app = apps.find((item) => item.id === appId);
+            const app = this.getAppById(appId);
             if (!app) return null;
 
             const props = {
@@ -1441,8 +1721,12 @@ export class Desktop extends Component {
                 prefetch: app.screen?.prefetch,
             };
 
-            const position = positions[appId] || this.computeGridPosition(index);
-            const isDragging = draggingIconId === appId;
+            const position = (keyboardMoveState && keyboardMoveState.id === appId && keyboardMoveState.position)
+                ? keyboardMoveState.position
+                : (positions[appId] || this.computeGridPosition(index));
+            const isKeyboardMoving = Boolean(keyboardMoveState && keyboardMoveState.id === appId);
+            const isDragging = draggingIconId === appId || isKeyboardMoving;
+            const assistiveHint = this.buildKeyboardMoveHint(app, isKeyboardMoving, position);
             const wrapperStyle = {
                 position: 'absolute',
                 left: `${position.x}px`,
@@ -1462,7 +1746,14 @@ export class Desktop extends Component {
                     onPointerCancel={this.handleIconPointerCancel}
                     onClickCapture={this.handleIconClickCapture}
                 >
-                    <UbuntuApp {...props} draggable={false} isBeingDragged={isDragging} />
+                    <UbuntuApp
+                        {...props}
+                        draggable={false}
+                        isBeingDragged={isDragging}
+                        onKeyDown={(event) => this.handleIconKeyDown(event, app)}
+                        onBlur={(event) => this.handleIconBlur(event, app.id)}
+                        assistiveHint={assistiveHint}
+                    />
                 </div>
             );
         }).filter(Boolean);
@@ -2039,6 +2330,10 @@ export class Desktop extends Component {
                         windows={this.state.switcherWindows}
                         onSelect={this.selectWindow}
                         onClose={this.closeWindowSwitcher} /> : null}
+
+                <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+                    {this.state.liveRegionMessage}
+                </div>
 
             </main>
         );
