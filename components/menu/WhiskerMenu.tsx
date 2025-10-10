@@ -1,9 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, useId } from 'react';
 import Image from 'next/image';
-import apps from '../../apps.config';
+import apps, { defaultPinnedAppIds } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import {
+  applyPinnedState,
+  dispatchPinnedAppsChange,
+  PINNED_APPS_EVENT,
+  readPinnedAppIds,
+  sanitizePinnedAppIds,
+  writePinnedAppIds,
+} from '../../utils/pinnedApps';
 
 type AppMeta = {
   id: string;
@@ -162,10 +170,22 @@ const WhiskerMenu: React.FC = () => {
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [pinnedIds, setPinnedIds] = useState<string[]>(() => [...defaultPinnedAppIds]);
+  const favoriteShortcutRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const dragStateRef = useRef<{ index: number; id: string } | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const shortcutInstructionsId = useId();
 
 
   const allApps: AppMeta[] = apps as any;
-  const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
+  const allAppIds = useMemo(() => allApps.map(app => app.id), [allApps]);
+  const favoriteApps = useMemo(() => {
+    const mapById = new Map(allApps.map(app => [app.id, app] as const));
+    return pinnedIds
+      .map(appId => mapById.get(appId))
+      .filter((app): app is AppMeta => Boolean(app));
+  }, [allApps, pinnedIds]);
+  const visibleFavoriteApps = useMemo(() => favoriteApps.slice(0, 6), [favoriteApps]);
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
@@ -243,6 +263,157 @@ const WhiskerMenu: React.FC = () => {
       }
     };
   }, [isOpen, prefersTouch]);
+
+  favoriteShortcutRefs.current.length = visibleFavoriteApps.length;
+
+  useEffect(() => {
+    if (!allAppIds.length) {
+      return;
+    }
+    const initial = readPinnedAppIds(allAppIds, defaultPinnedAppIds);
+    applyPinnedState(allApps, initial);
+    setPinnedIds((current) => {
+      if (current.length === initial.length && current.every((value, index) => value === initial[index])) {
+        return current;
+      }
+      return initial;
+    });
+  }, [allAppIds, allApps]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ ids?: string[] }>).detail;
+      if (!detail?.ids) return;
+      const sanitized = sanitizePinnedAppIds(detail.ids, allAppIds);
+      applyPinnedState(allApps, sanitized);
+      setPinnedIds((current) => {
+        if (current.length === sanitized.length && current.every((value, index) => value === sanitized[index])) {
+          return current;
+        }
+        return sanitized;
+      });
+    };
+    window.addEventListener(PINNED_APPS_EVENT, handler as EventListener);
+    return () => {
+      window.removeEventListener(PINNED_APPS_EVENT, handler as EventListener);
+    };
+  }, [allAppIds, allApps]);
+
+  const focusShortcutAtIndex = useCallback((index: number) => {
+    if (index < 0) return;
+    requestAnimationFrame(() => {
+      const ref = favoriteShortcutRefs.current[index];
+      if (ref) {
+        ref.focus({ preventScroll: true });
+      }
+    });
+  }, []);
+
+  const reorderPinned = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      setPinnedIds((current) => {
+        if (!current.length) return current;
+        const startIndex = Math.max(0, Math.min(fromIndex, current.length - 1));
+        const targetIndex = Math.max(0, Math.min(toIndex, current.length - 1));
+        if (startIndex === targetIndex) {
+          return current;
+        }
+        const next = [...current];
+        const [moved] = next.splice(startIndex, 1);
+        if (!moved) {
+          return current;
+        }
+        next.splice(targetIndex, 0, moved);
+        const sanitized = writePinnedAppIds(next, allAppIds);
+        if (sanitized.length === current.length && sanitized.every((value, index) => value === current[index])) {
+          return current;
+        }
+        applyPinnedState(allApps, sanitized);
+        dispatchPinnedAppsChange(sanitized);
+        return sanitized;
+      });
+    },
+    [allAppIds, allApps],
+  );
+
+  const handleShortcutDragStart = useCallback(
+    (index: number, id: string) => (event: React.DragEvent<HTMLButtonElement>) => {
+      dragStateRef.current = { index, id };
+      setDragOverIndex(index);
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        try {
+          event.dataTransfer.setData('text/plain', id);
+        } catch {
+          // ignore invalid data transfer errors
+        }
+      }
+    },
+    [],
+  );
+
+  const handleShortcutDragOver = useCallback(
+    (index: number) => (event: React.DragEvent<HTMLButtonElement>) => {
+      if (!dragStateRef.current) return;
+      event.preventDefault();
+      if (dragOverIndex !== index) {
+        setDragOverIndex(index);
+      }
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move';
+      }
+    },
+    [dragOverIndex],
+  );
+
+  const handleShortcutDrop = useCallback(
+    (index: number) => (event: React.DragEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      const source = dragStateRef.current;
+      dragStateRef.current = null;
+      setDragOverIndex(null);
+      if (!source) return;
+      reorderPinned(source.index, index);
+      focusShortcutAtIndex(index);
+    },
+    [focusShortcutAtIndex, reorderPinned],
+  );
+
+  const handleShortcutDragLeave = useCallback(() => {
+    setDragOverIndex(null);
+  }, []);
+
+  const handleShortcutDragEnd = useCallback(() => {
+    dragStateRef.current = null;
+    setDragOverIndex(null);
+  }, []);
+
+  const handleShortcutKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+      if (!(event.ctrlKey || event.metaKey)) {
+        return;
+      }
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        const target = Math.max(0, index - 1);
+        if (target !== index) {
+          reorderPinned(index, target);
+          focusShortcutAtIndex(target);
+        }
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        const target = Math.min(index + 1, pinnedIds.length - 1);
+        if (target !== index) {
+          reorderPinned(index, target);
+          focusShortcutAtIndex(target);
+        }
+      }
+    },
+    [focusShortcutAtIndex, pinnedIds.length, reorderPinned],
+  );
 
   const recentApps = useMemo(() => {
     const mapById = new Map(allApps.map(app => [app.id, app] as const));
@@ -632,24 +803,47 @@ const WhiskerMenu: React.FC = () => {
                 />
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                {favoriteApps.slice(0, 6).map((app) => (
-                  <button
-                    key={app.id}
-                    type="button"
-                    onClick={() => openSelectedApp(app.id)}
-                    className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#122136] text-white transition hover:-translate-y-0.5 hover:bg-[#1b2d46] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29]"
-                    aria-label={`Open ${app.title}`}
-                  >
-                    <Image
-                      src={app.icon}
-                      alt=""
-                      width={24}
-                      height={24}
-                      className="h-6 w-6"
-                      sizes="24px"
-                    />
-                  </button>
-                ))}
+                <p id={shortcutInstructionsId} className="sr-only">
+                  Drag favorites or press Control or Command with the arrow keys to reorder.
+                </p>
+                {visibleFavoriteApps.map((app, index) => {
+                  const pinnedIndex = index;
+                  const isDragTarget = dragOverIndex === pinnedIndex;
+                  return (
+                    <button
+                      key={app.id}
+                      ref={(el) => {
+                        favoriteShortcutRefs.current[pinnedIndex] = el;
+                      }}
+                      type="button"
+                      onClick={() => openSelectedApp(app.id)}
+                      className={`flex h-11 w-11 items-center justify-center rounded-lg bg-[#122136] text-white transition hover:-translate-y-0.5 hover:bg-[#1b2d46] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] cursor-grab active:cursor-grabbing ${
+                        isDragTarget ? 'ring-2 ring-[#53b9ff]' : ''
+                      }`}
+                      aria-label={`Open ${app.title}`}
+                      aria-describedby={shortcutInstructionsId}
+                      draggable
+                      data-app-id={app.id}
+                      data-testid={`favorite-shortcut-${app.id}`}
+                      onDragStart={handleShortcutDragStart(pinnedIndex, app.id)}
+                      onDragOver={handleShortcutDragOver(pinnedIndex)}
+                      onDrop={handleShortcutDrop(pinnedIndex)}
+                      onDragLeave={handleShortcutDragLeave}
+                      onDragEnd={handleShortcutDragEnd}
+                      onKeyDown={(event) => handleShortcutKeyDown(event, pinnedIndex)}
+                      title={`Open ${app.title}. Drag or press Ctrl/Cmd + Arrow keys to reorder.`}
+                    >
+                      <Image
+                        src={app.icon}
+                        alt=""
+                        width={24}
+                        height={24}
+                        className="h-6 w-6"
+                        sizes="24px"
+                      />
+                    </button>
+                  );
+                })}
               </div>
             </div>
             <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-3">

@@ -1065,4 +1065,10 @@ const apps = [
   ...games,
 ];
 
+const defaultPinnedAppIds = apps
+  .filter((app) => app.favourite)
+  .map((app) => app.id);
+
+export { defaultPinnedAppIds };
+
 export default apps;
