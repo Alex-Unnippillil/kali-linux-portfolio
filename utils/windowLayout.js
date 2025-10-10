@@ -1,9 +1,9 @@
 import { NAVBAR_HEIGHT, SNAP_BOTTOM_INSET } from './uiConstants';
 
 const NAVBAR_SELECTOR = '.main-navbar-vp';
-const NAVBAR_VERTICAL_PADDING = 16; // 0.5rem top + 0.5rem bottom
+const NAVBAR_VERTICAL_PADDING = 10; // 0.375rem top + 0.25rem bottom
 const DEFAULT_NAVBAR_HEIGHT = NAVBAR_HEIGHT + NAVBAR_VERTICAL_PADDING;
-const WINDOW_TOP_MARGIN = 8;
+const WINDOW_TOP_MARGIN = 2;
 const SAFE_AREA_PROPERTIES = {
   top: '--safe-area-top',
   right: '--safe-area-right',
