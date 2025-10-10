@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import WhiskerMenu from '../components/menu/WhiskerMenu';
 
@@ -22,6 +22,36 @@ describe('WhiskerMenu keyboard shortcuts', () => {
     fireEvent.keyDown(window, { key: 'F1', altKey: true });
 
     expect(screen.getByText('Categories')).toBeInTheDocument();
+  });
+});
+
+describe('WhiskerMenu focus management', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+  });
+
+  it('restores focus to the Applications button after closing', async () => {
+    render(<WhiskerMenu />);
+
+    const trigger = screen.getByRole('button', { name: /applications/i });
+    fireEvent.click(trigger);
+
+    expect(screen.getByText('Categories')).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    act(() => {
+      jest.advanceTimersByTime(250);
+    });
+
+    await waitFor(() => {
+      expect(trigger).toHaveFocus();
+    });
   });
 });
 
