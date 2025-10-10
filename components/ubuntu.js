@@ -18,16 +18,43 @@ export default class Ubuntu extends Component {
 			booting_screen: true,
 			shutDownScreen: false
 		};
+		this.bootScreenLoadHandler = null;
 	}
 
 	componentDidMount() {
 		this.getLocalData();
 	}
 
-	setTimeOutBootScreen = () => {
-		setTimeout(() => {
-			this.setState({ booting_screen: false });
-		}, 2000);
+	componentWillUnmount() {
+		this.detachBootScreenLoadHandler();
+	}
+
+	detachBootScreenLoadHandler = () => {
+		if (typeof window === 'undefined' || !this.bootScreenLoadHandler) return;
+
+		window.removeEventListener('load', this.bootScreenLoadHandler);
+		this.bootScreenLoadHandler = null;
+	};
+
+	hideBootScreen = () => {
+		this.setState({ booting_screen: false });
+	};
+
+	waitForBootSequence = () => {
+		if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+		const finalizeBoot = () => {
+			this.hideBootScreen();
+			this.detachBootScreenLoadHandler();
+		};
+
+		if (document.readyState === 'complete') {
+			finalizeBoot();
+		} else {
+			this.detachBootScreenLoadHandler();
+			this.bootScreenLoadHandler = finalizeBoot;
+			window.addEventListener('load', this.bootScreenLoadHandler, { once: true });
+		}
 	};
 
 	getLocalData = () => {
@@ -44,7 +71,7 @@ export default class Ubuntu extends Component {
 		} else {
 			// user is visiting site for the first time
                         safeLocalStorage?.setItem('booting_screen', false);
-			this.setTimeOutBootScreen();
+			this.waitForBootSequence();
 		}
 
 		// get shutdown state
@@ -114,8 +141,7 @@ export default class Ubuntu extends Component {
 	turnOn = () => {
 		ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
-		this.setState({ shutDownScreen: false, booting_screen: true });
-		this.setTimeOutBootScreen();
+		this.setState({ shutDownScreen: false, booting_screen: true }, this.waitForBootSequence);
                 safeLocalStorage?.setItem('shut-down', false);
 	};
 
