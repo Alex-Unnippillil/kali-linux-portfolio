@@ -82,6 +82,8 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            statusMessage: '',
+            statusSequence: 0,
         }
         this.windowRef = React.createRef();
         this._usageTimeout = null;
@@ -119,6 +121,16 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+    }
+
+    getWindowLabel = () => this.props.title || 'Window';
+
+    announceStatus = (message) => {
+        if (!message) return;
+        this.setState((prev) => ({
+            statusMessage: message,
+            statusSequence: prev.statusSequence + 1,
+        }));
     }
 
     setDefaultWindowDimenstion = () => {
@@ -375,7 +387,16 @@ export class Window extends Component {
             width: percentOf(region.width, viewportWidth),
             height: percentOf(region.height, viewportHeight),
             preMaximizeSize: null,
-        }, this.resizeBoundries);
+        }, () => {
+            this.resizeBoundries();
+            const positionLabels = {
+                left: 'left side',
+                right: 'right side',
+                top: 'top half',
+            };
+            const label = positionLabels[position] || position;
+            this.announceStatus(`${this.getWindowLabel()} window snapped to the ${label}.`);
+        });
     }
 
     setInertBackground = () => {
@@ -503,6 +524,7 @@ export class Window extends Component {
     minimizeWindow = () => {
         this.setWinowsPosition();
         this.props.hasMinimised(this.id);
+        this.announceStatus(`${this.getWindowLabel()} window minimized.`);
     }
 
     restoreWindow = () => {
@@ -510,6 +532,7 @@ export class Window extends Component {
         if (!node) return;
         const storedSize = this.state.preMaximizeSize;
         const hasStoredSize = storedSize && typeof storedSize.width === 'number' && typeof storedSize.height === 'number';
+        const announceRestore = () => this.announceStatus(`${this.getWindowLabel()} window restored.`);
 
         if (hasStoredSize) {
             this.setState({
@@ -517,10 +540,13 @@ export class Window extends Component {
                 height: storedSize.height,
                 maximized: false,
                 preMaximizeSize: null,
-            }, this.resizeBoundries);
+            }, () => {
+                this.resizeBoundries();
+                announceRestore();
+            });
         } else {
             this.setDefaultWindowDimenstion();
-            this.setState({ maximized: false, preMaximizeSize: null });
+            this.setState({ maximized: false, preMaximizeSize: null }, announceRestore);
         }
         // get previous position
         const posx = node.style.getPropertyValue("--window-transform-x") || `${this.startX}px`;
@@ -560,7 +586,9 @@ export class Window extends Component {
                 const translateYOffset = topOffset - DESKTOP_TOP_PADDING;
                 node.style.transform = `translate(-1pt, ${translateYOffset}px)`;
             }
-            this.setState({ maximized: true, height: heightPercent, width: 100.2, preMaximizeSize: currentSize });
+            this.setState({ maximized: true, height: heightPercent, width: 100.2, preMaximizeSize: currentSize }, () => {
+                this.announceStatus(`${this.getWindowLabel()} window maximized.`);
+            });
         }
     }
 
@@ -702,6 +730,9 @@ export class Window extends Component {
                         }}
                     />
                 )}
+                <div aria-live="polite" aria-atomic="true" className="sr-only">
+                    <span key={this.state.statusSequence}>{this.state.statusMessage}</span>
+                </div>
                 <Draggable
                     nodeRef={this.windowRef}
                     axis="both"
