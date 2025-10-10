@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/desktop/Window';
+import windowStyles from '../components/base/window.module.css';
 import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET } from '../utils/uiConstants';
 import { measureSafeAreaInset, measureWindowTopOffset } from '../utils/windowLayout';
 
@@ -109,7 +110,8 @@ describe('Window snapping preview', () => {
 
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toBeInTheDocument();
-    expect((preview as HTMLElement).style.backdropFilter).toBe('brightness(1.2)');
+    expect(preview).toHaveClass(windowStyles.snapPreviewGlass);
+    expect((preview as HTMLElement).style.backdropFilter).toBe('brightness(1.1) saturate(1.2)');
   });
 
   it('hides preview when away from edge', () => {
