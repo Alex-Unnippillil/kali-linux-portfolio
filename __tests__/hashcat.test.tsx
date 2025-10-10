@@ -1,6 +1,9 @@
 import React from 'react';
 import { render, fireEvent, waitFor, act } from '@testing-library/react';
-import HashcatApp, { detectHashType } from '../components/apps/hashcat';
+import HashcatApp, {
+  detectHashType,
+  generateWordlist,
+} from '../components/apps/hashcat';
 import progressInfo from '../components/apps/hashcat/progress.json';
 
 describe('HashcatApp', () => {
@@ -126,5 +129,26 @@ describe('HashcatApp', () => {
     expect(
       getByText(/hashcat \(v6\.2\.6\) starting in benchmark mode/)
     ).toBeInTheDocument();
+  });
+
+  it('expands mask tokens when generating wordlists', () => {
+    const wordlist = generateWordlist('?d?d');
+    expect(wordlist[0]).toBe('00');
+    expect(wordlist[1]).toBe('01');
+    expect(wordlist[99]).toBe('99');
+    expect(wordlist).toHaveLength(100);
+  });
+
+  it('supports literal characters in masks', () => {
+    const wordlist = generateWordlist('ab?l');
+    expect(wordlist[0]).toBe('aba');
+    expect(wordlist[25]).toBe('abz');
+    expect(wordlist).toHaveLength(26);
+  });
+
+  it('caps generated wordlists at 1000 entries', () => {
+    const wordlist = generateWordlist('?d?d?d?d?d?d?d?d?d?d');
+    expect(wordlist).toHaveLength(1000);
+    expect(wordlist[0]).toBe('0000000000');
   });
 });
