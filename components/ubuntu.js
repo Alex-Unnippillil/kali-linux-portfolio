@@ -10,15 +10,16 @@ import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
 
 export default class Ubuntu extends Component {
-	constructor() {
-		super();
-		this.state = {
-			screen_locked: false,
-			bg_image_name: 'wall-2',
-			booting_screen: true,
-			shutDownScreen: false
-		};
-	}
+        constructor() {
+                super();
+                this.state = {
+                        screen_locked: false,
+                        bg_image_name: 'wall-2',
+                        booting_screen: true,
+                        shutDownScreen: false
+                };
+                this.statusBarRef = React.createRef();
+        }
 
 	componentDidMount() {
 		this.getLocalData();
@@ -67,10 +68,9 @@ export default class Ubuntu extends Component {
 			action: `Set Screen to Locked`
 		});
 
-                const statusBar = document.getElementById('status-bar');
-                // Consider using a React ref if the status bar element lives within this component tree
-                statusBar?.blur();
-        const finalizeLock = () => {
+                const statusBar = this.statusBarRef?.current;
+                statusBar?.blur?.();
+                const finalizeLock = () => {
                         this.setState({ screen_locked: true });
                 };
                 if (typeof jest !== 'undefined') {
@@ -104,9 +104,8 @@ export default class Ubuntu extends Component {
 			action: `Switched off the Ubuntu`
 		});
 
-                const statusBar = document.getElementById('status-bar');
-                // Consider using a React ref if the status bar element lives within this component tree
-                statusBar?.blur();
+                const statusBar = this.statusBarRef?.current;
+                statusBar?.blur?.();
 		this.setState({ shutDownScreen: true });
                 safeLocalStorage?.setItem('shut-down', true);
 	};
@@ -120,21 +119,25 @@ export default class Ubuntu extends Component {
 	};
 
 	render() {
-        return (
-                <Layout id="monitor-screen">
+                return (
+                        <Layout id="monitor-screen">
                                 <LockScreen
                                         isLocked={this.state.screen_locked}
                                         bgImgName={this.state.bg_image_name}
                                         unLockScreen={this.unLockScreen}
                                 />
-				<BootingScreen
-					visible={this.state.booting_screen}
-					isShutDown={this.state.shutDownScreen}
-					turnOn={this.turnOn}
-				/>
-                                <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
+                                <BootingScreen
+                                        visible={this.state.booting_screen}
+                                        isShutDown={this.state.shutDownScreen}
+                                        turnOn={this.turnOn}
+                                />
+                                <Navbar
+                                        lockScreen={this.lockScreen}
+                                        shutDown={this.shutDown}
+                                        statusBarRef={this.statusBarRef}
+                                />
                                 <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
-                </Layout>
-        );
+                        </Layout>
+                );
 	}
 }
