@@ -79,6 +79,7 @@ export class Desktop extends Component {
 
         this.desktopRef = React.createRef();
         this.folderNameInputRef = React.createRef();
+        this.allAppsSearchRef = React.createRef();
         this.iconDragState = null;
         this.preventNextIconClick = false;
         this.savedIconPositions = {};
@@ -104,6 +105,9 @@ export class Desktop extends Component {
         this.openSettingsListenerAttached = false;
 
         this.liveRegionTimeout = null;
+
+        this.previousFocusElement = null;
+        this.allAppsTriggerKey = null;
 
     }
 
@@ -1205,6 +1209,7 @@ export class Desktop extends Component {
         window.addEventListener('trash-change', this.updateTrashIcon);
         window.addEventListener('resize', this.handleViewportResize);
         document.addEventListener('keydown', this.handleGlobalShortcut);
+        document.addEventListener('keyup', this.handleGlobalShortcutKeyup);
         window.addEventListener('open-app', this.handleOpenAppEvent);
         this.setupPointerMediaWatcher();
         this.setupGestureListeners();
@@ -1220,12 +1225,19 @@ export class Desktop extends Component {
         ) {
             this.broadcastWorkspaceState();
         }
+
+        if (!prevState.allAppsView && this.state.allAppsView) {
+            this.focusAllAppsSearchInput();
+        } else if (prevState.allAppsView && !this.state.allAppsView) {
+            this.restoreFocusToPreviousElement();
+        }
     }
 
     componentWillUnmount() {
         this.removeEventListeners();
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
+        document.removeEventListener('keyup', this.handleGlobalShortcutKeyup);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
         window.removeEventListener('resize', this.handleViewportResize);
@@ -1431,6 +1443,100 @@ export class Desktop extends Component {
                 document.getElementById(id)?.dispatchEvent(event);
             }
         }
+        else if (e.key === 'Meta' && !e.repeat) {
+            if (typeof e.preventDefault === 'function') {
+                e.preventDefault();
+            }
+            this.openAllAppsOverlay('Meta');
+        }
+        else if (e.ctrlKey && e.key === 'Escape' && !e.repeat) {
+            e.preventDefault();
+            if (this.state.allAppsView) {
+                this.closeAllAppsOverlay();
+            } else {
+                this.openAllAppsOverlay('Ctrl+Escape');
+            }
+        }
+    }
+
+    handleGlobalShortcutKeyup = (event) => {
+        if (!this.state.allAppsView) return;
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            this.closeAllAppsOverlay();
+            return;
+        }
+
+        if (this.allAppsTriggerKey === 'Meta' && event.key === 'Meta') {
+            event.preventDefault();
+            this.closeAllAppsOverlay();
+            return;
+        }
+
+        if (this.allAppsTriggerKey === 'Ctrl+Escape' && event.key === 'Control') {
+            event.preventDefault();
+            this.closeAllAppsOverlay();
+        }
+    }
+
+    focusAllAppsSearchInput = () => {
+        const focusInput = () => {
+            const input = this.allAppsSearchRef?.current;
+            if (input && typeof input.focus === 'function') {
+                try {
+                    input.focus({ preventScroll: true });
+                } catch (e) {
+                    input.focus();
+                }
+                if (typeof input.select === 'function') {
+                    input.select();
+                }
+            }
+        };
+
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(focusInput);
+        } else {
+            focusInput();
+        }
+    }
+
+    restoreFocusToPreviousElement = () => {
+        const target = this.previousFocusElement;
+        this.previousFocusElement = null;
+        this.allAppsTriggerKey = null;
+
+        if (target && typeof target.focus === 'function') {
+            try {
+                target.focus();
+            } catch (e) {
+                // ignore focus errors
+            }
+        }
+    }
+
+    openAllAppsOverlay = (triggerKey = null) => {
+        if (!this.state.allAppsView) {
+            if (typeof document !== 'undefined') {
+                const activeElement = document.activeElement;
+                if (activeElement && activeElement !== document.body) {
+                    this.previousFocusElement = activeElement;
+                } else {
+                    this.previousFocusElement = null;
+                }
+            }
+            this.setState({ allAppsView: true });
+        }
+        this.allAppsTriggerKey = triggerKey;
+    }
+
+    closeAllAppsOverlay = () => {
+        if (!this.state.allAppsView) {
+            this.allAppsTriggerKey = null;
+            return;
+        }
+        this.setState({ allAppsView: false });
     }
 
     getFocusedWindowId = () => {
@@ -2187,7 +2293,13 @@ export class Desktop extends Component {
         this.setState({ showNameBar: false }, this.updateAppsData);
     };
 
-    showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }); };
+    showAllApps = () => {
+        if (this.state.allAppsView) {
+            this.closeAllAppsOverlay();
+        } else {
+            this.openAllAppsOverlay();
+        }
+    };
 
     renderNameBar = () => {
         const handleSubmit = (event) => {
@@ -2316,7 +2428,8 @@ export class Desktop extends Component {
                     <AllApplications apps={apps}
                         games={games}
                         recentApps={this.getActiveStack()}
-                        openApp={this.openApp} /> : null}
+                        openApp={this.openApp}
+                        searchInputRef={this.allAppsSearchRef} /> : null}
 
                 { this.state.showShortcutSelector ?
                     <ShortcutSelector apps={apps}
