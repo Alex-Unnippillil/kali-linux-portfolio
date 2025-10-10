@@ -60,6 +60,10 @@ class AllApplications extends React.Component {
             favorites: [],
             recents: [],
         };
+        this.overlayRef = React.createRef();
+        this.searchInputRef = React.createRef();
+        this.previousActiveElement = null;
+        this.desktopInertState = [];
     }
 
     componentDidMount() {
@@ -75,13 +79,166 @@ class AllApplications extends React.Component {
         persistIds(FAVORITES_KEY, favorites);
         persistIds(RECENTS_KEY, recents);
 
-        this.setState({
-            apps: combined,
-            unfilteredApps: combined,
-            favorites,
-            recents,
-        });
+        this.setState(
+            {
+                apps: combined,
+                unfilteredApps: combined,
+                favorites,
+                recents,
+            },
+            () => {
+                this.activateOverlayAccessibility();
+            }
+        );
     }
+
+    componentWillUnmount() {
+        this.restoreDesktopAccessibility();
+        this.restoreFocus();
+    }
+
+    activateOverlayAccessibility = () => {
+        if (typeof document === 'undefined') return;
+        if (!this.overlayRef.current) return;
+
+        if (!this.previousActiveElement) {
+            const active = document.activeElement;
+            if (active && active !== document.body && typeof active.focus === 'function') {
+                this.previousActiveElement = active;
+            }
+        }
+
+        this.focusSearchInput();
+        this.disableDesktopRegion();
+    };
+
+    focusSearchInput = () => {
+        const input = this.searchInputRef.current;
+        if (!input) return;
+        try {
+            input.focus({ preventScroll: true });
+        } catch (e) {
+            input.focus();
+        }
+        if (typeof input.select === 'function') {
+            input.select();
+        }
+    };
+
+    disableDesktopRegion = () => {
+        const overlayNode = this.overlayRef.current;
+        if (!overlayNode) return;
+        let desktopRoot = overlayNode.parentElement;
+        while (desktopRoot && desktopRoot !== document.body) {
+            if (desktopRoot.classList.contains('window-parent')) break;
+            desktopRoot = desktopRoot.parentElement;
+        }
+        if (!desktopRoot || !desktopRoot.classList.contains('window-parent')) return;
+
+        if (this.desktopInertState.length) return;
+
+        const siblings = Array.from(desktopRoot.children || []);
+        this.desktopInertState = siblings
+            .filter((child) => child !== overlayNode)
+            .map((child) => {
+                const hadInert = child.hasAttribute('inert');
+                const previousAriaHidden = child.getAttribute('aria-hidden');
+                child.setAttribute('aria-hidden', 'true');
+                child.setAttribute('inert', '');
+                if ('inert' in child) {
+                    child.inert = true;
+                }
+                return { element: child, hadInert, previousAriaHidden };
+            });
+    };
+
+    restoreDesktopAccessibility = () => {
+        if (!this.desktopInertState.length) return;
+        this.desktopInertState.forEach(({ element, hadInert, previousAriaHidden }) => {
+            if (!element || !element.isConnected) return;
+            if (previousAriaHidden === null) {
+                element.removeAttribute('aria-hidden');
+            } else {
+                element.setAttribute('aria-hidden', previousAriaHidden);
+            }
+            if (hadInert) {
+                element.setAttribute('inert', '');
+                if ('inert' in element) {
+                    element.inert = true;
+                }
+            } else {
+                element.removeAttribute('inert');
+                if ('inert' in element) {
+                    element.inert = false;
+                }
+            }
+        });
+        this.desktopInertState = [];
+    };
+
+    restoreFocus = () => {
+        const trigger = this.previousActiveElement;
+        if (trigger && typeof trigger.focus === 'function') {
+            try {
+                trigger.focus({ preventScroll: true });
+            } catch (e) {
+                trigger.focus();
+            }
+        }
+        this.previousActiveElement = null;
+    };
+
+    getFocusableElements = () => {
+        if (!this.overlayRef.current) return [];
+        const selectors = [
+            'a[href]',
+            'area[href]',
+            'button:not([disabled])',
+            'input:not([disabled])',
+            'select:not([disabled])',
+            'textarea:not([disabled])',
+            '[tabindex]:not([tabindex="-1"])',
+        ];
+        const nodes = this.overlayRef.current.querySelectorAll(selectors.join(','));
+        return Array.from(nodes).filter((node) => !node.hasAttribute('inert') && node.getAttribute('aria-hidden') !== 'true');
+    };
+
+    handleKeyDown = (event) => {
+        if (event.key !== 'Tab') return;
+        const focusable = this.getFocusableElements();
+        if (!focusable.length) {
+            event.preventDefault();
+            if (this.overlayRef.current) {
+                this.overlayRef.current.focus();
+            }
+            return;
+        }
+        const activeElement = typeof document !== 'undefined' ? document.activeElement : null;
+        const currentIndex = focusable.indexOf(activeElement);
+        let nextIndex;
+        if (event.shiftKey) {
+            if (currentIndex <= 0) {
+                nextIndex = focusable.length - 1;
+            } else {
+                nextIndex = currentIndex - 1;
+            }
+        } else {
+            if (currentIndex === -1 || currentIndex === focusable.length - 1) {
+                nextIndex = 0;
+            } else {
+                nextIndex = currentIndex + 1;
+            }
+        }
+        event.preventDefault();
+        const nextElement = focusable[nextIndex];
+        if (nextElement && typeof nextElement.focus === 'function') {
+            try {
+                nextElement.focus({ preventScroll: true });
+            } catch (e) {
+                nextElement.focus();
+            }
+        }
+    };
 
     handleChange = (e) => {
         const value = e.target.value;
@@ -183,8 +340,17 @@ class AllApplications extends React.Component {
             groupedApps.some((group) => group.length > 0);
 
         return (
-            <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
+            <div
+                ref={this.overlayRef}
+                className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim"
+                role="dialog"
+                aria-modal="true"
+                aria-label="All applications"
+                tabIndex={-1}
+                onKeyDown={this.handleKeyDown}
+            >
                 <input
+                    ref={this.searchInputRef}
                     className="mt-10 mb-8 w-2/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none md:w-1/3"
                     placeholder="Search"
                     value={this.state.query}
