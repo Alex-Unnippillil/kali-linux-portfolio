@@ -81,6 +81,7 @@ export class UbuntuApp extends Component {
             padding: 'var(--desktop-icon-padding, 0.25rem)',
             fontSize: 'var(--desktop-icon-font-size, 0.75rem)',
             gap: 'var(--desktop-icon-gap, 0.375rem)',
+            lineHeight: 'var(--desktop-icon-line-height, 1.1rem)',
             ...style,
         };
 
@@ -127,7 +128,9 @@ export class UbuntuApp extends Component {
                     className="mb-1"
                     style={{
                         width: 'var(--desktop-icon-image, 2.5rem)',
-                        height: 'var(--desktop-icon-image, 2.5rem)'
+                        height: 'var(--desktop-icon-image, 2.5rem)',
+                        maxWidth: 'var(--desktop-icon-image, 2.5rem)',
+                        maxHeight: 'var(--desktop-icon-image, 2.5rem)'
                     }}
                     src={this.props.icon.replace('./', '/')}
                     alt={"Kali " + this.props.name}

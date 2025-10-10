@@ -46,6 +46,37 @@ export class Desktop extends Component {
         ]);
         this.initFavourite = {};
         this.allWindowClosed = false;
+
+        this.iconSizePresetKey = 'desktop_icon_size_preset';
+        this.iconSizePresets = {
+            small: {
+                dimensions: { width: 84, height: 76 },
+                spacing: { row: 100, column: 116 },
+                padding: { top: DESKTOP_TOP_PADDING, right: 20, bottom: 112, left: 20 },
+            },
+            medium: {
+                dimensions: { width: 96, height: 88 },
+                spacing: { row: 112, column: 128 },
+                padding: { top: DESKTOP_TOP_PADDING, right: 24, bottom: 120, left: 24 },
+            },
+            large: {
+                dimensions: { width: 112, height: 104 },
+                spacing: { row: 132, column: 148 },
+                padding: { top: DESKTOP_TOP_PADDING + 8, right: 28, bottom: 136, left: 28 },
+            },
+        };
+
+        const initialIconSizePreset = this.getStoredIconSizePreset();
+        const initialPresetConfig = this.getIconSizePresetConfig(initialIconSizePreset);
+
+        this.baseIconDimensions = { ...initialPresetConfig.dimensions };
+        this.baseIconGridSpacing = { ...initialPresetConfig.spacing };
+        this.baseDesktopPadding = { ...initialPresetConfig.padding };
+
+        this.iconDimensions = { ...this.baseIconDimensions };
+        this.iconGridSpacing = { ...this.baseIconGridSpacing };
+        this.desktopPadding = { ...this.baseDesktopPadding };
+
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -76,6 +107,7 @@ export class Desktop extends Component {
             draggingIconId: null,
             keyboardMoveState: null,
             liveRegionMessage: '',
+            iconSizePreset: initialIconSizePreset,
         }
 
         this.desktopRef = React.createRef();
@@ -84,14 +116,6 @@ export class Desktop extends Component {
         this.iconDragState = null;
         this.preventNextIconClick = false;
         this.savedIconPositions = {};
-
-        this.defaultIconDimensions = { width: 96, height: 88 };
-        this.defaultIconGridSpacing = { row: 112, column: 128 };
-        this.defaultDesktopPadding = { top: DESKTOP_TOP_PADDING, right: 24, bottom: 120, left: 24 };
-
-        this.iconDimensions = { ...this.defaultIconDimensions };
-        this.iconGridSpacing = { ...this.defaultIconGridSpacing };
-        this.desktopPadding = { ...this.defaultDesktopPadding };
 
         this.gestureState = { pointer: null, overview: null };
 
@@ -131,6 +155,45 @@ export class Desktop extends Component {
         minimized_windows: { ...state.minimized_windows },
         window_positions: { ...state.window_positions },
     });
+
+    getIconSizePresetConfig = (preset) => {
+        if (preset && this.iconSizePresets && this.iconSizePresets[preset]) {
+            return this.iconSizePresets[preset];
+        }
+        return this.iconSizePresets?.medium || {
+            dimensions: { width: 96, height: 88 },
+            spacing: { row: 112, column: 128 },
+            padding: { top: DESKTOP_TOP_PADDING, right: 24, bottom: 120, left: 24 },
+        };
+    };
+
+    getStoredIconSizePreset = () => {
+        const fallback = 'medium';
+        if (!safeLocalStorage) return fallback;
+        try {
+            const stored = safeLocalStorage.getItem(this.iconSizePresetKey);
+            if (stored && this.iconSizePresets?.[stored]) {
+                return stored;
+            }
+        } catch (e) {
+            // ignore read errors
+        }
+        return fallback;
+    };
+
+    persistIconSizePreset = (preset) => {
+        if (!safeLocalStorage) return;
+        try {
+            safeLocalStorage.setItem(this.iconSizePresetKey, preset);
+        } catch (e) {
+            // ignore write errors
+        }
+    };
+
+    broadcastIconSizePreset = (preset) => {
+        if (typeof window === 'undefined') return;
+        window.dispatchEvent(new CustomEvent('desktop-icon-size', { detail: { preset } }));
+    };
 
     commitWorkspacePartial = (partial, index) => {
         const targetIndex = typeof index === 'number' ? index : this.state.activeWorkspace;
@@ -194,6 +257,10 @@ export class Desktop extends Component {
 
     configureTouchTargets = (isCoarse) => {
         this.currentPointerIsCoarse = Boolean(isCoarse);
+        const presetConfig = this.getIconSizePresetConfig(this.state.iconSizePreset);
+        this.baseIconDimensions = { ...presetConfig.dimensions };
+        this.baseIconGridSpacing = { ...presetConfig.spacing };
+        this.baseDesktopPadding = { ...presetConfig.padding };
         const layoutChanged = this.applyIconLayoutFromSettings(this.props);
         if (layoutChanged) {
             this.realignIconPositions();
@@ -223,22 +290,26 @@ export class Desktop extends Component {
         const spacingMultiplier = normalizedFont * densitySpacingMultiplier * hitAreaSpacingMultiplier * pointerMultiplier;
         const paddingMultiplier = normalizedFont * densityPaddingMultiplier * hitAreaSpacingMultiplier * pointerMultiplier;
 
+        const baseDimensions = this.baseIconDimensions || this.iconSizePresets.medium.dimensions;
+        const baseSpacing = this.baseIconGridSpacing || this.iconSizePresets.medium.spacing;
+        const basePaddingConfig = this.baseDesktopPadding || this.iconSizePresets.medium.padding;
+
         const nextIconDimensions = {
-            width: clamp(Math.round(this.defaultIconDimensions.width * sizeMultiplier), 72, 192),
-            height: clamp(Math.round(this.defaultIconDimensions.height * sizeMultiplier), 64, 176),
+            width: clamp(Math.round(baseDimensions.width * sizeMultiplier), 72, 192),
+            height: clamp(Math.round(baseDimensions.height * sizeMultiplier), 64, 176),
         };
 
         const nextIconGridSpacing = {
-            row: clamp(Math.round(this.defaultIconGridSpacing.row * spacingMultiplier), 96, 240),
-            column: clamp(Math.round(this.defaultIconGridSpacing.column * spacingMultiplier), 108, 256),
+            row: clamp(Math.round(baseSpacing.row * spacingMultiplier), 96, 256),
+            column: clamp(Math.round(baseSpacing.column * spacingMultiplier), 108, 288),
         };
 
         const safeArea = getSafeAreaInsets();
         const basePadding = {
-            top: clamp(Math.round(this.defaultDesktopPadding.top * paddingMultiplier), 40, 256),
-            right: clamp(Math.round(this.defaultDesktopPadding.right * paddingMultiplier), 16, 200),
-            bottom: clamp(Math.round(this.defaultDesktopPadding.bottom * paddingMultiplier), 72, 360),
-            left: clamp(Math.round(this.defaultDesktopPadding.left * paddingMultiplier), 16, 200),
+            top: clamp(Math.round(basePaddingConfig.top * paddingMultiplier), 40, 256),
+            right: clamp(Math.round(basePaddingConfig.right * paddingMultiplier), 16, 220),
+            bottom: clamp(Math.round(basePaddingConfig.bottom * paddingMultiplier), 72, 384),
+            left: clamp(Math.round(basePaddingConfig.left * paddingMultiplier), 16, 220),
         };
 
         const nextDesktopPadding = {
@@ -248,10 +319,15 @@ export class Desktop extends Component {
             left: basePadding.left + safeArea.left,
         };
 
-        const iconPaddingRem = (0.25 * hitAreaSpacingMultiplier).toFixed(3);
-        const iconGapRem = (0.375 * hitAreaSpacingMultiplier).toFixed(3);
-        const fontSizeRem = (0.75 * normalizedFont * (density === 'compact' ? 0.95 : 1)).toFixed(3);
-        const imageSize = clamp(Math.round(48 * sizeMultiplier), 32, 96);
+        const mediumDimensions = this.iconSizePresets.medium.dimensions;
+        const dimensionScale = mediumDimensions?.width ? baseDimensions.width / mediumDimensions.width : 1;
+        const fontBase = normalizedFont * (density === 'compact' ? 0.95 : 1);
+        const iconPaddingRem = (0.25 * dimensionScale * hitAreaSpacingMultiplier).toFixed(3);
+        const iconGapRem = (0.375 * dimensionScale * hitAreaSpacingMultiplier).toFixed(3);
+        const fontSizeRem = (0.75 * dimensionScale * fontBase).toFixed(3);
+        const lineHeightRem = Math.max(1.05, 1.1 * dimensionScale * fontBase).toFixed(3);
+        const baseImageSize = Math.round((baseDimensions.width || 96) * 0.5);
+        const imageSize = clamp(Math.round(baseImageSize * sizeMultiplier), 32, 128);
 
         const cssVariables = {
             '--desktop-icon-width': `${nextIconDimensions.width}px`,
@@ -260,6 +336,7 @@ export class Desktop extends Component {
             '--desktop-icon-gap': `${iconGapRem}rem`,
             '--desktop-icon-font-size': `${fontSizeRem}rem`,
             '--desktop-icon-image': `${imageSize}px`,
+            '--desktop-icon-line-height': `${lineHeightRem}rem`,
         };
 
         const changed =
@@ -576,6 +653,30 @@ export class Desktop extends Component {
             this.commitWorkspacePartial(updater);
             this.setState(updater, callback);
         }
+    };
+
+    setIconSizePreset = (preset) => {
+        const normalized = preset && this.iconSizePresets?.[preset] ? preset : 'medium';
+        const presetConfig = this.getIconSizePresetConfig(normalized);
+        this.baseIconDimensions = { ...presetConfig.dimensions };
+        this.baseIconGridSpacing = { ...presetConfig.spacing };
+        this.baseDesktopPadding = { ...presetConfig.padding };
+        this.persistIconSizePreset(normalized);
+
+        if (normalized === this.state.iconSizePreset) {
+            this.applyIconLayoutFromSettings(this.props);
+            this.realignIconPositions();
+            this.broadcastIconSizePreset(normalized);
+            this.broadcastWorkspaceState();
+            return;
+        }
+
+        this.setState({ iconSizePreset: normalized }, () => {
+            this.applyIconLayoutFromSettings(this.props);
+            this.realignIconPositions();
+            this.broadcastIconSizePreset(normalized);
+            this.broadcastWorkspaceState();
+        });
     };
 
     loadDesktopIconPositions = () => {
@@ -1227,6 +1328,7 @@ export class Desktop extends Component {
             workspaces: this.getWorkspaceSummaries(),
             activeWorkspace: this.state.activeWorkspace,
             runningApps: this.getRunningAppSummaries(),
+            iconSizePreset: this.state.iconSizePreset,
         };
         window.dispatchEvent(new CustomEvent('workspace-state', { detail }));
     };
@@ -1240,6 +1342,7 @@ export class Desktop extends Component {
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
             this.broadcastWorkspaceState();
+            this.broadcastIconSizePreset(this.state.iconSizePreset);
         }
 
         this.savedIconPositions = this.loadDesktopIconPositions();
@@ -2520,6 +2623,8 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    iconSizePreset={this.state.iconSizePreset}
+                    setIconSizePreset={this.setIconSizePreset}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
