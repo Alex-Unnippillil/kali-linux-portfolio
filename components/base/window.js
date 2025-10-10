@@ -817,20 +817,22 @@ export class WindowXBorder extends Component {
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
-    const { togglePin } = useDocPiP(props.pip || (() => null));
+    const { isPinned, togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
+    const pipAriaLabel = isPinned ? 'Unpin window' : 'Pin window';
     return (
         <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[8.25rem]`}>
             {pipSupported && props.pip && (
                 <button
                     type="button"
-                    aria-label="Window pin"
+                    aria-label={pipAriaLabel}
+                    aria-pressed={isPinned}
                     className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
                     onClick={togglePin}
                 >
                     <NextImage
                         src="/themes/Yaru/window/window-pin-symbolic.svg"
-                        alt="Kali window pin"
+                        alt={`Kali window ${isPinned ? 'unpin' : 'pin'}`}
                         className="h-4 w-4 inline"
                         width={16}
                         height={16}
