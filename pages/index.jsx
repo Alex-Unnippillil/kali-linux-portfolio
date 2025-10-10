@@ -24,6 +24,17 @@ const InstallButton = dynamic(
     loading: () => null,
   }
 );
+const ReleaseNotesModal = dynamic(
+  () =>
+    import('../components/common/ReleaseNotesModal').catch((err) => {
+      console.error('Failed to load ReleaseNotesModal component', err);
+      return { default: () => null };
+    }),
+  {
+    ssr: false,
+    loading: () => null,
+  }
+);
 
 /**
  * @returns {JSX.Element}
@@ -37,6 +48,7 @@ const App = () => (
     <Ubuntu />
     <BetaBadge />
     <InstallButton />
+    <ReleaseNotesModal />
   </>
 );
 

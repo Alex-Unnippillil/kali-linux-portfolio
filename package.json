@@ -5,7 +5,7 @@
   "homepage": "https://unnippillil.com/",
   "scripts": {
     "build:gamepad": "tsc -p tsconfig.gamepad.json",
-    "prebuild": "tsc -p tsconfig.gamepad.json",
+    "prebuild": "tsc -p tsconfig.gamepad.json && node scripts/generate-release-notes.mjs",
     "dev": "next dev",
     "build": "next build",
     "postbuild": "node scripts/safe-copy.mjs",

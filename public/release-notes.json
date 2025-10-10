@@ -1,0 +1,62 @@
+{
+  "generatedAt": "2025-09-19T05:27:05.451Z",
+  "source": {
+    "changelog": "https://github.com/Alex-Unnippillil/kali-linux-portfolio/blob/main/CHANGELOG.md"
+  },
+  "latest": {
+    "version": "2.1.0",
+    "date": "2025-09-03",
+    "url": "https://github.com/Alex-Unnippillil/kali-linux-portfolio/blob/main/CHANGELOG.md#210---2025-09-03",
+    "sections": [
+      {
+        "title": "Added",
+        "items": [
+          "Added safe copy script and integrated into build process."
+        ]
+      },
+      {
+        "title": "Fixed",
+        "items": [
+          "Handle missing chat ID in chat module.",
+          "Pin Vercel runtime version to prevent deployment errors.",
+          "Update runtime mocks to resolve test issues."
+        ]
+      },
+      {
+        "title": "Upgrading",
+        "items": [
+          "No notable behavior changes."
+        ]
+      }
+    ]
+  },
+  "entries": [
+    {
+      "version": "2.1.0",
+      "date": "2025-09-03",
+      "url": "https://github.com/Alex-Unnippillil/kali-linux-portfolio/blob/main/CHANGELOG.md#210---2025-09-03",
+      "sections": [
+        {
+          "title": "Added",
+          "items": [
+            "Added safe copy script and integrated into build process."
+          ]
+        },
+        {
+          "title": "Fixed",
+          "items": [
+            "Handle missing chat ID in chat module.",
+            "Pin Vercel runtime version to prevent deployment errors.",
+            "Update runtime mocks to resolve test issues."
+          ]
+        },
+        {
+          "title": "Upgrading",
+          "items": [
+            "No notable behavior changes."
+          ]
+        }
+      ]
+    }
+  ]
+}
