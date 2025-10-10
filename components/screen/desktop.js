@@ -1286,21 +1286,40 @@ export class Desktop extends Component {
     }
 
     showContextMenu = (e, menuName /* context menu name */) => {
-        let { posx, posy } = this.getMenuPosition(e);
-        let contextMenu = document.getElementById(`${menuName}-menu`);
+        const { posx, posy } = this.getMenuPosition(e);
 
-        const menuWidth = contextMenu.offsetWidth;
-        const menuHeight = contextMenu.offsetHeight;
-        if (posx + menuWidth > window.innerWidth) posx -= menuWidth;
-        if (posy + menuHeight > window.innerHeight) posy -= menuHeight;
+        this.setState(
+            (prevState) => ({
+                context_menus: { ...prevState.context_menus, [menuName]: true },
+            }),
+            () => {
+                const contextMenu = document.getElementById(`${menuName}-menu`);
+                if (!contextMenu) {
+                    return;
+                }
 
-        posx = posx.toString() + "px";
-        posy = posy.toString() + "px";
+                let adjustedX = posx;
+                let adjustedY = posy;
 
-        contextMenu.style.left = posx;
-        contextMenu.style.top = posy;
+                const menuWidth = contextMenu.offsetWidth || 0;
+                const menuHeight = contextMenu.offsetHeight || 0;
+                if (adjustedX + menuWidth > window.innerWidth) adjustedX -= menuWidth;
+                if (adjustedY + menuHeight > window.innerHeight) adjustedY -= menuHeight;
 
-        this.setState({ context_menus: { ...this.state.context_menus, [menuName]: true } });
+                contextMenu.style.left = `${adjustedX}px`;
+                contextMenu.style.top = `${adjustedY}px`;
+
+                const focusTarget = contextMenu.querySelector(
+                    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                );
+
+                if (focusTarget && typeof focusTarget.focus === 'function') {
+                    focusTarget.focus();
+                } else if (typeof contextMenu.focus === 'function') {
+                    contextMenu.focus();
+                }
+            }
+        );
     }
 
     hideAllContextMenu = () => {
