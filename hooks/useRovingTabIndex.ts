@@ -15,11 +15,24 @@ export default function useRovingTabIndex(
     const node = ref.current;
     if (!node || !active) return;
 
-    const items = Array.from(
+    const allItems = Array.from(
       node.querySelectorAll<HTMLElement>(
         '[role="tab"], [role="menuitem"], [role="option"]'
       )
     );
+
+    const items = allItems.filter((el) => {
+      if (el.getAttribute('aria-disabled') === 'true') return false;
+      if ((el as HTMLButtonElement).disabled) return false;
+      return true;
+    });
+
+    allItems.forEach((el) => {
+      if (!items.includes(el)) {
+        el.tabIndex = -1;
+      }
+    });
+
     if (items.length === 0) return;
 
     let index = items.findIndex((el) => el.tabIndex === 0);
