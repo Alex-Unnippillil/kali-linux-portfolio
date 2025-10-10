@@ -51,8 +51,10 @@ export class UbuntuApp extends Component {
             onPointerMove,
             onPointerCancel,
             style,
+            renderLabel,
         } = this.props;
 
+        const accessibleName = this.props.displayName || this.props.name;
         const dragging = this.state.dragging || isBeingDragged;
 
         const handlePointerUp = (event) => {
@@ -81,7 +83,7 @@ export class UbuntuApp extends Component {
         return (
             <div
                 role="button"
-                aria-label={this.props.name}
+                aria-label={accessibleName}
                 aria-disabled={this.props.disabled}
                 data-context="app"
                 data-app-id={this.props.id}
@@ -111,10 +113,15 @@ export class UbuntuApp extends Component {
                         height: 'var(--desktop-icon-image, 2.5rem)'
                     }}
                     src={this.props.icon.replace('./', '/')}
-                    alt={"Kali " + this.props.name}
+                    alt={"Kali " + accessibleName}
                     sizes="(max-width: 768px) 48px, 64px"
                 />
-                {this.props.displayName || this.props.name}
+                {typeof renderLabel === 'function'
+                    ? renderLabel({
+                        defaultName: this.props.name,
+                        displayName: this.props.displayName || this.props.name,
+                    })
+                    : this.props.displayName || this.props.name}
 
             </div>
         )

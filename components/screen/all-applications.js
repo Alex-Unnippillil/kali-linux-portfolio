@@ -62,25 +62,49 @@ class AllApplications extends React.Component {
         };
     }
 
-    componentDidMount() {
+    syncWithProps = ({ readStorage = false } = {}) => {
         const { apps = [], games = [] } = this.props;
         const combined = [...apps];
         games.forEach((game) => {
             if (!combined.some((app) => app.id === game.id)) combined.push(game);
         });
         const availableIds = new Set(combined.map((app) => app.id));
-        const favorites = sanitizeIds(readStoredIds(FAVORITES_KEY), availableIds);
-        const recents = sanitizeIds(readStoredIds(RECENTS_KEY), availableIds, 10);
+        const baseFavorites = readStorage
+            ? readStoredIds(FAVORITES_KEY)
+            : this.state.favorites;
+        const baseRecents = readStorage
+            ? readStoredIds(RECENTS_KEY)
+            : this.state.recents;
+        const favorites = sanitizeIds(baseFavorites, availableIds);
+        const recents = sanitizeIds(baseRecents, availableIds, 10);
 
         persistIds(FAVORITES_KEY, favorites);
         persistIds(RECENTS_KEY, recents);
 
+        const query = this.state.query;
+        const nextApps =
+            query === '' || query === null
+                ? combined
+                : combined.filter((app) =>
+                      app.title.toLowerCase().includes(query.toLowerCase())
+                  );
+
         this.setState({
-            apps: combined,
+            apps: nextApps,
             unfilteredApps: combined,
             favorites,
             recents,
         });
+    };
+
+    componentDidMount() {
+        this.syncWithProps({ readStorage: true });
+    }
+
+    componentDidUpdate(prevProps) {
+        if (prevProps.apps !== this.props.apps || prevProps.games !== this.props.games) {
+            this.syncWithProps();
+        }
     }
 
     handleChange = (e) => {
