@@ -108,6 +108,7 @@ export class Desktop extends Component {
 
         this.previousFocusElement = null;
         this.allAppsTriggerKey = null;
+        this.skipNextEscapeKeyup = false;
 
     }
 
@@ -1468,6 +1469,10 @@ export class Desktop extends Component {
         if (!this.state.allAppsView) return;
 
         if (event.key === 'Escape') {
+            if (this.skipNextEscapeKeyup) {
+                this.skipNextEscapeKeyup = false;
+                return;
+            }
             event.preventDefault();
             this.closeAllAppsOverlay();
         }
@@ -1522,13 +1527,16 @@ export class Desktop extends Component {
             this.setState({ allAppsView: true });
         }
         this.allAppsTriggerKey = triggerKey;
+        this.skipNextEscapeKeyup = triggerKey === 'Ctrl+Escape';
     }
 
     closeAllAppsOverlay = () => {
         if (!this.state.allAppsView) {
             this.allAppsTriggerKey = null;
+            this.skipNextEscapeKeyup = false;
             return;
         }
+        this.skipNextEscapeKeyup = false;
         this.setState({ allAppsView: false });
     }
 
