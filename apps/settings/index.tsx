@@ -1,7 +1,12 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
+import {
+  useSettings,
+  ACCENT_OPTIONS,
+  BOOT_ANIMATION_PRESETS,
+  BootAnimationPreference,
+} from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
   resetSettings,
@@ -32,6 +37,8 @@ export default function Settings() {
     setHighContrast,
     haptics,
     setHaptics,
+    bootAnimationPreference,
+    setBootAnimationPreference,
     theme,
     setTheme,
   } = useSettings();
@@ -83,6 +90,8 @@ export default function Settings() {
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
+      if (parsed.bootAnimationPreference !== undefined)
+        setBootAnimationPreference(parsed.bootAnimationPreference as BootAnimationPreference);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
     } catch (err) {
       console.error("Invalid settings", err);
@@ -104,6 +113,9 @@ export default function Settings() {
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
+    setBootAnimationPreference(
+      defaults.bootAnimationPreference as BootAnimationPreference
+    );
     setTheme("default");
   };
 
@@ -258,6 +270,31 @@ export default function Settings() {
               <option value="compact">Compact</option>
             </select>
           </div>
+          <div className="flex justify-center my-4">
+            <label className="mr-2 text-ubt-grey">Boot animation:</label>
+            <select
+              value={bootAnimationPreference}
+              onChange={(e) =>
+                setBootAnimationPreference(
+                  e.target.value as BootAnimationPreference
+                )
+              }
+              className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+            >
+              {BOOT_ANIMATION_PRESETS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <p className="text-center text-xs text-ubt-grey/70 px-6 -mt-2 mb-4">
+            {
+              BOOT_ANIMATION_PRESETS.find(
+                (option) => option.value === bootAnimationPreference
+              )?.description
+            }
+          </p>
           <div className="flex justify-center my-4 items-center">
             <span className="mr-2 text-ubt-grey">Reduced Motion:</span>
             <ToggleSwitch

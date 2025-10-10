@@ -8,49 +8,75 @@ import Navbar from './screen/navbar';
 import Layout from './desktop/Layout';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
+import {
+        getBootAnimationPreferenceSync,
+        BOOT_ANIMATION_DURATIONS,
+} from '../utils/settingsStore';
 
 export default class Ubuntu extends Component {
 	constructor() {
 		super();
-		this.state = {
-			screen_locked: false,
-			bg_image_name: 'wall-2',
-			booting_screen: true,
-			shutDownScreen: false
-		};
-	}
+                this.state = {
+                        screen_locked: false,
+                        bg_image_name: 'wall-2',
+                        booting_screen: true,
+                        shutDownScreen: false
+                };
+                this.bootAnimationPreference = 'default';
+                this.bootTimeout = null;
+        }
 
-	componentDidMount() {
-		this.getLocalData();
-	}
+        componentDidMount() {
+                this.bootAnimationPreference = getBootAnimationPreferenceSync();
+                this.getLocalData();
+        }
 
-	setTimeOutBootScreen = () => {
-		setTimeout(() => {
-			this.setState({ booting_screen: false });
-		}, 2000);
-	};
+        componentWillUnmount() {
+                if (this.bootTimeout) {
+                        clearTimeout(this.bootTimeout);
+                        this.bootTimeout = null;
+                }
+        }
 
-	getLocalData = () => {
-		// Get Previously selected Background Image
+        setTimeOutBootScreen = () => {
+                if (this.bootTimeout) {
+                        clearTimeout(this.bootTimeout);
+                        this.bootTimeout = null;
+                }
+                const preference = this.bootAnimationPreference || 'default';
+                const duration = BOOT_ANIMATION_DURATIONS[preference] ?? BOOT_ANIMATION_DURATIONS.default;
+                if (duration === 0) {
+                        this.setState({ booting_screen: false });
+                        return;
+                }
+                this.bootTimeout = setTimeout(() => {
+                        this.setState({ booting_screen: false });
+                        this.bootTimeout = null;
+                }, duration);
+        };
+
+        getLocalData = () => {
+                // Get Previously selected Background Image
                 let bg_image_name = safeLocalStorage?.getItem('bg-image');
-		if (bg_image_name !== null && bg_image_name !== undefined) {
-			this.setState({ bg_image_name });
-		}
+                if (bg_image_name !== null && bg_image_name !== undefined) {
+                        this.setState({ bg_image_name });
+                }
 
-                let booting_screen = safeLocalStorage?.getItem('booting_screen');
-		if (booting_screen !== null && booting_screen !== undefined) {
-			// user has visited site before
-			this.setState({ booting_screen: false });
-		} else {
-			// user is visiting site for the first time
-                        safeLocalStorage?.setItem('booting_screen', false);
-			this.setTimeOutBootScreen();
-		}
+                const hasSeenBoot = safeLocalStorage?.getItem('booting_screen');
+                if (hasSeenBoot === null || hasSeenBoot === undefined) {
+                        safeLocalStorage?.setItem('booting_screen', 'seen');
+                }
 
-		// get shutdown state
+                if (this.bootAnimationPreference === 'skip') {
+                        this.setState({ booting_screen: false });
+                } else {
+                        this.setTimeOutBootScreen();
+                }
+
+                // get shutdown state
                 let shut_down = safeLocalStorage?.getItem('shut-down');
-		if (shut_down !== null && shut_down !== undefined && shut_down === 'true') this.shutDown();
-		else {
+                if (shut_down !== null && shut_down !== undefined && shut_down === 'true') this.shutDown();
+                else {
 			// Get previous lock screen state
                         let screen_locked = safeLocalStorage?.getItem('screen-locked');
 			if (screen_locked !== null && screen_locked !== undefined) {
@@ -111,11 +137,11 @@ export default class Ubuntu extends Component {
                 safeLocalStorage?.setItem('shut-down', true);
 	};
 
-	turnOn = () => {
-		ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+        turnOn = () => {
+                ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
-		this.setState({ shutDownScreen: false, booting_screen: true });
-		this.setTimeOutBootScreen();
+                this.setState({ shutDownScreen: false, booting_screen: true });
+                this.setTimeOutBootScreen();
                 safeLocalStorage?.setItem('shut-down', false);
 	};
 

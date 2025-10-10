@@ -22,10 +22,46 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getBootAnimationPreference as loadBootAnimationPreference,
+  setBootAnimationPreference as saveBootAnimationPreference,
+  BOOT_ANIMATION_DURATIONS,
   defaults,
 } from '../utils/settingsStore';
 import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
 type Density = 'regular' | 'compact';
+export type BootAnimationPreference = 'skip' | 'short' | 'default' | 'long';
+
+export const BOOT_ANIMATION_PRESETS: Array<{
+  value: BootAnimationPreference;
+  label: string;
+  description: string;
+  duration: number;
+}> = [
+  {
+    value: 'skip',
+    label: 'Skip animation',
+    description: 'Show the desktop immediately.',
+    duration: BOOT_ANIMATION_DURATIONS.skip,
+  },
+  {
+    value: 'short',
+    label: 'Short (1s)',
+    description: 'Play a quick one second boot animation.',
+    duration: BOOT_ANIMATION_DURATIONS.short,
+  },
+  {
+    value: 'default',
+    label: 'Standard (2s)',
+    description: 'Use the classic two second boot timing.',
+    duration: BOOT_ANIMATION_DURATIONS.default,
+  },
+  {
+    value: 'long',
+    label: 'Extended (4s)',
+    description: 'Let the boot animation linger longer.',
+    duration: BOOT_ANIMATION_DURATIONS.long,
+  },
+];
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -66,6 +102,7 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  bootAnimationPreference: BootAnimationPreference;
   theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
@@ -78,6 +115,7 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setBootAnimationPreference: (value: BootAnimationPreference) => void;
   setTheme: (value: string) => void;
 }
 
@@ -94,6 +132,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  bootAnimationPreference: defaults.bootAnimationPreference as BootAnimationPreference,
   theme: 'default',
   setAccent: () => {},
   setWallpaper: () => {},
@@ -106,6 +145,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
+  setBootAnimationPreference: () => {},
   setTheme: () => {},
 });
 
@@ -121,6 +161,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [bootAnimationPreference, setBootAnimationPreferenceState] = useState<BootAnimationPreference>(
+    (defaults.bootAnimationPreference as BootAnimationPreference) || 'default'
+  );
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
 
@@ -137,6 +180,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setBootAnimationPreferenceState((await loadBootAnimationPreference()) as BootAnimationPreference);
       setTheme(loadTheme());
     })();
   }, []);
@@ -250,6 +294,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    saveBootAnimationPreference(bootAnimationPreference);
+  }, [bootAnimationPreference]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
 
   return (
@@ -267,6 +315,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        bootAnimationPreference,
         theme,
         setAccent,
         setWallpaper,
@@ -279,6 +328,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setBootAnimationPreference: setBootAnimationPreferenceState,
         setTheme,
       }}
     >
