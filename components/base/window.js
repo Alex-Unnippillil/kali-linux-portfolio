@@ -18,6 +18,9 @@ import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET, WINDOW_TOP_INSET } from '../../
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
 const EDGE_THRESHOLD_RATIO = 0.05;
+const KEYBOARD_RESIZE_STEP = 16;
+const MIN_WINDOW_WIDTH_PERCENT = 20;
+const MIN_WINDOW_HEIGHT_PERCENT = 20;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -287,19 +290,46 @@ export class Window extends Component {
         return Math.round(value / 8) * 8;
     }
 
-    handleVerticleResize = () => {
+    extractResizeDelta = (input, defaultDelta = 1) => {
+        if (typeof input === 'number') {
+            return input;
+        }
+        if (input && typeof input === 'object') {
+            if (typeof input.delta === 'number' && !Number.isNaN(input.delta) && input.delta !== 0) {
+                return input.delta;
+            }
+            if (typeof input.direction === 'number' && input.direction !== 0) {
+                return input.direction;
+            }
+        }
+        return defaultDelta;
+    }
+
+    handleVerticleResize = (input) => {
         if (this.props.resizable === false) return;
-        const px = (this.state.height / 100) * window.innerHeight + 1;
+        if (typeof window === 'undefined') return;
+        const delta = this.extractResizeDelta(input);
+        if (!delta) return;
+        const currentHeightPx = (this.state.height / 100) * window.innerHeight;
+        const px = currentHeightPx + delta;
         const snapped = this.snapToGrid(px);
-        const heightPercent = snapped / window.innerHeight * 100;
+        const minHeightPx = window.innerHeight * (MIN_WINDOW_HEIGHT_PERCENT / 100);
+        const normalizedHeight = clamp(snapped, minHeightPx, window.innerHeight);
+        const heightPercent = normalizedHeight / window.innerHeight * 100;
         this.setState({ height: heightPercent, preMaximizeSize: null }, this.resizeBoundries);
     }
 
-    handleHorizontalResize = () => {
+    handleHorizontalResize = (input) => {
         if (this.props.resizable === false) return;
-        const px = (this.state.width / 100) * window.innerWidth + 1;
+        if (typeof window === 'undefined') return;
+        const delta = this.extractResizeDelta(input);
+        if (!delta) return;
+        const currentWidthPx = (this.state.width / 100) * window.innerWidth;
+        const px = currentWidthPx + delta;
         const snapped = this.snapToGrid(px);
-        const widthPercent = snapped / window.innerWidth * 100;
+        const minWidthPx = window.innerWidth * (MIN_WINDOW_WIDTH_PERCENT / 100);
+        const normalizedWidth = clamp(snapped, minWidthPx, window.innerWidth);
+        const widthPercent = normalizedWidth / window.innerWidth * 100;
         this.setState({ width: widthPercent, preMaximizeSize: null }, this.resizeBoundries);
     }
 
@@ -777,6 +807,11 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
 
 // Window's Borders
 export class WindowYBorder extends Component {
+    constructor(props) {
+        super(props);
+        this.lastClientX = null;
+    }
+
     componentDidMount() {
         // Use the browser's Image constructor rather than the imported Next.js
         // Image component to avoid runtime errors when running in tests.
@@ -785,18 +820,74 @@ export class WindowYBorder extends Component {
         this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
         this.trpImg.style.opacity = 0;
     }
-    render() {
-            return (
-                <div
-                    className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
+
+    componentWillUnmount() {
+        this.lastClientX = null;
+    }
+
+    handleDragStart = (event) => {
+        if (event?.dataTransfer && this.trpImg) {
+            event.dataTransfer.setDragImage(this.trpImg, 0, 0);
+        }
+        this.lastClientX = typeof event?.clientX === 'number' ? event.clientX : null;
+    }
+
+    handleDrag = (event) => {
+        if (typeof event?.clientX !== 'number') return;
+        if (this.lastClientX === null) {
+            this.lastClientX = event.clientX;
+            return;
+        }
+        const deltaX = event.clientX - this.lastClientX;
+        if (deltaX !== 0) {
+            this.props.resize?.({ delta: deltaX });
+            this.lastClientX = event.clientX;
         }
     }
 
+    resetTracker = () => {
+        this.lastClientX = null;
+    }
+
+    handleKeyDown = (event) => {
+        if (!this.props.resize) return;
+        let delta = 0;
+        if (event.key === 'ArrowLeft') {
+            delta = -KEYBOARD_RESIZE_STEP;
+        } else if (event.key === 'ArrowRight') {
+            delta = KEYBOARD_RESIZE_STEP;
+        }
+        if (delta !== 0) {
+            event.preventDefault();
+            this.props.resize({ delta });
+        }
+    }
+
+    render() {
+        return (
+            <div
+                className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
+                role="separator"
+                aria-label="Resize window width"
+                aria-orientation="vertical"
+                tabIndex={0}
+                draggable
+                onDragStart={this.handleDragStart}
+                onDrag={this.handleDrag}
+                onDragEnd={this.resetTracker}
+                onKeyDown={this.handleKeyDown}
+                onBlur={this.resetTracker}
+            ></div>
+        )
+    }
+}
+
 export class WindowXBorder extends Component {
+    constructor(props) {
+        super(props);
+        this.lastClientY = null;
+    }
+
     componentDidMount() {
         // Use the global Image constructor instead of Next.js Image component
 
@@ -804,16 +895,67 @@ export class WindowXBorder extends Component {
         this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
         this.trpImg.style.opacity = 0;
     }
-    render() {
-            return (
-                <div
-                    className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
+
+    componentWillUnmount() {
+        this.lastClientY = null;
+    }
+
+    handleDragStart = (event) => {
+        if (event?.dataTransfer && this.trpImg) {
+            event.dataTransfer.setDragImage(this.trpImg, 0, 0);
+        }
+        this.lastClientY = typeof event?.clientY === 'number' ? event.clientY : null;
+    }
+
+    handleDrag = (event) => {
+        if (typeof event?.clientY !== 'number') return;
+        if (this.lastClientY === null) {
+            this.lastClientY = event.clientY;
+            return;
+        }
+        const deltaY = event.clientY - this.lastClientY;
+        if (deltaY !== 0) {
+            this.props.resize?.({ delta: deltaY });
+            this.lastClientY = event.clientY;
         }
     }
+
+    resetTracker = () => {
+        this.lastClientY = null;
+    }
+
+    handleKeyDown = (event) => {
+        if (!this.props.resize) return;
+        let delta = 0;
+        if (event.key === 'ArrowUp') {
+            delta = -KEYBOARD_RESIZE_STEP;
+        } else if (event.key === 'ArrowDown') {
+            delta = KEYBOARD_RESIZE_STEP;
+        }
+        if (delta !== 0) {
+            event.preventDefault();
+            this.props.resize({ delta });
+        }
+    }
+
+    render() {
+        return (
+            <div
+                className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
+                role="separator"
+                aria-label="Resize window height"
+                aria-orientation="horizontal"
+                tabIndex={0}
+                draggable
+                onDragStart={this.handleDragStart}
+                onDrag={this.handleDrag}
+                onDragEnd={this.resetTracker}
+                onKeyDown={this.handleKeyDown}
+                onBlur={this.resetTracker}
+            ></div>
+        )
+    }
+}
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
