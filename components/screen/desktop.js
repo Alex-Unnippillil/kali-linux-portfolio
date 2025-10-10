@@ -99,6 +99,8 @@ export class Desktop extends Component {
         this.openSettingsClickHandler = null;
         this.openSettingsListenerAttached = false;
 
+        this.desktopIconRefs = new Map();
+
     }
 
     createEmptyWorkspaceState = () => ({
@@ -703,6 +705,141 @@ export class Desktop extends Component {
         const snappedY = snapAxis(y, metrics.offsetY, metrics.rowSpacing);
 
         return { x: snappedX, y: snappedY };
+    };
+
+    updateIconRegistryEntry = (id, partial = {}) => {
+        const current = this.desktopIconRefs.get(id) || {};
+        this.desktopIconRefs.set(id, { ...current, ...partial });
+    };
+
+    syncIconRegistryPosition = (id, position) => {
+        if (!position || !Number.isFinite(position.x) || !Number.isFinite(position.y)) return;
+        this.updateIconRegistryEntry(id, { position: { x: position.x, y: position.y } });
+    };
+
+    registerDesktopIcon = (id, position) => (node) => {
+        if (node) {
+            this.updateIconRegistryEntry(id, { node, position: position ? { x: position.x, y: position.y } : undefined });
+        } else {
+            this.desktopIconRefs.delete(id);
+        }
+    };
+
+    pruneDesktopIconRefs = (visibleIds = []) => {
+        const keep = new Set(visibleIds);
+        Array.from(this.desktopIconRefs.keys()).forEach((iconId) => {
+            if (!keep.has(iconId)) {
+                this.desktopIconRefs.delete(iconId);
+            }
+        });
+    };
+
+    isIconFocusable = (id) => {
+        const disabledApps = this.state.disabled_apps || {};
+        return !disabledApps[id];
+    };
+
+    getIconMetrics = (id) => {
+        const entry = this.desktopIconRefs.get(id);
+        const position = entry?.position || this.state.desktop_icon_positions?.[id];
+        if (!position || !Number.isFinite(position.x) || !Number.isFinite(position.y)) {
+            return null;
+        }
+        const width = (this.iconDimensions && Number.isFinite(this.iconDimensions.width))
+            ? this.iconDimensions.width
+            : this.defaultIconDimensions.width;
+        const height = (this.iconDimensions && Number.isFinite(this.iconDimensions.height))
+            ? this.iconDimensions.height
+            : this.defaultIconDimensions.height;
+        const centerX = position.x + width / 2;
+        const centerY = position.y + height / 2;
+        return {
+            id,
+            node: entry?.node,
+            position,
+            centerX,
+            centerY,
+        };
+    };
+
+    getFocusableIconEntries = () => {
+        const desktopApps = this.state.desktop_apps || [];
+        return desktopApps
+            .filter((appId) => this.isIconFocusable(appId))
+            .map((appId) => this.getIconMetrics(appId))
+            .filter((entry) => entry && entry.node);
+    };
+
+    moveDesktopIconFocus = (currentId, direction) => {
+        const focusable = this.getFocusableIconEntries();
+        const current = focusable.find((entry) => entry.id === currentId);
+        if (!current) return;
+
+        const threshold = 1;
+        let filter;
+        let primaryDelta;
+        let secondaryDelta;
+
+        switch (direction) {
+            case 'ArrowUp':
+                filter = (entry) => entry.centerY < current.centerY - threshold;
+                primaryDelta = (entry) => current.centerY - entry.centerY;
+                secondaryDelta = (entry) => Math.abs(entry.centerX - current.centerX);
+                break;
+            case 'ArrowDown':
+                filter = (entry) => entry.centerY > current.centerY + threshold;
+                primaryDelta = (entry) => entry.centerY - current.centerY;
+                secondaryDelta = (entry) => Math.abs(entry.centerX - current.centerX);
+                break;
+            case 'ArrowLeft':
+                filter = (entry) => entry.centerX < current.centerX - threshold;
+                primaryDelta = (entry) => current.centerX - entry.centerX;
+                secondaryDelta = (entry) => Math.abs(entry.centerY - current.centerY);
+                break;
+            case 'ArrowRight':
+                filter = (entry) => entry.centerX > current.centerX + threshold;
+                primaryDelta = (entry) => entry.centerX - current.centerX;
+                secondaryDelta = (entry) => Math.abs(entry.centerY - current.centerY);
+                break;
+            default:
+                return;
+        }
+
+        const candidates = focusable.filter((entry) => entry.id !== currentId).filter(filter);
+        if (!candidates.length) return;
+
+        const best = candidates.reduce((acc, entry) => {
+            const primary = primaryDelta(entry);
+            const secondary = secondaryDelta(entry);
+            if (primary <= 0) {
+                return acc;
+            }
+            if (!acc) {
+                return { entry, primary, secondary };
+            }
+            if (primary < acc.primary - 0.5) {
+                return { entry, primary, secondary };
+            }
+            if (Math.abs(primary - acc.primary) <= 0.5 && secondary < acc.secondary) {
+                return { entry, primary, secondary };
+            }
+            return acc;
+        }, null);
+
+        if (best?.entry?.node && typeof best.entry.node.focus === 'function') {
+            best.entry.node.focus();
+        }
+    };
+
+    handleDesktopIconKeyDown = (event, iconId) => {
+        if (!event) return false;
+        const { key } = event;
+        if (key === 'ArrowUp' || key === 'ArrowDown' || key === 'ArrowLeft' || key === 'ArrowRight') {
+            event.preventDefault();
+            this.moveDesktopIconFocus(iconId, key);
+            return true;
+        }
+        return false;
     };
 
     calculateIconPosition = (clientX, clientY, dragState = this.iconDragState) => {
@@ -1442,6 +1579,7 @@ export class Desktop extends Component {
             };
 
             const position = positions[appId] || this.computeGridPosition(index);
+            this.syncIconRegistryPosition(app.id, position);
             const isDragging = draggingIconId === appId;
             const wrapperStyle = {
                 position: 'absolute',
@@ -1451,6 +1589,9 @@ export class Desktop extends Component {
                 cursor: isDragging ? 'grabbing' : 'pointer',
                 zIndex: isDragging ? 60 : iconBaseZIndex,
             };
+
+            const iconRef = this.registerDesktopIcon(app.id, position);
+            const handleKeyDown = (event) => this.handleDesktopIconKeyDown(event, app.id);
 
             return (
                 <div
@@ -1462,12 +1603,20 @@ export class Desktop extends Component {
                     onPointerCancel={this.handleIconPointerCancel}
                     onClickCapture={this.handleIconClickCapture}
                 >
-                    <UbuntuApp {...props} draggable={false} isBeingDragged={isDragging} />
+                    <UbuntuApp
+                        {...props}
+                        draggable={false}
+                        isBeingDragged={isDragging}
+                        ref={iconRef}
+                        onKeyDown={handleKeyDown}
+                    />
                 </div>
             );
         }).filter(Boolean);
 
         if (!icons.length) return null;
+
+        this.pruneDesktopIconRefs(desktopApps);
 
         return (
             <div
