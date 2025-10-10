@@ -44,6 +44,18 @@ export class Desktop extends Component {
             'minimized_windows',
             'window_positions',
         ]);
+        this.defaultThemeConfig = {
+            id: 'default',
+            accent: (props.desktopTheme && props.desktopTheme.accent) || '#1793d1',
+            wallpaperUrl: props.desktopTheme && props.desktopTheme.wallpaperUrl,
+            fallbackWallpaperUrl: (props.desktopTheme && props.desktopTheme.fallbackWallpaperUrl) || '/wallpapers/wall-2.webp',
+            wallpaperName: (props.desktopTheme && props.desktopTheme.wallpaperName) || 'wall-2',
+            blur: (props.desktopTheme && typeof props.desktopTheme.blur === 'number') ? props.desktopTheme.blur : 18,
+            overlay: props.desktopTheme ? props.desktopTheme.overlay : undefined,
+            useKaliWallpaper: Boolean(props.desktopTheme && props.desktopTheme.useKaliWallpaper),
+        };
+        const initialTheme = this.normalizeTheme(props.desktopTheme);
+        this.workspaceThemes = Array.from({ length: this.workspaceCount }, () => ({ ...initialTheme }));
         this.initFavourite = {};
         this.allWindowClosed = false;
         this.state = {
@@ -76,6 +88,7 @@ export class Desktop extends Component {
             draggingIconId: null,
             keyboardMoveState: null,
             liveRegionMessage: '',
+            currentTheme: initialTheme,
         }
 
         this.desktopRef = React.createRef();
@@ -131,6 +144,57 @@ export class Desktop extends Component {
         minimized_windows: { ...state.minimized_windows },
         window_positions: { ...state.window_positions },
     });
+
+    normalizeTheme(theme) {
+        const fallback = this.defaultThemeConfig || {};
+        if (!theme) {
+            return { ...fallback };
+        }
+        const normalized = {
+            id: theme.id || fallback.id || 'default',
+            accent: theme.accent || fallback.accent || '#1793d1',
+            wallpaperUrl: theme.useKaliWallpaper
+                ? null
+                : theme.wallpaperUrl || theme.fallbackWallpaperUrl || fallback.wallpaperUrl || fallback.fallbackWallpaperUrl || null,
+            fallbackWallpaperUrl: theme.fallbackWallpaperUrl || fallback.fallbackWallpaperUrl || null,
+            wallpaperName: theme.wallpaperName || fallback.wallpaperName || null,
+            blur: typeof theme.blur === 'number' ? theme.blur : (fallback.blur || 18),
+            overlay: theme.overlay !== undefined ? theme.overlay : fallback.overlay,
+            useKaliWallpaper: typeof theme.useKaliWallpaper === 'boolean'
+                ? theme.useKaliWallpaper
+                : Boolean(fallback.useKaliWallpaper),
+        };
+        if (!normalized.wallpaperUrl && !normalized.useKaliWallpaper) {
+            normalized.wallpaperUrl = normalized.fallbackWallpaperUrl || null;
+        }
+        return normalized;
+    }
+
+    themesAreEqual(themeA, themeB) {
+        if (!themeA || !themeB) return false;
+        return (
+            themeA.id === themeB.id &&
+            themeA.accent === themeB.accent &&
+            themeA.wallpaperUrl === themeB.wallpaperUrl &&
+            themeA.fallbackWallpaperUrl === themeB.fallbackWallpaperUrl &&
+            themeA.wallpaperName === themeB.wallpaperName &&
+            themeA.blur === themeB.blur &&
+            themeA.overlay === themeB.overlay &&
+            themeA.useKaliWallpaper === themeB.useKaliWallpaper
+        );
+    }
+
+    getWorkspaceTheme(index) {
+        const stored = this.workspaceThemes && this.workspaceThemes[index];
+        return stored ? { ...stored } : this.normalizeTheme(this.props.desktopTheme);
+    }
+
+    setWorkspaceTheme(index, theme) {
+        if (!this.workspaceThemes) {
+            this.workspaceThemes = [];
+        }
+        this.workspaceThemes[index] = this.normalizeTheme(theme);
+    }
 
     commitWorkspacePartial = (partial, index) => {
         const targetIndex = typeof index === 'number' ? index : this.state.activeWorkspace;
@@ -1175,6 +1239,7 @@ export class Desktop extends Component {
         if (workspaceId === this.state.activeWorkspace) return;
         if (workspaceId < 0 || workspaceId >= this.state.workspaces.length) return;
         const snapshot = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
+        const nextTheme = this.getWorkspaceTheme(workspaceId);
         this.setState({
             activeWorkspace: workspaceId,
             focused_windows: { ...snapshot.focused_windows },
@@ -1183,6 +1248,7 @@ export class Desktop extends Component {
             window_positions: { ...snapshot.window_positions },
             showWindowSwitcher: false,
             switcherWindows: [],
+            currentTheme: nextTheme,
         }, () => {
             this.broadcastWorkspaceState();
             this.giveFocusToLastApp();
@@ -1294,6 +1360,20 @@ export class Desktop extends Component {
             prevState.workspaces !== this.state.workspaces
         ) {
             this.broadcastWorkspaceState();
+        }
+
+        const nextTheme = this.normalizeTheme(this.props.desktopTheme);
+        const storedTheme = (this.workspaceThemes && this.workspaceThemes[this.state.activeWorkspace]) || null;
+        const themeChanged = !this.themesAreEqual(storedTheme, nextTheme);
+        const stateThemeChanged = !this.themesAreEqual(this.state.currentTheme, nextTheme);
+        if (themeChanged) {
+            this.setWorkspaceTheme(this.state.activeWorkspace, nextTheme);
+        }
+        if (stateThemeChanged) {
+            this.setState({ currentTheme: nextTheme });
+        }
+        if (themeChanged || stateThemeChanged) {
+            this.defaultThemeConfig = { ...this.defaultThemeConfig, ...nextTheme };
         }
 
         if (!prevState.allAppsView && this.state.allAppsView) {
@@ -2490,13 +2570,27 @@ export class Desktop extends Component {
     };
 
     render() {
+        const theme = this.state.currentTheme || this.normalizeTheme(this.props.desktopTheme);
+        const accentColor = theme && theme.accent ? theme.accent : '#1793d1';
+        const wallpaperSource = (theme && (theme.wallpaperUrl || theme.fallbackWallpaperUrl)) || '';
+        const wallpaperCss = wallpaperSource ? `url("${wallpaperSource}")` : 'none';
+        const blurValue = theme && typeof theme.blur === 'number' ? `${theme.blur}px` : '0px';
+        const overlayValue = theme && theme.overlay ? theme.overlay : 'none';
+        const desktopStyle = {
+            paddingTop: DESKTOP_TOP_PADDING,
+            minHeight: '100dvh',
+            '--desktop-accent': accentColor,
+            '--desktop-wallpaper': wallpaperCss,
+            '--desktop-blur': blurValue,
+            '--desktop-overlay': overlayValue,
+        };
         return (
             <main
                 id="desktop"
                 role="main"
                 ref={this.desktopRef}
                 className={" min-h-screen h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent"}
-                style={{ paddingTop: DESKTOP_TOP_PADDING, minHeight: '100dvh' }}
+                style={desktopStyle}
             >
 
                 {/* Window Area */}
@@ -2509,7 +2603,7 @@ export class Desktop extends Component {
                 </div>
 
                 {/* Background Image */}
-                <BackgroundImage />
+                <BackgroundImage theme={theme} />
 
                 {/* Desktop Apps */}
                 {this.renderDesktopApps()}
@@ -2588,7 +2682,7 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    const { density, fontScale, largeHitAreas } = useSettings();
+    const { density, fontScale, largeHitAreas, desktopTheme } = useSettings();
     return (
         <Desktop
             {...props}
@@ -2596,6 +2690,7 @@ export default function DesktopWithSnap(props) {
             density={density}
             fontScale={fontScale}
             largeHitAreas={largeHitAreas}
+            desktopTheme={desktopTheme}
         />
     );
 }
