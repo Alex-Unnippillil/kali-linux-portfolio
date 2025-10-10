@@ -1914,14 +1914,30 @@ export class Desktop extends Component {
             this.setState({ showNameBar: false });
         };
 
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                event.stopPropagation();
+                removeCard();
+            }
+        };
+
         return (
-            <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
-                <form onSubmit={handleSubmit} className="flex flex-col">
-                    <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
-                        <label htmlFor="folder-name-input">New folder name</label>
-                        <input
-                            className="outline-none mt-5 px-1 w-10/12 context-menu-bg border-2 border-blue-700 rounded py-0.5"
-                            id="folder-name-input"
+            <>
+                <div
+                    className="absolute inset-0 bg-black bg-opacity-50 z-40"
+                    role="presentation"
+                    aria-hidden="true"
+                    onClick={removeCard}
+                    data-testid="folder-name-backdrop"
+                />
+                <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
+                    <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="flex flex-col">
+                        <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
+                            <label htmlFor="folder-name-input">New folder name</label>
+                            <input
+                                className="outline-none mt-5 px-1 w-10/12 context-menu-bg border-2 border-blue-700 rounded py-0.5"
+                                id="folder-name-input"
                             type="text"
                             autoComplete="off"
                             spellCheck="false"
@@ -1947,8 +1963,9 @@ export class Desktop extends Component {
                             Cancel
                         </button>
                     </div>
-                </form>
-            </div>
+                    </form>
+                </div>
+            </>
         );
     };
 
