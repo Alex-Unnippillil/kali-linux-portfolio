@@ -703,7 +703,7 @@ export class Window extends Component {
                 >
                     <div
                         ref={this.windowRef}
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%`, zIndex: computedZIndex }}
+                        style={{ position: 'absolute', width: `${this.state.width}%`, height: `${this.state.height}%`, zIndex: computedZIndex }}
                         className={[
                             this.state.cursorType,
                             this.state.closed ? 'closed-window' : '',
