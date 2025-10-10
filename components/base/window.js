@@ -75,6 +75,7 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            snapStatusMessage: '',
         }
         this.windowRef = React.createRef();
         this._usageTimeout = null;
@@ -368,6 +369,7 @@ export class Window extends Component {
             width: percentOf(region.width, viewportWidth),
             height: percentOf(region.height, viewportHeight),
             preMaximizeSize: null,
+            snapStatusMessage: '',
         }, this.resizeBoundries);
     }
 
@@ -418,10 +420,14 @@ export class Window extends Component {
                 this.state.snapPreview.width === preview.width &&
                 this.state.snapPreview.height === preview.height;
             if (!samePosition || !samePreview) {
-                this.setState({ snapPreview: preview, snapPosition: position });
+                this.setState({
+                    snapPreview: preview,
+                    snapPosition: position,
+                    snapStatusMessage: this.describeSnapPosition(position),
+                });
             }
         } else if (this.state.snapPreview) {
-            this.setState({ snapPreview: null, snapPosition: null });
+            this.setState({ snapPreview: null, snapPosition: null, snapStatusMessage: '' });
         }
     }
 
@@ -460,7 +466,20 @@ export class Window extends Component {
         if (snapPos) {
             this.snapWindow(snapPos);
         } else {
-            this.setState({ snapPreview: null, snapPosition: null });
+            this.setState({ snapPreview: null, snapPosition: null, snapStatusMessage: '' });
+        }
+    }
+
+    describeSnapPosition = (position) => {
+        switch (position) {
+            case 'left':
+                return 'Ready to snap left';
+            case 'right':
+                return 'Ready to snap right';
+            case 'top':
+                return 'Ready to snap top';
+            default:
+                return '';
         }
     }
 
@@ -723,6 +742,9 @@ export class Window extends Component {
                         onPointerDown={this.focusWindow}
                         onFocus={this.focusWindow}
                     >
+                        <div aria-live="polite" role="status" className="sr-only">
+                            {this.state.snapStatusMessage}
+                        </div>
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
                         <WindowTopBar
