@@ -51,9 +51,17 @@ export class UbuntuApp extends Component {
             onPointerMove,
             onPointerCancel,
             style,
+            tabIndex: tabIndexOverride,
         } = this.props;
 
         const dragging = this.state.dragging || isBeingDragged;
+
+        const resolvedTabIndex =
+            typeof tabIndexOverride === 'number'
+                ? tabIndexOverride
+                : this.props.disabled
+                    ? -1
+                    : 0;
 
         const handlePointerUp = (event) => {
             if (typeof this.props.onPointerUp === 'function') {
@@ -98,7 +106,7 @@ export class UbuntuApp extends Component {
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
-                tabIndex={this.props.disabled ? -1 : 0}
+                tabIndex={resolvedTabIndex}
                 onMouseEnter={this.handlePrefetch}
                 onFocus={this.handlePrefetch}
             >

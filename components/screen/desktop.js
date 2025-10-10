@@ -1439,6 +1439,7 @@ export class Desktop extends Component {
                 openApp: this.openApp,
                 disabled: this.state.disabled_apps[app.id],
                 prefetch: app.screen?.prefetch,
+                tabIndex: blockIcons ? -1 : undefined,
             };
 
             const position = positions[appId] || this.computeGridPosition(index);
@@ -1474,7 +1475,7 @@ export class Desktop extends Component {
                 className="absolute inset-0"
                 aria-hidden={blockIcons ? 'true' : 'false'}
                 style={{
-                    pointerEvents: 'auto',
+                    pointerEvents: blockIcons ? 'none' : 'auto',
                     zIndex: containerZIndex,
                 }}
             >
