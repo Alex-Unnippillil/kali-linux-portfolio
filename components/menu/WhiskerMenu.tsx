@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react';
 import Image from 'next/image';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 type AppMeta = {
   id: string;
@@ -151,17 +152,13 @@ const WhiskerMenu: React.FC = () => {
   const [recentIds, setRecentIds] = useState<string[]>([]);
   const [highlight, setHighlight] = useState(0);
   const [categoryHighlight, setCategoryHighlight] = useState(0);
-  const [prefersTouch, setPrefersTouch] = useState(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return false;
-    }
-    return window.matchMedia('(pointer: coarse)').matches;
-  });
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const categoryListRef = useRef<HTMLDivElement>(null);
   const categoryButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const focusTimeoutRef = useRef<number | null>(null);
+  const focusFrameRef = useRef<number | null>(null);
 
 
   const allApps: AppMeta[] = apps as any;
@@ -191,58 +188,47 @@ const WhiskerMenu: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-      return;
-    }
-
-    const mediaQuery = window.matchMedia('(pointer: coarse)');
-    const handleChange = (event: MediaQueryListEvent) => {
-      setPrefersTouch(event.matches);
-    };
-
-    setPrefersTouch(mediaQuery.matches);
-
-    if (typeof mediaQuery.addEventListener === 'function') {
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    }
-
-    if (typeof mediaQuery.addListener === 'function') {
-      mediaQuery.addListener(handleChange);
-      return () => mediaQuery.removeListener(handleChange);
-    }
-
-    return undefined;
-  }, []);
-
-  useEffect(() => {
     if (!isOpen) return;
     setRecentIds(readRecentAppIds());
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen || prefersTouch) return;
-    let timeout: ReturnType<typeof setTimeout> | null = null;
-    const focusInput = () => {
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+
+    const focusSearchInput = () => {
       const input = searchInputRef.current;
       if (!input) return;
-      input.focus({ preventScroll: true });
+      input.focus();
       if (typeof input.setSelectionRange === 'function') {
-        const valueLength = input.value.length;
-        input.setSelectionRange(valueLength, valueLength);
+        const length = input.value.length;
+        input.setSelectionRange(length, length);
       }
     };
-    const frame = requestAnimationFrame(() => {
-      focusInput();
-      timeout = setTimeout(focusInput, 80);
+
+    const frame = window.requestAnimationFrame(() => {
+      focusSearchInput();
+      const timeout = window.setTimeout(focusSearchInput, 120);
+      focusTimeoutRef.current = timeout;
     });
+
+    focusFrameRef.current = frame;
+
     return () => {
-      cancelAnimationFrame(frame);
-      if (timeout) {
-        clearTimeout(timeout);
+      if (focusFrameRef.current !== null) {
+        window.cancelAnimationFrame(focusFrameRef.current);
+        focusFrameRef.current = null;
+      }
+      if (focusTimeoutRef.current !== null) {
+        window.clearTimeout(focusTimeoutRef.current);
+        focusTimeoutRef.current = null;
       }
     };
-  }, [isOpen, prefersTouch]);
+  }, [isOpen]);
+
+  useFocusTrap(menuRef, isOpen, {
+    initialFocusRef: searchInputRef,
+    restoreFocusRef: buttonRef,
+  });
 
   const recentApps = useMemo(() => {
     const mapById = new Map(allApps.map(app => [app.id, app] as const));
@@ -520,6 +506,7 @@ const WhiskerMenu: React.FC = () => {
         onClick={toggleMenu}
         aria-keyshortcuts="Meta Alt+F1"
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
+        tabIndex={isOpen ? -1 : 0}
       >
         <Image
           src="/themes/Yaru/status/decompiler-symbolic.svg"
@@ -627,6 +614,7 @@ const WhiskerMenu: React.FC = () => {
                   enterKeyHint="search"
                   placeholder="Search applications"
                   aria-label="Search applications"
+                  autoFocus={isOpen}
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                 />
