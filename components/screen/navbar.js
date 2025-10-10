@@ -206,9 +206,9 @@ export default class Navbar extends PureComponent {
                                         </div>
                                         <div className="flex items-center gap-4 text-xs md:text-sm">
                                                 <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
-                                                <div
+                                                <button
+                                                        type="button"
                                                         id="status-bar"
-                                                        role="button"
                                                         tabIndex={0}
                                                         aria-label="System status"
                                                         aria-expanded={this.state.status_card}
@@ -220,7 +220,7 @@ export default class Navbar extends PureComponent {
                                                 >
                                                         <Status />
                                                         <QuickSettings open={this.state.status_card} />
-                                                </div>
+                                                </button>
                                         </div>
                                 </div>
 			);
