@@ -25,45 +25,60 @@ describe('WhiskerMenu keyboard shortcuts', () => {
   });
 });
 
-describe('WhiskerMenu touch pointer behavior', () => {
-  const originalMatchMedia = window.matchMedia;
+describe('WhiskerMenu focus management', () => {
+  const getFocusableElements = (container: HTMLElement) =>
+    Array.from(
+      container.querySelectorAll<HTMLElement>(
+        'a[href], area[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), iframe, object, embed, [contenteditable="true"], [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((element) => element.tabIndex >= 0 && !element.hasAttribute('disabled'));
 
-  afterEach(() => {
-    window.matchMedia = originalMatchMedia;
-  });
-
-  it('does not focus the search input when coarse pointer is preferred', async () => {
-    window.matchMedia = jest.fn().mockImplementation((query: string) => {
-      const listeners = new Set<(event: MediaQueryListEvent) => void>();
-      const mediaQueryList = {
-        matches: query === '(pointer: coarse)',
-        media: query,
-        onchange: null,
-        addEventListener: jest.fn((eventName: string, listener: (event: MediaQueryListEvent) => void) => {
-          if (eventName === 'change') {
-            listeners.add(listener);
-          }
-        }),
-        removeEventListener: jest.fn((eventName: string, listener: (event: MediaQueryListEvent) => void) => {
-          if (eventName === 'change') {
-            listeners.delete(listener);
-          }
-        }),
-        addListener: jest.fn((listener: (event: MediaQueryListEvent) => void) => listeners.add(listener)),
-        removeListener: jest.fn((listener: (event: MediaQueryListEvent) => void) => listeners.delete(listener)),
-        dispatchEvent: jest.fn(),
-      } satisfies MediaQueryList;
-      return mediaQueryList;
-    });
-
+  it('focuses the first focusable element when the menu opens', async () => {
     render(<WhiskerMenu />);
 
-    fireEvent.click(screen.getByRole('button', { name: /applications/i }));
+    fireEvent.keyDown(window, { key: 'F1', altKey: true });
 
     const searchInput = await screen.findByPlaceholderText('Search applications');
+    const focusSpy = jest.spyOn(searchInput, 'focus');
 
     await waitFor(() => {
-      expect(searchInput).not.toHaveFocus();
+      expect(focusSpy).toHaveBeenCalled();
     });
+
+    focusSpy.mockRestore();
+  });
+
+  it('traps focus within the dropdown when tabbing forward and backward', async () => {
+    render(<WhiskerMenu />);
+
+    fireEvent.keyDown(window, { key: 'F1', altKey: true });
+
+    const menu = await screen.findByTestId('whisker-menu-dropdown');
+    const focusable = getFocusableElements(menu);
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    const firstFocusSpy = jest.spyOn(first, 'focus');
+    const lastFocusSpy = jest.spyOn(last, 'focus');
+
+    await waitFor(() => {
+      expect(firstFocusSpy).toHaveBeenCalled();
+    });
+
+    fireEvent.keyDown(first, { key: 'Tab', shiftKey: true });
+
+    await waitFor(() => {
+      expect(lastFocusSpy).toHaveBeenCalled();
+    });
+
+    const initialFirstCallCount = firstFocusSpy.mock.calls.length;
+    fireEvent.keyDown(last, { key: 'Tab' });
+
+    await waitFor(() => {
+      expect(firstFocusSpy.mock.calls.length).toBeGreaterThan(initialFirstCallCount);
+    });
+
+    firstFocusSpy.mockRestore();
+    lastFocusSpy.mockRestore();
   });
 });
