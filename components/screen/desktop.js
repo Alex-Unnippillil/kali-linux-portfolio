@@ -95,8 +95,9 @@ export class Desktop extends Component {
 
         this.currentPointerIsCoarse = false;
 
-        this.validAppIds = new Set(apps.map((app) => app.id));
-        this.appMap = new Map(apps.map((app) => [app.id, app]));
+        this.validAppIds = new Set();
+        this.appMap = new Map();
+        this.refreshAppRegistry();
 
         this.openSettingsTarget = null;
         this.openSettingsClickHandler = null;
@@ -591,7 +592,27 @@ export class Desktop extends Component {
         return this.clampIconPosition(x, y);
     };
 
-    getAppById = (id) => this.appMap.get(id);
+    refreshAppRegistry() {
+        const nextAppMap = new Map();
+        const nextValidAppIds = new Set();
+        apps.forEach((app) => {
+            nextAppMap.set(app.id, app);
+            nextValidAppIds.add(app.id);
+        });
+        this.appMap = nextAppMap;
+        this.validAppIds = nextValidAppIds;
+    }
+
+    getAppById = (id) => {
+        if (!this.appMap?.has(id)) {
+            const match = apps.find((app) => app.id === id);
+            if (match) {
+                this.appMap.set(id, match);
+                this.validAppIds.add(id);
+            }
+        }
+        return this.appMap.get(id);
+    };
 
     getDesktopAppIndex = (id) => {
         const appsOnDesktop = this.state.desktop_apps || [];
@@ -1582,6 +1603,8 @@ export class Desktop extends Component {
     }
 
     fetchAppsData = (callback) => {
+        this.refreshAppRegistry();
+
         let pinnedApps = safeLocalStorage?.getItem('pinnedApps');
         if (pinnedApps) {
             pinnedApps = JSON.parse(pinnedApps);
@@ -1628,6 +1651,8 @@ export class Desktop extends Component {
     }
 
     updateAppsData = () => {
+        this.refreshAppRegistry();
+
         const focused_windows = {};
         const closed_windows = {};
         const favourite_apps = {};
