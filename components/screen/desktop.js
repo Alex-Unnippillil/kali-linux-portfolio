@@ -1447,7 +1447,12 @@ export class Desktop extends Component {
             if (typeof e.preventDefault === 'function') {
                 e.preventDefault();
             }
-            this.openAllAppsOverlay('Meta');
+
+            if (this.state.allAppsView && this.allAppsTriggerKey === 'Meta') {
+                this.closeAllAppsOverlay();
+            } else {
+                this.openAllAppsOverlay('Meta');
+            }
         }
         else if (e.ctrlKey && e.key === 'Escape' && !e.repeat) {
             e.preventDefault();
@@ -1463,18 +1468,6 @@ export class Desktop extends Component {
         if (!this.state.allAppsView) return;
 
         if (event.key === 'Escape') {
-            event.preventDefault();
-            this.closeAllAppsOverlay();
-            return;
-        }
-
-        if (this.allAppsTriggerKey === 'Meta' && event.key === 'Meta') {
-            event.preventDefault();
-            this.closeAllAppsOverlay();
-            return;
-        }
-
-        if (this.allAppsTriggerKey === 'Ctrl+Escape' && event.key === 'Control') {
             event.preventDefault();
             this.closeAllAppsOverlay();
         }
