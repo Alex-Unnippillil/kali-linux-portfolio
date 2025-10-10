@@ -1,13 +1,14 @@
 "use client";
 
 import usePersistentState from '../../hooks/usePersistentState';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface Props {
   open: boolean;
 }
 
 const QuickSettings = ({ open }: Props) => {
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const [theme, setTheme] = usePersistentState('qs-theme', 'light');
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
@@ -45,8 +46,21 @@ const QuickSettings = ({ open }: Props) => {
     },
   ];
 
+  useEffect(() => {
+    const panel = panelRef.current;
+
+    if (!panel) return;
+
+    if (open) {
+      panel.removeAttribute('inert');
+    } else {
+      panel.setAttribute('inert', '');
+    }
+  }, [open]);
+
   return (
     <div
+      ref={panelRef}
       role="menu"
       aria-label="Quick settings"
       aria-hidden={!open}
