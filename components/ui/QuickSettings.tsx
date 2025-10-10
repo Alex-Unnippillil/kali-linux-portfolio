@@ -23,6 +23,7 @@ const QuickSettings = ({ open }: Props) => {
 
   return (
     <div
+      id="quick-settings-panel"
       className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 shadow border-black border border-opacity-20 ${
         open ? '' : 'hidden'
       }`}
@@ -38,16 +39,27 @@ const QuickSettings = ({ open }: Props) => {
       </div>
       <div className="px-4 pb-2 flex justify-between">
         <span>Sound</span>
-        <input type="checkbox" checked={sound} onChange={() => setSound(!sound)} />
+        <input
+          type="checkbox"
+          aria-label="Toggle sound"
+          checked={sound}
+          onChange={() => setSound(!sound)}
+        />
       </div>
       <div className="px-4 pb-2 flex justify-between">
         <span>Network</span>
-        <input type="checkbox" checked={online} onChange={() => setOnline(!online)} />
+        <input
+          type="checkbox"
+          aria-label="Toggle network"
+          checked={online}
+          onChange={() => setOnline(!online)}
+        />
       </div>
       <div className="px-4 flex justify-between">
         <span>Reduced motion</span>
         <input
           type="checkbox"
+          aria-label="Toggle reduced motion"
           checked={reduceMotion}
           onChange={() => setReduceMotion(!reduceMotion)}
         />

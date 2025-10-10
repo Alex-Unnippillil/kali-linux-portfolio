@@ -211,7 +211,9 @@ export default class Navbar extends PureComponent {
                                                         role="button"
                                                         tabIndex={0}
                                                         aria-label="System status"
+                                                        aria-haspopup="dialog"
                                                         aria-expanded={this.state.status_card}
+                                                        aria-controls="quick-settings-panel"
                                                         onClick={this.handleStatusToggle}
                                                         onKeyDown={this.handleStatusKeyDown}
                                                         className={
