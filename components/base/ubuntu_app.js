@@ -51,6 +51,9 @@ export class UbuntuApp extends Component {
             onPointerMove,
             onPointerCancel,
             style,
+            disabled = false,
+            onClick,
+            onDoubleClick,
         } = this.props;
 
         const dragging = this.state.dragging || isBeingDragged;
@@ -78,8 +81,31 @@ export class UbuntuApp extends Component {
             ...style,
         };
 
+        const handleClick = (event) => {
+            if (typeof onClick === 'function') {
+                onClick(event);
+            }
+
+            if (event?.defaultPrevented) return;
+
+            if (event?.detail === 0) {
+                this.handleActivate(event);
+            }
+        };
+
+        const handleDoubleClick = (event) => {
+            if (typeof onDoubleClick === 'function') {
+                onDoubleClick(event);
+            }
+
+            if (event?.defaultPrevented) return;
+
+            this.openApp();
+        };
+
         return (
-            <div
+            <button
+                type="button"
                 role="button"
                 aria-label={this.props.name}
                 aria-disabled={this.props.disabled}
@@ -96,11 +122,13 @@ export class UbuntuApp extends Component {
                 className={(this.state.launching ? " app-icon-launch " : "") + (dragging ? " opacity-70 " : "") +
                     " m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none flex flex-col justify-start items-center text-center font-normal text-white transition-hover transition-active "}
                 id={"app-" + this.props.id}
-                onDoubleClick={this.openApp}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
-                tabIndex={this.props.disabled ? -1 : 0}
+                onClick={handleClick}
+                onDoubleClick={handleDoubleClick}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.handleActivate(e); } }}
+                tabIndex={disabled ? -1 : 0}
                 onMouseEnter={this.handlePrefetch}
                 onFocus={this.handlePrefetch}
+                disabled={disabled}
             >
                 <Image
                     width={48}
@@ -116,7 +144,7 @@ export class UbuntuApp extends Component {
                 />
                 {this.props.displayName || this.props.name}
 
-            </div>
+            </button>
         )
     }
 }
