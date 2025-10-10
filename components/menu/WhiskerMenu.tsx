@@ -323,18 +323,27 @@ const WhiskerMenu: React.FC = () => {
 
   useEffect(() => {
     if (!isOpen && isVisible) {
-      hideTimer.current = setTimeout(() => {
-        setIsVisible(false);
-      }, TRANSITION_DURATION);
-      return () => {
-        if (hideTimer.current) clearTimeout(hideTimer.current);
-      };
-    }
-    if (isOpen) {
       if (hideTimer.current) {
         clearTimeout(hideTimer.current);
-        hideTimer.current = null;
       }
+      hideTimer.current = setTimeout(() => {
+        setIsVisible(false);
+        hideTimer.current = null;
+        const button = buttonRef.current;
+        if (button) {
+          button.focus({ preventScroll: true });
+        }
+      }, TRANSITION_DURATION);
+      return () => {
+        if (hideTimer.current) {
+          clearTimeout(hideTimer.current);
+          hideTimer.current = null;
+        }
+      };
+    }
+    if (isOpen && hideTimer.current) {
+      clearTimeout(hideTimer.current);
+      hideTimer.current = null;
     }
     return () => {
       if (hideTimer.current) {
@@ -374,8 +383,14 @@ const WhiskerMenu: React.FC = () => {
         return;
       }
       if (!isVisible) return;
-      const target = e.target as Node | null;
-      if (target && categoryListRef.current?.contains(target)) {
+      const categoryList = categoryListRef.current;
+      const target = e.target;
+      if (
+        categoryList &&
+        typeof Node !== 'undefined' &&
+        target instanceof Node &&
+        categoryList.contains(target)
+      ) {
         return;
       }
 
