@@ -15,6 +15,8 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  rotationIntervalMinutes: 0,
+  rotationPlaylist: ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'],
 };
 
 let hasLoggedStorageWarning = false;
@@ -176,6 +178,71 @@ export async function setAllowNetwork(value) {
   storage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getWallpaperRotationInterval() {
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.rotationIntervalMinutes;
+  const stored = storage.getItem('wallpaper-rotation-interval');
+  if (stored === null) return DEFAULT_SETTINGS.rotationIntervalMinutes;
+  const parsed = parseInt(stored, 10);
+  return Number.isFinite(parsed) ? parsed : DEFAULT_SETTINGS.rotationIntervalMinutes;
+}
+
+export async function setWallpaperRotationInterval(value) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  if (!Number.isFinite(value) || value <= 0) {
+    storage.removeItem('wallpaper-rotation-interval');
+    return;
+  }
+  storage.setItem('wallpaper-rotation-interval', String(Math.floor(value)));
+}
+
+export async function getWallpaperRotationPlaylist() {
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.rotationPlaylist;
+  const stored = storage.getItem('wallpaper-rotation-playlist');
+  if (!stored) return DEFAULT_SETTINGS.rotationPlaylist;
+  try {
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed)
+      ? parsed.filter((item) => typeof item === 'string')
+      : DEFAULT_SETTINGS.rotationPlaylist;
+  } catch (error) {
+    console.warn('Failed to parse wallpaper rotation playlist', error);
+    return DEFAULT_SETTINGS.rotationPlaylist;
+  }
+}
+
+export async function setWallpaperRotationPlaylist(playlist) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  if (!Array.isArray(playlist)) {
+    storage.removeItem('wallpaper-rotation-playlist');
+    return;
+  }
+  const uniquePlaylist = Array.from(new Set(playlist.filter((item) => typeof item === 'string')));
+  storage.setItem('wallpaper-rotation-playlist', JSON.stringify(uniquePlaylist));
+}
+
+export async function getWallpaperRotationTimestamp() {
+  const storage = getLocalStorage();
+  if (!storage) return null;
+  const stored = storage.getItem('wallpaper-rotation-last');
+  if (stored === null) return null;
+  const parsed = parseInt(stored, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export async function setWallpaperRotationTimestamp(timestamp) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  if (!Number.isFinite(timestamp)) {
+    storage.removeItem('wallpaper-rotation-last');
+    return;
+  }
+  storage.setItem('wallpaper-rotation-last', String(Math.floor(timestamp)));
+}
+
 export async function resetSettings() {
   const storage = getLocalStorage();
   if (!storage) return;
@@ -192,6 +259,9 @@ export async function resetSettings() {
   storage.removeItem('allow-network');
   storage.removeItem('haptics');
   storage.removeItem('use-kali-wallpaper');
+  storage.removeItem('wallpaper-rotation-interval');
+  storage.removeItem('wallpaper-rotation-playlist');
+  storage.removeItem('wallpaper-rotation-last');
 }
 
 export async function exportSettings() {
@@ -207,6 +277,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    rotationIntervalMinutes,
+    rotationPlaylist,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -219,6 +291,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getWallpaperRotationInterval(),
+    getWallpaperRotationPlaylist(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -234,6 +308,8 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    rotationIntervalMinutes,
+    rotationPlaylist,
   });
 }
 
@@ -259,6 +335,8 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    rotationIntervalMinutes,
+    rotationPlaylist,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -272,6 +350,8 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (rotationIntervalMinutes !== undefined) await setWallpaperRotationInterval(rotationIntervalMinutes);
+  if (rotationPlaylist !== undefined) await setWallpaperRotationPlaylist(rotationPlaylist);
 }
 
 export const defaults = DEFAULT_SETTINGS;
