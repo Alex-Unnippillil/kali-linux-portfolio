@@ -13,6 +13,7 @@ declare global {
     documentPictureInPicture?: {
       requestWindow: (options?: PictureInPictureWindowOptions) => Promise<Window>;
     };
+    manualRefresh?: () => Promise<void> | void;
   }
 }
 

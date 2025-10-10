@@ -18,6 +18,12 @@ export type {
   NotificationPriority,
 } from '../../utils/notifications/ruleEngine';
 
+export interface NotificationAction {
+  id: string;
+  label: string;
+  onSelect?: () => void;
+}
+
 export interface AppNotification {
   id: string;
   appId: string;
@@ -28,6 +34,7 @@ export interface AppNotification {
   priority: NotificationPriority;
   hints?: NotificationHints;
   classification: ClassificationResult;
+  actions?: NotificationAction[];
 }
 
 export interface PushNotificationInput {
@@ -37,6 +44,7 @@ export interface PushNotificationInput {
   timestamp?: number;
   priority?: NotificationPriority;
   hints?: NotificationHints;
+  actions?: NotificationAction[];
 }
 
 interface NotificationsContextValue {
@@ -87,6 +95,7 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
         priority: classification.priority,
         hints: input.hints,
         classification,
+        actions: input.actions?.map(action => ({ ...action })),
       };
 
       return {
