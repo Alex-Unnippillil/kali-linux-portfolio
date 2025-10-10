@@ -11,12 +11,14 @@ export type {
   NotificationHints,
 } from '../utils/notifications/ruleEngine';
 
-export const useNotifications = () => {
+export const useNotificationCenter = () => {
   const ctx = useContext(NotificationsContext);
   if (!ctx) {
-    throw new Error('useNotifications must be used within NotificationCenter');
+    throw new Error('useNotificationCenter must be used within NotificationCenter');
   }
   return ctx;
 };
+
+export const useNotifications = () => useNotificationCenter();
 
 export default useNotifications;
