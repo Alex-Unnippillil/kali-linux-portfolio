@@ -141,6 +141,35 @@ describe('Desktop event listeners', () => {
   });
 });
 
+describe('Desktop global shortcuts', () => {
+  it('opens the window switcher on Alt+Tab when hidden', () => {
+    const desktop = new Desktop();
+    const preventDefault = jest.fn();
+    desktop.openWindowSwitcher = jest.fn();
+    desktop.cycleApps = jest.fn();
+
+    desktop.handleGlobalShortcut({ altKey: true, key: 'Tab', preventDefault } as unknown as KeyboardEvent);
+
+    expect(preventDefault).toHaveBeenCalled();
+    expect(desktop.openWindowSwitcher).toHaveBeenCalledTimes(1);
+    expect(desktop.cycleApps).not.toHaveBeenCalled();
+  });
+
+  it('cycles apps on Alt+Tab when the switcher is shown', () => {
+    const desktop = new Desktop();
+    const preventDefault = jest.fn();
+    desktop.state.showWindowSwitcher = true;
+    desktop.openWindowSwitcher = jest.fn();
+    desktop.cycleApps = jest.fn();
+
+    desktop.handleGlobalShortcut({ altKey: true, shiftKey: true, key: 'Tab', preventDefault } as unknown as KeyboardEvent);
+
+    expect(preventDefault).toHaveBeenCalled();
+    expect(desktop.openWindowSwitcher).not.toHaveBeenCalled();
+    expect(desktop.cycleApps).toHaveBeenCalledWith(-1);
+  });
+});
+
 describe('Desktop gesture handlers', () => {
   it('releases pointer and touch references after interactions', () => {
     const desktop = new Desktop();
