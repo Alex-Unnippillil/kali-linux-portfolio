@@ -51,9 +51,15 @@ export class UbuntuApp extends Component {
             onPointerMove,
             onPointerCancel,
             style,
+            onKeyDown: customKeyDown,
+            onBlur,
+            assistiveHint,
+            assistiveHintId,
         } = this.props;
 
         const dragging = this.state.dragging || isBeingDragged;
+
+        const hintId = assistiveHint ? (assistiveHintId || `app-${this.props.id}-instructions`) : undefined;
 
         const handlePointerUp = (event) => {
             if (typeof this.props.onPointerUp === 'function') {
@@ -97,10 +103,23 @@ export class UbuntuApp extends Component {
                     " m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none flex flex-col justify-start items-center text-center font-normal text-white transition-hover transition-active "}
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
+                onKeyDown={(event) => {
+                    if (typeof customKeyDown === 'function') {
+                        customKeyDown(event);
+                        if (event.defaultPrevented) {
+                            return;
+                        }
+                    }
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        this.openApp();
+                    }
+                }}
+                onBlur={onBlur}
                 tabIndex={this.props.disabled ? -1 : 0}
                 onMouseEnter={this.handlePrefetch}
                 onFocus={this.handlePrefetch}
+                aria-describedby={hintId}
             >
                 <Image
                     width={48}
@@ -115,6 +134,12 @@ export class UbuntuApp extends Component {
                     sizes="(max-width: 768px) 48px, 64px"
                 />
                 {this.props.displayName || this.props.name}
+
+                {assistiveHint ? (
+                    <span id={hintId} className="sr-only">
+                        {assistiveHint}
+                    </span>
+                ) : null}
 
             </div>
         )
