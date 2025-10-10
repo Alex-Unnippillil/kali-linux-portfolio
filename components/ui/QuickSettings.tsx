@@ -1,17 +1,19 @@
 "use client";
 
 import usePersistentState from '../../hooks/usePersistentState';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface Props {
   open: boolean;
+  onToggle: () => void;
 }
 
-const QuickSettings = ({ open }: Props) => {
+const QuickSettings = ({ open, onToggle }: Props) => {
   const [theme, setTheme] = usePersistentState('qs-theme', 'light');
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -21,8 +23,39 @@ const QuickSettings = ({ open }: Props) => {
     document.documentElement.classList.toggle('reduce-motion', reduceMotion);
   }, [reduceMotion]);
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onToggle();
+      }
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (containerRef.current && event.target instanceof Node) {
+        if (containerRef.current.contains(event.target)) {
+          return;
+        }
+      }
+
+      onToggle();
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('pointerdown', handlePointerDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('pointerdown', handlePointerDown);
+    };
+  }, [open, onToggle]);
+
   return (
     <div
+      ref={containerRef}
       className={`absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 shadow border-black border border-opacity-20 ${
         open ? '' : 'hidden'
       }`}

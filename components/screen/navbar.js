@@ -219,7 +219,10 @@ export default class Navbar extends PureComponent {
                                                         }
                                                 >
                                                         <Status />
-                                                        <QuickSettings open={this.state.status_card} />
+                                                        <QuickSettings
+                                                                open={this.state.status_card}
+                                                                onToggle={this.handleStatusToggle}
+                                                        />
                                                 </div>
                                         </div>
                                 </div>

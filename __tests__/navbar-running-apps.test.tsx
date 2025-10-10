@@ -4,9 +4,12 @@ import Navbar from '../components/screen/navbar';
 
 jest.mock('../components/util-components/clock', () => () => <div data-testid="clock" />);
 jest.mock('../components/util-components/status', () => () => <div data-testid="status" />);
-jest.mock('../components/ui/QuickSettings', () => ({ open }: { open: boolean }) => (
+jest.mock(
+  '../components/ui/QuickSettings',
+  () => ({ open }: { open: boolean; onToggle: () => void }) => (
   <div data-testid="quick-settings">{open ? 'open' : 'closed'}</div>
-));
+  ),
+);
 jest.mock('../components/menu/WhiskerMenu', () => () => <button type="button">Menu</button>);
 jest.mock('../components/ui/PerformanceGraph', () => () => <div data-testid="performance" />);
 
