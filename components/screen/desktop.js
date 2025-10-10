@@ -2256,7 +2256,6 @@ export class Desktop extends Component {
                 {/* Window Area */}
                 <div
                     id="window-area"
-                    role="main"
                     className="absolute h-full w-full bg-transparent"
                     data-context="desktop-area"
                 >
