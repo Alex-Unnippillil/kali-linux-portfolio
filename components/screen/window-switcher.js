@@ -67,10 +67,12 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
           className="w-full mb-4 px-2 py-1 rounded bg-black bg-opacity-20 focus:outline-none"
           placeholder="Search windows"
         />
-        <ul>
+        <ul role="listbox" aria-label="Open windows">
           {filtered.map((w, i) => (
             <li
               key={w.id}
+              role="option"
+              aria-selected={i === selected}
               className={`px-2 py-1 rounded ${i === selected ? 'bg-ub-orange text-black' : ''}`}
             >
               {w.title}
