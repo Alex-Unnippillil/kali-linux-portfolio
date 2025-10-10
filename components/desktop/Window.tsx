@@ -1,16 +1,15 @@
 import React, { useCallback, useEffect, useRef } from "react";
+import type { MutableRefObject } from "react";
 import BaseWindow from "../base/window";
 import {
   clampWindowPositionWithinViewport,
   clampWindowTopPosition,
   measureWindowTopOffset,
 } from "../../utils/windowLayout";
+import type { WindowHandle, WindowProps } from "../../types/window";
 
-type BaseWindowProps = React.ComponentProps<typeof BaseWindow>;
-// BaseWindow is a class component, so the instance type exposes helper methods.
-type BaseWindowInstance = InstanceType<typeof BaseWindow> | null;
-
-type MutableRef<T> = React.MutableRefObject<T>;
+type BaseWindowProps = WindowProps;
+type BaseWindowInstance = WindowHandle | null;
 
 const parsePx = (value?: string | null): number | null => {
   if (typeof value !== "string") return null;
@@ -58,7 +57,7 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
         if (typeof forwardedRef === "function") {
           forwardedRef(instance);
         } else {
-          (forwardedRef as MutableRef<BaseWindowInstance>).current = instance;
+          (forwardedRef as MutableRefObject<BaseWindowInstance>).current = instance;
         }
       },
       [forwardedRef],
@@ -67,9 +66,7 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
     const clampToViewport = useCallback(() => {
       if (typeof window === "undefined") return;
       const instance = innerRef.current;
-      const node = instance && typeof instance.getWindowNode === "function"
-        ? instance.getWindowNode()
-        : null;
+      const node = instance?.getWindowNode?.() ?? null;
       if (!node || typeof node.getBoundingClientRect !== "function") return;
 
       const rect = node.getBoundingClientRect();

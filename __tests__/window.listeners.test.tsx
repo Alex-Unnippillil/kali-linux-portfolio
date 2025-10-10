@@ -1,6 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import Window from '../components/base/window';
+import type { WindowHandle } from '../types/window';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('react-draggable', () => ({
@@ -17,7 +18,7 @@ describe('Window event listeners', () => {
     let superArrowHandler: ((event: Event) => void) | undefined;
 
     try {
-      const windowRef = React.createRef<Window>();
+      const windowRef = React.createRef<WindowHandle>();
       const { unmount } = render(
         <Window
           id="listener-window"
