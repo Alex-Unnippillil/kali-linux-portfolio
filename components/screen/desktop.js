@@ -30,6 +30,17 @@ import {
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 
+const ICON_LOCK_STORAGE_KEY = 'desktop_icons_locked';
+
+const readIconsLockedFromStorage = () => {
+    if (!safeLocalStorage) return false;
+    try {
+        return safeLocalStorage.getItem(ICON_LOCK_STORAGE_KEY) === 'true';
+    } catch (e) {
+        return false;
+    }
+};
+
 
 export class Desktop extends Component {
     constructor() {
@@ -45,6 +56,7 @@ export class Desktop extends Component {
         ]);
         this.initFavourite = {};
         this.allWindowClosed = false;
+        const iconsLocked = readIconsLockedFromStorage();
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -73,6 +85,7 @@ export class Desktop extends Component {
                 label: `Workspace ${index + 1}`,
             })),
             draggingIconId: null,
+            iconsLocked,
         }
 
         this.desktopRef = React.createRef();
@@ -529,6 +542,32 @@ export class Desktop extends Component {
         }
     };
 
+    persistIconsLocked = (locked) => {
+        if (!safeLocalStorage) return;
+        try {
+            safeLocalStorage.setItem(ICON_LOCK_STORAGE_KEY, locked ? 'true' : 'false');
+        } catch (e) {
+            // ignore storage errors
+        }
+    };
+
+    toggleIconsLocked = () => {
+        this.setState((prevState) => {
+            const nextLocked = !prevState.iconsLocked;
+            const partial = { iconsLocked: nextLocked };
+            if (nextLocked && prevState.draggingIconId !== null) {
+                partial.draggingIconId = null;
+            }
+            return partial;
+        }, () => {
+            const { iconsLocked } = this.state;
+            if (iconsLocked && this.iconDragState) {
+                this.cancelIconDrag(true);
+            }
+            this.persistIconsLocked(iconsLocked);
+        });
+    };
+
     ensureIconPositions = (desktopApps = []) => {
         if (!Array.isArray(desktopApps)) return;
         this.setState((prevState) => {
@@ -738,6 +777,7 @@ export class Desktop extends Component {
     };
 
     handleIconPointerDown = (event, appId) => {
+        if (this.state.iconsLocked) return;
         if (event.button !== 0) return;
         const container = event.currentTarget;
         const rect = container.getBoundingClientRect();
@@ -772,6 +812,7 @@ export class Desktop extends Component {
     };
 
     handleIconPointerMove = (event) => {
+        if (this.state.iconsLocked) return;
         if (!this.iconDragState || event.pointerId !== this.iconDragState.pointerId) return;
         const dragState = this.iconDragState;
         const deltaX = event.clientX - dragState.startX;
@@ -790,6 +831,12 @@ export class Desktop extends Component {
     };
 
     handleIconPointerUp = (event) => {
+        if (this.state.iconsLocked) {
+            if (this.iconDragState && event.pointerId === this.iconDragState.pointerId) {
+                this.cancelIconDrag(true);
+            }
+            return;
+        }
         if (!this.iconDragState || event.pointerId !== this.iconDragState.pointerId) return;
         const dragState = this.iconDragState;
         const moved = dragState.moved;
@@ -812,6 +859,12 @@ export class Desktop extends Component {
     };
 
     handleIconPointerCancel = (event) => {
+        if (this.state.iconsLocked) {
+            if (this.iconDragState && event.pointerId === this.iconDragState.pointerId) {
+                this.cancelIconDrag(true);
+            }
+            return;
+        }
         if (!this.iconDragState || event.pointerId !== this.iconDragState.pointerId) return;
         event.preventDefault();
         this.cancelIconDrag(true);
@@ -1421,7 +1474,12 @@ export class Desktop extends Component {
     };
 
     renderDesktopApps = () => {
-        const { desktop_apps: desktopApps, desktop_icon_positions: positions = {}, draggingIconId } = this.state;
+        const {
+            desktop_apps: desktopApps,
+            desktop_icon_positions: positions = {},
+            draggingIconId,
+            iconsLocked,
+        } = this.state;
         if (!desktopApps || desktopApps.length === 0) return null;
 
         const hasOpenWindows = this.hasVisibleWindows();
@@ -1442,25 +1500,31 @@ export class Desktop extends Component {
             };
 
             const position = positions[appId] || this.computeGridPosition(index);
-            const isDragging = draggingIconId === appId;
+            const isDragging = !iconsLocked && draggingIconId === appId;
             const wrapperStyle = {
                 position: 'absolute',
                 left: `${position.x}px`,
                 top: `${position.y}px`,
-                touchAction: 'none',
-                cursor: isDragging ? 'grabbing' : 'pointer',
+                touchAction: iconsLocked ? 'auto' : 'none',
+                cursor: iconsLocked ? 'default' : (isDragging ? 'grabbing' : 'pointer'),
                 zIndex: isDragging ? 60 : iconBaseZIndex,
             };
+
+            const pointerHandlers = iconsLocked
+                ? {}
+                : {
+                    onPointerDown: (event) => this.handleIconPointerDown(event, app.id),
+                    onPointerMove: this.handleIconPointerMove,
+                    onPointerUp: this.handleIconPointerUp,
+                    onPointerCancel: this.handleIconPointerCancel,
+                    onClickCapture: this.handleIconClickCapture,
+                };
 
             return (
                 <div
                     key={app.id}
                     style={wrapperStyle}
-                    onPointerDown={(event) => this.handleIconPointerDown(event, app.id)}
-                    onPointerMove={this.handleIconPointerMove}
-                    onPointerUp={this.handleIconPointerUp}
-                    onPointerCancel={this.handleIconPointerCancel}
-                    onClickCapture={this.handleIconClickCapture}
+                    {...pointerHandlers}
                 >
                     <UbuntuApp {...props} draggable={false} isBeingDragged={isDragging} />
                 </div>
@@ -1984,6 +2048,8 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
+                    iconsLocked={this.state.iconsLocked}
+                    toggleIconsLocked={this.toggleIconsLocked}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />

@@ -221,3 +221,72 @@ describe('Desktop gesture handlers', () => {
     document.body.innerHTML = '';
   });
 });
+
+describe('Desktop icon lock handling', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it('ignores pointer down events when icons are locked', () => {
+    const desktop = new Desktop();
+    (desktop as unknown as { setState: React.Component['setState'] }).setState = jest.fn();
+    const attachSpy = jest.spyOn(desktop, 'attachIconKeyboardListeners');
+
+    Object.assign(desktop.state, { iconsLocked: true });
+
+    const container = document.createElement('div');
+    container.getBoundingClientRect = jest.fn(
+      () => ({ left: 0, top: 0, width: 0, height: 0 } as unknown as DOMRect)
+    );
+    container.setPointerCapture = jest.fn();
+
+    const event = {
+      button: 0,
+      currentTarget: container,
+      pointerId: 1,
+      clientX: 10,
+      clientY: 20,
+    } as unknown as PointerEvent;
+
+    desktop.handleIconPointerDown(event, 'terminal');
+
+    expect(container.getBoundingClientRect).not.toHaveBeenCalled();
+    expect(container.setPointerCapture).not.toHaveBeenCalled();
+    expect(desktop.iconDragState).toBeNull();
+    expect(desktop.state.draggingIconId).toBeNull();
+    expect(attachSpy).not.toHaveBeenCalled();
+  });
+
+  it('prevents drag updates while locked', () => {
+    const desktop = new Desktop();
+    Object.assign(desktop.state, { iconsLocked: true });
+    const updateSpy = jest.spyOn(desktop, 'updateIconPosition');
+
+    const container = document.createElement('div');
+    desktop.iconDragState = {
+      id: 'terminal',
+      pointerId: 1,
+      offsetX: 0,
+      offsetY: 0,
+      startX: 0,
+      startY: 0,
+      moved: false,
+      container,
+      startPosition: { x: 0, y: 0 },
+      lastPosition: { x: 0, y: 0 },
+    };
+
+    const event = {
+      pointerId: 1,
+      clientX: 30,
+      clientY: 40,
+      preventDefault: jest.fn(),
+    } as unknown as PointerEvent;
+
+    desktop.handleIconPointerMove(event);
+
+    expect(updateSpy).not.toHaveBeenCalled();
+    expect(desktop.iconDragState?.moved).toBe(false);
+    expect(event.preventDefault).not.toHaveBeenCalled();
+  });
+});

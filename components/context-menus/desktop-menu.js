@@ -43,6 +43,8 @@ function DesktopMenu(props) {
         }
     }
 
+    const iconLockLabel = props.iconsLocked ? 'Unlock Desktop Icons' : 'Lock Desktop Icons'
+
     return (
         <div
             id="desktop-menu"
@@ -67,6 +69,15 @@ function DesktopMenu(props) {
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
             >
                 <span className="ml-5">Create Shortcut...</span>
+            </button>
+            <button
+                onClick={props.toggleIconsLocked}
+                type="button"
+                role="menuitem"
+                aria-label={iconLockLabel}
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
+                <span className="ml-5">{iconLockLabel}</span>
             </button>
             <Devider />
             <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
