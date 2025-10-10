@@ -109,6 +109,20 @@ const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
 const ContactApp = createDynamicApp('contact', 'Contact');
 
 
+const descriptionTemplates = {
+  app: (item) => `Launch the ${item.title} workspace.`,
+  utility: (item) => `Use the ${item.title} utility.`,
+  game: (item) => `Play the ${item.title} game.`,
+};
+
+const withDescription = (items, type) =>
+  items.map((item) => ({
+    ...item,
+    description:
+      item.description ?? descriptionTemplates[type](item),
+  }));
+
+
 
 const displayTerminal = createDisplay(TerminalApp);
 const displayVsCode = createDisplay(VsCodeApp);
@@ -274,7 +288,7 @@ const utilityList = [
   },
 ];
 
-export const utilities = utilityList;
+export const utilities = withDescription(utilityList, 'utility');
 
 // Default window sizing for games to prevent oversized frames
 export const gameDefaults = {
@@ -597,9 +611,11 @@ const gameList = [
   },
 ];
 
-export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
+const describedGames = withDescription(gameList, 'game');
 
-const apps = [
+export const games = describedGames.map((game) => ({ ...gameDefaults, ...game }));
+
+const coreAppsList = [
   {
     id: 'firefox',
     title: 'Firefox',
@@ -1059,6 +1075,12 @@ const apps = [
     desktop_shortcut: false,
     screen: displaySecurityTools,
   },
+];
+
+const coreApps = withDescription(coreAppsList, 'app');
+
+const apps = [
+  ...coreApps,
   // Utilities are grouped separately
   ...utilities,
   // Games are included so they appear alongside apps

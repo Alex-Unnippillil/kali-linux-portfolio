@@ -49,6 +49,7 @@ class ShortcutSelector extends React.Component {
                 openApp={() => this.selectApp(app.id)}
                 disabled={app.disabled}
                 prefetch={app.screen?.prefetch}
+                description={app.description}
             />
         ));
     };
@@ -61,6 +62,7 @@ class ShortcutSelector extends React.Component {
                     placeholder="Search"
                     value={this.state.query}
                     onChange={this.handleChange}
+                    aria-label="Search shortcuts"
                 />
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-10 place-items-center">
                     {this.renderApps()}

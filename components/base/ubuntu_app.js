@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import Image from 'next/image'
+import DelayedTooltip from '../ui/DelayedTooltip'
 
 export class UbuntuApp extends Component {
     constructor() {
@@ -51,6 +52,8 @@ export class UbuntuApp extends Component {
             onPointerMove,
             onPointerCancel,
             style,
+            description,
+            hideDescriptionTooltip,
         } = this.props;
 
         const dragging = this.state.dragging || isBeingDragged;
@@ -78,11 +81,23 @@ export class UbuntuApp extends Component {
             ...style,
         };
 
-        return (
+        const tooltipId = description && !hideDescriptionTooltip
+            ? `app-tooltip-${this.props.id}`
+            : undefined;
+
+        const renderContent = ({
+            ref,
+            onMouseEnter,
+            onMouseLeave,
+            onFocus,
+            onBlur,
+        } = {}) => (
             <div
+                ref={ref}
                 role="button"
                 aria-label={this.props.name}
                 aria-disabled={this.props.disabled}
+                aria-describedby={tooltipId}
                 data-context="app"
                 data-app-id={this.props.id}
                 draggable={draggable}
@@ -99,8 +114,20 @@ export class UbuntuApp extends Component {
                 onDoubleClick={this.openApp}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
                 tabIndex={this.props.disabled ? -1 : 0}
-                onMouseEnter={this.handlePrefetch}
-                onFocus={this.handlePrefetch}
+                onMouseEnter={(event) => {
+                    if (typeof onMouseEnter === 'function') {
+                        onMouseEnter(event);
+                    }
+                    this.handlePrefetch();
+                }}
+                onMouseLeave={onMouseLeave}
+                onFocus={(event) => {
+                    if (typeof onFocus === 'function') {
+                        onFocus(event);
+                    }
+                    this.handlePrefetch();
+                }}
+                onBlur={onBlur}
             >
                 <Image
                     width={48}
@@ -117,6 +144,34 @@ export class UbuntuApp extends Component {
                 {this.props.displayName || this.props.name}
 
             </div>
+        );
+
+        if (!tooltipId) {
+            return renderContent();
+        }
+
+        return (
+            <DelayedTooltip
+                id={tooltipId}
+                content={(
+                    <div className="flex max-w-xs flex-col gap-1">
+                        <span className="text-sm font-semibold text-white">
+                            {this.props.displayName || this.props.name}
+                        </span>
+                        <span className="text-xs leading-relaxed text-gray-200">{description}</span>
+                    </div>
+                )}
+            >
+                {(triggerProps) =>
+                    renderContent({
+                        ref: triggerProps.ref,
+                        onMouseEnter: triggerProps.onMouseEnter,
+                        onMouseLeave: triggerProps.onMouseLeave,
+                        onFocus: triggerProps.onFocus,
+                        onBlur: triggerProps.onBlur,
+                    })
+                }
+            </DelayedTooltip>
         )
     }
 }

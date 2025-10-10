@@ -147,6 +147,7 @@ class AllApplications extends React.Component {
                     openApp={() => this.openApp(app.id)}
                     disabled={app.disabled}
                     prefetch={app.screen?.prefetch}
+                    description={app.description}
                 />
             </div>
         );

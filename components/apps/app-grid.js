@@ -173,6 +173,8 @@ export default function AppGrid({ openApp }) {
               icon={app.icon}
               name={app.title}
               displayName={<>{app.nodes}</>}
+              description={app.description || meta?.description}
+              hideDescriptionTooltip
               style={data.layout.iconStyle}
               openApp={() => openApp && openApp(app.id)}
             />
