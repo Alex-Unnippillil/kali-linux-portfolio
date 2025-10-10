@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffe
 import Image from 'next/image';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { readRecentAppIds } from '../../utils/recentStorage';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 type AppMeta = {
@@ -27,7 +28,6 @@ type CategoryDefinitionBase = {
 } & CategorySource;
 
 const TRANSITION_DURATION = 180;
-const RECENT_STORAGE_KEY = 'recentApps';
 const CATEGORY_STORAGE_KEY = 'whisker-menu-category';
 
 const CATEGORY_DEFINITIONS = [
@@ -121,23 +121,6 @@ const isCategoryId = (
   CATEGORY_DEFINITIONS.some(cat => cat.id === value);
 
 type CategoryConfig = CategoryDefinition & { apps: AppMeta[] };
-
-
-const readRecentAppIds = (): string[] => {
-  try {
-    const stored = safeLocalStorage?.getItem(RECENT_STORAGE_KEY);
-    if (!stored) {
-      return [];
-    }
-    const parsed = JSON.parse(stored);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-    return parsed.filter((value): value is string => typeof value === 'string');
-  } catch {
-    return [];
-  }
-};
 
 
 const WhiskerMenu: React.FC = () => {
@@ -663,7 +646,7 @@ const WhiskerMenu: React.FC = () => {
                   <p>No applications match your search.</p>
                 </div>
               ) : (
-                <ul className="space-y-2">
+                <ul className="space-y-2" data-testid="whisker-menu-app-list">
                   {currentApps.map((app, idx) => (
                     <li key={app.id}>
                       <button
