@@ -1,9 +1,15 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import useFocusTrap from '../../hooks/useFocusTrap'
+import useRovingTabIndex from '../../hooks/useRovingTabIndex'
 import logger from '../../utils/logger'
 
 function DesktopMenu(props) {
 
     const [isFullScreen, setIsFullScreen] = useState(false)
+    const menuRef = useRef(null)
+
+    useFocusTrap(menuRef, props.active)
+    useRovingTabIndex(menuRef, props.active, 'vertical')
 
     useEffect(() => {
         document.addEventListener('fullscreenchange', checkFullScreen);
@@ -11,6 +17,17 @@ function DesktopMenu(props) {
             document.removeEventListener('fullscreenchange', checkFullScreen);
         };
     }, [])
+
+    useEffect(() => {
+        if (!props.active) {
+            return
+        }
+
+        const firstItem = menuRef.current?.querySelector('[role="menuitem"]')
+        if (firstItem instanceof HTMLElement) {
+            firstItem.focus()
+        }
+    }, [props.active])
 
 
     const openTerminal = () => {
@@ -48,6 +65,8 @@ function DesktopMenu(props) {
             id="desktop-menu"
             role="menu"
             aria-label="Desktop context menu"
+            aria-hidden={!props.active}
+            ref={menuRef}
             className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
         >
             <button
