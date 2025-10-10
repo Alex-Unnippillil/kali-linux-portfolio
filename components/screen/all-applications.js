@@ -156,7 +156,10 @@ class AllApplications extends React.Component {
         if (!apps.length) return null;
         return (
             <section key={title} aria-label={`${title} apps`} className="mb-8 w-full">
-                <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-white/70">
+                <h2
+                    className="mb-3 text-sm font-semibold uppercase tracking-wider"
+                    style={{ color: 'color-mix(in srgb, var(--color-accent), white 35%)' }}
+                >
                     {title}
                 </h2>
                 <div className="grid grid-cols-3 gap-6 place-items-center pb-6 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
@@ -168,7 +171,7 @@ class AllApplications extends React.Component {
 
     render() {
         const { apps, favorites, recents } = this.state;
-        const { searchInputRef } = this.props;
+        const { searchInputRef, headingId = 'all-apps-title' } = this.props;
         const favoriteSet = new Set(favorites);
         const appMap = new Map(apps.map((app) => [app.id, app]));
         const favoriteApps = apps.filter((app) => favoriteSet.has(app.id));
@@ -183,17 +186,54 @@ class AllApplications extends React.Component {
             recentApps.length > 0 ||
             groupedApps.some((group) => group.length > 0);
 
+        const headerAccentStyles = {
+            borderColor: 'color-mix(in srgb, var(--color-accent), transparent 55%)',
+            boxShadow: '0 35px 80px -45px color-mix(in srgb, var(--color-accent), transparent 35%)',
+            background: 'linear-gradient(145deg, color-mix(in srgb, var(--color-accent), transparent 75%) 0%, rgba(15,23,42,0.85) 45%, rgba(15,23,42,0.7) 100%)',
+        };
+
+        const searchAccentStyles = {
+            borderColor: 'color-mix(in srgb, var(--color-accent), transparent 55%)',
+            boxShadow: '0 0 0 1px color-mix(in srgb, var(--color-accent), transparent 75%) inset',
+        };
+
         return (
-            <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
-                <input
-                    ref={searchInputRef}
-                    className="mt-10 mb-8 w-2/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none md:w-1/3"
-                    placeholder="Search"
-                    value={this.state.query}
-                    onChange={this.handleChange}
-                    aria-label="Search applications"
-                />
-                <div className="flex w-full max-w-5xl flex-col items-stretch px-6 pb-10">
+            <div className="flex w-full flex-col items-center text-white">
+                <header className="w-full">
+                    <div
+                        className="mx-auto flex w-full max-w-5xl flex-col gap-6 rounded-3xl border bg-slate-900/70 p-6 backdrop-blur-xl"
+                        style={headerAccentStyles}
+                    >
+                        <div className="flex flex-col gap-3">
+                            <span className="text-xs font-semibold uppercase tracking-[0.35em] text-white/60">
+                                Launcher
+                            </span>
+                            <h1
+                                id={headingId}
+                                className="text-3xl font-semibold tracking-tight"
+                                style={{ color: 'var(--color-accent)' }}
+                            >
+                                All applications
+                            </h1>
+                        </div>
+                        <div className="w-full max-w-3xl">
+                            <label className="sr-only" htmlFor={`${headingId}-search`}>
+                                Search applications
+                            </label>
+                            <input
+                                id={`${headingId}-search`}
+                                ref={searchInputRef}
+                                className="w-full rounded-2xl border bg-slate-950/60 px-4 py-3 text-base shadow-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                                style={searchAccentStyles}
+                                placeholder="Search"
+                                value={this.state.query}
+                                onChange={this.handleChange}
+                                aria-label="Search applications"
+                            />
+                        </div>
+                    </div>
+                </header>
+                <div className="mt-10 flex w-full max-w-6xl flex-col items-stretch px-4 pb-12 sm:px-6 md:px-8">
                     {this.renderSection('Favorites', favoriteApps)}
                     {this.renderSection('Recent', recentApps)}
                     {groupedApps.map((group, index) =>
