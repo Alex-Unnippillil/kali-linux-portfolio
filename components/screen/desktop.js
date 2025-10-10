@@ -97,6 +97,8 @@ export class Desktop extends Component {
 
         this.validAppIds = new Set();
         this.appMap = new Map();
+        this.windowPreviewCache = new Map();
+        this.windowSwitcherRequestId = 0;
         this.refreshAppRegistry();
 
         this.openSettingsTarget = null;
@@ -1471,14 +1473,73 @@ export class Desktop extends Component {
         this.focus(windows[next]);
     }
 
-    openWindowSwitcher = () => {
-        const windows = this.getActiveStack()
-            .filter(id => this.state.closed_windows[id] === false)
-            .map(id => apps.find(a => a.id === id))
-            .filter(Boolean);
-        if (windows.length) {
-            this.setState({ showWindowSwitcher: true, switcherWindows: windows });
+    getWindowPreview = async (id) => {
+        if (this.windowPreviewCache.has(id)) {
+            return this.windowPreviewCache.get(id);
         }
+
+        let preview = null;
+        if (typeof document !== 'undefined') {
+            const node = document.getElementById(id);
+            if (node) {
+                try {
+                    preview = await toPng(node);
+                } catch (error) {
+                    preview = null;
+                }
+            }
+        }
+
+        this.windowPreviewCache.set(id, preview);
+        return preview;
+    };
+
+    buildWindowSwitcherEntries = async (ids) => {
+        const entries = [];
+        for (const id of ids) {
+            const app = this.getAppById(id) || {};
+            const preview = await this.getWindowPreview(id);
+            entries.push({
+                id,
+                title: app.title || app.name || id,
+                icon: app.icon,
+                preview,
+            });
+        }
+        return entries;
+    };
+
+    openWindowSwitcher = () => {
+        const stack = this.getActiveStack();
+        const availableIds = stack.filter((id) => (
+            this.state.closed_windows[id] === false && !this.state.minimized_windows[id]
+        ));
+
+        if (!availableIds.length) {
+            return;
+        }
+
+        const requestId = ++this.windowSwitcherRequestId;
+        this.setState({ showWindowSwitcher: true });
+
+        Promise.resolve(this.buildWindowSwitcherEntries(availableIds))
+            .then((windows) => {
+                if (this.windowSwitcherRequestId !== requestId) {
+                    return;
+                }
+
+                if (!windows.length) {
+                    this.setState({ showWindowSwitcher: false, switcherWindows: [] });
+                    return;
+                }
+
+                this.setState({ switcherWindows: windows, showWindowSwitcher: true });
+            })
+            .catch(() => {
+                if (this.windowSwitcherRequestId === requestId) {
+                    this.setState({ showWindowSwitcher: false, switcherWindows: [] });
+                }
+            });
     }
 
     closeWindowSwitcher = () => {
@@ -2049,6 +2110,10 @@ export class Desktop extends Component {
         const index = stack.indexOf(objId);
         if (index !== -1) {
             stack.splice(index, 1);
+        }
+
+        if (this.windowPreviewCache?.has(objId)) {
+            this.windowPreviewCache.delete(objId);
         }
 
         this.giveFocusToLastApp();
