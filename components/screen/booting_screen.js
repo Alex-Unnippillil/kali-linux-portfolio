@@ -10,6 +10,26 @@ const bootMessages = [
 function BootingScreen(props) {
     const isVisible = props.visible || props.isShutDown
     const visibilityClass = isVisible ? 'visible opacity-100' : 'invisible opacity-0'
+    const [prefersReducedMotion, setPrefersReducedMotion] = React.useState(false)
+
+    React.useEffect(() => {
+        if (typeof window === 'undefined') {
+            return
+        }
+
+        const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+
+        const handleChange = (event) => {
+            setPrefersReducedMotion(event.matches)
+        }
+
+        setPrefersReducedMotion(mediaQuery.matches)
+        mediaQuery.addEventListener('change', handleChange)
+
+        return () => {
+            mediaQuery.removeEventListener('change', handleChange)
+        }
+    }, [])
 
     return (
         <div
@@ -61,7 +81,11 @@ function BootingScreen(props) {
                         ) : (
                             <div className="relative flex h-14 w-14 items-center justify-center">
                                 <div className="absolute inset-0 rounded-full border border-slate-700/40" />
-                                <div className="absolute inset-0 rounded-full border-4 border-sky-400/80 border-t-transparent border-l-transparent animate-[spin_2.6s_linear_infinite]" />
+                                {prefersReducedMotion ? (
+                                    <div className="absolute inset-1 rounded-full border-2 border-sky-400/80" />
+                                ) : (
+                                    <div className="absolute inset-0 rounded-full border-4 border-sky-400/80 border-t-transparent border-l-transparent animate-[spin_2.6s_linear_infinite] motion-reduce:animate-none" />
+                                )}
                                 <div className="absolute inset-[30%] rounded-full bg-slate-900" />
                             </div>
                         )}
@@ -70,7 +94,7 @@ function BootingScreen(props) {
                     <ul className="flex flex-col gap-2 text-sm text-slate-300">
                         {bootMessages.map((message) => (
                             <li key={message} className="flex items-center gap-3">
-                                <span className="inline-flex h-2 w-2 rounded-full bg-sky-400/70 shadow-[0_0_12px_rgba(56,189,248,0.7)] animate-[pulse_2s_ease-in-out_infinite]" aria-hidden />
+                                <span className="inline-flex h-2 w-2 rounded-full bg-sky-400/70 shadow-[0_0_12px_rgba(56,189,248,0.7)] animate-[pulse_2s_ease-in-out_infinite] motion-reduce:animate-none" aria-hidden />
                                 <span>{message}</span>
                             </li>
                         ))}
