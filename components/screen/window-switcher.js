@@ -59,7 +59,12 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 text-white">
       <div className="bg-ub-grey p-4 rounded w-3/4 md:w-1/3">
+        <p id="window-switcher-search-label" className="sr-only">
+          Search open windows
+        </p>
         <input
+          aria-labelledby="window-switcher-search-label"
+          id="window-switcher-search"
           ref={inputRef}
           value={query}
           onChange={handleChange}
