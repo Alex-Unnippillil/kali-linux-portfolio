@@ -25,7 +25,7 @@ function fuzzyHighlight(text, query) {
   return { matched: qi === q.length, nodes: result };
 }
 
-export default function AppGrid({ openApp }) {
+export default function AppGrid({ openApp, closedWindows = {}, minimizedWindows = {} }) {
   const [query, setQuery] = useState('');
   const gridRef = useRef(null);
   const columnCountRef = useRef(1);
@@ -146,16 +146,18 @@ export default function AppGrid({ openApp }) {
     [filtered, focusedIndex]
   );
 
-  const Cell = ({ columnIndex, rowIndex, style, data }) => {
-    const index = rowIndex * data.columnCount + columnIndex;
-    if (index >= data.items.length) return null;
-    const app = data.items[index];
-    const meta = data.metadata[app.id] ?? buildAppMetadata(app);
-    return (
-      <DelayedTooltip content={<AppTooltipContent meta={meta} />}>
-        {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
-          <div
-            ref={ref}
+    const Cell = ({ columnIndex, rowIndex, style, data }) => {
+        const index = rowIndex * data.columnCount + columnIndex;
+        if (index >= data.items.length) return null;
+        const app = data.items[index];
+        const meta = data.metadata[app.id] ?? buildAppMetadata(app);
+        const isRunning = data.closedWindows[app.id] === false;
+        const isMinimized = isRunning && Boolean(data.minimizedWindows[app.id]);
+        return (
+            <DelayedTooltip content={<AppTooltipContent meta={meta} />}>
+                {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+                    <div
+                        ref={ref}
             style={{
               ...style,
               display: 'flex',
@@ -168,18 +170,20 @@ export default function AppGrid({ openApp }) {
             onFocus={onFocus}
             onBlur={onBlur}
           >
-            <UbuntuApp
-              id={app.id}
-              icon={app.icon}
-              name={app.title}
-              displayName={<>{app.nodes}</>}
-              style={data.layout.iconStyle}
-              openApp={() => openApp && openApp(app.id)}
-            />
-          </div>
-        )}
-      </DelayedTooltip>
-    );
+                        <UbuntuApp
+                            id={app.id}
+                            icon={app.icon}
+                            name={app.title}
+                            displayName={<>{app.nodes}</>}
+                            style={data.layout.iconStyle}
+                            openApp={() => openApp && openApp(app.id)}
+                            isRunning={isRunning}
+                            isMinimized={isMinimized}
+                        />
+                    </div>
+                )}
+            </DelayedTooltip>
+        );
   };
 
   return (
@@ -209,15 +213,17 @@ export default function AppGrid({ openApp }) {
                 className="scroll-smooth"
               >
                 {(props) => (
-                  <Cell
-                    {...props}
-                    data={{
-                      items: filtered,
-                      columnCount: layout.columnCount,
-                      metadata: registryMetadata,
-                      layout,
-                    }}
-                  />
+                    <Cell
+                        {...props}
+                        data={{
+                            items: filtered,
+                            columnCount: layout.columnCount,
+                            metadata: registryMetadata,
+                            layout,
+                            closedWindows,
+                            minimizedWindows,
+                        }}
+                    />
                 )}
               </Grid>
             );

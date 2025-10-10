@@ -123,6 +123,9 @@ class AllApplications extends React.Component {
 
     renderAppTile = (app) => {
         const isFavorite = this.state.favorites.includes(app.id);
+        const { closedWindows = {}, minimizedWindows = {} } = this.props;
+        const isRunning = closedWindows[app.id] === false;
+        const isMinimized = isRunning && Boolean(minimizedWindows[app.id]);
         return (
             <div key={app.id} className="relative flex w-full justify-center">
                 <button
@@ -147,6 +150,8 @@ class AllApplications extends React.Component {
                     openApp={() => this.openApp(app.id)}
                     disabled={app.disabled}
                     prefetch={app.screen?.prefetch}
+                    isRunning={isRunning}
+                    isMinimized={isMinimized}
                 />
             </div>
         );

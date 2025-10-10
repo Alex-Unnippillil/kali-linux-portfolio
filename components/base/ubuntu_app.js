@@ -51,9 +51,20 @@ export class UbuntuApp extends Component {
             onPointerMove,
             onPointerCancel,
             style,
+            isRunning = false,
+            isMinimized = false,
         } = this.props;
 
         const dragging = this.state.dragging || isBeingDragged;
+
+        const running = Boolean(isRunning);
+        const minimized = running && Boolean(isMinimized);
+        const badgeVariant = running ? (minimized ? 'minimized' : 'running') : null;
+        const statusLabel = badgeVariant === 'minimized'
+            ? 'Running (minimized)'
+            : badgeVariant === 'running'
+                ? 'Running'
+                : '';
 
         const handlePointerUp = (event) => {
             if (typeof this.props.onPointerUp === 'function') {
@@ -102,18 +113,44 @@ export class UbuntuApp extends Component {
                 onMouseEnter={this.handlePrefetch}
                 onFocus={this.handlePrefetch}
             >
-                <Image
-                    width={48}
-                    height={48}
-                    className="mb-1"
-                    style={{
-                        width: 'var(--desktop-icon-image, 2.5rem)',
-                        height: 'var(--desktop-icon-image, 2.5rem)'
-                    }}
-                    src={this.props.icon.replace('./', '/')}
-                    alt={"Kali " + this.props.name}
-                    sizes="(max-width: 768px) 48px, 64px"
-                />
+                <div className="relative mb-1 inline-flex items-center justify-center">
+                    <Image
+                        width={48}
+                        height={48}
+                        className="block"
+                        style={{
+                            width: 'var(--desktop-icon-image, 2.5rem)',
+                            height: 'var(--desktop-icon-image, 2.5rem)'
+                        }}
+                        src={this.props.icon.replace('./', '/')}
+                        alt={"Kali " + this.props.name}
+                        sizes="(max-width: 768px) 48px, 64px"
+                    />
+                    {badgeVariant ? (
+                        <>
+                            <div
+                                className="absolute bottom-1 right-1 flex h-4 w-4 items-center justify-center rounded-full border border-white/70 bg-black/80 shadow-sm"
+                                aria-hidden="true"
+                                data-testid="ubuntu-app-status-badge"
+                                data-variant={badgeVariant}
+                            >
+                                {badgeVariant === 'running' ? (
+                                    <span className="block h-2 w-2 rounded-full bg-emerald-400" aria-hidden="true" />
+                                ) : (
+                                    <svg
+                                        viewBox="0 0 12 12"
+                                        className="h-2.5 w-2.5 text-white"
+                                        aria-hidden="true"
+                                    >
+                                        <rect x="2" y="2" width="3" height="8" rx="0.75" fill="currentColor" />
+                                        <rect x="7" y="2" width="3" height="8" rx="0.75" fill="currentColor" />
+                                    </svg>
+                                )}
+                            </div>
+                            <span className="sr-only">Status: {statusLabel}</span>
+                        </>
+                    ) : null}
+                </div>
                 {this.props.displayName || this.props.name}
 
             </div>

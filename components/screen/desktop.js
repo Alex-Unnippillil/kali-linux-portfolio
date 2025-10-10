@@ -1421,7 +1421,13 @@ export class Desktop extends Component {
     };
 
     renderDesktopApps = () => {
-        const { desktop_apps: desktopApps, desktop_icon_positions: positions = {}, draggingIconId } = this.state;
+        const {
+            desktop_apps: desktopApps,
+            desktop_icon_positions: positions = {},
+            draggingIconId,
+            closed_windows: closedWindowsState = {},
+            minimized_windows: minimizedWindowsState = {},
+        } = this.state;
         if (!desktopApps || desktopApps.length === 0) return null;
 
         const hasOpenWindows = this.hasVisibleWindows();
@@ -1432,6 +1438,9 @@ export class Desktop extends Component {
             const app = apps.find((item) => item.id === appId);
             if (!app) return null;
 
+            const isRunning = closedWindowsState[app.id] === false;
+            const isMinimized = isRunning && Boolean(minimizedWindowsState[app.id]);
+
             const props = {
                 name: app.title,
                 id: app.id,
@@ -1439,6 +1448,8 @@ export class Desktop extends Component {
                 openApp: this.openApp,
                 disabled: this.state.disabled_apps[app.id],
                 prefetch: app.screen?.prefetch,
+                isRunning,
+                isMinimized,
             };
 
             const position = positions[appId] || this.computeGridPosition(index);
@@ -2026,13 +2037,17 @@ export class Desktop extends Component {
                     <AllApplications apps={apps}
                         games={games}
                         recentApps={this.getActiveStack()}
-                        openApp={this.openApp} /> : null}
+                        openApp={this.openApp}
+                        closedWindows={this.state.closed_windows}
+                        minimizedWindows={this.state.minimized_windows} /> : null}
 
                 { this.state.showShortcutSelector ?
                     <ShortcutSelector apps={apps}
                         games={games}
                         onSelect={this.addShortcutToDesktop}
-                        onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
+                        onClose={() => this.setState({ showShortcutSelector: false })}
+                        closedWindows={this.state.closed_windows}
+                        minimizedWindows={this.state.minimized_windows} /> : null}
 
                 { this.state.showWindowSwitcher ?
                     <WindowSwitcher
