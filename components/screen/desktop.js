@@ -1543,10 +1543,12 @@ export class Desktop extends Component {
     }
 
     closeWindowSwitcher = () => {
+        this.windowSwitcherRequestId += 1;
         this.setState({ showWindowSwitcher: false, switcherWindows: [] });
     }
 
     selectWindow = (id) => {
+        this.windowSwitcherRequestId += 1;
         this.setState({ showWindowSwitcher: false, switcherWindows: [] }, () => {
             this.openApp(id);
         });
