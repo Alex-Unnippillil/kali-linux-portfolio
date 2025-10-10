@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -11,6 +11,7 @@ import '../styles/print.css';
 import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
+import useLiveRegionAnnouncer from '../hooks/useLiveRegionAnnouncer';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
@@ -28,6 +29,9 @@ const ubuntu = Ubuntu({
 
 function MyApp(props) {
   const { Component, pageProps } = props;
+  const liveRegionRef = useRef(null);
+
+  useLiveRegionAnnouncer(liveRegionRef);
 
 
   useEffect(() => {
@@ -81,72 +85,6 @@ function MyApp(props) {
     }
   }, []);
 
-  useEffect(() => {
-    const liveRegion = document.getElementById('live-region');
-    if (!liveRegion) return;
-
-    const update = (message) => {
-      liveRegion.textContent = '';
-      setTimeout(() => {
-        liveRegion.textContent = message;
-      }, 100);
-    };
-
-    const handleCopy = () => update('Copied to clipboard');
-    const handleCut = () => update('Cut to clipboard');
-    const handlePaste = () => update('Pasted from clipboard');
-
-    window.addEventListener('copy', handleCopy);
-    window.addEventListener('cut', handleCut);
-    window.addEventListener('paste', handlePaste);
-
-    const { clipboard } = navigator;
-    const originalWrite = clipboard?.writeText?.bind(clipboard);
-    const originalRead = clipboard?.readText?.bind(clipboard);
-    if (originalWrite) {
-      clipboard.writeText = async (text) => {
-        update('Copied to clipboard');
-        return originalWrite(text);
-      };
-    }
-    if (originalRead) {
-      clipboard.readText = async () => {
-        const text = await originalRead();
-        update('Pasted from clipboard');
-        return text;
-      };
-    }
-
-    const OriginalNotification = window.Notification;
-    if (OriginalNotification) {
-      const WrappedNotification = function (title, options) {
-        update(`${title}${options?.body ? ' ' + options.body : ''}`);
-        return new OriginalNotification(title, options);
-      };
-      WrappedNotification.requestPermission = OriginalNotification.requestPermission.bind(
-        OriginalNotification,
-      );
-      Object.defineProperty(WrappedNotification, 'permission', {
-        get: () => OriginalNotification.permission,
-      });
-      WrappedNotification.prototype = OriginalNotification.prototype;
-      window.Notification = WrappedNotification;
-    }
-
-    return () => {
-      window.removeEventListener('copy', handleCopy);
-      window.removeEventListener('cut', handleCut);
-      window.removeEventListener('paste', handlePaste);
-      if (clipboard) {
-        if (originalWrite) clipboard.writeText = originalWrite;
-        if (originalRead) clipboard.readText = originalRead;
-      }
-      if (OriginalNotification) {
-        window.Notification = OriginalNotification;
-      }
-    };
-  }, []);
-
   return (
     <ErrorBoundary>
       <Script src="/a2hs.js" strategy="beforeInteractive" />
@@ -160,7 +98,7 @@ function MyApp(props) {
         <SettingsProvider>
           <NotificationCenter>
             <PipPortalProvider>
-              <div aria-live="polite" id="live-region" />
+              <div aria-live="polite" id="live-region" ref={liveRegionRef} />
               <Component {...pageProps} />
               <ShortcutOverlay />
               <Analytics
