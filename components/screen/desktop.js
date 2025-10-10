@@ -98,7 +98,7 @@ export class Desktop extends Component {
 
         this.desktopIconVariables = {};
 
-        this.applyIconLayoutFromSettings(props);
+        this.applyIconLayoutFromSettings(props, { silent: true });
 
         this.validAppIds = new Set();
         this.appMap = new Map();
@@ -194,7 +194,17 @@ export class Desktop extends Component {
         }
     };
 
-    applyIconLayoutFromSettings = (props = this.props) => {
+    haveDesktopIconVariablesChanged = (previous = {}, next = {}) => {
+        const prevKeys = Object.keys(previous || {});
+        const nextKeys = Object.keys(next || {});
+        if (prevKeys.length !== nextKeys.length) {
+            return true;
+        }
+        return nextKeys.some((key) => previous[key] !== next[key]);
+    };
+
+    applyIconLayoutFromSettings = (props = this.props, options = {}) => {
+        const { silent = false } = options;
         const density = props?.density === 'compact' ? 'compact' : 'regular';
         const rawFontScale = typeof props?.fontScale === 'number' ? props.fontScale : 1;
         const fontScale = Number.isFinite(rawFontScale) ? rawFontScale : 1;
@@ -266,12 +276,18 @@ export class Desktop extends Component {
             nextDesktopPadding.bottom !== this.desktopPadding.bottom ||
             nextDesktopPadding.left !== this.desktopPadding.left;
 
+        const cssVariablesChanged = this.haveDesktopIconVariablesChanged(this.desktopIconVariables, cssVariables);
+
         this.desktopIconVariables = cssVariables;
 
         if (changed) {
             this.iconDimensions = nextIconDimensions;
             this.iconGridSpacing = nextIconGridSpacing;
             this.desktopPadding = nextDesktopPadding;
+        }
+
+        if (!changed && cssVariablesChanged && !silent) {
+            this.forceUpdate();
         }
 
         return changed;
