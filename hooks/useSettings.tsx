@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  ReactNode,
+  useRef,
+} from 'react';
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -24,7 +32,13 @@ import {
   setHaptics as saveHaptics,
   defaults,
 } from '../utils/settingsStore';
-import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/theme';
+import {
+  DesktopTheme,
+  DESKTOP_THEME_PRESETS,
+  resolveDesktopTheme,
+  getTheme as loadTheme,
+  setTheme as saveTheme,
+} from '../utils/theme';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -67,6 +81,7 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   theme: string;
+  desktopTheme: DesktopTheme;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setUseKaliWallpaper: (value: boolean) => void;
@@ -80,6 +95,14 @@ interface SettingsContextValue {
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
 }
+
+const DEFAULT_DESKTOP_THEME = resolveDesktopTheme({
+  theme: 'default',
+  accent: defaults.accent,
+  wallpaperName: defaults.wallpaper,
+  bgImageName: defaults.wallpaper,
+  useKaliWallpaper: defaults.useKaliWallpaper,
+});
 
 export const SettingsContext = createContext<SettingsContextValue>({
   accent: defaults.accent,
@@ -95,6 +118,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   theme: 'default',
+  desktopTheme: DEFAULT_DESKTOP_THEME,
   setAccent: () => {},
   setWallpaper: () => {},
   setUseKaliWallpaper: () => {},
@@ -123,6 +147,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
+  const previousThemeRef = useRef<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -251,6 +276,48 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [haptics]);
 
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
+  const desktopTheme = useMemo(
+    () =>
+      resolveDesktopTheme({
+        theme,
+        accent,
+        wallpaperName: wallpaper,
+        bgImageName,
+        useKaliWallpaper,
+      }),
+    [theme, accent, wallpaper, bgImageName, useKaliWallpaper],
+  );
+
+  useEffect(() => {
+    const previousTheme = previousThemeRef.current;
+    const firstRun = previousTheme === null;
+    const themeChanged = previousTheme !== null && previousTheme !== theme;
+    const preset = DESKTOP_THEME_PRESETS[theme];
+
+    if (firstRun || themeChanged) {
+      if (preset?.accent && preset.accent !== accent) {
+        setAccent(preset.accent);
+      }
+      if (preset?.wallpaperName && preset.wallpaperName !== wallpaper) {
+        setWallpaper(preset.wallpaperName);
+      }
+      if (
+        preset?.useKaliWallpaper !== undefined &&
+        preset.useKaliWallpaper !== useKaliWallpaper
+      ) {
+        setUseKaliWallpaper(preset.useKaliWallpaper);
+      }
+      previousThemeRef.current = theme;
+    }
+  }, [
+    theme,
+    accent,
+    wallpaper,
+    useKaliWallpaper,
+    setAccent,
+    setWallpaper,
+    setUseKaliWallpaper,
+  ]);
 
   return (
     <SettingsContext.Provider
@@ -268,6 +335,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         theme,
+        desktopTheme,
         setAccent,
         setWallpaper,
         setUseKaliWallpaper,

@@ -1,62 +1,149 @@
 "use client";
 
-import React, { useEffect, useState } from 'react'
-import { useSettings } from '../../hooks/useSettings';
+import React, { useEffect, useMemo, useState } from 'react';
 import KaliWallpaper from './kali-wallpaper';
 
-export default function BackgroundImage() {
-    const { bgImageName, useKaliWallpaper } = useSettings();
+const FALLBACK_OVERLAY = 'linear-gradient(180deg, rgba(6, 12, 20, 0.65) 0%, rgba(3, 8, 16, 0.88) 92%)';
+
+const hexToRgba = (hex, alpha = 1) => {
+    if (typeof hex !== 'string') return `rgba(0,0,0,${alpha})`;
+    const normalized = hex.replace('#', '');
+    if (normalized.length !== 6) return `rgba(0,0,0,${alpha})`;
+    const value = parseInt(normalized, 16);
+    const r = (value >> 16) & 255;
+    const g = (value >> 8) & 255;
+    const b = value & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+export default function BackgroundImage({ theme }) {
     const [needsOverlay, setNeedsOverlay] = useState(false);
+    const [imageError, setImageError] = useState(false);
+
+    const accent = theme?.accent || '#1793d1';
+    const wallpaperUrl = theme?.useKaliWallpaper ? null : theme?.wallpaperUrl || null;
+    const fallbackUrl = theme?.fallbackWallpaperUrl || null;
+    const effectiveUrl = (!imageError && wallpaperUrl) || fallbackUrl;
+    const blurAmount = typeof theme?.blur === 'number' ? theme.blur : 0;
 
     useEffect(() => {
-        if (useKaliWallpaper || bgImageName === 'kali-gradient') {
+        setImageError(false);
+    }, [wallpaperUrl, fallbackUrl, theme?.useKaliWallpaper]);
+
+    useEffect(() => {
+        if (theme?.useKaliWallpaper || theme?.overlay) {
             setNeedsOverlay(false);
             return;
         }
+        if (!effectiveUrl) {
+            setNeedsOverlay(false);
+            return;
+        }
+        let cancelled = false;
         const img = new Image();
-        img.src = `/wallpapers/${bgImageName}.webp`;
+        img.src = effectiveUrl;
         img.onload = () => {
+            if (cancelled) return;
             const canvas = document.createElement('canvas');
             canvas.width = img.width;
             canvas.height = img.height;
             const ctx = canvas.getContext('2d');
-            if (!ctx) return;
+            if (!ctx) {
+                setNeedsOverlay(false);
+                return;
+            }
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
             const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-            let r = 0, g = 0, b = 0, count = 0;
+            let r = 0;
+            let g = 0;
+            let b = 0;
+            let count = 0;
             for (let i = 0; i < data.length; i += 40) {
                 r += data[i];
                 g += data[i + 1];
                 b += data[i + 2];
                 count++;
             }
-            const avgR = r / count, avgG = g / count, avgB = b / count;
-            const toLinear = (c) => {
-                c /= 255;
-                return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+            if (!count) {
+                setNeedsOverlay(false);
+                return;
+            }
+            const avgR = r / count;
+            const avgG = g / count;
+            const avgB = b / count;
+            const toLinear = (channel) => {
+                const value = channel / 255;
+                return value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
             };
-            const lum = 0.2126 * toLinear(avgR) + 0.7152 * toLinear(avgG) + 0.0722 * toLinear(avgB);
-            const contrast = (1.05) / (lum + 0.05); // white text luminance is 1
+            const luminance = 0.2126 * toLinear(avgR) + 0.7152 * toLinear(avgG) + 0.0722 * toLinear(avgB);
+            const contrast = 1.05 / (luminance + 0.05);
             setNeedsOverlay(contrast < 4.5);
         };
-    }, [bgImageName, useKaliWallpaper]);
+        img.onerror = () => {
+            if (!cancelled) {
+                setNeedsOverlay(false);
+            }
+        };
+        return () => {
+            cancelled = true;
+        };
+    }, [effectiveUrl, theme?.useKaliWallpaper, theme?.overlay]);
+
+    const accentGlow = useMemo(() => {
+        const inner = hexToRgba(accent, 0.24);
+        const outer = hexToRgba(accent, 0.05);
+        return `radial-gradient(circle at 22% 18%, ${inner} 0%, ${outer} 45%, rgba(0,0,0,0) 70%)`;
+    }, [accent]);
+
+    const overlayBackground = theme?.overlay || (needsOverlay ? FALLBACK_OVERLAY : null);
+
+    const handleImageError = () => {
+        if (!imageError && wallpaperUrl && fallbackUrl && wallpaperUrl !== fallbackUrl) {
+            setImageError(true);
+        } else {
+            setNeedsOverlay(false);
+        }
+    };
 
     return (
-        <div className="bg-ubuntu-img absolute -z-10 top-0 right-0 overflow-hidden h-full w-full">
-            {useKaliWallpaper || bgImageName === 'kali-gradient' ? (
-                <KaliWallpaper />
-            ) : (
-                <>
-                    <img
-                        src={`/wallpapers/${bgImageName}.webp`}
-                        alt=""
-                        className="w-full h-full object-cover"
-                    />
-                    {needsOverlay && (
-                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" aria-hidden="true"></div>
-                    )}
-                </>
+        <div
+            className="absolute inset-0 -z-10 overflow-hidden pointer-events-none"
+            aria-hidden="true"
+        >
+            {theme?.useKaliWallpaper ? (
+                <KaliWallpaper className="h-full w-full" />
+            ) : effectiveUrl ? (
+                <img
+                    key={effectiveUrl}
+                    src={effectiveUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    style={{
+                        filter: blurAmount ? `blur(${Math.max(blurAmount - 6, 0)}px)` : undefined,
+                        transform: 'scale(1.05)',
+                    }}
+                    onError={handleImageError}
+                />
+            ) : null}
+            {overlayBackground && (
+                <div
+                    className="pointer-events-none absolute inset-0"
+                    style={{ background: overlayBackground }}
+                />
+            )}
+            <div
+                className="pointer-events-none absolute inset-0 mix-blend-screen opacity-70"
+                style={{ background: accentGlow }}
+            />
+            {blurAmount > 0 && (
+                <div
+                    className="pointer-events-none absolute inset-0"
+                    style={{
+                        backdropFilter: `blur(${blurAmount}px)`,
+                        WebkitBackdropFilter: `blur(${blurAmount}px)`,
+                    }}
+                />
             )}
         </div>
-    )
+    );
 }

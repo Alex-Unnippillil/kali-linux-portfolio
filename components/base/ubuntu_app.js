@@ -103,6 +103,8 @@ export class UbuntuApp extends Component {
 
         const labelStyle = {
             textShadow: '0 1px 3px rgba(0,0,0,0.75)',
+            lineHeight: 'var(--desktop-icon-line-height, 1.1rem)',
+            ...style,
         };
 
         return (
@@ -149,7 +151,9 @@ export class UbuntuApp extends Component {
                     className="mb-1"
                     style={{
                         width: 'var(--desktop-icon-image, 2.5rem)',
-                        height: 'var(--desktop-icon-image, 2.5rem)'
+                        height: 'var(--desktop-icon-image, 2.5rem)',
+                        maxWidth: 'var(--desktop-icon-image, 2.5rem)',
+                        maxHeight: 'var(--desktop-icon-image, 2.5rem)'
                     }}
                     src={this.props.icon.replace('./', '/')}
                     alt={"Kali " + this.props.name}
