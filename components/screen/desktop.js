@@ -76,6 +76,10 @@ export class Desktop extends Component {
             draggingIconId: null,
             keyboardMoveState: null,
             liveRegionMessage: '',
+            selectedIcons: new Set(),
+            selectionAnchorId: null,
+            marqueeSelection: null,
+            hoveredIconId: null,
         }
 
         this.desktopRef = React.createRef();
@@ -98,6 +102,13 @@ export class Desktop extends Component {
         this.currentPointerIsCoarse = false;
 
         this.desktopIconVariables = {};
+        this.desktopAccentVariables = {
+            '--desktop-icon-selection-bg': 'rgba(56, 189, 248, 0.2)',
+            '--desktop-icon-selection-border': 'rgba(165, 243, 252, 0.9)',
+            '--desktop-icon-selection-glow': '0 0 0 1px rgba(56,189,248,0.7), 0 6px 24px rgba(8,47,73,0.55)',
+            '--desktop-icon-hover-bg': 'rgba(56, 189, 248, 0.12)',
+            '--desktop-icon-hover-border': 'rgba(165, 243, 252, 0.35)',
+        };
 
         this.applyIconLayoutFromSettings(props);
 
@@ -115,6 +126,8 @@ export class Desktop extends Component {
 
         this.previousFocusElement = null;
         this.allAppsTriggerKey = null;
+
+        this.desktopSelectionState = null;
 
     }
 
@@ -745,6 +758,186 @@ export class Desktop extends Component {
         });
     };
 
+    areSetsEqual = (first, second) => {
+        if (first === second) return true;
+        const a = first instanceof Set ? first : new Set(first || []);
+        const b = second instanceof Set ? second : new Set(second || []);
+        if (a.size !== b.size) return false;
+        for (const value of a) {
+            if (!b.has(value)) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    areRectsEqual = (a, b) => {
+        if (!a && !b) return true;
+        if (!a || !b) return false;
+        return a.left === b.left && a.top === b.top && a.width === b.width && a.height === b.height;
+    };
+
+    rectsOverlap = (a, b) => {
+        if (!a || !b) return false;
+        if (a.width <= 0 || a.height <= 0 || b.width <= 0 || b.height <= 0) return false;
+        return (
+            a.left < b.left + b.width &&
+            a.left + a.width > b.left &&
+            a.top < b.top + b.height &&
+            a.top + a.height > b.top
+        );
+    };
+
+    getIconBounds = (appId, index, state = this.state) => {
+        if (!appId) return null;
+        const positions = state.desktop_icon_positions || {};
+        const keyboardMoveState = state.keyboardMoveState;
+        const basePosition = (keyboardMoveState && keyboardMoveState.id === appId && keyboardMoveState.position)
+            ? keyboardMoveState.position
+            : (positions[appId] || this.computeGridPosition(index));
+        if (!this.isValidIconPosition(basePosition)) return null;
+        const width = this.iconDimensions?.width ?? this.defaultIconDimensions.width;
+        const height = this.iconDimensions?.height ?? this.defaultIconDimensions.height;
+        return {
+            left: basePosition.x,
+            top: basePosition.y,
+            width,
+            height,
+        };
+    };
+
+    calculateSelectionForState = (state, appId, modifiers = {}) => {
+        if (!appId) return null;
+        const desktopApps = Array.isArray(state.desktop_apps) ? state.desktop_apps : [];
+        const prevSelected = state.selectedIcons instanceof Set ? state.selectedIcons : new Set();
+        const prevAnchor = state.selectionAnchorId ?? null;
+        const multi = Boolean(modifiers.multi);
+        const range = Boolean(modifiers.range);
+
+        let anchorId = prevAnchor;
+        let nextSelected = null;
+
+        if (!multi && !range) {
+            nextSelected = new Set([appId]);
+            anchorId = appId;
+        } else if (range) {
+            const order = desktopApps;
+            if (!order.length) {
+                nextSelected = new Set(prevSelected);
+            } else {
+                let anchor = anchorId;
+                if (!anchor || !order.includes(anchor)) {
+                    const fallback = Array.from(prevSelected).find((id) => order.includes(id));
+                    anchor = fallback || order[0] || appId;
+                }
+                if (!order.includes(appId) || !order.includes(anchor)) {
+                    nextSelected = new Set(prevSelected);
+                } else {
+                    const startIndex = order.indexOf(anchor);
+                    const endIndex = order.indexOf(appId);
+                    const [start, end] = startIndex <= endIndex ? [startIndex, endIndex] : [endIndex, startIndex];
+                    nextSelected = multi ? new Set(prevSelected) : new Set();
+                    for (let i = start; i <= end; i += 1) {
+                        nextSelected.add(order[i]);
+                    }
+                    anchorId = anchor;
+                }
+            }
+        } else if (multi) {
+            nextSelected = new Set(prevSelected);
+            if (nextSelected.has(appId)) {
+                nextSelected.delete(appId);
+                if (anchorId === appId) {
+                    const remaining = nextSelected.values().next().value;
+                    anchorId = remaining ?? null;
+                }
+            } else {
+                nextSelected.add(appId);
+                anchorId = appId;
+            }
+        }
+
+        if (!nextSelected) {
+            nextSelected = new Set(prevSelected);
+        }
+
+        if (!nextSelected.size) {
+            anchorId = null;
+        }
+
+        const changed = !this.areSetsEqual(prevSelected, nextSelected);
+        const anchorChanged = anchorId !== prevAnchor && !(anchorId === null && prevAnchor === null);
+
+        return {
+            nextSelected,
+            anchorId,
+            changed,
+            shouldUpdate: changed || anchorChanged,
+        };
+    };
+
+    applyKeyboardSelection = (appId, modifiers = {}) => {
+        const selection = this.calculateSelectionForState(this.state, appId, modifiers);
+        if (!selection) return;
+        if (!selection.shouldUpdate) return;
+        this.setState({
+            selectedIcons: selection.nextSelected,
+            selectionAnchorId: selection.nextSelected.size ? selection.anchorId : null,
+        });
+    };
+
+    buildMarqueeSelection = (state, rect, selectionState) => {
+        if (!rect) return null;
+        const desktopApps = Array.isArray(state.desktop_apps) ? state.desktop_apps : [];
+        const base = selectionState?.mode === 'add'
+            ? new Set(selectionState?.baseSelection || [])
+            : new Set();
+        if (!desktopApps.length) {
+            return { nextSelected: base };
+        }
+        desktopApps.forEach((appId, index) => {
+            const bounds = this.getIconBounds(appId, index, state);
+            if (bounds && this.rectsOverlap(rect, bounds)) {
+                base.add(appId);
+            }
+        });
+        return { nextSelected: base };
+    };
+
+    updateMarqueeSelection = (rect, selectionState) => {
+        this.setState((prevState) => {
+            const changes = {};
+            if (!this.areRectsEqual(prevState.marqueeSelection, rect)) {
+                changes.marqueeSelection = rect;
+            }
+            const result = this.buildMarqueeSelection(prevState, rect, selectionState);
+            if (result) {
+                const prevSelected = prevState.selectedIcons instanceof Set ? prevState.selectedIcons : new Set();
+                const nextSelected = result.nextSelected;
+                if (!this.areSetsEqual(prevSelected, nextSelected)) {
+                    changes.selectedIcons = nextSelected;
+                }
+                if (nextSelected && nextSelected.size) {
+                    const anchorCandidate = selectionState?.anchor;
+                    let nextAnchor = null;
+                    if (anchorCandidate && nextSelected.has(anchorCandidate)) {
+                        nextAnchor = anchorCandidate;
+                    } else if (prevState.selectionAnchorId && nextSelected.has(prevState.selectionAnchorId)) {
+                        nextAnchor = prevState.selectionAnchorId;
+                    } else {
+                        nextAnchor = nextSelected.values().next().value ?? null;
+                    }
+                    if (prevState.selectionAnchorId !== nextAnchor && (nextAnchor || prevState.selectionAnchorId !== null)) {
+                        changes.selectionAnchorId = nextAnchor;
+                    }
+                } else if (prevState.selectionAnchorId !== null) {
+                    changes.selectionAnchorId = null;
+                }
+            }
+            return Object.keys(changes).length ? changes : null;
+        });
+    };
+
     resolveIconLayout = (desktopApps = [], current = {}, options = {}) => {
         const next = {};
         const taken = new Set();
@@ -953,6 +1146,8 @@ export class Desktop extends Component {
         const moveState = this.state.keyboardMoveState;
         const isMoving = moveState && moveState.id === appId;
         const key = event.key;
+        const multi = event.ctrlKey || event.metaKey;
+        const range = event.shiftKey;
 
         if (isMoving) {
             switch (key) {
@@ -995,9 +1190,13 @@ export class Desktop extends Component {
             return;
         }
 
-        if (key === ' ') {
+        if (key === ' ' || key === 'Spacebar') {
             event.preventDefault();
-            this.openApp(appId);
+            if (multi || range) {
+                this.applyKeyboardSelection(appId, { multi, range });
+            } else {
+                this.openApp(appId);
+            }
         }
     };
 
@@ -1065,17 +1264,167 @@ export class Desktop extends Component {
         this.announce(`Cancelled moving ${title}.`);
     };
 
-    handleIconPointerDown = (event, appId) => {
+    handleIconPointerEnter = (appId) => {
+        this.setState((prevState) => {
+            if (prevState.hoveredIconId === appId) return null;
+            return { hoveredIconId: appId };
+        });
+    };
+
+    handleIconPointerLeave = (appId) => {
+        this.setState((prevState) => {
+            if (prevState.hoveredIconId !== appId) return null;
+            return { hoveredIconId: null };
+        });
+    };
+
+    handleDesktopPointerDown = (event) => {
         if (event.button !== 0) return;
+        if (event.target !== event.currentTarget) return;
+        event.stopPropagation();
+
+        const container = event.currentTarget;
+        container.setPointerCapture?.(event.pointerId);
+
+        const baseSelectionArray = Array.from(this.state.selectedIcons instanceof Set ? this.state.selectedIcons : []);
+        const selectionAnchor = this.state.selectionAnchorId ?? null;
+        const isAdditive = event.metaKey || event.ctrlKey;
+        const isRange = event.shiftKey;
+
+        this.desktopSelectionState = {
+            pointerId: event.pointerId,
+            container,
+            rect: container.getBoundingClientRect(),
+            startClientX: event.clientX,
+            startClientY: event.clientY,
+            moved: false,
+            baseSelection: baseSelectionArray,
+            mode: isAdditive ? 'add' : 'replace',
+            anchor: selectionAnchor,
+        };
+
+        if (!isAdditive && !isRange) {
+            if (baseSelectionArray.length > 0) {
+                this.setState({ selectedIcons: new Set(), selectionAnchorId: null });
+            }
+        }
+
         if (this.state.keyboardMoveState) {
             this.setState({ keyboardMoveState: null });
         }
+        if (this.state.hoveredIconId !== null) {
+            this.setState({ hoveredIconId: null });
+        }
+    };
+
+    handleDesktopPointerMove = (event) => {
+        const selectionState = this.desktopSelectionState;
+        if (!selectionState || event.pointerId !== selectionState.pointerId) return;
+        event.stopPropagation();
+
+        const deltaX = event.clientX - selectionState.startClientX;
+        const deltaY = event.clientY - selectionState.startClientY;
+        if (!selectionState.moved) {
+            const threshold = 4;
+            if (Math.abs(deltaX) < threshold && Math.abs(deltaY) < threshold) {
+                return;
+            }
+            selectionState.moved = true;
+        }
+
+        event.preventDefault();
+
+        const rect = selectionState.rect;
+        const clampX = (value) => {
+            const relative = value - rect.left;
+            if (!Number.isFinite(relative)) return 0;
+            return Math.min(Math.max(relative, 0), Math.max(rect.width, 0));
+        };
+        const clampY = (value) => {
+            const relative = value - rect.top;
+            if (!Number.isFinite(relative)) return 0;
+            return Math.min(Math.max(relative, 0), Math.max(rect.height, 0));
+        };
+
+        const originX = clampX(selectionState.startClientX);
+        const originY = clampY(selectionState.startClientY);
+        const currentX = clampX(event.clientX);
+        const currentY = clampY(event.clientY);
+
+        const marqueeRect = {
+            left: Math.min(originX, currentX),
+            top: Math.min(originY, currentY),
+            width: Math.abs(currentX - originX),
+            height: Math.abs(currentY - originY),
+        };
+
+        this.updateMarqueeSelection(marqueeRect, selectionState);
+    };
+
+    handleDesktopPointerUp = (event) => {
+        const selectionState = this.desktopSelectionState;
+        if (!selectionState || event.pointerId !== selectionState.pointerId) return;
+        event.stopPropagation();
+
+        selectionState.container?.releasePointerCapture?.(selectionState.pointerId);
+
+        this.desktopSelectionState = null;
+
+        this.setState((prevState) => {
+            if (!prevState.marqueeSelection) return null;
+            return { marqueeSelection: null };
+        });
+    };
+
+    handleDesktopPointerCancel = (event) => {
+        const selectionState = this.desktopSelectionState;
+        if (!selectionState) return;
+        event?.stopPropagation?.();
+
+        selectionState.container?.releasePointerCapture?.(selectionState.pointerId);
+        this.desktopSelectionState = null;
+
+        const restoreSelection = new Set(selectionState.baseSelection || []);
+        this.setState((prevState) => {
+            const updates = {};
+            if (prevState.marqueeSelection) {
+                updates.marqueeSelection = null;
+            }
+            updates.selectedIcons = restoreSelection;
+            updates.selectionAnchorId = restoreSelection.size ? (restoreSelection.values().next().value ?? null) : null;
+            return Object.keys(updates).length ? updates : null;
+        });
+    };
+
+    handleIconPointerDown = (event, appId) => {
+        if (event.button !== 0) return;
+        event.stopPropagation();
         const container = event.currentTarget;
         const rect = container.getBoundingClientRect();
         const offsetX = event.clientX - rect.left;
         const offsetY = event.clientY - rect.top;
         container.setPointerCapture?.(event.pointerId);
         this.preventNextIconClick = false;
+        const modifiers = {
+            multi: event.metaKey || event.ctrlKey,
+            range: event.shiftKey,
+        };
+        let selectionChangedFlag = false;
+        this.setState((prevState) => {
+            const partial = { draggingIconId: appId };
+            if (prevState.keyboardMoveState) {
+                partial.keyboardMoveState = null;
+            }
+            const selection = this.calculateSelectionForState(prevState, appId, modifiers);
+            if (selection) {
+                selectionChangedFlag = selection.changed;
+                if (selection.shouldUpdate) {
+                    partial.selectedIcons = selection.nextSelected;
+                    partial.selectionAnchorId = selection.nextSelected.size ? selection.anchorId : null;
+                }
+            }
+            return partial;
+        });
         let startPosition = null;
         const positions = this.state.desktop_icon_positions || {};
         if (positions[appId]) {
@@ -1097,8 +1446,9 @@ export class Desktop extends Component {
             container,
             startPosition,
             lastPosition: startPosition,
+            selectionChangedOnPointerDown: selectionChangedFlag,
+            multiSelectIntent: modifiers.multi || modifiers.range,
         };
-        this.setState({ draggingIconId: appId });
         this.attachIconKeyboardListeners();
     };
 
@@ -1122,24 +1472,31 @@ export class Desktop extends Component {
 
     handleIconPointerUp = (event) => {
         if (!this.iconDragState || event.pointerId !== this.iconDragState.pointerId) return;
+        event.stopPropagation();
         const dragState = this.iconDragState;
         const moved = dragState.moved;
+        const selectionChanged = Boolean(dragState.selectionChangedOnPointerDown);
+        const hadMultiIntent = Boolean(dragState.multiSelectIntent);
         this.iconDragState = null;
         dragState.container?.releasePointerCapture?.(event.pointerId);
         this.detachIconKeyboardListeners();
         if (moved) {
             event.preventDefault();
-            event.stopPropagation();
             const position = this.resolveDropPosition(event, dragState);
             this.preventNextIconClick = true;
             this.updateIconPosition(dragState.id, position.x, position.y, true);
-        } else {
-            event.preventDefault();
-            event.stopPropagation();
-            this.setState({ draggingIconId: null }, () => {
-                this.openApp(dragState.id);
-            });
+            this.setState({ draggingIconId: null });
+            return;
         }
+
+        event.preventDefault();
+        const isTouch = event.pointerType === 'touch';
+        const shouldActivate = isTouch || (!selectionChanged && !hadMultiIntent && !(event.ctrlKey || event.metaKey || event.shiftKey));
+        this.setState({ draggingIconId: null }, () => {
+            if (shouldActivate) {
+                this.openApp(dragState.id);
+            }
+        });
     };
 
     handleIconPointerCancel = (event) => {
@@ -1943,6 +2300,10 @@ export class Desktop extends Component {
         const blockIcons = hasOpenWindows && !draggingIconId;
         const iconBaseZIndex = 15;
         const containerZIndex = blockIcons ? 5 : 15;
+        const selectionSet = this.state.selectedIcons instanceof Set ? this.state.selectedIcons : new Set();
+        const hoveredIconId = this.state.hoveredIconId;
+        const marqueeSelection = this.state.marqueeSelection;
+
         const icons = desktopApps.map((appId, index) => {
             const app = this.getAppById(appId);
             if (!app) return null;
@@ -1955,6 +2316,7 @@ export class Desktop extends Component {
                 disabled: this.state.disabled_apps[app.id],
                 prefetch: app.screen?.prefetch,
                 style: this.desktopIconVariables,
+                accentVariables: this.desktopAccentVariables,
             };
 
             const position = (keyboardMoveState && keyboardMoveState.id === appId && keyboardMoveState.position)
@@ -1962,6 +2324,8 @@ export class Desktop extends Component {
                 : (positions[appId] || this.computeGridPosition(index));
             const isKeyboardMoving = Boolean(keyboardMoveState && keyboardMoveState.id === appId);
             const isDragging = draggingIconId === appId || isKeyboardMoving;
+            const isSelected = selectionSet.has(appId);
+            const isHovered = hoveredIconId === appId;
             const assistiveHint = this.buildKeyboardMoveHint(app, isKeyboardMoving, position);
             const wrapperStyle = {
                 position: 'absolute',
@@ -1981,6 +2345,8 @@ export class Desktop extends Component {
                     onPointerUp={this.handleIconPointerUp}
                     onPointerCancel={this.handleIconPointerCancel}
                     onClickCapture={this.handleIconClickCapture}
+                    onPointerEnter={() => this.handleIconPointerEnter(app.id)}
+                    onPointerLeave={() => this.handleIconPointerLeave(app.id)}
                 >
                     <UbuntuApp
                         {...props}
@@ -1989,6 +2355,8 @@ export class Desktop extends Component {
                         onKeyDown={(event) => this.handleIconKeyDown(event, app)}
                         onBlur={(event) => this.handleIconBlur(event, app.id)}
                         assistiveHint={assistiveHint}
+                        isSelected={isSelected}
+                        isHovered={isHovered}
                     />
                 </div>
             );
@@ -2004,8 +2372,23 @@ export class Desktop extends Component {
                     pointerEvents: 'auto',
                     zIndex: containerZIndex,
                 }}
+                onPointerDown={this.handleDesktopPointerDown}
+                onPointerMove={this.handleDesktopPointerMove}
+                onPointerUp={this.handleDesktopPointerUp}
+                onPointerCancel={this.handleDesktopPointerCancel}
             >
                 {icons}
+                {marqueeSelection ? (
+                    <div
+                        className="absolute pointer-events-none rounded-sm border border-sky-300/80 bg-sky-400/10 shadow-[0_0_0_1px_rgba(56,189,248,0.35)]"
+                        style={{
+                            left: `${marqueeSelection.left}px`,
+                            top: `${marqueeSelection.top}px`,
+                            width: `${marqueeSelection.width}px`,
+                            height: `${marqueeSelection.height}px`,
+                        }}
+                    />
+                ) : null}
             </div>
         );
     }
