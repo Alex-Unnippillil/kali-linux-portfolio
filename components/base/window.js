@@ -64,6 +64,7 @@ export class Window extends Component {
             height: props.defaultHeight || 85,
             closed: false,
             maximized: false,
+            preMaximizeSize: null,
             parentSize: {
                 height: 100,
                 width: 100
@@ -116,7 +117,7 @@ export class Window extends Component {
     setDefaultWindowDimenstion = () => {
         if (this.props.defaultHeight && this.props.defaultWidth) {
             this.setState(
-                { height: this.props.defaultHeight, width: this.props.defaultWidth },
+                { height: this.props.defaultHeight, width: this.props.defaultWidth, preMaximizeSize: null },
                 this.resizeBoundries
             );
             return;
@@ -125,11 +126,11 @@ export class Window extends Component {
         const isPortrait = window.innerHeight > window.innerWidth;
         if (isPortrait) {
             this.startX = window.innerWidth * 0.05;
-            this.setState({ height: 85, width: 90 }, this.resizeBoundries);
+            this.setState({ height: 85, width: 90, preMaximizeSize: null }, this.resizeBoundries);
         } else if (window.innerWidth < 640) {
-            this.setState({ height: 60, width: 85 }, this.resizeBoundries);
+            this.setState({ height: 60, width: 85, preMaximizeSize: null }, this.resizeBoundries);
         } else {
-            this.setState({ height: 85, width: 60 }, this.resizeBoundries);
+            this.setState({ height: 85, width: 60, preMaximizeSize: null }, this.resizeBoundries);
         }
     }
 
@@ -198,7 +199,8 @@ export class Window extends Component {
             if (usage >= 80) return;
             this.setState(prev => ({
                 width: Math.max(prev.width - 1, 20),
-                height: Math.max(prev.height - 1, 20)
+                height: Math.max(prev.height - 1, 20),
+                preMaximizeSize: null,
             }), () => {
                 if (this.computeContentUsage() < 80) {
                     setTimeout(shrink, 50);
@@ -290,7 +292,7 @@ export class Window extends Component {
         const px = (this.state.height / 100) * window.innerHeight + 1;
         const snapped = this.snapToGrid(px);
         const heightPercent = snapped / window.innerHeight * 100;
-        this.setState({ height: heightPercent }, this.resizeBoundries);
+        this.setState({ height: heightPercent, preMaximizeSize: null }, this.resizeBoundries);
     }
 
     handleHorizontalResize = () => {
@@ -298,7 +300,7 @@ export class Window extends Component {
         const px = (this.state.width / 100) * window.innerWidth + 1;
         const snapped = this.snapToGrid(px);
         const widthPercent = snapped / window.innerWidth * 100;
-        this.setState({ width: widthPercent }, this.resizeBoundries);
+        this.setState({ width: widthPercent, preMaximizeSize: null }, this.resizeBoundries);
     }
 
     setWinowsPosition = () => {
@@ -333,10 +335,11 @@ export class Window extends Component {
             this.setState({
                 width: this.state.lastSize.width,
                 height: this.state.lastSize.height,
-                snapped: null
+                snapped: null,
+                preMaximizeSize: null,
             }, this.resizeBoundries);
         } else {
-            this.setState({ snapped: null }, this.resizeBoundries);
+            this.setState({ snapped: null, preMaximizeSize: null }, this.resizeBoundries);
         }
     }
 
@@ -363,7 +366,8 @@ export class Window extends Component {
             snapped: position,
             lastSize: { width, height },
             width: percentOf(region.width, viewportWidth),
-            height: percentOf(region.height, viewportHeight)
+            height: percentOf(region.height, viewportHeight),
+            preMaximizeSize: null,
         }, this.resizeBoundries);
     }
 
@@ -472,7 +476,20 @@ export class Window extends Component {
     restoreWindow = () => {
         const node = this.getWindowNode();
         if (!node) return;
-        this.setDefaultWindowDimenstion();
+        const storedSize = this.state.preMaximizeSize;
+        const hasStoredSize = storedSize && typeof storedSize.width === 'number' && typeof storedSize.height === 'number';
+
+        if (hasStoredSize) {
+            this.setState({
+                width: storedSize.width,
+                height: storedSize.height,
+                maximized: false,
+                preMaximizeSize: null,
+            }, this.resizeBoundries);
+        } else {
+            this.setDefaultWindowDimenstion();
+            this.setState({ maximized: false, preMaximizeSize: null });
+        }
         // get previous position
         const posx = node.style.getPropertyValue("--window-transform-x") || `${this.startX}px`;
         const posy = node.style.getPropertyValue("--window-transform-y") || `${this.startY}px`;
@@ -482,12 +499,10 @@ export class Window extends Component {
         this.setTransformMotionPreset(node, 'restore');
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
-            this.setState({ maximized: false });
             return;
         }
 
         node.style.transform = endTransform;
-        this.setState({ maximized: false });
     }
 
     maximizeWindow = () => {
@@ -507,18 +522,19 @@ export class Window extends Component {
                 viewportHeight - topOffset - SNAP_BOTTOM_INSET - Math.max(0, measureSafeAreaInset('bottom')),
             );
             const heightPercent = percentOf(availableHeight, viewportHeight);
+            const currentSize = { width: this.state.width, height: this.state.height };
             if (node) {
                 this.setTransformMotionPreset(node, 'maximize');
                 const translateYOffset = topOffset - DESKTOP_TOP_PADDING;
                 node.style.transform = `translate(-1pt, ${translateYOffset}px)`;
             }
-            this.setState({ maximized: true, height: heightPercent, width: 100.2 });
+            this.setState({ maximized: true, height: heightPercent, width: 100.2, preMaximizeSize: currentSize });
         }
     }
 
     closeWindow = () => {
         this.setWinowsPosition();
-        this.setState({ closed: true }, () => {
+        this.setState({ closed: true, preMaximizeSize: null }, () => {
             this.deactivateOverlay();
             setTimeout(() => {
                 this.props.closed(this.id)
@@ -595,19 +611,19 @@ export class Window extends Component {
             if (e.key === 'ArrowLeft') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ width: Math.max(prev.width - step, 20) }), this.resizeBoundries);
+                this.setState(prev => ({ width: Math.max(prev.width - step, 20), preMaximizeSize: null }), this.resizeBoundries);
             } else if (e.key === 'ArrowRight') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ width: Math.min(prev.width + step, 100) }), this.resizeBoundries);
+                this.setState(prev => ({ width: Math.min(prev.width + step, 100), preMaximizeSize: null }), this.resizeBoundries);
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ height: Math.max(prev.height - step, 20) }), this.resizeBoundries);
+                this.setState(prev => ({ height: Math.max(prev.height - step, 20), preMaximizeSize: null }), this.resizeBoundries);
             } else if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.setState(prev => ({ height: Math.min(prev.height + step, 100) }), this.resizeBoundries);
+                this.setState(prev => ({ height: Math.min(prev.height + step, 100), preMaximizeSize: null }), this.resizeBoundries);
             }
             this.focusWindow();
         }
