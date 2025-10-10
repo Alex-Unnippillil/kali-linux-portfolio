@@ -129,3 +129,9 @@ For each game below, build a canvas-based component with `requestAnimationFrame`
 - Keep `apps.config.js` organized with utilities and games grouped and exported consistently.
 - Monitor `fast-glob` updates and explore hash optimizations for the custom service worker.
 
+### App Icon Refresh
+- Inventory every app logo under `public/apps`, `public/assets`, and other icon folders; note sizes and current formats.
+- Source high-resolution SVG replacements with permissive licenses suited for redistribution and attribution notes.
+- Replace bitmap logos in the repo with the curated SVGs and update any manifest or config references that expect new filenames.
+- Run a visual regression pass in the desktop shell to confirm icons render crisply at launcher, dock, and window chrome sizes.
+
