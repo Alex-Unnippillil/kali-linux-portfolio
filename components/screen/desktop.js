@@ -23,6 +23,7 @@ import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING } from '../../utils/uiConstants';
 import { useSnapSetting } from '../../hooks/usePersistentState';
+import { useSettings } from '../../hooks/useSettings';
 import {
     clampWindowPositionWithinViewport,
     clampWindowTopPosition,
@@ -32,8 +33,8 @@ import {
 
 
 export class Desktop extends Component {
-    constructor() {
-        super();
+    constructor(props) {
+        super(props);
         this.workspaceCount = 4;
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => this.createEmptyWorkspaceState());
@@ -95,6 +96,10 @@ export class Desktop extends Component {
         this.gestureState = { pointer: null, overview: null };
 
         this.currentPointerIsCoarse = false;
+
+        this.desktopIconVariables = {};
+
+        this.applyIconLayoutFromSettings(props);
 
         this.validAppIds = new Set();
         this.appMap = new Map();
@@ -189,40 +194,93 @@ export class Desktop extends Component {
 
     configureTouchTargets = (isCoarse) => {
         this.currentPointerIsCoarse = Boolean(isCoarse);
+        const layoutChanged = this.applyIconLayoutFromSettings(this.props);
+        if (layoutChanged) {
+            this.realignIconPositions();
+        }
+    };
 
-        const baseDimensions = isCoarse
-            ? { width: 120, height: 108 }
-            : { ...this.defaultIconDimensions };
-        const baseSpacing = isCoarse
-            ? { row: 144, column: 156 }
-            : { ...this.defaultIconGridSpacing };
-        const basePadding = isCoarse
-            ? { top: 72, right: 32, bottom: 168, left: 32 }
-            : { ...this.defaultDesktopPadding };
+    applyIconLayoutFromSettings = (props = this.props) => {
+        const density = props?.density === 'compact' ? 'compact' : 'regular';
+        const rawFontScale = typeof props?.fontScale === 'number' ? props.fontScale : 1;
+        const fontScale = Number.isFinite(rawFontScale) ? rawFontScale : 1;
+        const largeHitAreas = Boolean(props?.largeHitAreas);
+
+        const clamp = (value, min, max) => {
+            const safe = Number.isFinite(value) ? value : min;
+            return Math.min(Math.max(safe, min), max);
+        };
+
+        const normalizedFont = clamp(fontScale, 0.85, 1.6);
+        const pointerMultiplier = this.currentPointerIsCoarse ? 1.08 : 1;
+        const densitySizeMultiplier = density === 'compact' ? 0.9 : 1;
+        const densitySpacingMultiplier = density === 'compact' ? 0.88 : 1;
+        const densityPaddingMultiplier = density === 'compact' ? 0.92 : 1;
+        const hitAreaSizeMultiplier = largeHitAreas || this.currentPointerIsCoarse ? 1.12 : 1;
+        const hitAreaSpacingMultiplier = largeHitAreas || this.currentPointerIsCoarse ? 1.15 : 1;
+
+        const sizeMultiplier = normalizedFont * densitySizeMultiplier * hitAreaSizeMultiplier * pointerMultiplier;
+        const spacingMultiplier = normalizedFont * densitySpacingMultiplier * hitAreaSpacingMultiplier * pointerMultiplier;
+        const paddingMultiplier = normalizedFont * densityPaddingMultiplier * hitAreaSpacingMultiplier * pointerMultiplier;
+
+        const nextIconDimensions = {
+            width: clamp(Math.round(this.defaultIconDimensions.width * sizeMultiplier), 72, 192),
+            height: clamp(Math.round(this.defaultIconDimensions.height * sizeMultiplier), 64, 176),
+        };
+
+        const nextIconGridSpacing = {
+            row: clamp(Math.round(this.defaultIconGridSpacing.row * spacingMultiplier), 96, 240),
+            column: clamp(Math.round(this.defaultIconGridSpacing.column * spacingMultiplier), 108, 256),
+        };
+
         const safeArea = getSafeAreaInsets();
-        const nextPadding = {
+        const basePadding = {
+            top: clamp(Math.round(this.defaultDesktopPadding.top * paddingMultiplier), 40, 256),
+            right: clamp(Math.round(this.defaultDesktopPadding.right * paddingMultiplier), 16, 200),
+            bottom: clamp(Math.round(this.defaultDesktopPadding.bottom * paddingMultiplier), 72, 360),
+            left: clamp(Math.round(this.defaultDesktopPadding.left * paddingMultiplier), 16, 200),
+        };
+
+        const nextDesktopPadding = {
             top: basePadding.top + safeArea.top,
             right: basePadding.right + safeArea.right,
             bottom: basePadding.bottom + safeArea.bottom,
             left: basePadding.left + safeArea.left,
         };
 
+        const iconPaddingRem = (0.25 * hitAreaSpacingMultiplier).toFixed(3);
+        const iconGapRem = (0.375 * hitAreaSpacingMultiplier).toFixed(3);
+        const fontSizeRem = (0.75 * normalizedFont * (density === 'compact' ? 0.95 : 1)).toFixed(3);
+        const imageSize = clamp(Math.round(48 * sizeMultiplier), 32, 96);
+
+        const cssVariables = {
+            '--desktop-icon-width': `${nextIconDimensions.width}px`,
+            '--desktop-icon-height': `${nextIconDimensions.height}px`,
+            '--desktop-icon-padding': `${iconPaddingRem}rem`,
+            '--desktop-icon-gap': `${iconGapRem}rem`,
+            '--desktop-icon-font-size': `${fontSizeRem}rem`,
+            '--desktop-icon-image': `${imageSize}px`,
+        };
+
         const changed =
-            baseDimensions.width !== this.iconDimensions.width ||
-            baseDimensions.height !== this.iconDimensions.height ||
-            baseSpacing.row !== this.iconGridSpacing.row ||
-            baseSpacing.column !== this.iconGridSpacing.column ||
-            nextPadding.top !== this.desktopPadding.top ||
-            nextPadding.right !== this.desktopPadding.right ||
-            nextPadding.bottom !== this.desktopPadding.bottom ||
-            nextPadding.left !== this.desktopPadding.left;
+            nextIconDimensions.width !== this.iconDimensions.width ||
+            nextIconDimensions.height !== this.iconDimensions.height ||
+            nextIconGridSpacing.row !== this.iconGridSpacing.row ||
+            nextIconGridSpacing.column !== this.iconGridSpacing.column ||
+            nextDesktopPadding.top !== this.desktopPadding.top ||
+            nextDesktopPadding.right !== this.desktopPadding.right ||
+            nextDesktopPadding.bottom !== this.desktopPadding.bottom ||
+            nextDesktopPadding.left !== this.desktopPadding.left;
 
-        if (!changed) return;
+        this.desktopIconVariables = cssVariables;
 
-        this.iconDimensions = { ...baseDimensions };
-        this.iconGridSpacing = { ...baseSpacing };
-        this.desktopPadding = nextPadding;
-        this.realignIconPositions();
+        if (changed) {
+            this.iconDimensions = nextIconDimensions;
+            this.iconGridSpacing = nextIconGridSpacing;
+            this.desktopPadding = nextDesktopPadding;
+        }
+
+        return changed;
     };
 
     handleViewportResize = () => {
@@ -1217,7 +1275,17 @@ export class Desktop extends Component {
         this.setupGestureListeners();
     }
 
-    componentDidUpdate(_prevProps, prevState) {
+    componentDidUpdate(prevProps, prevState) {
+        if (
+            prevProps?.density !== this.props.density ||
+            prevProps?.fontScale !== this.props.fontScale ||
+            prevProps?.largeHitAreas !== this.props.largeHitAreas
+        ) {
+            const layoutChanged = this.applyIconLayoutFromSettings(this.props);
+            if (layoutChanged) {
+                this.realignIconPositions();
+            }
+        }
         if (
             prevState.activeWorkspace !== this.state.activeWorkspace ||
             prevState.closed_windows !== this.state.closed_windows ||
@@ -1886,6 +1954,7 @@ export class Desktop extends Component {
                 openApp: this.openApp,
                 disabled: this.state.disabled_apps[app.id],
                 prefetch: app.screen?.prefetch,
+                style: this.desktopIconVariables,
             };
 
             const position = (keyboardMoveState && keyboardMoveState.id === appId && keyboardMoveState.position)
@@ -2519,5 +2588,14 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
-    return <Desktop {...props} snapEnabled={snapEnabled} />;
+    const { density, fontScale, largeHitAreas } = useSettings();
+    return (
+        <Desktop
+            {...props}
+            snapEnabled={snapEnabled}
+            density={density}
+            fontScale={fontScale}
+            largeHitAreas={largeHitAreas}
+        />
+    );
 }
