@@ -4,6 +4,7 @@ import logger from '../../utils/logger'
 function DesktopMenu(props) {
 
     const [isFullScreen, setIsFullScreen] = useState(false)
+    const desktopActionDisabled = typeof props.openDesktopInFiles !== 'function'
 
     useEffect(() => {
         document.addEventListener('fullscreenchange', checkFullScreen);
@@ -73,9 +74,17 @@ function DesktopMenu(props) {
                 <span className="ml-5">Paste</span>
             </div>
             <Devider />
-            <div role="menuitem" aria-label="Show Desktop in Files" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
+            <button
+                onClick={desktopActionDisabled ? undefined : () => props.openDesktopInFiles()}
+                type="button"
+                role="menuitem"
+                aria-label="Show Desktop in Files"
+                aria-disabled={desktopActionDisabled}
+                disabled={desktopActionDisabled}
+                className={(desktopActionDisabled ? 'text-gray-400 cursor-default' : 'text-white hover:bg-ub-warm-grey hover:bg-opacity-20') + " w-full text-left py-0.5 mb-1.5"}
+            >
                 <span className="ml-5">Show Desktop in Files</span>
-            </div>
+            </button>
             <button
                 onClick={openTerminal}
                 type="button"
