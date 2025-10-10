@@ -1,7 +1,7 @@
 "use client";
 
 import usePersistentState from '../../hooks/usePersistentState';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface Props {
   open: boolean;
@@ -12,6 +12,8 @@ const QuickSettings = ({ open }: Props) => {
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const [highContrast, setHighContrast] = usePersistentState('qs-high-contrast', false);
+  const previousThemeRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -20,6 +22,20 @@ const QuickSettings = ({ open }: Props) => {
   useEffect(() => {
     document.documentElement.classList.toggle('reduce-motion', reduceMotion);
   }, [reduceMotion]);
+
+  useEffect(() => {
+    if (highContrast) {
+      previousThemeRef.current = document.documentElement.dataset.theme;
+      document.documentElement.dataset.theme = 'contrast';
+    } else {
+      if (previousThemeRef.current) {
+        document.documentElement.dataset.theme = previousThemeRef.current;
+      } else {
+        delete document.documentElement.dataset.theme;
+      }
+      previousThemeRef.current = undefined;
+    }
+  }, [highContrast]);
 
   return (
     <div
@@ -43,6 +59,14 @@ const QuickSettings = ({ open }: Props) => {
       <div className="px-4 pb-2 flex justify-between">
         <span>Network</span>
         <input type="checkbox" checked={online} onChange={() => setOnline(!online)} />
+      </div>
+      <div className="px-4 pb-2 flex justify-between">
+        <span>High contrast</span>
+        <input
+          type="checkbox"
+          checked={highContrast}
+          onChange={() => setHighContrast(!highContrast)}
+        />
       </div>
       <div className="px-4 flex justify-between">
         <span>Reduced motion</span>
