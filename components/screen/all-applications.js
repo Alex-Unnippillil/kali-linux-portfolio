@@ -50,6 +50,43 @@ const chunkApps = (apps, size) => {
     return chunks;
 };
 
+const compareByTitle = (a, b) => {
+    const aTitle = typeof a?.title === 'string' ? a.title : '';
+    const bTitle = typeof b?.title === 'string' ? b.title : '';
+    return aTitle.localeCompare(bTitle, undefined, { sensitivity: 'base' });
+};
+
+const getTitleInitial = (title) => {
+    if (typeof title !== 'string') return null;
+    const match = title.trim().match(/[A-Za-z0-9]/);
+    return match ? match[0].toUpperCase() : null;
+};
+
+const describeGroupTitle = (group) => {
+    if (!group.length) return '';
+    const firstTitle = group[0]?.title;
+    const lastTitle = group[group.length - 1]?.title;
+    const firstInitial = getTitleInitial(firstTitle);
+    const lastInitial = getTitleInitial(lastTitle);
+
+    if (firstInitial && lastInitial) {
+        if (firstInitial === lastInitial) {
+            return `Apps ${firstInitial}`;
+        }
+        return `Apps ${firstInitial} – ${lastInitial}`;
+    }
+
+    if (firstInitial) {
+        return `Apps ${firstInitial}`;
+    }
+
+    if (lastInitial) {
+        return `Apps ${lastInitial}`;
+    }
+
+    return 'Other Apps';
+};
+
 class AllApplications extends React.Component {
     constructor() {
         super();
@@ -176,7 +213,7 @@ class AllApplications extends React.Component {
             .filter(Boolean);
         const seenIds = new Set([...favoriteApps, ...recentApps].map((app) => app.id));
         const remainingApps = apps.filter((app) => !seenIds.has(app.id));
-        const groupedApps = chunkApps(remainingApps, GROUP_SIZE);
+        const groupedApps = chunkApps([...remainingApps].sort(compareByTitle), GROUP_SIZE);
         const hasResults =
             favoriteApps.length > 0 ||
             recentApps.length > 0 ||
@@ -194,8 +231,8 @@ class AllApplications extends React.Component {
                 <div className="flex w-full max-w-5xl flex-col items-stretch px-6 pb-10">
                     {this.renderSection('Favorites', favoriteApps)}
                     {this.renderSection('Recent', recentApps)}
-                    {groupedApps.map((group, index) =>
-                        group.length ? this.renderSection(`Group ${index + 1}`, group) : null
+                    {groupedApps.map((group) =>
+                        group.length ? this.renderSection(describeGroupTitle(group), group) : null
                     )}
                     {!hasResults && (
                         <p className="mt-6 text-center text-sm text-white/70">
