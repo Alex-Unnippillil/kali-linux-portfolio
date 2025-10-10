@@ -77,6 +77,7 @@ export class Desktop extends Component {
 
         this.desktopRef = React.createRef();
         this.folderNameInputRef = React.createRef();
+        this.nameBarDialogRef = React.createRef();
         this.iconDragState = null;
         this.preventNextIconClick = false;
         this.savedIconPositions = {};
@@ -98,6 +99,11 @@ export class Desktop extends Component {
         this.openSettingsTarget = null;
         this.openSettingsClickHandler = null;
         this.openSettingsListenerAttached = false;
+
+        this.nameBarFocusTrapAttached = false;
+        this.nameBarKeydownListener = null;
+        this.nameBarFocusInListener = null;
+        this.nameBarPrevFocusedElement = null;
 
     }
 
@@ -953,6 +959,24 @@ export class Desktop extends Component {
         ) {
             this.broadcastWorkspaceState();
         }
+
+        if (prevState.showNameBar !== this.state.showNameBar) {
+            if (this.state.showNameBar) {
+                if (typeof document !== 'undefined') {
+                    this.nameBarPrevFocusedElement = document.activeElement;
+                }
+                this.focusNameBarInput();
+                this.attachNameBarFocusTrap();
+            } else {
+                this.detachNameBarFocusTrap();
+                if (this.nameBarPrevFocusedElement && typeof this.nameBarPrevFocusedElement.focus === 'function') {
+                    this.nameBarPrevFocusedElement.focus();
+                }
+                this.nameBarPrevFocusedElement = null;
+            }
+        } else if (this.state.showNameBar) {
+            this.focusNameBarInput();
+        }
     }
 
     componentWillUnmount() {
@@ -963,6 +987,7 @@ export class Desktop extends Component {
         window.removeEventListener('open-app', this.handleOpenAppEvent);
         window.removeEventListener('resize', this.handleViewportResize);
         this.detachIconKeyboardListeners();
+        this.detachNameBarFocusTrap();
         if (typeof window !== 'undefined') {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
@@ -1915,10 +1940,18 @@ export class Desktop extends Component {
         };
 
         return (
-            <div className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50">
+            <div
+                className="absolute rounded-md top-1/2 left-1/2 text-center text-white font-light text-sm bg-ub-cool-grey transform -translate-y-1/2 -translate-x-1/2 sm:w-96 w-3/4 z-50"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="new-folder-name-label"
+                ref={this.nameBarDialogRef}
+            >
                 <form onSubmit={handleSubmit} className="flex flex-col">
                     <div className="w-full flex flex-col justify-around items-start pl-6 pb-8 pt-6">
-                        <label htmlFor="folder-name-input">New folder name</label>
+                        <label id="new-folder-name-label" htmlFor="folder-name-input">
+                            New folder name
+                        </label>
                         <input
                             className="outline-none mt-5 px-1 w-10/12 context-menu-bg border-2 border-blue-700 rounded py-0.5"
                             id="folder-name-input"
@@ -1950,6 +1983,99 @@ export class Desktop extends Component {
                 </form>
             </div>
         );
+    };
+
+    focusNameBarInput = () => {
+        if (typeof window === 'undefined') return;
+        const schedule = typeof window.requestAnimationFrame === 'function'
+            ? window.requestAnimationFrame
+            : (callback) => window.setTimeout(callback, 0);
+        schedule(() => {
+            const input = this.folderNameInputRef.current;
+            if (input && typeof input.focus === 'function') {
+                input.focus();
+                if (typeof input.select === 'function') {
+                    input.select();
+                }
+            }
+        });
+    };
+
+    getNameBarFocusableElements = () => {
+        const dialog = this.nameBarDialogRef.current;
+        if (!dialog) return [];
+        const focusableSelectors =
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+        const elements = dialog.querySelectorAll(focusableSelectors);
+        return Array.from(elements).filter((element) => {
+            const el = element;
+            const isDisabled = el.hasAttribute('disabled') || el.getAttribute('aria-disabled') === 'true';
+            const isHidden = el.getAttribute('aria-hidden') === 'true' || el.tabIndex < 0;
+            return !(isDisabled || isHidden);
+        });
+    };
+
+    attachNameBarFocusTrap = () => {
+        if (this.nameBarFocusTrapAttached || typeof document === 'undefined') return;
+
+        this.nameBarKeydownListener = (event) => {
+            if (event.key !== 'Tab') return;
+            const dialog = this.nameBarDialogRef.current;
+            if (!dialog) return;
+            const focusable = this.getNameBarFocusableElements();
+            if (!focusable.length) return;
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            const active = document.activeElement;
+            const isActiveInDialog = active && dialog.contains(active);
+
+            if (event.shiftKey) {
+                if (active === first || !isActiveInDialog) {
+                    event.preventDefault();
+                    if (typeof last.focus === 'function') {
+                        last.focus();
+                    }
+                }
+            } else if (active === last || !isActiveInDialog) {
+                event.preventDefault();
+                if (typeof first.focus === 'function') {
+                    first.focus();
+                }
+            }
+        };
+
+        this.nameBarFocusInListener = (event) => {
+            const dialog = this.nameBarDialogRef.current;
+            if (!dialog) return;
+            if (!dialog.contains(event.target)) {
+                const focusable = this.getNameBarFocusableElements();
+                if (focusable.length) {
+                    if (typeof event.preventDefault === 'function') {
+                        event.preventDefault();
+                    }
+                    if (typeof event.stopPropagation === 'function') {
+                        event.stopPropagation();
+                    }
+                    const first = focusable[0];
+                    if (first && typeof first.focus === 'function') {
+                        first.focus();
+                    }
+                }
+            }
+        };
+
+        document.addEventListener('keydown', this.nameBarKeydownListener, true);
+        document.addEventListener('focusin', this.nameBarFocusInListener, true);
+        this.nameBarFocusTrapAttached = true;
+    };
+
+    detachNameBarFocusTrap = () => {
+        if (!this.nameBarFocusTrapAttached || typeof document === 'undefined') return;
+        document.removeEventListener('keydown', this.nameBarKeydownListener, true);
+        document.removeEventListener('focusin', this.nameBarFocusInListener, true);
+        this.nameBarFocusTrapAttached = false;
+        this.nameBarKeydownListener = null;
+        this.nameBarFocusInListener = null;
     };
 
     render() {
