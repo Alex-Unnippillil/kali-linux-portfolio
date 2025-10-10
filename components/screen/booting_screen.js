@@ -17,7 +17,7 @@ function BootingScreen(props) {
             aria-live="polite"
             aria-busy={props.visible}
             style={{
-                ...(isVisible ? { zIndex: '100' } : { zIndex: '-20' }),
+                ...(isVisible ? { zIndex: '2147483647' } : { zIndex: '-20' }),
                 contentVisibility: 'auto',
             }}
             className={`${visibilityClass} absolute inset-0 select-none overflow-hidden transition-opacity duration-700`}
