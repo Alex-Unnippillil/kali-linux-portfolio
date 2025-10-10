@@ -140,6 +140,8 @@ const readRecentAppIds = (): string[] => {
 };
 
 
+const MENU_ID = 'whisker-menu-dropdown';
+
 const WhiskerMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -505,6 +507,9 @@ const WhiskerMenu: React.FC = () => {
         type="button"
         onClick={toggleMenu}
         aria-keyshortcuts="Meta Alt+F1"
+        aria-haspopup="menu"
+        aria-expanded={isVisible}
+        aria-controls={MENU_ID}
         className="pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1"
         tabIndex={isOpen ? -1 : 0}
       >
@@ -520,6 +525,7 @@ const WhiskerMenu: React.FC = () => {
       {isVisible && (
         <div
           ref={menuRef}
+          id={MENU_ID}
           data-testid="whisker-menu-dropdown"
           className={`fixed z-50 flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:absolute sm:top-full sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:flex-row sm:overflow-hidden ${
             isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
