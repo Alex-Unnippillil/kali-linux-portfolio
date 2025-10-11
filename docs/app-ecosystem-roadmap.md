@@ -132,8 +132,8 @@ All arcade-style and puzzle titles share the same readiness gap: implement canva
 | space-invaders | Space Invaders | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | nonogram | Nonogram | Core maintainers | **Needs polish** – align with shared game scaffolding | Puzzle engine |
 | tetris | Tetris | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
-| candy-crush | Candy Crush | Core maintainers | **Needs polish** – align with shared game scaffolding | Match-3 logic |
-| gomoku | Gomoku | Core maintainers | **Ready** – integrated shared pause/reset/audio/high-score flow | Game engine |
+| candy-crush | Candy Crush | Core maintainers | **QA ready** – shared loop controls, boosters, persistent stats | Match-3 logic, audio hooks |
+| gomoku | Gomoku | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | pinball | Pinball | Core maintainers | **Needs polish** – align with shared game scaffolding | Physics engine |
 
 ## Outstanding Feature Work by Category

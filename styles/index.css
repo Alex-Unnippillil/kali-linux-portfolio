@@ -588,3 +588,47 @@ textarea:focus-visible {
     color: #000 !important;
 }
 
+
+.game-overlay {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 9999px;
+    background: rgba(15, 23, 42, 0.85);
+    color: #f8fafc;
+    box-shadow: 0 15px 30px rgba(15, 23, 42, 0.35);
+    z-index: 20;
+    font-size: 0.85rem;
+    backdrop-filter: blur(6px);
+}
+
+.game-overlay button {
+    border: 1px solid rgba(248, 250, 252, 0.35);
+    background: rgba(15, 23, 42, 0.6);
+    color: inherit;
+    border-radius: 9999px;
+    padding: 0.3rem 0.9rem;
+    font-weight: 600;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.game-overlay button:hover,
+.game-overlay button:focus-visible {
+    background: rgba(248, 250, 252, 0.15);
+    color: #fff;
+}
+
+.game-overlay button:focus-visible {
+    outline: 2px solid rgba(249, 115, 22, 0.85);
+    outline-offset: 2px;
+}
+
+.game-overlay .fps {
+    font-variant-numeric: tabular-nums;
+    opacity: 0.7;
+}
+

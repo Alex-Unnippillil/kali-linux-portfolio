@@ -154,7 +154,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   "candy-crush": {
     objective: "Match three candies to clear them.",
-    controls: "Swap adjacent candies by dragging or clicking.",
+    controls:
+      "Swap adjacent candies by dragging or clicking. Use the overlay to pause or mute, and the booster buttons to shuffle or detonate color bombs.",
   },
   gomoku: {
     objective: "Get five stones in a row before your opponent.",
