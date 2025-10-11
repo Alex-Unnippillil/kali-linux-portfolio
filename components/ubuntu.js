@@ -10,17 +10,19 @@ import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
 
 export default class Ubuntu extends Component {
-	constructor() {
-		super();
-		this.state = {
-			screen_locked: false,
-			bg_image_name: 'wall-2',
-			booting_screen: true,
-			shutDownScreen: false
-		};
+        constructor() {
+                super();
+                this.state = {
+                        screen_locked: false,
+                        bg_image_name: 'wall-2',
+                        booting_screen: true,
+                        shutDownScreen: false
+                };
                 this.bootScreenLoadHandler = null;
+                this.bootScreenLoadEvent = null;
+                this.bootScreenLoadTarget = null;
                 this.bootSequenceTimeoutId = null;
-	}
+        }
 
 	componentDidMount() {
 		this.getLocalData();
@@ -34,8 +36,12 @@ export default class Ubuntu extends Component {
                 if (typeof window === 'undefined') return;
 
                 if (this.bootScreenLoadHandler) {
-                        window.removeEventListener('load', this.bootScreenLoadHandler);
+                        const target = this.bootScreenLoadTarget || window;
+                        const eventType = this.bootScreenLoadEvent || 'load';
+                        target.removeEventListener(eventType, this.bootScreenLoadHandler);
                         this.bootScreenLoadHandler = null;
+                        this.bootScreenLoadEvent = null;
+                        this.bootScreenLoadTarget = null;
                 }
 
                 if (this.bootSequenceTimeoutId) {
@@ -48,44 +54,71 @@ export default class Ubuntu extends Component {
 		this.setState({ booting_screen: false });
 	};
 
-	waitForBootSequence = () => {
-		if (typeof window === 'undefined' || typeof document === 'undefined') return;
+        waitForBootSequence = () => {
+                if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+                const MIN_BOOT_DELAY = 350;
+                const MAX_BOOT_DELAY = 1200;
+                const hasPerformanceNow = typeof performance !== 'undefined' && typeof performance.now === 'function';
+                const bootStartTime = hasPerformanceNow ? performance.now() : null;
 
                 const finalizeBoot = () => {
                         this.hideBootScreen();
                         this.detachBootScreenLoadHandler();
                 };
 
-                const runFinalizeInNextFrame = () => {
+                const scheduleFinalize = () => {
                         if (typeof window === 'undefined' || this.state.booting_screen === false) return;
 
-                        const schedule =
-                                typeof window.requestAnimationFrame === 'function'
-                                        ? window.requestAnimationFrame.bind(window)
-                                        : (cb) => window.setTimeout(cb, 0);
+                        const run = () => {
+                                if (typeof window === 'undefined') return;
+                                const schedule =
+                                        typeof window.requestAnimationFrame === 'function'
+                                                ? window.requestAnimationFrame.bind(window)
+                                                : (cb) => window.setTimeout(cb, 0);
+                                schedule(finalizeBoot);
+                        };
 
-                        schedule(finalizeBoot);
+                        if (bootStartTime !== null) {
+                                const elapsed = performance.now() - bootStartTime;
+                                const remaining = Math.max(MIN_BOOT_DELAY - elapsed, 0);
+                                if (remaining > 0) {
+                                        window.setTimeout(run, remaining);
+                                        return;
+                                }
+                        } else if (MIN_BOOT_DELAY > 0) {
+                                window.setTimeout(run, MIN_BOOT_DELAY);
+                                return;
+                        }
+
+                        run();
                 };
 
                 this.detachBootScreenLoadHandler();
 
-                if (document.readyState === 'complete') {
-                        runFinalizeInNextFrame();
-                        return;
-                }
-
-                this.bootScreenLoadHandler = () => {
+                const finalizeAndClearTimers = () => {
                         if (this.bootSequenceTimeoutId) {
                                 window.clearTimeout(this.bootSequenceTimeoutId);
                                 this.bootSequenceTimeoutId = null;
                         }
-                        runFinalizeInNextFrame();
+                        scheduleFinalize();
                 };
-                window.addEventListener('load', this.bootScreenLoadHandler, { once: true });
+
+                if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                        scheduleFinalize();
+                        return;
+                }
+
+                this.bootScreenLoadHandler = () => {
+                        finalizeAndClearTimers();
+                };
+                this.bootScreenLoadEvent = 'DOMContentLoaded';
+                this.bootScreenLoadTarget = document;
+                document.addEventListener('DOMContentLoaded', this.bootScreenLoadHandler, { once: true });
 
                 this.bootSequenceTimeoutId = window.setTimeout(() => {
-                        runFinalizeInNextFrame();
-                }, 2000);
+                        scheduleFinalize();
+                }, MAX_BOOT_DELAY);
         };
 
 	getLocalData = () => {
