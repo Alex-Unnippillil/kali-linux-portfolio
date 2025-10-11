@@ -47,7 +47,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | serial-terminal | Serial Terminal | Core maintainers | **Needs polish** – confirm serial transport stubs | Web Serial API mock |
 | plugin-manager | Plugin Manager | Core maintainers | **Needs triage** – document scope and dependencies | Plugin metadata |
 | ssh | SSH Command Builder | Core maintainers | **Needs polish** – preset library and validation | Command templates |
-| http | HTTP Request Builder | Core maintainers | **Needs polish** – form validation and canned responses | HTTP schema mocks |
+| http | HTTP Request Builder | Core maintainers | **Ready** – validation, canned responses, and history logging shipped | HTTP schema mocks |
 | html-rewriter | HTML Rewriter | Core maintainers | **Needs polish** – transformation demos and worker wiring | Worker stubs |
 | contact | Contact | Core maintainers | **In progress** – validation, privacy note, dummy submit endpoint | Form schema, API stub |
 | gedit | Gedit | Core maintainers | **Needs polish** – ensure contact workflow alignment and EmailJS option | EmailJS config |
@@ -138,7 +138,7 @@ All arcade-style and puzzle titles share the same readiness gap: implement canva
 
 ## Outstanding Feature Work by Category
 
-- **Utilities & Productivity** – Implement calculator engine, YouTube history, QR camera picker, ASCII/Quote offline content, Resource Monitor metrics, Weather fake data, settings reset flow, Trash soft-delete metadata, HTTP/SSH builders, and contact form validation before claiming readiness.
+- **Utilities & Productivity** – Implement calculator engine, YouTube history, QR camera picker, ASCII/Quote offline content, Resource Monitor metrics, Weather fake data, settings reset flow, Trash soft-delete metadata, SSH builder, and contact form validation before claiming readiness.
 - **Security Tool Simulators** – For every simulator, load canned outputs, provide safe command builders, surface "For lab use only" banners, and gate advanced flows behind the lab-mode flag to remain non-destructive.
 - **Games & Interactive** – Build a shared canvas framework (loop, pause/reset, audio toggles, localStorage high scores) and apply it across all titles, prioritizing flagship experiences such as Tetris, 2048, and Space Invaders.
 
