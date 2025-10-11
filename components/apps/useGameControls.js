@@ -200,6 +200,7 @@ export const useGameSettings = (gameId = 'default') => {
   return {
     paused,
     togglePause,
+    setPaused,
     speed,
     setSpeed,
     muted,
