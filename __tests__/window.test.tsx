@@ -1,5 +1,5 @@
 import React, { act } from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import Window from '../components/desktop/Window';
 import windowStyles from '../components/base/window.module.css';
 import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET } from '../utils/uiConstants';
@@ -41,17 +41,26 @@ beforeEach(() => {
 });
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
-jest.mock('react-draggable', () => ({
-  __esModule: true,
-  default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
+jest.mock('react-draggable', () => {
+  const React = require('react');
+  const MockDraggable = ({ children, grid }: any) => (
+    <div data-testid="draggable-mock" data-grid={Array.isArray(grid) ? grid.join(',') : undefined}>
+      {children}
+    </div>
+  );
+  MockDraggable.displayName = 'MockDraggable';
+  return {
+    __esModule: true,
+    default: MockDraggable,
+  };
+});
 jest.mock('../components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
 
 describe('Window lifecycle', () => {
   it('invokes callbacks on close', () => {
     jest.useFakeTimers();
     const closed = jest.fn();
-  
+
     render(
       <Window
         id="test-window"
@@ -73,6 +82,70 @@ describe('Window lifecycle', () => {
 
     expect(closed).toHaveBeenCalledWith('test-window');
     jest.useRealTimers();
+  });
+
+  it('focuses the frame when mounting a focused window', () => {
+    const focus = jest.fn();
+
+    render(
+      <Window
+        id="focused-window"
+        title="Focused"
+        screen={() => <div>content</div>}
+        focus={focus}
+        isFocused
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const frame = document.getElementById('focused-window');
+    expect(frame).not.toBeNull();
+    expect(frame).toHaveFocus();
+    expect(focus).toHaveBeenCalledWith('focused-window');
+  });
+});
+
+describe('Window snap grid configuration', () => {
+  it('applies custom grid to draggable when snapping is enabled', () => {
+    render(
+      <Window
+        id="grid-test"
+        title="Grid Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        snapEnabled
+        snapGrid={[16, 24]}
+      />
+    );
+
+    const draggable = screen.getByTestId('draggable-mock');
+    expect(draggable).toHaveAttribute('data-grid', '16,24');
+  });
+
+  it('snaps dimensions using axis-specific grid values', () => {
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="grid-snap-test"
+        title="Grid Snap"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        snapEnabled
+        snapGrid={[16, 24]}
+        ref={ref}
+      />
+    );
+
+    expect(ref.current!.snapToGrid(23, 'x')).toBe(16);
+    expect(ref.current!.snapToGrid(23, 'y')).toBe(24);
   });
 });
 
@@ -115,6 +188,8 @@ describe('Window snapping preview', () => {
     expect(preview).toBeInTheDocument();
     expect(preview).toHaveClass(windowStyles.snapPreviewGlass);
     expect((preview as HTMLElement).style.backdropFilter).toBe('brightness(1.1) saturate(1.2)');
+    expect(preview).toHaveAttribute('aria-label', 'Snap left half');
+    expect(within(preview).getByText('Snap left half')).toBeInTheDocument();
   });
 
   it('hides preview when away from edge', () => {
@@ -189,6 +264,8 @@ describe('Window snapping preview', () => {
     expect(ref.current!.state.snapPosition).toBe('top');
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx()}px`);
+    expect(preview).toHaveAttribute('aria-label', 'Snap full screen');
+    expect(within(preview).getByText('Snap full screen')).toBeInTheDocument();
   });
 
   it('shows corner preview when dragged near the top-left edge', () => {
@@ -228,6 +305,8 @@ describe('Window snapping preview', () => {
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toHaveStyle(`width: ${window.innerWidth / 2}px`);
     expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx() / 2}px`);
+    expect(preview).toHaveAttribute('aria-label', 'Snap top-left quarter');
+    expect(within(preview).getByText('Snap top-left quarter')).toBeInTheDocument();
   });
 
   it('shows corner preview when dragged near the bottom-right edge', () => {
@@ -270,6 +349,8 @@ describe('Window snapping preview', () => {
       `top: ${measureWindowTopOffset() + computeAvailableHeightPx() / 2}px`
     );
     expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx() / 2}px`);
+    expect(preview).toHaveAttribute('aria-label', 'Snap bottom-right quarter');
+    expect(within(preview).getByText('Snap bottom-right quarter')).toBeInTheDocument();
   });
 });
 

@@ -10,6 +10,7 @@ const BackgroundImage = dynamic(
 import apps, { games } from '../../apps.config';
 import Window from '../desktop/Window';
 import UbuntuApp from '../base/ubuntu_app';
+import SystemOverlayWindow from '../base/SystemOverlayWindow';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
@@ -22,7 +23,7 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING } from '../../utils/uiConstants';
-import { useSnapSetting } from '../../hooks/usePersistentState';
+import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
 import {
     clampWindowPositionWithinViewport,
@@ -30,6 +31,54 @@ import {
     getSafeAreaInsets,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
+
+const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
+
+const sanitizeFolderItem = (item) => {
+    if (!item) return null;
+    if (typeof item === 'string') {
+        return { id: item, title: item };
+    }
+    if (typeof item === 'object' && typeof item.id === 'string') {
+        const title = typeof item.title === 'string' ? item.title : item.id;
+        const icon = typeof item.icon === 'string' ? item.icon : undefined;
+        return { id: item.id, title, icon };
+    }
+    return null;
+};
+
+const loadStoredFolderContents = () => {
+    if (!safeLocalStorage) return {};
+    try {
+        const raw = safeLocalStorage.getItem(FOLDER_CONTENTS_STORAGE_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return {};
+        const normalized = {};
+        Object.entries(parsed).forEach(([folderId, value]) => {
+            if (!folderId || !Array.isArray(value)) return;
+            const items = value
+                .map((entry) => sanitizeFolderItem(entry))
+                .filter(Boolean);
+            normalized[folderId] = items;
+        });
+        return normalized;
+    } catch (e) {
+        return {};
+    }
+};
+
+const persistStoredFolderContents = (contents) => {
+    if (!safeLocalStorage) return;
+    try {
+        safeLocalStorage.setItem(
+            FOLDER_CONTENTS_STORAGE_KEY,
+            JSON.stringify(contents || {}),
+        );
+    } catch (e) {
+        // ignore storage errors
+    }
+};
 
 
 const OVERLAY_WINDOWS = Object.freeze({
@@ -81,17 +130,22 @@ const createOverlayStateMap = () => {
 
 
 export class Desktop extends Component {
+    static defaultProps = {
+        snapGrid: [8, 8],
+    };
+
     constructor(props) {
         super(props);
         this.workspaceCount = 4;
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
-        this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => this.createEmptyWorkspaceState());
         this.workspaceKeys = new Set([
             'focused_windows',
             'closed_windows',
             'minimized_windows',
             'window_positions',
+            'window_sizes',
         ]);
+        this.windowSizeStorageKey = 'desktop_window_sizes';
         this.defaultThemeConfig = {
             id: 'default',
             accent: (props.desktopTheme && props.desktopTheme.accent) || '#1793d1',
@@ -126,6 +180,8 @@ export class Desktop extends Component {
             },
         };
 
+        this.taskbarOrderKeyBase = 'taskbar-order';
+
         const initialIconSizePreset = this.getStoredIconSizePreset();
         const initialPresetConfig = this.getIconSizePresetConfig(initialIconSizePreset);
 
@@ -148,6 +204,7 @@ export class Desktop extends Component {
             favourite_apps: {},
             minimized_windows: { ...initialOverlayMinimized },
             window_positions: {},
+            window_sizes: initialWindowSizes,
             desktop_apps: [],
             desktop_icon_positions: {},
             window_context: {},
@@ -177,10 +234,19 @@ export class Desktop extends Component {
             overlayWindows: createOverlayStateMap(),
         };
 
+        this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
+            focused_windows: {},
+            closed_windows: {},
+            minimized_windows: {},
+            window_positions: {},
+            window_sizes: { ...initialWindowSizes },
+        }));
+
         this.desktopRef = React.createRef();
         this.folderNameInputRef = React.createRef();
         this.allAppsSearchRef = React.createRef();
         this.allAppsOverlayRef = React.createRef();
+        this.windowSwitcherContentRef = React.createRef();
         this.iconDragState = null;
         this.preventNextIconClick = false;
         this.savedIconPositions = {};
@@ -228,6 +294,7 @@ export class Desktop extends Component {
         closed_windows: createOverlayFlagMap(true),
         minimized_windows: createOverlayFlagMap(false),
         window_positions: {},
+        window_sizes: {},
     });
 
     cloneWorkspaceState = (state) => ({
@@ -235,7 +302,109 @@ export class Desktop extends Component {
         closed_windows: { ...state.closed_windows },
         minimized_windows: { ...state.minimized_windows },
         window_positions: { ...state.window_positions },
+        window_sizes: { ...(state.window_sizes || {}) },
     });
+
+    getActiveUserId = () => {
+        const { user } = this.props || {};
+        if (user && typeof user === 'object') {
+            if (user.id) return String(user.id);
+            if (user.userId) return String(user.userId);
+            if (user.username) return String(user.username);
+            if (user.email) return String(user.email);
+        }
+        if (!safeLocalStorage) return 'default';
+        const candidateKeys = [
+            'active-user-id',
+            'active-user',
+            'desktop-user',
+            'current-user',
+            'session-user',
+        ];
+        for (const key of candidateKeys) {
+            const value = safeLocalStorage.getItem(key);
+            if (value) return String(value);
+        }
+        return 'default';
+    };
+
+    getTaskbarOrderStorageKey = () => {
+        const userId = this.getActiveUserId();
+        return `${this.taskbarOrderKeyBase}:${userId}`;
+    };
+
+    loadTaskbarOrder = () => {
+        if (!safeLocalStorage) return [];
+        try {
+            const stored = safeLocalStorage.getItem(this.getTaskbarOrderStorageKey());
+            if (!stored) return [];
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+                return parsed.filter((value) => typeof value === 'string');
+            }
+        } catch (e) {
+            // ignore malformed entries and fall back to default order
+        }
+        return [];
+    };
+
+    persistTaskbarOrder = (order) => {
+        if (!safeLocalStorage) return;
+        try {
+            safeLocalStorage.setItem(this.getTaskbarOrderStorageKey(), JSON.stringify(order));
+        } catch (e) {
+            // ignore write errors (storage may be unavailable)
+        }
+    };
+
+    getNormalizedTaskbarOrder = (runningIds, preferredOrder) => {
+        const base = Array.isArray(preferredOrder)
+            ? preferredOrder
+            : (this.state.taskbarOrder || []);
+        const normalized = [];
+        const seen = new Set();
+
+        base.forEach((id) => {
+            if (typeof id !== 'string') return;
+            if (!seen.has(id) && runningIds.includes(id)) {
+                normalized.push(id);
+                seen.add(id);
+            }
+        });
+
+        runningIds.forEach((id) => {
+            if (!seen.has(id)) {
+                normalized.push(id);
+                seen.add(id);
+            }
+        });
+
+        return normalized;
+    };
+
+    setTaskbarOrder = (nextOrder) => {
+        if (!Array.isArray(nextOrder)) return;
+        this.setState((prevState) => {
+            const current = prevState.taskbarOrder || [];
+            if (
+                current.length === nextOrder.length &&
+                current.every((id, index) => id === nextOrder[index])
+            ) {
+                return null;
+            }
+            return { taskbarOrder: nextOrder };
+        }, () => {
+            const order = this.state.taskbarOrder || [];
+            this.persistTaskbarOrder(order);
+        });
+    };
+
+    getCurrentRunningAppIds = () => {
+        const { closed_windows = {} } = this.state;
+        return apps
+            .filter((app) => closed_windows[app.id] === false)
+            .map((app) => app.id);
+    };
 
     normalizeTheme(theme) {
         const fallback = this.defaultThemeConfig || {};
@@ -744,6 +913,7 @@ export class Desktop extends Component {
                 closed_windows: this.mergeWorkspaceMaps(existing.closed_windows, baseState.closed_windows, validKeys),
                 minimized_windows: this.mergeWorkspaceMaps(existing.minimized_windows, baseState.minimized_windows, validKeys),
                 window_positions: this.mergeWorkspaceMaps(existing.window_positions, baseState.window_positions, validKeys),
+                window_sizes: this.mergeWorkspaceMaps(existing.window_sizes, baseState.window_sizes, validKeys),
             };
         });
     };
@@ -847,6 +1017,37 @@ export class Desktop extends Component {
         }
     };
 
+    loadWindowSizes = () => {
+        if (!safeLocalStorage) return {};
+        try {
+            const stored = safeLocalStorage.getItem(this.windowSizeStorageKey);
+            if (!stored) return {};
+            const parsed = JSON.parse(stored);
+            if (!parsed || typeof parsed !== 'object') return {};
+            const normalized = {};
+            Object.entries(parsed).forEach(([key, value]) => {
+                if (!value || typeof value !== 'object') return;
+                const width = Number(value.width);
+                const height = Number(value.height);
+                if (Number.isFinite(width) && Number.isFinite(height)) {
+                    normalized[key] = { width, height };
+                }
+            });
+            return normalized;
+        } catch (e) {
+            return {};
+        }
+    };
+
+    persistWindowSizes = (sizes) => {
+        if (!safeLocalStorage) return;
+        try {
+            safeLocalStorage.setItem(this.windowSizeStorageKey, JSON.stringify(sizes));
+        } catch (e) {
+            // ignore write errors (storage may be unavailable)
+        }
+    };
+
     ensureIconPositions = (desktopApps = []) => {
         if (!Array.isArray(desktopApps)) return;
         this.setState((prevState) => {
@@ -859,6 +1060,145 @@ export class Desktop extends Component {
         }, () => {
             this.persistIconPositions();
         });
+    };
+
+    getAllFolderItemIds = (contents = this.state.folder_contents) => {
+        const ids = new Set();
+        if (!contents || typeof contents !== 'object') return ids;
+        Object.values(contents).forEach((items) => {
+            if (!Array.isArray(items)) return;
+            items.forEach((item) => {
+                if (!item) return;
+                if (typeof item === 'string') {
+                    ids.add(item);
+                    return;
+                }
+                if (typeof item === 'object' && typeof item.id === 'string') {
+                    ids.add(item.id);
+                }
+            });
+        });
+        return ids;
+    };
+
+    isFolderApp = (appOrId, fallbackId = null) => {
+        if (!appOrId && !fallbackId) return false;
+        const id = typeof appOrId === 'string' ? appOrId : (appOrId?.id || fallbackId);
+        if (!id) return false;
+        if (appOrId && typeof appOrId === 'object' && appOrId.isFolder) return true;
+        const contents = this.state.folder_contents || {};
+        return Object.prototype.hasOwnProperty.call(contents, id);
+    };
+
+    ensureFolderEntry = (folderId) => {
+        if (!folderId) return;
+        this.setState((prevState) => {
+            const current = prevState.folder_contents || {};
+            if (Object.prototype.hasOwnProperty.call(current, folderId)) {
+                return null;
+            }
+            return { folder_contents: { ...current, [folderId]: [] } };
+        }, this.persistFolderContents);
+    };
+
+    getFolderDropTarget = (event, dragState) => {
+        if (!event || !Number.isFinite(event.clientX) || !Number.isFinite(event.clientY)) {
+            return null;
+        }
+        const rect = this.getDesktopRect();
+        if (!rect) return null;
+        const localX = event.clientX - rect.left;
+        const localY = event.clientY - rect.top;
+        if (!Number.isFinite(localX) || !Number.isFinite(localY)) return null;
+        const desktopApps = this.state.desktop_apps || [];
+        for (let index = 0; index < desktopApps.length; index += 1) {
+            const appId = desktopApps[index];
+            if (!appId || appId === dragState?.id) continue;
+            const app = this.getAppById(appId);
+            if (!this.isFolderApp(app, appId)) continue;
+            const bounds = this.getIconBounds(appId, index);
+            if (!bounds) continue;
+            const withinX = localX >= bounds.left && localX <= bounds.left + bounds.width;
+            const withinY = localY >= bounds.top && localY <= bounds.top + bounds.height;
+            if (withinX && withinY) {
+                return { type: 'folder', id: appId };
+            }
+        }
+        return null;
+    };
+
+    moveIconIntoFolder = (iconId, folderId) => {
+        if (!iconId || !folderId) return;
+        const app = this.getAppById(iconId);
+        if (!app) return;
+        this.setState((prevState) => {
+            const desktopApps = Array.isArray(prevState.desktop_apps)
+                ? prevState.desktop_apps.filter((id) => id !== iconId)
+                : [];
+            const positions = { ...(prevState.desktop_icon_positions || {}) };
+            if (positions[iconId]) {
+                delete positions[iconId];
+            }
+            const currentContents = prevState.folder_contents || {};
+            const folderItems = Array.isArray(currentContents[folderId])
+                ? currentContents[folderId].slice()
+                : [];
+            const exists = folderItems.some((item) => {
+                if (!item) return false;
+                if (typeof item === 'string') return item === iconId;
+                return item.id === iconId;
+            });
+            if (!exists) {
+                folderItems.push({
+                    id: iconId,
+                    title: app.title || app.name || iconId,
+                    icon: app.icon,
+                });
+            }
+            const nextContents = { ...currentContents, [folderId]: folderItems };
+            const nextSelected = prevState.selectedIcons instanceof Set
+                ? new Set(prevState.selectedIcons)
+                : new Set();
+            nextSelected.delete(iconId);
+            let nextAnchor = prevState.selectionAnchorId;
+            if (!nextSelected.size) {
+                nextAnchor = null;
+            } else if (nextAnchor === iconId) {
+                const first = nextSelected.values().next().value;
+                nextAnchor = first ?? null;
+            }
+            return {
+                desktop_apps: desktopApps,
+                desktop_icon_positions: positions,
+                folder_contents: nextContents,
+                selectedIcons: nextSelected,
+                selectionAnchorId: nextAnchor,
+                draggingIconId: null,
+            };
+        }, () => {
+            this.persistIconPositions();
+            this.persistFolderContents();
+        });
+    };
+
+    getFolderContext = (folderId) => {
+        if (!folderId) return null;
+        const contents = this.state.folder_contents?.[folderId];
+        if (!Array.isArray(contents)) {
+            return { folderId, folderItems: [] };
+        }
+        const items = contents.map((item) => {
+            if (!item) return null;
+            if (typeof item === 'string') {
+                return { id: item, title: item };
+            }
+            return {
+                id: item.id,
+                title: item.title || item.id,
+                icon: item.icon,
+            };
+        }).filter(Boolean);
+        return { folderId, folderItems: items };
     };
 
     getDesktopRect = () => {
@@ -1836,10 +2176,15 @@ export class Desktop extends Component {
         this.detachIconKeyboardListeners();
         if (moved) {
             event.preventDefault();
-            const position = this.resolveDropPosition(event, dragState);
             this.preventNextIconClick = true;
-            this.updateIconPosition(dragState.id, position.x, position.y, true);
-            this.setState({ draggingIconId: null });
+            const dropTarget = this.getFolderDropTarget(event, dragState);
+            if (dropTarget && dropTarget.type === 'folder') {
+                this.moveIconIntoFolder(dragState.id, dropTarget.id);
+            } else {
+                const position = this.resolveDropPosition(event, dragState);
+                this.updateIconPosition(dragState.id, position.x, position.y, true);
+                this.setState({ draggingIconId: null });
+            }
             return;
         }
 
@@ -1887,6 +2232,7 @@ export class Desktop extends Component {
         if (workspaceId < 0 || workspaceId >= this.state.workspaces.length) return;
         const snapshot = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
         const nextTheme = this.getWorkspaceTheme(workspaceId);
+        this.closeOverlay('windowSwitcher');
         this.setState({
             activeWorkspace: workspaceId,
             focused_windows: { ...snapshot.focused_windows },
@@ -2076,8 +2422,18 @@ export class Desktop extends Component {
 
     handleExternalTaskbarCommand = (event) => {
         const detail = event?.detail || {};
-        const appId = detail.appId;
         const action = detail.action || 'toggle';
+
+        if (action === 'reorder') {
+            if (Array.isArray(detail.order)) {
+                const runningIds = this.getCurrentRunningAppIds();
+                const normalized = this.getNormalizedTaskbarOrder(runningIds, detail.order);
+                this.setTaskbarOrder(normalized);
+            }
+            return;
+        }
+
+        const appId = detail.appId;
         if (!appId || !this.validAppIds.has(appId)) return;
 
         if (this.isOverlayId(appId)) {
@@ -2195,18 +2551,35 @@ export class Desktop extends Component {
         }
         try {
             const new_folders = JSON.parse(stored);
-            new_folders.forEach(folder => {
-                apps.push({
-                    id: `new-folder-${folder.id}`,
-                    title: folder.name,
-                    icon: '/themes/Yaru/system/folder.png',
-                    disabled: true,
-                    favourite: false,
-                    desktop_shortcut: true,
-                    screen: () => { },
-                });
+            const addedIds = [];
+            new_folders.forEach((folder) => {
+                const rawId = typeof folder?.id === 'string' ? folder.id : '';
+                const nameFallback = typeof folder?.name === 'string' ? folder.name : rawId;
+                const baseId = rawId || (nameFallback ? nameFallback.replace(/\s+/g, '-').toLowerCase() : '');
+                const normalizedId = baseId
+                    ? (baseId.startsWith('new-folder-') ? baseId : `new-folder-${baseId}`)
+                    : '';
+                if (!normalizedId) return;
+                const title = typeof folder?.name === 'string' ? folder.name : (nameFallback || 'New Folder');
+                const exists = apps.some((app) => app.id === normalizedId);
+                if (!exists) {
+                    apps.push({
+                        id: normalizedId,
+                        title,
+                        icon: '/themes/Yaru/system/folder.png',
+                        disabled: false,
+                        favourite: false,
+                        desktop_shortcut: true,
+                        isFolder: true,
+                        screen: () => null,
+                    });
+                }
+                addedIds.push(normalizedId);
             });
-            this.updateAppsData();
+            addedIds.forEach((id) => this.ensureFolderEntry(id));
+            if (addedIds.length) {
+                this.updateAppsData();
+            }
         } catch (e) {
             safeLocalStorage?.setItem('new_folders', JSON.stringify([]));
         }
@@ -2402,6 +2775,7 @@ export class Desktop extends Component {
                 }),
             }));
         }
+
         this.allAppsTriggerKey = triggerKey;
     }
 
@@ -2410,6 +2784,7 @@ export class Desktop extends Component {
             this.allAppsTriggerKey = null;
             return;
         }
+
         if (this.allAppsCloseTimeout) {
             clearTimeout(this.allAppsCloseTimeout);
             this.allAppsCloseTimeout = null;
@@ -2739,6 +3114,7 @@ export class Desktop extends Component {
         const favourite_apps = {};
         const minimized_windows = {};
         const desktop_apps = [];
+        const hiddenIconIds = this.getAllFolderItemIds();
 
         apps.forEach((app) => {
             focused_windows[app.id] = false;
@@ -2746,7 +3122,7 @@ export class Desktop extends Component {
             disabled_apps[app.id] = app.disabled;
             favourite_apps[app.id] = app.favourite;
             minimized_windows[app.id] = false;
-            if (app.desktop_shortcut) desktop_apps.push(app.id);
+            if (app.desktop_shortcut && !hiddenIconIds.has(app.id)) desktop_apps.push(app.id);
         });
 
         const workspaceState = {
@@ -2754,6 +3130,7 @@ export class Desktop extends Component {
             closed_windows,
             minimized_windows,
             window_positions: this.state.window_positions || {},
+            window_sizes: this.state.window_sizes || {},
         };
         this.updateWorkspaceSnapshots(workspaceState);
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
@@ -2778,6 +3155,7 @@ export class Desktop extends Component {
         const minimized_windows = {};
         const disabled_apps = {};
         const desktop_apps = [];
+        const hiddenIconIds = this.getAllFolderItemIds();
 
         apps.forEach((app) => {
             focused_windows[app.id] = this.state.focused_windows[app.id] ?? false;
@@ -2785,7 +3163,7 @@ export class Desktop extends Component {
             disabled_apps[app.id] = app.disabled;
             closed_windows[app.id] = this.state.closed_windows[app.id] ?? true;
             favourite_apps[app.id] = app.favourite;
-            if (app.desktop_shortcut) desktop_apps.push(app.id);
+            if (app.desktop_shortcut && !hiddenIconIds.has(app.id)) desktop_apps.push(app.id);
         });
 
         const workspaceState = {
@@ -2793,6 +3171,7 @@ export class Desktop extends Component {
             closed_windows,
             minimized_windows,
             window_positions: this.state.window_positions || {},
+            window_sizes: this.state.window_sizes || {},
         };
         this.updateWorkspaceSnapshots(workspaceState);
         this.setWorkspaceState({
@@ -2944,11 +3323,15 @@ export class Desktop extends Component {
         if (!orderedIds.length) return null;
 
         const appMap = new Map(apps.map((app) => [app.id, app]));
+        const snapGrid = this.getSnapGrid();
 
         return orderedIds.map((id, index) => {
             const app = appMap.get(id);
             if (!app) return null;
             const pos = this.state.window_positions[id];
+            const size = this.state.window_sizes?.[id];
+            const defaultWidth = size && typeof size.width === 'number' ? size.width : app.defaultWidth;
+            const defaultHeight = size && typeof size.height === 'number' ? size.height : app.defaultHeight;
             const props = {
                 title: app.title,
                 id: app.id,
@@ -2962,12 +3345,14 @@ export class Desktop extends Component {
                 minimized: minimized_windows[id],
                 resizable: app.resizable,
                 allowMaximize: app.allowMaximize,
-                defaultWidth: app.defaultWidth,
-                defaultHeight: app.defaultHeight,
+                defaultWidth,
+                defaultHeight,
                 initialX: pos ? pos.x : undefined,
                 initialY: pos ? clampWindowTopPosition(pos.y, safeTopOffset) : safeTopOffset,
                 onPositionChange: (x, y) => this.updateWindowPosition(id, x, y),
+                onSizeChange: (width, height) => this.updateWindowSize(id, width, height),
                 snapEnabled: this.props.snapEnabled,
+                snapGrid,
                 context: this.state.window_context[id],
                 zIndex: 200 + index,
             };
@@ -3051,15 +3436,36 @@ export class Desktop extends Component {
     }
 
     updateWindowPosition = (id, x, y) => {
-        const snap = this.props.snapEnabled
-            ? (v) => Math.round(v / 8) * 8
-            : (v) => v;
+        const [gridX, gridY] = this.getSnapGrid();
+        const snapValue = (value, size) => {
+            if (!this.props.snapEnabled) return value;
+            if (typeof size !== 'number' || !Number.isFinite(size) || size <= 0) return value;
+            return Math.round(value / size) * size;
+        };
         const safeTopOffset = measureWindowTopOffset();
-        const nextX = snap(x);
-        const nextY = clampWindowTopPosition(snap(y), safeTopOffset);
+        const nextX = snapValue(x, gridX);
+        const nextY = clampWindowTopPosition(snapValue(y, gridY), safeTopOffset);
         this.setWorkspaceState(prev => ({
             window_positions: { ...prev.window_positions, [id]: { x: nextX, y: nextY } }
-        }), this.saveSession);
+        }), () => {
+            this.persistWindowSizes(this.state.window_sizes || {});
+            this.saveSession();
+        });
+    }
+
+    getSnapGrid = () => {
+        const fallback = [8, 8];
+        if (!Array.isArray(this.props.snapGrid)) {
+            return [...fallback];
+        }
+        const [gridX, gridY] = this.props.snapGrid;
+        const normalize = (size, fallbackSize) => {
+            if (typeof size !== 'number') return fallbackSize;
+            if (!Number.isFinite(size)) return fallbackSize;
+            if (size <= 0) return fallbackSize;
+            return size;
+        };
+        return [normalize(gridX, fallback[0]), normalize(gridY, fallback[1])];
     }
 
     saveSession = () => {
@@ -3151,6 +3557,10 @@ export class Desktop extends Component {
                 ...(params.path && !params.initialPath ? { initialPath: params.path } : {}),
             }
             : undefined;
+        const folderContext = this.isFolderApp(objId) ? this.getFolderContext(objId) : null;
+        const context = folderContext || baseContext
+            ? { ...(folderContext || {}), ...(baseContext || {}) }
+            : undefined;
         const contextState = context
             ? { ...this.state.window_context, [objId]: context }
             : this.state.window_context;
@@ -3231,6 +3641,8 @@ export class Desktop extends Component {
             safeLocalStorage?.setItem('frequentApps', JSON.stringify(frequentApps));
 
             addRecentApp(objId);
+
+            this.closeAllAppsOverlay();
 
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
@@ -3428,19 +3840,22 @@ export class Desktop extends Component {
     addToDesktop = (folder_name) => {
         folder_name = folder_name.trim();
         let folder_id = folder_name.replace(/\s+/g, '-').toLowerCase();
+        const folderAppId = `new-folder-${folder_id}`;
         apps.push({
-            id: `new-folder-${folder_id}`,
+            id: folderAppId,
             title: folder_name,
             icon: '/themes/Yaru/system/folder.png',
-            disabled: true,
+            disabled: false,
             favourite: false,
             desktop_shortcut: true,
-            screen: () => { },
+            isFolder: true,
+            screen: () => null,
         });
+        this.ensureFolderEntry(folderAppId);
         // store in local storage
         let new_folders = [];
         try { new_folders = JSON.parse(safeLocalStorage?.getItem('new_folders') || '[]'); } catch (e) { new_folders = []; }
-        new_folders.push({ id: `new-folder-${folder_id}`, name: folder_name });
+        new_folders.push({ id: folderAppId, name: folder_name });
         safeLocalStorage?.setItem('new_folders', JSON.stringify(new_folders));
 
         this.setState({ showNameBar: false }, this.updateAppsData);
@@ -3523,6 +3938,10 @@ export class Desktop extends Component {
             '--desktop-blur': blurValue,
             '--desktop-overlay': overlayValue,
         };
+        const overlayWindows = this.state.overlayWindows || {};
+        const launcherOverlay = overlayWindows.launcher || { open: false, minimized: false, maximized: false, transitionState: 'exited' };
+        const shortcutOverlay = overlayWindows.shortcutSelector || { open: false, minimized: false, maximized: false };
+        const windowSwitcherOverlay = overlayWindows.windowSwitcher || { open: false, minimized: false, maximized: false };
         return (
             <main
                 id="desktop"
@@ -3619,11 +4038,13 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
+    const [snapGrid] = useSnapGridSetting();
     const { density, fontScale, largeHitAreas, desktopTheme } = useSettings();
     return (
         <Desktop
             {...props}
             snapEnabled={snapEnabled}
+            snapGrid={snapGrid}
             density={density}
             fontScale={fontScale}
             largeHitAreas={largeHitAreas}

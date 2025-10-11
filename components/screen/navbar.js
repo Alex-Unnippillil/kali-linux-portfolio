@@ -48,6 +48,9 @@ export default class Navbar extends PureComponent {
                         activeWorkspace: 0,
                         runningApps: []
                 };
+                this.taskbarListRef = React.createRef();
+                this.draggingAppId = null;
+                this.pendingReorder = null;
         }
 
         componentDidMount() {
@@ -110,18 +113,33 @@ export default class Navbar extends PureComponent {
 
                 return (
                         <ul
+                                ref={this.taskbarListRef}
                                 className="flex max-w-[40vw] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
                                 role="list"
                                 aria-label="Open applications"
+                                onDragOver={this.handleTaskbarDragOver}
+                                onDrop={this.handleTaskbarDrop}
                         >
-                                {runningApps.map((app) => (
-                                        <li key={app.id} className="flex">
-                                                {this.renderRunningAppButton(app)}
-                                        </li>
-                                ))}
+                                {runningApps.map((app) => this.renderRunningAppItem(app))}
                         </ul>
                 );
         };
+
+        renderRunningAppItem = (app) => (
+                <li
+                        key={app.id}
+                        className="flex"
+                        draggable
+                        data-app-id={app.id}
+                        role="listitem"
+                        onDragStart={(event) => this.handleAppDragStart(event, app)}
+                        onDragOver={this.handleAppDragOver}
+                        onDrop={(event) => this.handleAppDrop(event, app.id)}
+                        onDragEnd={this.handleAppDragEnd}
+                >
+                        {this.renderRunningAppButton(app)}
+                </li>
+        );
 
         renderRunningAppButton = (app) => {
                 const isActive = !app.isMinimized;
@@ -158,6 +176,106 @@ export default class Navbar extends PureComponent {
                                 <span className="hidden whitespace-nowrap text-white md:inline">{app.title}</span>
                         </button>
                 );
+        };
+
+        handleTaskbarDragOver = (event) => {
+                event.preventDefault();
+                if (event.dataTransfer) {
+                        event.dataTransfer.dropEffect = 'move';
+                }
+        };
+
+        handleTaskbarDrop = (event) => {
+                event.preventDefault();
+                const sourceId = this.getDragSourceId(event);
+                if (!sourceId) return;
+                this.reorderRunningApps(sourceId, null, true);
+        };
+
+        handleAppDragStart = (event, app) => {
+                this.draggingAppId = app.id;
+                if (event.dataTransfer) {
+                        event.dataTransfer.effectAllowed = 'move';
+                        event.dataTransfer.setData('application/x-taskbar-app-id', app.id);
+                }
+        };
+
+        handleAppDragOver = (event) => {
+                event.preventDefault();
+                if (event.dataTransfer) {
+                        event.dataTransfer.dropEffect = 'move';
+                }
+        };
+
+        handleAppDrop = (event, targetId) => {
+                event.preventDefault();
+                const sourceId = this.getDragSourceId(event);
+                if (!sourceId) return;
+                const rect = event.currentTarget?.getBoundingClientRect?.();
+                const insertAfter = rect ? (event.clientX - rect.left) > rect.width / 2 : false;
+                this.reorderRunningApps(sourceId, targetId, insertAfter);
+        };
+
+        handleAppDragEnd = () => {
+                this.draggingAppId = null;
+        };
+
+        getDragSourceId = (event) => {
+                const transfer = event.dataTransfer;
+                if (transfer) {
+                        const explicit = transfer.getData('application/x-taskbar-app-id');
+                        if (explicit) return explicit;
+                }
+                return this.draggingAppId;
+        };
+
+        reorderRunningApps = (sourceId, targetId, insertAfter = false) => {
+                if (!sourceId) return;
+                this.pendingReorder = null;
+                this.setState((prevState) => {
+                        const updated = this.computeReorderedApps(prevState.runningApps, sourceId, targetId, insertAfter);
+                        if (!updated) return null;
+                        this.pendingReorder = updated.map((item) => item.id);
+                        return { runningApps: updated };
+                }, () => {
+                        if (this.pendingReorder) {
+                                this.dispatchTaskbarCommand({ action: 'reorder', order: this.pendingReorder });
+                                this.pendingReorder = null;
+                        }
+                });
+        };
+
+        computeReorderedApps = (apps, sourceId, targetId, insertAfter) => {
+                if (!Array.isArray(apps) || apps.length === 0) return null;
+                if (sourceId === targetId) return null;
+
+                const list = [...apps];
+                const sourceIndex = list.findIndex((item) => item.id === sourceId);
+                if (sourceIndex === -1) return null;
+
+                const [moved] = list.splice(sourceIndex, 1);
+
+                let insertIndex;
+                if (!targetId) {
+                        insertIndex = insertAfter ? list.length : 0;
+                } else {
+                        const targetIndex = list.findIndex((item) => item.id === targetId);
+                        if (targetIndex === -1) {
+                                insertIndex = list.length;
+                        } else {
+                                insertIndex = insertAfter ? targetIndex + 1 : targetIndex;
+                        }
+                }
+
+                if (insertIndex < 0) insertIndex = 0;
+                if (insertIndex > list.length) insertIndex = list.length;
+
+                list.splice(insertIndex, 0, moved);
+
+                const unchanged = apps.length === list.length && apps.every((item, index) => item.id === list[index].id);
+                if (unchanged) return null;
+
+                return list;
         };
 
         handleWorkspaceSelect = (workspaceId) => {

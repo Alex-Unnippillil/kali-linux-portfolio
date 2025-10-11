@@ -54,23 +54,34 @@ class ShortcutSelector extends React.Component {
     };
 
     render() {
+        const { onRequestClose } = this.props;
         return (
-            <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
-                <input
-                    className="mt-10 mb-8 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
-                    placeholder="Search"
-                    value={this.state.query}
-                    onChange={this.handleChange}
-                />
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-10 place-items-center">
+            <div className="flex h-full flex-col gap-6 text-white">
+                <div className="flex flex-col gap-3">
+                    <label className="sr-only" htmlFor="shortcut-selector-search">
+                        Search applications
+                    </label>
+                    <input
+                        id="shortcut-selector-search"
+                        className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-2 text-base shadow-inner focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                        placeholder="Search"
+                        value={this.state.query}
+                        onChange={this.handleChange}
+                        aria-label="Search applications"
+                    />
+                </div>
+                <div className="grid flex-1 grid-cols-3 gap-6 overflow-y-auto pb-6 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
                     {this.renderApps()}
                 </div>
-                <button
-                    className="mb-8 px-4 py-2 rounded bg-black bg-opacity-20 text-white"
-                    onClick={this.props.onClose}
-                >
-                    Cancel
-                </button>
+                <div className="flex justify-end">
+                    <button
+                        type="button"
+                        className="rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                        onClick={onRequestClose}
+                    >
+                        Cancel
+                    </button>
+                </div>
             </div>
         );
     }
