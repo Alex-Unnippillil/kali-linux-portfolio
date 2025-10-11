@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import type { ReactElement } from 'react';
 import type { AppProps } from 'next/app';
-import Script from 'next/script';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -28,7 +27,6 @@ type PeriodicSyncPermissionDescriptor = PermissionDescriptor & {
 
 declare global {
   interface Window {
-    initA2HS?: () => void;
     manualRefresh?: () => Promise<void>;
   }
 
@@ -52,9 +50,20 @@ const ubuntu = Ubuntu({
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
   useEffect(() => {
-    if (typeof window !== 'undefined' && typeof window.initA2HS === 'function') {
-      window.initA2HS();
-    }
+    let cancelled = false;
+
+    const loadA2HS = async (): Promise<void> => {
+      try {
+        const module = await import('@/src/pwa/a2hs');
+        if (!cancelled) {
+          module.initA2HS();
+        }
+      } catch (err) {
+        console.error('A2HS initialization failed', err);
+      }
+    };
+
+    void loadA2HS();
 
     const initAnalytics = async (): Promise<void> => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
@@ -102,6 +111,10 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
         console.error('Service worker setup failed', err);
       });
     }
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -168,8 +181,6 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
 
   return (
     <ErrorBoundary>
-      {/* eslint-disable-next-line @next/next/no-before-interactive-script-outside-document */}
-      <Script src="/a2hs.js" strategy="beforeInteractive" />
       <div className={ubuntu.className}>
         <a
           href="#app-grid"
