@@ -63,7 +63,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | dsniff | dsniff | Security simulations pod | **In progress** – command builder and sample outputs | Command templates |
 | beef | BeEF | Security simulations pod | **In progress** – simulator backlog | Browser exploit fixtures |
 | metasploit | Metasploit | Security simulations pod | **In progress** – simulator backlog | Module JSON |
-| autopsy | Autopsy | Security simulations pod | **In progress** – simulator backlog | Forensic dataset |
+| autopsy | Autopsy | Security simulations pod | **Needs polish** – read-only timeline & hash-set viewers shipped; expand analysis workflows next | Forensic dataset |
 | radare2 | Radare2 | Security simulations pod | **In progress** – simulator backlog | Static analysis fixtures |
 | ghidra | Ghidra | Security simulations pod | **In progress** – simulator backlog | Reverse-engineering fixtures |
 | hashcat | Hashcat | Security simulations pod | **In progress** – simulator backlog | Hash samples |
