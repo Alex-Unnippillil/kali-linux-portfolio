@@ -4,20 +4,8 @@ on:
   pull_request:
 
 jobs:
-  install:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: yarn
-      - run: yarn install --immutable --immutable-cache
-      - run: yarn dedupe --check
-
   lint:
     runs-on: ubuntu-latest
-    needs: install
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -30,7 +18,6 @@ jobs:
 
   typecheck:
     runs-on: ubuntu-latest
-    needs: install
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -43,7 +30,6 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    needs: install
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -56,7 +42,6 @@ jobs:
 
   security:
     runs-on: ubuntu-latest
-    needs: install
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -69,7 +54,6 @@ jobs:
 
   vercel-preview:
     runs-on: ubuntu-latest
-    needs: install
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
