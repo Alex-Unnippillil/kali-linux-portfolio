@@ -1,7 +1,7 @@
 'use client';
-import { type ReactNode, useEffect } from 'react';
+import { Fragment, type ReactNode, useEffect, useMemo, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
-import ModeSwitcher from './components/ModeSwitcher';
+import ModeSwitcher, { type Mode } from './components/ModeSwitcher';
 import MemorySlots from './components/MemorySlots';
 import FormulaEditor from './components/FormulaEditor';
 import Tape from './components/Tape';
@@ -21,6 +21,9 @@ export default function Calculator() {
           typeof item?.result === 'string',
       ),
   );
+  const [mode, setMode] = useState<Mode>('basic');
+  const [scientificActive, setScientificActive] = useState(false);
+  const [programmerActive, setProgrammerActive] = useState(false);
 
   const baseBtnCls =
     'btn flex items-center justify-center font-semibold transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f212a]';
@@ -83,6 +86,8 @@ export default function Calculator() {
     let formatBase: any;
     let getLastResult: any;
     let setBase: any;
+    let setPreciseMode: any;
+    let setProgrammerMode: any;
 
     const load = async () => {
       if (typeof window !== 'undefined' && !(window as any).math) {
@@ -102,6 +107,8 @@ export default function Calculator() {
       formatBase = mod.formatBase;
       getLastResult = mod.getLastResult;
       setBase = mod.setBase;
+      setPreciseMode = mod.setPreciseMode;
+      setProgrammerMode = mod.setProgrammerMode;
 
       const display = document.getElementById('display') as HTMLInputElement;
       const buttons = document.querySelectorAll<HTMLButtonElement>('.btn');
@@ -110,6 +117,11 @@ export default function Calculator() {
       const formulasToggle = document.getElementById('toggle-formulas');
       const formulasEl = document.getElementById('formulas');
       const baseSelect = document.getElementById('base-select') as HTMLSelectElement | null;
+      const preciseToggle = document.getElementById('toggle-precise') as HTMLButtonElement | null;
+      const scientificToggle = document.getElementById('toggle-scientific') as HTMLButtonElement | null;
+      const programmerToggle = document.getElementById('toggle-programmer') as HTMLButtonElement | null;
+      const scientificPanel = document.getElementById('scientific');
+      const programmerPanel = document.getElementById('programmer');
 
       const insertAtCursor = (text: string) => {
         const start = display.selectionStart ?? display.value.length;
@@ -227,6 +239,50 @@ export default function Calculator() {
         setBase(parseInt(baseSelect.value, 10));
       });
 
+      if (preciseToggle) {
+        let preciseOn = preciseToggle.getAttribute('aria-pressed') === 'true';
+        const handlePrecise = () => {
+          preciseOn = !preciseOn;
+          preciseToggle.setAttribute('aria-pressed', String(preciseOn));
+          setPreciseMode?.(preciseOn);
+        };
+        preciseToggle.addEventListener('click', handlePrecise);
+        handlers.push({ btn: preciseToggle, handler: handlePrecise });
+      }
+
+      if (scientificToggle) {
+        let isActive = scientificToggle.getAttribute('aria-pressed') === 'true';
+        const syncScientific = (next: boolean) => {
+          isActive = next;
+          scientificToggle.setAttribute('aria-pressed', String(next));
+          scientificPanel?.classList.toggle('hidden', !next);
+          setScientificActive(next);
+        };
+        syncScientific(isActive);
+        const handleScientific = () => {
+          syncScientific(!isActive);
+        };
+        scientificToggle.addEventListener('click', handleScientific);
+        handlers.push({ btn: scientificToggle, handler: handleScientific });
+      }
+
+      if (programmerToggle) {
+        let isActive = programmerToggle.getAttribute('aria-pressed') === 'true';
+        const syncProgrammer = (next: boolean) => {
+          isActive = next;
+          programmerToggle.setAttribute('aria-pressed', String(next));
+          programmerPanel?.classList.toggle('hidden', !next);
+          setProgrammerMode?.(next);
+          setProgrammerActive(next);
+        };
+        syncProgrammer(isActive);
+        const handleProgrammer = () => {
+          syncProgrammer(!isActive);
+        };
+        programmerToggle.addEventListener('click', handleProgrammer);
+        handlers.push({ btn: programmerToggle, handler: handleProgrammer });
+      }
+
       return () => {
         handlers.forEach(({ btn, handler }) =>
           btn.removeEventListener('click', handler),
@@ -237,6 +293,18 @@ export default function Calculator() {
 
     load();
   }, [setHistory]);
+
+  const activePanels = useMemo(() => {
+    const panels: string[] = [];
+    if (scientificActive) panels.push('Scientific');
+    if (programmerActive) panels.push('Programmer');
+    return panels;
+  }, [programmerActive, scientificActive]);
+
+  const recentHistory = useMemo(
+    () => history.slice(0, 3),
+    [history],
+  );
 
   return (
     <div className="calculator mx-auto flex w-full max-w-lg flex-col gap-6 rounded-3xl bg-[#1f212a] p-6 text-slate-100 shadow-[0_35px_80px_-30px_rgba(15,15,20,0.9)]">
@@ -268,15 +336,15 @@ export default function Calculator() {
           Undo
         </button>
         <div className="flex items-center gap-3">
-          <ModeSwitcher />
-          <div className="flex items-center gap-1 text-slate-500">
+          <ModeSwitcher onChange={(nextMode) => setMode(nextMode)} />
+          <div className="flex items-center gap-2 text-slate-500">
             <button
               id="toggle-history"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-transparent text-slate-400 transition hover:border-white/10 hover:text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f212a]"
+              className="inline-flex items-center gap-2 rounded-full border border-transparent px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400 transition hover:border-white/10 hover:text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f212a]"
               aria-pressed="false"
               aria-label="toggle history"
+              aria-describedby="calculator-history-toggle-desc"
             >
-              <span className="sr-only">Toggle history</span>
               <svg
                 className="h-5 w-5"
                 viewBox="0 0 24 24"
@@ -292,14 +360,18 @@ export default function Calculator() {
                 <path d="M3 12h.01" />
                 <path d="M3 18h.01" />
               </svg>
+              <span>History</span>
+              <span id="calculator-history-toggle-desc" className="sr-only">
+                Show or hide the calculation history panel
+              </span>
             </button>
             <button
               id="toggle-formulas"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-transparent text-slate-400 transition hover:border-white/10 hover:text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f212a]"
+              className="inline-flex items-center gap-2 rounded-full border border-transparent px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400 transition hover:border-white/10 hover:text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f212a]"
               aria-pressed="false"
               aria-label="toggle formulas"
+              aria-describedby="calculator-formulas-toggle-desc"
             >
-              <span className="sr-only">Toggle formulas</span>
               <svg
                 className="h-5 w-5"
                 viewBox="0 0 24 24"
@@ -314,6 +386,10 @@ export default function Calculator() {
                 <path d="M4 22h4" />
                 <path d="M14 10l6 12" />
               </svg>
+              <span>Formulas</span>
+              <span id="calculator-formulas-toggle-desc" className="sr-only">
+                Show or hide the saved formula snippets
+              </span>
             </button>
           </div>
         </div>
@@ -405,6 +481,43 @@ export default function Calculator() {
         >
           =
         </button>
+      </div>
+
+      <div
+        className="rounded-2xl border border-white/5 bg-[#15171d] p-4 text-xs text-slate-300 shadow-inner"
+        role="status"
+        aria-live="polite"
+        data-testid="calc-status-summary"
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="uppercase tracking-[0.3em] text-slate-500">Mode</span>
+          <span className="font-semibold capitalize text-slate-100" data-testid="calc-mode-summary">
+            {mode}
+          </span>
+          <span className="uppercase tracking-[0.3em] text-slate-500">Panels</span>
+          <span className="font-semibold text-slate-100" data-testid="calc-active-panels">
+            {activePanels.length > 0 ? activePanels.join(' · ') : 'None'}
+          </span>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-2" data-testid="calc-summary-history">
+          <span className="uppercase tracking-[0.3em] text-slate-500">Recent</span>
+          {recentHistory.length === 0 ? (
+            <span className="text-slate-500">No tape entries yet</span>
+          ) : (
+            recentHistory.map((entry, index) => (
+              <Fragment key={`${entry.expr}-${entry.result}-${index}`}>
+                {index > 0 && (
+                  <span aria-hidden="true" className="text-slate-600">
+                    •
+                  </span>
+                )}
+                <span className="font-mono text-slate-200">
+                  {entry.expr} = <span className="text-[#f97316]">{entry.result}</span>
+                </span>
+              </Fragment>
+            ))
+          )}
+        </div>
       </div>
 
       <div id="scientific" className="scientific hidden grid grid-cols-3 gap-2 rounded-2xl border border-white/5 bg-white/5 p-4 text-sm uppercase tracking-wide text-slate-200" aria-label="scientific functions">
