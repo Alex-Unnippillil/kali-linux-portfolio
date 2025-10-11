@@ -108,6 +108,13 @@ export class Window extends Component {
         this._menuOpener = null;
     }
 
+    notifySizeChange = () => {
+        if (typeof this.props.onSizeChange === 'function') {
+            const { width, height } = this.state;
+            this.props.onSizeChange(width, height);
+        }
+    }
+
     componentDidMount() {
         this.id = this.props.id;
         this.setDefaultWindowDimenstion();
@@ -144,7 +151,10 @@ export class Window extends Component {
         if (this.props.defaultHeight && this.props.defaultWidth) {
             this.setState(
                 { height: this.props.defaultHeight, width: this.props.defaultWidth, preMaximizeSize: null },
-                this.resizeBoundries
+                () => {
+                    this.resizeBoundries();
+                    this.notifySizeChange();
+                }
             );
             return;
         }
@@ -152,11 +162,20 @@ export class Window extends Component {
         const isPortrait = window.innerHeight > window.innerWidth;
         if (isPortrait) {
             this.startX = window.innerWidth * 0.05;
-            this.setState({ height: 85, width: 90, preMaximizeSize: null }, this.resizeBoundries);
+            this.setState({ height: 85, width: 90, preMaximizeSize: null }, () => {
+                this.resizeBoundries();
+                this.notifySizeChange();
+            });
         } else if (window.innerWidth < 640) {
-            this.setState({ height: 60, width: 85, preMaximizeSize: null }, this.resizeBoundries);
+            this.setState({ height: 60, width: 85, preMaximizeSize: null }, () => {
+                this.resizeBoundries();
+                this.notifySizeChange();
+            });
         } else {
-            this.setState({ height: 85, width: 60, preMaximizeSize: null }, this.resizeBoundries);
+            this.setState({ height: 85, width: 60, preMaximizeSize: null }, () => {
+                this.resizeBoundries();
+                this.notifySizeChange();
+            });
         }
     }
 
@@ -228,6 +247,7 @@ export class Window extends Component {
                 height: Math.max(prev.height - 1, 20),
                 preMaximizeSize: null,
             }), () => {
+                this.notifySizeChange();
                 if (this.computeContentUsage() < 80) {
                     setTimeout(shrink, 50);
                 }
@@ -340,7 +360,10 @@ export class Window extends Component {
         const px = (this.state.height / 100) * window.innerHeight + 1;
         const snapped = this.snapToGrid(px, 'y');
         const heightPercent = snapped / window.innerHeight * 100;
-        this.setState({ height: heightPercent, preMaximizeSize: null }, this.resizeBoundries);
+        this.setState({ height: heightPercent, preMaximizeSize: null }, () => {
+            this.resizeBoundries();
+            this.notifySizeChange();
+        });
     }
 
     handleHorizontalResize = () => {
@@ -348,7 +371,10 @@ export class Window extends Component {
         const px = (this.state.width / 100) * window.innerWidth + 1;
         const snapped = this.snapToGrid(px, 'x');
         const widthPercent = snapped / window.innerWidth * 100;
-        this.setState({ width: widthPercent, preMaximizeSize: null }, this.resizeBoundries);
+        this.setState({ width: widthPercent, preMaximizeSize: null }, () => {
+            this.resizeBoundries();
+            this.notifySizeChange();
+        });
     }
 
     setWinowsPosition = () => {
@@ -366,6 +392,8 @@ export class Window extends Component {
         if (this.props.onPositionChange) {
             this.props.onPositionChange(snappedX, absoluteY);
         }
+
+        this.notifySizeChange();
     }
 
     unsnapWindow = () => {
@@ -385,9 +413,15 @@ export class Window extends Component {
                 height: this.state.lastSize.height,
                 snapped: null,
                 preMaximizeSize: null,
-            }, this.resizeBoundries);
+            }, () => {
+                this.resizeBoundries();
+                this.notifySizeChange();
+            });
         } else {
-            this.setState({ snapped: null, preMaximizeSize: null }, this.resizeBoundries);
+            this.setState({ snapped: null, preMaximizeSize: null }, () => {
+                this.resizeBoundries();
+                this.notifySizeChange();
+            });
         }
     }
 
@@ -416,7 +450,10 @@ export class Window extends Component {
             width: percentOf(region.width, viewportWidth),
             height: percentOf(region.height, viewportHeight),
             preMaximizeSize: null,
-        }, this.resizeBoundries);
+        }, () => {
+            this.resizeBoundries();
+            this.notifySizeChange();
+        });
     }
 
     setInertBackground = () => {
@@ -558,7 +595,10 @@ export class Window extends Component {
                 height: storedSize.height,
                 maximized: false,
                 preMaximizeSize: null,
-            }, this.resizeBoundries);
+            }, () => {
+                this.resizeBoundries();
+                this.notifySizeChange();
+            });
         } else {
             this.setDefaultWindowDimenstion();
             this.setState({ maximized: false, preMaximizeSize: null });
@@ -601,7 +641,9 @@ export class Window extends Component {
                 const translateYOffset = topOffset - DESKTOP_TOP_PADDING;
                 node.style.transform = `translate(-1pt, ${translateYOffset}px)`;
             }
-            this.setState({ maximized: true, height: heightPercent, width: 100.2, preMaximizeSize: currentSize });
+            this.setState({ maximized: true, height: heightPercent, width: 100.2, preMaximizeSize: currentSize }, () => {
+                this.notifySizeChange();
+            });
         }
     }
 

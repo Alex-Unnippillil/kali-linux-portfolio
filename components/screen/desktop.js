@@ -90,13 +90,14 @@ export class Desktop extends Component {
         super(props);
         this.workspaceCount = 4;
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
-        this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => this.createEmptyWorkspaceState());
         this.workspaceKeys = new Set([
             'focused_windows',
             'closed_windows',
             'minimized_windows',
             'window_positions',
+            'window_sizes',
         ]);
+        this.windowSizeStorageKey = 'desktop_window_sizes';
         this.defaultThemeConfig = {
             id: 'default',
             accent: (props.desktopTheme && props.desktopTheme.accent) || '#1793d1',
@@ -142,7 +143,7 @@ export class Desktop extends Component {
         this.iconGridSpacing = { ...this.baseIconGridSpacing };
         this.desktopPadding = { ...this.baseDesktopPadding };
 
-        const initialFolderContents = loadStoredFolderContents();
+        const initialWindowSizes = this.loadWindowSizes();
 
         this.state = {
             focused_windows: {},
@@ -156,6 +157,7 @@ export class Desktop extends Component {
             favourite_apps: {},
             minimized_windows: {},
             window_positions: {},
+            window_sizes: initialWindowSizes,
             desktop_apps: [],
             desktop_icon_positions: {},
             window_context: {},
@@ -184,6 +186,14 @@ export class Desktop extends Component {
             iconSizePreset: initialIconSizePreset,
             folder_contents: initialFolderContents,
         }
+
+        this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
+            focused_windows: {},
+            closed_windows: {},
+            minimized_windows: {},
+            window_positions: {},
+            window_sizes: { ...initialWindowSizes },
+        }));
 
         this.desktopRef = React.createRef();
         this.folderNameInputRef = React.createRef();
@@ -236,6 +246,7 @@ export class Desktop extends Component {
         closed_windows: {},
         minimized_windows: {},
         window_positions: {},
+        window_sizes: {},
     });
 
     cloneWorkspaceState = (state) => ({
@@ -243,6 +254,7 @@ export class Desktop extends Component {
         closed_windows: { ...state.closed_windows },
         minimized_windows: { ...state.minimized_windows },
         window_positions: { ...state.window_positions },
+        window_sizes: { ...(state.window_sizes || {}) },
     });
 
     getOverlayState = (key) => {
@@ -818,6 +830,7 @@ export class Desktop extends Component {
                 closed_windows: this.mergeWorkspaceMaps(existing.closed_windows, baseState.closed_windows, validKeys),
                 minimized_windows: this.mergeWorkspaceMaps(existing.minimized_windows, baseState.minimized_windows, validKeys),
                 window_positions: this.mergeWorkspaceMaps(existing.window_positions, baseState.window_positions, validKeys),
+                window_sizes: this.mergeWorkspaceMaps(existing.window_sizes, baseState.window_sizes, validKeys),
             };
         });
     };
@@ -905,9 +918,35 @@ export class Desktop extends Component {
         }
     };
 
-    persistFolderContents = () => {
-        const contents = this.state.folder_contents || {};
-        persistStoredFolderContents(contents);
+    loadWindowSizes = () => {
+        if (!safeLocalStorage) return {};
+        try {
+            const stored = safeLocalStorage.getItem(this.windowSizeStorageKey);
+            if (!stored) return {};
+            const parsed = JSON.parse(stored);
+            if (!parsed || typeof parsed !== 'object') return {};
+            const normalized = {};
+            Object.entries(parsed).forEach(([key, value]) => {
+                if (!value || typeof value !== 'object') return;
+                const width = Number(value.width);
+                const height = Number(value.height);
+                if (Number.isFinite(width) && Number.isFinite(height)) {
+                    normalized[key] = { width, height };
+                }
+            });
+            return normalized;
+        } catch (e) {
+            return {};
+        }
+    };
+
+    persistWindowSizes = (sizes) => {
+        if (!safeLocalStorage) return;
+        try {
+            safeLocalStorage.setItem(this.windowSizeStorageKey, JSON.stringify(sizes));
+        } catch (e) {
+            // ignore write errors (storage may be unavailable)
+        }
     };
 
     ensureIconPositions = (desktopApps = []) => {
@@ -1982,6 +2021,8 @@ export class Desktop extends Component {
             closed_windows: { ...snapshot.closed_windows },
             minimized_windows: { ...snapshot.minimized_windows },
             window_positions: { ...snapshot.window_positions },
+            window_sizes: { ...(snapshot.window_sizes || {}) },
+            showWindowSwitcher: false,
             switcherWindows: [],
             currentTheme: nextTheme,
         }, () => {
@@ -2839,6 +2880,7 @@ export class Desktop extends Component {
             closed_windows,
             minimized_windows,
             window_positions: this.state.window_positions || {},
+            window_sizes: this.state.window_sizes || {},
         };
         this.updateWorkspaceSnapshots(workspaceState);
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
@@ -2879,6 +2921,7 @@ export class Desktop extends Component {
             closed_windows,
             minimized_windows,
             window_positions: this.state.window_positions || {},
+            window_sizes: this.state.window_sizes || {},
         };
         this.updateWorkspaceSnapshots(workspaceState);
         this.setWorkspaceState({
@@ -3036,6 +3079,9 @@ export class Desktop extends Component {
             const app = appMap.get(id);
             if (!app) return null;
             const pos = this.state.window_positions[id];
+            const size = this.state.window_sizes?.[id];
+            const defaultWidth = size && typeof size.width === 'number' ? size.width : app.defaultWidth;
+            const defaultHeight = size && typeof size.height === 'number' ? size.height : app.defaultHeight;
             const props = {
                 title: app.title,
                 id: app.id,
@@ -3049,11 +3095,12 @@ export class Desktop extends Component {
                 minimized: minimized_windows[id],
                 resizable: app.resizable,
                 allowMaximize: app.allowMaximize,
-                defaultWidth: app.defaultWidth,
-                defaultHeight: app.defaultHeight,
+                defaultWidth,
+                defaultHeight,
                 initialX: pos ? pos.x : undefined,
                 initialY: pos ? clampWindowTopPosition(pos.y, safeTopOffset) : safeTopOffset,
                 onPositionChange: (x, y) => this.updateWindowPosition(id, x, y),
+                onSizeChange: (width, height) => this.updateWindowSize(id, width, height),
                 snapEnabled: this.props.snapEnabled,
                 snapGrid,
                 context: this.state.window_context[id],
@@ -3062,6 +3109,23 @@ export class Desktop extends Component {
 
             return <Window key={id} {...props} />;
         }).filter(Boolean);
+    }
+
+    updateWindowSize = (id, width, height) => {
+        if (!id || typeof width !== 'number' || !Number.isFinite(width) || typeof height !== 'number' || !Number.isFinite(height)) {
+            return;
+        }
+        this.setWorkspaceState((prev) => {
+            const current = prev.window_sizes || {};
+            const existing = current[id];
+            if (existing && existing.width === width && existing.height === height) {
+                this.persistWindowSizes(current);
+                return null;
+            }
+            const next = { ...current, [id]: { width, height } };
+            this.persistWindowSizes(next);
+            return { window_sizes: next };
+        });
     }
 
     updateWindowPosition = (id, x, y) => {
@@ -3076,7 +3140,10 @@ export class Desktop extends Component {
         const nextY = clampWindowTopPosition(snapValue(y, gridY), safeTopOffset);
         this.setWorkspaceState(prev => ({
             window_positions: { ...prev.window_positions, [id]: { x: nextX, y: nextY } }
-        }), this.saveSession);
+        }), () => {
+            this.persistWindowSizes(this.state.window_sizes || {});
+            this.saveSession();
+        });
     }
 
     getSnapGrid = () => {
