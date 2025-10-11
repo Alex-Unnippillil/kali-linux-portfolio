@@ -114,7 +114,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   tictactoe: {
     objective: "Place three marks in a row to win.",
-    controls: "Click a square to place your mark.",
+    controls:
+      "Click a square to place your mark. Use the toolbar to pause/resume, toggle sound, or reset stats.",
   },
   tetris: {
     objective: "Clear lines by completing horizontal rows.",
