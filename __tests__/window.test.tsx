@@ -41,10 +41,19 @@ beforeEach(() => {
 });
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
-jest.mock('react-draggable', () => ({
-  __esModule: true,
-  default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
+jest.mock('react-draggable', () => {
+  const React = require('react');
+  const MockDraggable = ({ children, grid }: any) => (
+    <div data-testid="draggable-mock" data-grid={Array.isArray(grid) ? grid.join(',') : undefined}>
+      {children}
+    </div>
+  );
+  MockDraggable.displayName = 'MockDraggable';
+  return {
+    __esModule: true,
+    default: MockDraggable,
+  };
+});
 jest.mock('../components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
 
 describe('Window lifecycle', () => {
@@ -73,6 +82,48 @@ describe('Window lifecycle', () => {
 
     expect(closed).toHaveBeenCalledWith('test-window');
     jest.useRealTimers();
+  });
+});
+
+describe('Window snap grid configuration', () => {
+  it('applies custom grid to draggable when snapping is enabled', () => {
+    render(
+      <Window
+        id="grid-test"
+        title="Grid Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        snapEnabled
+        snapGrid={[16, 24]}
+      />
+    );
+
+    const draggable = screen.getByTestId('draggable-mock');
+    expect(draggable).toHaveAttribute('data-grid', '16,24');
+  });
+
+  it('snaps dimensions using axis-specific grid values', () => {
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="grid-snap-test"
+        title="Grid Snap"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        snapEnabled
+        snapGrid={[16, 24]}
+        ref={ref}
+      />
+    );
+
+    expect(ref.current!.snapToGrid(23, 'x')).toBe(16);
+    expect(ref.current!.snapToGrid(23, 'y')).toBe(24);
   });
 });
 

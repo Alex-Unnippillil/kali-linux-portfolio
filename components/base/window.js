@@ -52,6 +52,10 @@ const computeSnapRegions = (viewportWidth, viewportHeight, topInset = DEFAULT_WI
 };
 
 export class Window extends Component {
+    static defaultProps = {
+        snapGrid: [8, 8],
+    };
+
     constructor(props) {
         super(props);
         this.id = null;
@@ -289,15 +293,37 @@ export class Window extends Component {
         this.setState({ cursorType: "cursor-default", grabbed: false })
     }
 
-    snapToGrid = (value) => {
+    getSnapGrid = () => {
+        const fallback = [8, 8];
+        if (!Array.isArray(this.props.snapGrid)) {
+            return fallback;
+        }
+
+        const [gridX, gridY] = this.props.snapGrid;
+        const normalize = (size, fallbackSize) => {
+            if (typeof size !== 'number') return fallbackSize;
+            if (!Number.isFinite(size)) return fallbackSize;
+            if (size <= 0) return fallbackSize;
+            return size;
+        };
+
+        const normalizedX = normalize(gridX, fallback[0]);
+        const normalizedY = normalize(gridY, fallback[1]);
+        return [normalizedX, normalizedY];
+    }
+
+    snapToGrid = (value, axis = 'x') => {
         if (!this.props.snapEnabled) return value;
-        return Math.round(value / 8) * 8;
+        const [gridX, gridY] = this.getSnapGrid();
+        const size = axis === 'y' ? gridY : gridX;
+        if (!size) return value;
+        return Math.round(value / size) * size;
     }
 
     handleVerticleResize = () => {
         if (this.props.resizable === false) return;
         const px = (this.state.height / 100) * window.innerHeight + 1;
-        const snapped = this.snapToGrid(px);
+        const snapped = this.snapToGrid(px, 'y');
         const heightPercent = snapped / window.innerHeight * 100;
         this.setState({ height: heightPercent, preMaximizeSize: null }, this.resizeBoundries);
     }
@@ -305,7 +331,7 @@ export class Window extends Component {
     handleHorizontalResize = () => {
         if (this.props.resizable === false) return;
         const px = (this.state.width / 100) * window.innerWidth + 1;
-        const snapped = this.snapToGrid(px);
+        const snapped = this.snapToGrid(px, 'x');
         const widthPercent = snapped / window.innerWidth * 100;
         this.setState({ width: widthPercent, preMaximizeSize: null }, this.resizeBoundries);
     }
@@ -315,9 +341,9 @@ export class Window extends Component {
         if (!node) return;
         const rect = node.getBoundingClientRect();
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
-        const snappedX = this.snapToGrid(rect.x);
+        const snappedX = this.snapToGrid(rect.x, 'x');
         const relativeY = rect.y - topInset;
-        const snappedRelativeY = this.snapToGrid(relativeY);
+        const snappedRelativeY = this.snapToGrid(relativeY, 'y');
         const absoluteY = clampWindowTopPosition(snappedRelativeY + topInset, topInset);
         node.style.setProperty('--window-transform-x', `${snappedX.toFixed(1)}px`);
         node.style.setProperty('--window-transform-y', `${absoluteY.toFixed(1)}px`);
@@ -685,6 +711,8 @@ export class Window extends Component {
             ? this.props.zIndex
             : (this.props.isFocused ? 30 : 20);
 
+        const snapGrid = this.getSnapGrid();
+
         return (
             <>
                 {this.state.snapPreview && (
@@ -706,7 +734,7 @@ export class Window extends Component {
                     nodeRef={this.windowRef}
                     axis="both"
                     handle=".bg-ub-window-title"
-                    grid={this.props.snapEnabled ? [8, 8] : [1, 1]}
+                    grid={this.props.snapEnabled ? snapGrid : [1, 1]}
                     scale={1}
                     onStart={this.changeCursorToMove}
                     onStop={this.handleStop}

@@ -49,3 +49,15 @@ export const useSnapSetting = () =>
     true,
     (value) => typeof value === "boolean",
   );
+
+export const useSnapGridSetting = () =>
+  usePersistentState(
+    "snap-grid",
+    [8, 8],
+    (value) =>
+      Array.isArray(value) &&
+      value.length === 2 &&
+      value.every(
+        (item) => typeof item === "number" && Number.isFinite(item) && item > 0,
+      ),
+  );
