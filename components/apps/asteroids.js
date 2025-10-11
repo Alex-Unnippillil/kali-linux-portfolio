@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import {
   wrap,
   createBulletPool,
@@ -10,11 +10,15 @@ import {
   POWER_UPS,
   applyPowerUp,
   createSeededRNG,
+  recordDifficultyScore,
+  readDifficultyScore,
 } from './asteroids-utils';
 import useGameControls from './useGameControls';
 import GameLayout from './GameLayout';
 import { vibrate } from './Games/common/haptics';
+import { Overlay } from './Games/common';
 import { getMapping } from './Games/common/input-remap/useInputMapping';
+import GameLoop from './Games/common/loop/GameLoop';
 import useOPFS from '../../hooks/useOPFS';
 
 // Arcade-style tuning constants
@@ -33,6 +37,14 @@ const DEFAULT_MAP = {
   fire: ' ',
   hyperspace: 'h',
 };
+
+const DIFFICULTIES = [
+  { id: 'cadet', label: 'Cadet — Level 1 (x1.0)', start: 1, modifier: 1 },
+  { id: 'scout', label: 'Scout — Level 2 (x1.2)', start: 2, modifier: 1.2 },
+  { id: 'ace', label: 'Ace — Level 3 (x1.4)', start: 3, modifier: 1.4 },
+  { id: 'veteran', label: 'Veteran — Level 4 (x1.7)', start: 4, modifier: 1.7 },
+  { id: 'legend', label: 'Legend — Level 5 (x2.0)', start: 5, modifier: 2 },
+];
 
 // Simple Quadtree for collision queries
 class Quadtree {
@@ -107,20 +119,30 @@ class Quadtree {
 
 const Asteroids = () => {
   const canvasRef = useRef(null);
-  const requestRef = useRef();
+  const loopRef = useRef(null);
   const audioCtx = useRef(null);
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-  const controlsRef = useRef(useGameControls(canvasRef));
-  const [paused, setPaused] = useState(false);
-  const pausedRef = useRef(false);
+  const controlsRef = useRef(useGameControls(canvasRef, 'asteroids'));
+  const [paused, setPaused] = useState(true);
+  const pausedRef = useRef(true);
   const [restartKey, setRestartKey] = useState(0);
   const [liveText, setLiveText] = useState('');
-  const HIGH_KEY = 'asteroids-highscore';
-  const LAST_KEY = 'asteroids-lastscore';
+  const [muted, setMuted] = useState(false);
+  const mutedRef = useRef(false);
+  const [score, setScore] = useState(0);
+  const scoreRef = useRef(0);
+  const [lives, setLives] = useState(3);
+  const livesRef = useRef(3);
+  const [level, setLevel] = useState(1);
+  const levelRef = useRef(1);
   const [highScore, setHighScore] = useState(0);
   const [lastScore, setLastScore] = useState(0);
   const highScoreRef = useRef(0);
   const lastScoreRef = useRef(0);
+  const [scoreModifier, setScoreModifier] = useState(DIFFICULTIES[0].modifier);
+  const scoreModifierRef = useRef(DIFFICULTIES[0].modifier);
+  const [difficulty, setDifficulty] = useState(DIFFICULTIES[0]);
+  const difficultyRef = useRef(DIFFICULTIES[0]);
   const [saveData, setSaveData, saveReady] = useOPFS('asteroids-save.json', { upgrades: [], ghost: [] });
   const saveDataRef = useRef(saveData);
   useEffect(() => { saveDataRef.current = saveData; }, [saveData]);
@@ -128,24 +150,49 @@ const Asteroids = () => {
   const inventoryRef = useRef(inventory);
   useEffect(() => { inventoryRef.current = inventory; }, [inventory]);
   const [selectingLevel, setSelectingLevel] = useState(true);
-  const [startLevelNum, setStartLevelNum] = useState(1);
+  const selectingRef = useRef(selectingLevel);
 
-  useEffect(() => {
-    const hs = Number(localStorage.getItem(HIGH_KEY) || 0);
-    const ls = Number(localStorage.getItem(LAST_KEY) || 0);
-    setHighScore(hs);
-    setLastScore(ls);
-    highScoreRef.current = hs;
-    lastScoreRef.current = ls;
-  }, []);
+  useEffect(() => { selectingRef.current = selectingLevel; }, [selectingLevel]);
+  useEffect(() => { mutedRef.current = muted; }, [muted]);
+  useEffect(() => { scoreRef.current = score; }, [score]);
+  useEffect(() => { livesRef.current = lives; }, [lives]);
+  useEffect(() => { levelRef.current = level; }, [level]);
   useEffect(() => { highScoreRef.current = highScore; }, [highScore]);
   useEffect(() => { lastScoreRef.current = lastScore; }, [lastScore]);
+  useEffect(() => { scoreModifierRef.current = scoreModifier; }, [scoreModifier]);
+  useEffect(() => { difficultyRef.current = difficulty; }, [difficulty]);
+
+  useEffect(() => {
+    const entry = readDifficultyScore(
+      difficulty.id,
+      undefined,
+      difficulty.modifier,
+    );
+    setHighScore(entry.high);
+    setLastScore(entry.last);
+    setScoreModifier(entry.modifier);
+    highScoreRef.current = entry.high;
+    lastScoreRef.current = entry.last;
+    scoreModifierRef.current = entry.modifier;
+  }, [difficulty]);
 
   useEffect(() => {
     if (!saveReady || selectingLevel) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const { start: startLevel, modifier: difficultyMultiplier } = difficultyRef.current;
+
+    pausedRef.current = false;
+    setPaused(false);
+    scoreRef.current = 0;
+    setScore(0);
+    livesRef.current = 3;
+    setLives(3);
+    levelRef.current = startLevel;
+    setLevel(startLevel);
+    scoreModifierRef.current = difficultyMultiplier;
+    setScoreModifier(difficultyMultiplier);
 
     function resize() {
       const { clientWidth, clientHeight } = canvas;
@@ -177,7 +224,7 @@ const Asteroids = () => {
     };
     let lives = 3;
     let score = 0;
-    let level = startLevelNum;
+    let level = startLevel;
     let extraLifeScore = 10000;
     const bullets = createBulletPool(40);
     const asteroids = [];
@@ -263,6 +310,7 @@ const Asteroids = () => {
 
     // Audio using WebAudio lazily
     const playSound = (freq) => {
+      if (mutedRef.current) return;
       if (!audioCtx.current) audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
       const ctxAudio = audioCtx.current;
       const osc = ctxAudio.createOscillator();
@@ -291,7 +339,7 @@ const Asteroids = () => {
       }
     };
 
-    const startLevel = () => {
+    const startLevelWave = () => {
       rand = createSeededRNG(level);
       spawnAsteroids(3 + level * 2);
       ufoTimer = Math.max(300, 900 - level * 60);
@@ -301,7 +349,7 @@ const Asteroids = () => {
       applyUpgrades();
     };
 
-    startLevel();
+    startLevelWave();
     ga.start();
 
     let lastAnnouncement = '';
@@ -324,6 +372,8 @@ const Asteroids = () => {
             SHIELD_DURATION,
             600,
           );
+          setLives(lives);
+          livesRef.current = lives;
           inventoryRef.current.splice(idx, 1);
           setInventory([...inventoryRef.current]);
         }
@@ -372,6 +422,8 @@ const Asteroids = () => {
       } else {
         spawnParticles(ship.x, ship.y, 40, 'orange', 'debris');
         lives -= 1;
+        setLives(lives);
+        livesRef.current = lives;
         ga.death();
         playSound(110);
         vibrate(200);
@@ -384,14 +436,17 @@ const Asteroids = () => {
       }
       ship.hitCooldown = COLLISION_COOLDOWN;
       if (lives < 0) {
-        if (score > highScoreRef.current) {
-          setHighScore(score);
-          highScoreRef.current = score;
-          try { localStorage.setItem(HIGH_KEY, String(score)); } catch {}
-        }
-        setLastScore(score);
-        lastScoreRef.current = score;
-        try { localStorage.setItem(LAST_KEY, String(score)); } catch {}
+        const result = recordDifficultyScore(
+          difficultyRef.current.id,
+          score,
+          difficultyRef.current.modifier,
+        );
+        setHighScore(result.high);
+        highScoreRef.current = result.high;
+        setLastScore(result.last);
+        lastScoreRef.current = result.last;
+        setScoreModifier(result.modifier);
+        scoreModifierRef.current = result.modifier;
         const updated = { upgrades, ghost: currentRun };
         saveDataRef.current = updated;
         setSaveData(updated);
@@ -400,8 +455,14 @@ const Asteroids = () => {
         ghostIndex = 0;
         currentRun.length = 0;
         lives = 3;
+        setLives(lives);
+        livesRef.current = lives;
         score = 0;
-        level = startLevelNum;
+        setScore(score);
+        scoreRef.current = score;
+        level = startLevel;
+        setLevel(level);
+        levelRef.current = level;
         asteroids.length = 0;
         powerUps.length = 0;
         inventoryRef.current = [];
@@ -415,6 +476,8 @@ const Asteroids = () => {
       const a = asteroids[index];
       spawnParticles(a.x, a.y, 20, 'white', 'debris');
       score += 100 * multiplier;
+      setScore(score);
+      scoreRef.current = score;
       multiplier = Math.min(multiplier + 1, MAX_MULTIPLIER);
       multiplierTimer = MULTIPLIER_TIMEOUT;
       ga.split(a.r);
@@ -430,13 +493,17 @@ const Asteroids = () => {
       if (rand() < 0.1) spawnPowerUp(powerUps, a.x, a.y);
       if (score >= extraLifeScore) {
         lives += 1;
+        setLives(lives);
+        livesRef.current = lives;
         extraLifeScore += 10000;
       }
       if (!asteroids.length) {
         level += 1;
+        setLevel(level);
+        levelRef.current = level;
         ga.level_up();
         chooseUpgrade();
-        startLevel();
+        startLevelWave();
       }
     }
 
@@ -445,15 +512,14 @@ const Asteroids = () => {
       ufo.active = false;
       playSound(220);
       score += 500 * multiplier;
+      setScore(score);
+      scoreRef.current = score;
       multiplier = Math.min(multiplier + 1, MAX_MULTIPLIER);
       multiplierTimer = MULTIPLIER_TIMEOUT;
     }
 
     const update = () => {
-      if (pausedRef.current) {
-        requestRef.current = requestAnimationFrame(update);
-        return;
-      }
+      if (pausedRef.current) return;
       pollGamepad();
       const { keys, joystick, fire, hyperspace: hyper } = controlsRef.current;
       const map = getMapping('asteroids', DEFAULT_MAP);
@@ -763,7 +829,11 @@ const Asteroids = () => {
       ctx.font = '16px monospace';
       ctx.fillText(`Score: ${score} x${multiplier}`, 10, 20);
       ctx.fillText(`Lives: ${lives}`, 10, 40);
-      ctx.fillText(`High: ${highScoreRef.current} Last: ${lastScoreRef.current}`, 10, 60);
+      ctx.fillText(
+        `High: ${highScoreRef.current} (x${scoreModifierRef.current.toFixed(2)}) Last: ${lastScoreRef.current}`,
+        10,
+        60,
+      );
 
       inventoryRef.current.forEach((type, i) => {
         ctx.beginPath();
@@ -788,62 +858,129 @@ const Asteroids = () => {
       }
 
       announce();
-      requestRef.current = requestAnimationFrame(update);
     };
 
     function cleanup() {
-      cancelAnimationFrame(requestRef.current);
       window.removeEventListener('resize', resize);
       window.removeEventListener('keydown', handleDebugToggle);
       window.removeEventListener('keydown', handleInventoryUse);
     }
 
-    requestRef.current = requestAnimationFrame(update);
-    return cleanup;
-  }, [controlsRef, dpr, restartKey, saveReady, selectingLevel, startLevelNum, setSaveData]);
-  const togglePause = () => {
-    pausedRef.current = !pausedRef.current;
-    setPaused(pausedRef.current);
-  };
+    const loop = new GameLoop(update);
+    loopRef.current = loop;
+    loop.start();
 
-  const restartGame = () => {
+    return () => {
+      loop.stop();
+      loopRef.current = null;
+      cleanup();
+    };
+  }, [dpr, restartKey, saveReady, selectingLevel, setSaveData, difficulty]);
+
+  const pauseGame = useCallback(() => {
+    if (pausedRef.current) return;
+    pausedRef.current = true;
+    setPaused(true);
+    loopRef.current?.stop();
+  }, []);
+
+  const resumeGame = useCallback(() => {
+    if (selectingRef.current || !pausedRef.current) return;
     pausedRef.current = false;
     setPaused(false);
+    loopRef.current?.start();
+  }, []);
+
+  const handleToggleSound = useCallback((nextMuted) => {
+    setMuted(nextMuted);
+  }, []);
+
+  const restartGame = useCallback(() => {
+    pauseGame();
     inventoryRef.current = [];
     setInventory([]);
     setSelectingLevel(true);
     setRestartKey((k) => k + 1);
-  };
+  }, [pauseGame]);
 
-  const resetProgress = () => {
+  const resetProgress = useCallback(() => {
     const cleared = { upgrades: [], ghost: [] };
     saveDataRef.current = cleared;
     setSaveData(cleared);
     restartGame();
-  };
+  }, [restartGame, setSaveData]);
+
+  useEffect(() => {
+    if (selectingLevel) pauseGame();
+  }, [pauseGame, selectingLevel]);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') pauseGame();
+    };
+    const handleBlur = () => pauseGame();
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('blur', handleBlur);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [pauseGame]);
+
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+        if (pausedRef.current) resumeGame();
+        else pauseGame();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [pauseGame, resumeGame]);
 
   return (
-    <GameLayout paused={paused} onPause={togglePause} onRestart={restartGame}>
+    <GameLayout
+      gameId="asteroids"
+      stage={level}
+      lives={lives}
+      score={score}
+      highScore={highScore}
+    >
+      <Overlay
+        paused={paused}
+        onPause={pauseGame}
+        onResume={resumeGame}
+        muted={muted}
+        onToggleSound={handleToggleSound}
+        onReset={restartGame}
+      />
       {selectingLevel && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-75 text-white space-y-2 z-50">
-          <div>Select Starting Level</div>
-          {[1, 2, 3, 4, 5].map((lvl) => (
+          <div>Select Difficulty</div>
+          {DIFFICULTIES.map((option) => (
             <button
-              key={lvl}
+              key={option.id}
               type="button"
               onClick={() => {
-                setStartLevelNum(lvl);
+                setDifficulty(option);
                 setSelectingLevel(false);
                 setRestartKey((k) => k + 1);
+                pausedRef.current = false;
+                setPaused(false);
               }}
               className="px-2 py-1 bg-gray-700 rounded"
             >
-              Level {lvl}
+              {option.label}
             </button>
           ))}
         </div>
       )}
-      <canvas ref={canvasRef} className="bg-black w-full h-full touch-none" />
+      <canvas
+        ref={canvasRef}
+        aria-label="Asteroids gameplay canvas"
+        className="bg-black w-full h-full touch-none"
+      />
       <div aria-live="polite" className="sr-only">
         {liveText}
       </div>
@@ -851,6 +988,7 @@ const Asteroids = () => {
         <button
           type="button"
           onClick={resetProgress}
+          aria-label="Reset Asteroids progress"
           className="px-2 py-1 bg-gray-700 text-white rounded"
         >
           Reset Progress

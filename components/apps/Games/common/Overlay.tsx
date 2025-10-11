@@ -10,19 +10,31 @@ export default function Overlay({
   onResume,
   muted: externalMuted,
   onToggleSound,
+  paused: externalPaused,
+  onReset,
+  resetLabel = 'Reset',
 }: {
   onPause?: () => void;
   onResume?: () => void;
   muted?: boolean;
   onToggleSound?: (muted: boolean) => void;
+  paused?: boolean;
+  onReset?: () => void;
+  resetLabel?: string;
 }) {
-  const [paused, setPaused] = useState(false);
+  const [paused, setPaused] = useState(externalPaused ?? false);
   const [muted, setMuted] = useState(externalMuted ?? false);
   const [fps, setFps] = useState(0);
   const frame = useRef(performance.now());
   const count = useRef(0);
   const [toast, setToast] = useState('');
   const pausedByDisconnect = useRef(false);
+
+  useEffect(() => {
+    if (externalPaused !== undefined) {
+      setPaused(externalPaused);
+    }
+  }, [externalPaused]);
 
   // track fps using requestAnimationFrame
   useEffect(() => {
@@ -55,6 +67,10 @@ export default function Overlay({
       return nm;
     });
   }, [onToggleSound]);
+
+  const handleReset = useCallback(() => {
+    onReset?.();
+  }, [onReset]);
 
   useEffect(() => {
     if (externalMuted !== undefined) {
@@ -94,6 +110,11 @@ export default function Overlay({
         <button onClick={toggleSound} aria-label={muted ? 'Unmute' : 'Mute'}>
           {muted ? 'Sound' : 'Mute'}
         </button>
+        {onReset && (
+          <button onClick={handleReset} aria-label={resetLabel}>
+            {resetLabel}
+          </button>
+        )}
         <span className="fps">{fps} FPS</span>
       </div>
       {toast && (
