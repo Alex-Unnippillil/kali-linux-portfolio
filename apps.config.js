@@ -925,7 +925,7 @@ const apps = [
   {
     id: 'html-rewriter',
     title: 'HTML Rewriter',
-    icon: '/themes/Yaru/apps/project-gallery.svg',
+    icon: '/themes/Yaru/apps/html-rewriter.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: true,
