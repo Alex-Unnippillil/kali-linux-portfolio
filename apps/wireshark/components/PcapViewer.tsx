@@ -9,6 +9,10 @@ import LayerView from './LayerView';
 
 interface PcapViewerProps {
   showLegend?: boolean;
+  initialPackets?: Packet[];
+  readOnly?: boolean;
+  presetFilter?: string;
+  onFilterChange?: (value: string) => void;
 }
 
 const protocolColors: Record<string, string> = {
@@ -234,9 +238,15 @@ const decodePacketLayers = (pkt: Packet): Layer[] => {
   return layers;
 };
 
-const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
-  const [packets, setPackets] = useState<Packet[]>([]);
-  const [filter, setFilter] = useState('');
+const PcapViewer: React.FC<PcapViewerProps> = ({
+  showLegend = true,
+  initialPackets = [],
+  readOnly = false,
+  presetFilter,
+  onFilterChange,
+}) => {
+  const [packets, setPackets] = useState<Packet[]>(initialPackets);
+  const [filter, setFilter] = useState(presetFilter ?? '');
   const [selected, setSelected] = useState<number | null>(null);
   const [columns, setColumns] = useState<string[]>([
     'Time',
@@ -246,6 +256,18 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     'Info',
   ]);
   const [dragCol, setDragCol] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPackets(initialPackets);
+    setSelected(null);
+  }, [initialPackets]);
+
+  useEffect(() => {
+    if (presetFilter !== undefined) {
+      setFilter(presetFilter);
+      onFilterChange?.(presetFilter);
+    }
+  }, [presetFilter, onFilterChange]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -261,7 +283,10 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const f = params.get('filter');
-    if (f) setFilter(f);
+    if (f) {
+      setFilter(f);
+      onFilterChange?.(f);
+    }
   }, []);
 
   useEffect(() => {
@@ -274,7 +299,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || readOnly) return;
     const buf = await file.arrayBuffer();
     const pkts = await parseWithWasm(buf);
     setPackets(pkts);
@@ -282,11 +307,17 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
   };
 
   const handleSample = async (path: string) => {
+    if (readOnly) return;
     const res = await fetch(path);
     const buf = await res.arrayBuffer();
     const pkts = await parseWithWasm(buf);
     setPackets(pkts);
     setSelected(null);
+  };
+
+  const updateFilter = (value: string) => {
+    setFilter(value);
+    onFilterChange?.(value);
   };
 
   const filtered = packets.filter((p) => {
@@ -303,26 +334,35 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
   return (
     <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
       <div className="flex items-center space-x-2">
-        <input
-          type="file"
-          accept=".pcap,.pcapng"
-          onChange={handleFile}
-          className="text-sm"
-        />
-        <select
-          onChange={(e) => {
-            if (e.target.value) handleSample(e.target.value);
-            e.target.value = '';
-          }}
-          className="text-sm bg-gray-700 text-white rounded"
-        >
-          <option value="">Open sample</option>
-          {samples.map(({ label, path }) => (
-            <option key={path} value={path}>
-              {label}
-            </option>
-          ))}
-        </select>
+        {!readOnly && (
+          <>
+            <input
+              type="file"
+              accept=".pcap,.pcapng"
+              onChange={handleFile}
+              className="text-sm"
+            />
+            <select
+              onChange={(e) => {
+                if (e.target.value) handleSample(e.target.value);
+                e.target.value = '';
+              }}
+              className="text-sm bg-gray-700 text-white rounded"
+            >
+              <option value="">Open sample</option>
+              {samples.map(({ label, path }) => (
+                <option key={path} value={path}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+        {readOnly && (
+          <span className="text-xs text-gray-300">
+            Fixture mode enabled — uploads disabled.
+          </span>
+        )}
         <a
           href="https://wiki.wireshark.org/SampleCaptures"
           target="_blank"
@@ -335,7 +375,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
       {packets.length > 0 && (
         <>
           <div className="flex items-center space-x-2">
-            <FilterHelper value={filter} onChange={setFilter} />
+            <FilterHelper value={filter} onChange={updateFilter} />
             <button
               onClick={() => navigator.clipboard.writeText(filter)}
               className="px-2 py-1 bg-gray-700 rounded text-xs"
@@ -349,7 +389,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
             {presets.map(({ label, expression }) => (
               <button
                 key={expression}
-                onClick={() => setFilter(expression)}
+                onClick={() => updateFilter(expression)}
                 className={`w-4 h-4 rounded ${
                   protocolColors[label.toUpperCase()] || 'bg-gray-500'
                 }`}
