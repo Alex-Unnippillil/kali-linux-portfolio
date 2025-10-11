@@ -24,17 +24,33 @@ describe('Ubuntu component', () => {
   });
 
   it('renders boot screen then desktop', () => {
-    render(<Ubuntu />);
-    const bootLogo = screen.getByAltText('Ubuntu Logo');
-    const bootScreen = bootLogo.parentElement as HTMLElement;
-    expect(bootScreen).toHaveClass('visible');
+    const originalDescriptor = Object.getOwnPropertyDescriptor(document, 'readyState');
+    let readyStateValue = 'loading';
 
-    act(() => {
-      jest.advanceTimersByTime(2000);
+    Object.defineProperty(document, 'readyState', {
+      configurable: true,
+      get: () => readyStateValue,
     });
 
-    expect(bootScreen).toHaveClass('invisible');
-    expect(screen.getByTestId('desktop')).toBeInTheDocument();
+    try {
+      render(<Ubuntu />);
+      const bootScreen = screen.getByRole('status');
+      expect(bootScreen).toHaveClass('visible');
+
+      readyStateValue = 'complete';
+      act(() => {
+        window.dispatchEvent(new Event('load'));
+      });
+
+      expect(bootScreen).toHaveClass('invisible');
+      expect(screen.getByTestId('desktop')).toBeInTheDocument();
+    } finally {
+      if (originalDescriptor) {
+        Object.defineProperty(document, 'readyState', originalDescriptor);
+      } else {
+        delete (document as Record<string, unknown>).readyState;
+      }
+    }
   });
 
   it('handles lockScreen when status bar is missing', () => {
