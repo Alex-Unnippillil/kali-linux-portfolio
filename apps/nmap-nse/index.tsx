@@ -25,6 +25,15 @@ const NmapNSE: React.FC = () => {
   const [result, setResult] = useState<{ script: string; output: string } | null>(
     null
   );
+  const [lastRun, setLastRun] = useState<{
+    script: string;
+    tag: string;
+    timestamp: number;
+  } | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState<{
+    context: 'sample' | 'result';
+    message: string;
+  } | null>(null);
 
   // load static script metadata
   useEffect(() => {
@@ -60,7 +69,46 @@ const NmapNSE: React.FC = () => {
   const run = () => {
     if (!selected) return;
     setResult({ script: selected.name, output: selected.example });
+    setLastRun({
+      script: selected.name,
+      tag: selected.tag,
+      timestamp: Date.now(),
+    });
   };
+
+  const copyToClipboard = async (
+    value: string,
+    context: 'sample' | 'result'
+  ) => {
+    try {
+      if (
+        typeof navigator !== 'undefined' &&
+        navigator.clipboard &&
+        typeof navigator.clipboard.writeText === 'function'
+      ) {
+        await navigator.clipboard.writeText(value);
+      } else if (typeof window !== 'undefined') {
+        const textArea = document.createElement('textarea');
+        textArea.value = value;
+        textArea.setAttribute('readonly', '');
+        textArea.style.position = 'absolute';
+        textArea.style.left = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      setCopyFeedback({ context, message: 'Copied to clipboard' });
+    } catch (error) {
+      setCopyFeedback({ context, message: 'Copy failed' });
+    }
+  };
+
+  useEffect(() => {
+    if (!copyFeedback) return;
+    const timer = setTimeout(() => setCopyFeedback(null), 2000);
+    return () => clearTimeout(timer);
+  }, [copyFeedback]);
 
   const download = () => {
     if (!result) return;
@@ -122,6 +170,39 @@ const NmapNSE: React.FC = () => {
         />
         <h1 className="font-mono">Nmap NSE</h1>
       </header>
+      <section className="border-b border-gray-800 bg-gray-900 p-4 grid grid-cols-1 gap-4 md:grid-cols-3 text-sm">
+        <div>
+          <p className="text-xs uppercase text-gray-400 tracking-wide">Categories</p>
+          <p className="font-mono text-sm text-gray-200">
+            {tags.length ? tags.join(', ') : 'Loading…'}
+          </p>
+        </div>
+        <nav aria-label="Script breadcrumb" className="md:text-center">
+          <p className="text-xs uppercase text-gray-400 tracking-wide">Breadcrumb</p>
+          {selected ? (
+            <p className="font-mono text-sm text-gray-200" data-testid="nmap-breadcrumb">
+              <span>{selected.tag}</span> <span aria-hidden="true">›</span> {selected.name}
+            </p>
+          ) : (
+            <p className="text-gray-500">Select a script to see the path.</p>
+          )}
+        </nav>
+        <div className="md:text-right">
+          <p className="text-xs uppercase text-gray-400 tracking-wide">Last run</p>
+          {lastRun ? (
+            <div className="font-mono text-sm text-gray-200">
+              <p>
+                {lastRun.tag} <span aria-hidden="true">›</span> {lastRun.script}
+              </p>
+              <p className="text-xs text-gray-400">
+                {new Date(lastRun.timestamp).toLocaleString()}
+              </p>
+            </div>
+          ) : (
+            <p className="text-gray-500">No runs yet</p>
+          )}
+        </div>
+      </section>
       <div className="flex flex-1">
         {/* script browser */}
         <aside className="w-1/3 border-r border-gray-700 flex flex-col">
@@ -180,12 +261,39 @@ const NmapNSE: React.FC = () => {
               <p className="mb-4">{selected.description}</p>
               <p className="mb-2 text-sm">Tag: {selected.tag}</p>
               <CollapsibleSection title="Sample Output" tag={selected.tag}>
+                <p className="text-sm text-gray-300 mb-2">
+                  This is a reference snippet from the script documentation to
+                  help you understand what a successful run reports.
+                </p>
                 <pre className="bg-black text-green-400 rounded overflow-auto font-mono leading-[1.2]">
                   {selected.example}
                 </pre>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button
+                    className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+                    onClick={() => copyToClipboard(selected.example, 'sample')}
+                    type="button"
+                  >
+                    Copy sample output
+                  </button>
+                  {copyFeedback?.context === 'sample' && (
+                    <span
+                      role="status"
+                      className="text-xs text-gray-300"
+                      aria-live="polite"
+                    >
+                      {copyFeedback.message}
+                    </span>
+                  )}
+                </div>
               </CollapsibleSection>
               {result && (
                 <CollapsibleSection title="Result" tag={selected.tag}>
+                  <p className="text-sm text-gray-300 mb-2">
+                    Output captured from the simulated run initiated above.
+                    Use it to compare with real-world scans in a safe
+                    environment.
+                  </p>
                   <pre className="bg-black text-green-400 rounded overflow-auto font-mono leading-[1.2]">
                     {JSON.stringify(result, null, 2)}
                   </pre>
@@ -197,6 +305,18 @@ const NmapNSE: React.FC = () => {
                     >
                       Download JSON
                     </button>
+                    <button
+                      className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+                      onClick={() =>
+                        copyToClipboard(
+                          JSON.stringify(result, null, 2),
+                          'result'
+                        )
+                      }
+                      type="button"
+                    >
+                      Copy result JSON
+                    </button>
                     {canShare() && (
                       <button
                         className="px-2 py-1 bg-purple-700 rounded"
@@ -205,6 +325,15 @@ const NmapNSE: React.FC = () => {
                       >
                         Share
                       </button>
+                    )}
+                    {copyFeedback?.context === 'result' && (
+                      <span
+                        role="status"
+                        className="text-xs text-gray-300 self-center"
+                        aria-live="polite"
+                      >
+                        {copyFeedback.message}
+                      </span>
                     )}
                   </div>
                 </CollapsibleSection>
