@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 
 export interface KanbanColumn {
@@ -28,9 +28,28 @@ export default function KanbanBoard({ columns }: KanbanBoardProps) {
     return map;
   }, [columns]);
 
+  useEffect(() => {
+    const validOrder = order.filter((id) => columnMap[id]);
+    if (validOrder.length !== order.length) {
+      setOrder(validOrder);
+    }
+  }, [columnMap, order, setOrder]);
+
+  useEffect(() => {
+    const missing = columns
+      .map((column) => column.id)
+      .filter((id) => !order.includes(id));
+    if (missing.length) {
+      setOrder([...order, ...missing]);
+    }
+  }, [columns, order, setOrder]);
+
   const orderedColumns = order
     .map((id) => columnMap[id])
     .filter((c): c is KanbanColumn => Boolean(c));
+
+  const appended = columns.filter((column) => !order.includes(column.id));
+  const finalColumns = [...orderedColumns, ...appended];
 
   const move = (fromId: string, toId: string) => {
     const fromIndex = order.indexOf(fromId);
@@ -80,7 +99,7 @@ export default function KanbanBoard({ columns }: KanbanBoardProps) {
       role="list"
       aria-label="Kanban Board"
     >
-      {orderedColumns.map((col) => (
+      {finalColumns.map((col) => (
         <div
           key={col.id}
           role="listitem"
