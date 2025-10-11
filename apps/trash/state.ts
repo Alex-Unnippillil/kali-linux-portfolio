@@ -1,4 +1,6 @@
-import { useEffect, useCallback } from 'react';
+"use client";
+
+import { useEffect, useCallback, useMemo } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 
 export interface TrashItem {
@@ -7,6 +9,7 @@ export interface TrashItem {
   icon?: string;
   image?: string;
   closedAt: number;
+  originalPath?: string;
 }
 
 const ITEMS_KEY = 'window-trash';
@@ -27,6 +30,11 @@ export default function useTrashState() {
     setItems(prev => prev.filter(item => now - item.closedAt <= ms));
   }, [setItems]);
 
+  const notifyChange = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new Event('trash-change'));
+  }, []);
+
   const pushHistory = useCallback(
     (item: TrashItem | TrashItem[]) => {
       setHistory(prev => {
@@ -37,6 +45,56 @@ export default function useTrashState() {
     },
     [setHistory],
   );
+
+  const restoreItem = useCallback(
+    (index: number): TrashItem | undefined => {
+      const target = items[index];
+      if (!target) return undefined;
+      setItems(prev => prev.filter((_, i) => i !== index));
+      notifyChange();
+      return target;
+    },
+    [items, setItems, notifyChange],
+  );
+
+  const removeItem = useCallback(
+    (index: number): TrashItem | undefined => {
+      const target = items[index];
+      if (!target) return undefined;
+      setItems(prev => prev.filter((_, i) => i !== index));
+      pushHistory(target);
+      notifyChange();
+      return target;
+    },
+    [items, setItems, pushHistory, notifyChange],
+  );
+
+  const purgeItem = useCallback(
+    (index: number): boolean => {
+      if (index < 0 || index >= items.length) return false;
+      setItems(prev => prev.filter((_, i) => i !== index));
+      notifyChange();
+      return true;
+    },
+    [items, setItems, notifyChange],
+  );
+
+  const restoreAllItems = useCallback((): TrashItem[] => {
+    if (!items.length) return [];
+    const snapshot = [...items];
+    setItems([]);
+    notifyChange();
+    return snapshot;
+  }, [items, setItems, notifyChange]);
+
+  const emptyTrash = useCallback((): TrashItem[] => {
+    if (!items.length) return [];
+    const snapshot = [...items];
+    setItems([]);
+    pushHistory(snapshot);
+    notifyChange();
+    return snapshot;
+  }, [items, setItems, pushHistory, notifyChange]);
 
   const resolveNameConflict = (
     restored: TrashItem,
@@ -104,6 +162,35 @@ export default function useTrashState() {
     });
   }, [setHistory, setItems]);
 
-  return { items, setItems, history, pushHistory, restoreFromHistory, restoreAllFromHistory };
+  const state = useMemo(
+    () => ({
+      items,
+      setItems,
+      history,
+      pushHistory,
+      restoreFromHistory,
+      restoreAllFromHistory,
+      restoreItem,
+      removeItem,
+      purgeItem,
+      restoreAllItems,
+      emptyTrash,
+    }),
+    [
+      items,
+      setItems,
+      history,
+      pushHistory,
+      restoreFromHistory,
+      restoreAllFromHistory,
+      restoreItem,
+      removeItem,
+      purgeItem,
+      restoreAllItems,
+      emptyTrash,
+    ],
+  );
+
+  return state;
 }
 

@@ -26,10 +26,17 @@ export default function HistoryList({ history, onRestore, onRestoreAll }: Props)
       </div>
       <ul className="max-h-32 overflow-auto">
         {history.map((item, idx) => (
-          <li key={item.closedAt} className="flex justify-between items-center h-9">
-            <span className="truncate mr-2 font-mono" title={item.title}>
-              {item.title}
-            </span>
+          <li key={`${item.closedAt}-${item.id}`} className="flex justify-between items-center h-9 space-x-2">
+            <div className="flex flex-col flex-1 min-w-0">
+              <span className="truncate font-mono" title={item.title}>
+                {item.title}
+              </span>
+              {item.originalPath && (
+                <span className="text-[10px] text-gray-400 truncate" title={item.originalPath}>
+                  {item.originalPath}
+                </span>
+              )}
+            </div>
             <button
               onClick={() => {
                 if (window.confirm(`Restore ${item.title}?`)) onRestore(idx);
