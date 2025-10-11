@@ -652,8 +652,11 @@ export class Window extends Component {
         this.setState({ closed: true, preMaximizeSize: null }, () => {
             this.deactivateOverlay();
             setTimeout(() => {
-                this.props.closed(this.id)
-            }, 300) // after 300ms this window will be unmounted from parent (Desktop)
+                const targetId = this.id ?? this.props.id;
+                if (typeof this.props.closed === 'function' && targetId) {
+                    this.props.closed(targetId);
+                }
+            }, 300); // after 300ms this window will be unmounted from parent (Desktop)
         });
     }
 
