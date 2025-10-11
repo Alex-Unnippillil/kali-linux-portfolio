@@ -641,7 +641,7 @@ const apps = [
   {
     id: 'terminal',
     title: 'Terminal',
-    icon: '/themes/Yaru/apps/bash.png',
+    icon: '/themes/Yaru/apps/bash.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: true,
@@ -979,7 +979,7 @@ const apps = [
   {
     id: 'serial-terminal',
     title: 'Serial Terminal',
-    icon: '/themes/Yaru/apps/bash.png',
+    icon: '/themes/Yaru/apps/bash.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: true,
