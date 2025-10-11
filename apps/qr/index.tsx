@@ -2,6 +2,7 @@
 
 import { useRef, useState, useCallback, useEffect, ChangeEvent } from 'react';
 import QRCode from 'qrcode';
+import { jsPDF } from 'jspdf';
 import Presets from './components/Presets';
 import Scan from './components/Scan';
 import {
@@ -53,14 +54,18 @@ export default function QR() {
     [],
   );
 
-  const downloadPng = useCallback(() => {
-    if (!payload || !canvasRef.current) return;
-    const data = canvasRef.current.toDataURL('image/png');
-    const link = document.createElement('a');
-    link.href = data;
-    link.download = `qr-${size}.png`;
-    link.click();
-  }, [payload, size]);
+  const downloadImage = useCallback(
+    (format: 'png' | 'jpeg') => {
+      if (!payload || !canvasRef.current) return;
+      const mime = `image/${format}`;
+      const data = canvasRef.current.toDataURL(mime, format === 'jpeg' ? 0.92 : undefined);
+      const link = document.createElement('a');
+      link.href = data;
+      link.download = `qr-${size}.${format}`;
+      link.click();
+    },
+    [payload, size],
+  );
 
   const downloadSvg = useCallback(async () => {
     if (!payload) return;
@@ -84,6 +89,15 @@ export default function QR() {
     link.click();
     URL.revokeObjectURL(url);
   }, [payload, size, margin, ecc, logo]);
+
+  const downloadPdf = useCallback(() => {
+    if (!payload || !canvasRef.current) return;
+    const data = canvasRef.current.toDataURL('image/png');
+    const dimension = size + margin * 2;
+    const doc = new jsPDF({ unit: 'pt', format: [dimension, dimension] });
+    doc.addImage(data, 'PNG', 0, 0, dimension, dimension);
+    doc.save(`qr-${size}.pdf`);
+  }, [payload, size, margin]);
 
   return (
     <div className="p-4 space-y-4 text-white bg-ub-cool-grey h-full overflow-auto">
@@ -109,11 +123,15 @@ export default function QR() {
       </div>
 
       <div className="w-64 aspect-square mx-auto">
-        {mode === 'generate' ? (
-          <canvas ref={canvasRef} className="w-full h-full bg-white" />
-        ) : (
-          <Scan onResult={setScanResult} />
-        )}
+          {mode === 'generate' ? (
+            <canvas
+              ref={canvasRef}
+              className="w-full h-full bg-white"
+              aria-label="QR code preview"
+            />
+          ) : (
+            <Scan onResult={setScanResult} />
+          )}
       </div>
 
       {mode === 'generate' && (
@@ -176,6 +194,7 @@ export default function QR() {
                 accept="image/*"
                 onChange={handleLogo}
                 className="ml-1 rounded p-1 text-black"
+                aria-label="Upload logo"
               />
             </label>
             {logo && (
@@ -189,9 +208,27 @@ export default function QR() {
             )}
             <button
               type="button"
-              onClick={downloadPng}
+              onClick={() => downloadImage('png')}
               className="p-1 bg-blue-600 rounded"
               aria-label="Download PNG"
+            >
+              <svg
+                className="w-6 h-6"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M12 3v12" />
+                <path d="M8 11l4 4 4-4" />
+                <path d="M4 19h16" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => downloadImage('jpeg')}
+              className="p-1 bg-blue-600 rounded"
+              aria-label="Download JPEG"
             >
               <svg
                 className="w-6 h-6"
@@ -210,6 +247,24 @@ export default function QR() {
               onClick={downloadSvg}
               className="p-1 bg-blue-600 rounded"
               aria-label="Download SVG"
+            >
+              <svg
+                className="w-6 h-6"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M12 3v12" />
+                <path d="M8 11l4 4 4-4" />
+                <path d="M4 19h16" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={downloadPdf}
+              className="p-1 bg-blue-600 rounded"
+              aria-label="Download PDF"
             >
               <svg
                 className="w-6 h-6"

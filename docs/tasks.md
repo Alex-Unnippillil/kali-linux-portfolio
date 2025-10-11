@@ -77,7 +77,7 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 - Centralize unit mappings in `components/apps/converter/units.js` and maintain test coverage.
 
 ### QR Tool
-- Add camera select drop-down and "download QR" button after generation.
+- ~~Add camera select drop-down and "download QR" button after generation.~~ (completed – camera picker, multi-format export, and permission UX shipped)
 
 ### ASCII Art
 - Support text-to-ASCII and image-to-ASCII via hidden canvas sampling.
