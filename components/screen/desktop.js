@@ -78,6 +78,8 @@ export class Desktop extends Component {
             },
         };
 
+        this.taskbarOrderKeyBase = 'taskbar-order';
+
         const initialIconSizePreset = this.getStoredIconSizePreset();
         const initialPresetConfig = this.getIconSizePresetConfig(initialIconSizePreset);
 
@@ -126,6 +128,7 @@ export class Desktop extends Component {
             hoveredIconId: null,
             currentTheme: initialTheme,
             iconSizePreset: initialIconSizePreset,
+            taskbarOrder: this.loadTaskbarOrder(),
         }
 
         this.desktopRef = React.createRef();
@@ -186,6 +189,107 @@ export class Desktop extends Component {
         minimized_windows: { ...state.minimized_windows },
         window_positions: { ...state.window_positions },
     });
+
+    getActiveUserId = () => {
+        const { user } = this.props || {};
+        if (user && typeof user === 'object') {
+            if (user.id) return String(user.id);
+            if (user.userId) return String(user.userId);
+            if (user.username) return String(user.username);
+            if (user.email) return String(user.email);
+        }
+        if (!safeLocalStorage) return 'default';
+        const candidateKeys = [
+            'active-user-id',
+            'active-user',
+            'desktop-user',
+            'current-user',
+            'session-user',
+        ];
+        for (const key of candidateKeys) {
+            const value = safeLocalStorage.getItem(key);
+            if (value) return String(value);
+        }
+        return 'default';
+    };
+
+    getTaskbarOrderStorageKey = () => {
+        const userId = this.getActiveUserId();
+        return `${this.taskbarOrderKeyBase}:${userId}`;
+    };
+
+    loadTaskbarOrder = () => {
+        if (!safeLocalStorage) return [];
+        try {
+            const stored = safeLocalStorage.getItem(this.getTaskbarOrderStorageKey());
+            if (!stored) return [];
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+                return parsed.filter((value) => typeof value === 'string');
+            }
+        } catch (e) {
+            // ignore malformed entries and fall back to default order
+        }
+        return [];
+    };
+
+    persistTaskbarOrder = (order) => {
+        if (!safeLocalStorage) return;
+        try {
+            safeLocalStorage.setItem(this.getTaskbarOrderStorageKey(), JSON.stringify(order));
+        } catch (e) {
+            // ignore write errors (storage may be unavailable)
+        }
+    };
+
+    getNormalizedTaskbarOrder = (runningIds, preferredOrder) => {
+        const base = Array.isArray(preferredOrder)
+            ? preferredOrder
+            : (this.state.taskbarOrder || []);
+        const normalized = [];
+        const seen = new Set();
+
+        base.forEach((id) => {
+            if (typeof id !== 'string') return;
+            if (!seen.has(id) && runningIds.includes(id)) {
+                normalized.push(id);
+                seen.add(id);
+            }
+        });
+
+        runningIds.forEach((id) => {
+            if (!seen.has(id)) {
+                normalized.push(id);
+                seen.add(id);
+            }
+        });
+
+        return normalized;
+    };
+
+    setTaskbarOrder = (nextOrder) => {
+        if (!Array.isArray(nextOrder)) return;
+        this.setState((prevState) => {
+            const current = prevState.taskbarOrder || [];
+            if (
+                current.length === nextOrder.length &&
+                current.every((id, index) => id === nextOrder[index])
+            ) {
+                return null;
+            }
+            return { taskbarOrder: nextOrder };
+        }, () => {
+            const order = this.state.taskbarOrder || [];
+            this.persistTaskbarOrder(order);
+        });
+    };
+
+    getCurrentRunningAppIds = () => {
+        const { closed_windows = {} } = this.state;
+        return apps
+            .filter((app) => closed_windows[app.id] === false)
+            .map((app) => app.id);
+    };
 
     normalizeTheme(theme) {
         const fallback = this.defaultThemeConfig || {};
@@ -712,7 +816,7 @@ export class Desktop extends Component {
 
     getRunningAppSummaries = () => {
         const { closed_windows = {}, minimized_windows = {}, focused_windows = {} } = this.state;
-        return apps
+        const running = apps
             .filter((app) => closed_windows[app.id] === false)
             .map((app) => ({
                 id: app.id,
@@ -721,6 +825,23 @@ export class Desktop extends Component {
                 isFocused: Boolean(focused_windows[app.id]),
                 isMinimized: Boolean(minimized_windows[app.id]),
             }));
+
+        if (!running.length) {
+            return running;
+        }
+
+        const runningIds = running.map((app) => app.id);
+        const normalizedOrder = this.getNormalizedTaskbarOrder(runningIds);
+        this.setTaskbarOrder(normalizedOrder);
+
+        const orderMap = new Map(normalizedOrder.map((id, index) => [id, index]));
+        running.sort((a, b) => {
+            const indexA = orderMap.get(a.id) ?? 0;
+            const indexB = orderMap.get(b.id) ?? 0;
+            return indexA - indexB;
+        });
+
+        return running;
     };
 
     setWorkspaceState = (updater, callback) => {
@@ -1821,7 +1942,8 @@ export class Desktop extends Component {
             prevState.closed_windows !== this.state.closed_windows ||
             prevState.focused_windows !== this.state.focused_windows ||
             prevState.minimized_windows !== this.state.minimized_windows ||
-            prevState.workspaces !== this.state.workspaces
+            prevState.workspaces !== this.state.workspaces ||
+            prevState.taskbarOrder !== this.state.taskbarOrder
         ) {
             this.broadcastWorkspaceState();
         }
@@ -1882,8 +2004,18 @@ export class Desktop extends Component {
 
     handleExternalTaskbarCommand = (event) => {
         const detail = event?.detail || {};
-        const appId = detail.appId;
         const action = detail.action || 'toggle';
+
+        if (action === 'reorder') {
+            if (Array.isArray(detail.order)) {
+                const runningIds = this.getCurrentRunningAppIds();
+                const normalized = this.getNormalizedTaskbarOrder(runningIds, detail.order);
+                this.setTaskbarOrder(normalized);
+            }
+            return;
+        }
+
+        const appId = detail.appId;
         if (!appId || !this.validAppIds.has(appId)) return;
 
         switch (action) {
