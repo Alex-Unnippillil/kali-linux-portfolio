@@ -35,8 +35,8 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | screen-recorder | Screen Recorder | Core maintainers | **Needs polish** – permission prompts, storage strategy | MediaRecorder API |
 | clipboard-manager | Clipboard Manager | Core maintainers | **Needs polish** – permission UX and fallbacks | Clipboard API |
 | figlet | Figlet | Core maintainers | **In progress** – font selector, copy action, IndexedDB caching | Font assets, IndexedDB |
-| weather | Weather | Core maintainers | **In progress** – fake data with unit toggle or settings-driven API key | Demo data, settings |
-| weather_widget | Weather Widget | Core maintainers | **In progress** – mirror Weather app parity and settings hand-off | Settings integration |
+| weather | Weather | Core maintainers | **In progress** – city groups refresh from Open-Meteo; surface settings tie-ins for alerts | Demo data, settings |
+| weather_widget | Weather Widget | Core maintainers | **Ready** – shares Open-Meteo data, respects Settings, and ships offline fallback | Settings integration |
 | qr | QR Tool | Core maintainers | **In progress** – camera selector and downloadable output | MediaDevices API |
 | ascii_art | ASCII Art | Core maintainers | **In progress** – text/image conversion pipeline | Canvas sampling |
 | quote | Quote | Core maintainers | **In progress** – offline JSON source and no-repeat option | Local JSON |
