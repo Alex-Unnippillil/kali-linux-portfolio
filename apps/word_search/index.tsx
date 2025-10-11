@@ -88,7 +88,7 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
 
   function pickWords(s: string, p: PackName | 'random') {
     if (p !== 'random') {
-      return PUZZLE_PACKS[p];
+      return PUZZLE_PACKS[p].words;
     }
     const rng = createRNG(s);
     const chosen = new Set<string>();
@@ -451,35 +451,55 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
           <text x="18" y="20.5" textAnchor="middle" className="text-xs">{`${found.size}/${words.length}`}</text>
         </svg>
         <span className="text-sm">Time: {elapsed}s</span>
+        <label htmlFor="word-search-pack" className="sr-only">
+          Select word list
+        </label>
         <select
+          id="word-search-pack"
           value={pack}
           onChange={(e) => setPack(e.target.value as PackName | 'random' | 'custom')}
           className="px-2 py-1 border rounded"
         >
           <option value="random">Random</option>
           <option value="custom">Custom</option>
-          {Object.keys(PUZZLE_PACKS).map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
+              {Object.keys(PUZZLE_PACKS).map((p) => (
+                <option key={p} value={p}>
+                  {PUZZLE_PACKS[p].label}
+                </option>
+              ))}
         </select>
-        <label className="flex items-center space-x-1">
+        <div className="flex items-center space-x-1">
           <input
+            id="word-search-allow-backwards"
             type="checkbox"
             checked={allowBackwards}
             onChange={(e) => setAllowBackwards(e.target.checked)}
+            aria-labelledby="word-search-allow-backwards-label"
           />
-          <span className="text-sm">Backwards</span>
-        </label>
-        <label className="flex items-center space-x-1">
+          <label
+            id="word-search-allow-backwards-label"
+            htmlFor="word-search-allow-backwards"
+            className="text-sm"
+          >
+            Backwards
+          </label>
+        </div>
+        <div className="flex items-center space-x-1">
           <input
+            id="word-search-allow-diagonal"
             type="checkbox"
             checked={allowDiagonal}
             onChange={(e) => setAllowDiagonal(e.target.checked)}
+            aria-labelledby="word-search-allow-diagonal-label"
           />
-          <span className="text-sm">Diagonal</span>
-        </label>
+          <label
+            id="word-search-allow-diagonal-label"
+            htmlFor="word-search-allow-diagonal"
+            className="text-sm"
+          >
+            Diagonal
+          </label>
+        </div>
         <button type="button" onClick={newPuzzle} className="px-2 py-1 bg-blue-700 text-white rounded">
           New
         </button>
@@ -503,10 +523,18 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
           type="button"
           onClick={() => inputRef.current?.click()}
           className="px-2 py-1 bg-purple-700 text-white rounded"
+          aria-controls="word-search-import-leaderboard"
         >
           Import LB
         </button>
-        <input ref={inputRef} type="file" className="hidden" onChange={importLeaderboard} />
+        <input
+          id="word-search-import-leaderboard"
+          ref={inputRef}
+          type="file"
+          className="hidden"
+          onChange={importLeaderboard}
+          aria-label="Import leaderboard file"
+        />
         <button
           type="button"
           onClick={useFirstHint}
@@ -523,25 +551,41 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
         >
           Last Hint ({lastHints})
         </button>
-        <label className="flex items-center space-x-1">
-          <span className="text-sm">Quality</span>
+        <div className="flex items-center space-x-1">
+          <label
+            id="word-search-quality-label"
+            htmlFor="word-search-quality"
+            className="text-sm"
+          >
+            Quality
+          </label>
           <input
+            id="word-search-quality"
             type="range"
             min="0.5"
             max="1"
             step="0.1"
             value={quality}
             onChange={(e) => setQuality(parseFloat(e.target.value))}
+            aria-labelledby="word-search-quality-label"
           />
-        </label>
-        <label className="flex items-center space-x-1">
+        </div>
+        <div className="flex items-center space-x-1">
           <input
+            id="word-search-high-contrast"
             type="checkbox"
             checked={highContrast}
             onChange={(e) => setHighContrast(e.target.checked)}
+            aria-labelledby="word-search-high-contrast-label"
           />
-          <span className="text-sm">High Contrast Letters</span>
-        </label>
+          <label
+            id="word-search-high-contrast-label"
+            htmlFor="word-search-high-contrast"
+            className="text-sm"
+          >
+            High Contrast Letters
+          </label>
+        </div>
       </div>
       <div
         className="relative w-max"
