@@ -86,7 +86,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | mimikatz/offline | Mimikatz Offline | Security simulations pod | **In progress** – simulator backlog | Offline dataset |
 | ettercap | Ettercap | Security simulations pod | **In progress** – simulator backlog | Network capture fixtures |
 | reaver | Reaver | Security simulations pod | **In progress** – simulator backlog | Wi-Fi fixtures |
-| hydra | Hydra | Security simulations pod | **In progress** – simulator backlog | Credential list fixtures |
+| hydra | Hydra | Security simulations pod | **Beta** – fixture-backed command builder with lab banner | Credential fixtures, lab mode gating |
 | john | John the Ripper | Security simulations pod | **In progress** – simulator backlog | Wordlists |
 | nessus | Nessus | Security simulations pod | **In progress** – simulator backlog | Scan report fixtures |
 | nmap-nse | Nmap NSE | Security simulations pod | **In progress** – simulator backlog | Script outputs |

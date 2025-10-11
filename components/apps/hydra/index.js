@@ -1,9 +1,47 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import usePersistentState from '../../../hooks/usePersistentState';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import { userFixtures, passwordFixtures, LAB_NOTICE } from './fixtures';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
+
+const ensureFixtureLists = (lists, fixtures) => {
+  const fixtureMap = new Map(fixtures.map((fixture) => [fixture.name, fixture]));
+  let changed = false;
+
+  const normalized = lists.map((list) => {
+    const fixture = fixtureMap.get(list.name);
+    if (fixture) {
+      const next = { ...fixture, readOnly: true };
+      if (
+        list.content !== next.content ||
+        list.description !== next.description ||
+        list.readOnly !== true
+      ) {
+        changed = true;
+      }
+      return next;
+    }
+    return list;
+  });
+
+  fixtureMap.forEach((fixture, name) => {
+    if (!normalized.some((list) => list.name === name)) {
+      changed = true;
+      normalized.push({ ...fixture, readOnly: true });
+    }
+  });
+
+  return changed ? normalized : lists;
+};
+
+const countEntries = (content = '') =>
+  content
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean).length;
 
 export const registerHydraProtocol = (protocol) => {
   if (!pluginServices.includes(protocol)) {
@@ -59,6 +97,7 @@ const HydraApp = () => {
     ...baseServices,
     ...pluginServices,
   ]);
+  const [labMode, setLabMode] = usePersistentState('hydra:labMode', false);
 
   const [userLists, setUserLists] = useState([]);
   const [passLists, setPassLists] = useState([]);
@@ -94,8 +133,16 @@ const HydraApp = () => {
   }, [target]);
 
   useEffect(() => {
-    setUserLists(loadWordlists('hydraUserLists'));
-    setPassLists(loadWordlists('hydraPassLists'));
+    const storedUsers = ensureFixtureLists(
+      loadWordlists('hydraUserLists'),
+      userFixtures
+    );
+    const storedPasses = ensureFixtureLists(
+      loadWordlists('hydraPassLists'),
+      passwordFixtures
+    );
+    setUserLists(storedUsers);
+    setPassLists(storedPasses);
     const cfg = loadConfig();
     if (cfg) {
       setTarget(cfg.target || '');
@@ -113,44 +160,52 @@ const HydraApp = () => {
     saveWordlists('hydraPassLists', passLists);
   }, [passLists]);
 
-  const resumeAttack = async (session) => {
-    const user = userLists.find((l) => l.name === session.selectedUser);
-    const pass = passLists.find((l) => l.name === session.selectedPass);
-    if (!user || !pass) return;
+  const resumeAttack = useCallback(
+    async (session) => {
+      const user = userLists.find((l) => l.name === session.selectedUser);
+      const pass = passLists.find((l) => l.name === session.selectedPass);
+      if (!user || !pass) return;
 
-    setRunning(true);
-    setPaused(false);
-    setRunId((id) => id + 1);
-    setAnnounce('Hydra resumed');
-    announceRef.current = Date.now();
-    try {
-      if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-        const res = await fetch('/api/hydra', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'resume',
-            target: session.target,
-            service: session.service,
-            userList: user.content,
-            passList: pass.content,
-          }),
-        });
-        const data = await res.json();
-        setOutput(data.output || data.error || 'No output');
-        setAnnounce('Hydra finished');
-      } else {
-        setOutput('Hydra demo output: feature disabled in static export');
-        setAnnounce('Hydra finished (demo)');
+      if (!labMode) {
+        setAnnounce('Enable lab mode to resume Hydra.');
+        return;
       }
-    } catch (err) {
-      setOutput(err.message);
-      setAnnounce('Hydra failed');
-    } finally {
-      setRunning(false);
-      clearSession();
-    }
-  };
+
+      setRunning(true);
+      setPaused(false);
+      setRunId((id) => id + 1);
+      setAnnounce('Hydra resumed');
+      announceRef.current = Date.now();
+      try {
+        if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+          const res = await fetch('/api/hydra', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'resume',
+              target: session.target,
+              service: session.service,
+              userList: user.content,
+              passList: pass.content,
+            }),
+          });
+          const data = await res.json();
+          setOutput(data.output || data.error || 'No output');
+          setAnnounce('Hydra finished');
+        } else {
+          setOutput('Hydra demo output: feature disabled in static export');
+          setAnnounce('Hydra finished (demo)');
+        }
+      } catch (err) {
+        setOutput(err.message);
+        setAnnounce('Hydra failed');
+      } finally {
+        setRunning(false);
+        clearSession();
+      }
+    },
+    [labMode, passLists, userLists]
+  );
 
   useEffect(() => {
     const session = loadSession();
@@ -163,11 +218,13 @@ const HydraApp = () => {
       setInitialAttempt(session.attempt || 0);
       const lastTime = session.timeline?.slice(-1)[0]?.time || 0;
       startRef.current = Date.now() - lastTime * 1000;
-      resumeAttack(session);
+      if (labMode) {
+        resumeAttack(session);
+      } else {
+        setAnnounce('Enable lab mode to resume the saved Hydra session.');
+      }
     }
-    // resumeAttack is stable
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userLists, passLists]);
+  }, [userLists, passLists, labMode, resumeAttack]);
 
   useEffect(() => {
     if (userLists.length && !selectedUser) {
@@ -193,13 +250,58 @@ const HydraApp = () => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
-      const newLists = [...lists, { name: file.name, content: e.target.result }];
-      listsSetter(newLists);
+      const text = e.target.result || '';
+      const baseName = file.name;
+      const existing = lists.find((l) => l.name === baseName);
+
+      if (existing && existing.readOnly) {
+        let suffix = 1;
+        let candidate = `${baseName} (${suffix})`;
+        while (lists.some((l) => l.name === candidate)) {
+          suffix += 1;
+          candidate = `${baseName} (${suffix})`;
+        }
+        listsSetter([
+          ...lists,
+          {
+            name: candidate,
+            label: candidate,
+            content: text,
+            readOnly: false,
+          },
+        ]);
+        return;
+      }
+
+      if (existing) {
+        listsSetter(
+          lists.map((l) =>
+            l.name === baseName
+              ? { ...l, content: text, label: l.label || baseName, readOnly: false }
+              : l
+          )
+        );
+        return;
+      }
+
+      listsSetter([
+        ...lists,
+        {
+          name: baseName,
+          label: baseName,
+          content: text,
+          readOnly: false,
+        },
+      ]);
     };
     reader.readAsText(file);
   };
 
   const removeWordList = (name, listsSetter, lists) => {
+    const targetList = lists.find((l) => l.name === name);
+    if (!targetList || targetList.readOnly) {
+      return;
+    }
     listsSetter(lists.filter((l) => l.name !== name));
   };
 
@@ -208,6 +310,20 @@ const HydraApp = () => {
   const totalAttempts =
     (selectedUserList?.content.split('\n').filter(Boolean).length || 0) *
     (selectedPassList?.content.split('\n').filter(Boolean).length || 0);
+
+  const commandPreview = useMemo(() => {
+    const userFlag = selectedUserList
+      ? `-L ${selectedUserList.name}`
+      : '-L <users.txt>';
+    const passFlag = selectedPassList
+      ? `-P ${selectedPassList.name}`
+      : '-P <passwords.txt>';
+    const targetPart = target.trim() || '<target>';
+    const servicePrefix = service.includes('://')
+      ? service
+      : `${service}://`;
+    return `hydra ${userFlag} ${passFlag} ${servicePrefix}${targetPart}`;
+  }, [selectedUserList, selectedPassList, service, target]);
 
   useEffect(() => {
     const limit = Math.min(LOCKOUT_THRESHOLD, totalAttempts);
@@ -311,6 +427,14 @@ const HydraApp = () => {
       return;
     }
 
+    if (!labMode) {
+      setOutput(
+        'Enable lab mode to send the simulated Hydra command to the API stub.'
+      );
+      setAnnounce('Lab mode required');
+      return;
+    }
+
     setRunning(true);
     setPaused(false);
     setRunId((id) => id + 1);
@@ -359,6 +483,11 @@ const HydraApp = () => {
   const dryRunHydra = () => {
     const user = selectedUserList;
     const pass = selectedPassList;
+    if (!user || !pass) {
+      setOutput('Select a user list and password list to build a command.');
+      setAnnounce('Lists required for dry run');
+      return;
+    }
     const userCount = user?.content.split('\n').filter(Boolean).length || 0;
     const passCount = pass?.content.split('\n').filter(Boolean).length || 0;
     const report = [
@@ -369,6 +498,10 @@ const HydraApp = () => {
       `Charset: ${charset} (${charset.length})`,
       `Rule: ${rule}`,
       `Estimated candidate space: ${candidateSpace.toLocaleString()}`,
+      `Command preview: ${commandPreview}`,
+      labMode
+        ? 'Lab mode enabled – API stub is available for safe simulations.'
+        : 'Lab mode disabled – this stays offline as a rehearsal.',
       'Dry run only - no network requests made.',
     ].join('\n');
     setOutput(report);
@@ -394,6 +527,10 @@ const HydraApp = () => {
   };
 
   const pauseHydra = async () => {
+    if (!labMode) {
+      setAnnounce('Lab mode disabled – nothing to pause.');
+      return;
+    }
     setPaused(true);
     setAnnounce('Hydra paused');
     if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
@@ -406,6 +543,10 @@ const HydraApp = () => {
   };
 
   const resumeHydra = async () => {
+    if (!labMode) {
+      setAnnounce('Enable lab mode to resume the simulation.');
+      return;
+    }
     setPaused(false);
     setAnnounce('Hydra resumed');
     if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
@@ -424,7 +565,7 @@ const HydraApp = () => {
     setOutput('');
     setTimeline([]);
     startRef.current = null;
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+    if (labMode && process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
       await fetch('/api/hydra', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -437,6 +578,29 @@ const HydraApp = () => {
 
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <label className="flex items-center gap-2 text-sm font-semibold">
+          <input
+            type="checkbox"
+            checked={labMode}
+            onChange={(e) => setLabMode(e.target.checked)}
+            aria-label="Enable lab mode"
+          />
+          Lab mode
+        </label>
+        <span className="text-xs text-gray-300">
+          {labMode ? 'Simulated API calls enabled.' : 'Commands stay offline.'}
+        </span>
+      </div>
+      {!labMode && (
+        <div
+          role="alert"
+          data-testid="hydra-lab-banner"
+          className="mb-4 rounded border border-yellow-500 bg-yellow-900/40 p-3 text-sm text-yellow-200"
+        >
+          {LAB_NOTICE}
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-1.5">
         <div className="col-span-2 flex gap-1.5">
           {[
@@ -480,18 +644,25 @@ const HydraApp = () => {
           </select>
         </div>
         <div>
-          <label className="block mb-1">User List</label>
+          <label className="block mb-1" htmlFor="hydra-user-list">
+            User List
+          </label>
           <select
+            id="hydra-user-list"
             value={selectedUser}
             onChange={(e) => setSelectedUser(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
           >
             {userLists.map((l) => (
               <option key={l.name} value={l.name}>
-                {l.name}
+                {l.label || l.name}
               </option>
             ))}
           </select>
+          <p className="mb-1 text-xs text-gray-400">
+            Prefilled lab fixtures are read-only. Upload files to add your own
+            lists alongside them.
+          </p>
           <input
             data-testid="user-file-input"
             type="file"
@@ -499,15 +670,33 @@ const HydraApp = () => {
             onChange={(e) =>
               addWordList(e.target.files[0], setUserLists, userLists)
             }
-            className="w-full p-2 rounded text-black mb-1"
+            className="w-full p-2 rounded text-black mb-2"
           />
-          <ul>
+          <ul className="space-y-1">
             {userLists.map((l) => (
-              <li key={l.name} className="flex justify-between">
-                {l.name}
+              <li
+                key={l.name}
+                data-testid={`user-list-${l.name}`}
+                className="flex items-start justify-between gap-2 rounded bg-gray-800/60 p-2 text-xs"
+              >
+                <div>
+                  <div className="font-semibold">{l.label || l.name}</div>
+                  {l.description && (
+                    <div className="text-gray-400">{l.description}</div>
+                  )}
+                  <div className="text-gray-500">
+                    {countEntries(l.content)} entries ·{' '}
+                    {l.readOnly ? 'lab fixture' : 'upload'}
+                  </div>
+                </div>
                 <button
+                  type="button"
                   onClick={() => removeWordList(l.name, setUserLists, userLists)}
-                  className="text-red-500"
+                  className={`text-red-400 hover:text-red-200 ${
+                    l.readOnly ? 'cursor-not-allowed opacity-40' : ''
+                  }`}
+                  disabled={l.readOnly}
+                  aria-label={`Remove ${l.name}`}
                 >
                   Remove
                 </button>
@@ -516,18 +705,25 @@ const HydraApp = () => {
           </ul>
         </div>
         <div>
-          <label className="block mb-1">Password List</label>
+          <label className="block mb-1" htmlFor="hydra-pass-list">
+            Password List
+          </label>
           <select
+            id="hydra-pass-list"
             value={selectedPass}
             onChange={(e) => setSelectedPass(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
           >
             {passLists.map((l) => (
               <option key={l.name} value={l.name}>
-                {l.name}
+                {l.label || l.name}
               </option>
             ))}
           </select>
+          <p className="mb-1 text-xs text-gray-400">
+            Password fixtures demonstrate common spray sets and seasonal
+            rotations for tabletop analysis.
+          </p>
           <input
             data-testid="pass-file-input"
             type="file"
@@ -535,15 +731,33 @@ const HydraApp = () => {
             onChange={(e) =>
               addWordList(e.target.files[0], setPassLists, passLists)
             }
-            className="w-full p-2 rounded text-black mb-1"
+            className="w-full p-2 rounded text-black mb-2"
           />
-          <ul>
+          <ul className="space-y-1">
             {passLists.map((l) => (
-              <li key={l.name} className="flex justify-between">
-                {l.name}
+              <li
+                key={l.name}
+                data-testid={`pass-list-${l.name}`}
+                className="flex items-start justify-between gap-2 rounded bg-gray-800/60 p-2 text-xs"
+              >
+                <div>
+                  <div className="font-semibold">{l.label || l.name}</div>
+                  {l.description && (
+                    <div className="text-gray-400">{l.description}</div>
+                  )}
+                  <div className="text-gray-500">
+                    {countEntries(l.content)} entries ·{' '}
+                    {l.readOnly ? 'lab fixture' : 'upload'}
+                  </div>
+                </div>
                 <button
+                  type="button"
                   onClick={() => removeWordList(l.name, setPassLists, passLists)}
-                  className="text-red-500"
+                  className={`text-red-400 hover:text-red-200 ${
+                    l.readOnly ? 'cursor-not-allowed opacity-40' : ''
+                  }`}
+                  disabled={l.readOnly}
+                  aria-label={`Remove ${l.name}`}
                 >
                   Remove
                 </button>
@@ -583,14 +797,25 @@ const HydraApp = () => {
         <div className="col-span-2 flex flex-wrap gap-1.5 mt-2">
           <button
             onClick={runHydra}
-            disabled={running || !isTargetValid}
+            disabled={
+              running ||
+              !isTargetValid ||
+              !selectedUserList ||
+              !selectedPassList ||
+              !labMode
+            }
             className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
+            title={
+              !labMode
+                ? 'Enable lab mode to run the simulated Hydra command.'
+                : undefined
+            }
           >
             {running ? 'Running...' : 'Run Hydra'}
           </button>
           <button
             onClick={dryRunHydra}
-            disabled={running}
+            disabled={running || !selectedUserList || !selectedPassList}
             className="px-4 py-2 bg-purple-600 rounded disabled:opacity-50"
           >
             Dry Run
@@ -634,6 +859,20 @@ const HydraApp = () => {
               Cancel
             </button>
           )}
+        </div>
+        <div className="col-span-2">
+          <h3 className="text-sm font-semibold">Command preview</h3>
+          <pre
+            data-testid="hydra-command-preview"
+            className="mt-1 max-h-24 overflow-auto whitespace-pre-wrap rounded bg-black/60 p-2 text-xs font-mono"
+          >
+            {commandPreview}
+          </pre>
+          <p className="mt-1 text-xs text-gray-400">
+            {labMode
+              ? 'Lab mode enabled – running Hydra calls the safe API stub.'
+              : 'Lab mode disabled – explore the preview or enable lab mode to use the simulation.'}
+          </p>
         </div>
       </div>
 
