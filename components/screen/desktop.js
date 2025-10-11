@@ -3694,7 +3694,7 @@ export class Desktop extends Component {
             this.openOverlay(objId);
             return;
         }
-        const context = params && typeof params === 'object'
+        const baseContext = params && typeof params === 'object'
             ? {
                 ...params,
                 ...(params.path && !params.initialPath ? { initialPath: params.path } : {}),
