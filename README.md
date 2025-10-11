@@ -154,6 +154,21 @@ playwright/           # Playwright helpers for end-to-end testing
 
 The Spotify app lets users map moods to playlists, persist preferences in OPFS, and recall the last session automatically.
 
+#### Converter units
+
+The Converter app shares a single catalog of units defined in [`components/apps/converter/units.js`](./components/apps/converter/units.js). Supported categories include:
+
+- **Length** – meter (m), kilometer (km), mile (mi), foot (ft)
+- **Mass** – gram (g), kilogram (kg), pound (lb), ounce (oz)
+- **Temperature** – celsius (°C), fahrenheit (°F), kelvin (K)
+- **Time** – second (s), minute (min), hour, day
+- **Digital storage** – byte (B), kilobyte (kB), megabyte (MB), gigabyte (GB)
+- **Area** – square meter (m²), square kilometer (km²), square foot (ft²), square mile (mi²), acre
+- **Volume** – liter (L), milliliter (ml), cubic meter (m³), cubic foot (ft³), gallon (gal)
+- **Currency** – USD, EUR, GBP, JPY (demo exchange rates)
+
+Each converter view (temperature-only and the multi-category unit converter) imports the shared catalog so new units only need to be added in one file.
+
 ### Games
 | Game | Route |
 | --- | --- |

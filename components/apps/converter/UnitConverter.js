@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  unitMap,
-  unitDetails,
   categories as allCategories,
   convertUnit,
-} from './unitData';
+  getDefaultPrecision,
+  getUnitDefinition,
+  isValueWithinRange,
+  listUnits,
+} from './units';
 import usePersistentState from '../../../hooks/usePersistentState';
 
 const categories = allCategories;
@@ -21,28 +23,24 @@ const UnitConverter = () => {
   const [favorites, setFavorites] = usePersistentState('unit-favorites', []);
 
   useEffect(() => {
-    const units = Object.keys(unitMap[category]);
+    const units = listUnits(category);
     setFromUnit(units[0]);
     setToUnit(units[1] || units[0]);
     setLeftVal('');
     setRightVal('');
     setError('');
-    const defaultPrec =
-      unitDetails[category][units[1] || units[0]]?.precision || 2;
+    const defaultPrec = getDefaultPrecision(category, units[1] || units[0]);
     setPrecision(defaultPrec);
   }, [category]);
 
-  const units = Object.keys(unitMap[category]);
+  const units = listUnits(category);
 
   useEffect(() => {
-    const defaultPrec = unitDetails[category][toUnit]?.precision || 2;
+    const defaultPrec = getDefaultPrecision(category, toUnit);
     setPrecision(defaultPrec);
   }, [category, toUnit]);
 
-  const withinRange = (cat, unit, val) => {
-    const { min, max } = unitDetails[cat][unit];
-    return val >= min && val <= max;
-  };
+  const withinRange = (cat, unit, val) => isValueWithinRange(cat, unit, val);
 
     const applyPrecision = useCallback(
       (num) => {
@@ -138,16 +136,21 @@ const UnitConverter = () => {
     setFavorites((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const format = (value, unit) =>
-    category === 'currency'
-      ? new Intl.NumberFormat(undefined, { style: 'currency', currency: unit }).format(
-          Number(value),
-        )
-      : new Intl.NumberFormat(undefined, {
-          style: 'unit',
-          unit,
-          maximumFractionDigits: unitDetails[category][unit].precision,
-        }).format(Number(value));
+  const format = (value, unit) => {
+    if (category === 'currency') {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency: unit,
+      }).format(Number(value));
+    }
+    const unitDef = getUnitDefinition(category, unit);
+    return new Intl.NumberFormat(undefined, {
+      style: 'unit',
+      unit,
+      unitDisplay: 'long',
+      maximumFractionDigits: unitDef?.precision ?? getDefaultPrecision(category, unit),
+    }).format(Number(value));
+  };
 
   return (
     <div className="bg-gray-700 text-white p-4 rounded flex flex-col gap-2">
@@ -185,15 +188,14 @@ const UnitConverter = () => {
               value={fromUnit}
               onChange={(e) => setFromUnit(e.target.value)}
             >
-              {units.map((u) => (
-                <option
-                  key={u}
-                  value={u}
-                  aria-label={`${u} (${unitMap[category][u]})`}
-                >
-                  {u}
-                </option>
-              ))}
+              {units.map((u) => {
+                const symbol = getUnitDefinition(category, u)?.symbol || u;
+                return (
+                  <option key={u} value={u} aria-label={`${u} (${symbol})`}>
+                    {u}
+                  </option>
+                );
+              })}
             </select>
           </label>
         </div>
@@ -224,15 +226,14 @@ const UnitConverter = () => {
               value={toUnit}
               onChange={(e) => setToUnit(e.target.value)}
             >
-              {units.map((u) => (
-                <option
-                  key={u}
-                  value={u}
-                  aria-label={`${u} (${unitMap[category][u]})`}
-                >
-                  {u}
-                </option>
-              ))}
+              {units.map((u) => {
+                const symbol = getUnitDefinition(category, u)?.symbol || u;
+                return (
+                  <option key={u} value={u} aria-label={`${u} (${symbol})`}>
+                    {u}
+                  </option>
+                );
+              })}
             </select>
           </label>
         </div>

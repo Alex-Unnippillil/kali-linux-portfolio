@@ -1,19 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { unitMap, unitDetails, convertUnit } from './unitData';
+import {
+  convertUnit,
+  getDefaultPrecision,
+  getUnitDefinition,
+  isValueWithinRange,
+  listUnits,
+} from './units';
 
 const TemperatureConverter = () => {
   const category = 'temperature';
-  const units = Object.keys(unitMap[category]);
+  const units = listUnits(category);
   const [fromUnit, setFromUnit] = useState(units[0]);
   const [toUnit, setToUnit] = useState(units[1]);
   const [leftVal, setLeftVal] = useState('');
   const [rightVal, setRightVal] = useState('');
   const [error, setError] = useState('');
 
-  const withinRange = (unit, val) => {
-    const { min, max } = unitDetails[category][unit];
-    return val >= min && val <= max;
-  };
+  const withinRange = (unit, val) => isValueWithinRange(category, unit, val);
 
   const convertLeftToRight = useCallback((val) => {
     if (val === '' || isNaN(parseFloat(val))) {
@@ -28,7 +31,7 @@ const TemperatureConverter = () => {
       return;
     }
     const converted = convertUnit(category, fromUnit, toUnit, num);
-    const precision = unitDetails[category][toUnit].precision;
+    const precision = getDefaultPrecision(category, toUnit);
     setRightVal(Number(converted.toFixed(precision)).toString());
     setError('');
   }, [fromUnit, toUnit]);
@@ -46,7 +49,7 @@ const TemperatureConverter = () => {
       return;
     }
     const converted = convertUnit(category, toUnit, fromUnit, num);
-    const precision = unitDetails[category][fromUnit].precision;
+    const precision = getDefaultPrecision(category, fromUnit);
     setLeftVal(Number(converted.toFixed(precision)).toString());
     setError('');
   }, [fromUnit, toUnit]);
@@ -79,12 +82,15 @@ const TemperatureConverter = () => {
     setError('');
   };
 
-  const format = (value, unit) =>
-    new Intl.NumberFormat(undefined, {
+  const format = (value, unit) => {
+    const def = getUnitDefinition(category, unit);
+    return new Intl.NumberFormat(undefined, {
       style: 'unit',
       unit,
-      maximumFractionDigits: unitDetails[category][unit].precision,
+      unitDisplay: 'long',
+      maximumFractionDigits: def?.precision ?? getDefaultPrecision(category, unit),
     }).format(Number(value));
+  };
 
   return (
     <div className="bg-gray-700 text-white p-4 rounded flex flex-col gap-2">
@@ -108,11 +114,14 @@ const TemperatureConverter = () => {
               value={fromUnit}
               onChange={(e) => setFromUnit(e.target.value)}
             >
-              {units.map((u) => (
-                <option key={u} value={u} aria-label={`${u} (${unitMap[category][u]})`}>
-                  {u}
-                </option>
-              ))}
+              {units.map((u) => {
+                const symbol = getUnitDefinition(category, u)?.symbol || u;
+                return (
+                  <option key={u} value={u} aria-label={`${u} (${symbol})`}>
+                    {u}
+                  </option>
+                );
+              })}
             </select>
           </label>
         </div>
@@ -134,11 +143,14 @@ const TemperatureConverter = () => {
               value={toUnit}
               onChange={(e) => setToUnit(e.target.value)}
             >
-              {units.map((u) => (
-                <option key={u} value={u} aria-label={`${u} (${unitMap[category][u]})`}>
-                  {u}
-                </option>
-              ))}
+              {units.map((u) => {
+                const symbol = getUnitDefinition(category, u)?.symbol || u;
+                return (
+                  <option key={u} value={u} aria-label={`${u} (${symbol})`}>
+                    {u}
+                  </option>
+                );
+              })}
             </select>
           </label>
         </div>
