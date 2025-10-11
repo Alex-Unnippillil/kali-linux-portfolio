@@ -1,0 +1,23 @@
+[
+  {
+    "path": "/admin",
+    "finding": "Potential administration portal found.",
+    "references": ["OSVDB-1234"],
+    "severity": "High",
+    "details": "The /admin path is accessible and may expose administrative functions."
+  },
+  {
+    "path": "/cgi-bin/test",
+    "finding": "CGI script found; may be vulnerable.",
+    "references": ["CVE-2012-1823", "OSVDB-5678"],
+    "severity": "Medium",
+    "details": "The /cgi-bin/test script reveals server information."
+  },
+  {
+    "path": "/",
+    "finding": "Server leaks inodes via ETags, header found with file /",
+    "references": ["OSVDB-3092"],
+    "severity": "Info",
+    "details": "ETag header found; may help fingerprinting."
+  }
+]

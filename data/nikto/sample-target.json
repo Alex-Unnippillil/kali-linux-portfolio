@@ -1,0 +1,5 @@
+{
+  "host": "demo-shop.local",
+  "port": "443",
+  "ssl": true
+}
