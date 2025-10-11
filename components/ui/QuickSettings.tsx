@@ -1,17 +1,23 @@
 "use client";
 
-import { useEffect, ReactNode } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 
 interface Props {
   open: boolean;
 }
 
+const transitionDurationMs = 200;
+
 const QuickSettings = ({ open }: Props) => {
   const [theme, setTheme] = usePersistentState('qs-theme', 'light');
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [shouldRender, setShouldRender] = useState(open);
+  const [isVisible, setIsVisible] = useState(open);
+  const focusableTabIndex = open ? 0 : -1;
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -20,6 +26,48 @@ const QuickSettings = ({ open }: Props) => {
   useEffect(() => {
     document.documentElement.classList.toggle('reduce-motion', reduceMotion);
   }, [reduceMotion]);
+
+  useEffect(() => {
+    if (open) {
+      setShouldRender(true);
+      const raf = requestAnimationFrame(() => setIsVisible(true));
+      return () => cancelAnimationFrame(raf);
+    }
+
+    setIsVisible(false);
+    const timeout = window.setTimeout(() => setShouldRender(false), transitionDurationMs);
+    return () => window.clearTimeout(timeout);
+  }, [open]);
+
+  useEffect(() => {
+    const node = panelRef.current;
+    if (!node) return;
+
+    if (open) {
+      node.removeAttribute('inert');
+    } else {
+      node.setAttribute('inert', '');
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      const activeElement = document.activeElement as HTMLElement | null;
+      if (activeElement && panelRef.current?.contains(activeElement)) {
+        activeElement.blur();
+      }
+    }
+  }, [open]);
+
+  if (!shouldRender) {
+    return null;
+  }
+
+  const statusBadges = [
+    { id: 'theme', label: 'Theme', value: theme === 'light' ? 'Light' : 'Dark' },
+    { id: 'audio', label: 'Sound', value: sound ? 'On' : 'Muted' },
+    { id: 'network', label: 'Network', value: online ? 'Online' : 'Offline' },
+  ];
 
   const toggles: Array<{
     id: string;
@@ -61,11 +109,12 @@ const QuickSettings = ({ open }: Props) => {
 
   return (
     <div
+      ref={panelRef}
       role="menu"
       aria-label="Quick settings"
       aria-hidden={!open}
       className={`group/qs absolute top-9 right-3 w-[19rem] origin-top-right rounded-2xl border border-white/10 bg-kali-surface/90 p-4 text-sm text-white shadow-kali-panel backdrop-blur-lg transition-all duration-200 focus:outline-none ${
-        open
+        isVisible
           ? 'pointer-events-auto translate-y-0 scale-100 opacity-100'
           : 'pointer-events-none -translate-y-2 scale-95 opacity-0'
       }`}
@@ -80,6 +129,28 @@ const QuickSettings = ({ open }: Props) => {
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-kali-muted">Quick settings</p>
         <p className="mt-1 text-xs text-white/70">Personalise the desktop in one place.</p>
       </div>
+
+      <section
+        aria-label="System snapshot"
+        className="rounded-xl border border-white/5 bg-white/5 p-3 shadow-inner"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-white/80">Status</span>
+          <span className="text-[10px] uppercase tracking-[0.2em] text-white/50">Live</span>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2" aria-live="polite">
+          {statusBadges.map(({ id, label, value }) => (
+            <span
+              key={id}
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-medium text-white/80 shadow-sm"
+            >
+              <span className="flex h-1.5 w-1.5 rounded-full bg-kali-control shadow-[0_0_0_2px_rgba(13,148,255,0.25)]" aria-hidden />
+              <span className="uppercase tracking-wide text-white/60">{label}</span>
+              <span className="font-semibold text-white">{value}</span>
+            </span>
+          ))}
+        </div>
+      </section>
 
       <section aria-label="Appearance" className="rounded-xl border border-white/10 bg-white/5 p-3 shadow-inner">
         <div className="flex items-center justify-between gap-2">
@@ -107,6 +178,7 @@ const QuickSettings = ({ open }: Props) => {
                     : 'bg-white/10 text-white hover:bg-white/20'
                 }`}
                 onClick={() => setTheme(option)}
+                tabIndex={focusableTabIndex}
               >
                 <span className="text-lg" aria-hidden>
                   {icon}
@@ -119,56 +191,66 @@ const QuickSettings = ({ open }: Props) => {
       </section>
 
       <div className="mt-4 space-y-2" role="none">
-        {toggles.map(({ id, label, description, value, onToggle, icon, accent }) => (
-          <div
-            key={id}
-            role="menuitem"
-            className="group flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-white/5 px-3 py-3 transition duration-150 hover:border-white/15 hover:bg-white/10 focus-within:border-white/15 focus-within:bg-white/10"
-          >
-            <div className="flex items-start gap-3">
-              <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/80">
-                <span
-                  className={`absolute inset-0 rounded-xl bg-gradient-to-br ${accent} opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100`}
-                  aria-hidden
-                />
-                <span className="relative text-lg" aria-hidden>
-                  {icon}
+        {toggles.map(({ id, label, description, value, onToggle, icon, accent }) => {
+          const labelId = `${id}-label`;
+          const descriptionId = `${id}-description`;
+          return (
+            <div
+              key={id}
+              role="presentation"
+              className="group flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-white/5 px-3 py-3 transition duration-150 hover:border-white/15 hover:bg-white/10 focus-within:border-white/15 focus-within:bg-white/10"
+            >
+              <div className="flex items-start gap-3">
+                <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/80">
+                  <span
+                    className={`absolute inset-0 rounded-xl bg-gradient-to-br ${accent} opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100`}
+                    aria-hidden
+                  />
+                  <span className="relative text-lg" aria-hidden>
+                    {icon}
+                  </span>
                 </span>
-              </span>
-              <label htmlFor={id} className="flex flex-col">
-                <span className="font-semibold text-white">{label}</span>
-                <span className="text-xs text-white/70">{description}</span>
-              </label>
-            </div>
-            <div className="flex flex-col items-end gap-1">
-              <span
-                aria-hidden
-                className={`inline-flex items-center rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                  value ? 'bg-kali-control text-black' : 'bg-white/10 text-white/70'
-                }`}
-              >
-                {value ? 'On' : 'Off'}
-              </span>
-              <button
-                id={id}
-                type="button"
-                role="switch"
-                aria-checked={value}
-                aria-label={label}
-                className={`relative inline-flex h-6 w-12 shrink-0 items-center rounded-full border border-white/10 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
-                  value ? 'bg-kali-control shadow-[0_0_15px_rgba(120,190,255,0.45)]' : 'bg-white/20'
-                }`}
-                onClick={onToggle}
-              >
+                <label htmlFor={id} className="flex flex-col">
+                  <span id={labelId} className="font-semibold text-white">
+                    {label}
+                  </span>
+                  <span id={descriptionId} className="text-xs text-white/70">
+                    {description}
+                  </span>
+                </label>
+              </div>
+              <div className="flex flex-col items-end gap-1">
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-150 ${
-                    value ? 'translate-x-6' : 'translate-x-1'
+                  aria-hidden
+                  className={`inline-flex items-center rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                    value ? 'bg-kali-control text-black' : 'bg-white/10 text-white/70'
                   }`}
-                />
-              </button>
+                >
+                  {value ? 'On' : 'Off'}
+                </span>
+                <button
+                  id={id}
+                  type="button"
+                  role="switch"
+                  aria-checked={value}
+                  aria-labelledby={labelId}
+                  aria-describedby={descriptionId}
+                  className={`relative inline-flex h-6 w-12 shrink-0 items-center rounded-full border border-white/10 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
+                    value ? 'bg-kali-control shadow-[0_0_15px_rgba(120,190,255,0.45)]' : 'bg-white/20'
+                  }`}
+                  onClick={onToggle}
+                  tabIndex={focusableTabIndex}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-150 ${
+                      value ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
