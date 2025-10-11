@@ -34,11 +34,12 @@ self.onmessage = (e: MessageEvent<any>) => {
     return;
   }
 
-  const { text = '', font, width = 80, layout = 'default' } = e.data as {
+  const { text = '', font, width = 80, layout = 'default', requestId } = e.data as {
     text: string;
     font: string;
     width: number;
     layout: string;
+    requestId?: string;
   };
   if (!font) return;
   const normalized = String(text)
@@ -50,5 +51,5 @@ self.onmessage = (e: MessageEvent<any>) => {
     width,
     horizontalLayout: layout as figlet.KerningMethods,
   });
-  self.postMessage({ type: 'render', output: rendered });
+  self.postMessage({ type: 'render', output: rendered, requestId });
 };
