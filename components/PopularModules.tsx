@@ -97,20 +97,31 @@ const PopularModules: React.FC = () => {
 
   const handleUpdate = async () => {
     try {
-      const res = await fetch(`/api/modules/update?version=${version}`);
-      const data = await res.json();
-      if (data.needsUpdate) {
-        const mods = await fetch('/data/module-index.json').then((r) => r.json());
+      const updateResponse = await fetch(`/api/modules/update?version=${version}`);
+      if (!updateResponse.ok) {
+        throw new Error('Failed to check for updates');
+      }
+
+      const updateData = await updateResponse.json();
+
+      if (updateData.needsUpdate) {
+        const modulesResponse = await fetch('/api/modules/index');
+        if (!modulesResponse.ok) {
+          throw new Error('Failed to load modules');
+        }
+
+        const mods = await modulesResponse.json();
         setModules(mods);
-        setVersion(data.latest);
-        setUpdateMessage(`Updated to v${data.latest}`);
-        setUpdateAvailable(false);
+        setVersion(updateData.latest);
+        setUpdateMessage(`Updated to v${updateData.latest}`);
       } else {
         setUpdateMessage('Already up to date');
-        setUpdateAvailable(false);
       }
+
+      setUpdateAvailable(false);
     } catch {
       setUpdateMessage('Update failed');
+      setUpdateAvailable(false);
     }
   };
 
