@@ -111,25 +111,35 @@ export const measureWindowTopOffset = () => {
   return Math.max(measured + WINDOW_TOP_MARGIN, DEFAULT_WINDOW_TOP_OFFSET);
 };
 
+const readTaskbarHeightFromElement = (element) => {
+  if (!element || typeof window === 'undefined' || typeof window.getComputedStyle !== 'function') {
+    return 0;
+  }
+
+  const computed = window.getComputedStyle(element);
+  if (!computed) {
+    return 0;
+  }
+
+  const raw = computed.getPropertyValue(TASKBAR_HEIGHT_PROPERTY);
+  return parseCssLengthValue(raw, computed);
+};
+
 export const measureTaskbarHeight = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return DEFAULT_SNAP_BOTTOM_INSET;
   }
 
-  const root = document.documentElement;
-  if (!root) {
-    return DEFAULT_SNAP_BOTTOM_INSET;
+  const shell = document.querySelector('.desktop-shell');
+  const measuredFromShell = readTaskbarHeightFromElement(shell);
+  if (measuredFromShell > 0) {
+    return measuredFromShell;
   }
 
-  const computed = window.getComputedStyle(root);
-  if (!computed) {
-    return DEFAULT_SNAP_BOTTOM_INSET;
-  }
-
-  const raw = computed.getPropertyValue(TASKBAR_HEIGHT_PROPERTY);
-  const parsed = parseCssLengthValue(raw, computed);
-  if (parsed > 0) {
-    return parsed;
+  const root = document.documentElement || document.body;
+  const measuredFromRoot = readTaskbarHeightFromElement(root);
+  if (measuredFromRoot > 0) {
+    return measuredFromRoot;
   }
 
   return DEFAULT_SNAP_BOTTOM_INSET;
