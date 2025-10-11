@@ -4,20 +4,29 @@
     "name": "Apache HTTP Server Privilege Escalation",
     "cvss": 7.5,
     "severity": "Medium",
-    "host": "server1.example.com"
+    "host": "server1.example.com",
+    "pluginFamily": "Web Servers",
+    "description": "Apache HTTP Server allows local users to escalate privileges via crafted requests that trigger modules with elevated permissions.",
+    "solution": "Apply the vendor patch or upgrade to a fixed release of Apache HTTP Server."
   },
   {
     "id": "3",
     "name": "Weak SSH Cipher",
     "cvss": 9.8,
     "severity": "Critical",
-    "host": "server2.example.com"
+    "host": "server2.example.com",
+    "pluginFamily": "SSH",
+    "description": "The SSH service permits obsolete ciphers that allow attackers to brute force encrypted sessions with minimal effort.",
+    "solution": "Remove legacy ciphers from the SSH daemon configuration and restart the service."
   },
   {
     "id": "4",
     "name": "Outdated Software",
     "cvss": 2.5,
     "severity": "Low",
-    "host": "server3.example.com"
+    "host": "server3.example.com",
+    "pluginFamily": "General",
+    "description": "Installed software packages are outdated and missing the latest security updates.",
+    "solution": "Update the affected packages to the latest supported versions via the system package manager."
   }
 ]

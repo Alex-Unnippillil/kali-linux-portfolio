@@ -88,7 +88,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | reaver | Reaver | Security simulations pod | **In progress** – simulator backlog | Wi-Fi fixtures |
 | hydra | Hydra | Security simulations pod | **In progress** – simulator backlog | Credential list fixtures |
 | john | John the Ripper | Security simulations pod | **In progress** – simulator backlog | Wordlists |
-| nessus | Nessus | Security simulations pod | **In progress** – simulator backlog | Scan report fixtures |
+| nessus | Nessus | Security simulations pod | **Shipped** – lab-mode fixtures with navigation | Scan report fixtures |
 | nmap-nse | Nmap NSE | Security simulations pod | **In progress** – simulator backlog | Script outputs |
 | openvas | OpenVAS | Security simulations pod | **In progress** – simulator backlog | Scan report fixtures |
 | reconng | Recon-ng | Security simulations pod | **In progress** – simulator backlog | Recon dataset |
