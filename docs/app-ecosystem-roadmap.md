@@ -83,16 +83,16 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | msf-post | Metasploit Post | Security simulations pod | **In progress** – simulator backlog | Module JSON |
 | evidence-vault | Evidence Vault | Security simulations pod | **Needs polish** – clarify evidence data model | Forensics fixtures |
 | mimikatz | Mimikatz | Security simulations pod | **In progress** – simulator backlog | Credential dump fixtures |
-| mimikatz/offline | Mimikatz Offline | Security simulations pod | **In progress** – simulator backlog | Offline dataset |
+| mimikatz/offline | Mimikatz Offline | Security simulations pod | **Ready** – offline datasets packaged with lab flows and Jest coverage | Offline dataset suite |
 | ettercap | Ettercap | Security simulations pod | **In progress** – simulator backlog | Network capture fixtures |
 | reaver | Reaver | Security simulations pod | **In progress** – simulator backlog | Wi-Fi fixtures |
 | hydra | Hydra | Security simulations pod | **In progress** – simulator backlog | Credential list fixtures |
-| john | John the Ripper | Security simulations pod | **In progress** – simulator backlog | Wordlists |
+| john | John the Ripper | Security simulations pod | **Beta** – lab-mode fixtures, command builder, and interpretation cards landed; monitor QA feedback | Wordlist fixtures, Lab Mode |
 | nessus | Nessus | Security simulations pod | **In progress** – simulator backlog | Scan report fixtures |
 | nmap-nse | Nmap NSE | Security simulations pod | **In progress** – simulator backlog | Script outputs |
 | openvas | OpenVAS | Security simulations pod | **In progress** – simulator backlog | Scan report fixtures |
 | reconng | Recon-ng | Security simulations pod | **In progress** – simulator backlog | Recon dataset |
-| kismet.jsx | Kismet | Security simulations pod | **In progress** – simulator backlog | Wireless fixtures |
+| kismet.jsx | Kismet | Security simulations pod | **Beta** – fixture dataset with channel/device filters behind Lab Mode | Wireless fixtures, lab mode flag |
 | security-tools | Security Tools | Security simulations pod | **Needs polish** – ensure catalog UX & lab-mode flag | Tool registry |
 
 ### Games & Interactive Experiences
@@ -108,7 +108,7 @@ All arcade-style and puzzle titles share the same readiness gap: implement canva
 | frogger | Frogger | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | flappy-bird | Flappy Bird | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | 2048 | 2048 | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
-| snake | Snake | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
+| snake | Snake | Core maintainers | **Ready** – shared canvas loop, pause/reset/audio toggles, and persistent high score shipped | Game engine |
 | memory | Memory | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | minesweeper | Minesweeper | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | pong | Pong | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |

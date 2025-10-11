@@ -2,6 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import AuditSimulator from './components/AuditSimulator';
+import johnPlaceholders from '../../components/apps/john/placeholders';
+import LabMode from '../../components/LabMode';
+import LabPanels from './components/LabPanels';
+import { useLabFixtures } from './lib/fixtures';
 
 interface HashItem {
   hash: string;
@@ -11,19 +15,19 @@ interface HashItem {
   strength?: 'weak' | 'medium' | 'strong';
 }
 
-const PASSWORDS: Record<string, string> = {
-  '5f4dcc3b5aa765d61d8327deb882cf99': 'password',
-  'e10adc3949ba59abbe56e057f20f883e': '123456',
-};
+const PASSWORDS: Record<string, string> = johnPlaceholders.hashedPasswords.reduce(
+  (acc, item) => {
+    acc[item.hash] = item.plaintext;
+    return acc;
+  },
+  {} as Record<string, string>
+);
 
-const DEFAULT_WORDLIST = `password
-123456
-letmein
-admin
-welcome`;
+const DEFAULT_WORDLIST = johnPlaceholders.defaultWordlist.join('\n');
 
-const initialHashes: HashItem[] = Object.keys(PASSWORDS)
-  .concat(['ffffffffffffffffffffffffffffffff'])
+const initialHashes: HashItem[] = johnPlaceholders.hashedPasswords
+  .map((item) => item.hash)
+  .concat([johnPlaceholders.fallbackHash])
   .map((hash) => ({ hash, progress: 0, status: 'pending' }));
 
 const generateIncremental = (length: number, limit = 100) => {
@@ -45,6 +49,7 @@ const generateIncremental = (length: number, limit = 100) => {
 };
 
 const JohnApp: React.FC = () => {
+  const fixtures = useLabFixtures();
   const [mode, setMode] = useState<'single' | 'incremental' | 'wordlist'>('wordlist');
   const [wordlist, setWordlist] = useState(DEFAULT_WORDLIST);
   const [singleValue, setSingleValue] = useState('password');
@@ -154,12 +159,16 @@ const JohnApp: React.FC = () => {
   }, [overallProgress, running, startTime]);
 
   return (
-    <div className="h-full w-full p-4 bg-gray-900 text-white flex flex-col gap-4">
-      <p className="text-xs text-yellow-300">Demo only – simulated cracking.</p>
-      <div className="flex flex-wrap gap-4 items-center">
-        <div className="flex gap-2">
-          {modes.map((m) => (
-            <button
+    <div className="h-full w-full overflow-auto bg-gray-900 text-white">
+      <div className="mx-auto flex h-full w-full flex-col gap-6 p-4 lg:max-w-6xl lg:flex-row">
+        <div className="flex-1 space-y-4">
+          <p className="text-xs text-yellow-300">
+            {johnPlaceholders.banners.page}
+          </p>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex gap-2">
+              {modes.map((m) => (
+                <button
               key={m.key}
               type="button"
               onClick={() => setMode(m.key)}
@@ -190,84 +199,90 @@ const JohnApp: React.FC = () => {
             aria-label="Wordlist"
           />
         )}
-          {mode === 'incremental' && (
-            <label className="flex items-center gap-2">
-              Length:
-              <input
-                type="number"
-                min={1}
-                max={5}
-                value={incLength}
-                onChange={(e) => setIncLength(parseInt(e.target.value, 10) || 1)}
-                className="w-16 text-black px-1 py-0.5 rounded"
-                aria-label="Incremental length"
-              />
-            </label>
-          )}
+        {mode === 'incremental' && (
+          <label className="flex items-center gap-2">
+            Length:
+            <input
+              type="number"
+              min={1}
+              max={5}
+              value={incLength}
+              onChange={(e) => setIncLength(parseInt(e.target.value, 10) || 1)}
+              className="w-16 rounded px-1 py-0.5 text-black"
+              aria-label="Incremental length"
+            />
+          </label>
+        )}
         <button
           type="button"
           onClick={start}
           disabled={running}
-          className="px-4 py-1 bg-blue-600 rounded"
+          className="rounded bg-blue-600 px-4 py-1"
         >
           Start
         </button>
-      </div>
+          </div>
 
-      <div className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 p-2 rounded">
-        <div className="w-full bg-gray-400 dark:bg-gray-600 rounded h-2">
-          <div
-            className="h-2 bg-blue-500 rounded"
-            style={{ width: `${overallProgress}%` }}
-          />
+          <div className="rounded bg-gray-200 p-2 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+            <div className="h-2 w-full rounded bg-gray-400 dark:bg-gray-600">
+              <div
+                className="h-2 rounded bg-blue-500"
+                style={{ width: `${overallProgress}%` }}
+              />
+            </div>
+            <div className="mt-1 text-center text-xs">ETA: {eta}</div>
+          </div>
+
+          <ul className="space-y-1 font-mono">
+            {hashes.map((h) => (
+              <li
+                key={h.hash}
+                className="flex h-9 items-center justify-between rounded bg-gray-800 px-2 text-xs sm:text-sm"
+              >
+                <span className="truncate">{h.hash}</span>
+                {h.status === 'cracked' ? (
+                  <div className="flex items-center gap-2">
+                    <span className="truncate">{h.password}</span>
+                    <span
+                      className={`px-2 py-0.5 text-xs ${strengthClass[h.strength!]}`}
+                    >
+                      {h.strength}
+                    </span>
+                  </div>
+                ) : h.status === 'failed' ? (
+                  <span className="rounded-full bg-red-200 px-2 py-0.5 text-xs text-red-800 dark:bg-red-800 dark:text-red-200">
+                    Failed
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-gray-500 px-2 py-0.5 text-xs text-gray-100">
+                    Pending
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+
+          {message && (
+            <div
+              className={`rounded p-2 text-sm ${
+                message.type === 'success'
+                  ? 'bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200'
+                  : 'bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200'
+              }`}
+            >
+              {message.text}
+            </div>
+          )}
+
+          <AuditSimulator />
         </div>
-        <div className="text-xs text-center mt-1">ETA: {eta}</div>
-      </div>
 
-      <ul className="space-y-1 font-mono">
-        {hashes.map((h) => (
-          <li
-            key={h.hash}
-            className="bg-gray-800 rounded px-2 h-9 flex items-center justify-between text-xs sm:text-sm"
-          >
-            <span className="truncate">{h.hash}</span>
-            {h.status === 'cracked' ? (
-              <div className="flex items-center gap-2">
-                <span className="truncate">{h.password}</span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-xs ${
-                    strengthClass[h.strength!]
-                  }`}
-                >
-                  {h.strength}
-                </span>
-              </div>
-            ) : h.status === 'failed' ? (
-              <span className="px-2 py-0.5 rounded-full bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200 text-xs">
-                Failed
-              </span>
-            ) : (
-              <span className="px-2 py-0.5 rounded-full bg-gray-500 text-gray-100 text-xs">
-                Pending
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      {message && (
-        <div
-          className={`p-2 rounded text-sm ${
-            message.type === 'success'
-              ? 'bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200'
-              : 'bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200'
-          }`}
-        >
-          {message.text}
+        <div className="flex-1 rounded-lg border border-white/10 bg-black/40">
+          <LabMode>
+            <LabPanels fixtures={fixtures} />
+          </LabMode>
         </div>
-      )}
-
-      <AuditSimulator />
+      </div>
     </div>
   );
 };

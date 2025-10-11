@@ -109,7 +109,7 @@ For each game below, build a canvas-based component with `requestAnimationFrame`
 - Pong
 - Reversi
 - Simon
-- Snake
+- ~~Snake~~ – shared canvas loop, pause/reset/audio toggles, and persistent highscores shipped
 - Sokoban
 - Solitaire
 - Tic Tac Toe
