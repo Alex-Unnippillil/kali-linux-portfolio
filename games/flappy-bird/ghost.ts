@@ -17,9 +17,23 @@ function read<T>(key: string): T | null {
   }
 }
 
+function isStorageAvailabilityError(error: unknown): error is DOMException {
+  if (!(error instanceof DOMException)) return false;
+  const quotaExceeded =
+    error.name === 'QuotaExceededError' || error.code === 22 || error.code === 1014;
+  const isSecurity = error.name === 'SecurityError';
+  const isInvalidState = error.name === 'InvalidStateError';
+  return quotaExceeded || isSecurity || isInvalidState;
+}
+
 function write(key: string, value: unknown): void {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(key, JSON.stringify(value));
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    if (isStorageAvailabilityError(error)) return;
+    throw error;
+  }
 }
 
 /** Load all ghost runs stored for a given gravity variant. */
