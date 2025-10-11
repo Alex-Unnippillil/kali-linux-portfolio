@@ -123,6 +123,24 @@ export default function PluginManager() {
   return (
     <div className="p-4 text-white">
       <h1 className="text-xl mb-4">Plugin Catalog</h1>
+      <div className="mb-4 rounded border border-ub-orange/60 bg-ub-orange/10 p-3 text-sm leading-relaxed">
+        <p className="mb-2">
+          This feature is in design review. Review the draft scope and metadata notes in the{' '}
+          <a
+            className="underline hover:text-ub-orange"
+            href="https://github.com/Alex-Unnippillil/kali-linux-portfolio/blob/main/docs/plugin-manager-design.md"
+            rel="noreferrer"
+            target="_blank"
+          >
+            Plugin Manager design doc
+          </a>{' '}
+          before shipping new functionality.
+        </p>
+        <p className="m-0">
+          Future iterations will expand manifests with descriptions, permission flags, and lifecycle controls. Until then, use
+          the prototype catalog below for sandbox experiments only.
+        </p>
+      </div>
       <ul>
         {plugins.map((p) => (
           <li key={p.id} className="flex items-center mb-2">
