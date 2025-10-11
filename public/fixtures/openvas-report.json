@@ -1,0 +1,135 @@
+{
+  "metadata": {
+    "scanName": "Quarterly PCI Internal",
+    "profile": "PCI DSS Full and Fast",
+    "target": "10.10.20.0/24",
+    "startTime": "2024-05-22T09:00:00Z",
+    "endTime": "2024-05-22T10:32:00Z",
+    "engine": "OpenVAS 22.4",
+    "notes": "Static training fixture bundled with the Kali Linux portfolio demo."
+  },
+  "summary": {
+    "critical": 2,
+    "high": 5,
+    "medium": 9,
+    "low": 14
+  },
+  "timeline": [
+    { "label": "Task created", "time": "2024-05-21T17:15:00Z" },
+    { "label": "Feed check completed", "time": "2024-05-22T08:45:00Z" },
+    { "label": "Target discovery", "time": "2024-05-22T09:05:00Z" },
+    { "label": "Vulnerability scan", "time": "2024-05-22T09:20:00Z" },
+    { "label": "Report generated", "time": "2024-05-22T10:32:00Z" }
+  ],
+  "hosts": [
+    {
+      "host": "192.168.1.10",
+      "asset": "Web Frontend",
+      "risk": "High",
+      "summary": { "critical": 1, "high": 2, "medium": 3, "low": 2 },
+      "services": [
+        { "name": "Apache", "product": "Apache HTTP Server 2.4.49", "port": "443/tcp" },
+        { "name": "OpenSSL", "product": "OpenSSL 1.1.1l", "port": "443/tcp" },
+        { "name": "PostgreSQL", "product": "PostgreSQL 12", "port": "5432/tcp" }
+      ],
+      "vulns": [
+        {
+          "id": "CVE-2021-41773",
+          "title": "Apache 2.4.49 Path Traversal",
+          "severity": "critical",
+          "cvss": 9.8,
+          "epss": 0.76,
+          "likelihood": "high",
+          "impact": "high",
+          "remediation": ["Patch", "WAF"],
+          "description": "A flaw in path normalisation allows attackers to map URLs to files outside the expected document root.",
+          "references": ["https://httpd.apache.org/security/vulnerabilities_24.html#CVE-2021-41773"]
+        },
+        {
+          "id": "CVE-2023-0464",
+          "title": "OpenSSL ASN.1 Parsing DoS",
+          "severity": "high",
+          "cvss": 7.5,
+          "epss": 0.35,
+          "likelihood": "medium",
+          "impact": "high",
+          "remediation": ["Update"],
+          "description": "Malformed ASN.1 data can trigger excessive resource consumption leading to denial of service.",
+          "references": ["https://www.openssl.org/news/secadv/20230419.txt"]
+        }
+      ]
+    },
+    {
+      "host": "192.168.1.20",
+      "asset": "Jump Server",
+      "risk": "Medium",
+      "summary": { "critical": 0, "high": 1, "medium": 4, "low": 3 },
+      "services": [
+        { "name": "OpenSSH", "product": "OpenSSH 8.2p1", "port": "22/tcp" },
+        { "name": "Samba", "product": "Samba 4.11", "port": "445/tcp" }
+      ],
+      "vulns": [
+        {
+          "id": "CVE-2020-14145",
+          "title": "OpenSSH User Enumeration",
+          "severity": "medium",
+          "cvss": 5.3,
+          "epss": 0.05,
+          "likelihood": "medium",
+          "impact": "medium",
+          "remediation": ["Harden SSH"],
+          "description": "Timing differences in public-key authentication make valid accounts discoverable.",
+          "references": ["https://nvd.nist.gov/vuln/detail/CVE-2020-14145"]
+        },
+        {
+          "id": "CVE-2017-0144",
+          "title": "SMBv1 Remote Code Execution",
+          "severity": "high",
+          "cvss": 8.1,
+          "epss": 0.91,
+          "likelihood": "high",
+          "impact": "high",
+          "remediation": ["Disable SMBv1", "Patch"],
+          "description": "Legacy SMBv1 protocol enables remote code execution via crafted packets (EternalBlue).",
+          "references": ["https://msrc.microsoft.com/update-guide/vulnerability/CVE-2017-0144"]
+        }
+      ]
+    },
+    {
+      "host": "192.168.1.30",
+      "asset": "Database Server",
+      "risk": "Low",
+      "summary": { "critical": 0, "high": 0, "medium": 2, "low": 5 },
+      "services": [
+        { "name": "MySQL", "product": "MySQL 8.0.28", "port": "3306/tcp" },
+        { "name": "NTP", "product": "ntpd 4.2.8p15", "port": "123/udp" }
+      ],
+      "vulns": [
+        {
+          "id": "CVE-2022-0981",
+          "title": "MySQL Information Disclosure",
+          "severity": "medium",
+          "cvss": 6.4,
+          "epss": 0.12,
+          "likelihood": "low",
+          "impact": "medium",
+          "remediation": ["Update"],
+          "description": "Improper privilege separation could allow authenticated users to view restricted schema metadata.",
+          "references": ["https://www.oracle.com/security-alerts/cpuapr2022.html"]
+        },
+        {
+          "id": "NVT-2024-0001",
+          "title": "NTP Mode 6 Amplification",
+          "severity": "low",
+          "cvss": 3.7,
+          "epss": 0.02,
+          "likelihood": "medium",
+          "impact": "low",
+          "remediation": ["Rate limit", "Monitor"],
+          "description": "Exposed Mode 6 queries may be abused for reflected amplification attacks.",
+          "references": ["https://www.kb.cert.org/vuls/id/123456"]
+        }
+      ]
+    }
+  ]
+}
