@@ -80,7 +80,8 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 - Add camera select drop-down and "download QR" button after generation.
 
 ### ASCII Art
-- Support text-to-ASCII and image-to-ASCII via hidden canvas sampling.
+- Text-to-ASCII and image-to-ASCII rendering now ship with hidden canvas sampling and configurable character sets/resolution controls.
+- Performance constraints: enforce a 2MB upload ceiling, cap sampling at four million pixels, and reuse figlet glyphs for scalable text rendering.
 
 ### Figlet
 - Provide font selector, copy-to-clipboard, and cache fonts in IndexedDB.
