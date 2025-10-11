@@ -46,6 +46,59 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   humor: ['laugh', 'funny', 'humor'],
 };
 
+type Theme = {
+  id: string;
+  name: string;
+  cardClass: string;
+  fontClass?: string;
+  quoteClass?: string;
+  authorClass?: string;
+  accentClass?: string;
+};
+
+const THEMES: Theme[] = [
+  {
+    id: 'aurora',
+    name: 'Aurora Glow',
+    cardClass:
+      'bg-gradient-to-br from-sky-500/40 via-purple-600/30 to-emerald-500/30 text-white shadow-lg border border-white/10 backdrop-blur',
+    fontClass: 'font-sans',
+    quoteClass: 'tracking-[6px] text-white',
+    authorClass: 'text-white/80',
+    accentClass: 'text-white/30',
+  },
+  {
+    id: 'noir-grid',
+    name: 'Noir Grid',
+    cardClass:
+      'bg-[#0f172a] text-gray-100 border border-white/10 shadow-inner bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.18),_transparent_65%)]',
+    fontClass: 'font-serif',
+    quoteClass: 'tracking-[4px] text-gray-100',
+    authorClass: 'text-gray-300/90',
+    accentClass: 'text-gray-400/40',
+  },
+  {
+    id: 'terminal',
+    name: 'Terminal Matrix',
+    cardClass:
+      'bg-[#03120f] text-emerald-200 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.25)] bg-[radial-gradient(circle_at_center,_rgba(16,185,129,0.15),_transparent_70%)]',
+    fontClass: 'font-mono uppercase',
+    quoteClass: 'tracking-[0.35em] text-emerald-100',
+    authorClass: 'text-emerald-300/80',
+    accentClass: 'text-emerald-400/40',
+  },
+  {
+    id: 'sunset-paper',
+    name: 'Sunset Paper',
+    cardClass:
+      'bg-[#331a1a] text-orange-100 border border-orange-400/30 shadow-lg bg-[linear-gradient(135deg,_rgba(249,115,22,0.35),_rgba(244,63,94,0.35))]',
+    fontClass: 'font-serif italic',
+    quoteClass: 'tracking-[0.25em] text-orange-100',
+    authorClass: 'text-orange-200/80 italic',
+    accentClass: 'text-orange-200/40',
+  },
+];
+
 const processQuotes = (data: any[]): Quote[] => {
   const filter = new Filter();
   return data
@@ -79,6 +132,7 @@ export default function QuoteApp() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [dailyQuote, setDailyQuote] = useState<Quote | null>(null);
   const [posterize, setPosterize] = useState(false);
+  const [themeId, setThemeId] = useState<string>(THEMES[0].id);
   const cardRef = useRef<HTMLDivElement>(null);
   const [playlist, setPlaylist] = useState<number[]>([]);
   const [playOrder, setPlayOrder] = useState<number[]>([]);
@@ -86,6 +140,15 @@ export default function QuoteApp() {
   const [playing, setPlaying] = useState(false);
   const [loop, setLoop] = useState(false);
   const [shuffle, setShuffle] = useState(false);
+  const [copying, setCopying] = useState(false);
+  const [tweeting, setTweeting] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+
+  const selectedTheme = useMemo(
+    () => THEMES.find((theme) => theme.id === themeId) ?? THEMES[0],
+    [themeId]
+  );
 
   useEffect(() => {
     const fav = localStorage.getItem('quote-favorites');
@@ -116,6 +179,12 @@ export default function QuoteApp() {
       }
     }
   }, [quotes]);
+
+  useEffect(() => {
+    if (!actionMessage) return;
+    const id = window.setTimeout(() => setActionMessage(null), 3000);
+    return () => window.clearTimeout(id);
+  }, [actionMessage]);
 
   useEffect(() => {
     if (!quotes.length) return;
@@ -273,23 +342,48 @@ export default function QuoteApp() {
       .catch(() => { /* ignore */ });
   };
 
-  const shareQuote = () => {
+  const shareQuote = async () => {
     if (!current) return;
     const text = `"${current.content}" — ${current.author}`;
-    share(text);
+    setSharing(true);
+    try {
+      const success = await share(text);
+      if (success) {
+        setActionMessage('Share sheet opened successfully.');
+      }
+    } finally {
+      setSharing(false);
+    }
   };
 
-  const copyQuote = () => {
+  const copyQuote = async () => {
     if (!current) return;
     const text = `"${current.content}" — ${current.author}`;
-    copyToClipboard(text);
+    setCopying(true);
+    try {
+      const success = await copyToClipboard(text);
+      if (success) {
+        setActionMessage('Quote copied to clipboard!');
+      }
+    } finally {
+      setCopying(false);
+    }
   };
 
-  const tweetQuote = () => {
+  const tweetQuote = async () => {
     if (!current) return;
-    const text = `"${current.content}" — ${current.author}`;
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
+    setTweeting(true);
+    try {
+      const text = `"${current.content}" — ${current.author}`;
+      const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+      const popup = window.open(url, '_blank');
+      if (popup) {
+        setActionMessage('Tweet composer opened in a new tab.');
+      }
+    } finally {
+      await Promise.resolve();
+      setTweeting(false);
+    }
   };
 
   const startPlaylist = () => {
@@ -329,32 +423,36 @@ export default function QuoteApp() {
         <div
           ref={cardRef}
           id="quote-card"
-          className="group relative p-6 rounded text-center bg-gradient-to-br from-[var(--color-primary)]/30 to-[var(--color-secondary)]/30 text-white"
+          className={`group relative p-6 rounded text-center transition-colors duration-300 ${selectedTheme.cardClass} ${selectedTheme.fontClass ?? ''}`}
         >
           {current ? (
             <div key={keyOf(current)} className="animate-quote">
               <span
-                className="absolute -top-4 left-4 text-[64px] text-white/20 select-none"
+                className={`absolute -top-4 left-4 text-[64px] select-none ${selectedTheme.accentClass ?? 'text-white/20'}`}
                 aria-hidden="true"
               >
                 &ldquo;
               </span>
-              <p className="mb-4 text-[18px] leading-[24px] sm:text-[20px] sm:leading-[26px] tracking-[6px]">
+              <p
+                className={`mb-4 text-[18px] leading-[24px] sm:text-[20px] sm:leading-[26px] ${selectedTheme.quoteClass ?? 'tracking-[6px] text-white'}`}
+              >
                 {current.content}
               </p>
-              <p className="text-sm text-white/80">— {current.author}</p>
+              <p className={`text-sm ${selectedTheme.authorClass ?? 'text-white/80'}`}>— {current.author}</p>
               <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition">
                 <button
                   onClick={copyQuote}
-                  className="p-1 bg-black/30 hover:bg-black/50 rounded"
+                  className="p-1 bg-black/30 hover:bg-black/50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="Copy quote"
+                  disabled={copying}
                 >
                   <CopyIcon className="w-6 h-6" />
                 </button>
                 <button
                   onClick={tweetQuote}
-                  className="p-1 bg-black/30 hover:bg-black/50 rounded"
+                  className="p-1 bg-black/30 hover:bg-black/50 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="Tweet quote"
+                  disabled={tweeting}
                 >
                   <TwitterIcon className="w-6 h-6" />
                 </button>
@@ -405,7 +503,11 @@ export default function QuoteApp() {
             {posterize ? 'Close Posterizer' : 'Posterize'}
           </button>
           {canShare() && (
-            <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={shareQuote}>
+            <button
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={shareQuote}
+              disabled={sharing}
+            >
               Share
             </button>
           )}
@@ -413,6 +515,29 @@ export default function QuoteApp() {
             Import
             <input type="file" accept="application/json" className="hidden" onChange={importQuotes} />
           </label>
+        </div>
+        <div className="mt-2 w-full">
+          <label
+            htmlFor="quote-theme"
+            className="mb-1 block text-xs font-semibold uppercase tracking-widest text-gray-300 text-center"
+          >
+            Card Theme
+          </label>
+          <select
+            id="quote-theme"
+            value={themeId}
+            onChange={(e) => setThemeId(e.target.value)}
+            className="w-full rounded bg-gray-800/80 border border-white/10 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+          >
+            {THEMES.map((theme) => (
+              <option key={theme.id} value={theme.id}>
+                {theme.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="mt-2 min-h-[1.5rem] text-center text-emerald-300" aria-live="polite">
+          {actionMessage}
         </div>
         {posterize && (
           <div className="mt-4 w-full">
