@@ -326,7 +326,7 @@ describe('Window snapping preview', () => {
     expect(within(preview).getByText('Snap top-left quarter')).toBeInTheDocument();
   });
 
-  it('shows corner preview when dragged near the bottom-right edge', () => {
+  it('shows right-half preview when dragged near the bottom-right edge', () => {
     setViewport(1600, 900);
     const ref = React.createRef<any>();
     render(
@@ -359,15 +359,15 @@ describe('Window snapping preview', () => {
       ref.current!.handleDrag();
     });
 
-    expect(ref.current!.state.snapPosition).toBe('bottom-right');
+    expect(ref.current!.state.snapPosition).toBe('right');
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toHaveStyle(`left: ${window.innerWidth / 2}px`);
     expect(preview).toHaveStyle(
-      `top: ${measureWindowTopOffset() + computeAvailableHeightPx() / 2}px`
+      `top: ${measureWindowTopOffset()}px`
     );
-    expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx() / 2}px`);
-    expect(preview).toHaveAttribute('aria-label', 'Snap bottom-right quarter');
-    expect(within(preview).getByText('Snap bottom-right quarter')).toBeInTheDocument();
+    expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx()}px`);
+    expect(preview).toHaveAttribute('aria-label', 'Snap right half');
+    expect(within(preview).getByText('Snap right half')).toBeInTheDocument();
   });
 });
 
@@ -582,11 +582,12 @@ describe('Window snapping finalize and release', () => {
       ref.current!.handleStop();
     });
 
-    expect(ref.current!.state.snapped).toBe('bottom-right');
+    expect(ref.current!.state.snapped).toBe('right');
     expect(ref.current!.state.width).toBeCloseTo(50, 2);
-    expect(ref.current!.state.height).toBeCloseTo(computeQuarterHeightPercent(), 5);
+    const expectedHeight = computeSnappedHeightPercent();
+    expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 5);
     const expectedX = window.innerWidth / 2;
-    const expectedY = getSnapOffsetTop() + computeAvailableHeightPx() / 2;
+    const expectedY = getSnapOffsetTop();
     expect(winEl.style.transform).toBe(`translate(${expectedX}px, ${expectedY}px)`);
   });
 
@@ -879,8 +880,23 @@ describe('Window viewport constraints', () => {
     });
 
     const state = ref.current!.state;
-    expect(state.parentSize.width).toBeCloseTo(320);
-    expect(state.parentSize.height).toBeCloseTo(13);
+    const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const expectedWidth = Math.max(
+      viewportWidth - viewportWidth * (state.width / 100),
+      0,
+    );
+    const availableVertical = Math.max(
+      viewportHeight - measureWindowTopOffset() - SNAP_BOTTOM_INSET - Math.max(0, measureSafeAreaInset('bottom')),
+      0,
+    );
+    const expectedHeight = Math.max(
+      availableVertical - viewportHeight * (state.height / 100),
+      0,
+    );
+
+    expect(state.parentSize.width).toBeCloseTo(expectedWidth);
+    expect(state.parentSize.height).toBeCloseTo(expectedHeight);
     expect(state.safeAreaTop).toBe(DESKTOP_TOP_PADDING);
   });
 });
