@@ -82,7 +82,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | hashcat | Hashcat | Security simulations pod | **In progress** – simulator backlog | Hash samples |
 | msf-post | Metasploit Post | Security simulations pod | **In progress** – simulator backlog | Module JSON |
 | evidence-vault | Evidence Vault | Security simulations pod | **Needs polish** – clarify evidence data model | Forensics fixtures |
-| mimikatz | Mimikatz | Security simulations pod | **In progress** – simulator backlog | Credential dump fixtures |
+| mimikatz | Mimikatz | Security simulations pod | **Ready** – curated fixtures, lab mode gating, command builders | Credential dataset |
 | mimikatz/offline | Mimikatz Offline | Security simulations pod | **In progress** – simulator backlog | Offline dataset |
 | ettercap | Ettercap | Security simulations pod | **In progress** – simulator backlog | Network capture fixtures |
 | reaver | Reaver | Security simulations pod | **In progress** – simulator backlog | Wi-Fi fixtures |
