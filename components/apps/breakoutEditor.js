@@ -1,10 +1,13 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-
-const ROWS = 5;
-const COLS = 10;
-const KEY_PREFIX = 'breakout-level:';
+import {
+  GRID_ROWS,
+  GRID_COLS,
+  STORAGE_PREFIX,
+  normalizeLayout,
+  serializeLayout,
+} from '../../games/breakout/levels';
 
 const cellClass = (cell) =>
   cell === 0
@@ -22,7 +25,7 @@ const cellClass = (cell) =>
  */
 export default function BreakoutEditor({ onLoad }) {
   const [grid, setGrid] = useState(
-    Array.from({ length: ROWS }, () => Array(COLS).fill(0)),
+    Array.from({ length: GRID_ROWS }, () => Array(GRID_COLS).fill(0)),
   );
   const [name, setName] = useState('level1');
   const currentType = useRef(1);
@@ -58,15 +61,23 @@ export default function BreakoutEditor({ onLoad }) {
   }, []);
 
   const save = () => {
-    localStorage.setItem(`${KEY_PREFIX}${name}`, JSON.stringify(grid));
+    try {
+      window.localStorage.setItem(
+        `${STORAGE_PREFIX}${name}`,
+        JSON.stringify(serializeLayout(grid)),
+      );
+    } catch {
+      /* ignore storage errors */
+    }
   };
 
   const load = () => {
-    const txt = localStorage.getItem(`${KEY_PREFIX}${name}`);
+    const txt = localStorage.getItem(`${STORAGE_PREFIX}${name}`);
     if (txt) {
       try {
         const arr = JSON.parse(txt);
-        if (Array.isArray(arr)) setGrid(arr);
+        const normalized = normalizeLayout(arr);
+        setGrid(normalized);
       } catch {
         /* ignore */
       }
@@ -74,7 +85,7 @@ export default function BreakoutEditor({ onLoad }) {
   };
 
   const play = () => {
-    if (onLoad) onLoad(grid);
+    if (onLoad) onLoad(normalizeLayout(grid));
   };
 
   return (
@@ -96,7 +107,7 @@ export default function BreakoutEditor({ onLoad }) {
       </div>
       <div
         className="grid gap-1 select-none"
-        style={{ gridTemplateColumns: `repeat(${COLS}, 20px)` }}
+        style={{ gridTemplateColumns: `repeat(${GRID_COLS}, 20px)` }}
       >
         {grid.map((row, r) =>
           row.map((cell, c) => (
@@ -143,4 +154,3 @@ export default function BreakoutEditor({ onLoad }) {
     </div>
   );
 }
-
