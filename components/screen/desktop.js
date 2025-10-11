@@ -32,6 +32,54 @@ import {
 } from '../../utils/windowLayout';
 
 
+const OVERLAY_WINDOWS = Object.freeze({
+    launcher: {
+        id: 'overlay-launcher',
+        title: 'All Applications',
+        icon: '/themes/Yaru/system/view-app-grid-symbolic.svg',
+    },
+    shortcutSelector: {
+        id: 'overlay-shortcut-selector',
+        title: 'Add to Desktop',
+        icon: '/themes/Yaru/system/user-desktop.png',
+    },
+    windowSwitcher: {
+        id: 'overlay-window-switcher',
+        title: 'Window Switcher',
+        icon: '/themes/Yaru/window/window-restore-symbolic.svg',
+    },
+});
+
+const OVERLAY_WINDOW_LIST = Object.values(OVERLAY_WINDOWS);
+const LAUNCHER_OVERLAY_ID = OVERLAY_WINDOWS.launcher.id;
+const SHORTCUT_OVERLAY_ID = OVERLAY_WINDOWS.shortcutSelector.id;
+const SWITCHER_OVERLAY_ID = OVERLAY_WINDOWS.windowSwitcher.id;
+
+const createOverlayFlagMap = (value) => {
+    const flags = {};
+    OVERLAY_WINDOW_LIST.forEach(({ id }) => {
+        flags[id] = value;
+    });
+    return flags;
+};
+
+const createOverlayStateMap = () => {
+    const next = {};
+    OVERLAY_WINDOW_LIST.forEach(({ id }) => {
+        next[id] = {
+            open: false,
+            minimized: false,
+            maximized: false,
+            focused: false,
+        };
+        if (id === LAUNCHER_OVERLAY_ID) {
+            next[id].transitionState = 'exited';
+        }
+    });
+    return next;
+};
+
+
 export class Desktop extends Component {
     constructor(props) {
         super(props);
@@ -89,14 +137,16 @@ export class Desktop extends Component {
         this.iconGridSpacing = { ...this.baseIconGridSpacing };
         this.desktopPadding = { ...this.baseDesktopPadding };
 
+        const initialOverlayClosed = createOverlayFlagMap(true);
+        const initialOverlayMinimized = createOverlayFlagMap(false);
+        const initialOverlayFocused = createOverlayFlagMap(false);
+
         this.state = {
-            focused_windows: {},
-            closed_windows: {},
-            allAppsView: false,
-            allAppsTransitionState: 'exited',
+            focused_windows: { ...initialOverlayFocused },
+            closed_windows: { ...initialOverlayClosed },
             disabled_apps: {},
             favourite_apps: {},
-            minimized_windows: {},
+            minimized_windows: { ...initialOverlayMinimized },
             window_positions: {},
             desktop_apps: [],
             desktop_icon_positions: {},
@@ -109,8 +159,6 @@ export class Desktop extends Component {
             },
             context_app: null,
             showNameBar: false,
-            showShortcutSelector: false,
-            showWindowSwitcher: false,
             switcherWindows: [],
             activeWorkspace: 0,
             workspaces: Array.from({ length: this.workspaceCount }, (_, index) => ({
@@ -126,7 +174,8 @@ export class Desktop extends Component {
             hoveredIconId: null,
             currentTheme: initialTheme,
             iconSizePreset: initialIconSizePreset,
-        }
+            overlayWindows: createOverlayStateMap(),
+        };
 
         this.desktopRef = React.createRef();
         this.folderNameInputRef = React.createRef();
@@ -153,6 +202,7 @@ export class Desktop extends Component {
 
         this.validAppIds = new Set();
         this.appMap = new Map();
+        this.overlayRegistry = new Map(OVERLAY_WINDOW_LIST.map((meta) => [meta.id, meta]));
         this.windowPreviewCache = new Map();
         this.windowSwitcherRequestId = 0;
         this.refreshAppRegistry();
@@ -174,9 +224,9 @@ export class Desktop extends Component {
     }
 
     createEmptyWorkspaceState = () => ({
-        focused_windows: {},
-        closed_windows: {},
-        minimized_windows: {},
+        focused_windows: createOverlayFlagMap(false),
+        closed_windows: createOverlayFlagMap(true),
+        minimized_windows: createOverlayFlagMap(false),
         window_positions: {},
     });
 
@@ -661,7 +711,7 @@ export class Desktop extends Component {
         const duration = now - gesture.startTime;
         const shouldTrigger = deltaY > 60 || (deltaY > 40 && duration < 400);
         if (shouldTrigger && !gesture.triggered) {
-            if (!this.state.showWindowSwitcher) {
+            if (!this.isOverlayOpen(SWITCHER_OVERLAY_ID)) {
                 this.openWindowSwitcher();
             }
             gesture.triggered = true;
@@ -712,15 +762,31 @@ export class Desktop extends Component {
 
     getRunningAppSummaries = () => {
         const { closed_windows = {}, minimized_windows = {}, focused_windows = {} } = this.state;
-        return apps
-            .filter((app) => closed_windows[app.id] === false)
-            .map((app) => ({
-                id: app.id,
-                title: app.title,
-                icon: app.icon.replace('./', '/'),
-                isFocused: Boolean(focused_windows[app.id]),
-                isMinimized: Boolean(minimized_windows[app.id]),
-            }));
+        const summaries = [];
+        apps.forEach((app) => {
+            if (closed_windows[app.id] === false) {
+                summaries.push({
+                    id: app.id,
+                    title: app.title,
+                    icon: app.icon.replace('./', '/'),
+                    isFocused: Boolean(focused_windows[app.id]),
+                    isMinimized: Boolean(minimized_windows[app.id]),
+                });
+            }
+        });
+        OVERLAY_WINDOW_LIST.forEach((overlay) => {
+            if (closed_windows[overlay.id] === false) {
+                summaries.push({
+                    id: overlay.id,
+                    title: overlay.title,
+                    icon: overlay.icon,
+                    isFocused: Boolean(focused_windows[overlay.id]),
+                    isMinimized: Boolean(minimized_windows[overlay.id]),
+                    isOverlay: true,
+                });
+            }
+        });
+        return summaries;
     };
 
     setWorkspaceState = (updater, callback) => {
@@ -845,9 +911,128 @@ export class Desktop extends Component {
             nextAppMap.set(app.id, app);
             nextValidAppIds.add(app.id);
         });
+        this.overlayRegistry.forEach((overlay) => {
+            const meta = {
+                id: overlay.id,
+                title: overlay.title,
+                icon: overlay.icon,
+                isOverlay: true,
+            };
+            nextAppMap.set(overlay.id, meta);
+            nextValidAppIds.add(overlay.id);
+        });
         this.appMap = nextAppMap;
         this.validAppIds = nextValidAppIds;
     }
+
+    isOverlayId = (id) => this.overlayRegistry?.has(id);
+
+    getOverlayMeta = (id) => this.overlayRegistry?.get(id) || null;
+
+    getOverlayState = (id) => {
+        const state = this.state.overlayWindows || {};
+        return state[id] || null;
+    };
+
+    buildOverlayStateMap = (prev, id, partial) => {
+        const current = (prev && prev[id]) || {};
+        return {
+            ...prev,
+            [id]: {
+                ...current,
+                ...partial,
+            },
+        };
+    };
+
+    isOverlayOpen = (id) => Boolean(this.state.overlayWindows?.[id]?.open);
+
+    getLauncherState = () => this.state.overlayWindows?.[LAUNCHER_OVERLAY_ID] || null;
+
+    openOverlay = (id, options = {}) => {
+        if (!this.isOverlayId(id)) return;
+        const { transitionState } = options;
+        this.promoteWindowInStack(id);
+        this.setState((prev) => {
+            const overlayWindows = this.buildOverlayStateMap(prev.overlayWindows, id, {
+                open: true,
+                minimized: false,
+                focused: true,
+            });
+            if (id === LAUNCHER_OVERLAY_ID) {
+                const current = overlayWindows[id] || {};
+                const nextTransition = transitionState
+                    || (current.transitionState === 'entered' ? 'entered' : 'entering');
+                overlayWindows[id] = { ...current, transitionState: nextTransition };
+            }
+            return {
+                overlayWindows,
+                closed_windows: { ...prev.closed_windows, [id]: false },
+                minimized_windows: { ...prev.minimized_windows, [id]: false },
+            };
+        }, () => {
+            this.focus(id);
+        });
+    };
+
+    toggleOverlayMinimize = (id) => {
+        if (!this.isOverlayId(id)) return;
+        if (this.state.minimized_windows?.[id]) {
+            this.openOverlay(id, { transitionState: 'entered' });
+        } else {
+            this.minimizeOverlay(id);
+        }
+    };
+
+    minimizeOverlay = (id) => {
+        if (!this.isOverlayId(id)) return;
+        this.setState((prev) => ({
+            overlayWindows: this.buildOverlayStateMap(prev.overlayWindows, id, {
+                minimized: true,
+                focused: false,
+            }),
+            minimized_windows: { ...prev.minimized_windows, [id]: true },
+            focused_windows: { ...prev.focused_windows, [id]: false },
+        }), () => {
+            this.giveFocusToLastApp();
+        });
+    };
+
+    closeOverlay = (id, options = {}) => {
+        if (!this.isOverlayId(id)) return;
+        const stack = this.getActiveStack();
+        const index = stack.indexOf(id);
+        if (index !== -1) {
+            stack.splice(index, 1);
+        }
+        if (this.windowPreviewCache?.has(id)) {
+            this.windowPreviewCache.delete(id);
+        }
+        const { transitionState } = options;
+        this.setState((prev) => {
+            const overlayWindows = this.buildOverlayStateMap(prev.overlayWindows, id, {
+                open: false,
+                minimized: false,
+                maximized: false,
+                focused: false,
+            });
+            if (id === LAUNCHER_OVERLAY_ID) {
+                const current = overlayWindows[id] || {};
+                overlayWindows[id] = {
+                    ...current,
+                    transitionState: transitionState || 'exiting',
+                };
+            }
+            return {
+                overlayWindows,
+                closed_windows: { ...prev.closed_windows, [id]: true },
+                minimized_windows: { ...prev.minimized_windows, [id]: false },
+                focused_windows: { ...prev.focused_windows, [id]: false },
+            };
+        }, () => {
+            this.giveFocusToLastApp();
+        });
+    };
 
     getAppById = (id) => {
         if (!this.appMap?.has(id)) {
@@ -1708,12 +1893,14 @@ export class Desktop extends Component {
             closed_windows: { ...snapshot.closed_windows },
             minimized_windows: { ...snapshot.minimized_windows },
             window_positions: { ...snapshot.window_positions },
-            showWindowSwitcher: false,
             switcherWindows: [],
             currentTheme: nextTheme,
         }, () => {
             this.broadcastWorkspaceState();
             this.giveFocusToLastApp();
+            if (this.isOverlayOpen(SWITCHER_OVERLAY_ID)) {
+                this.closeOverlay(SWITCHER_OVERLAY_ID);
+            }
         });
     };
 
@@ -1816,12 +2003,17 @@ export class Desktop extends Component {
                 this.realignIconPositions();
             }
         }
+        const prevLauncher = prevState.overlayWindows?.[LAUNCHER_OVERLAY_ID];
+        const nextLauncher = this.state.overlayWindows?.[LAUNCHER_OVERLAY_ID];
+
         if (
             prevState.activeWorkspace !== this.state.activeWorkspace ||
             prevState.closed_windows !== this.state.closed_windows ||
             prevState.focused_windows !== this.state.focused_windows ||
             prevState.minimized_windows !== this.state.minimized_windows ||
-            prevState.workspaces !== this.state.workspaces
+            prevState.workspaces !== this.state.workspaces ||
+            prevLauncher?.open !== nextLauncher?.open ||
+            prevLauncher?.transitionState !== nextLauncher?.transitionState
         ) {
             this.broadcastWorkspaceState();
         }
@@ -1840,10 +2032,12 @@ export class Desktop extends Component {
             this.defaultThemeConfig = { ...this.defaultThemeConfig, ...nextTheme };
         }
 
-        if (!prevState.allAppsView && this.state.allAppsView) {
+        const launcherWasOpen = Boolean(prevLauncher?.open);
+        const launcherIsOpen = Boolean(nextLauncher?.open);
+        if (!launcherWasOpen && launcherIsOpen) {
             this.activateAllAppsFocusTrap();
             this.focusAllAppsSearchInput();
-        } else if (prevState.allAppsView && !this.state.allAppsView) {
+        } else if (launcherWasOpen && !launcherIsOpen) {
             this.deactivateAllAppsFocusTrap();
             this.restoreFocusToPreviousElement();
         }
@@ -1885,6 +2079,30 @@ export class Desktop extends Component {
         const appId = detail.appId;
         const action = detail.action || 'toggle';
         if (!appId || !this.validAppIds.has(appId)) return;
+
+        if (this.isOverlayId(appId)) {
+            switch (action) {
+                case 'minimize':
+                    if (!this.state.minimized_windows[appId]) {
+                        this.minimizeOverlay(appId);
+                    }
+                    break;
+                case 'focus':
+                case 'open':
+                    this.openOverlay(appId, { transitionState: 'entered' });
+                    break;
+                case 'toggle':
+                default:
+                    if (this.state.minimized_windows[appId]) {
+                        this.openOverlay(appId, { transitionState: 'entered' });
+                    } else if (this.state.focused_windows[appId]) {
+                        this.minimizeOverlay(appId);
+                    } else {
+                        this.openOverlay(appId, { transitionState: 'entered' });
+                    }
+            }
+            return;
+        }
 
         switch (action) {
             case 'minimize':
@@ -2045,7 +2263,7 @@ export class Desktop extends Component {
     handleGlobalShortcut = (e) => {
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
-            if (!this.state.showWindowSwitcher) {
+            if (!this.isOverlayOpen(SWITCHER_OVERLAY_ID)) {
                 this.openWindowSwitcher();
             }
         } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
@@ -2076,7 +2294,7 @@ export class Desktop extends Component {
         }
         else if (e.ctrlKey && e.key === 'Escape' && !e.repeat) {
             e.preventDefault();
-            if (this.state.allAppsView) {
+            if (this.isOverlayOpen(LAUNCHER_OVERLAY_ID)) {
                 this.closeAllAppsOverlay();
             } else {
                 this.openAllAppsOverlay('Ctrl+Escape');
@@ -2085,7 +2303,7 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcutKeyup = (event) => {
-        if (!this.state.allAppsView) return;
+        if (!this.isOverlayOpen(LAUNCHER_OVERLAY_ID)) return;
 
         if (event.key === 'Escape') {
             event.preventDefault();
@@ -2149,13 +2367,19 @@ export class Desktop extends Component {
 
         const enter = () => {
             this.setState((state) => {
-                if (!state.allAppsView) return null;
-                return { allAppsTransitionState: 'entered' };
+                const launcher = state.overlayWindows?.[LAUNCHER_OVERLAY_ID];
+                if (!launcher?.open) return null;
+                return {
+                    overlayWindows: this.buildOverlayStateMap(state.overlayWindows, LAUNCHER_OVERLAY_ID, {
+                        transitionState: 'entered',
+                    }),
+                };
             });
             this.allAppsEnterRaf = null;
         };
 
-        if (!this.state.allAppsView) {
+        const launcherState = this.getLauncherState();
+        if (!launcherState?.open) {
             if (typeof document !== 'undefined') {
                 const activeElement = document.activeElement;
                 if (activeElement && activeElement !== document.body) {
@@ -2165,21 +2389,24 @@ export class Desktop extends Component {
                 }
             }
 
-            this.setState({ allAppsView: true, allAppsTransitionState: 'entering' }, () => {
-                if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
-                    this.allAppsEnterRaf = window.requestAnimationFrame(enter);
-                } else {
-                    enter();
-                }
-            });
+            this.openOverlay(LAUNCHER_OVERLAY_ID, { transitionState: 'entering' });
+            if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                this.allAppsEnterRaf = window.requestAnimationFrame(enter);
+            } else {
+                enter();
+            }
         } else {
-            this.setState({ allAppsTransitionState: 'entered' });
+            this.setState((state) => ({
+                overlayWindows: this.buildOverlayStateMap(state.overlayWindows, LAUNCHER_OVERLAY_ID, {
+                    transitionState: 'entered',
+                }),
+            }));
         }
         this.allAppsTriggerKey = triggerKey;
     }
 
     closeAllAppsOverlay = () => {
-        if (!this.state.allAppsView) {
+        if (!this.isOverlayOpen(LAUNCHER_OVERLAY_ID)) {
             this.allAppsTriggerKey = null;
             return;
         }
@@ -2187,12 +2414,16 @@ export class Desktop extends Component {
             clearTimeout(this.allAppsCloseTimeout);
             this.allAppsCloseTimeout = null;
         }
-        this.setState({ allAppsView: false, allAppsTransitionState: 'exiting' }, () => {
-            this.allAppsCloseTimeout = setTimeout(() => {
-                this.setState({ allAppsTransitionState: 'exited' });
-                this.allAppsCloseTimeout = null;
-            }, 220);
-        });
+        this.closeOverlay(LAUNCHER_OVERLAY_ID, { transitionState: 'exiting' });
+        this.allAppsCloseTimeout = setTimeout(() => {
+            this.setState((state) => ({
+                overlayWindows: this.buildOverlayStateMap(state.overlayWindows, LAUNCHER_OVERLAY_ID, {
+                    transitionState: 'exited',
+                }),
+            }));
+            this.allAppsCloseTimeout = null;
+        }, 220);
+        this.allAppsTriggerKey = null;
     }
 
     activateAllAppsFocusTrap = () => {
@@ -2200,7 +2431,7 @@ export class Desktop extends Component {
 
         this.allAppsFocusTrapHandler = (event) => {
             if (event.key !== 'Tab') return;
-            if (!this.state.allAppsView) return;
+            if (!this.isOverlayOpen(LAUNCHER_OVERLAY_ID)) return;
 
             const overlay = this.allAppsOverlayRef?.current;
             if (!overlay) return;
@@ -2343,7 +2574,7 @@ export class Desktop extends Component {
         }
 
         const requestId = ++this.windowSwitcherRequestId;
-        this.setState({ showWindowSwitcher: true });
+        this.openOverlay(SWITCHER_OVERLAY_ID);
 
         Promise.resolve(this.buildWindowSwitcherEntries(availableIds))
             .then((windows) => {
@@ -2352,25 +2583,29 @@ export class Desktop extends Component {
                 }
 
                 if (!windows.length) {
-                    this.setState({ showWindowSwitcher: false, switcherWindows: [] });
+                    this.setState({ switcherWindows: [] });
+                    this.closeOverlay(SWITCHER_OVERLAY_ID);
                     return;
                 }
 
-                this.setState({ switcherWindows: windows, showWindowSwitcher: true });
+                this.setState({ switcherWindows: windows });
             })
             .catch(() => {
                 if (this.windowSwitcherRequestId === requestId) {
-                    this.setState({ showWindowSwitcher: false, switcherWindows: [] });
+                    this.setState({ switcherWindows: [] });
+                    this.closeOverlay(SWITCHER_OVERLAY_ID);
                 }
             });
     }
 
     closeWindowSwitcher = () => {
-        this.setState({ showWindowSwitcher: false, switcherWindows: [] });
+        this.setState({ switcherWindows: [] });
+        this.closeOverlay(SWITCHER_OVERLAY_ID);
     }
 
     selectWindow = (id) => {
-        this.setState({ showWindowSwitcher: false, switcherWindows: [] }, () => {
+        this.setState({ switcherWindows: [] }, () => {
+            this.closeOverlay(SWITCHER_OVERLAY_ID);
             this.openApp(id);
         });
     }
@@ -2741,6 +2976,80 @@ export class Desktop extends Component {
         }).filter(Boolean);
     }
 
+    renderOverlayWindows = () => {
+        const elements = [];
+        const overlays = this.state.overlayWindows || {};
+
+        const launcherState = overlays[LAUNCHER_OVERLAY_ID];
+        if (launcherState) {
+            const transitionState = launcherState.transitionState || (launcherState.open ? 'entered' : 'exited');
+            const shouldRender = launcherState.open || ['entering', 'exiting'].includes(transitionState);
+            const overlayActive = launcherState.open && !launcherState.minimized;
+            if (shouldRender) {
+                const overlayClasses = [
+                    'fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto px-4 py-12 sm:py-16',
+                    'bg-slate-950/70 backdrop-blur-xl transition-opacity duration-200 ease-out',
+                    overlayActive ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
+                ].join(' ');
+                const panelClasses = [
+                    'w-full max-w-6xl transform transition-all duration-200 ease-out focus:outline-none',
+                    overlayActive ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 -translate-y-2',
+                ].join(' ');
+
+                elements.push(
+                    <div
+                        key={LAUNCHER_OVERLAY_ID}
+                        ref={this.allAppsOverlayRef}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="all-apps-overlay-title"
+                        aria-hidden={!overlayActive}
+                        tabIndex={-1}
+                        className={overlayClasses}
+                    >
+                        <div className={panelClasses}>
+                            <AllApplications
+                                apps={apps}
+                                games={games}
+                                recentApps={this.getActiveStack()}
+                                openApp={this.openApp}
+                                searchInputRef={this.allAppsSearchRef}
+                                headingId="all-apps-overlay-title"
+                            />
+                        </div>
+                    </div>
+                );
+            }
+        }
+
+        const shortcutState = overlays[SHORTCUT_OVERLAY_ID];
+        if (shortcutState?.open && !shortcutState.minimized) {
+            elements.push(
+                <ShortcutSelector
+                    key={SHORTCUT_OVERLAY_ID}
+                    apps={apps}
+                    games={games}
+                    onSelect={this.addShortcutToDesktop}
+                    onClose={() => this.closeOverlay(SHORTCUT_OVERLAY_ID)}
+                />
+            );
+        }
+
+        const switcherState = overlays[SWITCHER_OVERLAY_ID];
+        if (switcherState?.open && !switcherState.minimized) {
+            elements.push(
+                <WindowSwitcher
+                    key={SWITCHER_OVERLAY_ID}
+                    windows={this.state.switcherWindows}
+                    onSelect={this.selectWindow}
+                    onClose={this.closeWindowSwitcher}
+                />
+            );
+        }
+
+        return elements;
+    }
+
     updateWindowPosition = (id, x, y) => {
         const snap = this.props.snapEnabled
             ? (v) => Math.round(v / 8) * 8
@@ -2755,7 +3064,9 @@ export class Desktop extends Component {
 
     saveSession = () => {
         if (!this.props.setSession) return;
-        const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
+        const openWindows = Object.keys(this.state.closed_windows).filter((id) => (
+            this.state.closed_windows[id] === false && !this.isOverlayId(id)
+        ));
         const safeTopOffset = measureWindowTopOffset();
         const windows = openWindows.map(id => {
             const position = this.state.window_positions[id] || {};
@@ -2772,15 +3083,21 @@ export class Desktop extends Component {
     }
 
     hasMinimised = (objId) => {
-        let minimized_windows = this.state.minimized_windows;
-        var focused_windows = this.state.focused_windows;
-
-        // remove focus and minimise this window
-        minimized_windows[objId] = true;
-        focused_windows[objId] = false;
-        this.setWorkspaceState({ minimized_windows, focused_windows });
-
-        this.giveFocusToLastApp();
+        if (this.isOverlayId(objId)) {
+            this.minimizeOverlay(objId);
+            return;
+        }
+        this.setState((prev) => {
+            const minimized_windows = { ...prev.minimized_windows, [objId]: true };
+            const focused_windows = { ...prev.focused_windows, [objId]: false };
+            this.commitWorkspacePartial({ minimized_windows, focused_windows }, prev.activeWorkspace);
+            return {
+                minimized_windows,
+                focused_windows,
+            };
+        }, () => {
+            this.giveFocusToLastApp();
+        });
     }
 
     giveFocusToLastApp = () => {
@@ -2824,6 +3141,10 @@ export class Desktop extends Component {
             console.warn(`Attempted to open unknown app: ${objId}`);
             return;
         }
+        if (this.isOverlayId(objId)) {
+            this.openOverlay(objId);
+            return;
+        }
         const context = params && typeof params === 'object'
             ? {
                 ...params,
@@ -2843,6 +3164,10 @@ export class Desktop extends Component {
 
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
+
+        if (!this.isOverlayId(objId) && this.isOverlayOpen(LAUNCHER_OVERLAY_ID)) {
+            this.closeAllAppsOverlay();
+        }
 
         // if app is already open, focus it instead of spawning a new window
         if (this.state.closed_windows[objId] === false) {
@@ -2910,8 +3235,8 @@ export class Desktop extends Component {
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setWorkspaceState({ closed_windows, favourite_apps, allAppsView: false }, () => {
-                    const nextState = { closed_windows, favourite_apps, allAppsView: false };
+                this.setWorkspaceState({ closed_windows, favourite_apps }, () => {
+                    const nextState = { closed_windows, favourite_apps };
                     if (context) {
                         nextState.window_context = contextState;
                     }
@@ -2925,6 +3250,10 @@ export class Desktop extends Component {
     }
 
     closeApp = async (objId) => {
+        if (this.isOverlayId(objId)) {
+            this.closeOverlay(objId);
+            return;
+        }
 
         // capture window snapshot
         let image = null;
@@ -3011,19 +3340,33 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
-        // removes focus from all window and
-        // gives focus to window with 'id = objId'
         this.promoteWindowInStack(objId);
-        var focused_windows = this.state.focused_windows;
-        focused_windows[objId] = true;
-        for (let key in focused_windows) {
-            if (focused_windows.hasOwnProperty(key)) {
-                if (key !== objId) {
-                    focused_windows[key] = false;
-                }
+        this.setState((prev) => {
+            const nextFocused = { ...prev.focused_windows };
+            Object.keys(nextFocused).forEach((key) => {
+                nextFocused[key] = key === objId;
+            });
+            if (!Object.prototype.hasOwnProperty.call(nextFocused, objId)) {
+                nextFocused[objId] = true;
             }
-        }
-        this.setWorkspaceState({ focused_windows });
+            let overlayWindows = prev.overlayWindows;
+            if (overlayWindows) {
+                overlayWindows = Object.keys(overlayWindows).reduce((acc, key) => {
+                    const current = overlayWindows[key];
+                    acc[key] = {
+                        ...current,
+                        focused: key === objId,
+                        minimized: key === objId ? false : current.minimized,
+                    };
+                    return acc;
+                }, {});
+            }
+            this.commitWorkspacePartial({ focused_windows: nextFocused }, prev.activeWorkspace);
+            return {
+                focused_windows: nextFocused,
+                overlayWindows,
+            };
+        });
     }
 
     addNewFolder = () => {
@@ -3031,7 +3374,7 @@ export class Desktop extends Component {
     }
 
     openShortcutSelector = () => {
-        this.setState({ showShortcutSelector: true });
+        this.openOverlay(SHORTCUT_OVERLAY_ID);
     }
 
     addShortcutToDesktop = (app_id) => {
@@ -3044,7 +3387,8 @@ export class Desktop extends Component {
             shortcuts.push(app_id);
             safeLocalStorage?.setItem('app_shortcuts', JSON.stringify(shortcuts));
         }
-        this.setState({ showShortcutSelector: false }, this.updateAppsData);
+        this.closeOverlay(SHORTCUT_OVERLAY_ID);
+        this.updateAppsData();
     }
 
     checkForAppShortcuts = () => {
@@ -3103,7 +3447,7 @@ export class Desktop extends Component {
     };
 
     showAllApps = () => {
-        if (this.state.allAppsView) {
+        if (this.isOverlayOpen(LAUNCHER_OVERLAY_ID)) {
             this.closeAllAppsOverlay();
         } else {
             this.openAllAppsOverlay();
@@ -3227,16 +3571,29 @@ export class Desktop extends Component {
                     onMinimize={() => {
                         const id = this.state.context_app;
                         if (!id) return;
+                        const isOverlay = this.isOverlayId(id);
                         if (this.state.minimized_windows[id]) {
-                            this.openApp(id);
+                            if (isOverlay) {
+                                this.openOverlay(id, { transitionState: 'entered' });
+                            } else {
+                                this.openApp(id);
+                            }
                         } else {
-                            this.hasMinimised(id);
+                            if (isOverlay) {
+                                this.minimizeOverlay(id);
+                            } else {
+                                this.hasMinimised(id);
+                            }
                         }
                     }}
                     onClose={() => {
                         const id = this.state.context_app;
                         if (!id) return;
-                        this.closeApp(id);
+                        if (this.isOverlayId(id)) {
+                            this.closeOverlay(id);
+                        } else {
+                            this.closeApp(id);
+                        }
                     }}
                     onCloseMenu={this.hideAllContextMenu}
                 />
@@ -3249,61 +3606,7 @@ export class Desktop extends Component {
                     )
                 }
 
-                {
-                    (() => {
-                        const { allAppsView, allAppsTransitionState } = this.state;
-                        const shouldRenderAllApps =
-                            allAppsView || ['entering', 'exiting'].includes(allAppsTransitionState);
-                        if (!shouldRenderAllApps) return null;
-
-                        const overlayActive = allAppsView;
-                        const overlayClasses = [
-                            'fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto px-4 py-12 sm:py-16',
-                            'bg-slate-950/70 backdrop-blur-xl transition-opacity duration-200 ease-out',
-                            overlayActive ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
-                        ].join(' ');
-
-                        const panelClasses = [
-                            'w-full max-w-6xl transform transition-all duration-200 ease-out focus:outline-none',
-                            overlayActive ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 -translate-y-2',
-                        ].join(' ');
-
-                        return (
-                            <div
-                                ref={this.allAppsOverlayRef}
-                                role="dialog"
-                                aria-modal="true"
-                                aria-labelledby="all-apps-overlay-title"
-                                aria-hidden={!overlayActive}
-                                tabIndex={-1}
-                                className={overlayClasses}
-                            >
-                                <div className={panelClasses}>
-                                    <AllApplications
-                                        apps={apps}
-                                        games={games}
-                                        recentApps={this.getActiveStack()}
-                                        openApp={this.openApp}
-                                        searchInputRef={this.allAppsSearchRef}
-                                        headingId="all-apps-overlay-title"
-                                    />
-                                </div>
-                            </div>
-                        );
-                    })()
-                }
-
-                { this.state.showShortcutSelector ?
-                    <ShortcutSelector apps={apps}
-                        games={games}
-                        onSelect={this.addShortcutToDesktop}
-                        onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
-
-                { this.state.showWindowSwitcher ?
-                    <WindowSwitcher
-                        windows={this.state.switcherWindows}
-                        onSelect={this.selectWindow}
-                        onClose={this.closeWindowSwitcher} /> : null}
+                {this.renderOverlayWindows()}
 
                 <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
                     {this.state.liveRegionMessage}
