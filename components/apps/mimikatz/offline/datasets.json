@@ -1,0 +1,34 @@
+[
+  {
+    "id": "training-workstation",
+    "title": "Training Workstation Snapshot",
+    "summary": "Extract from a sanitized LSASS memory capture of a training workstation where a domain admin signed in to the demo environment.",
+    "labSafety": "Redacted and synthetic credentials. Use only inside the closed training lab. Do not export or reuse in production networks.",
+    "artifacts": [
+      { "label": "Capture time", "value": "2024-04-02 18:22 UTC" },
+      { "label": "Acquisition", "value": "sekurlsa::logonpasswords" }
+    ],
+    "flow": [
+      "Review the briefing to confirm sanitized dataset use and ensure lab mode is toggled on in the shell.",
+      "Load the dump to inspect credential artifacts and identify the demo administrator account.",
+      "Pivot into remediation guidance by documenting the synthetic password rotation steps."
+    ],
+    "dump": "[*] sekurlsa::logonpasswords\\n    username : LAB\\\\analyst\\n    domain   : LAB.LOCAL\\n    password : 0ffline!Lab2024\\n\\n[*] sekurlsa::logonpasswords\\n    username : DEMO\\\\domain-admin\\n    domain   : DEMO.LOCAL\\n    password : Adm1n-Reset-Only\\n"
+  },
+  {
+    "id": "incident-playback",
+    "title": "Incident Playback Timeline",
+    "summary": "Canned event timeline from an incident response tabletop with two exposed service accounts.",
+    "labSafety": "All values are fictional and reserved for tabletop exercises. Keep the dataset offline and delete exports after drills.",
+    "artifacts": [
+      { "label": "Source", "value": "Event log replay" },
+      { "label": "Suggested module", "value": "sekurlsa::tickets" }
+    ],
+    "flow": [
+      "Load the playback dataset and correlate accounts with the tabletop inject briefing.",
+      "Use the checklist below to determine which accounts require resets and which can be disabled.",
+      "Summarize containment steps in the lab notebook before clearing the dataset from the window."
+    ],
+    "dump": "[timestamp] 2024-03-11 09:32:18Z\\nusername: SERVICE\\\\backup-job\\npassword: Backup!RotationOnly\\n\\n[timestamp] 2024-03-11 09:45:02Z\\nuser = SERVICE\\\\monitoring-bot\\npassword = M0nitor!ng-Play\\n"
+  }
+]
