@@ -117,6 +117,44 @@ describe('Window snapping preview', () => {
     expect((preview as HTMLElement).style.backdropFilter).toBe('brightness(1.1) saturate(1.2)');
   });
 
+  it('marks preview as hidden from assistive technology', () => {
+    setViewport(1920, 1080);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 5,
+      top: 150,
+      right: 105,
+      bottom: 250,
+      width: 100,
+      height: 100,
+      x: 5,
+      y: 150,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+
+    const preview = screen.getByTestId('snap-preview');
+    expect(preview).toHaveAttribute('aria-hidden', 'true');
+    expect(preview).toHaveAttribute('role', 'presentation');
+  });
+
   it('hides preview when away from edge', () => {
     const ref = React.createRef<any>();
     render(
