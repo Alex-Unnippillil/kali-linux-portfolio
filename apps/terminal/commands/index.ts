@@ -37,11 +37,69 @@ function alias(args: string, ctx: CommandContext) {
   }
 }
 
+const help: CommandHandler = (_args, ctx) => {
+  const commands = ctx.listCommands();
+  ctx.writeLine(`Available commands: ${commands.join(', ')}`);
+  ctx.writeLine(
+    'Example scripts: https://github.com/unnippillil/kali-linux-portfolio/tree/main/scripts/examples',
+  );
+};
+
+const ls: CommandHandler = (_args, ctx) => {
+  const entries = Object.keys(ctx.files);
+  ctx.writeLine(entries.length ? entries.join('  ') : '');
+};
+
+const cat: CommandHandler = async (args, ctx) => {
+  const target = args.trim();
+  if (!target) {
+    ctx.writeLine('Usage: cat <file>');
+    return;
+  }
+  if (target in ctx.files) {
+    ctx.writeLine(ctx.files[target]);
+    return;
+  }
+  await ctx.runWorker(`cat ${args}`);
+};
+
+const clear: CommandHandler = (_args, ctx) => {
+  ctx.clear();
+};
+
+const open: CommandHandler = (args, ctx) => {
+  const target = args.trim();
+  if (!target) {
+    ctx.writeLine('Usage: open <app>');
+    return;
+  }
+  if (ctx.openApp) {
+    ctx.openApp(target);
+    ctx.writeLine(`Opening ${target}`);
+  } else {
+    ctx.writeLine('Open command unavailable');
+  }
+};
+
+const about: CommandHandler = (_args, ctx) => {
+  ctx.writeLine('This terminal is powered by xterm.js');
+};
+
+const date: CommandHandler = (_args, ctx) => {
+  ctx.writeLine(new Date().toString());
+};
+
 const registry: Record<string, CommandHandler> = {
   man,
   history,
   alias,
-  cat: (args, ctx) => ctx.runWorker(`cat ${args}`),
+  help,
+  ls,
+  cat,
+  clear,
+  open,
+  about,
+  date,
   grep: (args, ctx) => ctx.runWorker(`grep ${args}`),
   jq: (args, ctx) => ctx.runWorker(`jq ${args}`),
 };

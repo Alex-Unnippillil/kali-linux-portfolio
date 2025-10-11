@@ -10,8 +10,10 @@ jest.mock(
       onData: jest.fn(),
       onKey: jest.fn(),
       onPaste: jest.fn(),
+      onScroll: jest.fn(),
       dispose: jest.fn(),
       clear: jest.fn(),
+      options: { scrollback: 0 },
     })),
   }),
   { virtual: true }
@@ -40,13 +42,17 @@ import TerminalTabs from '../apps/terminal/tabs';
 describe('Terminal component', () => {
   const openApp = jest.fn();
 
+  beforeEach(() => {
+    openApp.mockClear();
+  });
+
   it('renders container and exposes runCommand', async () => {
     const ref = createRef<any>();
     render(<Terminal ref={ref} openApp={openApp} />);
     await act(async () => {});
     expect(ref.current).toBeTruthy();
-    act(() => {
-      ref.current.runCommand('help');
+    await act(async () => {
+      await ref.current.runCommand('help');
     });
     expect(ref.current.getContent()).toContain('help');
   });
@@ -55,10 +61,44 @@ describe('Terminal component', () => {
     const ref = createRef<any>();
     render(<Terminal ref={ref} openApp={openApp} />);
     await act(async () => {});
-    act(() => {
-      ref.current.runCommand('open calculator');
+    await act(async () => {
+      await ref.current.runCommand('open calculator');
     });
     expect(openApp).toHaveBeenCalledWith('calculator');
+  });
+
+  it('handles ls and cat commands via registry', async () => {
+    const ref = createRef<any>();
+    render(<Terminal ref={ref} openApp={openApp} />);
+    await act(async () => {});
+    await act(async () => {
+      await ref.current.runCommand('ls');
+    });
+    expect(ref.current.getContent()).toContain('README.md');
+    await act(async () => {
+      await ref.current.runCommand('cat README.md');
+    });
+    expect(ref.current.getContent()).toContain('Welcome to the web terminal.');
+  });
+
+  it('clears history and prints about/date messages', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2023-01-01T00:00:00Z'));
+    const ref = createRef<any>();
+    render(<Terminal ref={ref} openApp={openApp} />);
+    await act(async () => {});
+    await act(async () => {
+      await ref.current.runCommand('about');
+    });
+    expect(ref.current.getContent()).toContain('powered by xterm.js');
+    await act(async () => {
+      await ref.current.runCommand('date');
+    });
+    expect(ref.current.getContent()).toContain('Jan 01 2023');
+    await act(async () => {
+      await ref.current.runCommand('clear');
+    });
+    expect(ref.current.getContent()).toBe('');
+    jest.useRealTimers();
   });
 
   it('supports tab management shortcuts', async () => {

@@ -22,10 +22,7 @@ This document tracks planned improvements and new features for the desktop portf
 - Register with `createDynamicApp('calc','Calc')` and export `displayCalc`.
 
 ### Terminal
-- Import `@xterm/xterm/css/xterm.css` and `FitAddon`; call `fitAddon.fit()` on mount and resize.
-- Implement command registry (`help`, `ls`, `cat`, `clear`, `open <app>`, `about`, `date`).
-- Add paste support, auto-complete, and scrollback limit.
-- Keep client-only dynamic import.
+- Baseline session manager, command registry, paste/autocomplete, and FitAddon wiring are complete; track future enhancements as new commands are scoped.
 
 ### Visual Studio Code
 - App now embeds a StackBlitz IDE via iframe instead of a local Monaco editor.
