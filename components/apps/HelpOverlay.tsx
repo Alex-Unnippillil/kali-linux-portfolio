@@ -157,8 +157,9 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
     controls: "Swap adjacent candies by dragging or clicking.",
   },
   gomoku: {
-    objective: "Get five stones in a row.",
-    controls: "Click a grid intersection to place a stone.",
+    objective: "Get five stones in a row before your opponent.",
+    controls:
+      "Click a grid intersection to place a stone. Use the toolbar to switch between local and AI play, adjust difficulty, toggle sound, or reset the board.",
   },
   pinball: {
     objective: "Score points by hitting targets.",
