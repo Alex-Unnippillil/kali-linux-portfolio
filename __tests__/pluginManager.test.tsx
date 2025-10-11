@@ -23,7 +23,16 @@ describe('PluginManager', () => {
     (global as any).fetch = jest.fn((url: string) => {
       if (url === '/api/plugins') {
         return Promise.resolve({
-          json: () => Promise.resolve([{ id: 'demo', file: 'demo.json' }]),
+          json: () =>
+            Promise.resolve([
+              {
+                id: 'demo',
+                file: 'demo.json',
+                sandbox: 'worker',
+                size: 128,
+                description: 'Demo plugin that echoes content.',
+              },
+            ]),
         });
       }
       if (url === '/api/plugins/demo.json') {
@@ -40,8 +49,15 @@ describe('PluginManager', () => {
     });
   });
 
-  test('installs plugin from catalog', async () => {
+  test('installs plugin from catalog and shows metadata', async () => {
     render(<PluginManager />);
+    expect(await screen.findByText(/Sandbox: Worker/i)).toBeInTheDocument();
+    expect(screen.getByText(/128 B/)).toBeInTheDocument();
+    const listItem = screen.getByText('demo').closest('li');
+    expect(listItem).toHaveAttribute(
+      'title',
+      'Demo plugin that echoes content.'
+    );
     const button = await screen.findByText('Install');
     fireEvent.click(button);
     await waitFor(() =>
@@ -67,6 +83,7 @@ describe('PluginManager', () => {
     (global as any).URL.revokeObjectURL = jest.fn();
     render(<PluginManager />);
     expect(await screen.findByText(/Last Run: demo/)).toBeInTheDocument();
+    expect(screen.getByText(/Export CSV/)).toBeInTheDocument();
     const exportBtn = screen.getByText('Export CSV');
     fireEvent.click(exportBtn);
     expect((global as any).URL.createObjectURL).toHaveBeenCalled();
