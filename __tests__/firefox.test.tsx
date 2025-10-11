@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Firefox from '../components/apps/firefox';
 
@@ -9,15 +9,11 @@ describe('Firefox app', () => {
     sessionStorage.clear();
   });
 
-  it('renders the default address with a simulation fallback', () => {
+  it('renders the default address inside the iframe shell', () => {
     render(<Firefox />);
     const input = screen.getByLabelText('Address');
     expect(input).toHaveValue('https://www.kali.org/docs/');
-    expect(screen.getByRole('heading', { name: 'Kali Linux Documentation' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /open kali.org\/docs/i })).toHaveAttribute(
-      'href',
-      'https://www.kali.org/docs/'
-    );
+    expect(screen.getByTitle('Firefox')).toHaveAttribute('src', 'https://www.kali.org/docs/');
   });
 
   it('navigates to entered urls', async () => {
@@ -32,14 +28,20 @@ describe('Firefox app', () => {
     expect(localStorage.getItem('firefox:last-url')).toBe('https://example.com/');
   });
 
-  it('opens bookmarks when clicked and shows their simulations', async () => {
-    const user = userEvent.setup();
+  it('restores the previous address on mount', () => {
+    localStorage.setItem('firefox:last-url', 'https://www.kali.org/blog/');
     render(<Firefox />);
-    const bookmark = await screen.findByRole('button', { name: 'Kali NetHunter' });
-    await user.click(bookmark);
-    await waitFor(() =>
-      expect(screen.getByRole('heading', { name: 'Kali NetHunter & Downloads' })).toBeInTheDocument()
-    );
-    expect(localStorage.getItem('firefox:last-url')).toBe('https://www.kali.org/get-kali/#kali-platforms');
+    const input = screen.getByLabelText('Address');
+    expect(input).toHaveValue('https://www.kali.org/blog/');
+    expect(screen.getByTitle('Firefox')).toHaveAttribute('src', 'https://www.kali.org/blog/');
+  });
+
+  it('consumes staged start URLs from session storage', () => {
+    sessionStorage.setItem('firefox:start-url', 'forums.kali.org');
+    render(<Firefox />);
+    const input = screen.getByLabelText('Address');
+    expect(input).toHaveValue('https://forums.kali.org/');
+    expect(localStorage.getItem('firefox:last-url')).toBe('https://forums.kali.org/');
+    expect(sessionStorage.getItem('firefox:start-url')).toBeNull();
   });
 });
