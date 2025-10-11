@@ -65,7 +65,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   frogger: {
     objective: "Cross the road and river to reach the goal.",
-    controls: "Use the arrow keys to move the frog.",
+    controls:
+      "Arrow keys move the frog. P pauses/resumes, R resets, M toggles sound, T enables slow time.",
   },
   hangman: {
     objective: "Guess the word before the hangman is complete.",

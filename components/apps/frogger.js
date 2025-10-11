@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
+import { useGameLoop } from './Games/common';
 import { vibrate } from './Games/common/haptics';
 import {
   generateLaneConfig,
@@ -7,6 +8,7 @@ import {
   getRandomSkin,
 } from '../../apps/games/frogger/config';
 import { getLevelConfig } from '../../apps/games/frogger/levels';
+import { safeLocalStorage } from '../../utils/safeStorage';
 
 const WIDTH = 7;
 const HEIGHT = 8;
@@ -114,6 +116,30 @@ const updateLogs = (prev, frogPos, dt) => {
   return { lanes: newLanes, frog: newFrog, dead };
 };
 
+export const FROGGER_HIGHSCORE_KEY = 'frogger-highscore';
+
+export const loadFroggerHighScore = (storage = safeLocalStorage) => {
+  if (!storage) return 0;
+  const raw = storage.getItem(FROGGER_HIGHSCORE_KEY);
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+
+export const persistFroggerHighScore = (score, storage = safeLocalStorage) => {
+  if (!storage) return;
+  const safeScore = Math.max(0, Math.floor(score));
+  storage.setItem(FROGGER_HIGHSCORE_KEY, String(safeScore));
+};
+
+export const syncFroggerHighScore = (score, storage = safeLocalStorage) => {
+  const current = loadFroggerHighScore(storage);
+  if (score > current) {
+    persistFroggerHighScore(score, storage);
+    return score;
+  }
+  return current;
+};
+
 const Frogger = () => {
   const [frog, setFrog] = useState(initialFrog);
   const frogRef = useRef(frog);
@@ -139,9 +165,9 @@ const Frogger = () => {
   const [difficulty, setDifficulty] = useState('normal');
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(paused);
-  const [sound, setSound] = useState(true);
-  const soundRef = useRef(sound);
-  const [highScore, setHighScore] = useState(0);
+  const [muted, setMuted] = useState(false);
+  const mutedRef = useRef(muted);
+  const [highScore, setHighScore] = useState(() => loadFroggerHighScore());
   const [reduceMotion, setReduceMotion] = useState(false);
   const reduceMotionRef = useRef(reduceMotion);
   const canvasRef = useRef(null);
@@ -168,7 +194,7 @@ const Frogger = () => {
   useEffect(() => { logsRef.current = logs; }, [logs]);
   useEffect(() => { padsRef.current = pads; }, [pads]);
   useEffect(() => { pausedRef.current = paused; }, [paused]);
-  useEffect(() => { soundRef.current = sound; }, [sound]);
+  useEffect(() => { mutedRef.current = muted; }, [muted]);
   useEffect(() => { reduceMotionRef.current = reduceMotion; }, [reduceMotion]);
   useEffect(() => { slowTimeRef.current = slowTime; }, [slowTime]);
   useEffect(() => { livesRef.current = lives; }, [lives]);
@@ -176,18 +202,9 @@ const Frogger = () => {
   useEffect(() => { statusRef.current = status; }, [status]);
 
   useEffect(() => {
-    const saved = Number(localStorage.getItem('frogger-highscore') || 0);
-    setHighScore(saved);
-  }, []);
-  useEffect(() => {
-    if (score > highScore) {
-      setHighScore(score);
-      try {
-        localStorage.setItem('frogger-highscore', String(score));
-      } catch {
-        /* ignore */
-      }
-    }
+    if (score <= highScore) return;
+    const updated = syncFroggerHighScore(score);
+    if (updated !== highScore) setHighScore(updated);
   }, [score, highScore]);
 
   useEffect(() => {
@@ -199,7 +216,7 @@ const Frogger = () => {
   }, []);
 
   const playTone = (freq, duration = 0.1) => {
-    if (!soundRef.current) return;
+    if (mutedRef.current) return;
     if (!audioCtxRef.current)
       audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
     const ctx = audioCtxRef.current;
@@ -245,12 +262,13 @@ const Frogger = () => {
       else if (e.key === 'ArrowUp') moveFrog(0, -1);
       else if (e.key === 'ArrowDown') moveFrog(0, 1);
       else if (e.key === 'p' || e.key === 'P') setPaused((p) => !p);
-      else if (e.key === 'm' || e.key === 'M') setSound((s) => !s);
+      else if (e.key === 'm' || e.key === 'M') setMuted((m) => !m);
+      else if (e.key === 'r' || e.key === 'R') reset(true);
       else if (e.key === 't' || e.key === 'T') setSlowTime((s) => !s);
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [moveFrog]);
+  }, [moveFrog, reset]);
 
   useEffect(() => {
     const container = document.getElementById('frogger-container');
@@ -292,6 +310,7 @@ const Frogger = () => {
       setCars(lanes.cars.map((l, i) => initLane(l, i + 1)));
       setLogs(lanes.logs.map((l, i) => initLane(l, i + 101)));
       setStatus('');
+      pendingDeathRef.current = null;
       if (full) {
         setScore(0);
         setLives(3);
@@ -300,6 +319,7 @@ const Frogger = () => {
         setSkin(getRandomSkin());
         nextLife.current = 500;
         deathStreakRef.current = 0;
+        setPaused(false);
         ReactGA.event({
           category: 'Frogger',
           action: 'level_start',
@@ -337,170 +357,168 @@ const Frogger = () => {
     [level, reset]
   );
 
-  useEffect(() => {
-    let last = performance.now();
-    let raf;
-    const draw = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      const colors = SKINS[skin];
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const phase = rippleRef.current;
-      for (let y = 0; y < HEIGHT; y += 1) {
-        for (let x = 0; x < WIDTH; x += 1) {
-          if (y === 0) {
-            ctx.fillStyle = colors.water;
-            ctx.fillRect(x * CELL, 0, CELL, CELL);
-            const idx = PAD_POSITIONS.indexOf(x);
-            if (idx >= 0) {
-              const padColor = padsRef.current[idx]
-                ? colors.frog
-                : colors.grass;
-              const bob = Math.sin(phase + x) * 2;
-              ctx.fillStyle = padColor;
-              ctx.fillRect(x * CELL, bob, CELL, CELL);
-            }
-          } else if (y === 3 || y === 6) {
-            ctx.fillStyle = colors.grass;
-            ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
-            if (safeFlashRef.current > 0 && Math.floor(phase * 8) % 2 === 0) {
-              ctx.fillStyle = 'rgba(251,191,36,0.5)';
-              ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
-            }
-          } else if (y >= 4 && y <= 5) {
-            ctx.fillStyle = '#374151';
-            ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
-            ctx.fillStyle = '#9ca3af';
-            ctx.fillRect(x * CELL, y * CELL, CELL, 4);
-            ctx.fillStyle = '#111827';
-            ctx.fillRect(x * CELL, y * CELL + CELL - 4, CELL, 4);
-          } else {
-            ctx.fillStyle = colors.water;
+  const ctxRef = useRef(null);
+
+  const drawScene = useCallback(() => {
+    const canvas = canvasRef.current;
+    const ctx = ctxRef.current;
+    if (!canvas || !ctx) return;
+    const colors = SKINS[skin];
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const phase = rippleRef.current;
+    for (let y = 0; y < HEIGHT; y += 1) {
+      for (let x = 0; x < WIDTH; x += 1) {
+        if (y === 0) {
+          ctx.fillStyle = colors.water;
+          ctx.fillRect(x * CELL, 0, CELL, CELL);
+          const idx = PAD_POSITIONS.indexOf(x);
+          if (idx >= 0) {
+            const padColor = padsRef.current[idx]
+              ? colors.frog
+              : colors.grass;
+            const bob = Math.sin(phase + x) * 2;
+            ctx.fillStyle = padColor;
+            ctx.fillRect(x * CELL, bob, CELL, CELL);
+          }
+        } else if (y === 3 || y === 6) {
+          ctx.fillStyle = colors.grass;
+          ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+          if (safeFlashRef.current > 0 && Math.floor(phase * 8) % 2 === 0) {
+            ctx.fillStyle = 'rgba(251,191,36,0.5)';
             ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
           }
+        } else if (y >= 4 && y <= 5) {
+          ctx.fillStyle = '#374151';
+          ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+          ctx.fillStyle = '#9ca3af';
+          ctx.fillRect(x * CELL, y * CELL, CELL, 4);
+          ctx.fillStyle = '#111827';
+          ctx.fillRect(x * CELL, y * CELL + CELL - 4, CELL, 4);
+        } else {
+          ctx.fillStyle = colors.water;
+          ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
         }
       }
-      const rippleColor = '#93c5fd';
-      if (reduceMotionRef.current) {
-        ctx.fillStyle = rippleColor;
-        for (let x = 0; x < WIDTH; x += 1) {
-          ctx.fillRect(x * CELL, CELL, CELL, 4);
-          ctx.fillRect(x * CELL, CELL * 3 - 4, CELL, 4);
-        }
-      } else {
-        ctx.fillStyle = rippleColor;
-        for (let x = 0; x < WIDTH; x += 1) {
-          const offset = Math.sin(phase + x) * 2;
-          ctx.fillRect(x * CELL, CELL + offset, CELL, 4);
-          ctx.fillRect(x * CELL, CELL * 3 - 4 + offset, CELL, 4);
-        }
+    }
+    const rippleColor = '#93c5fd';
+    if (reduceMotionRef.current) {
+      ctx.fillStyle = rippleColor;
+      for (let x = 0; x < WIDTH; x += 1) {
+        ctx.fillRect(x * CELL, CELL, CELL, 4);
+        ctx.fillRect(x * CELL, CELL * 3 - 4, CELL, 4);
       }
-      // parallax background for logs
-      logsRef.current.forEach((lane) => {
-        const bgOffset =
-          ((rippleRef.current * lane.speed * lane.dir * 20) % CELL) - CELL;
-        ctx.fillStyle = 'rgba(255,255,255,0.05)';
-        for (let x = bgOffset; x < WIDTH * CELL + CELL; x += CELL) {
-          ctx.fillRect(x, lane.y * CELL, CELL / 8, CELL);
-        }
+    } else {
+      ctx.fillStyle = rippleColor;
+      for (let x = 0; x < WIDTH; x += 1) {
+        const offset = Math.sin(phase + x) * 2;
+        ctx.fillRect(x * CELL, CELL + offset, CELL, 4);
+        ctx.fillRect(x * CELL, CELL * 3 - 4 + offset, CELL, 4);
+      }
+    }
+    logsRef.current.forEach((lane) => {
+      const bgOffset = ((phase * lane.speed * lane.dir * 20) % CELL) - CELL;
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      for (let x = bgOffset; x < WIDTH * CELL + CELL; x += CELL) {
+        ctx.fillRect(x, lane.y * CELL, CELL / 8, CELL);
+      }
+    });
+    carsRef.current.forEach((lane) => {
+      const bgOffset = ((phase * lane.speed * lane.dir * 20) % CELL) - CELL;
+      ctx.fillStyle = 'rgba(255,255,255,0.1)';
+      for (let x = bgOffset; x < WIDTH * CELL + CELL; x += CELL) {
+        ctx.fillRect(x, lane.y * CELL, CELL / 4, CELL);
+      }
+    });
+    logsRef.current.forEach((lane) => {
+      ctx.fillStyle = colors.log;
+      lane.entities.forEach((e) => {
+        ctx.fillRect(e.x * CELL, lane.y * CELL, lane.length * CELL, CELL);
       });
-      // parallax background for car lanes
-      carsRef.current.forEach((lane) => {
-        const bgOffset =
-          ((rippleRef.current * lane.speed * lane.dir * 20) % CELL) - CELL;
-        ctx.fillStyle = 'rgba(255,255,255,0.1)';
-        for (let x = bgOffset; x < WIDTH * CELL + CELL; x += CELL) {
-          ctx.fillRect(x, lane.y * CELL, CELL / 4, CELL);
-        }
-      });
-      // draw logs and cars
-      logsRef.current.forEach((lane) => {
-        ctx.fillStyle = colors.log;
-        lane.entities.forEach((e) => {
-          ctx.fillRect(e.x * CELL, lane.y * CELL, lane.length * CELL, CELL);
-        });
-      });
-      carsRef.current.forEach((lane) => {
-        lane.entities.forEach((e) => {
-          const x = e.x * CELL;
-          const y = lane.y * CELL;
-          ctx.fillStyle = colors.car;
-          ctx.fillRect(x, y, lane.length * CELL, CELL);
-          ctx.globalAlpha = 0.3;
-          ctx.fillRect(x - lane.dir * 8, y, lane.length * CELL, CELL);
-          ctx.globalAlpha = 1;
-        });
-      });
-      splashesRef.current.forEach((sp) => {
-        const progress = sp.t / RIPPLE_DURATION;
-        const radius = progress * CELL;
-        ctx.strokeStyle = rippleColor;
-        ctx.globalAlpha = 1 - progress;
-        ctx.beginPath();
-        ctx.arc(sp.x, sp.y, radius, 0, Math.PI * 2);
-        ctx.stroke();
+    });
+    carsRef.current.forEach((lane) => {
+      lane.entities.forEach((e) => {
+        const x = e.x * CELL;
+        const y = lane.y * CELL;
+        ctx.fillStyle = colors.car;
+        ctx.fillRect(x, y, lane.length * CELL, CELL);
+        ctx.globalAlpha = 0.3;
+        ctx.fillRect(x - lane.dir * 8, y, lane.length * CELL, CELL);
         ctx.globalAlpha = 1;
       });
-      ctx.fillStyle = colors.frog;
-      ctx.fillRect(frogRef.current.x * CELL, frogRef.current.y * CELL, CELL, CELL);
-      // HUD
+    });
+    splashesRef.current.forEach((sp) => {
+      const progress = sp.t / RIPPLE_DURATION;
+      const radius = progress * CELL;
+      ctx.strokeStyle = rippleColor;
+      ctx.globalAlpha = 1 - progress;
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    });
+    ctx.fillStyle = colors.frog;
+    ctx.fillRect(frogRef.current.x * CELL, frogRef.current.y * CELL, CELL, CELL);
+    ctx.fillStyle = '#fff';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Lives: ${livesRef.current}`, 4, 12);
+    ctx.textAlign = 'right';
+    ctx.fillText(`Level: ${levelRef.current}`, canvas.width - 4, 12);
+    if (showHitboxes) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+      logsRef.current.forEach((lane) => {
+        lane.entities.forEach((e) => {
+          ctx.strokeRect(
+            e.x * CELL,
+            lane.y * CELL,
+            lane.length * CELL,
+            CELL,
+          );
+        });
+      });
+      carsRef.current.forEach((lane) => {
+        lane.entities.forEach((e) => {
+          ctx.strokeRect(
+            e.x * CELL,
+            lane.y * CELL,
+            lane.length * CELL,
+            CELL,
+          );
+        });
+      });
+      ctx.strokeRect(
+        frogRef.current.x * CELL,
+        frogRef.current.y * CELL,
+        CELL,
+        CELL,
+      );
+    }
+    if (hitFlashRef.current > 0) {
+      ctx.fillStyle = `rgba(255,255,255,${hitFlashRef.current / 0.2})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    if (pausedRef.current || statusRef.current) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = '#fff';
-      ctx.font = '12px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(`Lives: ${livesRef.current}`, 4, 12);
-      ctx.textAlign = 'right';
-      ctx.fillText(`Level: ${levelRef.current}`, canvas.width - 4, 12);
-      if (showHitboxes) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-        logsRef.current.forEach((lane) => {
-          lane.entities.forEach((e) => {
-            ctx.strokeRect(
-              e.x * CELL,
-              lane.y * CELL,
-              lane.length * CELL,
-              CELL,
-            );
-          });
-        });
-        carsRef.current.forEach((lane) => {
-          lane.entities.forEach((e) => {
-            ctx.strokeRect(
-              e.x * CELL,
-              lane.y * CELL,
-              lane.length * CELL,
-              CELL,
-            );
-          });
-        });
-        ctx.strokeRect(
-          frogRef.current.x * CELL,
-          frogRef.current.y * CELL,
-          CELL,
-          CELL,
-        );
+      ctx.font = '20px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(
+        pausedRef.current ? 'Paused' : statusRef.current,
+        canvas.width / 2,
+        canvas.height / 2,
+      );
+    }
+  }, [showHitboxes, skin]);
+
+  const step = useCallback(
+    (delta) => {
+      if (!ctxRef.current) return;
+      const dt = delta * (slowTimeRef.current ? 0.7 : 1);
+      if (pausedRef.current) {
+        drawScene();
+        return;
       }
-      if (hitFlashRef.current > 0) {
-        ctx.fillStyle = `rgba(255,255,255,${hitFlashRef.current / 0.2})`;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-      if (pausedRef.current || statusRef.current) {
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#fff';
-        ctx.font = '20px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(
-          pausedRef.current ? 'Paused' : statusRef.current,
-          canvas.width / 2,
-          canvas.height / 2,
-        );
-      }
-    };
-    const loop = (time) => {
-      const rawDt = (time - last) / 1000;
-      last = time;
-      const dt = rawDt * (slowTimeRef.current ? 0.7 : 1);
       rippleRef.current += dt * 4;
       if (safeFlashRef.current > 0) safeFlashRef.current -= dt;
       if (hitFlashRef.current > 0) hitFlashRef.current -= dt;
@@ -513,8 +531,7 @@ const Frogger = () => {
           frogRef.current = { ...initialFrog };
           pendingDeathRef.current = null;
         }
-        draw();
-        raf = requestAnimationFrame(loop);
+        drawScene();
         return;
       }
 
@@ -570,12 +587,22 @@ const Frogger = () => {
       setFrog({ ...frogRef.current });
       setCars([...carsRef.current]);
       setLogs([...logsRef.current]);
-      draw();
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, [difficulty, level, loseLife, reset, skin, showHitboxes]);
+      drawScene();
+    },
+    [difficulty, drawScene, level, loseLife, reset],
+  );
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.imageSmoothingEnabled = false;
+    ctxRef.current = ctx;
+    drawScene();
+  }, [drawScene]);
+
+  useGameLoop(step, true);
 
   useEffect(() => {
     if (score >= nextLife.current) {
@@ -625,10 +652,10 @@ const Frogger = () => {
         </button>
         <button
           type="button"
-          onClick={() => setSound((s) => !s)}
+          onClick={() => setMuted((m) => !m)}
           className="px-2 py-1 bg-gray-700 rounded"
         >
-          Sound: {sound ? 'On' : 'Off'}
+          Sound: {muted ? 'Off' : 'On'}
         </button>
         <button
           type="button"
@@ -643,6 +670,13 @@ const Frogger = () => {
           className="px-2 py-1 bg-gray-700 rounded"
         >
           Hitboxes: {showHitboxes ? 'On' : 'Off'}
+        </button>
+        <button
+          type="button"
+          onClick={() => reset(true)}
+          className="px-2 py-1 bg-gray-700 rounded"
+        >
+          Reset
         </button>
         <label htmlFor="difficulty">Difficulty:</label>
         <select
