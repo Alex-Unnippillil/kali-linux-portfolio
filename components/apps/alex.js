@@ -1,11 +1,14 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
+import ActivityCalendar from 'react-activity-calendar';
 import GitHubStars from '../GitHubStars';
 import Certs from './certs';
 import data from './alex/data.json';
 import resumeData from './alex/resume.json';
-import ActivityCalendar from 'react-activity-calendar';
+import { logEvent } from '../../utils/analytics';
+
+export const RESUME_FEED_URL = '/data/resume/alex.json';
 
 export class AboutAlex extends Component {
 
@@ -454,9 +457,19 @@ function Projects({ projects }) {
 }
 
 
-function Resume({ data: resume }) {
+function Resume({ data: fallbackResume }) {
     const [filter, setFilter] = React.useState('all');
     const [liveMessage, setLiveMessage] = React.useState('');
+    const { resume, loading, error } = useResumeFeed(fallbackResume);
+
+    const safeResume = React.useMemo(
+        () => ({
+            skills: Array.isArray(resume?.skills) ? resume.skills : [],
+            projects: Array.isArray(resume?.projects) ? resume.projects : [],
+            experience: Array.isArray(resume?.experience) ? resume.experience : [],
+        }),
+        [resume]
+    );
 
     const handleDownload = () => {
         ReactGA.event({ category: 'resume', action: 'download' });
@@ -479,11 +492,34 @@ function Resume({ data: resume }) {
         }
     };
 
+    const skillGroups = React.useMemo(() => {
+        const groups = new Map();
+        for (const skill of safeResume.skills) {
+            const category = skill.category || 'General';
+            if (!groups.has(category)) {
+                groups.set(category, []);
+            }
+            groups.get(category).push(skill);
+        }
+        return Array.from(groups.entries());
+    }, [safeResume.skills]);
+
     const tags = React.useMemo(
-        () => Array.from(new Set(resume.experience.flatMap((e) => e.tags))),
-        [resume]
+        () => Array.from(new Set(safeResume.experience.flatMap((e) => e.tags || []))),
+        [safeResume.experience]
     );
-    const experiences = filter === 'all' ? resume.experience : resume.experience.filter((e) => e.tags.includes(filter));
+
+    const experiences = React.useMemo(
+        () =>
+            filter === 'all'
+                ? safeResume.experience
+                : safeResume.experience.filter((e) => (e.tags || []).includes(filter)),
+        [filter, safeResume.experience]
+    );
+
+    const handleProjectClick = React.useCallback((project) => {
+        logEvent({ category: 'Resume', action: 'open_project', label: project.name });
+    }, []);
 
     React.useEffect(() => {
         const elements = document.querySelectorAll('.exp-item');
@@ -504,7 +540,7 @@ function Resume({ data: resume }) {
         return () => {
             elements.forEach((el) => observer.unobserve(el));
         };
-    }, [filter]);
+    }, [experiences]);
 
     return (
         <div className="h-full w-full flex flex-col">
@@ -530,6 +566,18 @@ function Resume({ data: resume }) {
                 </button>
             </div>
             <div id="resume-content" className="p-4 overflow-y-auto flex-1 print:scale-90">
+                <div className="mb-4 space-y-2 text-left">
+                    {loading && (
+                        <p role="status" className="text-xs text-gray-300">
+                            Loading latest resume details…
+                        </p>
+                    )}
+                    {error && (
+                        <p role="status" className="text-xs text-red-300">
+                            Showing cached resume information while the live feed is unreachable.
+                        </p>
+                    )}
+                </div>
                 <div className="mb-4">
                     <div className="font-bold text-lg">Milestones</div>
                     <div className="border-l-2 border-ubt-blue ml-2">
@@ -547,30 +595,58 @@ function Resume({ data: resume }) {
                 </div>
                 <div className="mb-4">
                     <div className="font-bold text-lg">Skills</div>
-                    <div className="flex flex-wrap mt-2">
-                        {resume.skills.map((skill) => (
-                            <span
-                                key={skill}
-                                className="m-1 px-2 py-1 bg-ub-gedit-light rounded-full text-xs"
-                            >
-                                {skill}
-                            </span>
-                        ))}
+                    <div className="mt-2 space-y-3">
+                        {skillGroups.length === 0 ? (
+                            <p className="text-sm text-gray-300">Resume feed does not list skills yet.</p>
+                        ) : (
+                            skillGroups.map(([category, skills]) => (
+                                <div key={category}>
+                                    <div className="text-xs uppercase tracking-wide text-gray-300 mb-1">{category}</div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {skills.map((skill) => (
+                                            <span
+                                                key={skill.name}
+                                                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gray-800 text-gray-100"
+                                            >
+                                                {skill.name}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
                 <div className="mb-4">
                     <div className="font-bold text-lg">Projects</div>
-                    <ul className="list-disc ml-5 mt-2">
-                        {resume.projects.map((p) => (
-                            <li key={p.name} className="text-sm">
+                    <ul className="list-none mt-2 space-y-3">
+                        {safeResume.projects.map((project) => (
+                            <li key={project.name} className="text-sm">
                                 <a
-                                    href={p.link}
+                                    href={project.link}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="underline text-ubt-blue"
+                                    onClick={() => handleProjectClick(project)}
+                                    data-analytics-id={`resume-project-${project.name}`}
                                 >
-                                    {p.name}
+                                    {project.name}
                                 </a>
+                                {project.summary && (
+                                    <p className="mt-1 text-xs text-gray-300">{project.summary}</p>
+                                )}
+                                {Array.isArray(project.tags) && project.tags.length > 0 && (
+                                    <div className="mt-1 flex flex-wrap gap-1">
+                                        {project.tags.map((tag) => (
+                                            <span
+                                                key={`${project.name}-${tag}`}
+                                                className="inline-flex items-center px-2 py-[2px] rounded-full bg-gray-700 text-[10px] uppercase tracking-wide text-gray-100"
+                                            >
+                                                {tag}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
                             </li>
                         ))}
                     </ul>
@@ -580,7 +656,7 @@ function Resume({ data: resume }) {
                     <div className="flex flex-wrap my-2">
                         <button
                             onClick={() => setFilter('all')}
-                            className={(filter === 'all' ? 'bg-ubt-blue' : 'bg-ub-gedit-light') + ' text-xs px-2 py-1 rounded m-1'}
+                            className={(filter === 'all' ? 'bg-ubt-blue text-white' : 'bg-ub-gedit-light text-black') + ' text-xs px-2 py-1 rounded m-1'}
                         >
                             All
                         </button>
@@ -588,7 +664,7 @@ function Resume({ data: resume }) {
                             <button
                                 key={tag}
                                 onClick={() => setFilter(tag)}
-                                className={(filter === tag ? 'bg-ubt-blue' : 'bg-ub-gedit-light') + ' text-xs px-2 py-1 rounded m-1'}
+                                className={(filter === tag ? 'bg-ubt-blue text-white' : 'bg-ub-gedit-light text-black') + ' text-xs px-2 py-1 rounded m-1'}
                             >
                                 {tag}
                             </button>
@@ -598,7 +674,7 @@ function Resume({ data: resume }) {
                     <div className="border-l-2 border-ubt-blue ml-2">
                         {experiences.map((e, i) => (
                             <div
-                                key={i}
+                                key={`${e.date}-${i}`}
                                 className="exp-item opacity-0 translate-y-4 transition-all duration-700 ease-out relative mb-8 pl-4"
                                 data-description={`${e.date} ${e.description}`}
                             >
@@ -616,3 +692,56 @@ function Resume({ data: resume }) {
         </div>
     );
 }
+
+function useResumeFeed(fallbackResume) {
+    const [resume, setResume] = React.useState(fallbackResume || null);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState(null);
+
+    React.useEffect(() => {
+        let isMounted = true;
+        const controller = new AbortController();
+
+        const loadResume = async () => {
+            try {
+                const response = await fetch(RESUME_FEED_URL, {
+                    signal: controller.signal,
+                    headers: {
+                        Accept: 'application/json',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Resume feed responded with status ${response.status}`);
+                }
+
+                const payload = await response.json();
+                if (isMounted) {
+                    setResume(payload);
+                    setError(null);
+                }
+            } catch (err) {
+                if (!isMounted || err.name === 'AbortError') {
+                    return;
+                }
+                console.error('Failed to load resume feed', err);
+                setError(err instanceof Error ? err : new Error('Unknown resume feed error'));
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        loadResume();
+
+        return () => {
+            isMounted = false;
+            controller.abort();
+        };
+    }, []);
+
+    return { resume, loading, error };
+}
+
+export { Resume };
