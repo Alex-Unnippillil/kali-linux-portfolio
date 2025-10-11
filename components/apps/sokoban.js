@@ -1,7 +1,28 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+} from 'react';
 import GameLayout from './GameLayout';
-import useGameControls from './useGameControls';
+import useGameControls, {
+  useGameSettings,
+  useGamePersistence,
+} from './useGameControls';
 import levelPack from './sokoban_levels.json';
+import {
+  makeLevelKey,
+  serializeState,
+  deserializeState,
+  readProgressSnapshot,
+  updateProgressSnapshot,
+  removeProgressSnapshot,
+  sanitizeSnapshot,
+  loadBestFromStorage,
+  saveBestToStorage,
+  encodeScore,
+} from './sokobanState';
 
 const TILE = 32;
 
@@ -10,24 +31,25 @@ if (typeof globalThis.structuredClone !== 'function') {
   globalThis.structuredClone = (val) => JSON.parse(JSON.stringify(val));
 }
 
-const parseLevel = (level) => {
+function parseLevel(level) {
   const board = level.map((r) => r.split(''));
   let player = { x: 0, y: 0 };
-  for (let y = 0; y < board.length; y++) {
-    for (let x = 0; x < board[y].length; x++) {
+  for (let y = 0; y < board.length; y += 1) {
+    for (let x = 0; x < board[y].length; x += 1) {
       const cell = board[y][x];
       if (cell === '@' || cell === '+') player = { x, y };
     }
   }
   return { board, player, moves: 0, pushes: 0 };
-};
+}
 
-const parseLevelsFromText = (text) =>
-  text
+function parseLevelsFromText(text) {
+  return text
     .replace(/\r/g, '')
     .trim()
     .split(/\n\s*\n/)
     .map((lvl) => lvl.split('\n'));
+}
 
 const attemptMove = (state, dx, dy) => {
   const { board, player } = state;
@@ -75,84 +97,45 @@ const Sokoban = () => {
   const canvasRef = useRef(null);
   const rafRef = useRef();
   const undoRef = useRef([]);
+  const historyRef = useRef([]);
   const stateRef = useRef();
-const initialLevels = Array.isArray(levelPack.levels)
-  ? levelPack.levels
-  : parseLevelsFromText(levelPack);
-const initialState = parseLevel(initialLevels[0]);
-const historyRef = useRef([initialState]);
   const sliderRaf = useRef();
   const liveRef = useRef();
   const prefersReducedMotion = useRef(false);
+  const skipHydrateRef = useRef(false);
 
-const [levels, setLevels] = useState(initialLevels);
+  const defaultLevels = useMemo(
+    () =>
+      Array.isArray(levelPack.levels)
+        ? levelPack.levels
+        : parseLevelsFromText(levelPack),
+    [],
+  );
+
+  const [levels, setLevels] = useState(defaultLevels);
   const [levelIndex, setLevelIndex] = useState(0);
-  const [state, setState] = useState(initialState);
+  const [progress, setProgress] = useState({});
+  const [state, setState] = useState(() => {
+    const initial = parseLevel(defaultLevels[0]);
+    historyRef.current = [initial];
+    return initial;
+  });
   const [historyIndex, setHistoryIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const [sound, setSound] = useState(true);
-const [best, setBest] = useState(null);
+  const [best, setBest] = useState(null);
+
+  const { paused, togglePause, muted, toggleMute } = useGameSettings('sokoban');
+  const { saveSnapshot, loadSnapshot, getHighScore, setHighScore } =
+    useGamePersistence('sokoban');
+
+  const levelKey = useMemo(
+    () => makeLevelKey(levels[levelIndex]),
+    [levels, levelIndex],
+  );
 
   stateRef.current = state;
 
-const loadBest = (idx) => {
-  const b = localStorage.getItem(`sokoban-best-${idx}`);
-  setBest(b ? JSON.parse(b) : null);
-};
-
-const saveProgress = (idx, st) => {
-  try {
-    localStorage.setItem(
-      `sokoban-progress-${idx}`,
-      JSON.stringify({
-        board: st.board.map((r) => r.join('')),
-        player: st.player,
-        moves: st.moves,
-        pushes: st.pushes,
-      }),
-    );
-  } catch {
-    // ignore storage errors
-  }
-};
-
-const loadState = (idx, lvls) => {
-  const saved = localStorage.getItem(`sokoban-progress-${idx}`);
-  if (saved) {
-    try {
-      const data = JSON.parse(saved);
-      return {
-        board: data.board.map((r) => r.split('')),
-        player: data.player,
-        moves: data.moves || 0,
-        pushes: data.pushes || 0,
-      };
-    } catch {
-      // ignore parse errors
-    }
-  }
-  return parseLevel(lvls[idx]);
-};
-
-  useEffect(() => {
-    loadBest(levelIndex);
-  }, [levelIndex]);
-
-  useEffect(() => {
-    prefersReducedMotion.current =
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  }, []);
-
-  useEffect(() => {
-    const st = loadState(levelIndex, levels);
-    setState(st);
-    undoRef.current = [];
-    historyRef.current = [st];
-    setHistoryIndex(0);
-  }, [levelIndex, levels]);
-
-  const playBeep = () => {
-    if (!sound) return;
+  const playBeep = useCallback(() => {
+    if (muted) return;
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
@@ -165,52 +148,121 @@ const loadState = (idx, lvls) => {
     } catch {
       // ignore audio errors
     }
-  };
-
-const move = ({ x, y }) => {
-  if (paused) return;
-  const res = attemptMove(stateRef.current, x, y);
-  if (!res) return;
-  undoRef.current.push(structuredClone(stateRef.current));
-  const newState = {
-    board: res.board,
-    player: res.player,
-    moves: stateRef.current.moves + 1,
-    pushes: stateRef.current.pushes + (res.push ? 1 : 0),
-  };
-  historyRef.current = historyRef.current
-    .slice(0, historyIndex + 1)
-    .concat([newState]);
-  setHistoryIndex(historyRef.current.length - 1);
-  setState(newState);
-  playBeep();
-  const progressKey = `sokoban-progress-${levelIndex}`;
-  if (checkWin(res.board)) {
-    const bestKey = `sokoban-best-${levelIndex}`;
-    if (
-      !best ||
-      newState.moves < best.moves ||
-      (newState.moves === best.moves && newState.pushes < best.pushes)
-    ) {
-      localStorage.setItem(
-        bestKey,
-        JSON.stringify({ moves: newState.moves, pushes: newState.pushes }),
-      );
-      setBest({ moves: newState.moves, pushes: newState.pushes });
-    }
-    localStorage.removeItem(progressKey);
-  }
-};
-
-  useGameControls(move);
+  }, [muted]);
 
   useEffect(() => {
-    if (!checkWin(state.board)) saveProgress(levelIndex, state);
-  }, [state, levelIndex]);
+    const stored = loadSnapshot();
+    if (stored) setProgress(sanitizeSnapshot(stored));
+  }, [loadSnapshot]);
+
+  useEffect(() => {
+    const bestStats = loadBestFromStorage(
+      typeof window === 'undefined' ? null : window.localStorage,
+      `sokoban-best:${levelKey}`,
+    );
+    setBest(bestStats);
+    if (bestStats) {
+      const encoded = encodeScore(bestStats);
+      if (encoded > getHighScore()) setHighScore(encoded);
+    }
+  }, [levelKey, getHighScore, setHighScore]);
+
+  useEffect(() => {
+    prefersReducedMotion.current =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }, []);
+
+  const hydrateLevel = useCallback(
+    (snapshot) => {
+      const base = snapshot
+        ? deserializeState(snapshot)
+        : parseLevel(levels[levelIndex]);
+      undoRef.current = [];
+      historyRef.current = [base];
+      setHistoryIndex(0);
+      setState(base);
+    },
+    [levelIndex, levels],
+  );
+
+  useEffect(() => {
+    if (skipHydrateRef.current) {
+      skipHydrateRef.current = false;
+      return;
+    }
+    const saved = readProgressSnapshot(progress, levelKey);
+    hydrateLevel(saved);
+  }, [progress, levelKey, hydrateLevel]);
+
+  const persistState = useCallback(
+    (nextState, solved = false) => {
+      skipHydrateRef.current = true;
+      setProgress((prev) => {
+        const updated = solved
+          ? removeProgressSnapshot(prev, levelKey)
+          : updateProgressSnapshot(prev, levelKey, serializeState(nextState));
+        if (updated === prev) {
+          skipHydrateRef.current = false;
+          return prev;
+        }
+        saveSnapshot(updated);
+        return updated;
+      });
+    },
+    [levelKey, saveSnapshot],
+  );
+
+  const recordWin = useCallback(
+    (stats) => {
+      const storage = typeof window === 'undefined' ? null : window.localStorage;
+      const updated = saveBestToStorage(storage, `sokoban-best:${levelKey}`, stats);
+      setBest(updated);
+      setHighScore(encodeScore(updated));
+    },
+    [levelKey, setHighScore],
+  );
+
+  const move = useCallback(
+    ({ x, y }) => {
+      if (paused) return;
+      const res = attemptMove(stateRef.current, x, y);
+      if (!res) return;
+      undoRef.current.push(structuredClone(stateRef.current));
+      const newState = {
+        board: res.board,
+        player: res.player,
+        moves: stateRef.current.moves + 1,
+        pushes: stateRef.current.pushes + (res.push ? 1 : 0),
+      };
+      historyRef.current = historyRef.current
+        .slice(0, historyIndex + 1)
+        .concat([newState]);
+      setHistoryIndex(historyRef.current.length - 1);
+      setState(newState);
+      playBeep();
+      if (checkWin(res.board)) {
+        persistState(newState, true);
+        recordWin({ moves: newState.moves, pushes: newState.pushes });
+      } else {
+        persistState(newState);
+      }
+    },
+    [historyIndex, paused, persistState, playBeep, recordWin],
+  );
+
+  useGameControls(move, 'sokoban');
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    if (!canvas) return undefined;
     const ctx = canvas.getContext('2d');
+
+    /**
+     * Keep a single requestAnimationFrame loop alive so rewind scrubbing and
+     * external resume events remain responsive. Drawing short-circuits while
+     * paused, effectively freezing the board without tearing down listeners.
+     */
     const draw = () => {
       const { board, player } = stateRef.current;
       const h = board.length;
@@ -218,15 +270,21 @@ const move = ({ x, y }) => {
       canvas.width = w * TILE;
       canvas.height = h * TILE;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (let y = 0; y < h; y++) {
-        for (let x = 0; x < w; x++) {
+      for (let y = 0; y < h; y += 1) {
+        for (let x = 0; x < w; x += 1) {
           const cell = board[y][x];
           ctx.fillStyle = cell === '#' ? '#444' : '#777';
           ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
           if (cell === '.' || cell === '+' || cell === '*') {
             ctx.fillStyle = '#ff0';
             ctx.beginPath();
-            ctx.arc(x * TILE + TILE / 2, y * TILE + TILE / 2, TILE / 6, 0, Math.PI * 2);
+            ctx.arc(
+              x * TILE + TILE / 2,
+              y * TILE + TILE / 2,
+              TILE / 6,
+              0,
+              Math.PI * 2,
+            );
             ctx.fill();
           }
           if (cell === '$' || cell === '*') {
@@ -238,6 +296,7 @@ const move = ({ x, y }) => {
       ctx.fillStyle = '#0af';
       ctx.fillRect(player.x * TILE + 4, player.y * TILE + 4, TILE - 8, TILE - 8);
     };
+
     const loop = () => {
       if (!paused) draw();
       rafRef.current = requestAnimationFrame(loop);
@@ -246,62 +305,73 @@ const move = ({ x, y }) => {
     return () => cancelAnimationFrame(rafRef.current);
   }, [paused]);
 
-  const undo = () => {
+  const undo = useCallback(() => {
     const prev = undoRef.current.pop();
     if (prev) {
       setState(prev);
       setHistoryIndex((i) => Math.max(0, i - 1));
+      persistState(prev, checkWin(prev.board));
     }
-  };
+  }, [persistState]);
 
-  const reset = () => {
+  const reset = useCallback(() => {
     const st = parseLevel(levels[levelIndex]);
     setState(st);
     undoRef.current = [];
     historyRef.current = [st];
     setHistoryIndex(0);
-  };
+    persistState(st);
+  }, [levelIndex, levels, persistState]);
 
-  const handleRewind = (e) => {
-    const idx = Number(e.target.value);
-    setHistoryIndex(idx);
-    const update = () => {
-      setState(historyRef.current[idx]);
-      if (liveRef.current) liveRef.current.textContent = `Rewind to move ${idx}`;
-    };
-    if (prefersReducedMotion.current) update();
-    else {
-      cancelAnimationFrame(sliderRaf.current);
-      sliderRaf.current = requestAnimationFrame(update);
-    }
-  };
-
-  const handleFile = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const text = ev.target.result;
-        let parsed;
-        if (file.name.endsWith('.json')) {
-          const data = JSON.parse(text);
-          parsed = Array.isArray(data) ? data : data.levels;
-        } else {
-          parsed = parseLevelsFromText(text);
-        }
-        if (parsed && parsed.length) {
-          setLevels(parsed);
-          setLevelIndex(0);
-        }
-      } catch {
-        // ignore parse errors
+  const handleRewind = useCallback(
+    (e) => {
+      const idx = Number(e.target.value);
+      setHistoryIndex(idx);
+      const update = () => {
+        const snapshot = historyRef.current[idx];
+        if (!snapshot) return;
+        setState(snapshot);
+        persistState(snapshot, checkWin(snapshot.board));
+        if (liveRef.current) liveRef.current.textContent = `Rewind to move ${idx}`;
+      };
+      if (prefersReducedMotion.current) update();
+      else {
+        cancelAnimationFrame(sliderRaf.current);
+        sliderRaf.current = requestAnimationFrame(update);
       }
-    };
-    reader.readAsText(file);
-  };
+    },
+    [persistState],
+  );
 
-  const exportLevels = () => {
+  const handleFile = useCallback(
+    (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const text = ev.target.result;
+          let parsed;
+          if (file.name.endsWith('.json')) {
+            const data = JSON.parse(text);
+            parsed = Array.isArray(data) ? data : data.levels;
+          } else {
+            parsed = parseLevelsFromText(text);
+          }
+          if (parsed && parsed.length) {
+            setLevels(parsed);
+            setLevelIndex(0);
+          }
+        } catch {
+          // ignore parse errors
+        }
+      };
+      reader.readAsText(file);
+    },
+    [hydrateLevel],
+  );
+
+  const exportLevels = useCallback(() => {
     const text = levels.map((l) => l.join('\n')).join('\n\n');
     const blob = new Blob([text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -310,10 +380,14 @@ const move = ({ x, y }) => {
     a.download = 'sokoban_levels.txt';
     a.click();
     URL.revokeObjectURL(url);
-  };
+  }, [levels]);
 
   return (
-    <GameLayout stage={levelIndex + 1}>
+    <GameLayout
+      gameId="sokoban"
+      stage={levelIndex + 1}
+      highScore={best ? best.moves : undefined}
+    >
       <canvas ref={canvasRef} className="mx-auto bg-gray-700" />
       <div className="mt-2 flex flex-wrap items-center justify-center space-x-2">
         <select value={levelIndex} onChange={(e) => setLevelIndex(Number(e.target.value))}>
@@ -329,12 +403,15 @@ const move = ({ x, y }) => {
         </button>
         <button
           className="px-2 py-1 bg-gray-700 rounded"
-          onClick={() => setPaused((p) => !p)}
+          onClick={togglePause}
         >
           {paused ? 'Resume' : 'Pause'}
         </button>
-        <button className="px-2 py-1 bg-gray-700 rounded" onClick={() => setSound((s) => !s)}>
-          {sound ? 'Sound On' : 'Sound Off'}
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={toggleMute}
+        >
+          {muted ? 'Sound Off' : 'Sound On'}
         </button>
         <button className="px-2 py-1 bg-gray-700 rounded" onClick={exportLevels}>
           Export
@@ -343,7 +420,7 @@ const move = ({ x, y }) => {
         <input
           type="range"
           min="0"
-          max={historyRef.current.length - 1}
+          max={Math.max(0, historyRef.current.length - 1)}
           value={historyIndex}
           onChange={handleRewind}
           className="w-32 accent-blue-500 bg-gray-600"
@@ -364,7 +441,6 @@ const move = ({ x, y }) => {
       </div>
     </GameLayout>
   );
-  };
+};
 
 export default Sokoban;
-

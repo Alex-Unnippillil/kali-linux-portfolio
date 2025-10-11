@@ -1,3 +1,9 @@
+/**
+ * Built-in Sokoban level packs used by both the classic components app and the
+ * modern `/apps/sokoban` experience.  Packs are simple collections of string
+ * grids so custom content can be loaded from text, JSON, or OPFS storage.
+ * See `docs/sokoban-level-packs.md` for import/export expectations.
+ */
 export interface LevelPack {
   name: string;
   difficulty: string;
