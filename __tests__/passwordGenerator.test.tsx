@@ -31,4 +31,21 @@ describe('PasswordGenerator', () => {
     const updated = getByText(/Entropy/i).textContent;
     expect(updated).not.toBe(initial);
   });
+
+  it('applies preset configuration', () => {
+    const { getByRole, getByLabelText } = render(<PasswordGenerator />);
+    fireEvent.click(getByRole('button', { name: /High security/i }));
+    expect((getByLabelText(/Length/i) as HTMLInputElement).value).toBe('20');
+    expect((getByLabelText(/Symbols/i) as HTMLInputElement).checked).toBe(true);
+    expect((getByLabelText(/Numbers/i) as HTMLInputElement).checked).toBe(true);
+  });
+
+  it('updates entropy label when presets change', () => {
+    const { getByRole, getByText } = render(<PasswordGenerator />);
+    const initial = getByText(/Entropy/i).textContent;
+    fireEvent.click(getByRole('button', { name: /Memorable/i }));
+    const afterPreset = getByText(/Entropy/i).textContent;
+    expect(afterPreset).not.toBe(initial);
+    expect(afterPreset).toMatch(/Weak/);
+  });
 });
