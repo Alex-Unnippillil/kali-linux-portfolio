@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import Image from 'next/image';
 import clsx from 'clsx';
 import BeefApp from '../../components/apps/beef';
@@ -81,6 +81,31 @@ const formatSince = (seconds: number) => {
 type WindowState = 'normal' | 'minimized' | 'maximized' | 'closed';
 
 const BeefPage: React.FC = () => {
+  const [windowState, setWindowState] = useState<WindowState>('normal');
+
+  const isMinimized = windowState === 'minimized';
+  const isMaximized = windowState === 'maximized';
+  const isClosed = windowState === 'closed';
+
+  const handleMinimize = () => {
+    setWindowState('minimized');
+  };
+
+  const restoreFromMinimize = () => {
+    setWindowState('normal');
+  };
+
+  const handleMaximize = () => {
+    setWindowState((prev) => (prev === 'maximized' ? 'normal' : 'maximized'));
+  };
+
+  const handleClose = () => {
+    setWindowState('closed');
+  };
+
+  const restoreWindow = () => {
+    setWindowState('normal');
+  };
   const logs: LogEntry[] = [
     { offsetSeconds: 0, severity: 'Low', message: 'Hook initialized (simulation)' },
     { offsetSeconds: 2, severity: 'Medium', message: 'Payload delivered to sandbox browser' },
@@ -95,11 +120,25 @@ const BeefPage: React.FC = () => {
 
   const lastCheckIn = formatSince(logs[logs.length - 1]?.offsetSeconds ?? 0);
 
-  return (
-    <div className="bg-ub-cool-grey text-white h-full w-full flex flex-col">
-      <header className="flex flex-col gap-4 border-b border-gray-800 bg-black/30 p-4 backdrop-blur-sm lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
-          <div className="flex items-center gap-3">
+  const frameClasses = useMemo(
+    () =>
+      clsx(
+        'relative mx-auto flex h-[32rem] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-gray-800/70 bg-black/40 shadow-2xl shadow-cyan-900/20 backdrop-blur transition-all duration-300 ease-in-out',
+        {
+          'h-[calc(100vh-4rem)] max-h-[calc(100vh-2rem)] w-full max-w-none rounded-none border-cyan-500/70 shadow-[0_0_60px_rgba(6,182,212,0.35)]':
+            isMaximized,
+          'scale-[0.98] opacity-70 pointer-events-none': isMinimized,
+        },
+      ),
+    [isMaximized, isMinimized],
+  );
+
+  if (isClosed) {
+    return (
+      <div className="bg-ub-cool-grey text-white h-full w-full flex flex-col">
+        <header className="flex flex-col gap-4 border-b border-gray-800 bg-black/30 p-4 backdrop-blur-sm lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
+            <div className="flex items-center gap-3">
             <Image
               src="/themes/Yaru/apps/beef.svg"
               alt="BeEF badge"
@@ -181,6 +220,7 @@ const BeefPage: React.FC = () => {
           </ol>
         </nav>
       </div>
+      </div>
     );
   }
 
@@ -255,6 +295,7 @@ const BeefPage: React.FC = () => {
             </li>
           ))}
         </ul>
+      </section>
       </section>
     </div>
   );
