@@ -1,15 +1,48 @@
-import React from 'react'
+"use client"
+
+import React, { useEffect, useState } from 'react'
 import Image from 'next/image'
 
-const bootMessages = [
+export const BOOT_MESSAGES = [
     'Securing environment',
     'Loading offensive simulations',
     'Calibrating desktop widgets',
 ]
 
+export const BOOT_MESSAGE_INTERVAL_MS = 360
+
 function BootingScreen(props) {
     const isVisible = props.visible || props.isShutDown
     const visibilityClass = isVisible ? 'visible opacity-100' : 'invisible opacity-0'
+    const [activeMessageIndex, setActiveMessageIndex] = useState(0)
+
+    const isBooting = props.visible && !props.isShutDown
+
+    useEffect(() => {
+        if (!isBooting) {
+            setActiveMessageIndex(0)
+            return
+        }
+
+        setActiveMessageIndex(0)
+
+        const intervalId = window.setInterval(() => {
+            setActiveMessageIndex((prevIndex) => {
+                if (prevIndex >= BOOT_MESSAGES.length - 1) {
+                    window.clearInterval(intervalId)
+                    return prevIndex
+                }
+
+                return prevIndex + 1
+            })
+        }, BOOT_MESSAGE_INTERVAL_MS)
+
+        return () => {
+            window.clearInterval(intervalId)
+        }
+    }, [isBooting])
+
+    const bootMessages = BOOT_MESSAGES
 
     return (
         <div
@@ -68,12 +101,39 @@ function BootingScreen(props) {
                     </button>
 
                     <ul className="flex flex-col gap-2 text-sm text-slate-300">
-                        {bootMessages.map((message) => (
-                            <li key={message} className="flex items-center gap-3">
-                                <span className="inline-flex h-2 w-2 rounded-full bg-sky-400/70 shadow-[0_0_12px_rgba(56,189,248,0.7)] animate-[pulse_2s_ease-in-out_infinite]" aria-hidden />
-                                <span>{message}</span>
-                            </li>
-                        ))}
+                        {bootMessages.map((message, index) => {
+                            const isActive = isBooting && index === activeMessageIndex
+                            const isComplete = isBooting && index < activeMessageIndex
+                            const state = isActive ? 'active' : isComplete ? 'complete' : 'upcoming'
+
+                            return (
+                                <li
+                                    key={message}
+                                    data-state={state}
+                                    className={`flex items-center gap-3 transition-all duration-500 ${
+                                        isActive
+                                            ? 'translate-x-0 text-sky-100 drop-shadow-[0_0_16px_rgba(56,189,248,0.55)]'
+                                            : isComplete
+                                              ? 'translate-x-0 text-slate-400 opacity-80'
+                                              : 'translate-x-2 text-slate-500 opacity-60'
+                                    }`}
+                                >
+                                    <span
+                                        className={`inline-flex h-2 w-2 rounded-full transition-all duration-500 ${
+                                            isActive
+                                                ? 'bg-sky-400/80 shadow-[0_0_12px_rgba(56,189,248,0.7)]'
+                                                : isComplete
+                                                  ? 'bg-emerald-400/70 shadow-[0_0_6px_rgba(16,185,129,0.6)]'
+                                                  : 'bg-slate-600/60'
+                                        } ${isActive ? 'animate-[pulse_2s_ease-in-out_infinite]' : ''}`}
+                                        aria-hidden
+                                    />
+                                    <span className={`transition-opacity duration-500 ${isActive ? 'opacity-100' : 'opacity-80'}`}>
+                                        {message}
+                                    </span>
+                                </li>
+                            )
+                        })}
                     </ul>
                 </div>
 
