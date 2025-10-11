@@ -1,4 +1,5 @@
 import { TextEncoder, TextDecoder } from 'util';
+import { ReadableStream } from 'stream/web';
 // Polyfill structuredClone before requiring modules that depend on it
 // @ts-ignore
 if (typeof global.structuredClone !== 'function') {
@@ -13,6 +14,13 @@ import '@testing-library/jest-dom';
 global.TextEncoder = TextEncoder;
 // @ts-ignore
 global.TextDecoder = TextDecoder as any;
+
+// Provide ReadableStream for environments (like Jest) that do not expose it globally
+// @ts-ignore
+if (typeof global.ReadableStream === 'undefined') {
+  // @ts-ignore
+  global.ReadableStream = ReadableStream;
+}
 
 // Provide a minimal structuredClone polyfill for environments lacking it
 // @ts-ignore
