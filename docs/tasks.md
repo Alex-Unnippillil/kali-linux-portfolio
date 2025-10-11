@@ -61,7 +61,7 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 - Show CPU synthetic load graph using `requestAnimationFrame` buckets.
 
 ### Project Gallery
-- Load projects from `projects.json`; add filters and buttons for repo and live demo.
+- _Complete – Project Gallery now reads from `data/projects.json`, exposes stack/tag filters, and provides accessible repo and live demo calls to action._
 
 ### Todoist
 - Implement local task manager with sections, due dates, drag-drop ordering, and quick-add shortcut.

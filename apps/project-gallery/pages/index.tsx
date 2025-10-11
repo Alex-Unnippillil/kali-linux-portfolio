@@ -5,6 +5,12 @@ import type { TouchEvent } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import FilterChip from '../components/FilterChip';
+import {
+  filterProjects,
+  getProjectOptions,
+  projectCatalog,
+  Project,
+} from '../lib/projects';
 
 const TagIcon = () => (
   <svg
@@ -96,19 +102,6 @@ const PlayIcon = () => (
     />
   </svg>
 );
-
-interface Project {
-  id: number;
-  title: string;
-  description: string;
-  stack: string[];
-  tags: string[];
-  year: number;
-  type: string;
-  thumbnail: string;
-  demo?: string;
-  repo?: string;
-}
 
 const ACTION_WIDTH = 160;
 const SWIPE_THRESHOLD = 80;
@@ -213,6 +206,11 @@ function ProjectCard({
             onOpen(project);
             onSwipeClose();
           }}
+          aria-label={
+            project.demo
+              ? `Open ${project.title} live demo in a new tab`
+              : `Open ${project.title} repository in a new tab`
+          }
         >
           Open
         </button>
@@ -253,6 +251,7 @@ function ProjectCard({
                 className="sm:hidden text-xs font-medium text-blue-600"
                 onClick={handleToggleActions}
                 aria-expanded={isActive}
+                aria-label={isActive ? 'Hide project actions' : 'Show project actions'}
               >
                 Actions
               </button>
@@ -291,6 +290,11 @@ function ProjectCard({
                 type="button"
                 className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
                 onClick={() => onOpen(project)}
+                aria-label={
+                  project.demo
+                    ? `Open ${project.title} live demo in a new tab`
+                    : `Open ${project.title} repository in a new tab`
+                }
               >
                 Open
               </button>
@@ -303,6 +307,30 @@ function ProjectCard({
                 {isSelectedForCompare ? 'Remove from compare' : 'Compare'}
               </button>
             </div>
+            <div className="flex flex-wrap gap-2 text-sm">
+              {project.repo && (
+                <a
+                  href={project.repo}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center rounded-full border border-blue-600 px-3 py-1 font-semibold text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-label={`View the ${project.title} repository`}
+                >
+                  Repository
+                </a>
+              )}
+              {project.demo && (
+                <a
+                  href={project.demo}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center rounded-full border border-blue-600 px-3 py-1 font-semibold text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  aria-label={`Launch the ${project.title} live demo`}
+                >
+                  Live Demo
+                </a>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -311,8 +339,7 @@ function ProjectCard({
 }
 
 export default function ProjectGalleryPage() {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
+  const projects = projectCatalog;
   const router = useRouter();
 
   const [tech, setTech] = usePersistentState<string[]>('pg-tech', []);
@@ -323,15 +350,6 @@ export default function ProjectGalleryPage() {
   const [demoOnly, setDemoOnly] = usePersistentState<boolean>('pg-demo', false);
   const [compareSelection, setCompareSelection] = useState<Project[]>([]);
   const [activeSwipe, setActiveSwipe] = useState<number | null>(null);
-
-  useEffect(() => {
-    setLoading(true);
-    fetch('/projects.json')
-      .then((r) => r.json())
-      .then((data) => setProjects(data as Project[]))
-      .catch(() => setProjects([]))
-      .finally(() => setLoading(false));
-  }, []);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -371,36 +389,21 @@ export default function ProjectGalleryPage() {
     router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
   }, [router, tech, year, type, tags, search, demoOnly]);
 
-  const stacks = useMemo(
-    () => Array.from(new Set(projects.flatMap((p) => p.stack))),
-    [projects]
-  );
-  const years = useMemo(
-    () => Array.from(new Set(projects.map((p) => p.year))).sort((a, b) => b - a),
-    [projects]
-  );
-  const types = useMemo(
-    () => Array.from(new Set(projects.map((p) => p.type))),
-    [projects]
-  );
-  const tagList = useMemo(
-    () => Array.from(new Set(projects.flatMap((p) => p.tags))),
+  const { stacks, years, types, tags: tagList } = useMemo(
+    () => getProjectOptions(projects),
     [projects]
   );
 
   const filtered = useMemo(
     () =>
-      projects.filter(
-        (p) =>
-          (!tech.length || tech.every((t) => p.stack.includes(t))) &&
-          (!year || String(p.year) === year) &&
-          (!type || p.type === type) &&
-          (!tags.length || tags.every((t) => p.tags.includes(t))) &&
-          (!search ||
-            p.title.toLowerCase().includes(search.toLowerCase()) ||
-            p.description.toLowerCase().includes(search.toLowerCase())) &&
-          (!demoOnly || Boolean(p.demo))
-      ),
+      filterProjects(projects, {
+        stack: tech,
+        year,
+        type,
+        tags,
+        search,
+        demoOnly,
+      }),
     [projects, tech, year, type, tags, search, demoOnly]
   );
 
@@ -492,31 +495,20 @@ export default function ProjectGalleryPage() {
         ))}
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {loading
-          ? Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="space-y-3 rounded-lg border p-4">
-                <div className="aspect-video w-full rounded-md bg-gray-200" />
-                <div className="space-y-2">
-                  <div className="h-4 w-3/4 rounded bg-gray-200" />
-                  <div className="h-3 w-2/3 rounded bg-gray-200" />
-                  <div className="h-3 w-1/2 rounded bg-gray-200" />
-                </div>
-              </div>
-            ))
-          : filtered.map((p) => (
-              <ProjectCard
-                key={p.id}
-                project={p}
-                isActive={activeSwipe === p.id}
-                onOpen={handleOpen}
-                onCompare={handleCompare}
-                onSwipeOpen={() => setActiveSwipe(p.id)}
-                onSwipeClose={() => setActiveSwipe((current) => (current === p.id ? null : current))}
-                isSelectedForCompare={compareSelection.some((item) => item.id === p.id)}
-              />
-            ))}
+        {filtered.map((p) => (
+          <ProjectCard
+            key={p.id}
+            project={p}
+            isActive={activeSwipe === p.id}
+            onOpen={handleOpen}
+            onCompare={handleCompare}
+            onSwipeOpen={() => setActiveSwipe(p.id)}
+            onSwipeClose={() => setActiveSwipe((current) => (current === p.id ? null : current))}
+            isSelectedForCompare={compareSelection.some((item) => item.id === p.id)}
+          />
+        ))}
       </div>
-      {!loading && filtered.length === 0 && (
+      {filtered.length === 0 && (
         <div className="rounded-lg border border-dashed bg-white/60 p-6 text-center text-sm text-gray-600">
           <p className="font-medium text-gray-800">No projects match your filters.</p>
           <p>

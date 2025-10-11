@@ -1,21 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import projectsData from '../../data/projects.json';
-
-interface Project {
-  id: number;
-  title: string;
-  description: string;
-  stack: string[];
-  tags: string[];
-  year: number;
-  type: string;
-  thumbnail: string;
-  repo: string;
-  demo: string;
-  snippet: string;
-  language: string;
-}
+import {
+  filterProjects,
+  getProjectOptions,
+  projectCatalog,
+  Project,
+} from '../../apps/project-gallery/lib/projects';
 
 interface Props {
   openApp?: (id: string) => void;
@@ -27,7 +17,7 @@ const STORAGE_KEY = 'project-gallery-filters';
 const STORAGE_FILE = 'project-gallery-filters.json';
 
 const ProjectGallery: React.FC<Props> = ({ openApp }) => {
-  const projects: Project[] = projectsData as Project[];
+  const projects = projectCatalog;
   const [search, setSearch] = useState('');
   const [stack, setStack] = useState('');
   const [year, setYear] = useState('');
@@ -90,37 +80,23 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
       setTags(data.tags || []);
       setAriaMessage(`Showing ${projects.length} projects`);
     });
-  }, [projects.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const stacks = useMemo(
-    () => Array.from(new Set(projects.flatMap((p) => p.stack))),
-    [projects]
-  );
-  const years = useMemo(
-    () => Array.from(new Set(projects.map((p) => p.year))).sort((a, b) => b - a),
-    [projects]
-  );
-  const types = useMemo(
-    () => Array.from(new Set(projects.map((p) => p.type))),
-    [projects]
-  );
-  const allTags = useMemo(
-    () => Array.from(new Set(projects.flatMap((p) => p.tags))),
+  const { stacks, years, types, tags: allTags } = useMemo(
+    () => getProjectOptions(projects),
     [projects]
   );
 
   const filtered = useMemo(
     () =>
-      projects.filter(
-        (p) =>
-          (!stack || p.stack.includes(stack)) &&
-          (!year || String(p.year) === year) &&
-          (!type || p.type === type) &&
-          (tags.length === 0 || tags.every((t) => p.tags.includes(t))) &&
-          (search === '' ||
-            p.title.toLowerCase().includes(search.toLowerCase()) ||
-            p.description.toLowerCase().includes(search.toLowerCase()))
-      ),
+      filterProjects(projects, {
+        stack,
+        year,
+        type,
+        tags,
+        search,
+      }),
     [projects, stack, year, type, tags, search]
   );
 
@@ -228,21 +204,23 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
           <table className="w-full text-sm text-left" role="table">
             <thead>
               <tr>
-                <th />
+                <th scope="col">Attribute</th>
                 {selected.map((p) => (
-                  <th key={p.id}>{p.title}</th>
+                  <th key={p.id} scope="col">
+                    {p.title}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               <tr>
-                <th>Stack</th>
+                <th scope="row">Stack</th>
                 {selected.map((p) => (
                   <td key={`${p.id}-stack`}>{p.stack.join(', ')}</td>
                 ))}
               </tr>
               <tr>
-                <th>Highlights</th>
+                <th scope="row">Highlights</th>
                 {selected.map((p) => (
                   <td key={`${p.id}-tags`}>{p.tags.join(', ')}</td>
                 ))}
@@ -252,99 +230,107 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
         </div>
       )}
       <div className="columns-1 sm:columns-2 md:columns-3 gap-4">
-        {filtered.map((project) => (
-          <div
-            key={project.id}
-            className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden"
-          >
-            <div className="flex flex-col md:flex-row h-48">
-              <img
-                src={project.thumbnail}
-                alt={project.title}
-                className="w-full md:w-1/2 h-48 object-cover"
-                loading="lazy"
-              />
-              <div className="w-full md:w-1/2 h-48">
-                <Editor
-                  height="100%"
-                  theme="vs-dark"
-                  language={project.language}
-                  value={project.snippet}
-                  options={{ readOnly: true, minimap: { enabled: false } }}
+        {filtered.map((project) => {
+          const demoUrl = project.demo;
+          const repoUrl = project.repo;
+
+          return (
+            <div
+              key={project.id}
+              className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden"
+            >
+              <div className="flex flex-col md:flex-row h-48">
+                <img
+                  src={project.thumbnail}
+                  alt={project.title}
+                  className="w-full md:w-1/2 h-48 object-cover"
+                  loading="lazy"
                 />
+                <div className="w-full md:w-1/2 h-48">
+                  <Editor
+                    height="100%"
+                    theme="vs-dark"
+                    language={project.language ?? 'plaintext'}
+                    value={project.snippet ?? '// Snippet unavailable'}
+                    options={{ readOnly: true, minimap: { enabled: false } }}
+                  />
+                </div>
               </div>
-            </div>
-            <div className="p-4 space-y-2">
-              <h3 className="text-lg font-semibold">{project.title}</h3>
-              <p className="text-sm">{project.description}</p>
-              <button
-                onClick={() => toggleSelect(project)}
-                aria-label={`Select ${project.title} for comparison`}
-                className="bg-gray-700 text-xs px-2 py-1 rounded-full"
-              >
-                {selected.some((p) => p.id === project.id)
-                  ? 'Deselect'
-                  : 'Compare'}
-              </button>
-              <div className="flex flex-wrap gap-1">
-                {project.stack.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setStack(s)}
-                    className="bg-gray-700 text-xs px-2 py-1 rounded-full"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {project.tags.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() =>
-                      setTags((prev) =>
-                        prev.includes(t)
-                          ? prev.filter((tag) => tag !== t)
-                          : [...prev, t]
-                      )
-                    }
-                    className="bg-gray-700 text-xs px-2 py-1 rounded-full"
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-3 text-sm pt-2">
-                <a
-                  href={project.repo}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-400 hover:underline"
+              <div className="p-4 space-y-2">
+                <h3 className="text-lg font-semibold">{project.title}</h3>
+                <p className="text-sm">{project.description}</p>
+                <button
+                  onClick={() => toggleSelect(project)}
+                  aria-label={`Select ${project.title} for comparison`}
+                  className="bg-gray-700 text-xs px-2 py-1 rounded-full"
                 >
-                  Repo
-                </a>
-                  {project.demo && (
+                  {selected.some((p) => p.id === project.id) ? 'Deselect' : 'Compare'}
+                </button>
+                <div className="flex flex-wrap gap-1">
+                  {project.stack.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setStack(s)}
+                      className="bg-gray-700 text-xs px-2 py-1 rounded-full"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {project.tags.map((t) => (
+                    <button
+                      key={t}
+                      onClick={() =>
+                        setTags((prev) =>
+                          prev.includes(t)
+                            ? prev.filter((tag) => tag !== t)
+                            : [...prev, t]
+                        )
+                      }
+                      className="bg-gray-700 text-xs px-2 py-1 rounded-full"
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-3 text-sm pt-2">
+                  {repoUrl && (
+                    <a
+                      href={repoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:underline"
+                      aria-label={`View the ${project.title} repository`}
+                    >
+                      Repository
+                    </a>
+                  )}
+                  {demoUrl && (
                     <>
                       <a
-                        href={project.demo}
+                        href={demoUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-400 hover:underline"
+                        aria-label={`Launch the ${project.title} live demo`}
                       >
                         Live Demo
                       </a>
                       <button
-                        onClick={() => openInFirefox(project.demo)}
+                        onClick={() => openInFirefox(demoUrl)}
                         className="text-blue-400 hover:underline"
+                        aria-label={`Open ${project.title} live demo in the Firefox app`}
                       >
                         Open in Firefox
                       </button>
                     </>
                   )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       <div aria-live="polite" className="sr-only">
         {ariaMessage}
