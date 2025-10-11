@@ -46,6 +46,25 @@ interface ModuleSet {
   modules: string[];
 }
 
+type QueueStatus = 'pending' | 'running' | 'done';
+
+interface QueueItem {
+  module: ModuleEntry;
+  status: QueueStatus;
+}
+
+const queueStatusStyles: Record<QueueStatus, string> = {
+  pending: 'bg-yellow-500/20 text-yellow-200 border border-yellow-500/40',
+  running: 'bg-blue-500/20 text-blue-200 border border-blue-500/40',
+  done: 'bg-green-500/20 text-green-200 border border-green-500/40',
+};
+
+const queueStatusLabels: Record<QueueStatus, string> = {
+  pending: 'Pending',
+  running: 'Running',
+  done: 'Done',
+};
+
 const buildModuleTree = (catalog: ModuleEntry[]) => {
   const root: TreeNode = {};
   catalog.forEach((mod) => {
@@ -196,9 +215,11 @@ const MetasploitPost: React.FC = () => {
     Enumeration: [],
   });
   const [report, setReport] = useState<ResultItem[]>([]);
-  const [queue, setQueue] = useState<ModuleEntry[]>([]);
+  const [queue, setQueue] = useState<QueueItem[]>([]);
   const [setName, setSetName] = useState('');
   const [savedSets, setSavedSets] = usePersistentState<ModuleSet[]>('msf-post-sets', []);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isQueueProcessing, setIsQueueProcessing] = useState(false);
 
   const treeData = useMemo(() => buildModuleTree(modules as ModuleEntry[]), []);
 
@@ -223,6 +244,19 @@ const MetasploitPost: React.FC = () => {
     });
   }, [steps]);
 
+  const updateQueueItemStatus = useCallback((modulePath: string, status: QueueStatus) => {
+    setQueue((prev) =>
+      prev.map((item) =>
+        item.module.path === modulePath
+          ? {
+              ...item,
+              status,
+            }
+          : item,
+      ),
+    );
+  }, []);
+
   const runModule = (mod: ModuleEntry) => {
     const result = { title: mod.path, output: mod.sampleOutput };
     setResults((prev) => ({
@@ -234,25 +268,79 @@ const MetasploitPost: React.FC = () => {
   };
 
   const run = () => {
-    if (!selected) return;
+    if (!selected) {
+      setStatusMessage('Select a module to run from the catalog tree.');
+      return;
+    }
+
+    const missingOptions =
+      selected.options?.filter((o) => !(params[o.name] && params[o.name].trim())) || [];
+
+    if (missingOptions.length > 0) {
+      const missingLabels = missingOptions.map((o) => o.label).join(', ');
+      setStatusMessage(`Set the required option values before running: ${missingLabels}.`);
+      return;
+    }
+
+    setStatusMessage(`Running ${selected.path}...`);
     runModule(selected);
+    updateQueueItemStatus(selected.path, 'done');
+    setStatusMessage(`Completed ${selected.path}. Review the output in the ${activeTab} tab.`);
   };
 
   const addToQueue = () => {
     if (!selected) return;
-    setQueue((prev) => [...prev, selected]);
+    setQueue((prev) => {
+      if (prev.find((item) => item.module.path === selected.path)) {
+        setStatusMessage('This module is already queued.');
+        return prev;
+      }
+      setStatusMessage(`Queued ${selected.path}.`);
+      return [...prev, { module: selected, status: 'pending' }];
+    });
   };
 
   const runQueue = () => {
-    queue.forEach((mod, idx) => {
-      setTimeout(() => runModule(mod), idx * 1000);
+    if (queue.length === 0) {
+      setStatusMessage('Queue is empty. Add modules to the queue before running.');
+      return;
+    }
+
+    if (isQueueProcessing) {
+      setStatusMessage('Queue is already running. Please wait for it to finish.');
+      return;
+    }
+
+    const snapshot = [...queue];
+    setIsQueueProcessing(true);
+    setStatusMessage(
+      `Running queue with ${snapshot.length} module${snapshot.length > 1 ? 's' : ''}...`,
+    );
+
+    snapshot.forEach((item, idx) => {
+      const startDelay = idx * 1200;
+      setTimeout(() => {
+        updateQueueItemStatus(item.module.path, 'running');
+        setStatusMessage(
+          `Running ${item.module.path} (${idx + 1}/${snapshot.length})...`,
+        );
+      }, startDelay);
+
+      setTimeout(() => {
+        runModule(item.module);
+        updateQueueItemStatus(item.module.path, 'done');
+        if (idx === snapshot.length - 1) {
+          setStatusMessage('Queue completed. Review the results below.');
+          setIsQueueProcessing(false);
+          setTimeout(() => setQueue([]), 800);
+        }
+      }, startDelay + 600);
     });
-    setQueue([]);
   };
 
   const saveSet = () => {
     if (!setName || queue.length === 0) return;
-    const newSet = { name: setName, modules: queue.map((m) => m.path) };
+    const newSet = { name: setName, modules: queue.map((m) => m.module.path) };
     setSavedSets((prev) => [...prev, newSet]);
     setQueue([]);
     setSetName('');
@@ -275,12 +363,54 @@ const MetasploitPost: React.FC = () => {
       ...results['Persistence'],
       ...results['Enumeration'],
     ];
+    if (all.length === 0) {
+      setStatusMessage('No results to save. Run a module before generating a report.');
+      return;
+    }
+    setStatusMessage('Saving consolidated report results...');
     setReport((prev) => [...prev, ...all]);
+    setStatusMessage('Report saved. Scroll down to review the compiled findings.');
   };
+
+  const selectedMissingOptions =
+    selected?.options?.filter((o) => !(params[o.name] && params[o.name].trim())) || [];
+  const hasMissingOptions = selectedMissingOptions.length > 0;
 
   return (
     <div className="p-4 bg-gray-900 text-white min-h-screen">
       <h1 className="text-xl mb-4">Metasploit Post Modules</h1>
+      <div
+        className="mb-4 rounded border border-gray-700 bg-gray-800 p-3"
+        data-testid="queue-summary-card"
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Execution Queue</h2>
+          {isQueueProcessing && (
+            <span className="text-xs uppercase text-blue-300">Processing</span>
+          )}
+        </div>
+        {queue.length === 0 ? (
+          <p className="mt-2 text-sm text-gray-300">No modules queued.</p>
+        ) : (
+          <ul className="mt-2 space-y-2">
+            {queue.map((item) => (
+              <li key={item.module.path} className="flex items-center justify-between text-sm">
+                <span className="pr-2">{item.module.path}</span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs uppercase tracking-wide ${queueStatusStyles[item.status]}`}
+                >
+                  {queueStatusLabels[item.status]}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      {statusMessage && (
+        <div className="mb-4 rounded border border-blue-500/40 bg-blue-900/30 p-3 text-sm" role="status">
+          {statusMessage}
+        </div>
+      )}
       <div className="flex space-x-4 mb-4">
         {tabs.map((t) => (
           <button
@@ -316,6 +446,14 @@ const MetasploitPost: React.FC = () => {
             <div>
               <h2 className="font-semibold mb-2">{selected.path}</h2>
               <p className="mb-2 text-sm text-gray-300">{selected.description}</p>
+              {selected.options && selected.options.length > 0 ? (
+                <p className="mb-3 text-xs text-gray-400">
+                  Provide values for all required options before running. Defaults are pre-filled when
+                  available.
+                </p>
+              ) : (
+                <p className="mb-3 text-xs text-gray-400">This module has no required options.</p>
+              )}
                   {selected.options?.map((o) => {
                     const inputId = `metasploit-post-option-${o.name}`;
                     const labelId = `${inputId}-label`;
@@ -335,7 +473,18 @@ const MetasploitPost: React.FC = () => {
                       </div>
                     );
                   })}
-              <button onClick={run} className="mt-2 px-3 py-1 bg-green-600 rounded">
+              {hasMissingOptions && (
+                <p className="text-xs text-amber-300">
+                  Missing options: {selectedMissingOptions.map((o) => o.label).join(', ')}
+                </p>
+              )}
+              <button
+                onClick={run}
+                className={`mt-2 px-3 py-1 rounded ${
+                  hasMissingOptions ? 'bg-green-600/40 cursor-not-allowed' : 'bg-green-600'
+                }`}
+                disabled={hasMissingOptions}
+              >
                 Run
               </button>
               <button onClick={addToQueue} className="mt-2 ml-2 px-3 py-1 bg-purple-600 rounded">
@@ -349,12 +498,21 @@ const MetasploitPost: React.FC = () => {
             <div className="mt-4">
               <h3 className="font-semibold mb-2">Queued Modules</h3>
               <ul className="list-disc pl-6">
-                {queue.map((m, i) => (
-                  <li key={i}>{m.path}</li>
+                {queue.map((m) => (
+                  <li key={m.module.path}>
+                    {m.module.path}
+                    <span className="ml-2 text-xs text-gray-400">({queueStatusLabels[m.status]})</span>
+                  </li>
                 ))}
               </ul>
               <div className="flex items-center space-x-2 mt-2">
-                  <button onClick={runQueue} className="px-3 py-1 bg-green-600 rounded">
+                  <button
+                    onClick={runQueue}
+                    className={`px-3 py-1 rounded ${
+                      isQueueProcessing ? 'bg-green-600/40 cursor-not-allowed' : 'bg-green-600'
+                    }`}
+                    disabled={isQueueProcessing}
+                  >
                     Run Queue
                   </button>
                   <label htmlFor="metasploit-post-set-name" className="sr-only" id="metasploit-post-set-name-label">
@@ -368,7 +526,15 @@ const MetasploitPost: React.FC = () => {
                     onChange={(e) => setSetName(e.target.value)}
                     aria-labelledby="metasploit-post-set-name-label"
                   />
-                <button onClick={saveSet} className="px-3 py-1 bg-blue-600 rounded">
+                <button
+                  onClick={saveSet}
+                  className={`px-3 py-1 rounded ${
+                    queue.length === 0 || !setName.trim()
+                      ? 'bg-blue-600/40 cursor-not-allowed'
+                      : 'bg-blue-600'
+                  }`}
+                  disabled={queue.length === 0 || !setName.trim()}
+                >
                   Save Set
                 </button>
               </div>
