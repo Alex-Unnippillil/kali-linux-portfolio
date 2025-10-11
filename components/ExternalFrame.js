@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { forwardRef, useEffect, useState } from 'react';
 import Head from 'next/head';
 
 const ALLOWLIST = ['https://vscode.dev', 'https://stackblitz.com'];
@@ -16,7 +16,10 @@ const isAllowed = (src) => {
  * Iframe wrapper for allowed external sources.
  * Optionally prefetches the iframe source.
  */
-export default function ExternalFrame({ src, title, prefetch = false, onLoad: onLoadProp, ...props }) {
+const ExternalFrame = (
+  { src, title, prefetch = false, onLoad: onLoadProp, onError: onErrorProp, ...props },
+  ref,
+) => {
   const [cookiesBlocked, setCookiesBlocked] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -66,9 +69,14 @@ export default function ExternalFrame({ src, title, prefetch = false, onLoad: on
             sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture; microphone; camera"
             referrerPolicy="no-referrer"
+            ref={ref}
             onLoad={(e) => {
               setLoaded(true);
               onLoadProp?.(e);
+            }}
+            onError={(e) => {
+              setLoaded(false);
+              onErrorProp?.(e);
             }}
             className={`w-full h-full ${loaded ? '' : 'invisible'}`}
             {...props}
@@ -88,4 +96,6 @@ export default function ExternalFrame({ src, title, prefetch = false, onLoad: on
       </div>
     </>
   );
-}
+};
+
+export default forwardRef(ExternalFrame);
