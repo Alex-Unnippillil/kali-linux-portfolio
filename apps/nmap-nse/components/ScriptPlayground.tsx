@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
+import scriptCatalog from '../../../public/demo-data/nmap/scripts.json';
 
 interface ScriptMeta {
   name: string;
@@ -10,25 +11,47 @@ interface ScriptMeta {
   code: string;
 }
 
-const OUTPUT_EXAMPLES: Record<string, string> = {
-  'http-title': `80/tcp open  http
-| http-title: Example Domain
-|_Requested resource was Example Domain page`,
-  'ftp-anon': `21/tcp open  ftp
-| ftp-anon: Anonymous FTP login allowed (FTP code 230)
-|_This is a sample output`,
-};
+type CatalogShape = Record<string, Array<{ name: string; description: string; example?: string; categories?: string[] }>>;
 
-const ScriptPlayground: React.FC = () => {
-  const [script, setScript] = usePersistentState<ScriptMeta>(
-    'nmap-nse-playground',
-    {
+const catalog = scriptCatalog as CatalogShape;
+
+const flattened = Object.entries(catalog).flatMap(([tag, scripts]) =>
+  scripts.map((script) => ({
+    name: script.name,
+    description: script.description,
+    example: script.example || '',
+    categories: script.categories || [tag],
+  }))
+);
+
+const DEFAULT_SCRIPT: ScriptMeta = flattened[0]
+  ? {
+      name: flattened[0].name,
+      description: flattened[0].description,
+      categories: flattened[0].categories.join(', '),
+      code: `-- ${flattened[0].name}.nse\ndescription = [[\n${flattened[0].description}\n]]\n`;
+    }
+  : {
       name: '',
       description: '',
       categories: '',
       code: '',
-    }
+    };
+
+const ScriptPlayground: React.FC = () => {
+  const [script, setScript] = usePersistentState<ScriptMeta>(
+    'nmap-nse-playground',
+    DEFAULT_SCRIPT
   );
+
+  const outputExamples = useMemo(() => {
+    return flattened.reduce<Record<string, string>>((acc, entry) => {
+      if (entry.example) {
+        acc[entry.name] = entry.example;
+      }
+      return acc;
+    }, {});
+  }, []);
 
   const update = (
     key: keyof ScriptMeta
@@ -94,7 +117,7 @@ const ScriptPlayground: React.FC = () => {
       <div>
         <h3 className="text-lg mb-2">Simulated Output</h3>
         <pre className="bg-black text-green-400 p-2 rounded overflow-auto font-mono leading-[1.2]">
-          {OUTPUT_EXAMPLES[script.name] || 'No example available.'}
+          {outputExamples[script.name] || 'No example available.'}
         </pre>
       </div>
     </div>

@@ -1,18 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import TerminalOutput from './TerminalOutput';
 
 interface BuilderProps {
   doc: string;
   build: (params: Record<string, string>) => string;
+  onBuild?: (command: string, params: Record<string, string>) => void;
 }
 
-export default function CommandBuilder({ doc, build }: BuilderProps) {
+export default function CommandBuilder({ doc, build, onBuild }: BuilderProps) {
   const [params, setParams] = useState<Record<string, string>>({});
   const update = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setParams({ ...params, [key]: e.target.value });
   };
 
   const command = build(params);
+
+  useEffect(() => {
+    onBuild?.(command, params);
+  }, [command, onBuild, params]);
 
   return (
     <form className="text-xs" onSubmit={(e) => e.preventDefault()} aria-label="command builder">

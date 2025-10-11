@@ -4,6 +4,17 @@
       "ip": "192.0.2.10",
       "ports": [
         {
+          "port": 22,
+          "service": "ssh",
+          "cvss": 4.4,
+          "scripts": [
+            {
+              "name": "ssh-hostkey",
+              "output": "RSA SHA256:3ZavExampleFingerprint\nED25519 SHA256:9XuoExampleFingerprint"
+            }
+          ]
+        },
+        {
           "port": 80,
           "service": "http",
           "cvss": 5.0,
@@ -25,11 +36,12 @@
           "scripts": [
             {
               "name": "ssl-cert",
-              "output": "Subject: commonName=example.com\nNot valid before: 2020-06-01\nNot valid after: 2022-06-01"
+              "output": "Subject: commonName=example.com\nIssuer: Example CA"
             }
           ]
         }
-      ]
+      ],
+      "vulnerabilities": []
     },
     {
       "ip": "192.0.2.20",
@@ -44,8 +56,20 @@
               "output": "Anonymous FTP login allowed\nwelcome.msg"
             }
           ]
+        },
+        {
+          "port": 80,
+          "service": "http",
+          "cvss": 7.8,
+          "scripts": [
+            {
+              "name": "http-vuln-cve2009-3960",
+              "output": "VULNERABLE: Directory traversal"
+            }
+          ]
         }
-      ]
+      ],
+      "vulnerabilities": []
     },
     {
       "ip": "192.0.2.30",
@@ -53,13 +77,19 @@
         {
           "port": 445,
           "service": "microsoft-ds",
-          "cvss": 4.0,
+          "cvss": 9.8,
           "scripts": [
             {
               "name": "smb-os-discovery",
               "output": "OS: Windows 10 Pro\nComputer name: HOST\nWorkgroup: WORKGROUP"
             }
           ]
+        }
+      ],
+      "vulnerabilities": [
+        {
+          "id": "smb-vuln-ms17-010",
+          "output": "Remote host vulnerable to MS17-010"
         }
       ]
     }

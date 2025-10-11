@@ -1,71 +1,75 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import LabMode from '../../LabMode';
+import CommandBuilder from '../../CommandBuilder';
 import Toast from '../../ui/Toast';
 import DiscoveryMap from './DiscoveryMap';
+import scriptCatalog from '../../../public/demo-data/nmap/scripts.json';
+import outputFixture from '../../../public/demo/nmap-nse.json';
+import resultsFixture from '../../../public/demo/nmap-results.json';
 
-// Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
-const scripts = [
-  {
-    name: 'http-title',
-    description: 'Fetches page titles from HTTP services.',
-    tags: ['discovery', 'http']
-  },
-  {
-    name: 'ssl-cert',
-    description: 'Retrieves TLS certificate information.',
-    tags: ['ssl', 'discovery']
-  },
-  {
-    name: 'smb-os-discovery',
-    description: 'Discovers remote OS information via SMB.',
-    tags: ['smb', 'discovery']
-  },
-  {
-    name: 'ftp-anon',
-    description: 'Checks for anonymous FTP access.',
-    tags: ['ftp', 'auth']
-  },
-  {
-    name: 'http-enum',
-    description: 'Enumerates directories on web servers.',
-    tags: ['http', 'vuln']
-  },
-  {
-    name: 'dns-brute',
-    description: 'Performs DNS subdomain brute force enumeration.',
-    tags: ['dns', 'brute']
-  }
-];
-
-const scriptPhases = {
-  'http-title': ['portrule'],
-  'ssl-cert': ['portrule'],
-  'smb-os-discovery': ['hostrule'],
-  'ftp-anon': ['portrule'],
-  'http-enum': ['portrule'],
-  'dns-brute': ['hostrule']
+const FALLBACK_PHASES = {
+  discovery: ['portrule'],
+  vuln: ['hostrule'],
+  safe: ['portrule'],
 };
 
-const phaseInfo = {
+const PHASE_DETAILS = {
   prerule: {
     description:
       'Runs before any hosts are scanned. Often used for broadcast discovery.',
-    example: 'broadcast-dhcp-discover'
+    example: 'broadcast-dhcp-discover',
   },
   hostrule: {
     description: 'Runs once for each target host.',
-    example: 'smb-os-discovery'
+    example: 'smb-os-discovery',
   },
   portrule: {
     description: 'Runs once for each target port.',
-    example: 'http-title'
-  }
+    example: 'http-title',
+  },
+  postrule: {
+    description: 'Runs after all hosts/ports are processed to summarise findings.',
+    example: 'vuln-summary',
+  },
 };
 
-const portPresets = [
+const PHASE_ORDER = ['prerule', 'hostrule', 'portrule', 'postrule'];
+
+const PORT_PRESETS = [
   { label: 'Default', flag: '' },
   { label: 'Common', flag: '-F' },
-  { label: 'Full', flag: '-p-' }
+  { label: 'Full', flag: '-p-' },
 ];
+
+const buildLibrary = (catalog) =>
+  Object.entries(catalog).flatMap(([tag, scripts]) =>
+    scripts.map((script) => ({
+      name: script.name,
+      description: script.description,
+      categories: script.categories || [tag],
+      phases: script.phases || FALLBACK_PHASES[tag] || ['hostrule'],
+      argsHint: script.argsHint || '',
+      example: script.example || '',
+    }))
+  );
+
+const baseLibrary = buildLibrary(scriptCatalog);
+
+const fallbackExamples = baseLibrary.reduce(
+  (acc, script) => {
+    if (script.example) {
+      acc[script.name] = script.example;
+    }
+    return acc;
+  },
+  { ...outputFixture }
+);
 
 const cvssColor = (score) => {
   if (score >= 9) return 'bg-red-700';
@@ -74,82 +78,180 @@ const cvssColor = (score) => {
   return 'bg-green-700';
 };
 
+const highlightLine = (line) => /open|allowed|potential|vulnerable|high/i.test(line);
+
+const buildLibraryFromFetch = (data) => {
+  try {
+    return buildLibrary(data);
+  } catch (err) {
+    return [];
+  }
+};
+
 const NmapNSEApp = () => {
-  const [target, setTarget] = useState('example.com');
-  const [selectedScripts, setSelectedScripts] = useState([scripts[0].name]);
+  const [library, setLibrary] = useState(baseLibrary);
+  const [target, setTarget] = useState('scanme.nmap.org');
   const [scriptQuery, setScriptQuery] = useState('');
-  const [portFlag, setPortFlag] = useState('');
-  const [examples, setExamples] = useState({});
-  const [results, setResults] = useState({ hosts: [] });
-  const [scriptOptions, setScriptOptions] = useState({});
-  const [activeScript, setActiveScript] = useState(scripts[0].name);
+  const [selectedScripts, setSelectedScripts] = useState(() =>
+    baseLibrary[0] ? [baseLibrary[0].name] : []
+  );
+  const [activeScript, setActiveScript] = useState(
+    () => baseLibrary[0]?.name || ''
+  );
   const [phaseStep, setPhaseStep] = useState(0);
+  const [portFlag, setPortFlag] = useState('');
+  const [scriptOptions, setScriptOptions] = useState({});
+  const [examples, setExamples] = useState(fallbackExamples);
+  const [results, setResults] = useState(resultsFixture);
   const [toast, setToast] = useState('');
+  const [commandString, setCommandString] = useState('');
   const outputRef = useRef(null);
-  const phases = ['prerule', 'hostrule', 'portrule'];
+
+  const scriptMap = useMemo(() => {
+    return library.reduce((acc, script) => {
+      acc[script.name] = script;
+      return acc;
+    }, {});
+  }, [library]);
 
   useEffect(() => {
-    fetch('/demo/nmap-nse.json')
-      .then((r) => r.json())
-      .then(setExamples)
-      .catch(() => setExamples({}));
-    fetch('/demo/nmap-results.json')
-      .then((r) => r.json())
-      .then(setResults)
-      .catch(() => setResults({ hosts: [] }));
+    const controller = new AbortController();
+    const load = async () => {
+      try {
+        const res = await fetch('/demo-data/nmap/scripts.json', {
+          signal: controller.signal,
+        });
+        if (res.ok) {
+          const json = await res.json();
+          const nextLibrary = buildLibraryFromFetch(json);
+          if (nextLibrary.length) {
+            setLibrary(nextLibrary);
+          }
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          // ignore
+        }
+      }
+
+      try {
+        const res = await fetch('/demo/nmap-nse.json', {
+          signal: controller.signal,
+        });
+        if (res.ok) {
+          const json = await res.json();
+          setExamples((prev) => ({ ...prev, ...json }));
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          // ignore
+        }
+      }
+
+      try {
+        const res = await fetch('/demo/nmap-results.json', {
+          signal: controller.signal,
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json?.hosts) {
+            setResults(json);
+          }
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          // ignore
+        }
+      }
+    };
+
+    load();
+
+    return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (!selectedScripts.length && library[0]) {
+      setSelectedScripts([library[0].name]);
+      setActiveScript(library[0].name);
+      setPhaseStep(0);
+    }
+  }, [library, selectedScripts.length]);
+
+  useEffect(() => {
+    if (activeScript && !scriptMap[activeScript]) {
+      const fallback = selectedScripts[0] || library[0]?.name || '';
+      setActiveScript(fallback);
+      setPhaseStep(0);
+    }
+  }, [activeScript, scriptMap, selectedScripts, library]);
+
+  const buildCommand = useCallback(
+    (params) => {
+      const resolvedTarget = (params.target || target || '').trim() || 'scanme.nmap.org';
+      const extraOpts = (params.opts || '').trim();
+      const scriptList = selectedScripts.join(',');
+      const argsList = selectedScripts
+        .map((name) => scriptOptions[name])
+        .filter(Boolean)
+        .join(',');
+
+      const segments = ['nmap'];
+      if (portFlag) segments.push(portFlag);
+      if (extraOpts) segments.push(extraOpts);
+      if (scriptList) segments.push(`--script ${scriptList}`);
+      if (argsList) segments.push(`--script-args ${argsList}`);
+      segments.push(resolvedTarget);
+
+      return segments.join(' ').replace(/\s+/g, ' ').trim();
+    },
+    [portFlag, scriptOptions, selectedScripts, target]
+  );
+
+  const handleBuild = useCallback((cmd) => {
+    setCommandString(cmd);
+  }, []);
+
+  const filteredScripts = useMemo(() => {
+    const query = scriptQuery.toLowerCase();
+    return library.filter(
+      (script) =>
+        script.name.toLowerCase().includes(query) ||
+        script.description.toLowerCase().includes(query)
+    );
+  }, [library, scriptQuery]);
 
   const toggleScript = (name) => {
     setSelectedScripts((prev) => {
       const exists = prev.includes(name);
-      const next = exists ? prev.filter((n) => n !== name) : [...prev, name];
-      return next;
+      if (exists) {
+        return prev.filter((n) => n !== name);
+      }
+      return [...prev, name];
     });
     setActiveScript(name);
     setPhaseStep(0);
   };
 
-  useEffect(() => {
-    if (!selectedScripts.includes(activeScript)) {
-      setActiveScript(selectedScripts[0] || '');
-      setPhaseStep(0);
-    }
-  }, [selectedScripts, activeScript]);
-
-  const filteredScripts = scripts.filter((s) =>
-    s.name.toLowerCase().includes(scriptQuery.toLowerCase())
-  );
-
-  const argsString = selectedScripts
-    .map((s) => scriptOptions[s])
-    .filter(Boolean)
-    .join(',');
-  const command = `nmap ${portFlag} ${
-    selectedScripts.length ? `--script ${selectedScripts.join(',')}` : ''
-  } ${argsString ? `--script-args ${argsString}` : ''} ${target}`
-    .replace(/\s+/g, ' ')
-    .trim();
-
   const copyCommand = async () => {
-    if (typeof window !== 'undefined') {
-      try {
-        await navigator.clipboard.writeText(command);
-        setToast('Command copied');
-      } catch (e) {
-        // ignore
-      }
+    if (!commandString) return;
+    try {
+      await navigator.clipboard.writeText(commandString);
+      setToast('Command copied');
+    } catch {
+      // ignore
     }
   };
 
   const copyOutput = async () => {
     const text = selectedScripts
-      .map((s) => `# ${s}\n${examples[s] || ''}`)
+      .map((name) => `# ${name}\n${examples[name] || ''}`)
       .join('\n');
     if (!text.trim()) return;
     try {
       await navigator.clipboard.writeText(text);
       setToast('Output copied');
-    } catch (e) {
+    } catch {
       // ignore
     }
   };
@@ -177,266 +279,305 @@ const NmapNSEApp = () => {
 
   const renderOutput = (text) => {
     if (!text) return 'No sample output available.';
-    return text.split('\n').map((line, idx) => {
-      const highlight = /open|allowed|Potential/i.test(line);
-      return (
-        <span key={idx} className={highlight ? 'text-yellow-300' : undefined}>
-          {line}
-          {'\n'}
-        </span>
-      );
-    });
+    return text.split('\n').map((line, idx) => (
+      <span key={idx} className={highlightLine(line) ? 'text-yellow-300' : undefined}>
+        {line}
+        {'\n'}
+      </span>
+    ));
   };
 
+  const activeMeta = activeScript ? scriptMap[activeScript] : null;
+  const activePhases = activeMeta?.phases || [];
+
+  useEffect(() => {
+    if (activePhases.length && phaseStep >= activePhases.length) {
+      setPhaseStep(activePhases.length - 1);
+    }
+    if (!activePhases.length && phaseStep !== 0) {
+      setPhaseStep(0);
+    }
+  }, [activePhases, phaseStep]);
+
   return (
-    <div className="flex flex-col md:flex-row h-full w-full text-white">
-      <div className="md:w-1/2 p-4 bg-ub-dark overflow-y-auto">
-        <h1 className="text-lg mb-4">Nmap NSE Demo</h1>
-        <div className="mb-4 p-2 bg-yellow-900 text-yellow-200 border-l-4 border-yellow-500 rounded">
-          <p className="text-sm font-bold">
-            Educational use only. Do not scan systems without permission.
+    <LabMode>
+      <div className="flex h-full w-full flex-col text-white md:flex-row">
+        <div className="bg-ub-dark p-4 md:w-1/2 md:overflow-y-auto">
+          <h1 className="text-lg font-semibold">Nmap NSE Lab</h1>
+          <p className="mt-1 mb-4 text-xs text-yellow-200">
+            Build safe commands, explore outputs, and keep scans inside this simulated lab.
           </p>
-        </div>
-        <div className="mb-4">
-          <label className="block text-sm mb-1" htmlFor="target">Target</label>
-          <input
-            id="target"
-            value={target}
-            onChange={(e) => setTarget(e.target.value)}
-            className="w-full p-2 text-black"
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-sm mb-1" htmlFor="scripts">
-            Scripts
-          </label>
-          <input
-            id="scripts"
-            value={scriptQuery}
-            onChange={(e) => setScriptQuery(e.target.value)}
-            placeholder="Search scripts"
-            className="w-full p-2 text-black mb-2"
-          />
-          <div className="max-h-64 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {filteredScripts.map((s) => (
-              <div key={s.name} className="bg-white text-black p-2 rounded">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedScripts.includes(s.name)}
-                    onChange={() => toggleScript(s.name)}
-                  />
-                  <span className="font-mono">{s.name}</span>
-                </label>
-                <p className="text-xs mb-1">{s.description}</p>
-                <div className="flex flex-wrap gap-1 mb-1">
-                  {s.tags.map((t) => (
-                    <span key={t} className="px-1 text-xs bg-gray-200 rounded">
-                      {t}
-                    </span>
-                  ))}
-                </div>
-                {selectedScripts.includes(s.name) && (
-                  <input
-                    type="text"
-                    value={scriptOptions[s.name] || ''}
-                    onChange={(e) =>
-                      setScriptOptions((prev) => ({
-                        ...prev,
-                        [s.name]: e.target.value,
-                      }))
-                    }
-                    placeholder="arg=value"
-                    className="w-full p-1 border rounded text-black"
-                  />
-                )}
-              </div>
-            ))}
-            {filteredScripts.length === 0 && (
-              <p className="text-sm">No scripts found.</p>
-            )}
+          <div className="mb-4">
+            <label className="mb-1 block text-sm font-medium" htmlFor="nmap-target">
+              Target host or range
+            </label>
+            <input
+              id="nmap-target"
+              value={target}
+              onChange={(e) => setTarget(e.target.value)}
+              className="w-full rounded border border-black/40 p-2 text-black"
+              placeholder="scanme.nmap.org"
+            />
           </div>
-        </div>
-        <div className="mb-4">
-          <p className="block text-sm mb-1">Port presets</p>
-          <div className="flex gap-2">
-            {portPresets.map((p) => (
-              <button
-                key={p.label}
-                type="button"
-                onClick={() => setPortFlag(p.flag)}
-                className={`px-2 py-1 rounded text-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow ${
-                  portFlag === p.flag ? 'bg-ub-yellow' : 'bg-ub-grey'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="flex items-center mb-4">
-          <pre className="flex-1 bg-black text-green-400 p-2 rounded overflow-auto">
-            {command}
-          </pre>
-          <button
-            type="button"
-            onClick={copyCommand}
-            className="ml-2 px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
-          >
-            Copy Command
-          </button>
-        </div>
-      </div>
-      <div className="md:w-1/2 p-4 bg-black overflow-y-auto">
-        <h2 className="text-lg mb-2">Script phases</h2>
-        {activeScript ? (
-          <>
-            <p className="text-sm mb-1">
-              Phases for <span className="font-mono">{activeScript}</span>
-            </p>
-            <div className="flex space-x-2 mb-2">
-              {phases.map((p) => (
+          <div className="mb-4">
+            <label className="mb-1 block text-sm font-medium" htmlFor="nmap-script-search">
+              Script library
+            </label>
+            <input
+              id="nmap-script-search"
+              value={scriptQuery}
+              onChange={(e) => setScriptQuery(e.target.value)}
+              placeholder="Search by name or description"
+              className="mb-2 w-full rounded border border-black/40 p-2 text-black"
+            />
+            <div className="max-h-64 overflow-y-auto rounded border border-white/10 bg-black/30 p-2">
+              {filteredScripts.map((script) => (
                 <div
-                  key={p}
-                  className={`flex-1 p-2 text-center rounded ${
-                    scriptPhases[activeScript]?.includes(p)
-                      ? phaseStep >= scriptPhases[activeScript].indexOf(p)
-                        ? 'bg-blue-600'
-                        : 'bg-gray-700'
-                      : 'bg-gray-800'
-                  }`}
+                  key={script.name}
+                  className="mb-2 rounded bg-white text-black p-2 last:mb-0"
                 >
-                  {p}
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedScripts.includes(script.name)}
+                      onChange={() => toggleScript(script.name)}
+                      aria-label={script.name}
+                    />
+                    <span className="font-mono text-sm">{script.name}</span>
+                  </label>
+                  <p className="mt-1 text-xs text-gray-700">{script.description}</p>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {script.categories.map((category) => (
+                      <span
+                        key={category}
+                        className="rounded bg-gray-200 px-1.5 py-0.5 text-[10px] uppercase tracking-wide"
+                      >
+                        {category}
+                      </span>
+                    ))}
+                  </div>
+                  {selectedScripts.includes(script.name) && (
+                    <input
+                      type="text"
+                      value={scriptOptions[script.name] || ''}
+                      onChange={(e) =>
+                        setScriptOptions((prev) => ({
+                          ...prev,
+                          [script.name]: e.target.value,
+                        }))
+                      }
+                      placeholder={script.argsHint || 'key=value'}
+                      className="mt-2 w-full rounded border border-black/30 p-1 text-xs"
+                      aria-label={`Arguments for ${script.name}`}
+                    />
+                  )}
                 </div>
               ))}
+              {filteredScripts.length === 0 && (
+                <p className="text-xs text-gray-300">No scripts match that query.</p>
+              )}
             </div>
-            {scriptPhases[activeScript] && (
-              <p className="text-sm mb-2">
-                {phaseInfo[scriptPhases[activeScript][phaseStep]]?.description}{' '}
-                <span className="text-gray-400">
-                  Example: {phaseInfo[scriptPhases[activeScript][phaseStep]]?.example}
-                </span>
+          </div>
+          <div className="mb-4">
+            <p className="mb-1 text-sm font-medium">Port presets</p>
+            <div className="flex gap-2">
+              {PORT_PRESETS.map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => setPortFlag(preset.flag)}
+                  className={`rounded px-2 py-1 text-xs font-semibold transition ${
+                    portFlag === preset.flag
+                      ? 'bg-ub-yellow text-black'
+                      : 'bg-ub-grey text-black'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <CommandBuilder
+              doc="Craft an NSE command string without executing it. Optional fields let you append additional flags."
+              build={buildCommand}
+              onBuild={handleBuild}
+            />
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={copyCommand}
+                className="rounded bg-ub-grey px-2 py-1 text-xs font-semibold text-black"
+                disabled={!commandString}
+              >
+                Copy command
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="bg-black p-4 md:w-1/2 md:overflow-y-auto">
+          <h2 className="text-lg font-semibold">Script phases</h2>
+          {activeMeta ? (
+            <div className="mb-4">
+              <p className="text-xs text-gray-300">
+                Phases for <span className="font-mono text-sm text-blue-300">{activeMeta.name}</span>
               </p>
-            )}
-            <div className="flex gap-2 mb-4">
-              <button
-                type="button"
-                onClick={() =>
-                  setPhaseStep((s) =>
-                    Math.min(
-                      s + 1,
-                      (scriptPhases[activeScript]?.length || 1) - 1
-                    )
-                  )
-                }
-                className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
-              >
-                Step
-              </button>
-              <button
-                type="button"
-                onClick={() => setPhaseStep(0)}
-                className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
-              >
-                Reset
-              </button>
-            </div>
-          </>
-        ) : (
-          <p className="text-sm mb-4">Select a script to view phases.</p>
-        )}
-        <h2 className="text-lg mb-2">Topology</h2>
-        <DiscoveryMap hosts={results.hosts} />
-        <h2 className="text-lg mb-2">Parsed output</h2>
-        <ul className="mb-4 space-y-2">
-          {results.hosts.map((host) => (
-            <li key={host.ip}>
-              <div className="text-blue-400 font-mono">{host.ip}</div>
-              <ul className="ml-4 space-y-1">
-                {host.ports.map((p) => (
-                  <li key={p.port}>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono">
-                        {p.port}/tcp {p.service}
-                      </span>
-                      <span
-                        className={`px-1.5 py-0.5 rounded text-xs ${cvssColor(p.cvss)}`}
-                        aria-label={`CVSS score ${p.cvss}`}
-                      >
-                        CVSS {p.cvss}
-                      </span>
+              <div className="mt-2 flex gap-2">
+                {PHASE_ORDER.map((phase) => {
+                  const index = activePhases.indexOf(phase);
+                  const stateClass =
+                    index === -1
+                      ? 'bg-gray-800'
+                      : phaseStep >= index
+                      ? 'bg-blue-600'
+                      : 'bg-gray-700';
+                  return (
+                    <div
+                      key={phase}
+                      className={`flex-1 rounded px-2 py-1 text-center text-xs uppercase tracking-wide ${stateClass}`}
+                    >
+                      {phase}
                     </div>
-                    {p.scripts?.length > 0 && (
-                      <ul className="ml-4 mt-1 space-y-1">
-                        {p.scripts.map((sc) => {
-                          const meta = scripts.find((s) => s.name === sc.name);
-                          return (
-                            <li key={sc.name}>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-mono">{sc.name}</span>
-                                {meta && (
-                                  <div className="flex flex-wrap gap-1">
-                                    {meta.tags.map((t) => (
-                                      <span
-                                        key={t}
-                                        className="px-1.5 py-0.5 rounded text-xs bg-gray-700"
-                                      >
-                                        {t}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                              {sc.output && (
-                                <pre className="ml-4 text-green-400 whitespace-pre-wrap">
-                                  {sc.output}
-                                </pre>
-                              )}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
-        <h2 className="text-lg mb-2">Example output</h2>
-        <div
-          ref={outputRef}
-          tabIndex={0}
-          onKeyDown={handleOutputKey}
-          className="whitespace-pre-wrap text-green-400"
-        >
-          {selectedScripts.length === 0 && 'Select scripts to view sample output.'}
-          {selectedScripts.map((s) => (
-            <div key={s} className="mb-4">
-              <h3 className="text-blue-400 font-mono">{s}</h3>
-              <pre>{renderOutput(examples[s])}</pre>
+                  );
+                })}
+              </div>
+              {activePhases[phaseStep] && (
+                <p className="mt-2 text-xs text-gray-200">
+                  {PHASE_DETAILS[activePhases[phaseStep]]?.description}{' '}
+                  <span className="text-gray-500">
+                    Example: {PHASE_DETAILS[activePhases[phaseStep]]?.example}
+                  </span>
+                </p>
+              )}
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPhaseStep((prev) => {
+                      if (!activePhases.length) return 0;
+                      return Math.min(prev + 1, activePhases.length - 1);
+                    })
+                  }
+                  className="rounded bg-ub-grey px-2 py-1 text-xs font-semibold text-black"
+                >
+                  Step
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPhaseStep(0)}
+                  className="rounded bg-ub-grey px-2 py-1 text-xs font-semibold text-black"
+                >
+                  Reset
+                </button>
+              </div>
             </div>
-          ))}
-        </div>
-        <div className="mt-2 flex gap-2">
-          <button
-            type="button"
-            onClick={copyOutput}
-            className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+          ) : (
+            <p className="mb-4 text-sm text-gray-300">Select a script to view its phase progression.</p>
+          )}
+          <h2 className="text-lg font-semibold">Topology</h2>
+          <DiscoveryMap hosts={results.hosts || []} />
+          <h2 className="mt-4 text-lg font-semibold">Parsed output</h2>
+          <ul className="mb-4 space-y-2">
+            {(results.hosts || []).map((host) => (
+              <li key={host.ip}>
+                <div className="font-mono text-blue-400">{host.ip}</div>
+                <ul className="ml-4 space-y-1">
+                  {host.ports.map((port) => (
+                    <li key={`${host.ip}-${port.port}`}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm">
+                          {port.port}/tcp {port.service}
+                        </span>
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${cvssColor(port.cvss)}`}
+                          aria-label={`CVSS score ${port.cvss}`}
+                        >
+                          CVSS {port.cvss}
+                        </span>
+                      </div>
+                      {port.scripts?.length > 0 && (
+                        <ul className="ml-4 mt-1 space-y-1">
+                          {port.scripts.map((script) => {
+                            const meta = scriptMap[script.name];
+                            return (
+                              <li key={script.name}>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="font-mono text-xs text-white">{script.name}</span>
+                                  {meta && (
+                                    <div className="flex flex-wrap gap-1">
+                                      {meta.categories.map((cat) => (
+                                        <span
+                                          key={cat}
+                                          className="rounded bg-gray-700 px-1.5 py-0.5 text-[10px] uppercase"
+                                        >
+                                          {cat}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                {script.output && (
+                                  <pre className="ml-4 whitespace-pre-wrap text-[11px] text-green-400">
+                                    {script.output}
+                                  </pre>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                {host.vulnerabilities?.length > 0 && (
+                  <div className="ml-4 mt-1 space-y-1">
+                    {host.vulnerabilities.map((vuln, idx) => (
+                      <div key={`${host.ip}-vuln-${idx}`} className="text-xs text-red-400">
+                        {vuln.id}: {vuln.output}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+          <h2 className="text-lg font-semibold">Example output</h2>
+          <div
+            ref={outputRef}
+            tabIndex={0}
+            onKeyDown={handleOutputKey}
+            className="mt-2 whitespace-pre-wrap text-[13px] text-green-400 focus:outline-none"
           >
-            Copy Output
-          </button>
-          <button
-            type="button"
-            onClick={selectOutput}
-            className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
-          >
-            Select All
-          </button>
+            {selectedScripts.length === 0 && (
+              <p>Select scripts to view sample output.</p>
+            )}
+            {selectedScripts.map((name) => (
+              <div key={name} className="mb-4">
+                <h3 className="font-mono text-blue-300">{name}</h3>
+                <pre>{renderOutput(examples[name])}</pre>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={copyOutput}
+              className="rounded bg-ub-grey px-2 py-1 text-xs font-semibold text-black"
+            >
+              Copy output
+            </button>
+            <button
+              type="button"
+              onClick={selectOutput}
+              className="rounded bg-ub-grey px-2 py-1 text-xs font-semibold text-black"
+            >
+              Select all
+            </button>
+          </div>
         </div>
+        {toast && <Toast message={toast} onClose={() => setToast('')} />}
       </div>
-      {toast && <Toast message={toast} onClose={() => setToast('')} />}
-    </div>
+    </LabMode>
   );
 };
 

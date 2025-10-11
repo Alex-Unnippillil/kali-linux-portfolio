@@ -89,7 +89,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | hydra | Hydra | Security simulations pod | **In progress** – simulator backlog | Credential list fixtures |
 | john | John the Ripper | Security simulations pod | **In progress** – simulator backlog | Wordlists |
 | nessus | Nessus | Security simulations pod | **In progress** – simulator backlog | Scan report fixtures |
-| nmap-nse | Nmap NSE | Security simulations pod | **In progress** – simulator backlog | Script outputs |
+| nmap-nse | Nmap NSE | Security simulations pod | ✅ Ready – lab-mode gating, command builder, and fixture-driven outputs shipped | Script outputs |
 | openvas | OpenVAS | Security simulations pod | **In progress** – simulator backlog | Scan report fixtures |
 | reconng | Recon-ng | Security simulations pod | **In progress** – simulator backlog | Recon dataset |
 | kismet.jsx | Kismet | Security simulations pod | **In progress** – simulator backlog | Wireless fixtures |

@@ -1,8 +1,11 @@
 {
-  "http-title": "PORT   STATE SERVICE VERSION\n80/tcp open  http\n| http-title: Example Domain\n|_Requested resource was /\n",
-  "ssl-cert": "PORT    STATE SERVICE\n443/tcp open  https\n| ssl-cert: Subject: commonName=example.com\n| Not valid before: 2020-06-01T00:00:00\n|_Not valid after: 2022-06-01T12:00:00\n",
-  "smb-os-discovery": "PORT    STATE SERVICE\n445/tcp open  microsoft-ds\n| smb-os-discovery:\n|   OS: Windows 10 Pro 19041\n|   Computer name: HOST\n|_  Workgroup: WORKGROUP\n",
-  "ftp-anon": "PORT   STATE SERVICE\n21/tcp open  ftp\n| ftp-anon: Anonymous FTP login allowed (FTP code 230)\n|_-rw-r--r--    1 ftp  ftp           73 Feb 02 00:15 welcome.msg\n",
-  "http-enum": "PORT   STATE SERVICE\n80/tcp open  http\n| http-enum:\n|   /admin/: Potential admin interface\n|_  /images/: Potentially interesting directory w/ listing\n",
-  "dns-brute": "Host scripts results:\n| dns-brute:\n|   mail.example.com - 192.0.2.10\n|   dev.example.com - 192.0.2.20\n|_  shop.example.com - 192.0.2.30\n"
+  "http-title": "PORT   STATE SERVICE\n80/tcp open  http\n| http-title: Example Domain\n|_Requested resource was /\n",
+  "ssh-hostkey": "PORT   STATE SERVICE\n22/tcp open  ssh\n| ssh-hostkey:\n|   2048 SHA256:3ZavExampleFingerprint (RSA)\n|   256 SHA256:9XuoExampleFingerprint (ED25519)\n|_  Fallback fingerprints redacted in lab mode\n",
+  "http-enum": "PORT   STATE SERVICE\n80/tcp open  http\n| http-enum:\n|   /admin/: Potential admin interface\n|   /images/: Potentially interesting directory w/ listing\n|_  /backup/: Indexed directory with dated tarballs\n",
+  "dns-brute": "Host scripts results:\n| dns-brute:\n|   mail.example.com - 192.0.2.10\n|   dev.example.com - 192.0.2.20\n|   vpn.example.com - 192.0.2.25\n|_  shop.example.com - 192.0.2.30\n",
+  "smb-os-discovery": "PORT   STATE SERVICE\n445/tcp open  microsoft-ds\n| smb-os-discovery:\n|   OS: Windows 10 Pro 19041\n|   Computer name: HOST\n|_  Workgroup: WORKGROUP\n",
+  "smb-vuln-ms17-010": "Host script results:\n| smb-vuln-ms17-010:\n|   VULNERABLE: Remote Code Execution vulnerability in Microsoft SMBv1 servers (MS17-010)\n|     State: VULNERABLE\n|     IDs:  CVE:CVE-2017-0143\n|     Risk factor: HIGH\n|   Detection: The remote host is running a version of Microsoft SMBv1 that is vulnerable to MS17-010.\n|_  References: https://technet.microsoft.com/en-us/library/security/ms17-010.aspx\n",
+  "http-vuln-cve2009-3960": "PORT   STATE SERVICE\n80/tcp open  http\n| http-vuln-cve2009-3960:\n|   VULNERABLE: Directory traversal\n|     State: VULNERABLE\n|     IDs:  CVE:CVE-2009-3960\n|   Description: The server allows ../ style paths to escape the web root.\n|_  Solution: Apply vendor patch or sanitize requests.\n",
+  "ftp-anon": "PORT   STATE SERVICE\n21/tcp open  ftp\n| ftp-anon: Anonymous FTP login allowed (FTP code 230)\n|   drwxr-xr-x   2 ftp      ftp        4096 Jun  5 11:32 pub\n|   -rw-r--r--   1 ftp      ftp         612 Jun  1 09:14 welcome.msg\n|_  Use caution when mirroring this content.\n",
+  "ssl-cert": "PORT    STATE SERVICE\n443/tcp open  https\n| ssl-cert: Subject: commonName=example.com\n| Subject Alternative Name: DNS:www.example.com, DNS:example.com\n| Issuer: commonName=Example CA\n| Not valid before: 2024-01-01T00:00:00\n|_Not valid after: 2025-01-01T00:00:00\n"
 }

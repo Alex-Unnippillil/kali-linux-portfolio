@@ -3,46 +3,78 @@
     {
       "name": "http-title",
       "description": "Fetches page titles from HTTP services.",
-      "example": "80/tcp open  http\n| http-title: Example Domain\n|_Requested resource was /"
+      "example": "80/tcp open  http\n| http-title: Example Domain\n|_Requested resource was /",
+      "categories": ["discovery", "http"],
+      "phases": ["portrule"],
+      "argsHint": "http-title.path=/"
     },
     {
       "name": "ssh-hostkey",
       "description": "Retrieves the SSH host key.",
-      "example": "22/tcp open  ssh\n| ssh-hostkey:\n|   2048 SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA (RSA)\n|  256 SHA256:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB (ED25519)"
+      "example": "22/tcp open  ssh\n| ssh-hostkey:\n|   2048 SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA (RSA)\n|   256 SHA256:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB (ED25519)",
+      "categories": ["discovery", "ssh"],
+      "phases": ["portrule"],
+      "argsHint": "ssh-hostkey.oneshot=true"
     },
     {
       "name": "http-enum",
       "description": "Enumerates directories on web servers.",
-      "example": "80/tcp open  http\n| http-enum:\n|   /admin/: Potential admin interface\n|_  /images/: Potentially interesting directory w/ listing"
+      "example": "80/tcp open  http\n| http-enum:\n|   /admin/: Potential admin interface\n|_  /images/: Potentially interesting directory w/ listing",
+      "categories": ["discovery", "http", "vuln"],
+      "phases": ["portrule"],
+      "argsHint": "http-enum.basepath=/"
     },
     {
       "name": "dns-brute",
       "description": "Performs DNS subdomain brute force enumeration.",
-      "example": "Host scripts results:\n| dns-brute:\n|   mail.example.com - 192.0.2.10\n|   dev.example.com - 192.0.2.20\n|_  shop.example.com - 192.0.2.30"
+      "example": "Host scripts results:\n| dns-brute:\n|   mail.example.com - 192.0.2.10\n|   dev.example.com - 192.0.2.20\n|_  shop.example.com - 192.0.2.30",
+      "categories": ["discovery", "dns"],
+      "phases": ["hostrule"],
+      "argsHint": "dns-brute.domain=example.com"
+    },
+    {
+      "name": "smb-os-discovery",
+      "description": "Discovers remote OS information via SMB banner data.",
+      "example": "445/tcp open  microsoft-ds\n| smb-os-discovery:\n|   OS: Windows 10 Pro 19041\n|   Computer name: HOST\n|_  Workgroup: WORKGROUP",
+      "categories": ["discovery", "smb"],
+      "phases": ["hostrule"],
+      "argsHint": "smb-os-discovery.max-os-guess=3"
     }
   ],
   "vuln": [
     {
       "name": "smb-vuln-ms17-010",
       "description": "Detects MS17-010 SMB vulnerabilities.",
-      "example": "445/tcp open  microsoft-ds\n| smb-vuln-ms17-010: VULNERABLE\n|   MS17-010: Microsoft SMBv1 Multiple Vulnerabilities\n|_  State: VULNERABLE"
+      "example": "445/tcp open  microsoft-ds\n| smb-vuln-ms17-010: VULNERABLE\n|   MS17-010: Microsoft SMBv1 Multiple Vulnerabilities\n|_  State: VULNERABLE",
+      "categories": ["vuln", "smb"],
+      "phases": ["hostrule"],
+      "argsHint": "smb-vuln-ms17-010.checks=ms17-010"
     },
     {
       "name": "http-vuln-cve2009-3960",
       "description": "Checks for directory traversal vulnerability in HTTP servers.",
-      "example": "80/tcp open  http\n| http-vuln-cve2009-3960:\n|   VULNERABLE: Directory traversal\n|_  State: VULNERABLE"
+      "example": "80/tcp open  http\n| http-vuln-cve2009-3960:\n|   VULNERABLE: Directory traversal\n|_  State: VULNERABLE",
+      "categories": ["vuln", "http"],
+      "phases": ["portrule"],
+      "argsHint": "http-vuln-cve2009-3960.path=/admin"
     }
   ],
   "safe": [
     {
       "name": "ftp-anon",
       "description": "Checks for anonymous FTP access.",
-      "example": "21/tcp open  ftp\n| ftp-anon: Anonymous FTP login allowed (FTP code 230)\n|_-rw-r--r--   1 ftp      ftp            0 Jan 01 00:00 readme.txt"
+      "example": "21/tcp open  ftp\n| ftp-anon: Anonymous FTP login allowed (FTP code 230)\n|_-rw-r--r--   1 ftp      ftp        0 Jan 01 00:00 readme.txt",
+      "categories": ["safe", "ftp", "auth"],
+      "phases": ["portrule"],
+      "argsHint": "ftp-anon.maxlist=20"
     },
     {
       "name": "ssl-cert",
       "description": "Retrieves TLS certificate information.",
-      "example": "443/tcp open  https\n| ssl-cert: Subject: commonName=example.com\n| Not valid before: 2020-06-01T00:00:00\n|_Not valid after: 2022-06-01T12:00:00"
+      "example": "443/tcp open  https\n| ssl-cert: Subject: commonName=example.com\n| Not valid before: 2020-06-01T00:00:00\n|_Not valid after: 2022-06-01T12:00:00",
+      "categories": ["safe", "ssl"],
+      "phases": ["portrule"],
+      "argsHint": "ssl-cert.mode=full"
     }
   ]
 }

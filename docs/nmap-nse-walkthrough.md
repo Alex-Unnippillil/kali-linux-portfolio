@@ -30,3 +30,9 @@ This output is a canned sample; the simulation never contacts a real host.
 - Monitor logs for repeated scans or NSE script fingerprints.
 - Patch exposed services so known vulnerabilities are not present.
 
+## Lab Fixtures
+
+- Script metadata and examples are bundled under `public/demo-data/nmap/scripts.json` so the UI can operate offline.
+- Sample command outputs live in `public/demo/nmap-nse.json` and parsed topology data is in `public/demo/nmap-results.json`.
+- Both the desktop app and `/apps/nmap-nse` route are gated by lab mode and surface the fixtures through their command builders and report viewers.
+
