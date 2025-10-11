@@ -44,12 +44,19 @@ const getSnapLabel = (position) => {
     return SNAP_LABELS[position] || 'Snap window';
 };
 
-const computeSnapRegions = (
-    viewportWidth,
-    viewportHeight,
-    topInset = DEFAULT_WINDOW_TOP_OFFSET,
-    bottomInset,
-) => {
+const normalizeRightCornerSnap = (candidate, regions) => {
+    if (!candidate) return null;
+    const { position } = candidate;
+    if (position === 'top-right' || position === 'bottom-right') {
+        const rightRegion = regions?.right;
+        if (rightRegion && rightRegion.width > 0 && rightRegion.height > 0) {
+            return { position: 'right', preview: rightRegion };
+        }
+    }
+    return candidate;
+};
+
+const computeSnapRegions = (viewportWidth, viewportHeight, topInset = DEFAULT_WINDOW_TOP_OFFSET) => {
     const normalizedTopInset = typeof topInset === 'number'
         ? Math.max(topInset, DESKTOP_TOP_PADDING)
         : DEFAULT_WINDOW_TOP_OFFSET;
@@ -445,15 +452,17 @@ export class Window extends Component {
     }
 
     snapWindow = (position) => {
+        const resolvedPosition = (position === 'top-right' || position === 'bottom-right')
+            ? 'right'
+            : position;
         this.setWinowsPosition();
         this.focusWindow();
         const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
         const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         if (!viewportWidth || !viewportHeight) return;
-        const snapBottomInset = measureSnapBottomInset();
-        const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset, snapBottomInset);
-        const region = regions[position];
+        const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset);
+        const region = regions[resolvedPosition];
         if (!region) return;
         const { width, height } = this.state;
         const node = this.getWindowNode();
@@ -465,7 +474,7 @@ export class Window extends Component {
         this.setState({
             snapPreview: null,
             snapPosition: null,
-            snapped: position,
+            snapped: resolvedPosition,
             lastSize: { width, height },
             width: percentOf(region.width, viewportWidth),
             height: percentOf(region.height, viewportHeight),
@@ -526,8 +535,9 @@ export class Window extends Component {
             candidate = { position: 'right', preview: regions.right };
         }
 
-        if (candidate) {
-            const { position, preview } = candidate;
+        const resolvedCandidate = normalizeRightCornerSnap(candidate, regions);
+        if (resolvedCandidate) {
+            const { position, preview } = resolvedCandidate;
             const samePosition = this.state.snapPosition === position;
             const samePreview =
                 this.state.snapPreview &&
