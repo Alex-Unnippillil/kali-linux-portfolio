@@ -41,6 +41,33 @@ export interface Move {
 export const cloneBoard = (board: Board): Board =>
   board.map((row) => row.map((cell) => (cell ? { ...cell } : null)));
 
+export const normalizeBoard = (value: unknown): Board | null => {
+  if (!Array.isArray(value) || value.length !== 8) return null;
+  const board: Board = Array(8)
+    .fill(null)
+    .map(() => Array(8).fill(null));
+  for (let r = 0; r < 8; r++) {
+    const row = value[r];
+    if (!Array.isArray(row) || row.length !== 8) return null;
+    for (let c = 0; c < 8; c++) {
+      const cell = row[c] as any;
+      if (cell === null) {
+        board[r][c] = null;
+      } else if (
+        typeof cell === 'object' &&
+        cell &&
+        (cell.color === 'red' || cell.color === 'black') &&
+        typeof cell.king === 'boolean'
+      ) {
+        board[r][c] = { color: cell.color, king: cell.king };
+      } else {
+        return null;
+      }
+    }
+  }
+  return board;
+};
+
 export const getPieceMoves = (
   board: Board,
   r: number,

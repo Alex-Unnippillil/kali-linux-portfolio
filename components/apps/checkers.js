@@ -1,6 +1,8 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import GameLayout from './GameLayout';
 import usePersistedState from '../../hooks/usePersistedState';
+import useGameAudio from '../../hooks/useGameAudio';
+import { useGamePersistence, useGameSettings } from './useGameControls';
 import {
   createBoard,
   getPieceMoves,
@@ -9,6 +11,7 @@ import {
   hasMoves,
   evaluateBoard,
   cloneBoard,
+  normalizeBoard,
 } from './checkers/engine';
 
 const TILE = 50;
@@ -117,8 +120,9 @@ const Checkers = () => {
     hintMovesRef.current = hintMoves;
   }, [hintMoves]);
 
-  const [paused, setPaused] = useState(false);
-  const [sound, setSound] = useState(true);
+  const { paused, togglePause, muted: mutedSetting, toggleMute } =
+    useGameSettings('checkers');
+  const { context: audioContext, setMuted: setAudioMuted } = useGameAudio();
   const [difficulty, setDifficulty] = useState('hard');
   const [wins, setWins] = useState({ player: 0, ai: 0 });
   const [winner, setWinner] = useState(null);
@@ -126,35 +130,153 @@ const Checkers = () => {
     'checkersRequireCapture',
     true,
   );
+  const {
+    saveSnapshot,
+    loadSnapshot,
+    getHighScore,
+    setHighScore: persistHighScore,
+  } = useGamePersistence('checkers');
+  const [bestMargin, setBestMargin] = useState(0);
+  const [hydrated, setHydrated] = useState(false);
 
-  // load wins
+  const recordWin = useCallback(
+    (color) => {
+      setWins((prev) => {
+        const next =
+          color === 'red'
+            ? { ...prev, player: prev.player + 1 }
+            : { ...prev, ai: prev.ai + 1 };
+        if (color === 'red') {
+          const margin = next.player - next.ai;
+          setBestMargin((current) => {
+            if (margin > current) {
+              persistHighScore(margin);
+              return margin;
+            }
+            return current;
+          });
+        }
+        return next;
+      });
+    },
+    [persistHighScore],
+  );
+
   useEffect(() => {
-    const stored = localStorage.getItem('checkersWins');
-    if (stored) {
-      try {
-        setWins(JSON.parse(stored));
-      } catch {}
+    setAudioMuted(mutedSetting);
+  }, [mutedSetting, setAudioMuted]);
+
+  useEffect(() => {
+    const snapshot = loadSnapshot();
+    const storedHigh = getHighScore();
+    let marginFromWins = 0;
+    if (snapshot) {
+      const {
+        board: storedBoard,
+        turn: storedTurn,
+        history: storedHistory,
+        wins: storedWins,
+        requireCapture: storedRequireCapture,
+        difficulty: storedDifficulty,
+        selected: storedSelected,
+        moves: storedMoves,
+        hintMoves: storedHintMoves,
+        winner: storedWinner,
+      } = snapshot;
+      const normalized = normalizeBoard(storedBoard);
+      if (normalized) {
+        setBoard(normalized);
+        boardRef.current = normalized;
+      }
+      if (storedTurn === 'red' || storedTurn === 'black') {
+        setTurn(storedTurn);
+        turnRef.current = storedTurn;
+      }
+      if (Array.isArray(storedHistory)) {
+        setHistory(storedHistory);
+        historyRef.current = storedHistory;
+      }
+      if (storedWins && typeof storedWins.player === 'number') {
+        setWins(storedWins);
+        marginFromWins = storedWins.player - (storedWins.ai || 0);
+      }
+      if (typeof storedRequireCapture === 'boolean') {
+        setRequireCapture(storedRequireCapture);
+      }
+      if (storedDifficulty) {
+        setDifficulty(storedDifficulty);
+      }
+      if (storedSelected) {
+        setSelected(storedSelected);
+      }
+      if (storedMoves) {
+        setMoves(storedMoves);
+      }
+      if (storedHintMoves) {
+        setHintMoves(storedHintMoves);
+      }
+      if (storedWinner) {
+        setWinner(storedWinner);
+      }
     }
-  }, []);
+    const storedMargin =
+      snapshot?.bestMargin && typeof snapshot.bestMargin === 'number'
+        ? snapshot.bestMargin
+        : 0;
+    setBestMargin(Math.max(storedHigh, storedMargin, marginFromWins));
+    setHydrated(true);
+  }, [getHighScore, loadSnapshot, setRequireCapture]);
 
   useEffect(() => {
-    localStorage.setItem('checkersWins', JSON.stringify(wins));
-  }, [wins]);
+    if (!hydrated) return;
+    saveSnapshot({
+      board: boardRef.current,
+      turn: turnRef.current,
+      history: historyRef.current,
+      wins,
+      requireCapture,
+      difficulty,
+      selected: selectedRef.current,
+      moves: movesRef.current,
+      hintMoves: hintMovesRef.current,
+      winner,
+      bestMargin,
+    });
+  }, [
+    hydrated,
+    board,
+    turn,
+    history,
+    wins,
+    requireCapture,
+    difficulty,
+    selected,
+    moves,
+    hintMoves,
+    winner,
+    bestMargin,
+    saveSnapshot,
+  ]);
 
   const playBeep = useCallback(() => {
-    if (!sound) return;
+    if (mutedSetting) return;
+    const ctx = audioContext;
+    if (!ctx) return;
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
       osc.type = 'square';
       osc.frequency.value = 500;
-      osc.connect(ctx.destination);
+      gain.gain.value = 0.1;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      const stopAt = ctx.currentTime + 0.1;
       osc.start();
-      osc.stop(ctx.currentTime + 0.1);
+      osc.stop(stopAt);
     } catch (e) {
       // ignore
     }
-  }, [sound]);
+  }, [audioContext, mutedSetting]);
 
   const draw = useCallback(
     (ctx) => {
@@ -260,12 +382,10 @@ const Checkers = () => {
       setMoves([]);
       if (!hasMoves(nb, next, requireCapture)) {
         setWinner(turnRef.current);
-        if (turnRef.current === 'red')
-          setWins((w) => ({ ...w, player: w.player + 1 }));
-        else setWins((w) => ({ ...w, ai: w.ai + 1 }));
+        recordWin(turnRef.current);
       }
     },
-    [playBeep, requireCapture]
+    [playBeep, requireCapture, recordWin]
   );
 
   const aiMove = useCallback(() => {
@@ -283,9 +403,9 @@ const Checkers = () => {
     if (move) makeMove(move);
     else {
       setWinner('red');
-      setWins((w) => ({ ...w, player: w.player + 1 }));
+      recordWin('red');
     }
-  }, [makeMove, difficulty, requireCapture]);
+  }, [makeMove, difficulty, requireCapture, recordWin]);
 
   useEffect(() => {
     if (turn === 'black' && !winner && !paused) {
@@ -360,8 +480,22 @@ const Checkers = () => {
     setHintMoves([]);
   };
 
+  const handlePauseChange = useCallback(
+    (next) => {
+      if (next !== paused) togglePause();
+    },
+    [paused, togglePause],
+  );
+
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+    <GameLayout
+      gameId="checkers"
+      score={wins.player}
+      highScore={bestMargin}
+      paused={paused}
+      onPauseChange={handlePauseChange}
+    >
+      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       <div className="w-56 mb-4">
         <input
           type="range"
@@ -410,15 +544,9 @@ const Checkers = () => {
         </button>
         <button
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={() => setPaused((p) => !p)}
+          onClick={toggleMute}
         >
-          {paused ? 'Resume' : 'Pause'}
-        </button>
-        <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={() => setSound((s) => !s)}
-        >
-          {sound ? 'Sound On' : 'Sound Off'}
+          {mutedSetting ? 'Sound Off' : 'Sound On'}
         </button>
         <button
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
@@ -428,15 +556,10 @@ const Checkers = () => {
         </button>
       </div>
       <div className="text-sm">Wins: You {wins.player} - AI {wins.ai}</div>
-    </div>
+      </div>
+    </GameLayout>
   );
 };
 
-export default function CheckersApp() {
-  return (
-    <GameLayout gameId="checkers">
-      <Checkers />
-    </GameLayout>
-  );
-}
+export default Checkers;
 

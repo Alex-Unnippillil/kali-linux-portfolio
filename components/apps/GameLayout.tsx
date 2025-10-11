@@ -23,6 +23,8 @@ interface GameLayoutProps {
   score?: number;
   highScore?: number;
   editor?: React.ReactNode;
+  paused?: boolean;
+  onPauseChange?: (next: boolean) => void;
 }
 
 interface RecordedInput {
@@ -51,9 +53,11 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   score,
   highScore,
   editor,
+  paused: pausedProp,
+  onPauseChange,
 }) => {
   const [showHelp, setShowHelp] = useState(false);
-  const [paused, setPaused] = useState(false);
+  const [internalPaused, setInternalPaused] = useState(false);
   const [log, setLog] = useState<RecordedInput[]>([]);
   const [replayHandler, setReplayHandler] = useState<
     ((input: any, index: number) => void) | undefined
@@ -63,6 +67,20 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 
   const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
+
+  const paused = pausedProp ?? internalPaused;
+
+  const setPausedState = useCallback(
+    (next: boolean) => {
+      if (pausedProp === undefined) {
+        setInternalPaused(next);
+      }
+      onPauseChange?.(next);
+    },
+    [pausedProp, onPauseChange],
+  );
+
+  const togglePaused = useCallback(() => setPausedState(!paused), [paused, setPausedState]);
 
   const fallbackCopy = useCallback((text: string) => {
     if (navigator.clipboard) {
@@ -193,19 +211,19 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
-        setPaused(true);
+        setPausedState(true);
       }
     };
-    const handleBlur = () => setPaused(true);
+    const handleBlur = () => setPausedState(true);
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('blur', handleBlur);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('blur', handleBlur);
     };
-  }, []);
+  }, [setPausedState]);
 
-  const resume = useCallback(() => setPaused(false), []);
+  const resume = useCallback(() => setPausedState(false), [setPausedState]);
 
   const contextValue = { record, registerReplay };
 
@@ -232,7 +250,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
       <div className="absolute top-2 right-2 z-40 flex space-x-2">
         <button
           type="button"
-          onClick={() => setPaused((p) => !p)}
+          onClick={togglePaused}
           className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
         >
           {paused ? 'Resume' : 'Pause'}
