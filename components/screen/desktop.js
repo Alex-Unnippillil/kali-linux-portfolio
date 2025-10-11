@@ -22,7 +22,7 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING } from '../../utils/uiConstants';
-import { useSnapSetting } from '../../hooks/usePersistentState';
+import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
 import {
     clampWindowPositionWithinViewport,
@@ -33,6 +33,10 @@ import {
 
 
 export class Desktop extends Component {
+    static defaultProps = {
+        snapGrid: [8, 8],
+    };
+
     constructor(props) {
         super(props);
         this.workspaceCount = 4;
@@ -2709,6 +2713,7 @@ export class Desktop extends Component {
         if (!orderedIds.length) return null;
 
         const appMap = new Map(apps.map((app) => [app.id, app]));
+        const snapGrid = this.getSnapGrid();
 
         return orderedIds.map((id, index) => {
             const app = appMap.get(id);
@@ -2733,6 +2738,7 @@ export class Desktop extends Component {
                 initialY: pos ? clampWindowTopPosition(pos.y, safeTopOffset) : safeTopOffset,
                 onPositionChange: (x, y) => this.updateWindowPosition(id, x, y),
                 snapEnabled: this.props.snapEnabled,
+                snapGrid,
                 context: this.state.window_context[id],
                 zIndex: 200 + index,
             };
@@ -2742,15 +2748,33 @@ export class Desktop extends Component {
     }
 
     updateWindowPosition = (id, x, y) => {
-        const snap = this.props.snapEnabled
-            ? (v) => Math.round(v / 8) * 8
-            : (v) => v;
+        const [gridX, gridY] = this.getSnapGrid();
+        const snapValue = (value, size) => {
+            if (!this.props.snapEnabled) return value;
+            if (typeof size !== 'number' || !Number.isFinite(size) || size <= 0) return value;
+            return Math.round(value / size) * size;
+        };
         const safeTopOffset = measureWindowTopOffset();
-        const nextX = snap(x);
-        const nextY = clampWindowTopPosition(snap(y), safeTopOffset);
+        const nextX = snapValue(x, gridX);
+        const nextY = clampWindowTopPosition(snapValue(y, gridY), safeTopOffset);
         this.setWorkspaceState(prev => ({
             window_positions: { ...prev.window_positions, [id]: { x: nextX, y: nextY } }
         }), this.saveSession);
+    }
+
+    getSnapGrid = () => {
+        const fallback = [8, 8];
+        if (!Array.isArray(this.props.snapGrid)) {
+            return [...fallback];
+        }
+        const [gridX, gridY] = this.props.snapGrid;
+        const normalize = (size, fallbackSize) => {
+            if (typeof size !== 'number') return fallbackSize;
+            if (!Number.isFinite(size)) return fallbackSize;
+            if (size <= 0) return fallbackSize;
+            return size;
+        };
+        return [normalize(gridX, fallback[0]), normalize(gridY, fallback[1])];
     }
 
     saveSession = () => {
@@ -3316,11 +3340,13 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
+    const [snapGrid] = useSnapGridSetting();
     const { density, fontScale, largeHitAreas, desktopTheme } = useSettings();
     return (
         <Desktop
             {...props}
             snapEnabled={snapEnabled}
+            snapGrid={snapGrid}
             density={density}
             fontScale={fontScale}
             largeHitAreas={largeHitAreas}
