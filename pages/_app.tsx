@@ -20,6 +20,7 @@ import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 import { Ubuntu } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
+import { initA2HS } from '@/src/pwa/a2hs';
 
 type PeriodicSyncPermissionDescriptor = PermissionDescriptor & {
   name: 'periodic-background-sync';
@@ -50,20 +51,11 @@ const ubuntu = Ubuntu({
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
   useEffect(() => {
-    let cancelled = false;
-
-    const loadA2HS = async (): Promise<void> => {
-      try {
-        const module = await import('@/src/pwa/a2hs');
-        if (!cancelled) {
-          module.initA2HS();
-        }
-      } catch (err) {
-        console.error('A2HS initialization failed', err);
-      }
-    };
-
-    void loadA2HS();
+    try {
+      initA2HS();
+    } catch (err) {
+      console.error('A2HS initialization failed', err);
+    }
 
     const initAnalytics = async (): Promise<void> => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
@@ -111,10 +103,6 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
         console.error('Service worker setup failed', err);
       });
     }
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   useEffect(() => {
