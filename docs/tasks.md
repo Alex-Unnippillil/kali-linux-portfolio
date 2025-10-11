@@ -96,7 +96,6 @@ For each game below, build a canvas-based component with `requestAnimationFrame`
 - Battleship
 - Blackjack
 - Breakout
-- Car Racer
 - Checkers
 - Chess
 - Connect Four

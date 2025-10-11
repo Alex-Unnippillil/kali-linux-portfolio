@@ -206,6 +206,14 @@ Each converter view (temperature-only and the multi-category unit converter) imp
 | Word Search | `/apps/word-search` |
 | Wordle | `/apps/wordle` |
 
+#### Car Racer Controls
+
+- **Move left/right:** Arrow keys or `A`/`D`
+- **Boost:** Arrow Up or `W`
+- **Pause/Resume:** Spacebar or the in-game overlay
+- **Reset/Audio:** Use the shared overlay toolbar (top-left) to restart, mute, or resume
+- **Touch controls:** On-screen arrows and buttons handle steering, boosts, and lane assist
+
 ### Security Tools (Simulated)
 | Tool | Route |
 | --- | --- |
