@@ -112,7 +112,7 @@ All arcade-style and puzzle titles share the same readiness gap: implement canva
 | memory | Memory | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | minesweeper | Minesweeper | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | pong | Pong | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
-| pacman | Pacman | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
+| pacman | Pacman | Core maintainers | **In review** – shared loop, pause/audio toggles, persistent highscores | Game engine |
 | car-racer | Car Racer | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | lane-runner | Lane Runner | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | platformer | Platformer | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
