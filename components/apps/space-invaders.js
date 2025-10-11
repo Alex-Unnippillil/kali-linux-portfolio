@@ -1,10 +1,18 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import GameLayout from './GameLayout';
+import { Overlay } from './Games/common';
+import { useGameSettings, useGamePersistence } from './useGameControls';
 import useAssetLoader from '../../hooks/useAssetLoader';
-
-const EXTRA_LIFE_THRESHOLDS = [1000, 5000, 10000];
-const BOSS_EVERY = 3;
-const MAX_SHIELD_HP = 3;
+import {
+  BOSS_EVERY,
+  MAX_SHIELD_HP,
+  EXTRA_LIFE_THRESHOLDS,
+  computeExtraLifeIndex,
+  createWave,
+  normalizeProgress,
+  DEFAULT_LIVES,
+  INVADER_COLUMNS,
+} from '../../apps/games/space-invaders';
 const STREAK_THRESHOLD = 3;
 const STREAK_MULTIPLIER = 2;
 
@@ -63,6 +71,7 @@ const SpaceInvaders = () => {
   const shake = useRef(0);
   const bombWarning = useRef({ time: 0, x: 0, y: 0 });
   const prefersReducedMotion = useRef(false);
+  const hydratedRef = useRef(false);
   const [ariaMessage, setAriaMessage] = useState('');
 
   const [difficulty, setDifficulty] = useState(1);
@@ -71,13 +80,27 @@ const SpaceInvaders = () => {
     difficultyRef.current = difficulty;
   }, [difficulty]);
 
-  const [sound, setSound] = useState(true);
-  const soundRef = useRef(sound);
+  const {
+    paused,
+    togglePause: togglePauseSetting,
+    setPaused,
+    muted,
+    toggleMute,
+  } = useGameSettings('space-invaders');
+  const {
+    saveSnapshot,
+    loadSnapshot,
+    getHighScore: loadHighScore,
+    setHighScore: persistHighScore,
+  } = useGamePersistence('space-invaders');
+  const soundRef = useRef(!muted);
   useEffect(() => {
-    soundRef.current = sound;
-  }, [sound]);
-  const [isPaused, setIsPaused] = useState(false);
+    soundRef.current = !muted;
+  }, [muted]);
   const pausedRef = useRef(false);
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
 
   useEffect(() => {
     prefersReducedMotion.current =
@@ -108,12 +131,12 @@ const SpaceInvaders = () => {
     osc.frequency.setValueAtTime(start, audioCtx.current.currentTime);
     osc.frequency.linearRampToValueAtTime(
       end,
-      audioCtx.current.currentTime + duration
+      audioCtx.current.currentTime + duration,
     );
     gain.gain.setValueAtTime(0.1, audioCtx.current.currentTime);
     gain.gain.linearRampToValueAtTime(
       0,
-      audioCtx.current.currentTime + duration
+      audioCtx.current.currentTime + duration,
     );
     osc.connect(gain);
     gain.connect(audioCtx.current.destination);
@@ -121,28 +144,32 @@ const SpaceInvaders = () => {
     osc.stop(audioCtx.current.currentTime + duration);
   };
 
-  const resetGame = () => {
+  const resetGame = useCallback(() => {
     stageRef.current = 1;
     setStage(1);
     scoreRef.current = 0;
     hitStreak.current = 0;
     setScore(0);
-    livesRef.current = 3;
-    setLives(3);
+    livesRef.current = DEFAULT_LIVES;
+    setLives(DEFAULT_LIVES);
     pattern.current = 0;
     nextExtraLife.current = 0;
     pausedRef.current = false;
-    setIsPaused(false);
+    setPaused(false);
     player.current.shield = false;
     player.current.shieldHp = 0;
     boss.current.active = false;
+    saveSnapshot(normalizeProgress({
+      stage: 1,
+      score: 0,
+      lives: DEFAULT_LIVES,
+    }));
     setupWaveRef.current();
-  };
+  }, [saveSnapshot, setPaused]);
 
-  const togglePause = () => {
-    pausedRef.current = !pausedRef.current;
-    setIsPaused(pausedRef.current);
-  };
+  const togglePause = useCallback(() => {
+    togglePauseSetting();
+  }, [togglePauseSetting]);
 
   const [stage, setStage] = useState(1);
   const stageRef = useRef(stage);
@@ -150,7 +177,7 @@ const SpaceInvaders = () => {
     stageRef.current = stage;
   }, [stage]);
 
-  const [lives, setLives] = useState(3);
+  const [lives, setLives] = useState(DEFAULT_LIVES);
   const livesRef = useRef(lives);
   useEffect(() => {
     livesRef.current = lives;
@@ -163,7 +190,7 @@ const SpaceInvaders = () => {
     scoreRef.current = score;
   }, [score]);
 
-  const [highScore, setHighScore] = useState(0);
+  const [highScore, setHighScoreState] = useState(0);
   const highScoreRef = useRef(highScore);
   useEffect(() => {
     highScoreRef.current = highScore;
@@ -172,13 +199,23 @@ const SpaceInvaders = () => {
   useEffect(() => {
     if (loading || error) return;
     const canvas = canvasRef.current;
-    const stored = localStorage.getItem('si_highscore');
-    if (stored) setHighScore(parseInt(stored, 10));
     const ctx = canvas.getContext('2d');
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
     const w = canvas.width;
     const h = canvas.height;
+
+    const storedHigh = loadHighScore();
+    if (storedHigh) setHighScoreState(storedHigh);
+
+    const snapshot = normalizeProgress(loadSnapshot());
+    stageRef.current = snapshot.stage;
+    setStage(snapshot.stage);
+    scoreRef.current = snapshot.score;
+    setScore(snapshot.score);
+    livesRef.current = snapshot.lives;
+    setLives(snapshot.lives);
+    nextExtraLife.current = computeExtraLifeIndex(snapshot.score);
 
     player.current.x = w / 2 - player.current.w / 2;
     player.current.y = h - 30;
@@ -204,7 +241,7 @@ const SpaceInvaders = () => {
               y: h - 60 + r * tileSize,
               w: tileSize,
               h: tileSize,
-              hp: 3,
+              hp: MAX_SHIELD_HP,
             });
           }
         }
@@ -233,21 +270,17 @@ const SpaceInvaders = () => {
         };
         initialCount.current = 0;
       } else {
-        const rows = 4 + (stageRef.current - 1);
-        const cols = 8;
-        const invArr = [];
-        for (let r = 0; r < rows; r += 1) {
-          for (let c = 0; c < cols; c += 1) {
-            invArr.push({
-              x: 30 + c * spacing,
-              y: 30 + r * spacing,
-              alive: true,
-              phase: Math.random() * Math.PI * 2,
-            });
-          }
-        }
-        invaders.current = invArr;
-        initialCount.current = invArr.length;
+        const offsetX = Math.max(
+          20,
+          w / 2 - ((INVADER_COLUMNS - 1) * spacing) / 2,
+        );
+        const wave = createWave(stageRef.current, {
+          offsetX,
+          offsetY: 30,
+          spacing,
+        });
+        invaders.current = wave.map((inv) => ({ ...inv }));
+        initialCount.current = wave.length;
       }
 
       player.current.x = w / 2 - player.current.w / 2;
@@ -269,6 +302,7 @@ const SpaceInvaders = () => {
     };
     setupWaveRef.current = setupWave;
     setupWave();
+    hydratedRef.current = true;
 
     const handleKey = (e) => {
       if (e.code === 'Escape' && e.type === 'keydown') {
@@ -354,8 +388,8 @@ const SpaceInvaders = () => {
 
       if (scoreRef.current > highScoreRef.current) {
         highScoreRef.current = scoreRef.current;
-        setHighScore(highScoreRef.current);
-        localStorage.setItem('si_highscore', highScoreRef.current.toString());
+        setHighScoreState(highScoreRef.current);
+        persistHighScore(highScoreRef.current);
       }
     };
 
@@ -376,15 +410,15 @@ const SpaceInvaders = () => {
       if (livesRef.current <= 0) {
         if (scoreRef.current > highScoreRef.current) {
           highScoreRef.current = scoreRef.current;
-          setHighScore(highScoreRef.current);
-          localStorage.setItem('si_highscore', highScoreRef.current.toString());
+          setHighScoreState(highScoreRef.current);
+          persistHighScore(highScoreRef.current);
         }
         stageRef.current = 1;
         setStage(1);
         scoreRef.current = 0;
         setScore(0);
-        livesRef.current = 3;
-        setLives(3);
+        livesRef.current = DEFAULT_LIVES;
+        setLives(DEFAULT_LIVES);
         pattern.current = 0;
         nextExtraLife.current = 0;
       }
@@ -764,7 +798,18 @@ const SpaceInvaders = () => {
       window.removeEventListener('keydown', handleKey);
       window.removeEventListener('keyup', handleKey);
     };
-  }, [loading, error]);
+  }, [loading, error, loadHighScore, loadSnapshot, togglePause]);
+
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    saveSnapshot(
+      normalizeProgress({
+        stage: stageRef.current,
+        score: scoreRef.current,
+        lives: livesRef.current,
+      }),
+    );
+  }, [saveSnapshot, stage, score, lives]);
 
   const touchStart = (key) => () => {
     touch.current[key] = true;
@@ -790,70 +835,62 @@ const SpaceInvaders = () => {
   }
 
   return (
-    <GameLayout gameId="space-invaders">
+    <GameLayout
+      gameId="space-invaders"
+      stage={stage}
+      lives={lives}
+      score={score}
+      highScore={highScore}
+    >
       <div className="h-full w-full relative bg-black text-white">
         <canvas ref={canvasRef} className="w-full h-full" />
-        {isPaused && (
-          <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-20">
+        {paused && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/70">
             <span className="text-xl">Paused</span>
           </div>
         )}
-        <div className="absolute top-2 left-2 text-xs flex gap-4 z-10">
-          <span>Lives: {lives}</span>
-          <span>Score: {score}</span>
-        </div>
-        <div className="absolute top-2 right-2 flex gap-2 z-10">
-          <div className="bg-gray-700 px-2 py-1 rounded flex items-center">
-            <label htmlFor="difficulty" className="text-xs mr-2">
-              Diff
-            </label>
-            <input
-              id="difficulty"
-              type="range"
-              min="1"
-              max="3"
-              step="1"
-              value={difficulty}
-              onChange={(e) => setDifficulty(Number(e.target.value))}
-              className="w-16"
-            />
-          </div>
-          <button
-            className="bg-gray-700 px-2 py-1 rounded"
-            onClick={resetGame}
-          >
-            Reset
-          </button>
-          <button
-            className="bg-gray-700 px-2 py-1 rounded"
-            onClick={togglePause}
-          >
-            {isPaused ? 'Resume' : 'Pause'}
-          </button>
-          <button
-            className="bg-gray-700 px-2 py-1 rounded"
-            onClick={() => setSound((s) => !s)}
-          >
-            {sound ? 'Sound On' : 'Sound Off'}
-          </button>
+        <Overlay
+          paused={paused}
+          muted={muted}
+          onPause={() => setPaused(true)}
+          onResume={() => setPaused(false)}
+          onToggleSound={toggleMute}
+          onReset={resetGame}
+        />
+        <div className="absolute top-20 right-2 z-30 flex items-center gap-2 rounded bg-gray-900/80 px-3 py-2 text-xs text-white shadow-lg backdrop-blur">
+          <label htmlFor="difficulty" className="mr-2 uppercase tracking-wide">
+            Diff
+          </label>
+          <input
+            id="difficulty"
+            type="range"
+            min="1"
+            max="3"
+            step="1"
+            value={difficulty}
+            onChange={(e) => setDifficulty(Number(e.target.value))}
+            className="w-20 accent-lime-400"
+            aria-label="Difficulty"
+          />
+          <span className="font-semibold">{difficulty}</span>
         </div>
         <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-8 md:hidden">
           <button
-            className="bg-gray-700 px-4 py-2 rounded"
+            className="rounded bg-gray-700 px-4 py-2"
             onTouchStart={touchStart('left')}
             onTouchEnd={touchEnd('left')}
           >
             ◀
           </button>
           <button
-            className="bg-gray-700 px-4 py-2 rounded"
+            className="rounded bg-gray-700 px-4 py-2"
             onTouchStart={touchStart('fire')}
             onTouchEnd={touchEnd('fire')}
           >
             🔥
           </button>
           <button
-            className="bg-gray-700 px-4 py-2 rounded"
+            className="rounded bg-gray-700 px-4 py-2"
             onTouchStart={touchStart('right')}
             onTouchEnd={touchEnd('right')}
           >
