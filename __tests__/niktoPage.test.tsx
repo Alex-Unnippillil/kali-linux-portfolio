@@ -35,15 +35,21 @@ describe('NiktoPage', () => {
     }) as any;
   });
 
-  it('builds command preview and shows fix suggestion', async () => {
+  it('builds command preview and toggles severity group details', async () => {
     const user = userEvent.setup();
     render(<NiktoPage />);
     await user.type(screen.getByLabelText(/host/i), 'example.com');
     expect(screen.getByText(/nikto -h example.com/i)).toBeInTheDocument();
-    // expand high severity section to reveal finding
-    await waitFor(() => screen.getByText('High'));
-    await user.click(screen.getByText('High'));
-    await user.click(await screen.findByText('/admin'));
+    const highCard = await screen.findByText(/High Findings/i);
+    expect(highCard).toBeInTheDocument();
+    await waitFor(() => screen.getByText(/Recommended remediation/i));
+    const toggleButton = screen.getByRole('button', { name: /hide details/i });
+    await user.click(toggleButton);
+    await waitFor(() => expect(screen.queryByText(/Recommended remediation/i)).not.toBeInTheDocument());
+    const showButton = screen.getByRole('button', { name: /show details/i });
+    await user.click(showButton);
+    await waitFor(() => screen.getByText(/Recommended remediation/i));
+    expect(screen.getByText(/1 item/i)).toBeInTheDocument();
     await waitFor(() => screen.getByText(/Critical: 3/i));
     expect(screen.getByText(/Warning: 1/i)).toBeInTheDocument();
     expect(screen.getByText(/Info: 1/i)).toBeInTheDocument();

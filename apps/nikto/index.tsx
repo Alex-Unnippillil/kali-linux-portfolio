@@ -18,6 +18,7 @@ const NiktoPage: React.FC = () => {
   const [findings, setFindings] = useState<NiktoFinding[]>([]);
   const [rawLog, setRawLog] = useState('');
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const [copiedCommand, setCopiedCommand] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -87,10 +88,64 @@ const NiktoPage: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const colorMap: Record<string, string> = {
-    High: 'bg-red-700',
-    Medium: 'bg-yellow-700',
-    Info: 'bg-blue-700',
+  const severityMeta = [
+    {
+      key: 'High',
+      icon: '🚨',
+      accent: 'border-red-600/70 shadow-red-900/40',
+      badge: 'bg-red-500/20 text-red-200 ring-1 ring-red-400/40',
+      recommendation:
+        'Prioritize immediate remediation, patch vulnerable services, and restrict public access.',
+    },
+    {
+      key: 'Medium',
+      icon: '⚠️',
+      accent: 'border-amber-500/60 shadow-amber-900/20',
+      badge: 'bg-amber-400/20 text-amber-100 ring-1 ring-amber-400/40',
+      recommendation:
+        'Schedule fixes in the next maintenance cycle and harden exposed configurations.',
+    },
+    {
+      key: 'Info',
+      icon: 'ℹ️',
+      accent: 'border-sky-500/60 shadow-sky-900/20',
+      badge: 'bg-sky-400/20 text-sky-100 ring-1 ring-sky-400/40',
+      recommendation:
+        'Improve security hygiene and monitor future scans for drift.',
+    },
+  ];
+
+  const deriveRemediation = (finding: NiktoFinding) => {
+    const text = `${finding.finding} ${finding.details}`.toLowerCase();
+    if (text.includes('sql')) {
+      return 'Use parameterized queries, sanitize input, and review database permissions.';
+    }
+    if (text.includes('xss') || text.includes('cross-site')) {
+      return 'Sanitize user-controlled content, enable CSP, and audit risky script sinks.';
+    }
+    if (text.includes('file inclusion') || text.includes('lfi')) {
+      return 'Validate file paths, disable remote file includes, and enforce allowlists.';
+    }
+    if (text.includes('cookie')) {
+      return 'Harden cookie attributes with Secure, HttpOnly, and SameSite flags.';
+    }
+    if (text.includes('header')) {
+      return 'Set the recommended security headers and enforce HTTPS where possible.';
+    }
+    return (
+      severityMeta.find((sev) => sev.key === finding.severity)?.recommendation ||
+      'Review the finding details and apply the appropriate mitigation.'
+    );
+  };
+
+  const copyCommand = async () => {
+    try {
+      await navigator.clipboard?.writeText(command);
+      setCopiedCommand(true);
+      setTimeout(() => setCopiedCommand(false), 2000);
+    } catch {
+      // ignore clipboard failures
+    }
   };
 
   const summary = useMemo(() => {
@@ -165,12 +220,21 @@ const NiktoPage: React.FC = () => {
             </label>
           </div>
       </form>
-      <div>
-        <h2 className="text-lg mb-2">Command Preview</h2>
-        <pre className="bg-black text-green-400 p-2 rounded overflow-auto">{command}</pre>
+      <div className="bg-gray-800/70 border border-gray-700 rounded-lg shadow-lg shadow-black/40">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700/80">
+          <h2 className="text-lg font-semibold">Command Preview</h2>
+          <button
+            type="button"
+            onClick={copyCommand}
+            className="text-xs bg-blue-600 hover:bg-blue-500 transition-colors px-3 py-1 rounded"
+          >
+            {copiedCommand ? 'Copied!' : 'Copy'}
+          </button>
+        </div>
+        <pre className="bg-black/80 text-green-400 px-4 py-3 rounded-b-lg overflow-auto text-sm">{command}</pre>
       </div>
-      <div className="relative bg-gray-800 p-4 rounded shadow space-y-4">
-        <div className="absolute top-2 right-2 bg-gray-700 text-xs px-2 py-1 rounded-full">
+      <div className="relative bg-gray-800 p-4 rounded-xl shadow-lg shadow-black/50 space-y-4 border border-gray-700/60">
+        <div className="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-sky-500 via-blue-500 to-purple-600 text-white shadow-lg shadow-purple-900/40 border border-white/10">
           Phase 3 • {findings.length} results
         </div>
         <div>
@@ -193,54 +257,86 @@ const NiktoPage: React.FC = () => {
         </div>
         <div>
           <h2 className="text-lg mb-2">Vulnerabilities</h2>
-          {Object.entries(grouped).map(([sev, list]) => {
-            const open = openSections[sev];
-            return (
-              <div key={sev} className="mb-2 border border-gray-700 rounded">
-                <div
-                  className="flex justify-between items-center p-2 bg-gray-800 cursor-pointer"
-                  onClick={() => setOpenSections((s) => ({ ...s, [sev]: !open }))}
+          {severityMeta
+            .filter((sev) => grouped[sev.key]?.length)
+            .map((sev) => {
+              const list = grouped[sev.key];
+              const open = openSections[sev.key] ?? (sev.key === 'High');
+              const panelId = `nikto-severity-${sev.key.toLowerCase()}`;
+              return (
+                <section
+                  key={sev.key}
+                  className={`mb-3 rounded-xl border ${sev.accent} bg-gray-900/60 backdrop-blur-sm shadow-lg`}
                 >
-                  <span className="font-bold">{sev}</span>
-                  <div className="flex items-center space-x-2">
-                    <span className="bg-gray-600 rounded-full px-2 text-xs">{list.length}</span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        copySection(list);
-                      }}
-                      className="text-xs bg-blue-600 px-2 py-1 rounded"
-                    >
-                      Copy
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        exportSection(list, sev);
-                      }}
-                      className="text-xs bg-blue-600 px-2 py-1 rounded"
-                    >
-                      Export JSON
-                    </button>
-                  </div>
-                </div>
-                {open && (
-                  <ul className="p-2 space-y-1">
-                    {list.map((f) => (
-                      <li
-                        key={f.path}
-                        className={`p-2 rounded ${colorMap[f.severity] || 'bg-gray-700'}`}
+                  <div className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-center gap-3">
+                      <span aria-hidden className="text-2xl">
+                        {sev.icon}
+                      </span>
+                      <div>
+                        <p className="text-lg font-semibold">{sev.key} Findings</p>
+                        <p className="text-xs text-gray-300">{sev.recommendation}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs px-3 py-1 rounded-full ${sev.badge}`}>
+                        {list.length} {list.length === 1 ? 'item' : 'items'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => copySection(list)}
+                        className="text-xs bg-blue-600 hover:bg-blue-500 transition-colors px-2 py-1 rounded"
                       >
-                        <span className="font-mono">{f.path}</span>: {f.finding}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            );
-          })}
+                        Copy JSON
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => exportSection(list, sev.key)}
+                        className="text-xs bg-blue-600 hover:bg-blue-500 transition-colors px-2 py-1 rounded"
+                      >
+                        Export JSON
+                      </button>
+                      <button
+                        type="button"
+                        aria-expanded={open}
+                        aria-controls={panelId}
+                        onClick={() =>
+                          setOpenSections((s) => ({
+                            ...s,
+                            [sev.key]: !open,
+                          }))
+                        }
+                        className="text-xs bg-gray-700 hover:bg-gray-600 transition-colors px-2 py-1 rounded"
+                      >
+                        {open ? 'Hide' : 'Show'} details
+                      </button>
+                    </div>
+                  </div>
+                  {open && (
+                    <ul id={panelId} className="space-y-3 border-t border-gray-800/80 px-4 py-3">
+                      {list.map((f) => (
+                        <li
+                          key={`${f.path}-${f.finding}`}
+                          className="rounded-lg bg-gray-800/80 p-4 text-sm space-y-2 border border-gray-700/70"
+                        >
+                          <div className="font-mono text-green-300 break-all">{f.path}</div>
+                          <p className="font-semibold text-base">{f.finding}</p>
+                          {f.details && <p className="text-gray-200">{f.details}</p>}
+                          {f.references?.length ? (
+                            <p className="text-xs text-gray-400">
+                              References: {f.references.join(', ')}
+                            </p>
+                          ) : null}
+                          <p className="text-xs text-green-300">
+                            Recommended remediation: {deriveRemediation(f)}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              );
+            })}
         </div>
       </div>
       {rawLog && (
