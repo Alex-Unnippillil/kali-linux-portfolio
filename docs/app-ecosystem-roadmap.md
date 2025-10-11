@@ -32,7 +32,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | alex | About Alex | Core maintainers | **In progress** – resume widget, skill chips, project links | Resume JSON feed |
 | settings | Settings | Core maintainers | **In progress** – theme picker, wallpaper selector, reset desktop | `settingsStore.js`, localStorage |
 | resource_monitor | Resource Monitor | Core maintainers | **In progress** – memory/FPS display and synthetic CPU graph | `performance` APIs |
-| screen-recorder | Screen Recorder | Core maintainers | **Needs polish** – permission prompts, storage strategy | MediaRecorder API |
+| screen-recorder | Screen Recorder | Core maintainers | **Ready** – normalized permission prompts, storage options, MediaRecorder fallback copy | MediaRecorder API |
 | clipboard-manager | Clipboard Manager | Core maintainers | **Needs polish** – permission UX and fallbacks | Clipboard API |
 | figlet | Figlet | Core maintainers | **In progress** – font selector, copy action, IndexedDB caching | Font assets, IndexedDB |
 | weather | Weather | Core maintainers | **In progress** – fake data with unit toggle or settings-driven API key | Demo data, settings |
