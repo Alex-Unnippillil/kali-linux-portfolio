@@ -1,5 +1,5 @@
 import usePersistentState from '../../hooks/usePersistentState';
-import { evaluate } from './main';
+import { evaluate } from './logic';
 
 export interface Formula {
   name: string;

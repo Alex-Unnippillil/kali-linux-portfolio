@@ -8,7 +8,7 @@ export default function MemorySlots() {
   const [evaluate, setEvaluate] = useState<null | ((expr: string) => string | null)>(null);
 
   useEffect(() => {
-    import('../main').then((m) => {
+    import('../logic').then((m) => {
       const fn = (m as any).evaluate || (m as any).default?.evaluate;
       if (typeof fn === 'function') setEvaluate(() => fn);
     });

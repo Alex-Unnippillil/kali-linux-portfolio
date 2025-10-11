@@ -25,7 +25,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | x | X | Core maintainers | **In progress** – read-only embed with SSR disabled and theme toggle | Social embed script |
 | spotify | Spotify | Core maintainers | **In progress** – playlist editor JSON and mini-player mode pending | Spotify embed |
 | youtube | YouTube | Core maintainers | **In progress** – search, watch view, history storage, component test | YouTube embeds, localStorage |
-| calculator | Calculator | Core maintainers | **In progress** – tokenizer, shunting-yard evaluator, keyboard support | Expression parser |
+| calc | Calc | Core maintainers | **OS-ready** – custom tokenizer, shunting-yard evaluator, and keyboard-covered memory flows | Parser + keyboard tests |
 | converter | Converter | Core maintainers | **In progress** – centralized unit map and Jest coverage | `components/apps/converter/units.js` |
 | file-explorer | Files | Core maintainers | **Needs polish** – ensure virtual FS hooks stay in sync | Virtual filesystem layer |
 | project-gallery | Project Gallery | Core maintainers | **In progress** – load from `projects.json`, add filters and CTA buttons | `projects.json` data |

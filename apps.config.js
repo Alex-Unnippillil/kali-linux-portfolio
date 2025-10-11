@@ -18,7 +18,7 @@ const TerminalApp = createDynamicApp('terminal', 'Terminal');
 // VSCode app uses a Stack iframe, so no editor dependencies are required
 const VsCodeApp = createDynamicApp('vscode', 'VsCode');
 const YouTubeApp = createDynamicApp('youtube', 'YouTube');
-const CalculatorApp = createDynamicApp('calculator', 'Calculator');
+const CalcApp = createDynamicApp('calc', 'Calc');
 const ConverterApp = createDynamicApp('converter', 'Converter');
 const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
 const ChessApp = createDynamicApp('chess', 'Chess');
@@ -113,7 +113,7 @@ const ContactApp = createDynamicApp('contact', 'Contact');
 const displayTerminal = createDisplay(TerminalApp);
 const displayVsCode = createDisplay(VsCodeApp);
 const displayYouTube = createDisplay(YouTubeApp);
-const displayCalculator = createDisplay(CalculatorApp);
+const displayCalc = createDisplay(CalcApp);
 const displayConverter = createDisplay(ConverterApp);
 const displayTicTacToe = createDisplay(TicTacToeApp);
 const displayChess = createDisplay(ChessApp);
@@ -616,7 +616,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: true,
-    screen: displayCalculator,
+    screen: displayCalc,
     resizable: false,
     allowMaximize: false,
     defaultWidth: 28,

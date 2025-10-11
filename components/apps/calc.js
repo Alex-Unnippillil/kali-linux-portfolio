@@ -1,5 +1,9 @@
-// Ensure decimal.js wrapper is bundled for precise arithmetic
 import '../../utils/decimal';
+import dynamic from 'next/dynamic';
 
-// Re-export calculator helpers from archived source
-export { default, evaluateExpression, displayTerminalCalc } from './archive/Calc';
+const Calc = dynamic(() => import('../../apps/calculator'), {
+  ssr: false,
+  loading: () => <p>Loading...</p>,
+});
+
+export default Calc;

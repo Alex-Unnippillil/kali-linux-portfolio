@@ -17,9 +17,9 @@ This document tracks planned improvements and new features for the desktop portf
 - Export default `Firefox` and `displayFirefox` via factory.
 
 ### Calc
-- Replace button-only logic with tokenizer and shunting-yard evaluator for operator precedence.
-- Add keyboard support, memory registers (M+, M−, MR), and history stored in `localStorage`.
-- Register with `createDynamicApp('calc','Calc')` and export `displayCalc`.
+- Maintain the tokenizer + shunting-yard evaluator in `apps/calculator/logic.ts` and extend operator coverage through tests before shipping new functions.
+- Keep keyboard shortcuts (Enter, Escape, digit bindings, and M+/M−/MR) wired and covered by Jest in `__tests__/calculator`.
+- Register the window via `createDynamicApp('calc','Calc')` and expose `displayCalc` from `apps.config.js`.
 
 ### Terminal
 - Import `@xterm/xterm/css/xterm.css` and `FitAddon`; call `fitAddon.fit()` on mount and resize.

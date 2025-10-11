@@ -80,28 +80,21 @@ export default function Calculator() {
     let memoryAdd: any;
     let memorySubtract: any;
     let memoryRecall: any;
-    let formatBase: any;
     let getLastResult: any;
     let setBase: any;
+    let setMode: any;
+    let setProgrammerMode: any;
 
     const load = async () => {
-      if (typeof window !== 'undefined' && !(window as any).math) {
-        await new Promise((resolve) => {
-          const script = document.createElement('script');
-          script.src =
-            'https://cdn.jsdelivr.net/npm/mathjs@13.2.3/lib/browser/math.js';
-          script.onload = resolve as any;
-          document.body.appendChild(script);
-        });
-      }
-      const mod = await import('./main');
+      const mod = await import('./logic');
       evaluate = mod.evaluate;
       memoryAdd = mod.memoryAdd;
       memorySubtract = mod.memorySubtract;
       memoryRecall = mod.memoryRecall;
-      formatBase = mod.formatBase;
       getLastResult = mod.getLastResult;
       setBase = mod.setBase;
+      setMode = mod.setMode;
+      setProgrammerMode = mod.setProgrammerMode;
 
       const display = document.getElementById('display') as HTMLInputElement;
       const buttons = document.querySelectorAll<HTMLButtonElement>('.btn');
@@ -155,22 +148,30 @@ export default function Calculator() {
           }
 
           if (action === 'ans') {
-            insertAtCursor(formatBase(getLastResult()));
+            insertAtCursor(getLastResult());
             return;
           }
 
           if (action === 'mplus') {
-            memoryAdd(display.value);
+            try {
+              memoryAdd(display.value);
+            } catch {
+              // ignore invalid memory input
+            }
             return;
           }
 
           if (action === 'mminus') {
-            memorySubtract(display.value);
+            try {
+              memorySubtract(display.value);
+            } catch {
+              // ignore invalid memory input
+            }
             return;
           }
 
           if (action === 'mr') {
-            display.value = formatBase(memoryRecall());
+            display.value = memoryRecall();
             return;
           }
 
@@ -195,6 +196,25 @@ export default function Calculator() {
         if (e.key === 'Escape' || e.key.toLowerCase() === 'c') {
           e.preventDefault();
           display.value = '';
+          return;
+        }
+        if (e.key.toLowerCase() === 'm') {
+          e.preventDefault();
+          if (e.shiftKey) {
+            try {
+              memoryAdd(display.value);
+            } catch {
+              // ignore invalid memory input
+            }
+          } else if (e.altKey || e.ctrlKey) {
+            try {
+              memorySubtract(display.value);
+            } catch {
+              // ignore invalid memory input
+            }
+          } else {
+            display.value = memoryRecall();
+          }
           return;
         }
         const btn = document.querySelector<HTMLButtonElement>(
@@ -224,14 +244,32 @@ export default function Calculator() {
       });
 
       baseSelect?.addEventListener('change', () => {
-        setBase(parseInt(baseSelect.value, 10));
+        const nextBase = parseInt(baseSelect.value, 10);
+        setBase(nextBase);
       });
+
+      const modeHandler = (event: Event) => {
+        const detail = (event as CustomEvent).detail;
+        if (!detail) return;
+        setMode(detail);
+        setProgrammerMode(detail === 'programmer');
+        const scientific = document.getElementById('scientific');
+        const programmer = document.getElementById('programmer');
+        if (scientific) {
+          scientific.classList.toggle('hidden', detail !== 'scientific');
+        }
+        if (programmer) {
+          programmer.classList.toggle('hidden', detail !== 'programmer');
+        }
+      };
+      document.addEventListener('mode-change', modeHandler as EventListener);
 
       return () => {
         handlers.forEach(({ btn, handler }) =>
           btn.removeEventListener('click', handler),
         );
         document.removeEventListener('keydown', keyHandler);
+        document.removeEventListener('mode-change', modeHandler as EventListener);
       };
     };
 
