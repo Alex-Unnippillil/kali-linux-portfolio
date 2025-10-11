@@ -1923,21 +1923,37 @@ export class Desktop extends Component {
     };
 
     updateIconPosition = (id, x, y, persist = false) => {
+        const nextPosition = this.clampIconPosition(x, y);
+        if (persist) {
+            this.setState((prevState) => {
+                const current = prevState.desktop_icon_positions || {};
+                const desktopApps = Array.isArray(prevState.desktop_apps) ? prevState.desktop_apps : [];
+                const layout = this.resolveIconLayout(desktopApps, { ...current, [id]: nextPosition });
+                const shouldUpdatePositions = !this.areIconLayoutsEqual(current, layout);
+                const nextPositions = shouldUpdatePositions ? layout : current;
+                if (!shouldUpdatePositions && prevState.draggingIconId === null) {
+                    return null;
+                }
+                return {
+                    desktop_icon_positions: nextPositions,
+                    draggingIconId: null,
+                };
+            }, () => {
+                this.persistIconPositions();
+            });
+            return;
+        }
+
         this.setState((prevState) => {
             const current = prevState.desktop_icon_positions || {};
-            const nextPosition = this.clampIconPosition(x, y);
             const previous = current[id];
-            if (previous && previous.x === nextPosition.x && previous.y === nextPosition.y && !persist) {
+            if (previous && previous.x === nextPosition.x && previous.y === nextPosition.y) {
                 return null;
             }
             return {
                 desktop_icon_positions: { ...current, [id]: nextPosition },
-                draggingIconId: persist ? null : prevState.draggingIconId,
+                draggingIconId: prevState.draggingIconId,
             };
-        }, () => {
-            if (persist) {
-                this.persistIconPositions();
-            }
         });
     };
 
