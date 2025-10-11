@@ -1,0 +1,296 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`KismetPage layout renders simulated sections with context banner 1`] = `
+<div>
+  <div
+    class="space-y-8"
+  >
+    <aside
+      aria-label="Simulation notice"
+      class="rounded-xl border border-amber-500/40 bg-amber-900/20 p-4 text-sm text-amber-100/90 shadow"
+      role="note"
+    >
+      <p
+        class="font-semibold text-amber-100"
+      >
+        Simulation notice
+      </p>
+      <p
+        class="mt-2"
+      >
+        All telemetry in this workspace is replayed from bundled fixture data (
+        <code
+          class="font-mono"
+        >
+          sampleCapture.json
+        </code>
+         and
+         
+        <code
+          class="font-mono"
+        >
+          sampleClients.json
+        </code>
+        ) so the demo can run entirely offline.
+      </p>
+      <p
+        class="mt-2"
+      >
+        Safe Mode keeps radio controls, uploads, and outbound probes disabled; toggling Lab Mode only unlocks additional filters on the simulated dataset.
+      </p>
+    </aside>
+    <section
+      aria-labelledby="kismet-monitor-heading"
+      class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-6 shadow-lg"
+    >
+      <h1
+        class="mb-4 text-2xl font-semibold text-sky-100"
+        id="kismet-monitor-heading"
+      >
+        Kismet Live Monitor (Simulated)
+      </h1>
+      <div
+        class="p-4 text-white space-y-4"
+      >
+        <div
+          class="rounded border border-yellow-700 bg-yellow-900/60 p-3 text-sm"
+          role="status"
+        >
+          <div
+            class="flex flex-wrap items-center gap-2 justify-between"
+          >
+            <div>
+              <p
+                class="font-semibold"
+              >
+                Lab Mode 
+                off
+              </p>
+              <p
+                class="text-xs text-yellow-200"
+              >
+                Enable Lab Mode to explore the full simulator. Offline summary remains available.
+              </p>
+            </div>
+            <div
+              class="flex items-center gap-2"
+            >
+              <button
+                class="rounded bg-ub-yellow px-3 py-1 text-xs font-semibold text-black"
+                type="button"
+              >
+                Enable Lab Mode
+              </button>
+              <button
+                class="rounded border border-yellow-500 px-3 py-1 text-xs"
+                type="button"
+              >
+                Reload fixtures
+              </button>
+            </div>
+          </div>
+        </div>
+        <div
+          class="rounded border border-blue-800 bg-blue-900/60 p-3 text-xs"
+        >
+          <p
+            class="font-semibold"
+          >
+            Offline summary
+          </p>
+          <ul
+            class="mt-2 list-disc space-y-1 pl-5"
+          >
+            <li>
+              Access points discovered: 
+              4
+            </li>
+            <li>
+              Total beacon frames observed: 
+              6
+            </li>
+            <li>
+              Busiest channel:
+               
+              1
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+    <section
+      aria-labelledby="deauth-walkthrough-heading"
+      class="rounded-2xl border border-slate-700/70 bg-slate-900/70 p-6 shadow-lg"
+    >
+      <h2
+        class="mb-4 text-xl font-semibold text-sky-100"
+        id="deauth-walkthrough-heading"
+      >
+        Deauthentication Walkthrough
+      </h2>
+      <div
+        class="space-y-4 text-sm"
+      >
+        <table
+          class="w-full text-sm"
+        >
+          <thead>
+            <tr
+              class="text-left"
+            >
+              <th
+                class="pr-2"
+              >
+                Seq
+              </th>
+              <th
+                class="pr-2"
+              >
+                Source
+              </th>
+              <th
+                class="pr-2"
+              >
+                Destination
+              </th>
+              <th>
+                Type
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              class="odd:bg-gray-800 "
+            >
+              <td
+                class="pr-2"
+              >
+                1
+              </td>
+              <td
+                class="pr-2"
+              >
+                66:77:88:00:00:01
+              </td>
+              <td
+                class="pr-2"
+              >
+                11:22:33:44:55:66
+              </td>
+              <td>
+                Data
+              </td>
+            </tr>
+            <tr
+              class="odd:bg-gray-800 "
+            >
+              <td
+                class="pr-2"
+              >
+                2
+              </td>
+              <td
+                class="pr-2"
+              >
+                66:77:88:00:00:01
+              </td>
+              <td
+                class="pr-2"
+              >
+                11:22:33:44:55:66
+              </td>
+              <td>
+                Data
+              </td>
+            </tr>
+            <tr
+              class="odd:bg-gray-800 bg-red-900 text-red-100"
+            >
+              <td
+                class="pr-2"
+              >
+                3
+              </td>
+              <td
+                class="pr-2"
+              >
+                66:77:88:00:00:01
+              </td>
+              <td
+                class="pr-2"
+              >
+                FF:FF:FF:FF:FF:FF
+              </td>
+              <td>
+                Deauth
+              </td>
+            </tr>
+            <tr
+              class="odd:bg-gray-800 bg-red-900 text-red-100"
+            >
+              <td
+                class="pr-2"
+              >
+                4
+              </td>
+              <td
+                class="pr-2"
+              >
+                66:77:88:00:00:01
+              </td>
+              <td
+                class="pr-2"
+              >
+                FF:FF:FF:FF:FF:FF
+              </td>
+              <td>
+                Deauth
+              </td>
+            </tr>
+            <tr
+              class="odd:bg-gray-800 "
+            >
+              <td
+                class="pr-2"
+              >
+                5
+              </td>
+              <td
+                class="pr-2"
+              >
+                66:77:88:00:00:01
+              </td>
+              <td
+                class="pr-2"
+              >
+                11:22:33:44:55:66
+              </td>
+              <td>
+                Data
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p
+          class="mt-4"
+        >
+          Frames 3 and 4 show back-to-back deauthentication messages, a pattern often used to forcibly disconnect clients from an access point.
+        </p>
+        <p
+          class="mt-2"
+        >
+          For defensive guidance, review the
+           
+          <a
+            class="text-blue-400 underline"
+            href="/docs/deauth-mitigation.md"
+          >
+            mitigation notes
+          </a>
+          .
+        </p>
+      </div>
+    </section>
+  </div>
+</div>
+`;
