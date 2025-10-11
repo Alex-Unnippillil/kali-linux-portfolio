@@ -23,7 +23,12 @@ export default function ShareTarget() {
               return { name: file.name, type: file.type };
             })
           );
-          params.set('files', encodeURIComponent(JSON.stringify(fileInfos)));
+          if (fileInfos.length) {
+            const serialized = JSON.stringify(fileInfos);
+            if (serialized) {
+              params.set('files', serialized);
+            }
+          }
         }
         router.replace(`/input-hub?${params.toString()}`);
       });

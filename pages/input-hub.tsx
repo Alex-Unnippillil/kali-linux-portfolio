@@ -44,15 +44,33 @@ const InputHub = () => {
     if (text) parts.push(String(text));
     if (url) parts.push(String(url));
     if (files) {
-      try {
-        const list = JSON.parse(
-          decodeURIComponent(String(files))
-        ) as { name: string; type: string }[];
+      const parseFiles = (raw: string) => {
+        try {
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : null;
+        } catch {
+          return null;
+        }
+      };
+      const value = Array.isArray(files)
+        ? files[0]
+        : files;
+      const rawValue = value ? String(value) : '';
+      let list = rawValue ? parseFiles(rawValue) : null;
+      if (!list && rawValue) {
+        try {
+          const decoded = decodeURIComponent(rawValue);
+          if (decoded && decoded !== rawValue) {
+            list = parseFiles(decoded);
+          }
+        } catch {
+          // ignore decode errors
+        }
+      }
+      if (list && list.length) {
         parts.push(
           ...list.map((f) => `File: ${f.name} (${f.type})`)
         );
-      } catch {
-        // ignore parse errors
       }
     }
     if (parts.length) {
