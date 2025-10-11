@@ -8,11 +8,13 @@ import Toast from '../../../ui/Toast';
 export default function Overlay({
   onPause,
   onResume,
+  onReset,
   muted: externalMuted,
   onToggleSound,
 }: {
   onPause?: () => void;
   onResume?: () => void;
+  onReset?: () => void;
   muted?: boolean;
   onToggleSound?: (muted: boolean) => void;
 }) {
@@ -91,6 +93,11 @@ export default function Overlay({
         <button onClick={togglePause} aria-label={paused ? 'Resume' : 'Pause'}>
           {paused ? 'Resume' : 'Pause'}
         </button>
+        {onReset && (
+          <button onClick={onReset} aria-label="Reset game">
+            Reset
+          </button>
+        )}
         <button onClick={toggleSound} aria-label={muted ? 'Unmute' : 'Mute'}>
           {muted ? 'Sound' : 'Mute'}
         </button>

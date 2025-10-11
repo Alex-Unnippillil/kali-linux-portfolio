@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import GameLayout from "../../components/apps/GameLayout";
+import { Overlay, useGameLoop } from "../../components/apps/Games/common";
 import DpsCharts from "../games/tower-defense/components/DpsCharts";
 import RangeUpgradeTree from "../games/tower-defense/components/RangeUpgradeTree";
 import {
@@ -11,6 +12,13 @@ import {
   Enemy,
   createEnemyPool,
   spawnEnemy,
+  type WaveConfig,
+  type WaveRuntimeState,
+  createWaveRuntime,
+  armWaveCountdown,
+  stepWaveRuntime,
+  getHighScore,
+  updateHighScore,
 } from "../games/tower-defense";
 
 const GRID_SIZE = 10;
@@ -86,23 +94,23 @@ interface EnemyInstance extends Enemy {
   progress: number;
 }
 
+const SOUND_KEY = "tower-defense:muted";
+
 const TowerDefense = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [editing, setEditing] = useState(true);
-  const [path, setPath] = useState<{ x: number; y: number }[]>([]);
+  const [path, setPath] = useState<Vec[]>([]);
   const pathSetRef = useRef<Set<string>>(new Set());
+  const pathRef = useRef<Vec[]>([]);
+  useEffect(() => {
+    pathRef.current = path;
+  }, [path]);
   const [towers, setTowers] = useState<Tower[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
   const [hovered, setHovered] = useState<number | null>(null);
   const enemiesRef = useRef<EnemyInstance[]>([]);
   const enemyPool = useRef(createEnemyPool(50));
-  const lastTime = useRef(0);
-  const running = useRef(false);
-  const spawnTimer = useRef(0);
-  const waveRef = useRef(1);
-  const waveCountdownRef = useRef<number | null>(null);
-  const [, forceRerender] = useState(0);
-  const enemiesSpawnedRef = useRef(0);
+  const enemyIdRef = useRef(0);
   const damageNumbersRef = useRef<
     {
       x: number;
@@ -114,92 +122,125 @@ const TowerDefense = () => {
   const damageTicksRef = useRef<{ x: number; y: number; life: number }[]>([]);
   const flowFieldRef = useRef<Vec[][] | null>(null);
 
-  const [waveConfig, setWaveConfig] = useState<
-    (keyof typeof ENEMY_TYPES)[][]
-  >([Array(5).fill("fast") as (keyof typeof ENEMY_TYPES)[]]);
+  const [waveConfig, setWaveConfig] = useState<WaveConfig>([
+    Array(5).fill("fast") as (keyof typeof ENEMY_TYPES)[],
+  ]);
+  const waveStateRef = useRef<WaveRuntimeState>(createWaveRuntime(waveConfig));
+  useEffect(() => {
+    waveStateRef.current.waves = waveConfig;
+  }, [waveConfig]);
+
   const [waveJson, setWaveJson] = useState("");
   useEffect(() => {
     setWaveJson(JSON.stringify(waveConfig, null, 2));
   }, [waveConfig]);
-  const addWave = () => setWaveConfig((w) => [...w, []]);
-  const addEnemyToWave = (
-    index: number,
-    type: keyof typeof ENEMY_TYPES,
-  ) => {
-    setWaveConfig((w) => {
-      const copy = w.map((wave) => [...wave]);
-      copy[index].push(type);
-      return copy;
-    });
-  };
-  const importWaves = () => {
-    try {
-      const data = JSON.parse(waveJson) as (keyof typeof ENEMY_TYPES)[][];
-      if (Array.isArray(data)) setWaveConfig(data);
-    } catch {
-      alert("Invalid wave JSON");
-    }
-  };
-  const exportWaves = () => {
-    const json = JSON.stringify(waveConfig, null, 2);
-    setWaveJson(json);
-    navigator.clipboard
-      ?.writeText(json)
-      .catch(() => {});
-  };
 
-  const togglePath = (x: number, y: number) => {
-    const key = `${x},${y}`;
-    setPath((p) => {
-      const set = pathSetRef.current;
-      if (set.has(key)) {
-        set.delete(key);
-        return p.filter((c) => !(c.x === x && c.y === y));
-      }
-      set.add(key);
-      return [...p, { x, y }];
-    });
-  };
-
-  const handleCanvasClick = (e: React.MouseEvent) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
-    const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
-    const key = `${x},${y}`;
-    if (editing) {
-      togglePath(x, y);
-      return;
-    }
-    const existing = towers.findIndex((t) => t.x === x && t.y === y);
-    if (existing >= 0) {
-      setSelected(existing);
-      return;
-    }
-    if (pathSetRef.current.has(key)) return;
-    setTowers((ts) => [...ts, { x, y, range: 1, damage: 1, level: 1 }]);
-  };
-
-  const handleCanvasMove = (e: React.MouseEvent) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
-    const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
-    const idx = towers.findIndex((t) => t.x === x && t.y === y);
-    setHovered(idx >= 0 ? idx : null);
-  };
-
-  const handleCanvasLeave = () => setHovered(null);
-
+  const [countdownDisplay, setCountdownDisplay] = useState<number | null>(null);
+  const [currentWave, setCurrentWave] = useState(1);
+  const [score, setScore] = useState(0);
+  const scoreRef = useRef(0);
+  const [highScore, setHighScore] = useState(() => getHighScore());
+  const highScoreRef = useRef(highScore);
   useEffect(() => {
-    if (path.length >= 2) {
-      flowFieldRef.current = computeFlowField(
-        path[0],
-        path[path.length - 1],
-        towers,
-      );
-    }
-  }, [path, towers]);
+    highScoreRef.current = highScore;
+  }, [highScore]);
 
-  const draw = () => {
+  const [muted, setMuted] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem(SOUND_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const mutedRef = useRef(muted);
+  useEffect(() => {
+    mutedRef.current = muted;
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(SOUND_KEY, muted ? "1" : "0");
+    } catch {
+      // ignore persistence errors
+    }
+  }, [muted]);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const playShot = useCallback(() => {
+    if (mutedRef.current || typeof window === "undefined") return;
+    try {
+      let ctx = audioCtxRef.current;
+      if (!ctx) {
+        ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioCtxRef.current = ctx;
+      }
+      if (ctx.state === "suspended") {
+        ctx.resume();
+      }
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "square";
+      osc.frequency.value = 440 + Math.random() * 120;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.15);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      const now = ctx.currentTime;
+      osc.start(now);
+      osc.stop(now + 0.2);
+    } catch {
+      // ignore audio errors
+    }
+  }, []);
+
+  const [paused, setPaused] = useState(false);
+
+  const updateCountdown = useCallback((value: number | null) => {
+    const display = value !== null ? Math.max(0, Math.ceil(value)) : null;
+    setCountdownDisplay((prev) => (prev === display ? prev : display));
+  }, []);
+
+  const updateScore = useCallback(
+    (kills: number) => {
+      if (kills <= 0) return;
+      const next = scoreRef.current + kills;
+      scoreRef.current = next;
+      setScore(next);
+      if (next > highScoreRef.current) {
+        const newHigh = updateHighScore(next);
+        highScoreRef.current = newHigh;
+        setHighScore(newHigh);
+      }
+    },
+    [],
+  );
+
+  const spawnEnemyOfType = useCallback(
+    (type: keyof typeof ENEMY_TYPES) => {
+      const currentPath = pathRef.current;
+      if (!currentPath.length) return;
+      const spec = ENEMY_TYPES[type];
+      enemyIdRef.current += 1;
+      const enemy = spawnEnemy(enemyPool.current, {
+        id: enemyIdRef.current,
+        x: currentPath[0].x,
+        y: currentPath[0].y,
+        pathIndex: 0,
+        progress: 0,
+        health: spec.health,
+        resistance: 0,
+        baseSpeed: spec.speed,
+        slow: null,
+        dot: null,
+        type,
+      });
+      if (enemy) {
+        enemiesRef.current.push(enemy as EnemyInstance);
+      }
+    },
+    [],
+  );
+
+  const draw = useCallback(() => {
     const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
     ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
@@ -277,94 +318,119 @@ const TowerDefense = () => {
         d.y * CELL_SIZE + CELL_SIZE / 2 - (1 - d.life) * 10,
       );
     });
-  };
+  }, [hovered, path, selected, towers]);
 
-  const spawnEnemyInstance = () => {
-    if (!path.length) return;
-    const wave = waveConfig[waveRef.current - 1] || [];
-    const type = wave[enemiesSpawnedRef.current];
-    if (!type) return;
-    const spec = ENEMY_TYPES[type];
-    const enemy = spawnEnemy(enemyPool.current, {
-      id: Date.now(),
-      x: path[0].x,
-      y: path[0].y,
-      pathIndex: 0,
-      progress: 0,
-      health: spec.health,
-      resistance: 0,
-      baseSpeed: spec.speed,
-      slow: null,
-      dot: null,
-      type,
-    });
-    if (enemy) enemiesRef.current.push(enemy as EnemyInstance);
-  };
+  useEffect(() => {
+    if (path.length >= 2) {
+      flowFieldRef.current = computeFlowField(
+        path[0],
+        path[path.length - 1],
+        towers,
+      );
+    } else {
+      flowFieldRef.current = null;
+    }
+  }, [path, towers]);
 
-  const update = (time: number) => {
-    const dt = (time - lastTime.current) / 1000;
-    lastTime.current = time;
+  useEffect(() => {
+    draw();
+  }, [draw]);
 
-    if (waveCountdownRef.current !== null) {
-      waveCountdownRef.current -= dt;
-      forceRerender((n) => n + 1);
-      if (waveCountdownRef.current <= 0) {
-        waveCountdownRef.current = null;
-        running.current = true;
-        spawnTimer.current = 0;
-        enemiesSpawnedRef.current = 0;
-      }
-    } else if (running.current) {
-      spawnTimer.current += dt;
-      const currentWave = waveConfig[waveRef.current - 1] || [];
-      if (
-        spawnTimer.current > 1 &&
-        enemiesSpawnedRef.current < currentWave.length
-      ) {
-        spawnTimer.current = 0;
-        spawnEnemyInstance();
-        enemiesSpawnedRef.current += 1;
-      }
-      enemiesRef.current.forEach((en) => {
-        const field = flowFieldRef.current;
-        if (!field) return;
-        const cellX = Math.floor(en.x);
-        const cellY = Math.floor(en.y);
-        const vec = field[cellX]?.[cellY];
-        if (!vec) return;
-        const step = (en.baseSpeed * dt) / CELL_SIZE;
-        en.x += vec.x * step;
-        en.y += vec.y * step;
+  const updateGame = useCallback(
+    (dt: number) => {
+      const state = waveStateRef.current;
+      const step = stepWaveRuntime(state, dt, {
+        activeEnemies: enemiesRef.current.length,
       });
-      enemiesRef.current = enemiesRef.current.filter((e) => {
-        const goal = path[path.length - 1];
-        const reached =
-          Math.floor(e.x) === goal?.x && Math.floor(e.y) === goal?.y;
-        return e.health > 0 && !reached;
-      });
-      towers.forEach((t) => {
-        (t as any).cool = (t as any).cool ? (t as any).cool - dt : 0;
-        if ((t as any).cool <= 0) {
-          const enemy = enemiesRef.current.find(
-            (e) => Math.hypot(e.x - t.x, e.y - t.y) <= t.range,
+
+      if (step.spawnedTypes.length) {
+        step.spawnedTypes.forEach(spawnEnemyOfType);
+      }
+
+      if (step.waveStarted) {
+        setCurrentWave(step.waveStarted);
+        updateCountdown(state.countdown);
+      } else if (step.countdown !== undefined) {
+        updateCountdown(state.countdown);
+      }
+
+      if (step.waveFinished) {
+        if (step.allWavesCleared) {
+          updateCountdown(null);
+          setPaused(true);
+          setEditing(true);
+        } else {
+          const nextWave = Math.min(
+            state.waveIndex + 1,
+            Math.max(state.waves.length, 1),
           );
-          if (enemy) {
-            enemy.health -= t.damage;
+          setCurrentWave(nextWave);
+          updateCountdown(state.countdown);
+        }
+      }
+
+      if (!state.running && state.countdown === null && step.countdown === undefined) {
+        updateCountdown(null);
+      }
+
+      const field = flowFieldRef.current;
+      if (field) {
+        enemiesRef.current.forEach((en) => {
+          const cellX = Math.floor(en.x);
+          const cellY = Math.floor(en.y);
+          const vec = field[cellX]?.[cellY];
+          if (!vec) return;
+          const stepSize = (en.baseSpeed * dt) / CELL_SIZE;
+          en.x += vec.x * stepSize;
+          en.y += vec.y * stepSize;
+        });
+      }
+
+      const currentPath = pathRef.current;
+      const goal = currentPath[currentPath.length - 1];
+      let kills = 0;
+      enemiesRef.current = enemiesRef.current.filter((enemy) => {
+        const reached =
+          goal &&
+          Math.floor(enemy.x) === goal.x &&
+          Math.floor(enemy.y) === goal.y;
+        const alive = enemy.health > 0 && !reached;
+        if (!alive && enemy.health <= 0) {
+          kills += 1;
+        }
+        return alive;
+      });
+      if (kills) {
+        updateScore(kills);
+      }
+
+      towers.forEach((tower) => {
+        const runtime = tower as Tower & { cool?: number };
+        runtime.cool = runtime.cool ? runtime.cool - dt : 0;
+        if (runtime.cool <= 0) {
+          const target = enemiesRef.current.find(
+            (enemy) =>
+              Math.hypot(enemy.x - tower.x, enemy.y - tower.y) <= tower.range,
+          );
+          if (target) {
+            target.health -= tower.damage;
             damageNumbersRef.current.push({
-              x: enemy.x,
-              y: enemy.y,
-              value: t.damage,
+              x: target.x,
+              y: target.y,
+              value: tower.damage,
               life: 1,
             });
             damageTicksRef.current.push({
-              x: enemy.x,
-              y: enemy.y,
+              x: target.x,
+              y: target.y,
               life: 1,
             });
-            (t as any).cool = 1;
+            runtime.cool = 1;
+            playShot();
           }
         }
       });
+
       damageNumbersRef.current.forEach((d) => {
         d.y -= dt * 0.5;
         d.life -= dt * 2;
@@ -372,39 +438,117 @@ const TowerDefense = () => {
       damageNumbersRef.current = damageNumbersRef.current.filter(
         (d) => d.life > 0,
       );
+
       damageTicksRef.current.forEach((t) => {
         t.life -= dt * 2;
       });
       damageTicksRef.current = damageTicksRef.current.filter((t) => t.life > 0);
-        if (
-          enemiesSpawnedRef.current >= currentWave.length &&
-          enemiesRef.current.length === 0
-        ) {
-          running.current = false;
-          if (waveRef.current < waveConfig.length) {
-            waveRef.current += 1;
-            waveCountdownRef.current = 5;
-          }
-          forceRerender((n) => n + 1);
-        }
-      }
+
       draw();
-      requestAnimationFrame(update);
-    };
+    },
+    [draw, playShot, spawnEnemyOfType, towers, updateCountdown, updateScore],
+  );
 
-  useEffect(() => {
-    lastTime.current = performance.now();
-    requestAnimationFrame(update);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useGameLoop(updateGame, !paused);
 
-    const start = () => {
-      if (!path.length || !waveConfig.length) return;
-      setEditing(false);
-      waveRef.current = 1;
-      waveCountdownRef.current = 3;
-      forceRerender((n) => n + 1);
-    };
+  const togglePath = (x: number, y: number) => {
+    const key = `${x},${y}`;
+    setPath((p) => {
+      const set = pathSetRef.current;
+      if (set.has(key)) {
+        set.delete(key);
+        return p.filter((c) => !(c.x === x && c.y === y));
+      }
+      set.add(key);
+      return [...p, { x, y }];
+    });
+  };
+
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
+    const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+    const key = `${x},${y}`;
+    if (editing) {
+      togglePath(x, y);
+      return;
+    }
+    const existing = towers.findIndex((t) => t.x === x && t.y === y);
+    if (existing >= 0) {
+      setSelected(existing);
+      return;
+    }
+    if (pathSetRef.current.has(key)) return;
+    setTowers((ts) => [...ts, { x, y, range: 1, damage: 1, level: 1 }]);
+  };
+
+  const handleCanvasMove = (e: React.MouseEvent) => {
+    const rect = canvasRef.current!.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
+    const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+    const idx = towers.findIndex((t) => t.x === x && t.y === y);
+    setHovered(idx >= 0 ? idx : null);
+  };
+
+  const handleCanvasLeave = () => setHovered(null);
+
+  const addWave = () => setWaveConfig((w) => [...w, []]);
+
+  const addEnemyToWave = (
+    index: number,
+    type: keyof typeof ENEMY_TYPES,
+  ) => {
+    setWaveConfig((w) => {
+      const copy = w.map((wave) => [...wave]);
+      copy[index].push(type);
+      return copy;
+    });
+  };
+
+  const importWaves = () => {
+    try {
+      const data = JSON.parse(waveJson) as WaveConfig;
+      if (Array.isArray(data)) setWaveConfig(data);
+    } catch {
+      alert("Invalid wave JSON");
+    }
+  };
+
+  const exportWaves = () => {
+    const json = JSON.stringify(waveConfig, null, 2);
+    setWaveJson(json);
+    navigator.clipboard
+      ?.writeText(json)
+      .catch(() => {});
+  };
+
+  const resetGame = useCallback(() => {
+    waveStateRef.current = createWaveRuntime(waveConfig);
+    enemiesRef.current = [];
+    damageNumbersRef.current = [];
+    damageTicksRef.current = [];
+    setEditing(true);
+    setPaused(true);
+    scoreRef.current = 0;
+    setScore(0);
+    updateCountdown(null);
+    setCurrentWave(1);
+  }, [updateCountdown, waveConfig]);
+
+  const startGame = useCallback(() => {
+    if (!pathRef.current.length || !waveConfig.length) return;
+    enemiesRef.current = [];
+    damageNumbersRef.current = [];
+    damageTicksRef.current = [];
+    scoreRef.current = 0;
+    setScore(0);
+    waveStateRef.current = createWaveRuntime(waveConfig);
+    armWaveCountdown(waveStateRef.current);
+    updateCountdown(waveStateRef.current.countdown);
+    setCurrentWave(1);
+    setEditing(false);
+    setPaused(false);
+  }, [updateCountdown, waveConfig]);
 
   const upgrade = (type: "range" | "damage") => {
     if (selected === null) return;
@@ -418,11 +562,23 @@ const TowerDefense = () => {
   };
 
   return (
-    <GameLayout gameId="tower-defense">
+    <GameLayout
+      gameId="tower-defense"
+      stage={currentWave}
+      score={score}
+      highScore={highScore}
+    >
+      <Overlay
+        onPause={() => setPaused(true)}
+        onResume={() => setPaused(false)}
+        onReset={resetGame}
+        muted={muted}
+        onToggleSound={setMuted}
+      />
       <div className="p-2 space-y-2">
-        {waveCountdownRef.current !== null && (
+        {countdownDisplay !== null && (
           <div className="text-center bg-gray-700 text-white py-1 rounded">
-            Wave {waveRef.current} in {Math.ceil(waveCountdownRef.current)}
+            Wave {currentWave} in {countdownDisplay}
           </div>
         )}
         <div className="space-x-2 mb-2">
@@ -434,10 +590,16 @@ const TowerDefense = () => {
           </button>
           <button
             className="px-2 py-1 bg-gray-700 rounded"
-            onClick={start}
-            disabled={running.current || waveCountdownRef.current !== null}
+            onClick={startGame}
+            disabled={paused === false && waveStateRef.current.running}
           >
             Start
+          </button>
+          <button
+            className="px-2 py-1 bg-gray-700 rounded"
+            onClick={resetGame}
+          >
+            Reset
           </button>
         </div>
         <div className="space-y-1 mb-2 text-xs">
@@ -520,3 +682,4 @@ const TowerDefense = () => {
 };
 
 export default TowerDefense;
+

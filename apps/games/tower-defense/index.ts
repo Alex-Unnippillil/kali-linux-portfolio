@@ -158,3 +158,178 @@ export const upgradeTower = (tower: Tower, path: 'range' | 'damage') => {
   else tower.damage += 1;
 };
 
+export type WaveConfig = (keyof typeof ENEMY_TYPES)[][];
+
+export interface WaveRuntimeOptions {
+  spawnInterval?: number;
+  countdownDuration?: number;
+  interWaveDelay?: number;
+}
+
+export interface WaveRuntimeState extends Required<WaveRuntimeOptions> {
+  waves: WaveConfig;
+  waveIndex: number;
+  countdown: number | null;
+  spawnTimer: number;
+  spawned: number;
+  running: boolean;
+  completedWaves: number;
+}
+
+export interface WaveStepOptions {
+  activeEnemies: number;
+}
+
+export interface WaveStepResult {
+  spawnedTypes: (keyof typeof ENEMY_TYPES)[];
+  waveStarted?: number;
+  waveFinished?: number;
+  allWavesCleared?: boolean;
+  countdown?: number | null;
+}
+
+const DEFAULT_WAVE_OPTIONS: Required<WaveRuntimeOptions> = {
+  spawnInterval: 1,
+  countdownDuration: 3,
+  interWaveDelay: 5,
+};
+
+export const createWaveRuntime = (
+  waves: WaveConfig,
+  options: WaveRuntimeOptions = {},
+): WaveRuntimeState => ({
+  waves,
+  waveIndex: 0,
+  countdown: null,
+  spawnTimer: 0,
+  spawned: 0,
+  running: false,
+  completedWaves: 0,
+  spawnInterval: options.spawnInterval ?? DEFAULT_WAVE_OPTIONS.spawnInterval,
+  countdownDuration:
+    options.countdownDuration ?? DEFAULT_WAVE_OPTIONS.countdownDuration,
+  interWaveDelay: options.interWaveDelay ?? DEFAULT_WAVE_OPTIONS.interWaveDelay,
+});
+
+export const armWaveCountdown = (
+  state: WaveRuntimeState,
+  duration?: number,
+) => {
+  state.countdown = duration ?? state.countdownDuration;
+  state.running = false;
+  state.spawnTimer = 0;
+  state.spawned = 0;
+};
+
+export const stepWaveRuntime = (
+  state: WaveRuntimeState,
+  dt: number,
+  { activeEnemies }: WaveStepOptions,
+): WaveStepResult => {
+  const result: WaveStepResult = { spawnedTypes: [] };
+
+  if (state.countdown !== null) {
+    state.countdown = Math.max(0, state.countdown - dt);
+    if (state.countdown <= 0) {
+      state.countdown = null;
+      state.running = true;
+      state.spawnTimer = 0;
+      state.spawned = 0;
+      result.waveStarted = state.waveIndex + 1;
+    } else {
+      result.countdown = state.countdown;
+    }
+    return result;
+  }
+
+  if (!state.running) {
+    return result;
+  }
+
+  const wave = state.waves[state.waveIndex] ?? [];
+
+  if (wave.length === 0) {
+    state.running = false;
+    state.waveIndex += 1;
+    state.completedWaves += 1;
+    result.waveFinished = state.completedWaves;
+    if (state.waveIndex >= state.waves.length) {
+      result.allWavesCleared = true;
+    } else {
+      armWaveCountdown(state, state.interWaveDelay);
+      result.countdown = state.countdown;
+    }
+    return result;
+  }
+
+  state.spawnTimer += dt;
+
+  while (state.spawned < wave.length && state.spawnTimer >= state.spawnInterval) {
+    state.spawnTimer -= state.spawnInterval;
+    const type = wave[state.spawned];
+    state.spawned += 1;
+    result.spawnedTypes.push(type);
+  }
+
+  if (state.spawned >= wave.length && activeEnemies === 0) {
+    state.running = false;
+    state.waveIndex += 1;
+    state.completedWaves += 1;
+    result.waveFinished = state.completedWaves;
+    if (state.waveIndex >= state.waves.length) {
+      result.allWavesCleared = true;
+    } else {
+      armWaveCountdown(state, state.interWaveDelay);
+      result.countdown = state.countdown;
+    }
+  }
+
+  return result;
+};
+
+type StorageLike = Pick<Storage, 'getItem' | 'setItem'>;
+
+const HIGH_SCORE_KEY = 'tower-defense:high-score';
+
+const resolveStorage = (storage?: StorageLike): StorageLike | undefined => {
+  if (storage) return storage;
+  if (typeof window !== 'undefined' && window.localStorage) {
+    return window.localStorage;
+  }
+  return undefined;
+};
+
+export const getHighScore = (storage?: StorageLike): number => {
+  const store = resolveStorage(storage);
+  if (!store) return 0;
+  try {
+    const raw = store.getItem(HIGH_SCORE_KEY);
+    if (!raw) return 0;
+    const value = Number.parseInt(raw, 10);
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  } catch {
+    return 0;
+  }
+};
+
+export const updateHighScore = (
+  score: number,
+  storage?: StorageLike,
+): number => {
+  if (!Number.isFinite(score) || score < 0) {
+    return getHighScore(storage);
+  }
+  const store = resolveStorage(storage);
+  if (!store) return score;
+  const current = getHighScore(store);
+  if (score > current) {
+    try {
+      store.setItem(HIGH_SCORE_KEY, String(score));
+    } catch {
+      // ignore persistence errors
+    }
+    return score;
+  }
+  return current;
+};
+
