@@ -28,18 +28,44 @@ export default function ResultViewer({ data }: ViewerProps) {
     }
   }, [sortKey]);
 
-  const keys = data[0] ? Object.keys(data[0]) : [];
+  const keys = useMemo(() => {
+    const seen = new Set<string>();
+    const ordered: string[] = [];
+    data.forEach((row) => {
+      if (!row || typeof row !== 'object') return;
+      Object.keys(row).forEach((key) => {
+        if (!seen.has(key)) {
+          seen.add(key);
+          ordered.push(key);
+        }
+      });
+    });
+    return ordered;
+  }, [data]);
   const filtered = useMemo(() => {
     const lower = filter.toLowerCase();
     return data.filter((row) => JSON.stringify(row).toLowerCase().includes(lower));
   }, [data, filter]);
   const sorted = useMemo(() => {
     if (!sortKey) return filtered;
-    return [...filtered].sort((a, b) => (a[sortKey] > b[sortKey] ? 1 : -1));
+    return [...filtered].sort((a, b) => {
+      const aVal = a?.[sortKey];
+      const bVal = b?.[sortKey];
+      if (aVal === bVal) return 0;
+      if (aVal == null) return 1;
+      if (bVal == null) return -1;
+      return String(aVal).localeCompare(String(bVal), undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      });
+    });
   }, [filtered, sortKey]);
 
   const exportCsv = () => {
-    const csv = [keys.join(','), ...data.map((row) => keys.map((k) => JSON.stringify(row[k] ?? '')).join(','))].join('\n');
+    const csv = [
+      keys.join(','),
+      ...data.map((row) => keys.map((k) => JSON.stringify(row?.[k] ?? '')).join(',')),
+    ].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -112,11 +138,14 @@ export default function ResultViewer({ data }: ViewerProps) {
               <tbody>
                 {sorted.map((row, i) => (
                   <tr key={i}>
-                    {keys.map((k) => (
-                      <td key={k} className="border px-1">
-                        {String(row[k])}
-                      </td>
-                    ))}
+                    {keys.map((k) => {
+                      const value = row?.[k];
+                      return (
+                        <td key={k} className="border px-1">
+                          {value == null ? '' : String(value)}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>
@@ -126,16 +155,21 @@ export default function ResultViewer({ data }: ViewerProps) {
       )}
       {tab === 'chart' && (
         <svg width="100%" height="100" role="img" aria-label="bar chart">
-          {data.slice(0, keys.length).map((row, i) => (
-            <rect
-              key={i}
-              x={i * 40}
-              y={100 - Number(row[keys[0]])}
-              width={30}
-              height={Number(row[keys[0]])}
-              fill={['#377eb8', '#4daf4a', '#e41a1c', '#984ea3', '#ff7f00'][i % 5]}
-            />
-          ))}
+          {data.slice(0, keys.length).map((row, i) => {
+            const primaryKey = keys[0];
+            const value = Number(row?.[primaryKey] ?? 0);
+            const safeValue = Number.isFinite(value) ? value : 0;
+            return (
+              <rect
+                key={i}
+                x={i * 40}
+                y={100 - safeValue}
+                width={30}
+                height={safeValue}
+                fill={['#377eb8', '#4daf4a', '#e41a1c', '#984ea3', '#ff7f00'][i % 5]}
+              />
+            );
+          })}
         </svg>
       )}
     </div>
