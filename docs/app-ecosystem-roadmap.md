@@ -42,7 +42,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | quote | Quote | Core maintainers | **In progress** – offline JSON source and no-repeat option | Local JSON |
 | input-lab | Input Lab | Core maintainers | **Needs polish** – ensure device coverage (keyboard, mouse, gamepad) | Device APIs |
 | subnet-calculator | Subnet Calculator | Core maintainers | **Needs polish** – validation UX and shared presets | Network calc utils |
-| sticky_notes | Sticky Notes | Core maintainers | **Needs polish** – confirm persistence model and drag handles | localStorage |
+| sticky_notes | Sticky Notes | Core maintainers | **Ready** – IndexedDB persistence with drag handles and z-order focus | IndexedDB, localStorage |
 | trash | Trash | Core maintainers | **In progress** – soft-delete metadata with restore/empty flows | Virtual filesystem metadata |
 | serial-terminal | Serial Terminal | Core maintainers | **Needs polish** – confirm serial transport stubs | Web Serial API mock |
 | plugin-manager | Plugin Manager | Core maintainers | **Needs triage** – document scope and dependencies | Plugin metadata |

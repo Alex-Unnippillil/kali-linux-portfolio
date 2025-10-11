@@ -33,6 +33,45 @@ body {
   border-radius: 4px;
 }
 
+.note.note-active {
+  box-shadow: 0 6px 12px color-mix(in srgb, var(--color-inverse), transparent 85%),
+    0 2px 6px color-mix(in srgb, var(--color-inverse), transparent 90%);
+}
+
+.note-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.note-handle {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-inverse), transparent 80%);
+  cursor: move;
+  color: color-mix(in srgb, var(--color-inverse), transparent 40%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+}
+
+.note-handle::before {
+  content: '⋮⋮';
+  pointer-events: none;
+}
+
+.note-handle:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-inverse), transparent 40%);
+  outline-offset: 1px;
+}
+
 .note textarea {
   width: 100%;
   height: 150px;
@@ -44,8 +83,8 @@ body {
 
 .note .controls {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 5px;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .note .delete-note {
