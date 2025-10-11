@@ -218,6 +218,8 @@ The Spotify app lets users map moods to playlists, persist preferences in OPFS, 
 
 All security-oriented apps are **non-operational** and render curated walkthroughs, faux output, or embedded documentation. They must never perform real exploitation or network activity.
 
+The BeEF simulator now includes a lab-mode gate, canned hook datasets, and expanded explanations. See [`docs/beef-lab.md`](docs/beef-lab.md) for classroom guidance and safety notes.
+
 ---
 
 ## Configuration & Environment

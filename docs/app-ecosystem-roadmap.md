@@ -61,7 +61,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | wireshark | Wireshark | Security simulations pod | **In progress** – simulator backlog | Packet capture fixtures |
 | ble-sensor | BLE Sensor | Security simulations pod | **Needs polish** – finalize simulator UX and datasets | BLE datasets |
 | dsniff | dsniff | Security simulations pod | **In progress** – command builder and sample outputs | Command templates |
-| beef | BeEF | Security simulations pod | **In progress** – simulator backlog | Browser exploit fixtures |
+| beef | BeEF | Security simulations pod | **Ready** – simulated hook manager, lab-mode gating, docs shipped | Browser exploit fixtures |
 | metasploit | Metasploit | Security simulations pod | **In progress** – simulator backlog | Module JSON |
 | autopsy | Autopsy | Security simulations pod | **In progress** – simulator backlog | Forensic dataset |
 | radare2 | Radare2 | Security simulations pod | **In progress** – simulator backlog | Static analysis fixtures |
