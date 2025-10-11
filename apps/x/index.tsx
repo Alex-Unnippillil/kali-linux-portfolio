@@ -1,5 +1,6 @@
 'use client';
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -8,12 +9,17 @@ import {
   type SVGProps,
 } from 'react';
 import DOMPurify from 'dompurify';
-import Script from 'next/script';
 import usePersistentState from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
 import useScheduledTweets, {
   ScheduledTweet,
 } from './state/scheduled';
+import {
+  getNextEmbedTheme,
+  type EmbedTheme,
+  useEmbedTheme,
+} from './state/theme';
+import { loadEmbedScript } from './embed';
 
 const IconRefresh = (
   props: SVGProps<SVGSVGElement>,
@@ -98,26 +104,55 @@ export default function XTimeline() {
   const [loading, setLoading] = useState(false);
   const [timelineLoaded, setTimelineLoaded] = useState(false);
   const [scriptError, setScriptError] = useState(false);
-  const [scriptLoaded, setScriptLoaded] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
+  const [systemTheme, setSystemTheme] = useState<EmbedTheme>('light');
+  const [hasManualTheme, setHasManualTheme] = useState(false);
+  const manualThemeRef = useRef(false);
+  const initialTheme: EmbedTheme =
     typeof document !== 'undefined' &&
     document.documentElement.classList.contains('dark')
       ? 'dark'
-      : 'light'
-  );
+      : 'light';
+  const { theme, setTheme, toggleTheme } = useEmbedTheme(initialTheme);
   const timelineRef = useRef<HTMLDivElement>(null);
   const timeoutsRef = useRef<Record<string, number>>({});
   const [scheduled, setScheduled] = useScheduledTweets();
   const [showSetup, setShowSetup] = useState(true);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => () => {
+    isMountedRef.current = false;
+  }, []);
+
+  useEffect(() => {
+    manualThemeRef.current = hasManualTheme;
+  }, [hasManualTheme]);
 
   useEffect(() => {
     const root = document.documentElement;
-    const observer = new MutationObserver(() => {
-      setTheme(root.classList.contains('dark') ? 'dark' : 'light');
-    });
+    const updateTheme = () => {
+      const next = root.classList.contains('dark') ? 'dark' : 'light';
+      setSystemTheme(next);
+      if (!manualThemeRef.current) {
+        setTheme(next);
+      }
+    };
+    updateTheme();
+    const observer = new MutationObserver(updateTheme);
     observer.observe(root, { attributes: true, attributeFilter: ['class'] });
     return () => observer.disconnect();
-  }, []);
+  }, [setTheme]);
+
+  useEffect(() => {
+    if (!hasManualTheme) {
+      setTheme((current) => (current === systemTheme ? current : systemTheme));
+    }
+  }, [hasManualTheme, setTheme, systemTheme]);
+
+  useEffect(() => {
+    if (hasManualTheme && theme === systemTheme) {
+      setHasManualTheme(false);
+    }
+  }, [hasManualTheme, systemTheme, theme]);
 
   useEffect(() => {
     if (
@@ -159,44 +194,48 @@ export default function XTimeline() {
     });
   }, [scheduled, setScheduled]);
 
-  useEffect(() => {
-    if (!loaded || !scriptLoaded) return;
-    loadTimeline();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [theme, feed, timelineType, scriptLoaded]);
-
-  const loadTimeline = () => {
-    if (!feed || !window.twttr || !timelineRef.current) return;
+  const loadTimeline = useCallback(async () => {
+    if (!feed || !timelineRef.current) return;
     setLoading(true);
     setScriptError(false);
     setTimelineLoaded(false);
-    timelineRef.current.innerHTML = '';
-    const options = {
-      chrome: 'noheader noborders',
-      theme,
-      linkColor: accent,
-    } as const;
-    const source =
-      timelineType === 'profile'
-        ? { sourceType: 'profile', screenName: feed }
-        : feed.includes('/')
-            ? {
-                sourceType: 'list',
-                ownerScreenName: feed.split('/')[0],
-                slug: feed.split('/')[1],
-              }
-            : { sourceType: 'list', id: feed };
-    window.twttr.widgets
-      .createTimeline(source as any, timelineRef.current, options)
-      .then(() => {
-        setTimelineLoaded(true);
+    try {
+      const widgets = await loadEmbedScript();
+      if (!isMountedRef.current || !timelineRef.current) return;
+      timelineRef.current.innerHTML = '';
+      const options = {
+        chrome: 'noheader noborders',
+        theme,
+        linkColor: accent,
+      } as const;
+      const source =
+        timelineType === 'profile'
+          ? { sourceType: 'profile', screenName: feed }
+          : feed.includes('/')
+              ? {
+                  sourceType: 'list',
+                  ownerScreenName: feed.split('/')[0],
+                  slug: feed.split('/')[1],
+                }
+              : { sourceType: 'list', id: feed };
+      await widgets.createTimeline(source as any, timelineRef.current, options);
+      if (!isMountedRef.current) return;
+      setTimelineLoaded(true);
+    } catch (error) {
+      console.error('Failed to load X timeline', error);
+      if (!isMountedRef.current) return;
+      setScriptError(true);
+    } finally {
+      if (isMountedRef.current) {
         setLoading(false);
-      })
-      .catch(() => {
-        setScriptError(true);
-        setLoading(false);
-      });
-  };
+      }
+    }
+  }, [accent, feed, theme, timelineType]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    void loadTimeline();
+  }, [loaded, loadTimeline]);
 
   const handleAddPreset = (e: FormEvent) => {
     e.preventDefault();
@@ -292,21 +331,16 @@ export default function XTimeline() {
           </div>
         </div>
       )}
-      <Script
-        src="https://platform.twitter.com/widgets.js"
-        strategy="lazyOnload"
-        onLoad={() => {
-          setScriptLoaded(true);
-          if (loaded) loadTimeline();
-        }}
-        onError={() => setScriptError(true)}
-      />
       <div className="flex flex-col h-full">
         <header className="flex items-center justify-between p-1.5 border-b gap-1.5">
           <button
             type="button"
             aria-label="Refresh timeline"
-            onClick={() => loaded && loadTimeline()}
+            onClick={() => {
+              if (loaded) {
+                void loadTimeline();
+              }
+            }}
             className="p-1 rounded hover:bg-[var(--color-muted)]"
           >
             <IconRefresh className="w-6 h-6" />
@@ -324,54 +358,88 @@ export default function XTimeline() {
           </button>
         </header>
         <div className="p-1.5 space-y-4 flex-1 overflow-auto">
-        <form onSubmit={handleScheduleTweet} className="space-y-2">
-          <textarea
-            value={tweetText}
-            onChange={(e) => setTweetText(e.target.value)}
-            placeholder="Tweet text"
-            className="w-full p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-          />
-          <div className="flex gap-2 items-center">
-            <input
-              type="datetime-local"
-              value={tweetTime}
-              onChange={(e) => setTweetTime(e.target.value)}
-              className="flex-1 p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-            />
+          <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-[var(--color-muted)]">
+            <span>Timeline theme</span>
             <button
-              type="submit"
-              className="px-3 py-1 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-              style={{ backgroundColor: accent }}
+              type="button"
+              onClick={() => {
+                setHasManualTheme(true);
+                toggleTheme();
+              }}
+              aria-pressed={theme === 'dark'}
+              className="px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
+              style={{
+                backgroundColor: accent,
+                color: 'var(--color-text)',
+              }}
             >
-              Schedule
+              {`Switch to ${getNextEmbedTheme(theme)} mode`}
             </button>
+            {hasManualTheme && (
+              <button
+                type="button"
+                onClick={() => {
+                  setHasManualTheme(false);
+                  setTheme(systemTheme);
+                }}
+                className="px-2 py-1 rounded border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
+                style={{
+                  color: 'var(--color-text)',
+                  borderColor: 'var(--color-muted)',
+                }}
+              >
+                {`Use system (${systemTheme})`}
+              </button>
+            )}
           </div>
-        </form>
-        {scheduled.length > 0 && (
-          <ul className="space-y-2">
-            {scheduled.map((t) => (
-              <li key={t.id}>
-                <div
-                  tabIndex={0}
-                  data-scheduled-item
-                  onKeyDown={(e) => handleScheduledKey(e, t.id)}
-                  className="flex justify-between items-center p-2 rounded border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-                >
-                  <span>
-                    {t.text} - {new Date(t.time).toLocaleString()}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeScheduled(t.id)}
-                    className="ml-2 px-2 py-1 rounded bg-[var(--color-muted)] text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+          <form onSubmit={handleScheduleTweet} className="space-y-2">
+            <textarea
+              value={tweetText}
+              onChange={(e) => setTweetText(e.target.value)}
+              placeholder="Tweet text"
+              className="w-full p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+            />
+            <div className="flex gap-2 items-center">
+              <input
+                type="datetime-local"
+                value={tweetTime}
+                onChange={(e) => setTweetTime(e.target.value)}
+                className="flex-1 p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+              />
+              <button
+                type="submit"
+                className="px-3 py-1 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                style={{ backgroundColor: accent }}
+              >
+                Schedule
+              </button>
+            </div>
+          </form>
+          {scheduled.length > 0 && (
+            <ul className="space-y-2">
+              {scheduled.map((t) => (
+                <li key={t.id}>
+                  <div
+                    tabIndex={0}
+                    data-scheduled-item
+                    onKeyDown={(e) => handleScheduledKey(e, t.id)}
+                    className="flex justify-between items-center p-2 rounded border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
                   >
-                    ×
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+                    <span>
+                      {t.text} - {new Date(t.time).toLocaleString()}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeScheduled(t.id)}
+                      className="ml-2 px-2 py-1 rounded bg-[var(--color-muted)] text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         <div className="flex gap-2">
           <button
             type="button"
@@ -447,7 +515,7 @@ export default function XTimeline() {
             type="button"
             onClick={() => {
               setLoaded(true);
-              if (scriptLoaded) loadTimeline();
+              void loadTimeline();
             }}
             className="px-4 py-2 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
             style={{ backgroundColor: accent }}
@@ -482,17 +550,36 @@ export default function XTimeline() {
               className={`tweet-feed ${timelineLoaded ? 'block' : 'hidden'}`}
             />
             {scriptError && (
-              <div className="text-center">
-                <div className="mb-2">Nothing to see</div>
-                <a
-                  href={`https://x.com/${feed}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline"
-                  style={{ color: accent }}
-                >
-                  Open on x.com
-                </a>
+              <div className="text-center space-y-2">
+                <div>Timeline failed to load.</div>
+                <div className="flex justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!loaded) {
+                        setLoaded(true);
+                        return;
+                      }
+                      void loadTimeline();
+                    }}
+                    className="px-3 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
+                    style={{
+                      backgroundColor: accent,
+                      color: 'var(--color-text)',
+                    }}
+                  >
+                    Retry
+                  </button>
+                  <a
+                    href={`https://x.com/${feed}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                    style={{ color: accent }}
+                  >
+                    Open on x.com
+                  </a>
+                </div>
               </div>
             )}
             {!loading && !timelineLoaded && !scriptError && (

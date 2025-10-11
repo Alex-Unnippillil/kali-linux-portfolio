@@ -1,14 +1,22 @@
-import React, { useEffect, useRef, useState } from 'react';
+"use client";
+
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { getNextEmbedTheme } from '../../apps/x/state/theme';
+import { loadEmbedScript } from '../../apps/x/embed';
 
 const sanitizeHandle = (handle) =>
   handle.replace(/[^A-Za-z0-9_]/g, '').slice(0, 15);
 
 export default function XApp() {
   const [theme, setTheme] = useState('light');
+  const [systemTheme, setSystemTheme] = useState('light');
+  const [hasManualTheme, setHasManualTheme] = useState(false);
   const [timelineLoaded, setTimelineLoaded] = useState(false);
   const [scriptError, setScriptError] = useState(false);
   const [shouldLoad, setShouldLoad] = useState(false);
   const timelineRef = useRef(null);
+  const isMountedRef = useRef(true);
+  const manualThemeRef = useRef(false);
 
   const [feedInput, setFeedInput] = useState('');
   const [feedUser, setFeedUser] = useState('AUnnippillil');
@@ -51,59 +59,84 @@ export default function XApp() {
   };
 
   // Sync theme with system preference
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const mq = window.matchMedia('(prefers-color-scheme: dark)');
-      const update = () => setTheme(mq.matches ? 'dark' : 'light');
-      update();
-      mq.addEventListener('change', update);
-      return () => mq.removeEventListener('change', update);
-    }
+  useEffect(() => () => {
+    isMountedRef.current = false;
   }, []);
 
-  // Load timeline script and render timeline
   useEffect(() => {
-    if (!shouldLoad) return;
-    const src = 'https://platform.twitter.com/widgets.js';
-    let script = document.querySelector(`script[src="${src}"]`);
-    let timeout;
-    const handleError = () => {
-      clearTimeout(timeout);
-      setScriptError(true);
-    };
-    const loadTimeline = () => {
-      clearTimeout(timeout);
-      if (!timelineRef.current || !window.twttr) return;
-      setScriptError(false);
-      setTimelineLoaded(false);
-      timelineRef.current.innerHTML = '';
-      window.twttr.widgets
-        .createTimeline(
-          { sourceType: 'profile', screenName: feedUser },
-          timelineRef.current,
-          { chrome: 'noheader noborders', theme }
-        )
-        .then(() => setTimelineLoaded(true))
-        .catch(() => setScriptError(true));
-    };
-    if (script && window.twttr) {
-      loadTimeline();
-    } else {
-      if (!script) {
-        script = document.createElement('script');
-        script.src = src;
-        script.async = true;
-        document.body.appendChild(script);
+    if (typeof window === 'undefined') return undefined;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const applySystemTheme = () => {
+      const next = mq.matches ? 'dark' : 'light';
+      setSystemTheme(next);
+      if (!manualThemeRef.current) {
+        setTheme(next);
       }
-      timeout = window.setTimeout(handleError, 10000);
-      script.addEventListener('load', loadTimeline, { once: true });
-      script.addEventListener('error', handleError, { once: true });
-    }
-    return () => {
-      clearTimeout(timeout);
-      script && script.removeEventListener('error', handleError);
     };
-  }, [shouldLoad, feedUser, theme]);
+    applySystemTheme();
+    mq.addEventListener('change', applySystemTheme);
+    return () => mq.removeEventListener('change', applySystemTheme);
+  }, []);
+
+  useEffect(() => {
+    manualThemeRef.current = hasManualTheme;
+    if (!hasManualTheme) {
+      setTheme((current) => (current === systemTheme ? current : systemTheme));
+    }
+  }, [hasManualTheme, systemTheme]);
+
+  useEffect(() => {
+    if (hasManualTheme && theme === systemTheme) {
+      setHasManualTheme(false);
+    }
+  }, [hasManualTheme, systemTheme, theme]);
+
+  // Load timeline script and render timeline
+  const renderTimeline = useCallback(async () => {
+    if (!timelineRef.current || !feedUser) return;
+    setScriptError(false);
+    setTimelineLoaded(false);
+    try {
+      const widgets = await loadEmbedScript();
+      if (!isMountedRef.current || !timelineRef.current) return;
+      timelineRef.current.innerHTML = '';
+      await widgets.createTimeline(
+        { sourceType: 'profile', screenName: feedUser },
+        timelineRef.current,
+        { chrome: 'noheader noborders', theme },
+      );
+      if (!isMountedRef.current) return;
+      setTimelineLoaded(true);
+    } catch (error) {
+      console.error('Failed to load X timeline', error);
+      if (!isMountedRef.current) return;
+      setScriptError(true);
+    }
+  }, [feedUser, theme]);
+
+  useEffect(() => {
+    if (!shouldLoad) return undefined;
+    void renderTimeline();
+    return undefined;
+  }, [shouldLoad, renderTimeline]);
+
+  const handleToggleTheme = () => {
+    setHasManualTheme(true);
+    setTheme((prev) => getNextEmbedTheme(prev));
+  };
+
+  const handleResetTheme = () => {
+    setTheme(systemTheme);
+    setHasManualTheme(false);
+  };
+
+  const handleRetry = () => {
+    if (!shouldLoad) {
+      setShouldLoad(true);
+      return;
+    }
+    void renderTimeline();
+  };
 
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey flex flex-col tweet-container">
@@ -142,6 +175,26 @@ export default function XApp() {
             ))}
           </div>
         )}
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-gray-300">Timeline theme:</span>
+          <button
+            type="button"
+            onClick={handleToggleTheme}
+            className="px-3 py-1 rounded bg-gray-800 text-gray-100 hover:bg-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+            aria-pressed={theme === 'dark'}
+          >
+            {`Switch to ${getNextEmbedTheme(theme)} mode`}
+          </button>
+          {hasManualTheme && (
+            <button
+              type="button"
+              onClick={handleResetTheme}
+              className="px-3 py-1 rounded border border-gray-700 text-gray-200 hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+            >
+              {`Use system (${systemTheme})`}
+            </button>
+          )}
+        </div>
       </div>
       <div className="flex-1 relative">
         {!shouldLoad && (
@@ -177,15 +230,25 @@ export default function XApp() {
           className={`${timelineLoaded ? 'block h-full' : 'hidden'} tweet-feed`}
         />
         {scriptError && (
-          <div className="p-4 text-center">
-            <a
-              href={`https://x.com/${sanitizeHandle(feedUser)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline text-blue-500"
-            >
-              Open on x.com
-            </a>
+          <div className="p-4 text-center space-y-2">
+            <div className="text-gray-200">Timeline failed to load.</div>
+            <div className="flex justify-center gap-2">
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="px-3 py-1 rounded bg-gray-800 text-gray-100 hover:bg-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+              >
+                Retry
+              </button>
+              <a
+                href={`https://x.com/${sanitizeHandle(feedUser)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline text-blue-400"
+              >
+                Open on x.com
+              </a>
+            </div>
           </div>
         )}
       </div>
