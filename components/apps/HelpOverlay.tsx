@@ -118,7 +118,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   tetris: {
     objective: "Clear lines by completing horizontal rows.",
-    controls: "Arrow keys move, up rotates, space drops.",
+    controls:
+      "Arrow keys move, Up rotates, Space hard drops, Shift holds. Press P to pause and M to toggle sound.",
   },
   "tower-defense": {
     objective: "Stop enemies before they reach the end.",

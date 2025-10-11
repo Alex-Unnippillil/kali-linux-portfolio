@@ -75,6 +75,35 @@ html[data-theme='matrix'] {
 
 }
 
+.game-overlay {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 60;
+}
+
+.game-overlay button {
+  background-color: rgba(31, 41, 55, 0.85);
+  color: #f9fafb;
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.game-overlay button:focus {
+  outline: 2px solid rgba(59, 130, 246, 0.7);
+  outline-offset: 2px;
+}
+
+.game-overlay .fps {
+  font-variant-numeric: tabular-nums;
+  color: #d1d5db;
+  font-size: 0.75rem;
+}
+
 ::selection {
   background: color-mix(in srgb, var(--color-primary) 65%, var(--kali-bg));
   color: var(--kali-text);
