@@ -2,8 +2,13 @@ import React, { act } from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import Window from '../components/desktop/Window';
 import windowStyles from '../components/base/window.module.css';
-import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET } from '../utils/uiConstants';
-import { measureSafeAreaInset, measureWindowTopOffset } from '../utils/windowLayout';
+import { DESKTOP_TOP_PADDING } from '../utils/uiConstants';
+import {
+  DEFAULT_SNAP_BOTTOM_INSET,
+  measureSafeAreaInset,
+  measureSnapBottomInset,
+  measureWindowTopOffset,
+} from '../utils/windowLayout';
 
 jest.mock('../utils/windowLayout', () => {
   const actual = jest.requireActual('../utils/windowLayout');
@@ -11,16 +16,19 @@ jest.mock('../utils/windowLayout', () => {
     ...actual,
     measureSafeAreaInset: jest.fn(() => 0),
     measureWindowTopOffset: jest.fn(() => actual.DEFAULT_WINDOW_TOP_OFFSET),
+    measureSnapBottomInset: jest.fn(() => actual.DEFAULT_SNAP_BOTTOM_INSET),
   };
 });
 
 const measureSafeAreaInsetMock = measureSafeAreaInset as jest.MockedFunction<typeof measureSafeAreaInset>;
 const measureWindowTopOffsetMock = measureWindowTopOffset as jest.MockedFunction<typeof measureWindowTopOffset>;
+const measureSnapBottomInsetMock = measureSnapBottomInset as jest.MockedFunction<typeof measureSnapBottomInset>;
 
 const computeAvailableHeightPx = () => {
   const topOffset = measureWindowTopOffset();
   const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
-  return window.innerHeight - topOffset - SNAP_BOTTOM_INSET - safeBottom;
+  const snapBottomInset = measureSnapBottomInset();
+  return window.innerHeight - topOffset - snapBottomInset - safeBottom;
 };
 
 const computeSnappedHeightPercent = () => (computeAvailableHeightPx() / window.innerHeight) * 100;
@@ -51,6 +59,7 @@ beforeEach(() => {
   setViewport(1440, 900);
   measureSafeAreaInsetMock.mockReturnValue(0);
   measureWindowTopOffsetMock.mockReturnValue(DESKTOP_TOP_PADDING);
+  measureSnapBottomInsetMock.mockReturnValue(DEFAULT_SNAP_BOTTOM_INSET);
 });
 
 afterEach(() => {
@@ -847,7 +856,8 @@ describe('Window viewport constraints', () => {
     const maxX = Math.max(800 - 300, 0);
     const topOffset = measureWindowTopOffset();
     const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
-    const maxY = topOffset + Math.max(600 - topOffset - SNAP_BOTTOM_INSET - safeBottom - 200, 0);
+    const snapBottomInset = measureSnapBottomInset();
+    const maxY = topOffset + Math.max(600 - topOffset - snapBottomInset - safeBottom - 200, 0);
 
     expect(clampedX).toBeGreaterThanOrEqual(0);
     expect(clampedX).toBeLessThanOrEqual(maxX);
