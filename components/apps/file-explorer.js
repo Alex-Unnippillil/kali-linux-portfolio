@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import useOPFS from '../../hooks/useOPFS';
-import { getDb } from '../../utils/safeIDB';
+import useFileSystemNavigator from '../../hooks/useFileSystemNavigator';
+import { ensureHandlePermission } from '../../services/fileExplorer/permissions';
 import Breadcrumbs from '../ui/Breadcrumbs';
 
 export async function openFileDialog(options = {}) {
@@ -59,52 +60,14 @@ export async function saveFileDialog(options = {}) {
   };
 }
 
-const DB_NAME = 'file-explorer';
-const STORE_NAME = 'recent';
-
-function openDB() {
-  return getDb(DB_NAME, 1, {
-    upgrade(db) {
-      db.createObjectStore(STORE_NAME, { autoIncrement: true });
-    },
-  });
-}
-
-async function getRecentDirs() {
-  try {
-    const dbp = openDB();
-    if (!dbp) return [];
-    const db = await dbp;
-    return (await db.getAll(STORE_NAME)) || [];
-  } catch {
-    return [];
-  }
-}
-
-async function addRecentDir(handle) {
-  try {
-    const dbp = openDB();
-    if (!dbp) return;
-    const db = await dbp;
-    const entry = { name: handle.name, handle };
-    await db.put(STORE_NAME, entry);
-  } catch {}
-}
-
 export default function FileExplorer({ context, initialPath, path: pathProp } = {}) {
   const [supported, setSupported] = useState(true);
-  const [dirHandle, setDirHandle] = useState(null);
-  const [files, setFiles] = useState([]);
-  const [dirs, setDirs] = useState([]);
-  const [path, setPath] = useState([]);
-  const [recent, setRecent] = useState([]);
   const [currentFile, setCurrentFile] = useState(null);
   const [content, setContent] = useState('');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
-  const [locationError, setLocationError] = useState(null);
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -115,23 +78,48 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     writeFile: opfsWrite,
     deleteFile: opfsDelete,
   } = useOPFS();
+  const {
+    currentDirectory: dirHandle,
+    directories: dirs,
+    files,
+    breadcrumbs: path,
+    recent,
+    locationError,
+    openHandle,
+    enterDirectory,
+    navigateTo,
+    goBack: goBackNav,
+    openPath,
+    setLocationError,
+  } = useFileSystemNavigator();
   const [unsavedDir, setUnsavedDir] = useState(null);
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
     setSupported(ok);
-    if (ok) getRecentDirs().then(setRecent);
   }, []);
 
   useEffect(() => {
     if (!opfsSupported || !root) return;
+    let active = true;
     (async () => {
-      setUnsavedDir(await getDir('unsaved'));
-      setDirHandle(root);
-      setPath([{ name: root.name || '/', handle: root }]);
-      await readDir(root);
+      const unsaved = await getDir('unsaved');
+      if (active) setUnsavedDir(unsaved);
+      if (!active) return;
+      await openHandle(root, { setAsRoot: true });
     })();
-  }, [opfsSupported, root, getDir]);
+    return () => {
+      active = false;
+    };
+  }, [opfsSupported, root, getDir, openHandle]);
+
+  useEffect(() => {
+    if (!opfsSupported || !root) return;
+    const requested =
+      (context?.initialPath ?? context?.path ?? initialPath ?? pathProp) || '';
+    if (!requested) return;
+    openPath(requested);
+  }, [context, initialPath, pathProp, opfsSupported, root, openPath]);
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -157,23 +145,20 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const openFolder = async () => {
     try {
       const handle = await window.showDirectoryPicker();
-      setDirHandle(handle);
-      addRecentDir(handle);
-      setRecent(await getRecentDirs());
-      setPath([{ name: handle.name || '/', handle }]);
-      await readDir(handle);
-      setLocationError(null);
+      const allowed = await ensureHandlePermission(handle);
+      if (!allowed) {
+        setLocationError('Permission required to open folder');
+        return;
+      }
+      await openHandle(handle, { recordRecent: true });
     } catch {}
   };
 
   const openRecent = async (entry) => {
     try {
-      const perm = await entry.handle.requestPermission({ mode: 'readwrite' });
-      if (perm !== 'granted') return;
-      setDirHandle(entry.handle);
-      setPath([{ name: entry.name, handle: entry.handle }]);
-      await readDir(entry.handle);
-      setLocationError(null);
+      const allowed = await ensureHandlePermission(entry.handle);
+      if (!allowed) return;
+      await openHandle(entry.handle, { breadcrumbName: entry.name });
     } catch {}
   };
 
@@ -191,88 +176,16 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setContent(text);
   };
 
-  const readDir = useCallback(async (handle) => {
-    const ds = [];
-    const fs = [];
-    for await (const [name, h] of handle.entries()) {
-      if (h.kind === 'file') fs.push({ name, handle: h });
-      else if (h.kind === 'directory') ds.push({ name, handle: h });
-    }
-    setDirs(ds);
-    setFiles(fs);
-  }, []);
-
-  useEffect(() => {
-    const requested =
-      (context?.initialPath ?? context?.path ?? initialPath ?? pathProp) || '';
-    if (!requested) return;
-    if (!opfsSupported || !root) return;
-    let active = true;
-    const openPath = async () => {
-      const sanitized = requested
-        .replace(/^~\//, 'home/kali/')
-        .replace(/^\/+/, '');
-      try {
-        if (!sanitized) {
-          if (!active) return;
-          setDirHandle(root);
-          setPath([{ name: root.name || '/', handle: root }]);
-          await readDir(root);
-          if (active) setLocationError(null);
-          return;
-        }
-        let current = root;
-        const crumbs = [{ name: root.name || '/', handle: root }];
-        const segments = sanitized
-          .split('/')
-          .map((segment) => segment.trim())
-          .filter(Boolean);
-        for (const segment of segments) {
-          current = await current.getDirectoryHandle(segment, { create: true });
-          crumbs.push({ name: segment, handle: current });
-        }
-        if (!active) return;
-        setDirHandle(current);
-        setPath(crumbs);
-        await readDir(current);
-        if (active) setLocationError(null);
-      } catch {
-        if (active) setLocationError(`Unable to open ${requested}`);
-      }
-    };
-    setLocationError(null);
-    openPath();
-    return () => {
-      active = false;
-    };
-  }, [context, initialPath, pathProp, opfsSupported, root, readDir]);
-
-  const openDir = async (dir) => {
-    setDirHandle(dir.handle);
-    setPath((p) => [...p, { name: dir.name, handle: dir.handle }]);
-    await readDir(dir.handle);
-    setLocationError(null);
+  const openDir = (dir) => {
+    void enterDirectory(dir);
   };
 
-  const navigateTo = async (index) => {
-    const target = path[index];
-    if (!target || !target.handle) return;
-    setDirHandle(target.handle);
-    setPath(path.slice(0, index + 1));
-    await readDir(target.handle);
-    setLocationError(null);
+  const navigateToBreadcrumb = (index) => {
+    void navigateTo(index);
   };
 
-  const goBack = async () => {
-    if (path.length <= 1) return;
-    const newPath = path.slice(0, -1);
-    const prev = newPath[newPath.length - 1];
-    setPath(newPath);
-    if (prev?.handle) {
-      setDirHandle(prev.handle);
-      await readDir(prev.handle);
-      setLocationError(null);
-    }
+  const goBack = () => {
+    void goBackNav();
   };
 
   const saveFile = async () => {
@@ -359,7 +272,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             Back
           </button>
         )}
-        <Breadcrumbs path={path} onNavigate={navigateTo} />
+        <Breadcrumbs path={path} onNavigate={navigateToBreadcrumb} />
         {locationError && (
           <div className="text-xs text-red-300" role="status">
             {locationError}
