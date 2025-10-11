@@ -50,21 +50,6 @@ const ubuntu = Ubuntu({
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
   useEffect(() => {
-    let cancelled = false;
-
-    const loadA2HS = async (): Promise<void> => {
-      try {
-        const module = await import('@/src/pwa/a2hs');
-        if (!cancelled) {
-          module.initA2HS();
-        }
-      } catch (err) {
-        console.error('A2HS initialization failed', err);
-      }
-    };
-
-    void loadA2HS();
-
     const initAnalytics = async (): Promise<void> => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
       if (trackingId) {
@@ -112,9 +97,6 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
       });
     }
 
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   useEffect(() => {
