@@ -51,7 +51,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | html-rewriter | HTML Rewriter | Core maintainers | **Needs polish** – transformation demos and worker wiring | Worker stubs |
 | contact | Contact | Core maintainers | **In progress** – validation, privacy note, dummy submit endpoint | Form schema, API stub |
 | gedit | Gedit | Core maintainers | **Needs polish** – ensure contact workflow alignment and EmailJS option | EmailJS config |
-| todoist | Todoist | Core maintainers | **In progress** – sections, due dates, drag-drop, quick-add, persistence | localStorage, DnD |
+| todoist | Todoist | Core maintainers | **Ready** – sections, due dates, drag-drop, quick-add, persistence shipped | localStorage, DnD |
 
 ### Security Tool Simulators
 

@@ -64,8 +64,7 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 - Load projects from `projects.json`; add filters and buttons for repo and live demo.
 
 ### Todoist
-- Implement local task manager with sections, due dates, drag-drop ordering, and quick-add shortcut.
-- Persist tasks in `localStorage`.
+- ✅ Completed – local task manager now ships sections, due dates, drag-and-drop ordering, quick-add shortcuts, and `localStorage` persistence.
 
 ### Trash
 - Soft-delete files from virtual FS with restore or empty options; store original path metadata.
