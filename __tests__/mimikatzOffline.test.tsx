@@ -34,7 +34,9 @@ describe('MimikatzOffline component', () => {
     render(<MimikatzOffline />);
 
     await user.click(
-      screen.getByRole('button', { name: /Load Training Workstation Snapshot/i })
+      screen.getByRole('button', {
+        name: /Load Training Workstation Snapshot \(Shortcut 1\)/i,
+      })
     );
 
     expect(await screen.findByTestId('credential-user-0')).toHaveTextContent(
@@ -44,5 +46,17 @@ describe('MimikatzOffline component', () => {
     expect(
       screen.getByText(/Review the briefing to confirm sanitized dataset use/i)
     ).toBeInTheDocument();
+  });
+
+  it('allows switching datasets with keyboard shortcuts', async () => {
+    const user = userEvent.setup();
+    render(<MimikatzOffline />);
+
+    await user.keyboard('2');
+
+    expect(await screen.findByTestId('credential-user-0')).toHaveTextContent(
+      /SERVICE\\\\backup-job/
+    );
+    expect(screen.getByRole('button', { name: /Reload dataset \(Shortcut 2\)/i })).toBeInTheDocument();
   });
 });

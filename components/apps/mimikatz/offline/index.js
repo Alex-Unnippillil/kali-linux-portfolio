@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import WarningBanner from '../../../WarningBanner';
 import datasets from './datasets.json';
@@ -28,23 +28,60 @@ const MimikatzOffline = () => {
   const [error, setError] = useState('');
   const [selectedDatasetId, setSelectedDatasetId] = useState('');
 
+  const datasetShortcutMap = useMemo(() => {
+    const map = new Map();
+    datasets.forEach((dataset, index) => {
+      map.set(String(index + 1), dataset.id);
+    });
+    return map;
+  }, []);
+
   const selectedDataset = useMemo(
     () => datasets.find((dataset) => dataset.id === selectedDatasetId) || null,
     [selectedDatasetId]
   );
 
-  const loadDump = (text, emptyStateMessage = 'No credentials found') => {
+  const loadDump = useCallback((text, emptyStateMessage = 'No credentials found') => {
     const parsed = parseDump(text);
     setCredentials(parsed);
     setError(parsed.length ? '' : emptyStateMessage);
-  };
+  }, []);
 
-  const handleDatasetSelect = (datasetId) => {
-    setSelectedDatasetId(datasetId);
-    const dataset = datasets.find((entry) => entry.id === datasetId);
-    if (!dataset) return;
-    loadDump(dataset.dump, 'No credentials found in dataset');
-  };
+  const handleDatasetSelect = useCallback(
+    (datasetId) => {
+      setSelectedDatasetId(datasetId);
+      const dataset = datasets.find((entry) => entry.id === datasetId);
+      if (!dataset) return;
+      loadDump(dataset.dump, 'No credentials found in dataset');
+    },
+    [loadDump]
+  );
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.defaultPrevented) return;
+      if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return;
+
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      ) {
+        return;
+      }
+
+      const datasetId = datasetShortcutMap.get(event.key);
+      if (!datasetId) return;
+
+      event.preventDefault();
+      handleDatasetSelect(datasetId);
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [datasetShortcutMap, handleDatasetSelect]);
 
   const handleFile = (event) => {
     const file = event.target.files?.[0];
@@ -84,8 +121,10 @@ const MimikatzOffline = () => {
             <span className="text-xs uppercase tracking-wide text-purple-200">Offline ready</span>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
-            {datasets.map((dataset) => {
+            {datasets.map((dataset, index) => {
               const isActive = dataset.id === selectedDatasetId;
+              const shortcutKey = String(index + 1);
+              const artifactCount = dataset.artifacts?.length ?? 0;
               return (
                 <article
                   key={dataset.id}
@@ -97,13 +136,23 @@ const MimikatzOffline = () => {
                     <div>
                       <h3 className="text-base font-semibold">{dataset.title}</h3>
                       <p className="text-gray-300 mt-1">{dataset.summary}</p>
+                      <div className="mt-2 flex flex-wrap gap-2 text-[0.7rem] font-semibold">
+                        <span className="rounded-full bg-purple-500/20 px-2 py-1 text-purple-200">
+                          {artifactCount} {artifactCount === 1 ? 'artifact' : 'artifacts'}
+                        </span>
+                        <span className="rounded-full bg-amber-500/20 px-2 py-1 text-amber-200">
+                          Risk: {dataset.riskRating || 'Not rated'}
+                        </span>
+                      </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => handleDatasetSelect(dataset.id)}
                       className="rounded bg-purple-600 px-3 py-1 text-xs font-semibold uppercase tracking-wide hover:bg-purple-500"
                     >
-                      {isActive ? 'Reload dataset' : `Load ${dataset.title}`}
+                      {isActive
+                        ? `Reload dataset (Shortcut ${shortcutKey})`
+                        : `Load ${dataset.title} (Shortcut ${shortcutKey})`}
                     </button>
                   </div>
                   <p className="mt-3 text-xs text-red-200" data-testid={`${dataset.id}-safety`}>
