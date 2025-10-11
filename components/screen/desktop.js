@@ -10,6 +10,7 @@ const BackgroundImage = dynamic(
 import apps, { games } from '../../apps.config';
 import Window from '../desktop/Window';
 import UbuntuApp from '../base/ubuntu_app';
+import SystemOverlayWindow from '../base/SystemOverlayWindow';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
@@ -22,7 +23,7 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING } from '../../utils/uiConstants';
-import { useSnapSetting } from '../../hooks/usePersistentState';
+import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
 import {
     clampWindowPositionWithinViewport,
@@ -31,8 +32,60 @@ import {
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 
+const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
+
+const sanitizeFolderItem = (item) => {
+    if (!item) return null;
+    if (typeof item === 'string') {
+        return { id: item, title: item };
+    }
+    if (typeof item === 'object' && typeof item.id === 'string') {
+        const title = typeof item.title === 'string' ? item.title : item.id;
+        const icon = typeof item.icon === 'string' ? item.icon : undefined;
+        return { id: item.id, title, icon };
+    }
+    return null;
+};
+
+const loadStoredFolderContents = () => {
+    if (!safeLocalStorage) return {};
+    try {
+        const raw = safeLocalStorage.getItem(FOLDER_CONTENTS_STORAGE_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return {};
+        const normalized = {};
+        Object.entries(parsed).forEach(([folderId, value]) => {
+            if (!folderId || !Array.isArray(value)) return;
+            const items = value
+                .map((entry) => sanitizeFolderItem(entry))
+                .filter(Boolean);
+            normalized[folderId] = items;
+        });
+        return normalized;
+    } catch (e) {
+        return {};
+    }
+};
+
+const persistStoredFolderContents = (contents) => {
+    if (!safeLocalStorage) return;
+    try {
+        safeLocalStorage.setItem(
+            FOLDER_CONTENTS_STORAGE_KEY,
+            JSON.stringify(contents || {}),
+        );
+    } catch (e) {
+        // ignore storage errors
+    }
+};
+
 
 export class Desktop extends Component {
+    static defaultProps = {
+        snapGrid: [8, 8],
+    };
+
     constructor(props) {
         super(props);
         this.workspaceCount = 4;
@@ -95,8 +148,11 @@ export class Desktop extends Component {
         this.state = {
             focused_windows: {},
             closed_windows: {},
-            allAppsView: false,
-            allAppsTransitionState: 'exited',
+            overlayWindows: {
+                launcher: { open: false, minimized: false, maximized: false, transitionState: 'exited' },
+                shortcutSelector: { open: false, minimized: false, maximized: false },
+                windowSwitcher: { open: false, minimized: false, maximized: false },
+            },
             disabled_apps: {},
             favourite_apps: {},
             minimized_windows: {},
@@ -113,8 +169,6 @@ export class Desktop extends Component {
             },
             context_app: null,
             showNameBar: false,
-            showShortcutSelector: false,
-            showWindowSwitcher: false,
             switcherWindows: [],
             activeWorkspace: 0,
             workspaces: Array.from({ length: this.workspaceCount }, (_, index) => ({
@@ -130,6 +184,7 @@ export class Desktop extends Component {
             hoveredIconId: null,
             currentTheme: initialTheme,
             iconSizePreset: initialIconSizePreset,
+            folder_contents: initialFolderContents,
         }
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -144,6 +199,7 @@ export class Desktop extends Component {
         this.folderNameInputRef = React.createRef();
         this.allAppsSearchRef = React.createRef();
         this.allAppsOverlayRef = React.createRef();
+        this.windowSwitcherContentRef = React.createRef();
         this.iconDragState = null;
         this.preventNextIconClick = false;
         this.savedIconPositions = {};
@@ -200,6 +256,71 @@ export class Desktop extends Component {
         window_positions: { ...state.window_positions },
         window_sizes: { ...(state.window_sizes || {}) },
     });
+
+    getOverlayState = (key) => {
+        const overlays = this.state.overlayWindows || {};
+        const current = overlays[key];
+        if (current) return current;
+        return { open: false, minimized: false, maximized: false };
+    };
+
+    updateOverlayState = (key, updater, callback) => {
+        this.setState((state) => {
+            const overlays = state.overlayWindows || {};
+            const current = overlays[key] || { open: false, minimized: false, maximized: false };
+            const next = typeof updater === 'function' ? updater(current) : { ...current, ...updater };
+            if (next === current) {
+                return null;
+            }
+            return {
+                overlayWindows: {
+                    ...overlays,
+                    [key]: next,
+                },
+            };
+        }, callback);
+    };
+
+    openOverlay = (key, extra = {}, callback) => {
+        this.updateOverlayState(key, (current) => ({
+            ...current,
+            ...extra,
+            open: true,
+            minimized: false,
+        }), callback);
+    };
+
+    restoreOverlay = (key, extra = {}, callback) => {
+        this.updateOverlayState(key, (current) => ({
+            ...current,
+            ...extra,
+            open: true,
+            minimized: false,
+        }), callback);
+    };
+
+    closeOverlay = (key, extra = {}, callback) => {
+        this.updateOverlayState(key, () => ({
+            open: false,
+            minimized: false,
+            maximized: false,
+            ...extra,
+        }), callback);
+    };
+
+    toggleOverlayMinimize = (key) => {
+        this.updateOverlayState(key, (current) => ({
+            ...current,
+            minimized: !current.minimized,
+        }));
+    };
+
+    toggleOverlayMaximize = (key) => {
+        this.updateOverlayState(key, (current) => ({
+            ...current,
+            maximized: !current.maximized,
+        }));
+    };
 
     normalizeTheme(theme) {
         const fallback = this.defaultThemeConfig || {};
@@ -675,7 +796,8 @@ export class Desktop extends Component {
         const duration = now - gesture.startTime;
         const shouldTrigger = deltaY > 60 || (deltaY > 40 && duration < 400);
         if (shouldTrigger && !gesture.triggered) {
-            if (!this.state.showWindowSwitcher) {
+            const switcher = this.getOverlayState('windowSwitcher');
+            if (!switcher.open || switcher.minimized) {
                 this.openWindowSwitcher();
             }
             gesture.triggered = true;
@@ -839,6 +961,145 @@ export class Desktop extends Component {
         }, () => {
             this.persistIconPositions();
         });
+    };
+
+    getAllFolderItemIds = (contents = this.state.folder_contents) => {
+        const ids = new Set();
+        if (!contents || typeof contents !== 'object') return ids;
+        Object.values(contents).forEach((items) => {
+            if (!Array.isArray(items)) return;
+            items.forEach((item) => {
+                if (!item) return;
+                if (typeof item === 'string') {
+                    ids.add(item);
+                    return;
+                }
+                if (typeof item === 'object' && typeof item.id === 'string') {
+                    ids.add(item.id);
+                }
+            });
+        });
+        return ids;
+    };
+
+    isFolderApp = (appOrId, fallbackId = null) => {
+        if (!appOrId && !fallbackId) return false;
+        const id = typeof appOrId === 'string' ? appOrId : (appOrId?.id || fallbackId);
+        if (!id) return false;
+        if (appOrId && typeof appOrId === 'object' && appOrId.isFolder) return true;
+        const contents = this.state.folder_contents || {};
+        return Object.prototype.hasOwnProperty.call(contents, id);
+    };
+
+    ensureFolderEntry = (folderId) => {
+        if (!folderId) return;
+        this.setState((prevState) => {
+            const current = prevState.folder_contents || {};
+            if (Object.prototype.hasOwnProperty.call(current, folderId)) {
+                return null;
+            }
+            return { folder_contents: { ...current, [folderId]: [] } };
+        }, this.persistFolderContents);
+    };
+
+    getFolderDropTarget = (event, dragState) => {
+        if (!event || !Number.isFinite(event.clientX) || !Number.isFinite(event.clientY)) {
+            return null;
+        }
+        const rect = this.getDesktopRect();
+        if (!rect) return null;
+        const localX = event.clientX - rect.left;
+        const localY = event.clientY - rect.top;
+        if (!Number.isFinite(localX) || !Number.isFinite(localY)) return null;
+        const desktopApps = this.state.desktop_apps || [];
+        for (let index = 0; index < desktopApps.length; index += 1) {
+            const appId = desktopApps[index];
+            if (!appId || appId === dragState?.id) continue;
+            const app = this.getAppById(appId);
+            if (!this.isFolderApp(app, appId)) continue;
+            const bounds = this.getIconBounds(appId, index);
+            if (!bounds) continue;
+            const withinX = localX >= bounds.left && localX <= bounds.left + bounds.width;
+            const withinY = localY >= bounds.top && localY <= bounds.top + bounds.height;
+            if (withinX && withinY) {
+                return { type: 'folder', id: appId };
+            }
+        }
+        return null;
+    };
+
+    moveIconIntoFolder = (iconId, folderId) => {
+        if (!iconId || !folderId) return;
+        const app = this.getAppById(iconId);
+        if (!app) return;
+        this.setState((prevState) => {
+            const desktopApps = Array.isArray(prevState.desktop_apps)
+                ? prevState.desktop_apps.filter((id) => id !== iconId)
+                : [];
+            const positions = { ...(prevState.desktop_icon_positions || {}) };
+            if (positions[iconId]) {
+                delete positions[iconId];
+            }
+            const currentContents = prevState.folder_contents || {};
+            const folderItems = Array.isArray(currentContents[folderId])
+                ? currentContents[folderId].slice()
+                : [];
+            const exists = folderItems.some((item) => {
+                if (!item) return false;
+                if (typeof item === 'string') return item === iconId;
+                return item.id === iconId;
+            });
+            if (!exists) {
+                folderItems.push({
+                    id: iconId,
+                    title: app.title || app.name || iconId,
+                    icon: app.icon,
+                });
+            }
+            const nextContents = { ...currentContents, [folderId]: folderItems };
+            const nextSelected = prevState.selectedIcons instanceof Set
+                ? new Set(prevState.selectedIcons)
+                : new Set();
+            nextSelected.delete(iconId);
+            let nextAnchor = prevState.selectionAnchorId;
+            if (!nextSelected.size) {
+                nextAnchor = null;
+            } else if (nextAnchor === iconId) {
+                const first = nextSelected.values().next().value;
+                nextAnchor = first ?? null;
+            }
+            return {
+                desktop_apps: desktopApps,
+                desktop_icon_positions: positions,
+                folder_contents: nextContents,
+                selectedIcons: nextSelected,
+                selectionAnchorId: nextAnchor,
+                draggingIconId: null,
+            };
+        }, () => {
+            this.persistIconPositions();
+            this.persistFolderContents();
+        });
+    };
+
+    getFolderContext = (folderId) => {
+        if (!folderId) return null;
+        const contents = this.state.folder_contents?.[folderId];
+        if (!Array.isArray(contents)) {
+            return { folderId, folderItems: [] };
+        }
+        const items = contents.map((item) => {
+            if (!item) return null;
+            if (typeof item === 'string') {
+                return { id: item, title: item };
+            }
+            return {
+                id: item.id,
+                title: item.title || item.id,
+                icon: item.icon,
+            };
+        }).filter(Boolean);
+        return { folderId, folderItems: items };
     };
 
     getDesktopRect = () => {
@@ -1697,10 +1958,15 @@ export class Desktop extends Component {
         this.detachIconKeyboardListeners();
         if (moved) {
             event.preventDefault();
-            const position = this.resolveDropPosition(event, dragState);
             this.preventNextIconClick = true;
-            this.updateIconPosition(dragState.id, position.x, position.y, true);
-            this.setState({ draggingIconId: null });
+            const dropTarget = this.getFolderDropTarget(event, dragState);
+            if (dropTarget && dropTarget.type === 'folder') {
+                this.moveIconIntoFolder(dragState.id, dropTarget.id);
+            } else {
+                const position = this.resolveDropPosition(event, dragState);
+                this.updateIconPosition(dragState.id, position.x, position.y, true);
+                this.setState({ draggingIconId: null });
+            }
             return;
         }
 
@@ -1748,6 +2014,7 @@ export class Desktop extends Component {
         if (workspaceId < 0 || workspaceId >= this.state.workspaces.length) return;
         const snapshot = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
         const nextTheme = this.getWorkspaceTheme(workspaceId);
+        this.closeOverlay('windowSwitcher');
         this.setState({
             activeWorkspace: workspaceId,
             focused_windows: { ...snapshot.focused_windows },
@@ -1887,10 +2154,15 @@ export class Desktop extends Component {
             this.defaultThemeConfig = { ...this.defaultThemeConfig, ...nextTheme };
         }
 
-        if (!prevState.allAppsView && this.state.allAppsView) {
+        const prevLauncher = (prevState.overlayWindows && prevState.overlayWindows.launcher) || { open: false, minimized: false };
+        const currentLauncher = this.getOverlayState('launcher');
+        const prevVisible = prevLauncher.open && !prevLauncher.minimized;
+        const currentVisible = currentLauncher.open && !currentLauncher.minimized;
+
+        if (!prevVisible && currentVisible) {
             this.activateAllAppsFocusTrap();
             this.focusAllAppsSearchInput();
-        } else if (prevState.allAppsView && !this.state.allAppsView) {
+        } else if (prevVisible && !currentVisible) {
             this.deactivateAllAppsFocusTrap();
             this.restoreFocusToPreviousElement();
         }
@@ -2024,18 +2296,35 @@ export class Desktop extends Component {
         }
         try {
             const new_folders = JSON.parse(stored);
-            new_folders.forEach(folder => {
-                apps.push({
-                    id: `new-folder-${folder.id}`,
-                    title: folder.name,
-                    icon: '/themes/Yaru/system/folder.png',
-                    disabled: true,
-                    favourite: false,
-                    desktop_shortcut: true,
-                    screen: () => { },
-                });
+            const addedIds = [];
+            new_folders.forEach((folder) => {
+                const rawId = typeof folder?.id === 'string' ? folder.id : '';
+                const nameFallback = typeof folder?.name === 'string' ? folder.name : rawId;
+                const baseId = rawId || (nameFallback ? nameFallback.replace(/\s+/g, '-').toLowerCase() : '');
+                const normalizedId = baseId
+                    ? (baseId.startsWith('new-folder-') ? baseId : `new-folder-${baseId}`)
+                    : '';
+                if (!normalizedId) return;
+                const title = typeof folder?.name === 'string' ? folder.name : (nameFallback || 'New Folder');
+                const exists = apps.some((app) => app.id === normalizedId);
+                if (!exists) {
+                    apps.push({
+                        id: normalizedId,
+                        title,
+                        icon: '/themes/Yaru/system/folder.png',
+                        disabled: false,
+                        favourite: false,
+                        desktop_shortcut: true,
+                        isFolder: true,
+                        screen: () => null,
+                    });
+                }
+                addedIds.push(normalizedId);
             });
-            this.updateAppsData();
+            addedIds.forEach((id) => this.ensureFolderEntry(id));
+            if (addedIds.length) {
+                this.updateAppsData();
+            }
         } catch (e) {
             safeLocalStorage?.setItem('new_folders', JSON.stringify([]));
         }
@@ -2092,7 +2381,8 @@ export class Desktop extends Component {
     handleGlobalShortcut = (e) => {
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
-            if (!this.state.showWindowSwitcher) {
+            const switcher = this.getOverlayState('windowSwitcher');
+            if (!switcher.open || switcher.minimized) {
                 this.openWindowSwitcher();
             }
         } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
@@ -2123,7 +2413,8 @@ export class Desktop extends Component {
         }
         else if (e.ctrlKey && e.key === 'Escape' && !e.repeat) {
             e.preventDefault();
-            if (this.state.allAppsView) {
+            const launcher = this.getOverlayState('launcher');
+            if (launcher.open && !launcher.minimized) {
                 this.closeAllAppsOverlay();
             } else {
                 this.openAllAppsOverlay('Ctrl+Escape');
@@ -2132,7 +2423,8 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcutKeyup = (event) => {
-        if (!this.state.allAppsView) return;
+        const launcher = this.getOverlayState('launcher');
+        if (!launcher.open || launcher.minimized) return;
 
         if (event.key === 'Escape') {
             event.preventDefault();
@@ -2195,14 +2487,23 @@ export class Desktop extends Component {
         }
 
         const enter = () => {
-            this.setState((state) => {
-                if (!state.allAppsView) return null;
-                return { allAppsTransitionState: 'entered' };
+            this.updateOverlayState('launcher', (current) => {
+                if (!current.open || current.transitionState === 'entered') return current;
+                return { ...current, transitionState: 'entered' };
             });
             this.allAppsEnterRaf = null;
         };
 
-        if (!this.state.allAppsView) {
+        const scheduleEnter = () => {
+            if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                this.allAppsEnterRaf = window.requestAnimationFrame(enter);
+            } else {
+                enter();
+            }
+        };
+
+        const launcher = this.getOverlayState('launcher');
+        if (!launcher.open) {
             if (typeof document !== 'undefined') {
                 const activeElement = document.activeElement;
                 if (activeElement && activeElement !== document.body) {
@@ -2212,34 +2513,36 @@ export class Desktop extends Component {
                 }
             }
 
-            this.setState({ allAppsView: true, allAppsTransitionState: 'entering' }, () => {
-                if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
-                    this.allAppsEnterRaf = window.requestAnimationFrame(enter);
-                } else {
-                    enter();
-                }
-            });
+            this.openOverlay('launcher', { transitionState: 'entering' }, scheduleEnter);
+        } else if (launcher.minimized) {
+            this.restoreOverlay('launcher', { transitionState: 'entering' }, scheduleEnter);
         } else {
-            this.setState({ allAppsTransitionState: 'entered' });
+            this.updateOverlayState('launcher', (current) => ({ ...current, transitionState: 'entered' }));
         }
+
         this.allAppsTriggerKey = triggerKey;
     }
 
     closeAllAppsOverlay = () => {
-        if (!this.state.allAppsView) {
+        const launcher = this.getOverlayState('launcher');
+        const transitionState = launcher.transitionState || 'exited';
+        if (!launcher.open && transitionState === 'exited') {
             this.allAppsTriggerKey = null;
             return;
         }
+
         if (this.allAppsCloseTimeout) {
             clearTimeout(this.allAppsCloseTimeout);
             this.allAppsCloseTimeout = null;
         }
-        this.setState({ allAppsView: false, allAppsTransitionState: 'exiting' }, () => {
+
+        this.closeOverlay('launcher', { transitionState: 'exiting' }, () => {
             this.allAppsCloseTimeout = setTimeout(() => {
-                this.setState({ allAppsTransitionState: 'exited' });
+                this.updateOverlayState('launcher', (current) => ({ ...current, transitionState: 'exited' }));
                 this.allAppsCloseTimeout = null;
             }, 220);
         });
+        this.allAppsTriggerKey = null;
     }
 
     activateAllAppsFocusTrap = () => {
@@ -2247,7 +2550,8 @@ export class Desktop extends Component {
 
         this.allAppsFocusTrapHandler = (event) => {
             if (event.key !== 'Tab') return;
-            if (!this.state.allAppsView) return;
+            const launcher = this.getOverlayState('launcher');
+            if (!launcher.open || launcher.minimized) return;
 
             const overlay = this.allAppsOverlayRef?.current;
             if (!overlay) return;
@@ -2390,7 +2694,8 @@ export class Desktop extends Component {
         }
 
         const requestId = ++this.windowSwitcherRequestId;
-        this.setState({ showWindowSwitcher: true });
+        this.openOverlay('windowSwitcher');
+        this.setState({ switcherWindows: [] });
 
         Promise.resolve(this.buildWindowSwitcherEntries(availableIds))
             .then((windows) => {
@@ -2399,26 +2704,34 @@ export class Desktop extends Component {
                 }
 
                 if (!windows.length) {
-                    this.setState({ showWindowSwitcher: false, switcherWindows: [] });
+                    this.closeOverlay('windowSwitcher', {}, () => {
+                        this.setState({ switcherWindows: [] });
+                    });
                     return;
                 }
 
-                this.setState({ switcherWindows: windows, showWindowSwitcher: true });
+                this.setState({ switcherWindows: windows });
             })
             .catch(() => {
                 if (this.windowSwitcherRequestId === requestId) {
-                    this.setState({ showWindowSwitcher: false, switcherWindows: [] });
+                    this.closeOverlay('windowSwitcher', {}, () => {
+                        this.setState({ switcherWindows: [] });
+                    });
                 }
             });
     }
 
     closeWindowSwitcher = () => {
-        this.setState({ showWindowSwitcher: false, switcherWindows: [] });
+        this.closeOverlay('windowSwitcher', {}, () => {
+            this.setState({ switcherWindows: [] });
+        });
     }
 
     selectWindow = (id) => {
-        this.setState({ showWindowSwitcher: false, switcherWindows: [] }, () => {
-            this.openApp(id);
+        this.closeOverlay('windowSwitcher', {}, () => {
+            this.setState({ switcherWindows: [] }, () => {
+                this.openApp(id);
+            });
         });
     }
 
@@ -2551,6 +2864,7 @@ export class Desktop extends Component {
         const favourite_apps = {};
         const minimized_windows = {};
         const desktop_apps = [];
+        const hiddenIconIds = this.getAllFolderItemIds();
 
         apps.forEach((app) => {
             focused_windows[app.id] = false;
@@ -2558,7 +2872,7 @@ export class Desktop extends Component {
             disabled_apps[app.id] = app.disabled;
             favourite_apps[app.id] = app.favourite;
             minimized_windows[app.id] = false;
-            if (app.desktop_shortcut) desktop_apps.push(app.id);
+            if (app.desktop_shortcut && !hiddenIconIds.has(app.id)) desktop_apps.push(app.id);
         });
 
         const workspaceState = {
@@ -2591,6 +2905,7 @@ export class Desktop extends Component {
         const minimized_windows = {};
         const disabled_apps = {};
         const desktop_apps = [];
+        const hiddenIconIds = this.getAllFolderItemIds();
 
         apps.forEach((app) => {
             focused_windows[app.id] = this.state.focused_windows[app.id] ?? false;
@@ -2598,7 +2913,7 @@ export class Desktop extends Component {
             disabled_apps[app.id] = app.disabled;
             closed_windows[app.id] = this.state.closed_windows[app.id] ?? true;
             favourite_apps[app.id] = app.favourite;
-            if (app.desktop_shortcut) desktop_apps.push(app.id);
+            if (app.desktop_shortcut && !hiddenIconIds.has(app.id)) desktop_apps.push(app.id);
         });
 
         const workspaceState = {
@@ -2758,6 +3073,7 @@ export class Desktop extends Component {
         if (!orderedIds.length) return null;
 
         const appMap = new Map(apps.map((app) => [app.id, app]));
+        const snapGrid = this.getSnapGrid();
 
         return orderedIds.map((id, index) => {
             const app = appMap.get(id);
@@ -2786,6 +3102,7 @@ export class Desktop extends Component {
                 onPositionChange: (x, y) => this.updateWindowPosition(id, x, y),
                 onSizeChange: (width, height) => this.updateWindowSize(id, width, height),
                 snapEnabled: this.props.snapEnabled,
+                snapGrid,
                 context: this.state.window_context[id],
                 zIndex: 200 + index,
             };
@@ -2812,18 +3129,36 @@ export class Desktop extends Component {
     }
 
     updateWindowPosition = (id, x, y) => {
-        const snap = this.props.snapEnabled
-            ? (v) => Math.round(v / 8) * 8
-            : (v) => v;
+        const [gridX, gridY] = this.getSnapGrid();
+        const snapValue = (value, size) => {
+            if (!this.props.snapEnabled) return value;
+            if (typeof size !== 'number' || !Number.isFinite(size) || size <= 0) return value;
+            return Math.round(value / size) * size;
+        };
         const safeTopOffset = measureWindowTopOffset();
-        const nextX = snap(x);
-        const nextY = clampWindowTopPosition(snap(y), safeTopOffset);
+        const nextX = snapValue(x, gridX);
+        const nextY = clampWindowTopPosition(snapValue(y, gridY), safeTopOffset);
         this.setWorkspaceState(prev => ({
             window_positions: { ...prev.window_positions, [id]: { x: nextX, y: nextY } }
         }), () => {
             this.persistWindowSizes(this.state.window_sizes || {});
             this.saveSession();
         });
+    }
+
+    getSnapGrid = () => {
+        const fallback = [8, 8];
+        if (!Array.isArray(this.props.snapGrid)) {
+            return [...fallback];
+        }
+        const [gridX, gridY] = this.props.snapGrid;
+        const normalize = (size, fallbackSize) => {
+            if (typeof size !== 'number') return fallbackSize;
+            if (!Number.isFinite(size)) return fallbackSize;
+            if (size <= 0) return fallbackSize;
+            return size;
+        };
+        return [normalize(gridX, fallback[0]), normalize(gridY, fallback[1])];
     }
 
     saveSession = () => {
@@ -2897,11 +3232,15 @@ export class Desktop extends Component {
             console.warn(`Attempted to open unknown app: ${objId}`);
             return;
         }
-        const context = params && typeof params === 'object'
+        const baseContext = params && typeof params === 'object'
             ? {
                 ...params,
                 ...(params.path && !params.initialPath ? { initialPath: params.path } : {}),
             }
+            : undefined;
+        const folderContext = this.isFolderApp(objId) ? this.getFolderContext(objId) : null;
+        const context = folderContext || baseContext
+            ? { ...(folderContext || {}), ...(baseContext || {}) }
             : undefined;
         const contextState = context
             ? { ...this.state.window_context, [objId]: context }
@@ -2980,11 +3319,13 @@ export class Desktop extends Component {
 
             addRecentApp(objId);
 
+            this.closeAllAppsOverlay();
+
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setWorkspaceState({ closed_windows, favourite_apps, allAppsView: false }, () => {
-                    const nextState = { closed_windows, favourite_apps, allAppsView: false };
+                this.setWorkspaceState({ closed_windows, favourite_apps }, () => {
+                    const nextState = { closed_windows, favourite_apps };
                     if (context) {
                         nextState.window_context = contextState;
                     }
@@ -3104,7 +3445,7 @@ export class Desktop extends Component {
     }
 
     openShortcutSelector = () => {
-        this.setState({ showShortcutSelector: true });
+        this.openOverlay('shortcutSelector');
     }
 
     addShortcutToDesktop = (app_id) => {
@@ -3117,7 +3458,7 @@ export class Desktop extends Component {
             shortcuts.push(app_id);
             safeLocalStorage?.setItem('app_shortcuts', JSON.stringify(shortcuts));
         }
-        this.setState({ showShortcutSelector: false }, this.updateAppsData);
+        this.closeOverlay('shortcutSelector', {}, this.updateAppsData);
     }
 
     checkForAppShortcuts = () => {
@@ -3157,26 +3498,30 @@ export class Desktop extends Component {
     addToDesktop = (folder_name) => {
         folder_name = folder_name.trim();
         let folder_id = folder_name.replace(/\s+/g, '-').toLowerCase();
+        const folderAppId = `new-folder-${folder_id}`;
         apps.push({
-            id: `new-folder-${folder_id}`,
+            id: folderAppId,
             title: folder_name,
             icon: '/themes/Yaru/system/folder.png',
-            disabled: true,
+            disabled: false,
             favourite: false,
             desktop_shortcut: true,
-            screen: () => { },
+            isFolder: true,
+            screen: () => null,
         });
+        this.ensureFolderEntry(folderAppId);
         // store in local storage
         let new_folders = [];
         try { new_folders = JSON.parse(safeLocalStorage?.getItem('new_folders') || '[]'); } catch (e) { new_folders = []; }
-        new_folders.push({ id: `new-folder-${folder_id}`, name: folder_name });
+        new_folders.push({ id: folderAppId, name: folder_name });
         safeLocalStorage?.setItem('new_folders', JSON.stringify(new_folders));
 
         this.setState({ showNameBar: false }, this.updateAppsData);
     };
 
     showAllApps = () => {
-        if (this.state.allAppsView) {
+        const launcher = this.getOverlayState('launcher');
+        if (launcher.open && !launcher.minimized) {
             this.closeAllAppsOverlay();
         } else {
             this.openAllAppsOverlay();
@@ -3252,6 +3597,10 @@ export class Desktop extends Component {
             '--desktop-blur': blurValue,
             '--desktop-overlay': overlayValue,
         };
+        const overlayWindows = this.state.overlayWindows || {};
+        const launcherOverlay = overlayWindows.launcher || { open: false, minimized: false, maximized: false, transitionState: 'exited' };
+        const shortcutOverlay = overlayWindows.shortcutSelector || { open: false, minimized: false, maximized: false };
+        const windowSwitcherOverlay = overlayWindows.windowSwitcher || { open: false, minimized: false, maximized: false };
         return (
             <main
                 id="desktop"
@@ -3324,59 +3673,103 @@ export class Desktop extends Component {
 
                 {
                     (() => {
-                        const { allAppsView, allAppsTransitionState } = this.state;
-                        const shouldRenderAllApps =
-                            allAppsView || ['entering', 'exiting'].includes(allAppsTransitionState);
-                        if (!shouldRenderAllApps) return null;
-
-                        const overlayActive = allAppsView;
-                        const overlayClasses = [
-                            'fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto px-4 py-12 sm:py-16',
-                            'bg-slate-950/70 backdrop-blur-xl transition-opacity duration-200 ease-out',
-                            overlayActive ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
-                        ].join(' ');
-
+                        const transitionState = launcherOverlay.transitionState || 'exited';
+                        const shouldRenderLauncher = launcherOverlay.open || ['entering', 'exiting'].includes(transitionState);
+                        if (!shouldRenderLauncher) return null;
+                        const launcherActive = launcherOverlay.open && !launcherOverlay.minimized;
                         const panelClasses = [
-                            'w-full max-w-6xl transform transition-all duration-200 ease-out focus:outline-none',
-                            overlayActive ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 -translate-y-2',
+                            'w-full max-w-6xl bg-slate-900/80 text-white shadow-2xl transition-all duration-200 ease-out focus:outline-none',
+                            launcherOverlay.maximized ? 'max-w-none h-full' : 'max-h-[90vh]',
+                            launcherActive ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 -translate-y-2',
                         ].join(' ');
 
                         return (
-                            <div
-                                ref={this.allAppsOverlayRef}
-                                role="dialog"
-                                aria-modal="true"
-                                aria-labelledby="all-apps-overlay-title"
-                                aria-hidden={!overlayActive}
-                                tabIndex={-1}
-                                className={overlayClasses}
+                            <SystemOverlayWindow
+                                id="overlay-launcher"
+                                title="All applications"
+                                open={launcherOverlay.open}
+                                minimized={launcherOverlay.minimized}
+                                maximized={launcherOverlay.maximized}
+                                onMinimize={() => this.toggleOverlayMinimize('launcher')}
+                                onMaximize={() => this.toggleOverlayMaximize('launcher')}
+                                onClose={this.closeAllAppsOverlay}
+                                overlayRef={this.allAppsOverlayRef}
+                                overlayClassName="bg-slate-950/70 backdrop-blur-xl transition-opacity duration-200 ease-out overflow-y-auto"
+                                frameClassName={panelClasses}
+                                bodyClassName="flex-1 overflow-y-auto"
+                                ariaLabelledBy="all-apps-overlay-title"
                             >
-                                <div className={panelClasses}>
-                                    <AllApplications
-                                        apps={apps}
-                                        games={games}
-                                        recentApps={this.getActiveStack()}
-                                        openApp={this.openApp}
-                                        searchInputRef={this.allAppsSearchRef}
-                                        headingId="all-apps-overlay-title"
-                                    />
-                                </div>
-                            </div>
+                                <AllApplications
+                                    apps={apps}
+                                    games={games}
+                                    recentApps={this.getActiveStack()}
+                                    openApp={this.openApp}
+                                    searchInputRef={this.allAppsSearchRef}
+                                    headingId="all-apps-overlay-title"
+                                />
+                            </SystemOverlayWindow>
                         );
                     })()
                 }
 
-                { this.state.showShortcutSelector ?
-                    <ShortcutSelector apps={apps}
-                        games={games}
-                        onSelect={this.addShortcutToDesktop}
-                        onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
+                {shortcutOverlay.open ? (
+                    <SystemOverlayWindow
+                        id="overlay-shortcut-selector"
+                        title="Add to desktop"
+                        open={shortcutOverlay.open}
+                        minimized={shortcutOverlay.minimized}
+                        maximized={shortcutOverlay.maximized}
+                        onMinimize={() => this.toggleOverlayMinimize('shortcutSelector')}
+                        onMaximize={() => this.toggleOverlayMaximize('shortcutSelector')}
+                        onClose={() => this.closeOverlay('shortcutSelector')}
+                        overlayClassName="bg-slate-950/70 backdrop-blur-xl transition-opacity duration-200 ease-out"
+                        frameClassName={[
+                            'w-full max-w-3xl bg-slate-900/85 text-white shadow-xl transition-all duration-200 ease-out focus:outline-none',
+                            shortcutOverlay.maximized ? 'max-w-none h-full' : 'max-h-[80vh]',
+                            shortcutOverlay.open && !shortcutOverlay.minimized ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 -translate-y-2',
+                        ].join(' ')}
+                        bodyClassName="flex-1 overflow-y-auto px-6 py-6"
+                        allowMaximize={false}
+                        ariaLabel="Add to desktop"
+                    >
+                        <ShortcutSelector
+                            apps={apps}
+                            games={games}
+                            onSelect={this.addShortcutToDesktop}
+                            onRequestClose={() => this.closeOverlay('shortcutSelector')}
+                        />
+                    </SystemOverlayWindow>
+                ) : null}
 
-                { this.state.showWindowSwitcher ?
-                    <WindowSwitcher
-                        windows={this.state.switcherWindows}
-                        onSelect={this.selectWindow}
-                        onClose={this.closeWindowSwitcher} /> : null}
+                {windowSwitcherOverlay.open ? (
+                    <SystemOverlayWindow
+                        id="overlay-window-switcher"
+                        title="Switch windows"
+                        open={windowSwitcherOverlay.open}
+                        minimized={windowSwitcherOverlay.minimized}
+                        maximized={windowSwitcherOverlay.maximized}
+                        onMinimize={() => this.toggleOverlayMinimize('windowSwitcher')}
+                        onMaximize={() => this.toggleOverlayMaximize('windowSwitcher')}
+                        onClose={this.closeWindowSwitcher}
+                        overlayClassName="bg-slate-950/70 backdrop-blur-xl transition-opacity duration-200 ease-out"
+                        frameClassName={[
+                            'w-full max-w-5xl bg-slate-900/85 text-white shadow-2xl transition-all duration-200 ease-out focus:outline-none',
+                            windowSwitcherOverlay.maximized ? 'max-w-none h-full' : 'max-h-[80vh]',
+                            windowSwitcherOverlay.open && !windowSwitcherOverlay.minimized ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 -translate-y-2',
+                        ].join(' ')}
+                        bodyClassName="flex-1 overflow-y-auto px-6 py-6"
+                        allowMaximize={false}
+                        contentRef={this.windowSwitcherContentRef}
+                        ariaLabel="Switch windows"
+                    >
+                        <WindowSwitcher
+                            windows={this.state.switcherWindows}
+                            onSelect={this.selectWindow}
+                            onClose={this.closeWindowSwitcher}
+                            containerRef={this.windowSwitcherContentRef}
+                        />
+                    </SystemOverlayWindow>
+                ) : null}
 
                 <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
                     {this.state.liveRegionMessage}
@@ -3389,11 +3782,13 @@ export class Desktop extends Component {
 
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
+    const [snapGrid] = useSnapGridSetting();
     const { density, fontScale, largeHitAreas, desktopTheme } = useSettings();
     return (
         <Desktop
             {...props}
             snapEnabled={snapEnabled}
+            snapGrid={snapGrid}
             density={density}
             fontScale={fontScale}
             largeHitAreas={largeHitAreas}
