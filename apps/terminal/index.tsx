@@ -322,7 +322,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           }
         }
       });
-      term.onPaste?.((text: string) => sessionManager.handlePaste(text));
+      const termWithPaste = term as typeof term & {
+        onPaste?: (listener: (text: string) => void) => void;
+      };
+      termWithPaste.onPaste?.((text: string) => sessionManager.handlePaste(text));
       updateOverflow();
       term.onScroll?.(() => updateOverflow());
     })();
