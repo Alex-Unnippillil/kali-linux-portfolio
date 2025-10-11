@@ -5,6 +5,10 @@ interface ParsedData {
   strings: string[];
 }
 
+interface ImportAnnotateProps {
+  labModeEnabled?: boolean;
+}
+
 function extractStrings(bytes: Uint8Array): string[] {
   const out: string[] = [];
   let current = '';
@@ -86,11 +90,17 @@ function parseELF(bytes: Uint8Array): ParsedData {
   return { sections, strings: extractStrings(bytes) };
 }
 
-export default function ImportAnnotate() {
+export default function ImportAnnotate({
+  labModeEnabled = false,
+}: ImportAnnotateProps) {
   const [sections, setSections] = useState<string[]>([]);
   const [strings, setStrings] = useState<string[]>([]);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!labModeEnabled) {
+      e.target.value = '';
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
     const buf = await file.arrayBuffer();
@@ -112,13 +122,24 @@ export default function ImportAnnotate() {
 
   return (
     <div className="text-xs md:text-sm">
-      <label className="block mb-1">Upload PE or ELF file</label>
+      <label className="block mb-1" htmlFor="ghidra-upload">
+        Upload PE or ELF file
+      </label>
       <input
+        id="ghidra-upload"
         type="file"
         accept=".exe,.dll,.bin,.elf"
         onChange={handleFile}
         className="mb-2"
+        disabled={!labModeEnabled}
+        aria-label="Upload PE or ELF file"
       />
+      {!labModeEnabled && (
+        <p className="text-yellow-300 mb-2" aria-live="polite">
+          Enable lab mode to import your own binaries. Demo data below stays
+          read-only.
+        </p>
+      )}
       <div className="flex flex-wrap gap-4">
         <div>
           <h3 className="font-bold">Sections</h3>
