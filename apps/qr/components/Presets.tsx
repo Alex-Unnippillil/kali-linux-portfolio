@@ -81,15 +81,6 @@ const Presets: React.FC<Props> = ({
       });
   }, [payload, canvasRef, size, margin, ecc, logo]);
 
-  const copyPayload = async () => {
-    if (!payload) return;
-    try {
-      await navigator.clipboard?.writeText(payload);
-    } catch {
-      /* ignore */
-    }
-  };
-
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -171,20 +162,6 @@ const Presets: React.FC<Props> = ({
         )}
       </div>
 
-      {payload && (
-        <div className="space-y-2">
-          <p className="break-all text-sm">{payload}</p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={copyPayload}
-              className="px-2 py-1 bg-blue-600 rounded"
-            >
-              Copy
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
