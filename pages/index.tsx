@@ -13,22 +13,8 @@ const Ubuntu = dynamic(
     loading: () => null,
   }
 );
-const InstallButton = dynamic(
-  () =>
-    import('../components/InstallButton').catch((err) => {
-      console.error('Failed to load InstallButton component', err);
-      throw err;
-    }),
-  {
-    ssr: false,
-    loading: () => null,
-  }
-);
 
-/**
- * @returns {JSX.Element}
- */
-const App = () => (
+const App = (): JSX.Element => (
   <>
     <a href="#window-area" className="sr-only focus:not-sr-only">
       Skip to content
@@ -36,7 +22,6 @@ const App = () => (
     <Meta />
     <Ubuntu />
     <BetaBadge />
-    <InstallButton />
   </>
 );
 
