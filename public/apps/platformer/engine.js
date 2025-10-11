@@ -14,6 +14,20 @@ export function setPhysics(values) {
   Object.assign(physics, values);
 }
 
+export function cloneTiles(layout) {
+  if (!Array.isArray(layout)) return [];
+  return layout.map((row) => row.slice());
+}
+
+export function countCoins(tiles) {
+  if (!Array.isArray(tiles)) return 0;
+  return tiles.reduce(
+    (total, row) =>
+      total + row.reduce((rowTotal, cell) => rowTotal + (cell === 5 ? 1 : 0), 0),
+    0,
+  );
+}
+
 export class Player {
   constructor() {
     this.x = 0;

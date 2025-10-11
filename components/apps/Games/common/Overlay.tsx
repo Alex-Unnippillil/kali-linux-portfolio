@@ -6,17 +6,19 @@ import Toast from '../../../ui/Toast';
  * frames-per-second counter. Can be dropped into any game component.
  */
 export default function Overlay({
+  paused: externalPaused,
   onPause,
   onResume,
   muted: externalMuted,
   onToggleSound,
 }: {
+  paused?: boolean;
   onPause?: () => void;
   onResume?: () => void;
   muted?: boolean;
   onToggleSound?: (muted: boolean) => void;
 }) {
-  const [paused, setPaused] = useState(false);
+  const [paused, setPaused] = useState(externalPaused ?? false);
   const [muted, setMuted] = useState(externalMuted ?? false);
   const [fps, setFps] = useState(0);
   const frame = useRef(performance.now());
@@ -47,6 +49,11 @@ export default function Overlay({
       return np;
     });
   }, [onPause, onResume]);
+
+  useEffect(() => {
+    if (externalPaused === undefined) return;
+    setPaused(externalPaused);
+  }, [externalPaused]);
 
   const toggleSound = useCallback(() => {
     setMuted((m) => {
