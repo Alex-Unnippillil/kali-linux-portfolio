@@ -663,20 +663,20 @@ export class Desktop extends Component {
         this.baseDesktopPadding = { ...presetConfig.padding };
         this.persistIconSizePreset(normalized);
 
-        if (normalized === this.state.iconSizePreset) {
-            this.applyIconLayoutFromSettings(this.props);
+        this.applyIconLayoutFromSettings(this.props);
+
+        const finalizePresetUpdate = () => {
             this.realignIconPositions();
             this.broadcastIconSizePreset(normalized);
             this.broadcastWorkspaceState();
+        };
+
+        if (normalized === this.state.iconSizePreset) {
+            finalizePresetUpdate();
             return;
         }
 
-        this.setState({ iconSizePreset: normalized }, () => {
-            this.applyIconLayoutFromSettings(this.props);
-            this.realignIconPositions();
-            this.broadcastIconSizePreset(normalized);
-            this.broadcastWorkspaceState();
-        });
+        this.setState({ iconSizePreset: normalized }, finalizePresetUpdate);
     };
 
     loadDesktopIconPositions = () => {
