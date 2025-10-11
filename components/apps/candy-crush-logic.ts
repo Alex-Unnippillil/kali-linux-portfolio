@@ -1,7 +1,7 @@
 import usePersistentState from '../../hooks/usePersistentState';
 
 export const BOARD_WIDTH = 8;
-export const CANDY_COLORS = ['#ff6666', '#66b3ff', '#66ff66', '#ffcc66', '#cc66ff'];
+export const CANDY_COLORS = ['#38bdf8', '#22d3ee', '#6366f1', '#0ea5e9', '#f472b6'];
 
 export interface Cascade {
   matches: number[][];
