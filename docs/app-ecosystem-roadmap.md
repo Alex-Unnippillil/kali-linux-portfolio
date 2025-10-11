@@ -33,7 +33,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | settings | Settings | Core maintainers | **In progress** – theme picker, wallpaper selector, reset desktop | `settingsStore.js`, localStorage |
 | resource_monitor | Resource Monitor | Core maintainers | **In progress** – memory/FPS display and synthetic CPU graph | `performance` APIs |
 | screen-recorder | Screen Recorder | Core maintainers | **Needs polish** – permission prompts, storage strategy | MediaRecorder API |
-| clipboard-manager | Clipboard Manager | Core maintainers | **Needs polish** – permission UX and fallbacks | Clipboard API |
+| clipboard-manager | Clipboard Manager | Core maintainers | **Ready** – permission UX, fallbacks, and status telemetry covered | Clipboard API |
 | figlet | Figlet | Core maintainers | **In progress** – font selector, copy action, IndexedDB caching | Font assets, IndexedDB |
 | weather | Weather | Core maintainers | **In progress** – fake data with unit toggle or settings-driven API key | Demo data, settings |
 | weather_widget | Weather Widget | Core maintainers | **In progress** – mirror Weather app parity and settings hand-off | Settings integration |
@@ -52,6 +52,19 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | contact | Contact | Core maintainers | **In progress** – validation, privacy note, dummy submit endpoint | Form schema, API stub |
 | gedit | Gedit | Core maintainers | **Needs polish** – ensure contact workflow alignment and EmailJS option | EmailJS config |
 | todoist | Todoist | Core maintainers | **In progress** – sections, due dates, drag-drop, quick-add, persistence | localStorage, DnD |
+
+#### Clipboard Manager QA Update (May 2024)
+
+- Permission preflight now surfaces clear read/write status, fallback messaging, and retry guidance directly in the app UI.
+- Automated coverage exercises clipboard availability, permission denial handling, and history reuse via `__tests__/ClipboardManager.test.tsx`.
+- Browser compatibility focus areas:
+
+| Browser | Minimum version | Notes |
+| --- | --- | --- |
+| Chrome / Edge (Chromium) | 66+ / 79+ | Full async Clipboard API support; standard permission prompts covered by the status banner. |
+| Firefox | 87+ | Clipboard reads require user gesture; denied permissions trigger the in-app remediation guidance. |
+| Safari | 13.1+ | Write support is stable; reads prompt per gesture and fall back to manual copy instructions when blocked. |
+| Legacy / unsupported contexts | – | App surfaces "Clipboard API not supported" messaging and preserves manual copy workflows. |
 
 ### Security Tool Simulators
 
