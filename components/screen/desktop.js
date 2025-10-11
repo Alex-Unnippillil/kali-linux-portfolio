@@ -23,7 +23,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
-import { DESKTOP_TOP_PADDING } from '../../utils/uiConstants';
+import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
 import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
 import {
@@ -4308,8 +4308,10 @@ export class Desktop extends Component {
         const wallpaperCss = wallpaperSource ? `url("${wallpaperSource}")` : 'none';
         const blurValue = theme && typeof theme.blur === 'number' ? `${theme.blur}px` : '0px';
         const overlayValue = theme && theme.overlay ? theme.overlay : 'none';
+        const baseNavbarHeight = DESKTOP_TOP_PADDING - (WINDOW_TOP_MARGIN + WINDOW_TOP_INSET);
+        const windowTopSpacing = WINDOW_TOP_MARGIN + WINDOW_TOP_INSET;
         const desktopStyle = {
-            paddingTop: DESKTOP_TOP_PADDING,
+            paddingTop: `calc(var(--desktop-navbar-height, ${baseNavbarHeight}px) + ${windowTopSpacing}px)`,
             minHeight: '100dvh',
             '--desktop-accent': accentColor,
             '--desktop-wallpaper': wallpaperCss,
