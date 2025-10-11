@@ -70,6 +70,12 @@ export const countPieces = (board) => {
   return { black, white };
 };
 
+export const getScoreMargin = (board, player = 'B') => {
+  const { black, white } = countPieces(board);
+  if (player === 'B') return black - white;
+  return white - black;
+};
+
 const boardKey = (board) =>
   board.map((row) => row.map((cell) => cell || '.').join('')).join('/');
 

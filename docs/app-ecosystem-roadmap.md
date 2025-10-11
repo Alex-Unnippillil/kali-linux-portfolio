@@ -118,7 +118,7 @@ All arcade-style and puzzle titles share the same readiness gap: implement canva
 | platformer | Platformer | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | battleship | Battleship | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | checkers | Checkers | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
-| reversi | Reversi | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
+| reversi | Reversi | Core maintainers | **Ready** – shared canvas loop, strategy aids, and leaderboard | Game engine |
 | simon | Simon | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | sokoban | Sokoban | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | solitaire/index | Solitaire | Core maintainers | **Needs polish** – align with shared game scaffolding | Enhanced TS solitaire module |
