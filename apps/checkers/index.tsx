@@ -20,6 +20,8 @@ type MoveLogEntry = { player: 'red' | 'black'; notation: string };
 const squareNotation = ([r, c]: [number, number]) =>
   `${String.fromCharCode(97 + c)}${8 - r}`;
 
+const formatPlayer = (color: 'red' | 'black') => (color === 'red' ? 'Red' : 'Black');
+
 // Helper to get all moves without enforcing capture
 const getAllMovesNoForce = (board: Board, color: 'red' | 'black'): Move[] => {
   let result: Move[] = [];
@@ -56,6 +58,33 @@ export default function CheckersPage() {
   const [moveLog, setMoveLog] = useState<MoveLogEntry[]>([]);
   const movePathRef = useRef<[number, number][]>([]);
   const captureSequenceRef = useRef(false);
+
+  const captureOpportunities = useMemo(() => {
+    let total = 0;
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        if (board[r][c]?.color === turn) {
+          total += getPieceMoves(board, r, c, false).filter((m) => m.captured).length;
+        }
+      }
+    }
+    return total;
+  }, [board, turn]);
+
+  const movesUntilDraw = useMemo(() => Math.max(0, 40 - noCapture), [noCapture]);
+
+  const pieceCounts = useMemo(() => {
+    let redPieces = 0;
+    let blackPieces = 0;
+    board.forEach((row) => {
+      row.forEach((cell) => {
+        if (!cell) return;
+        if (cell.color === 'red') redPieces += 1;
+        else blackPieces += 1;
+      });
+    });
+    return { red: redPieces, black: blackPieces };
+  }, [board]);
 
   const makeMove = useCallback(
     (move: Move) => {
@@ -248,107 +277,156 @@ export default function CheckersPage() {
     [],
   );
 
-  const PanelContent = ({ variant }: { variant: 'mobile' | 'desktop' }) => (
-    <div className={`flex flex-col gap-2 ${variant === 'mobile' ? 'h-full' : ''} text-xs`}> 
-      <div className="flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-2">
-          <span className="uppercase tracking-wide text-[0.65rem] text-gray-300">Rules</span>
-          <select
-            className="rounded bg-gray-800 px-2 py-1 text-sm"
-            value={rule}
-            onChange={(e) => setRule(e.target.value as 'forced' | 'relaxed')}
+  const PanelContent = ({ variant }: { variant: 'mobile' | 'desktop' }) => {
+    const badgeBase =
+      'inline-flex items-center gap-2 rounded-full border border-ub-orange/40 bg-ub-orange/10 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-widest text-ub-orange';
+
+    return (
+      <div className={`flex flex-col gap-4 ${variant === 'mobile' ? 'h-full' : ''} text-xs`}>
+        <section className="space-y-2">
+          <h3 className="text-[0.65rem] font-semibold uppercase tracking-widest text-ub-orange">
+            Match telemetry
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            <span className={badgeBase}>
+              Captures left
+              <span className="rounded bg-black/40 px-2 py-0.5 font-mono text-[0.7rem] text-white">
+                {captureOpportunities}
+              </span>
+            </span>
+            <span className={badgeBase}>
+              Moves to draw
+              <span className="rounded bg-black/40 px-2 py-0.5 font-mono text-[0.7rem] text-white">
+                {movesUntilDraw}
+              </span>
+            </span>
+            <span className={badgeBase}>
+              Pieces
+              <span className="rounded bg-black/40 px-2 py-0.5 font-mono text-[0.7rem] text-white">
+                {pieceCounts.red}/{pieceCounts.black}
+              </span>
+            </span>
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <h3 className="text-[0.65rem] font-semibold uppercase tracking-widest text-ub-orange">
+            Configuration
+          </h3>
+          <div
+            className={`flex flex-col gap-3 ${
+              variant === 'desktop' ? 'md:flex-row md:flex-wrap md:items-end' : ''
+            }`}
           >
-            <option value="forced">Forced Capture</option>
-            <option value="relaxed">Capture Optional</option>
-          </select>
-        </label>
-        <label className="flex items-center gap-2">
-          <span className="uppercase tracking-wide text-[0.65rem] text-gray-300">AI</span>
-          <select
-            className="rounded bg-gray-800 px-2 py-1 text-sm"
-            value={algorithm}
-            onChange={(e) => setAlgorithm(e.target.value as 'alphabeta' | 'mcts')}
-          >
-            <option value="alphabeta">Alpha-Beta</option>
-            <option value="mcts">MCTS</option>
-          </select>
-        </label>
-      </div>
-      <label className="flex items-center gap-2 text-xs">
-        <span className="uppercase tracking-wide text-[0.65rem] text-gray-300">Difficulty</span>
-        <input
-          type="range"
-          min={1}
-          max={8}
-          value={difficulty}
-          onChange={(e) => setDifficulty(Number(e.target.value))}
-          aria-label="Difficulty"
-          className="h-2 flex-1 accent-amber-400"
-        />
-        <span className="tabular-nums text-sm text-gray-200">{difficulty}</span>
-      </label>
-      <div className="flex flex-wrap gap-2">
-        <button
-          className="rounded bg-gray-700 px-3 py-1 text-sm transition hover:bg-gray-600"
-          onClick={reset}
+            <label className="flex flex-col gap-1 text-xs md:flex-auto">
+              <span className="uppercase tracking-wide text-[0.65rem] text-gray-300">Rules</span>
+              <select
+                className="rounded bg-gray-800 px-2 py-1 text-sm"
+                value={rule}
+                onChange={(e) => setRule(e.target.value as 'forced' | 'relaxed')}
+              >
+                <option value="forced">Forced Capture</option>
+                <option value="relaxed">Capture Optional</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-xs md:flex-auto">
+              <span className="uppercase tracking-wide text-[0.65rem] text-gray-300">AI</span>
+              <select
+                className="rounded bg-gray-800 px-2 py-1 text-sm"
+                value={algorithm}
+                onChange={(e) => setAlgorithm(e.target.value as 'alphabeta' | 'mcts')}
+              >
+                <option value="alphabeta">Alpha-Beta</option>
+                <option value="mcts">MCTS</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-2 text-xs md:flex-[1_1_100%]">
+              <span className="uppercase tracking-wide text-[0.65rem] text-gray-300">Difficulty</span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="range"
+                  min={1}
+                  max={8}
+                  value={difficulty}
+                  onChange={(e) => setDifficulty(Number(e.target.value))}
+                  aria-label="Difficulty"
+                  className="h-2 flex-1 accent-amber-400"
+                />
+                <span className="tabular-nums text-sm text-gray-200">{difficulty}</span>
+              </div>
+            </label>
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <h3 className="text-[0.65rem] font-semibold uppercase tracking-widest text-ub-orange">
+            Actions
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="rounded bg-gray-700 px-3 py-1 text-sm transition hover:bg-gray-600"
+              onClick={reset}
+            >
+              Reset
+            </button>
+            <button
+              className="rounded bg-gray-700 px-3 py-1 text-sm transition hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={undo}
+              disabled={!history.length}
+            >
+              Undo
+            </button>
+            <button
+              className="rounded bg-gray-700 px-3 py-1 text-sm transition hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={hintMove}
+              disabled={!!winner}
+            >
+              Hint
+            </button>
+          </div>
+        </section>
+
+        <section
+          className={`space-y-2 rounded-md bg-black/30 p-2 ${
+            variant === 'mobile' ? 'flex-1 overflow-y-auto' : 'max-h-[28rem] overflow-y-auto'
+          }`}
         >
-          Reset
-        </button>
-        <button
-          className="rounded bg-gray-700 px-3 py-1 text-sm transition hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={undo}
-          disabled={!history.length}
-        >
-          Undo
-        </button>
-        <button
-          className="rounded bg-gray-700 px-3 py-1 text-sm transition hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={hintMove}
-          disabled={!!winner}
-        >
-          Hint
-        </button>
-      </div>
-      <div
-        className={`rounded-md bg-black/30 p-2 ${
-          variant === 'mobile' ? 'flex-1 overflow-y-auto' : 'max-h-[28rem] overflow-y-auto'
-        }`}
-      >
-        <div className="flex items-center justify-between text-[0.65rem] uppercase tracking-wide text-gray-300">
-          <span>Moves</span>
-          <span className="capitalize text-gray-200">
-            {winner ? (winner === 'Draw' ? 'Draw' : `${winner} wins`) : `Turn: ${turn}`}
-          </span>
-        </div>
-        {moveLog.length ? (
-          <ol className="mt-2 space-y-1 text-sm">
-            {moveLog.map((entry, idx) => {
-              const moveNumber = Math.floor(idx / 2) + 1;
-              const prefix = idx % 2 === 0 ? `${moveNumber}.` : `${moveNumber}...`;
-              return (
-                <li
-                  key={`${entry.notation}-${idx}`}
-                  className="grid grid-cols-[auto_auto_1fr] items-center gap-2 rounded bg-white/5 px-2 py-1"
-                >
-                  <span className="font-mono text-xs text-gray-300">{prefix}</span>
-                  <span
-                    className={`text-xs font-semibold capitalize ${
-                      entry.player === 'red' ? 'text-red-300' : 'text-gray-200'
-                    }`}
+          <div className="flex items-center justify-between text-[0.65rem] uppercase tracking-wide text-gray-300">
+            <span>Moves</span>
+            <span className="capitalize text-gray-200">
+              {winner ? (winner === 'Draw' ? 'Draw' : `${winner} wins`) : `Turn: ${turn}`}
+            </span>
+          </div>
+          {moveLog.length ? (
+            <ol className="space-y-1 text-sm">
+              {moveLog.map((entry, idx) => {
+                const moveNumber = Math.floor(idx / 2) + 1;
+                const prefix = idx % 2 === 0 ? `${moveNumber}.` : `${moveNumber}...`;
+                return (
+                  <li
+                    key={`${entry.notation}-${idx}`}
+                    className="grid grid-cols-[auto_auto_1fr] items-center gap-2 rounded bg-white/5 px-2 py-1"
                   >
-                    {entry.player}
-                  </span>
-                  <span className="font-mono text-sm text-white">{entry.notation}</span>
-                </li>
-              );
-            })}
-          </ol>
-        ) : (
-          <p className="mt-2 text-xs text-gray-400">No moves yet.</p>
-        )}
+                    <span className="font-mono text-xs text-gray-300">{prefix}</span>
+                    <span
+                      className={`text-xs font-semibold capitalize ${
+                        entry.player === 'red' ? 'text-red-300' : 'text-gray-200'
+                      }`}
+                    >
+                      {entry.player}
+                    </span>
+                    <span className="font-mono text-sm text-white">{entry.notation}</span>
+                  </li>
+                );
+              })}
+            </ol>
+          ) : (
+            <p className="text-xs text-gray-400">No moves yet.</p>
+          )}
+        </section>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div
@@ -359,15 +437,35 @@ export default function CheckersPage() {
         className="flex flex-1 flex-col items-center justify-center gap-4 px-4 pt-6 md:py-8"
         style={{ paddingBottom: 'var(--panel-height)' }}
       >
-        {winner && (
-          <div className="text-xl">
-            {winner === 'Draw' ? 'Draw!' : `${winner} wins!`}
-          </div>
-        )}
-        {!winner && (
-          <div className="text-sm uppercase tracking-wide text-gray-300">Turn: {turn}</div>
-        )}
         <div className="w-[var(--board-size)] max-w-full">
+          <div className="mb-4 rounded-lg border border-ub-orange/40 bg-black/40 px-4 py-3 text-[0.8rem] text-gray-100 shadow-lg shadow-black/40">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-ub-orange">
+              Match briefing
+            </p>
+            <ul className="mt-2 space-y-1 text-[0.75rem] leading-relaxed">
+              <li>
+                <span className="font-semibold text-white">
+                  {winner
+                    ? winner === 'Draw'
+                      ? 'The match ends in a draw.'
+                      : `${formatPlayer(winner as 'red' | 'black')} wins the match.`
+                    : `It's ${formatPlayer(turn)}'s move.`}
+                </span>
+              </li>
+              <li>
+                <span className="font-semibold text-ub-orange">Hint:</span>{' '}
+                {winner
+                  ? 'Hints are disabled after the final move.'
+                  : `Tap the Hint button to light up a ${formatPlayer(turn)} move for a second.`}
+              </li>
+              <li>
+                <span className="font-semibold text-ub-orange">Rules:</span>{' '}
+                {rule === 'forced'
+                  ? 'Forced capture is active — jumps must be taken when available.'
+                  : 'Relaxed capture is active — jumps are optional if you prefer positioning.'}
+              </li>
+            </ul>
+          </div>
           <div className="grid h-[var(--board-size)] w-full grid-cols-8 rounded-lg shadow-lg shadow-black/30">
             {board.map((row, r) =>
               row.map((cell, c) => {
