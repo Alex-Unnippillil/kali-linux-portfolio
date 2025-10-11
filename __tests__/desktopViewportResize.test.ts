@@ -1,6 +1,5 @@
 import { Desktop } from '../components/screen/desktop';
-import { SNAP_BOTTOM_INSET } from '../utils/uiConstants';
-import { measureSafeAreaInset, measureWindowTopOffset } from '../utils/windowLayout';
+import { measureSafeAreaInset, measureSnapBottomInset, measureWindowTopOffset } from '../utils/windowLayout';
 
 const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: width });
@@ -95,7 +94,8 @@ describe('Desktop viewport resize handling', () => {
     const positions = desktop.state.window_positions;
     const topOffset = measureWindowTopOffset();
     const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
-    const expectedApp1Y = topOffset + Math.max(600 - topOffset - SNAP_BOTTOM_INSET - safeBottom - 320, 0);
+    const snapBottomInset = measureSnapBottomInset();
+    const expectedApp1Y = topOffset + Math.max(600 - topOffset - snapBottomInset - safeBottom - 320, 0);
     expect(positions.app1).toEqual({ x: 380, y: expectedApp1Y });
     expect(positions.app2).toEqual({ x: 0, y: topOffset });
 
