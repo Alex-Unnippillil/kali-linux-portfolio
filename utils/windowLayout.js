@@ -94,7 +94,7 @@ export const measureSafeAreaInset = (side) => {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 };
 
-export const DEFAULT_WINDOW_TOP_OFFSET = NAVBAR_HEIGHT + WINDOW_TOP_MARGIN;
+export const DEFAULT_WINDOW_TOP_OFFSET = DEFAULT_NAVBAR_HEIGHT + WINDOW_TOP_MARGIN;
 
 export const measureWindowTopOffset = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -108,8 +108,7 @@ export const measureWindowTopOffset = () => {
 
   const { height } = navbar.getBoundingClientRect();
   const measured = Number.isFinite(height) ? Math.ceil(height) : DEFAULT_NAVBAR_HEIGHT;
-  const trimmedHeight = Math.max(measured - NAVBAR_VERTICAL_PADDING, NAVBAR_HEIGHT);
-  return Math.max(trimmedHeight + WINDOW_TOP_MARGIN, DEFAULT_WINDOW_TOP_OFFSET);
+  return Math.max(measured + WINDOW_TOP_MARGIN, DEFAULT_WINDOW_TOP_OFFSET);
 };
 
 export const measureTaskbarHeight = () => {
