@@ -93,7 +93,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   reversi: {
     objective: "Control the most discs on the board.",
-    controls: "Click a square to place a disc and flip others.",
+    controls:
+      "Click a legal square to place a disc, hover to preview flips, and use the mobility/leaderboard aids to plan swings.",
   },
   simon: {
     objective: "Repeat the sequence of lights and sounds.",
