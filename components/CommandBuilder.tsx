@@ -4,12 +4,15 @@ import TerminalOutput from './TerminalOutput';
 interface BuilderProps {
   doc: string;
   build: (params: Record<string, string>) => string;
+  defaults?: Record<string, string>;
 }
 
-export default function CommandBuilder({ doc, build }: BuilderProps) {
-  const [params, setParams] = useState<Record<string, string>>({});
+export default function CommandBuilder({ doc, build, defaults }: BuilderProps) {
+  const [params, setParams] = useState<Record<string, string>>(
+    () => ({ ...(defaults ?? {}) })
+  );
   const update = (key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setParams({ ...params, [key]: e.target.value });
+    setParams((prev) => ({ ...prev, [key]: e.target.value }));
   };
 
   const command = build(params);

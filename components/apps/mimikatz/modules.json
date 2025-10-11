@@ -1,5 +1,32 @@
 [
-  { "name": "sekurlsa", "description": "Sample: retrieve credentials from memory" },
-  { "name": "lsadump", "description": "Sample: dump LSASS secrets" },
-  { "name": "misc", "description": "Sample helper commands only" }
+  {
+    "id": "sekurlsa-logonpasswords",
+    "name": "sekurlsa::logonpasswords",
+    "description": "Enumerate interactive logon secrets from an LSASS memory capture.",
+    "doc": "Builds a read-only command string that inspects a sanitized LSASS dump. Provide a process name or exported dump path to keep the exercise offline.",
+    "defaults": {
+      "target": "lsass.exe",
+      "opts": "/output:demo-logon.txt"
+    }
+  },
+  {
+    "id": "lsadump-sam",
+    "name": "lsadump::sam",
+    "description": "Simulate pulling the SAM database with LSA protection disabled.",
+    "doc": "Use this to explain how SAM secrets are materialized. Point the target to a mounted lab image or note that elevated rights are required in production.",
+    "defaults": {
+      "target": "/system32/config/SAM",
+      "opts": "/system:system.hiv"
+    }
+  },
+  {
+    "id": "misc-token",
+    "name": "token::list",
+    "description": "List delegated and impersonation tokens for the current session.",
+    "doc": "Demonstrates token enumeration without touching live handles. Adjust options to filter on logon sessions or integrity levels.",
+    "defaults": {
+      "target": "",
+      "opts": "/integrity:high"
+    }
+  }
 ]

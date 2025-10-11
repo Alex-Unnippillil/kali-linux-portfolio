@@ -1,12 +1,20 @@
 [
   {
     "step": "Invoke Mimikatz",
-    "log": "Event ID 1: mimikatz.exe executed with privilege escalation",
-    "mitigation": "Restrict execution via application whitelisting."
+    "log": "Event ID 4688: mimikatz.exe launched with debug privileges on LAB-WKS01.",
+    "mitigation": "Restrict execution through application control and monitor privileged process launches.",
+    "resource": "https://learn.microsoft.com/windows/security/threat-protection/auditing/event-4688"
   },
   {
     "step": "Dump LSASS",
-    "log": "Event ID 2: LSASS memory accessed to extract credentials",
-    "mitigation": "Enable LSA protection and monitor memory access."
+    "log": "Event ID 4611: A trusted logon process registered. LSASS memory access request detected.",
+    "mitigation": "Enable LSA protection or Credential Guard to block unsigned memory readers.",
+    "resource": "https://learn.microsoft.com/windows/security/threat-protection/auditing/event-4611"
+  },
+  {
+    "step": "Token Replay",
+    "log": "Event ID 4624: Type 3 network logon reused service token against FILESRV01.",
+    "mitigation": "Correlate with 4648 (explicit credentials) and enforce tiered admin model.",
+    "resource": "https://learn.microsoft.com/windows/security/threat-protection/auditing/event-4624"
   }
 ]
