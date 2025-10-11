@@ -29,20 +29,20 @@ function DefaultMenu(props) {
                 href="https://www.linkedin.com/in/unnippillil/"
                 target="_blank"
                 role="menuitem"
-                aria-label="Follow on Linkedin"
+                aria-label="Linkedin"
                 className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
-                <span className="ml-5">🙋‍♂️</span> <span className="ml-2">Follow on <strong>Linkedin</strong></span>
+                <span className="ml-5"><strong>Linkedin</strong></span>
             </a>
             <a
                 rel="noopener noreferrer"
                 href="https://github.com/Alex-Unnippillil"
                 target="_blank"
                 role="menuitem"
-                aria-label="Follow on Github"
+                aria-label="Github"
                 className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
-                <span className="ml-5">🤝</span> <span className="ml-2">Follow on <strong>Github</strong></span>
+                <span className="ml-5"><strong>Github</strong></span>
             </a>
             <a
                 rel="noopener noreferrer"
@@ -52,7 +52,7 @@ function DefaultMenu(props) {
                 aria-label="Contact Me"
                 className="w-full block cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
-                <span className="ml-5">📥</span> <span className="ml-2">Contact Me</span>
+                <span className="ml-5">Contact Me</span>
             </a>
             <Devider />
             <button
@@ -62,7 +62,7 @@ function DefaultMenu(props) {
                 aria-label="Reset Kali Linux"
                 className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
-                <span className="ml-5">🧹</span> <span className="ml-2">Reset Kali Linux</span>
+                <span className="ml-5">Reset Kali Linux</span>
             </button>
         </div>
     )
