@@ -51,7 +51,7 @@ describe('Window lifecycle', () => {
   it('invokes callbacks on close', () => {
     jest.useFakeTimers();
     const closed = jest.fn();
-  
+
     render(
       <Window
         id="test-window"
@@ -73,6 +73,28 @@ describe('Window lifecycle', () => {
 
     expect(closed).toHaveBeenCalledWith('test-window');
     jest.useRealTimers();
+  });
+
+  it('focuses the frame when mounting a focused window', () => {
+    const focus = jest.fn();
+
+    render(
+      <Window
+        id="focused-window"
+        title="Focused"
+        screen={() => <div>content</div>}
+        focus={focus}
+        isFocused
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const frame = document.getElementById('focused-window');
+    expect(frame).not.toBeNull();
+    expect(frame).toHaveFocus();
+    expect(focus).toHaveBeenCalledWith('focused-window');
   });
 });
 

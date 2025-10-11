@@ -106,6 +106,9 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        if (this.props.isFocused) {
+            this.focusWindow();
+        }
     }
 
     componentWillUnmount() {
@@ -485,6 +488,12 @@ export class Window extends Component {
 
     focusWindow = () => {
         this.props.focus(this.id);
+        const node = this.getWindowNode();
+        if (!node || typeof node.focus !== 'function') return;
+        const alreadyFocused = typeof document !== 'undefined' && document.activeElement === node;
+        if (!alreadyFocused) {
+            node.focus();
+        }
     }
 
     handleTitleBarDoubleClick = (event) => {
