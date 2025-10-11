@@ -82,6 +82,28 @@ const persistStoredFolderContents = (contents) => {
     }
 };
 
+const loadStoredWindowSizes = (storageKey) => {
+    if (!safeLocalStorage) return {};
+    try {
+        const stored = safeLocalStorage.getItem(storageKey);
+        if (!stored) return {};
+        const parsed = JSON.parse(stored);
+        if (!parsed || typeof parsed !== 'object') return {};
+        const normalized = {};
+        Object.entries(parsed).forEach(([key, value]) => {
+            if (!value || typeof value !== 'object') return;
+            const width = Number(value.width);
+            const height = Number(value.height);
+            if (Number.isFinite(width) && Number.isFinite(height)) {
+                normalized[key] = { width, height };
+            }
+        });
+        return normalized;
+    } catch (e) {
+        return {};
+    }
+};
+
 
 const OVERLAY_WINDOWS = Object.freeze({
     launcher: {
@@ -174,7 +196,8 @@ export class Desktop extends Component {
             'window_positions',
             'window_sizes',
         ]);
-        this.windowSizeStorageKey = WINDOW_SIZE_STORAGE_KEY;
+        this.windowSizeStorageKey = 'desktop_window_sizes';
+        const initialWindowSizes = loadStoredWindowSizes(this.windowSizeStorageKey);
         this.defaultThemeConfig = {
             id: 'default',
             accent: (props.desktopTheme && props.desktopTheme.accent) || '#1793d1',
