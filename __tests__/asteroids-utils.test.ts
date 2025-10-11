@@ -11,7 +11,22 @@ import {
   addToInventory,
   useInventory,
   POWER_UPS,
+  recordDifficultyScore,
+  readDifficultyScore,
 } from '../components/apps/asteroids-utils';
+
+const createMockStorage = () => {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => (store.has(key) ? store.get(key)! : null),
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+  } as any;
+};
 
 describe('wrap', () => {
   it('wraps positive overflow', () => {
@@ -67,6 +82,16 @@ describe('handleBulletAsteroidCollision', () => {
     expect(asteroids).toHaveLength(0);
     expect(bullet.active).toBe(false);
   });
+
+  it('splits large asteroids into smaller fragments', () => {
+    const asteroids = [{ x: 0, y: 0, dx: 0, dy: 0, r: 40 }];
+    const bullet = { x: 0, y: 0, r: 2, active: true };
+    const hit = handleBulletAsteroidCollision(asteroids, bullet);
+    expect(hit).toBe(true);
+    expect(bullet.active).toBe(false);
+    expect(asteroids).toHaveLength(2);
+    expect(asteroids.every((a) => a.r === 20)).toBe(true);
+  });
 });
 
 describe('updateShipPosition', () => {
@@ -111,5 +136,34 @@ describe('inventory', () => {
     lives = useInventory(inv, 0, ship, lives, 50, 30);
     expect(lives).toBe(4);
     expect(inv).toHaveLength(0);
+  });
+});
+
+describe('difficulty score persistence', () => {
+  it('tracks scores per difficulty with modifiers applied', () => {
+    const storage = createMockStorage();
+    const cadet = recordDifficultyScore('cadet', 1000, 1.2, storage);
+    expect(cadet).toEqual({ high: 1200, last: 1200, modifier: 1.2 });
+
+    const lower = recordDifficultyScore('cadet', 100, 1.2, storage);
+    expect(lower.high).toBe(1200);
+    expect(lower.last).toBe(120);
+
+    const legend = recordDifficultyScore('legend', 500, 2, storage);
+    expect(legend).toEqual({ high: 1000, last: 1000, modifier: 2 });
+
+    const storedCadet = readDifficultyScore('cadet', storage, 1.2);
+    expect(storedCadet).toEqual({ high: 1200, last: 120, modifier: 1.2 });
+    const storedLegend = readDifficultyScore('legend', storage, 2);
+    expect(storedLegend).toEqual({ high: 1000, last: 1000, modifier: 2 });
+  });
+
+  it('returns defaults when no data exists', () => {
+    const storage = createMockStorage();
+    expect(readDifficultyScore('hard', storage, 1.6)).toEqual({
+      high: 0,
+      last: 0,
+      modifier: 1.6,
+    });
   });
 });

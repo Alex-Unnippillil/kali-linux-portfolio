@@ -127,7 +127,7 @@ All arcade-style and puzzle titles share the same readiness gap: implement canva
 | wordle | Wordle | Core maintainers | **Needs polish** – align with shared game scaffolding | Word list |
 | blackjack | Blackjack | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | breakout | Breakout | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
-| asteroids | Asteroids | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
+| asteroids | Asteroids | Core maintainers | **Beta** – shared loop, pause overlay, and difficulty leaderboards validated | Game engine |
 | sudoku | Sudoku | Core maintainers | **Needs polish** – align with shared game scaffolding | Puzzle engine |
 | space-invaders | Space Invaders | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | nonogram | Nonogram | Core maintainers | **Needs polish** – align with shared game scaffolding | Puzzle engine |

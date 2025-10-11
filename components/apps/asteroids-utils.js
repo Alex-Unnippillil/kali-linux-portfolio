@@ -2,6 +2,83 @@ import { POWER_UPS } from '../../games/asteroids/powerups';
 
 export { POWER_UPS };
 
+const SCORE_KEY = 'asteroids:scores';
+
+const safeStorage = (storage) => {
+  if (storage) return storage;
+  if (typeof window === 'undefined') return undefined;
+  return window.localStorage;
+};
+
+const parseTable = (value) => {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed && typeof parsed === 'object') return parsed;
+  } catch {
+    /* ignore malformed storage */
+  }
+  return {};
+};
+
+const normaliseEntry = (entry, modifier = 1) => {
+  if (!entry || typeof entry !== 'object') {
+    return { high: 0, last: 0, modifier };
+  }
+  const { high, last, modifier: storedModifier } = entry;
+  return {
+    high: typeof high === 'number' && Number.isFinite(high) ? high : 0,
+    last: typeof last === 'number' && Number.isFinite(last) ? last : 0,
+    modifier:
+      typeof storedModifier === 'number' && Number.isFinite(storedModifier)
+        ? storedModifier
+        : modifier,
+  };
+};
+
+export const SCORE_STORAGE_KEY = SCORE_KEY;
+
+export const loadScoreTable = (storage) => {
+  const target = safeStorage(storage);
+  if (!target) return {};
+  return parseTable(target.getItem(SCORE_KEY));
+};
+
+export const saveScoreTable = (table, storage) => {
+  const target = safeStorage(storage);
+  if (!target) return false;
+  try {
+    target.setItem(SCORE_KEY, JSON.stringify(table));
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const readDifficultyScore = (difficulty, storage, modifier = 1) => {
+  const table = loadScoreTable(storage);
+  return normaliseEntry(table[difficulty], modifier);
+};
+
+export const recordDifficultyScore = (
+  difficulty,
+  score,
+  modifier = 1,
+  storage,
+) => {
+  const adjusted = Math.max(0, Math.round(score * modifier));
+  const table = loadScoreTable(storage);
+  const current = normaliseEntry(table[difficulty], modifier);
+  const next = {
+    high: Math.max(current.high, adjusted),
+    last: adjusted,
+    modifier,
+  };
+  const updated = { ...table, [difficulty]: next };
+  saveScoreTable(updated, storage);
+  return next;
+};
+
 export function wrap(value, max, margin = 0) {
   const range = max + margin * 2;
   let m = (value + margin) % range;
