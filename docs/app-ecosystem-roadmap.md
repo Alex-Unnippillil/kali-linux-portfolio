@@ -116,7 +116,7 @@ All arcade-style and puzzle titles share the same readiness gap: implement canva
 | car-racer | Car Racer | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | lane-runner | Lane Runner | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | platformer | Platformer | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
-| battleship | Battleship | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
+| battleship | Battleship | Core maintainers | **Beta** – shared loop/pause/audio scaffolding and persistence shipped | Game engine |
 | checkers | Checkers | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | reversi | Reversi | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | simon | Simon | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |

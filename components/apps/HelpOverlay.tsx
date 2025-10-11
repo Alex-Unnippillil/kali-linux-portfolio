@@ -37,7 +37,13 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   battleship: {
     objective: "Sink all enemy ships before they sink yours.",
-    controls: "Click cells to place ships and fire shots.",
+    controls:
+      "Drag ships into position, double-click to rotate, use F to fire selected targets, and the overlay to pause or reset.",
+    actions: {
+      select: "Enter / Space",
+      fire: "F",
+      rotate: "Double-click ship",
+    },
   },
   blackjack: {
     objective: "Get as close to 21 as possible without busting.",
