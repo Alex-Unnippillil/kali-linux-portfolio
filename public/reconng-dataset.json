@@ -1,0 +1,131 @@
+{
+  "labMessage": "This Recon-ng simulation uses pre-recorded demo data. Commands, flows, and artifacts stay inside the browser for authorized lab exercises only.",
+  "playbooks": [
+    {
+      "id": "baseline-survey",
+      "title": "Baseline Survey Walkthrough",
+      "description": "Kick off a sanitized recon session that chains DNS discovery, WHOIS enrichment, and reverse IP context.",
+      "steps": [
+        {
+          "title": "Enumerate DNS",
+          "details": "Run the built-in DNS Enumeration module against example.com to hydrate the workspace with the canned host records.",
+          "artifacts": ["example.com", "93.184.216.34"],
+          "expect": "Graph adds the example.com node linked to the sanitized IP asset."
+        },
+        {
+          "title": "Review WHOIS",
+          "details": "Pivot into the WHOIS Lookup module to surface registrar metadata sourced from the fixtures.",
+          "artifacts": ["Example Corp", "John Doe"],
+          "expect": "Entities table records the placeholder contacts with no live queries executed."
+        },
+        {
+          "title": "Reverse IP Context",
+          "details": "Use Reverse IP Lookup to illustrate how additional domains are discovered in the canned dataset.",
+          "artifacts": ["example.com", "static.demo"],
+          "expect": "Workspace graph expands with demo hosts connected to the shared lab IP."
+        },
+        {
+          "title": "Capture Findings",
+          "details": "Open the Report Templates panel and export the markdown summary to show the offline reporting workflow.",
+          "artifacts": ["Baseline recon template"],
+          "expect": "Exported report references only sanitized fixtures and lab guidance."
+        }
+      ]
+    },
+    {
+      "id": "profile-saas",
+      "title": "Profile a SaaS Tenant (Demo Data)",
+      "description": "Demonstrate how Recon-ng workspaces track assets and findings for a SaaS perimeter using pre-built fixtures.",
+      "steps": [
+        {
+          "title": "Set Workspace",
+          "details": "Create a workspace for demo-saas.local using the workspace selector in the app header.",
+          "artifacts": ["Workspace: demo-saas"],
+          "expect": "Workspace label updates, but no backend calls are made."
+        },
+        {
+          "title": "Import Host Snapshot",
+          "details": "From the Marketplace, add the Recon Notebook module and tag it with 'saas-demo'.",
+          "artifacts": ["Recon Notebook", "tag: saas-demo"],
+          "expect": "Script tag persistence confirms offline storage."
+        },
+        {
+          "title": "Run TLS Check",
+          "details": "Switch to SSL Checker to review the expired certificate metadata bundled with the dataset.",
+          "artifacts": ["*.demo-saas.local", "TLS 1.0"],
+          "expect": "Output highlights deprecated cipher suites from fixtures only."
+        }
+      ]
+    }
+  ],
+  "commandBuilder": {
+    "title": "Safe Command Builder",
+    "description": "Assemble Recon-ng console commands backed by sanitized lab inputs. These never execute live network actions.",
+    "commands": [
+      {
+        "id": "dns-enum",
+        "title": "DNS Enumeration",
+        "description": "Load the google_site module with an approved lab target.",
+        "placeholders": [
+          {
+            "token": "{TARGET}",
+            "label": "Target Domain",
+            "values": ["example.com", "shop.example.com", "demo-saas.local"],
+            "default": "shop.example.com",
+            "helperText": "Values map to the canned DNS fixture shipped with the simulator."
+          }
+        ],
+        "steps": [
+          "recon-ng > workspaces load demo",
+          "recon-ng > modules load recon/domains-hosts/google_site",
+          "recon-ng (google_site) > set SOURCE {TARGET}",
+          "recon-ng (google_site) > run",
+          "recon-ng (google_site) > show hosts"
+        ],
+        "safeOutput": "Hosts table fills with sanitized entries for {TARGET} including 93.184.216.34."
+      },
+      {
+        "id": "whois-enrich",
+        "title": "WHOIS Enrichment",
+        "description": "Demonstrate contact discovery with the offline WHOIS fixture.",
+        "placeholders": [
+          {
+            "token": "{DOMAIN}",
+            "label": "Domain",
+            "values": ["example.com", "demo-saas.local"],
+            "default": "example.com",
+            "helperText": "Uses registrar metadata authored for training."
+          }
+        ],
+        "steps": [
+          "recon-ng > modules load recon/domains-contacts/whois_pocs",
+          "recon-ng (whois_pocs) > set DOMAIN {DOMAIN}",
+          "recon-ng (whois_pocs) > run",
+          "recon-ng (whois_pocs) > show contacts"
+        ],
+        "safeOutput": "Contacts table lists Example Corp placeholders without touching the public WHOIS service."
+      },
+      {
+        "id": "reverse-ip",
+        "title": "Reverse IP Lookup",
+        "description": "Preview reverse IP relationships using the bundled dataset.",
+        "placeholders": [
+          {
+            "token": "{IP}",
+            "label": "IP Address",
+            "values": ["93.184.216.34", "203.0.113.10"],
+            "default": "93.184.216.34",
+            "helperText": "Addresses are from documentation ranges reserved for examples."
+          }
+        ],
+        "steps": [
+          "recon-ng > modules load recon/hosts-hosts/reverse_resolve",
+          "recon-ng (reverse_resolve) > set HOST {IP}",
+          "recon-ng (reverse_resolve) > run",
+          "recon-ng (reverse_resolve) > show hosts"
+        ],
+        "safeOutput": "Workspace gains demo hostnames mapped to {IP} for storytelling purposes."
+      }
+    ]
+  }
+}

@@ -3,6 +3,7 @@ import React, {
   useEffect,
   useRef,
   useMemo,
+  useCallback,
 } from 'react';
 import dynamic from 'next/dynamic';
 import usePersistentState from '../../../hooks/usePersistentState';
@@ -133,6 +134,33 @@ const createWorkspace = (index) => ({
   },
 });
 
+const normalizeMarketplaceModule = (module) =>
+  typeof module === 'string'
+    ? { name: module }
+    : { ...module, name: module.name };
+
+const getInitialPlaceholderValues = (command) => {
+  const values = {};
+  (command?.placeholders || []).forEach((placeholder) => {
+    values[placeholder.token] =
+      placeholder.default ?? placeholder.values?.[0] ?? '';
+  });
+  return values;
+};
+
+const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const applyPlaceholders = (text, placeholders, values) => {
+  if (!text) return '';
+  let result = text;
+  (placeholders || []).forEach((placeholder) => {
+    const token = escapeRegExp(placeholder.token);
+    const value = values[placeholder.token] ?? '';
+    result = result.replace(new RegExp(token, 'g'), value);
+  });
+  return result;
+};
+
 const ReconNG = () => {
   const { allowNetwork } = useSettings();
   const [selectedModule, setSelectedModule] = useState(modules[0]);
@@ -141,6 +169,9 @@ const ReconNG = () => {
   const [useLiveData, setUseLiveData] = useState(false);
   const [view, setView] = useState('run');
   const [marketplace, setMarketplace] = useState([]);
+  const [dataset, setDataset] = useState(null);
+  const [selectedCommandId, setSelectedCommandId] = useState(null);
+  const [commandValues, setCommandValues] = useState({});
   const [scriptTags, setScriptTags] = usePersistentState('reconng-script-tags', {});
   const [tagInputs, setTagInputs] = useState({});
   const [apiKeys, setApiKeys] = usePersistentState('reconng-api-keys', {});
@@ -153,7 +184,7 @@ const ReconNG = () => {
   const [chainData, setChainData] = useState(null);
   const cyRef = useRef(null);
 
-  const currentWorkspace = workspaces[activeWs];
+  const currentWorkspace = workspaces[activeWs] || workspaces[0];
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -174,7 +205,21 @@ const ReconNG = () => {
   useEffect(() => {
     fetch('/reconng-marketplace.json')
       .then((r) => r.json())
-      .then((d) => setMarketplace(d.modules || []))
+      .then((d) => setMarketplace((d.modules || []).map(normalizeMarketplaceModule)))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch('/reconng-dataset.json')
+      .then((r) => r.json())
+      .then((d) => {
+        setDataset(d);
+        const commands = d.commandBuilder?.commands || [];
+        if (commands.length > 0) {
+          setSelectedCommandId(commands[0].id);
+          setCommandValues(getInitialPlaceholderValues(commands[0]));
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -217,7 +262,56 @@ const ReconNG = () => {
     setFocusedNodeIndex(0);
   }, [currentWorkspace.graph, prefersReducedMotion]);
 
-  const allModules = useMemo(() => [...modules, ...marketplace], [marketplace]);
+  const marketplaceNames = useMemo(
+    () => marketplace.map((item) => item.name).filter(Boolean),
+    [marketplace],
+  );
+
+  const allModules = useMemo(
+    () => [...modules, ...marketplaceNames],
+    [marketplaceNames],
+  );
+
+  const selectedCommand = useMemo(() => {
+    if (!dataset?.commandBuilder?.commands) return null;
+    return (
+      dataset.commandBuilder.commands.find((command) => command.id === selectedCommandId) || null
+    );
+  }, [dataset, selectedCommandId]);
+
+  const commandPreview = useMemo(() => {
+    if (!selectedCommand) return '';
+    return (selectedCommand.steps || [])
+      .map((step) => applyPlaceholders(step, selectedCommand.placeholders, commandValues))
+      .join('\n');
+  }, [selectedCommand, commandValues]);
+
+  const safeOutputPreview = useMemo(() => {
+    if (!selectedCommand?.safeOutput) return '';
+    return applyPlaceholders(
+      selectedCommand.safeOutput,
+      selectedCommand.placeholders,
+      commandValues,
+    );
+  }, [selectedCommand, commandValues]);
+
+  const handleCommandSelect = useCallback(
+    (commandId) => {
+      setSelectedCommandId(commandId);
+      const commands = dataset?.commandBuilder?.commands || [];
+      const nextCommand = commands.find((command) => command.id === commandId);
+      if (nextCommand) {
+        setCommandValues(getInitialPlaceholderValues(nextCommand));
+      } else {
+        setCommandValues({});
+      }
+    },
+    [dataset],
+  );
+
+  const handlePlaceholderChange = useCallback((token, value) => {
+    setCommandValues((prev) => ({ ...prev, [token]: value }));
+  }, []);
 
   const stylesheet = useMemo(
     () => [
@@ -473,6 +567,13 @@ const ReconNG = () => {
         </button>
         <button
           type="button"
+          onClick={() => setView('playbooks')}
+          className={`px-2 py-1 ${view === 'playbooks' ? 'bg-blue-600' : 'bg-gray-800'}`}
+        >
+          Playbooks
+        </button>
+        <button
+          type="button"
           onClick={() => setView('reports')}
           className={`px-2 py-1 ${view === 'reports' ? 'bg-blue-600' : 'bg-gray-800'}`}
         >
@@ -493,13 +594,26 @@ const ReconNG = () => {
           Marketplace
         </button>
       </div>
+      {dataset?.labMessage && (
+        <div
+          className="mb-4 bg-yellow-900/60 border border-yellow-700 text-yellow-100 text-sm rounded px-3 py-2"
+          role="note"
+        >
+          {dataset.labMessage}
+        </div>
+      )}
       {view === 'run' && (
         <>
           <div className="flex gap-2 mb-2">
+            <label htmlFor="reconng-module-select" className="sr-only">
+              Module
+            </label>
             <select
+              id="reconng-module-select"
               value={selectedModule}
               onChange={(e) => setSelectedModule(e.target.value)}
               className="bg-gray-800 px-2 py-1"
+              aria-label="Module"
             >
               {allModules.map((m) => (
                 <option key={m} value={m}>
@@ -507,18 +621,24 @@ const ReconNG = () => {
                 </option>
               ))}
             </select>
+            <label htmlFor="reconng-target-input" className="sr-only">
+              Lab target (domain or IP)
+            </label>
             <input
+              id="reconng-target-input"
               type="text"
               value={target}
               onChange={(e) => setTarget(e.target.value)}
-              placeholder="Target"
+              placeholder="Lab target (domain or IP)"
               className="flex-1 bg-gray-800 px-2 py-1"
+              aria-label="Lab target (domain or IP)"
             />
             <label className="flex items-center gap-1 text-xs">
               <input
                 type="checkbox"
                 checked={useLiveData}
                 onChange={(e) => setUseLiveData(e.target.checked)}
+                aria-label="Enable live fetch"
               />
               Live fetch
             </label>
@@ -574,6 +694,104 @@ const ReconNG = () => {
               </button>
             </div>
           )}
+          {dataset?.commandBuilder && (
+            <section className="mt-4 bg-gray-800/80 border border-gray-700 rounded p-3" aria-labelledby="reconng-command-builder">
+              <div className="flex flex-col gap-3">
+                <div>
+                  <h3 id="reconng-command-builder" className="text-sm font-semibold">
+                    {dataset.commandBuilder.title || 'Command Builder'}
+                  </h3>
+                  {dataset.commandBuilder.description && (
+                    <p className="text-xs text-gray-300 mt-1">
+                      {dataset.commandBuilder.description}
+                    </p>
+                  )}
+                </div>
+                {(dataset.commandBuilder.commands || []).length > 0 && (
+                  <div className="flex flex-col gap-1">
+                    <label
+                      htmlFor="reconng-command-select"
+                      className="text-xs font-semibold uppercase tracking-wide"
+                    >
+                      Scenario
+                    </label>
+                    <select
+                      id="reconng-command-select"
+                      value={selectedCommandId || ''}
+                      onChange={(e) => handleCommandSelect(e.target.value)}
+                      className="bg-gray-900 border border-gray-700 px-2 py-1 text-sm"
+                    >
+                      {(dataset.commandBuilder.commands || []).map((command) => (
+                        <option key={command.id} value={command.id}>
+                          {command.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {selectedCommand && (
+                  <div className="flex flex-col gap-3">
+                    {selectedCommand.description && (
+                      <p className="text-xs text-gray-300">{selectedCommand.description}</p>
+                    )}
+                    {(selectedCommand.placeholders || []).map((placeholder) => {
+                      const placeholderId = `placeholder-${
+                        placeholder.token.replace(/[^a-z0-9_-]/gi, '').toLowerCase() || 'value'
+                      }`;
+                      return (
+                        <div key={placeholder.token} className="flex flex-col gap-1">
+                          <label
+                            htmlFor={placeholderId}
+                            className="text-xs font-semibold uppercase tracking-wide"
+                          >
+                            {placeholder.label}
+                          </label>
+                          {placeholder.values?.length ? (
+                            <select
+                              id={placeholderId}
+                              value={commandValues[placeholder.token] || ''}
+                              onChange={(e) => handlePlaceholderChange(placeholder.token, e.target.value)}
+                              className="bg-gray-900 border border-gray-700 px-2 py-1 text-sm"
+                              aria-label={placeholder.label}
+                            >
+                              {placeholder.values.map((value) => (
+                                <option key={value} value={value}>
+                                  {value}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              id={placeholderId}
+                              type="text"
+                              value={commandValues[placeholder.token] || ''}
+                              onChange={(e) => handlePlaceholderChange(placeholder.token, e.target.value)}
+                              className="bg-gray-900 border border-gray-700 px-2 py-1 text-sm"
+                              aria-label={placeholder.label}
+                            />
+                          )}
+                          {placeholder.helperText && (
+                            <p className="text-[11px] text-gray-400">{placeholder.helperText}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                    <div>
+                      <h4 className="text-xs font-semibold uppercase tracking-wide mb-1">Console steps</h4>
+                      <pre className="bg-black border border-gray-700 text-xs p-2 whitespace-pre-wrap" aria-live="polite">
+                        {commandPreview}
+                      </pre>
+                    </div>
+                    {safeOutputPreview && (
+                      <p className="text-xs text-green-300" aria-live="polite">
+                        {safeOutputPreview}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
           <div role="status" aria-live="polite" className="sr-only">
             {ariaMessage}
           </div>
@@ -597,74 +815,152 @@ const ReconNG = () => {
           </div>
         </>
       )}
+      {view === 'playbooks' && (
+        <div className="flex-1 overflow-auto space-y-4 pr-1">
+          {dataset?.playbooks?.length ? (
+            dataset.playbooks.map((playbook) => (
+              <section
+                key={playbook.id}
+                className="bg-gray-800/80 border border-gray-700 rounded p-3"
+                aria-labelledby={`playbook-${playbook.id}`}
+              >
+                <h3 id={`playbook-${playbook.id}`} className="text-sm font-semibold">
+                  {playbook.title}
+                </h3>
+                {playbook.description && (
+                  <p className="text-xs text-gray-300 mt-1">{playbook.description}</p>
+                )}
+                <ol className="list-decimal pl-5 text-xs text-gray-200 space-y-2 mt-3">
+                  {(playbook.steps || []).map((step, idx) => (
+                    <li key={step.title || `step-${idx}`} className="space-y-1">
+                      <p className="font-semibold text-xs text-white">{step.title}</p>
+                      {step.details && <p className="text-xs text-gray-300">{step.details}</p>}
+                      {step.artifacts?.length ? (
+                        <p className="text-[11px] text-gray-400">
+                          <span className="font-semibold text-gray-300">Artifacts:</span>{' '}
+                          {step.artifacts.join(', ')}
+                        </p>
+                      ) : null}
+                      {step.expect && (
+                        <p className="text-[11px] text-gray-400">
+                          <span className="font-semibold text-gray-300">Expected result:</span>{' '}
+                          {step.expect}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ))
+          ) : (
+            <p className="text-sm text-gray-300">Playbook data failed to load. Refresh to retry.</p>
+          )}
+        </div>
+      )}
       {view === 'reports' && <ReportTemplates />}
       {view === 'settings' && (
         <div className="flex-1 overflow-auto">
-          {allModules.map((m) => (
-            <div key={m} className="mb-2">
-              <label className="block mb-1">{`${m} API Key`}</label>
-              <div className="flex">
-                <input
-                  type={showApiKeys[m] ? 'text' : 'password'}
-                  value={apiKeys[m] || ''}
-                  onChange={(e) => setApiKeys({ ...apiKeys, [m]: e.target.value })}
-                  className="flex-1 bg-gray-800 px-2 py-1"
-                  placeholder={`${m} API Key`}
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowApiKeys({ ...showApiKeys, [m]: !showApiKeys[m] })
-                  }
-                  className="ml-2 px-2 py-1 bg-gray-700"
-                >
-                  {showApiKeys[m] ? 'Hide' : 'Show'}
-                </button>
+          {allModules.map((m) => {
+            const apiKeyId = `api-key-${m.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+            return (
+              <div key={m} className="mb-2">
+                <label className="block mb-1" htmlFor={apiKeyId}>{`${m} API Key`}</label>
+                <div className="flex">
+                  <input
+                    id={apiKeyId}
+                    type={showApiKeys[m] ? 'text' : 'password'}
+                    value={apiKeys[m] || ''}
+                    onChange={(e) => setApiKeys({ ...apiKeys, [m]: e.target.value })}
+                    className="flex-1 bg-gray-800 px-2 py-1"
+                    placeholder={`${m} API Key`}
+                    aria-label={`${m} API Key`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowApiKeys({ ...showApiKeys, [m]: !showApiKeys[m] })
+                    }
+                    className="ml-2 px-2 py-1 bg-gray-700"
+                  >
+                    {showApiKeys[m] ? 'Hide' : 'Show'}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
       {view === 'marketplace' && (
-        <ul className="list-disc pl-5">
-          {marketplace.map((m) => (
-            <li key={m} className="mb-2">
-              <div className="flex items-center gap-2">
-                <span>{m}</span>
-                <input
-                  type="text"
-                  value={tagInputs[m] || ''}
-                  onChange={(e) =>
-                    setTagInputs({ ...tagInputs, [m]: e.target.value })
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && tagInputs[m]) {
-                      const tag = tagInputs[m].trim();
-                      if (tag) {
-                        setScriptTags({
-                          ...scriptTags,
-                          [m]: [...(scriptTags[m] || []), tag],
-                        });
-                      }
-                      setTagInputs({ ...tagInputs, [m]: '' });
-                    }
-                  }}
-                  placeholder={`Tag ${m}`}
-                  className="bg-gray-800 px-1 py-0.5 text-xs"
-                  aria-label={`Tag ${m}`}
-                />
-              </div>
-              {(scriptTags[m] || []).length > 0 && (
-                <div className="mt-1 flex gap-1 flex-wrap">
-                  {scriptTags[m].map((t) => (
-                    <span key={t} className="bg-gray-700 px-1 text-xs">
-                      {t}
-                    </span>
-                  ))}
+        <ul className="list-disc pl-5 space-y-3 pr-1 overflow-auto">
+          {marketplace.map((module) => {
+            const moduleKey = module.name;
+            const tagsForModule = scriptTags[moduleKey] || [];
+            return (
+              <li key={moduleKey} className="bg-gray-800/60 border border-gray-700 rounded p-3 list-none">
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h4 className="font-semibold text-sm">{module.name}</h4>
+                      {module.summary && (
+                        <p className="text-xs text-gray-300 mt-1">{module.summary}</p>
+                      )}
+                    </div>
+                    {module.recommendedTags?.length ? (
+                      <div className="flex flex-wrap gap-1" aria-label="Recommended tags">
+                        {module.recommendedTags.map((tag) => (
+                          <span key={tag} className="bg-gray-700 px-1.5 py-0.5 text-[11px] rounded">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                  {module.simulatedSteps?.length ? (
+                    <ol className="list-decimal pl-5 text-[11px] text-gray-400 space-y-1">
+                      {module.simulatedSteps.map((step) => (
+                        <li key={step}>{step}</li>
+                      ))}
+                    </ol>
+                  ) : null}
+                  <div className="flex items-center gap-2">
+                    <label htmlFor={`tag-${moduleKey}`} className="text-xs">
+                      Add tag
+                    </label>
+                    <input
+                      id={`tag-${moduleKey}`}
+                      type="text"
+                      value={tagInputs[moduleKey] || ''}
+                      onChange={(e) => setTagInputs({ ...tagInputs, [moduleKey]: e.target.value })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && tagInputs[moduleKey]) {
+                          const tag = tagInputs[moduleKey].trim();
+                          if (tag) {
+                            setScriptTags({
+                              ...scriptTags,
+                              [moduleKey]: [...tagsForModule, tag],
+                            });
+                          }
+                          setTagInputs({ ...tagInputs, [moduleKey]: '' });
+                        }
+                      }}
+                      placeholder={`Tag ${moduleKey}`}
+                      className="bg-gray-900 border border-gray-700 px-1 py-0.5 text-xs flex-1"
+                      aria-label={`Tag ${moduleKey}`}
+                    />
+                  </div>
+                  {tagsForModule.length > 0 && (
+                    <div className="mt-1 flex gap-1 flex-wrap">
+                      {tagsForModule.map((tag) => (
+                        <span key={tag} className="bg-gray-700 px-1 text-xs rounded">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

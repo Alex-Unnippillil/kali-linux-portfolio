@@ -1,3 +1,34 @@
 {
-  "modules": ["Port Scan", "SSL Checker"]
+  "modules": [
+    {
+      "name": "Port Scan",
+      "summary": "Simulated TCP scan over the Demo Retail perimeter with sanitized service banners.",
+      "simulatedSteps": [
+        "Initialize workspace with demo retail perimeter endpoints.",
+        "Run nmap --top-ports 20 against lab gateway (sanitized output only).",
+        "Populate findings table with canned ports 22, 80, 443 and a placeholder maintenance host."
+      ],
+      "recommendedTags": ["network", "lab-mode", "demo"]
+    },
+    {
+      "name": "SSL Checker",
+      "summary": "Offline TLS reporting module seeded with expired certificate metadata for training.",
+      "simulatedSteps": [
+        "Load certificate chain JSON from local fixtures.",
+        "Highlight mismatched hostnames and deprecated ciphers from the dataset.",
+        "Surface remediation guidance sourced from documentation snippets."
+      ],
+      "recommendedTags": ["tls", "compliance", "demo"]
+    },
+    {
+      "name": "Recon Notebook",
+      "summary": "Templated note-taking module with pre-authored sections for scope, findings, and next actions.",
+      "simulatedSteps": [
+        "Bootstrap markdown notebook with scope statement from the fixtures.",
+        "Insert quick links to canned DNS, WHOIS, and reverse IP exports.",
+        "Provide follow-up checklist tailored to the sanitized dataset."
+      ],
+      "recommendedTags": ["reporting", "workflow"]
+    }
+  ]
 }
