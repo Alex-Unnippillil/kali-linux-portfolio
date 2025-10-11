@@ -18,7 +18,8 @@ export default class Ubuntu extends Component {
 			booting_screen: true,
 			shutDownScreen: false
 		};
-		this.bootScreenLoadHandler = null;
+                this.bootScreenLoadHandler = null;
+                this.bootSequenceTimeoutId = null;
 	}
 
 	componentDidMount() {
@@ -29,12 +30,19 @@ export default class Ubuntu extends Component {
 		this.detachBootScreenLoadHandler();
 	}
 
-	detachBootScreenLoadHandler = () => {
-		if (typeof window === 'undefined' || !this.bootScreenLoadHandler) return;
+        detachBootScreenLoadHandler = () => {
+                if (typeof window === 'undefined') return;
 
-		window.removeEventListener('load', this.bootScreenLoadHandler);
-		this.bootScreenLoadHandler = null;
-	};
+                if (this.bootScreenLoadHandler) {
+                        window.removeEventListener('load', this.bootScreenLoadHandler);
+                        this.bootScreenLoadHandler = null;
+                }
+
+                if (this.bootSequenceTimeoutId) {
+                        window.clearTimeout(this.bootSequenceTimeoutId);
+                        this.bootSequenceTimeoutId = null;
+                }
+        };
 
 	hideBootScreen = () => {
 		this.setState({ booting_screen: false });
@@ -43,19 +51,42 @@ export default class Ubuntu extends Component {
 	waitForBootSequence = () => {
 		if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
-		const finalizeBoot = () => {
-			this.hideBootScreen();
-			this.detachBootScreenLoadHandler();
-		};
+                const finalizeBoot = () => {
+                        this.hideBootScreen();
+                        this.detachBootScreenLoadHandler();
+                };
 
-		if (document.readyState === 'complete') {
-			finalizeBoot();
-		} else {
-			this.detachBootScreenLoadHandler();
-			this.bootScreenLoadHandler = finalizeBoot;
-			window.addEventListener('load', this.bootScreenLoadHandler, { once: true });
-		}
-	};
+                const runFinalizeInNextFrame = () => {
+                        if (typeof window === 'undefined' || this.state.booting_screen === false) return;
+
+                        const schedule =
+                                typeof window.requestAnimationFrame === 'function'
+                                        ? window.requestAnimationFrame.bind(window)
+                                        : (cb) => window.setTimeout(cb, 0);
+
+                        schedule(finalizeBoot);
+                };
+
+                this.detachBootScreenLoadHandler();
+
+                if (document.readyState === 'complete') {
+                        runFinalizeInNextFrame();
+                        return;
+                }
+
+                this.bootScreenLoadHandler = () => {
+                        if (this.bootSequenceTimeoutId) {
+                                window.clearTimeout(this.bootSequenceTimeoutId);
+                                this.bootSequenceTimeoutId = null;
+                        }
+                        runFinalizeInNextFrame();
+                };
+                window.addEventListener('load', this.bootScreenLoadHandler, { once: true });
+
+                this.bootSequenceTimeoutId = window.setTimeout(() => {
+                        runFinalizeInNextFrame();
+                }, 2000);
+        };
 
 	getLocalData = () => {
 		// Get Previously selected Background Image
