@@ -110,7 +110,7 @@ All arcade-style and puzzle titles share the same readiness gap: implement canva
 | 2048 | 2048 | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | snake | Snake | Core maintainers | **Ready** – shared canvas loop, pause/reset/audio toggles, and persistent high score shipped | Game engine |
 | memory | Memory | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
-| minesweeper | Minesweeper | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
+| minesweeper | Minesweeper | Core maintainers | **Ready** – shared canvas/overlay wired up with documented difficulty presets | Game engine |
 | pong | Pong | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | pacman | Pacman | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | car-racer | Car Racer | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |

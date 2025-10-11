@@ -1,7 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import GameLayout from './GameLayout';
+import Overlay from './Games/common/Overlay';
 import usePersistedState from '../../hooks/usePersistedState';
+import useCanvasResize from '../../hooks/useCanvasResize';
+import useGameAudio from '../../hooks/useGameAudio';
 import calculate3BV from '../../games/minesweeper/metrics';
+import generateBoard from '../../games/minesweeper/generator';
 import { serializeBoard, deserializeBoard } from '../../games/minesweeper/save';
 import { getDailySeed } from '../../utils/dailySeed';
 
@@ -11,10 +15,15 @@ import { getDailySeed } from '../../utils/dailySeed';
  * and renders to a canvas element.
  */
 
-const BOARD_SIZE = 8;
-const MINES_COUNT = 10;
 const CELL_SIZE = 32;
-const CANVAS_SIZE = BOARD_SIZE * CELL_SIZE;
+
+const DIFFICULTIES = {
+  beginner: { label: 'Beginner', size: 8, mines: 10 },
+  intermediate: { label: 'Intermediate', size: 16, mines: 40 },
+  expert: { label: 'Expert', size: 22, mines: 99 },
+};
+
+const DEFAULT_DIFFICULTY = 'beginner';
 
 const numberColors = [
   '#0000ff',
@@ -26,14 +35,6 @@ const numberColors = [
   '#000000',
   '#808080',
 ];
-
-// simple seeded pseudo random generator
-const mulberry32 = (a) => {
-  let t = (a += 0x6d2b79f5);
-  t = Math.imul(t ^ (t >>> 15), t | 1);
-  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-};
 
 // convert string seed to 32-bit number
 const hashSeed = (str) => {
@@ -47,87 +48,16 @@ const hashSeed = (str) => {
 const cloneBoard = (board) =>
   board.map((row) => row.map((cell) => ({ ...cell })));
 
-const generateBoard = (seed, sx, sy) => {
-  const board = Array.from({ length: BOARD_SIZE }, () =>
-    Array.from({ length: BOARD_SIZE }, () => ({
-      mine: false,
-      revealed: false,
-      flagged: false,
-      question: false,
-      adjacent: 0,
-    })),
-  );
-
-  const rng = mulberry32(seed);
-  const indices = Array.from(
-    { length: BOARD_SIZE * BOARD_SIZE },
-    (_, i) => i,
-  );
-
-  // Fisher-Yates shuffle using seeded rng
-  for (let i = indices.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [indices[i], indices[j]] = [indices[j], indices[i]];
-  }
-
-  const safe = new Set();
-  for (let dx = -1; dx <= 1; dx++) {
-    for (let dy = -1; dy <= 1; dy++) {
-      const nx = sx + dx;
-      const ny = sy + dy;
-      if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE) {
-        safe.add(nx * BOARD_SIZE + ny);
-      }
-    }
-  }
-
-  let placed = 0;
-  for (const idx of indices) {
-    if (placed >= MINES_COUNT) break;
-    if (safe.has(idx)) continue;
-    const x = Math.floor(idx / BOARD_SIZE);
-    const y = idx % BOARD_SIZE;
-    board[x][y].mine = true;
-    placed++;
-  }
-
-  const dirs = [-1, 0, 1];
-  for (let x = 0; x < BOARD_SIZE; x++) {
-    for (let y = 0; y < BOARD_SIZE; y++) {
-      if (board[x][y].mine) continue;
-      let count = 0;
-      dirs.forEach((dx) =>
-        dirs.forEach((dy) => {
-          if (dx === 0 && dy === 0) return;
-          const nx = x + dx;
-          const ny = y + dy;
-          if (
-            nx >= 0 &&
-            nx < BOARD_SIZE &&
-            ny >= 0 &&
-            ny < BOARD_SIZE &&
-            board[nx][ny].mine
-          ) {
-            count++;
-          }
-        }),
-      );
-      board[x][y].adjacent = count;
-    }
-  }
-  return board;
-};
-
 
 const checkWin = (board) =>
   board.flat().every((cell) => cell.revealed || cell.mine);
 
 const calculateRiskMap = (board) => {
-  const risk = Array.from({ length: BOARD_SIZE }, () =>
-    Array(BOARD_SIZE).fill(0),
-  );
-  for (let x = 0; x < BOARD_SIZE; x++) {
-    for (let y = 0; y < BOARD_SIZE; y++) {
+  if (!board) return [];
+  const size = board.length;
+  const risk = Array.from({ length: size }, () => Array(size).fill(0));
+  for (let x = 0; x < size; x++) {
+    for (let y = 0; y < size; y++) {
       const cell = board[x][y];
       if (cell.revealed || cell.flagged) continue;
       let maxProb = 0;
@@ -136,7 +66,7 @@ const calculateRiskMap = (board) => {
           if (dx === 0 && dy === 0) continue;
           const nx = x + dx;
           const ny = y + dy;
-          if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE) continue;
+          if (nx < 0 || nx >= size || ny < 0 || ny >= size) continue;
           const nCell = board[nx][ny];
           if (!nCell.revealed || nCell.mine || nCell.adjacent === 0) continue;
           let flagged = 0;
@@ -146,13 +76,7 @@ const calculateRiskMap = (board) => {
               if (ox === 0 && oy === 0) continue;
               const mx = nx + ox;
               const my = ny + oy;
-              if (
-                mx < 0 ||
-                mx >= BOARD_SIZE ||
-                my < 0 ||
-                my >= BOARD_SIZE
-              )
-                continue;
+              if (mx < 0 || mx >= size || my < 0 || my >= size) continue;
               const around = board[mx][my];
               if (around.flagged) flagged++;
               if (!around.revealed && !around.flagged) hidden++;
@@ -171,9 +95,21 @@ const calculateRiskMap = (board) => {
   return risk;
 };
 
+const bestTimeKey = (difficulty) => `minesweeper-best-time:${difficulty}`;
+
+const loadBestTimes = () => {
+  if (typeof window === 'undefined') return {};
+  return Object.keys(DIFFICULTIES).reduce((acc, key) => {
+    const raw = window.localStorage.getItem(bestTimeKey(key));
+    if (raw) {
+      const value = parseFloat(raw);
+      if (!Number.isNaN(value)) acc[key] = value;
+    }
+    return acc;
+  }, {});
+};
+
 const Minesweeper = () => {
-  const canvasRef = useRef(null);
-  const audioRef = useRef(null);
   const workerRef = useRef(null);
   const initWorker = () => {
     if (typeof window !== 'undefined' && typeof Worker === 'function') {
@@ -190,16 +126,19 @@ const Minesweeper = () => {
   const [shareCode, setShareCode] = useState('');
   const [startTime, setStartTime] = useState(null);
   const [elapsed, setElapsed] = useState(0);
-  const [bestTime, setBestTime] = useState(null);
+  const [bestTimes, setBestTimes] = useState(loadBestTimes);
   const [bv, setBV] = useState(0);
   const [bvps, setBVPS] = useState(null);
   const [codeInput, setCodeInput] = useState('');
   const [flags, setFlags] = useState(0);
   const [paused, setPaused] = useState(false);
   const [pauseStart, setPauseStart] = useState(0);
-  const [sound, setSound] = useState(true);
   const [ariaMessage, setAriaMessage] = useState('');
   const prefersReducedMotion = useRef(false);
+  const [difficulty, setDifficulty] = usePersistedState(
+    'minesweeperDifficulty',
+    DEFAULT_DIFFICULTY,
+  );
   const [showRisk, setShowRisk] = usePersistedState(
     'minesweeperAssist',
     false,
@@ -218,6 +157,36 @@ const Minesweeper = () => {
   const rightDown = useRef(false);
   const chorded = useRef(false);
   const flagAnim = useRef({});
+  const { context: audioContext, muted, setMuted } = useGameAudio();
+
+  const activeConfig = useMemo(
+    () => DIFFICULTIES[difficulty] || DIFFICULTIES[DEFAULT_DIFFICULTY],
+    [difficulty],
+  );
+  const boardSize = board ? board.length : activeConfig.size;
+  const canvasSize = boardSize * CELL_SIZE;
+  const canvasRef = useCanvasResize(canvasSize, canvasSize);
+  const minesCount = activeConfig.mines;
+  const currentBest = bestTimes[difficulty] ?? null;
+  const bestSummary = useMemo(
+    () =>
+      Object.entries(DIFFICULTIES).map(([key, cfg]) => ({
+        key,
+        label: cfg.label,
+        time: bestTimes[key] ?? null,
+      })),
+    [bestTimes],
+  );
+  const cellFromClient = (clientX, clientY) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return { x: 0, y: 0 };
+    const col = Math.floor(((clientX - rect.left) / rect.width) * boardSize);
+    const row = Math.floor(((clientY - rect.top) / rect.height) * boardSize);
+    const clamp = (value) => Math.min(boardSize - 1, Math.max(0, value));
+    return { x: clamp(row), y: clamp(col) };
+  };
 
   useEffect(() => {
     initWorker();
@@ -226,17 +195,13 @@ const Minesweeper = () => {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const best = localStorage.getItem('minesweeper-best-time');
-      if (best) setBestTime(parseFloat(best));
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('minesweeper-state');
       if (saved) {
         try {
           const data = JSON.parse(saved);
+          if (data.difficulty && DIFFICULTIES[data.difficulty]) {
+            setDifficulty(data.difficulty);
+          }
           if (data.board) {
             const first = data.board[0]?.[0];
             setBoard(Array.isArray(first) ? deserializeBoard(data.board) : data.board);
@@ -249,8 +214,8 @@ const Minesweeper = () => {
           if (data.shareCode) setShareCode(data.shareCode);
           if (data.bv) setBV(data.bv);
           if (data.bvps !== undefined) setBVPS(data.bvps);
-          if (data.flags) setFlags(data.flags);
-          if (data.paused) setPaused(data.paused);
+          if (typeof data.flags === 'number') setFlags(data.flags);
+          if (typeof data.paused === 'boolean') setPaused(data.paused);
           if (data.status === 'playing' && !data.paused) {
             setStartTime(Date.now() - (data.elapsed || 0) * 1000);
             setElapsed(data.elapsed || 0);
@@ -268,6 +233,10 @@ const Minesweeper = () => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
+    const urlDifficulty = params.get('difficulty');
+    if (urlDifficulty && DIFFICULTIES[urlDifficulty]) {
+      setDifficulty(urlDifficulty);
+    }
     const urlSeed = params.get('seed');
     if (urlSeed) {
       const num = parseInt(urlSeed, 36);
@@ -293,15 +262,16 @@ const Minesweeper = () => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     params.set('seed', seed.toString(36));
+    params.set('difficulty', difficulty);
     window.history.replaceState(
       {},
       '',
       `${window.location.pathname}?${params.toString()}`,
     );
-  }, [seed]);
+  }, [seed, difficulty]);
 
   useEffect(() => {
-    if (status === 'playing' && !paused) {
+    if (status === 'playing' && !paused && startTime) {
       const interval = setInterval(() => {
         setElapsed((Date.now() - startTime) / 1000);
       }, 100);
@@ -325,13 +295,13 @@ const Minesweeper = () => {
     const ctx = canvas.getContext('2d');
     let frame;
     const draw = () => {
-      ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      ctx.clearRect(0, 0, canvasSize, canvasSize);
       ctx.font = '16px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const riskMap = showRisk && board ? calculateRiskMap(board) : null;
-      for (let x = 0; x < BOARD_SIZE; x++) {
-        for (let y = 0; y < BOARD_SIZE; y++) {
+      for (let x = 0; x < boardSize; x++) {
+        for (let y = 0; y < boardSize; y++) {
           const cell = board
             ? board[x][y]
             : {
@@ -401,22 +371,23 @@ const Minesweeper = () => {
       }
       if (paused && status === 'playing') {
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+        ctx.fillRect(0, 0, canvasSize, canvasSize);
         ctx.fillStyle = '#fff';
-        ctx.fillText('Paused', CANVAS_SIZE / 2, CANVAS_SIZE / 2);
+        ctx.fillText('Paused', canvasSize / 2, canvasSize / 2);
       }
       frame = requestAnimationFrame(draw);
     };
     draw();
     return () => cancelAnimationFrame(frame);
-    }, [board, status, paused, flags, showRisk, cursor, cursorVisible]);
+  }, [board, status, paused, flags, showRisk, cursor, cursorVisible, boardSize, canvasSize]);
 
   useEffect(() => {
     if (!useQuestionMarks && board) {
+      const size = board.length;
       const newBoard = cloneBoard(board);
       let changed = false;
-      for (let x = 0; x < BOARD_SIZE; x++) {
-        for (let y = 0; y < BOARD_SIZE; y++) {
+      for (let x = 0; x < size; x++) {
+        for (let y = 0; y < size; y++) {
           if (newBoard[x][y].question) {
             newBoard[x][y].question = false;
             changed = true;
@@ -441,18 +412,18 @@ const Minesweeper = () => {
           bvps,
           flags,
           paused,
+          difficulty,
         };
         localStorage.setItem('minesweeper-state', JSON.stringify(data));
         setHasSave(!!board);
       } catch {}
     }
-  }, [board, status, seed, shareCode, startTime, elapsed, bv, bvps, flags, paused]);
+  }, [board, status, seed, shareCode, startTime, elapsed, bv, bvps, flags, paused, difficulty]);
 
   const playSound = (type) => {
-    if (!sound || typeof window === 'undefined') return;
-    if (!audioRef.current)
-      audioRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    const ctx = audioRef.current;
+    if (muted || typeof window === 'undefined') return;
+    const ctx = audioContext;
+    if (!ctx) return;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'square';
@@ -473,9 +444,11 @@ const Minesweeper = () => {
       setBV(finalBV);
       setBVPS(time > 0 ? finalBV / time : finalBV);
       if (typeof window !== 'undefined') {
-        if (!bestTime || time < bestTime) {
-          setBestTime(time);
-          localStorage.setItem('minesweeper-best-time', time.toString());
+        const key = bestTimeKey(difficulty);
+        const current = bestTimes[difficulty];
+        if (!current || time < current) {
+          localStorage.setItem(key, time.toString());
+          setBestTimes((prev) => ({ ...prev, [difficulty]: time }));
         }
       }
     }
@@ -562,15 +535,21 @@ const Minesweeper = () => {
 
   const startGame = async (x, y) => {
     flagAnim.current = {};
-    const newBoard = generateBoard(seed, x, y);
+    const newBoard = generateBoard(seed, {
+      size: activeConfig.size,
+      mines: minesCount,
+      startX: x,
+      startY: y,
+    });
     setBoard(newBoard);
     setStatus('playing');
     setStartTime(Date.now());
-    setShareCode(`${seed.toString(36)}-${x}-${y}`);
+    setShareCode(`${seed.toString(36)}-${difficulty}-${x}-${y}`);
     setBV(calculate3BV(newBoard));
     setBVPS(null);
     setFlags(0);
     setPaused(false);
+    setPauseStart(0);
     const finalize = (count) => {
       setAriaMessage(`Revealed ${count} cells`);
       checkAndHandleWin(newBoard);
@@ -596,6 +575,7 @@ const Minesweeper = () => {
     }
 
     const newBoard = cloneBoard(board);
+    const size = newBoard.length;
     const cell = newBoard[x][y];
 
     if (cell.revealed) {
@@ -608,9 +588,9 @@ const Minesweeper = () => {
             const ny = y + dy;
             if (
               nx >= 0 &&
-              nx < BOARD_SIZE &&
+              nx < size &&
               ny >= 0 &&
-              ny < BOARD_SIZE &&
+              ny < size &&
               newBoard[nx][ny].flagged
             ) {
               flagged++;
@@ -625,9 +605,9 @@ const Minesweeper = () => {
               const ny = y + dy;
               if (
                 nx >= 0 &&
-                nx < BOARD_SIZE &&
+                nx < size &&
                 ny >= 0 &&
-                ny < BOARD_SIZE &&
+                ny < size &&
                 !newBoard[nx][ny].flagged
               ) {
                 const { hit, cells: revealed } = await computeRevealed(
@@ -732,6 +712,7 @@ const Minesweeper = () => {
   const handleChord = async (x, y) => {
     if (status !== 'playing' || paused || !board) return;
     const newBoard = cloneBoard(board);
+    const size = newBoard.length;
     const cell = newBoard[x][y];
     if (!cell.revealed || cell.adjacent === 0) return;
     let flagged = 0;
@@ -742,9 +723,9 @@ const Minesweeper = () => {
         const ny = y + dy;
         if (
           nx >= 0 &&
-          nx < BOARD_SIZE &&
+          nx < size &&
           ny >= 0 &&
-          ny < BOARD_SIZE &&
+          ny < size &&
           newBoard[nx][ny].flagged
         ) {
           flagged++;
@@ -759,9 +740,9 @@ const Minesweeper = () => {
         const ny = y + dy;
         if (
           nx >= 0 &&
-          nx < BOARD_SIZE &&
+          nx < size &&
           ny >= 0 &&
-          ny < BOARD_SIZE &&
+          ny < size &&
           !newBoard[nx][ny].flagged
         ) {
           const { hit, cells: revealed } = await computeRevealed(
@@ -791,9 +772,7 @@ const Minesweeper = () => {
   };
 
   const handleMouseDown = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const y = Math.floor((e.clientX - rect.left) / CELL_SIZE);
-    const x = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+    const { x, y } = cellFromClient(e.clientX, e.clientY);
     setCursor({ x, y });
     setCursorVisible(true);
     setFacePressed(true);
@@ -808,9 +787,7 @@ const Minesweeper = () => {
   };
 
   const handleMouseUp = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const y = Math.floor((e.clientX - rect.left) / CELL_SIZE);
-    const x = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+    const { x, y } = cellFromClient(e.clientX, e.clientY);
     setCursor({ x, y });
     setFacePressed(false);
     if (e.button === 0) {
@@ -836,9 +813,7 @@ const Minesweeper = () => {
   };
 
   const handleMouseMove = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const y = Math.floor((e.clientX - rect.left) / CELL_SIZE);
-    const x = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+    const { x, y } = cellFromClient(e.clientX, e.clientY);
     setCursor({ x, y });
     setCursorVisible(true);
   };
@@ -863,13 +838,13 @@ const Minesweeper = () => {
       setCursor((c) => ({ x: Math.max(0, c.x - 1), y: c.y }));
       setCursorVisible(true);
     } else if (e.key === 'ArrowDown') {
-      setCursor((c) => ({ x: Math.min(BOARD_SIZE - 1, c.x + 1), y: c.y }));
+      setCursor((c) => ({ x: Math.min(boardSize - 1, c.x + 1), y: c.y }));
       setCursorVisible(true);
     } else if (e.key === 'ArrowLeft') {
       setCursor((c) => ({ x: c.x, y: Math.max(0, c.y - 1) }));
       setCursorVisible(true);
     } else if (e.key === 'ArrowRight') {
-      setCursor((c) => ({ x: c.x, y: Math.min(BOARD_SIZE - 1, c.y + 1) }));
+      setCursor((c) => ({ x: c.x, y: Math.min(boardSize - 1, c.y + 1) }));
       setCursorVisible(true);
     } else if (e.key.toLowerCase() === 'f') {
       toggleFlag(cursor.x, cursor.y);
@@ -893,6 +868,7 @@ const Minesweeper = () => {
     setCodeInput('');
     setFlags(0);
     setPaused(false);
+    setPauseStart(0);
     setAriaMessage('');
     setFacePressed(false);
     setFaceBtnDown(false);
@@ -924,32 +900,49 @@ const Minesweeper = () => {
     setBVPS(null);
     setFlags(0);
     setPaused(false);
-    if (parts.length === 3) {
-      const x = parseInt(parts[1], 10);
-      const y = parseInt(parts[2], 10);
-      if (!Number.isNaN(x) && !Number.isNaN(y)) {
-        const newBoard = generateBoard(newSeed, x, y);
-        setBoard(newBoard);
-        setStatus('playing');
-        setStartTime(Date.now());
-        setShareCode(codeInput.trim());
-        setBV(calculate3BV(newBoard));
-        setFlags(0);
-        const finalize = (count) => {
-          setAriaMessage(`Revealed ${count} cells`);
-          checkAndHandleWin(newBoard);
-        };
-        if (prefersReducedMotion.current) {
-          const { cells } = await computeRevealed(newBoard, [[x, y]]);
-          cells.forEach(([cx, cy]) => {
-            newBoard[cx][cy].revealed = true;
-          });
-          setBoard(cloneBoard(newBoard));
-          finalize(cells.length);
-        } else {
-          revealWave(newBoard, x, y, finalize);
-        }
-      }
+    let diff = difficulty;
+    let coordIndex = 1;
+    if (parts.length >= 4 && DIFFICULTIES[parts[1]]) {
+      diff = parts[1];
+      coordIndex = 2;
+    }
+    if (parts.length <= coordIndex + 1) {
+      setCodeInput('');
+      return;
+    }
+    const x = parseInt(parts[coordIndex], 10);
+    const y = parseInt(parts[coordIndex + 1], 10);
+    if (Number.isNaN(x) || Number.isNaN(y)) {
+      setCodeInput('');
+      return;
+    }
+    if (diff !== difficulty) setDifficulty(diff);
+    const config = DIFFICULTIES[diff] || activeConfig;
+    const newBoard = generateBoard(newSeed, {
+      size: config.size,
+      mines: config.mines,
+      startX: x,
+      startY: y,
+    });
+    setBoard(newBoard);
+    setStatus('playing');
+    setStartTime(Date.now());
+    setShareCode(`${newSeed.toString(36)}-${diff}-${x}-${y}`);
+    setBV(calculate3BV(newBoard));
+    setFlags(0);
+    const finalize = (count) => {
+      setAriaMessage(`Revealed ${count} cells`);
+      checkAndHandleWin(newBoard);
+    };
+    if (prefersReducedMotion.current) {
+      const { cells } = await computeRevealed(newBoard, [[x, y]]);
+      cells.forEach(([cx, cy]) => {
+        newBoard[cx][cy].revealed = true;
+      });
+      setBoard(cloneBoard(newBoard));
+      finalize(cells.length);
+    } else {
+      revealWave(newBoard, x, y, finalize);
     }
     setCodeInput('');
   };
@@ -960,6 +953,9 @@ const Minesweeper = () => {
     if (!saved) return;
     try {
       const data = JSON.parse(saved);
+      if (data.difficulty && DIFFICULTIES[data.difficulty]) {
+        setDifficulty(data.difficulty);
+      }
       if (data.board) {
         const first = data.board[0]?.[0];
         setBoard(Array.isArray(first) ? deserializeBoard(data.board) : data.board);
@@ -972,8 +968,8 @@ const Minesweeper = () => {
       if (data.shareCode) setShareCode(data.shareCode);
       if (data.bv) setBV(data.bv);
       if (data.bvps !== undefined) setBVPS(data.bvps);
-      if (data.flags) setFlags(data.flags);
-      if (data.paused) setPaused(data.paused);
+      if (typeof data.flags === 'number') setFlags(data.flags);
+      if (typeof data.paused === 'boolean') setPaused(data.paused);
       if (data.status === 'playing' && !data.paused) {
         setStartTime(Date.now() - (data.elapsed || 0) * 1000);
         setElapsed(data.elapsed || 0);
@@ -986,18 +982,21 @@ const Minesweeper = () => {
     }
   };
 
-  const togglePause = () => {
-    if (status !== 'playing') return;
-    if (!paused) {
-      setPaused(true);
-      setPauseStart(Date.now());
-    } else {
-      setPaused(false);
-      setStartTime((s) => s + (Date.now() - pauseStart));
-    }
+  const pauseGame = () => {
+    if (status !== 'playing' || paused) return;
+    setPaused(true);
+    setPauseStart(Date.now());
   };
 
-  const toggleSound = () => setSound((s) => !s);
+  const resumeGame = () => {
+    if (status !== 'playing' || !paused) return;
+    const pausedAt = pauseStart;
+    setPaused(false);
+    setPauseStart(0);
+    if (startTime) {
+      setStartTime((s) => (s ? s + (Date.now() - pausedAt) : s));
+    }
+  };
 
   const face =
     status === 'won'
@@ -1011,43 +1010,61 @@ const Minesweeper = () => {
   return (
     <GameLayout gameId="minesweeper">
       <div className="relative h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
-      <div className="mb-2 flex items-center space-x-2">
-        <span>Seed:</span>
-        <span className="font-mono">{seed.toString(36)}</span>
-        {shareCode && (
+        <div className="absolute top-2 right-2 z-30">
+          <Overlay
+            paused={paused}
+            onPause={pauseGame}
+            onResume={resumeGame}
+            onReset={reset}
+            muted={muted}
+            onToggleSound={setMuted}
+          />
+        </div>
+        <div className="mb-2 flex items-center space-x-2">
+          <span>Seed:</span>
+          <span className="font-mono">{seed.toString(36)}</span>
+          {shareCode && (
+            <button
+              onClick={copyCode}
+              className="px-1 py-0.5 bg-gray-700 hover:bg-gray-600 rounded"
+            >
+              Copy Code
+            </button>
+          )}
+        </div>
+        <div className="mb-2 text-sm text-gray-300">
+          Difficulty: {activeConfig.label} ({activeConfig.size}×
+          {activeConfig.size}, {minesCount} mines)
+        </div>
+        <div className="mb-2 flex items-center space-x-2">
+          <input
+            className="px-1 text-black"
+            value={codeInput}
+            onChange={(e) => setCodeInput(e.target.value)}
+            placeholder="seed or share code"
+          />
           <button
-            onClick={copyCode}
+            onClick={loadFromCode}
             className="px-1 py-0.5 bg-gray-700 hover:bg-gray-600 rounded"
           >
-            Copy Code
+            Load
           </button>
-        )}
-      </div>
-      <div className="mb-2 flex items-center space-x-2">
-        <input
-          className="px-1 text-black"
-          value={codeInput}
-          onChange={(e) => setCodeInput(e.target.value)}
-          placeholder="seed or share code"
-        />
-        <button
-          onClick={loadFromCode}
-          className="px-1 py-0.5 bg-gray-700 hover:bg-gray-600 rounded"
-        >
-          Load
-        </button>
-      </div>
-      <div className="mb-2">Mines: {MINES_COUNT - flags}</div>
-      <div className="mb-2">
-        3BV: {bv}
-        {(status === 'won' || status === 'lost') && bvps !== null
-          ? ` | 3BV/s: ${bvps.toFixed(2)}`
-          : ''}
-        {` | Best: ${bestTime ? bestTime.toFixed(2) : '--'}s`}
-        {(status === 'won' || status === 'lost')
-          ? ` | Time: ${elapsed.toFixed(2)}s`
-          : ''}
-      </div>
+        </div>
+        <div className="mb-2">Mines left: {Math.max(minesCount - flags, 0)} / {minesCount}</div>
+        <div className="mb-2">
+          3BV: {bv}
+          {(status === 'won' || status === 'lost') && bvps !== null
+            ? ` | 3BV/s: ${bvps.toFixed(2)}`
+            : ''}
+          {` | Best (${activeConfig.label}): ${currentBest ? currentBest.toFixed(2) : '--'}s`}
+          {status !== 'ready' ? ` | Time: ${elapsed.toFixed(2)}s` : ''}
+        </div>
+        <div className="mb-2 text-xs text-gray-300">
+          PBs:{' '}
+          {bestSummary
+            .map(({ label, time }) => `${label}: ${time ? time.toFixed(2) : '--'}s`)
+            .join(' • ')}
+        </div>
       <div className="mb-2">
         <button
           className={`w-8 h-8 text-xl bg-gray-700 rounded border-2 ${faceBtnDown ? 'border-gray-400 translate-y-[1px]' : 'border-gray-600'}`}
@@ -1071,8 +1088,8 @@ const Minesweeper = () => {
       </div>
       <canvas
         ref={canvasRef}
-        width={CANVAS_SIZE}
-        height={CANVAS_SIZE}
+        width={canvasSize}
+        height={canvasSize}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseMove={handleMouseMove}
@@ -1105,18 +1122,6 @@ const Minesweeper = () => {
         )}
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={togglePause}
-        >
-          {paused ? 'Resume' : 'Pause'}
-        </button>
-        <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={toggleSound}
-        >
-          {sound ? 'Sound: On' : 'Sound: Off'}
-        </button>
-        <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={() => setShowSettings(true)}
         >
           Settings
@@ -1124,8 +1129,28 @@ const Minesweeper = () => {
       </div>
       {showSettings && (
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-gray-800 p-4 rounded">
+          <div className="bg-gray-800 p-4 rounded w-80">
             <h2 className="mb-2 text-center">Settings</h2>
+            <div className="mb-2 flex items-center">
+              <label className="w-40">Difficulty</label>
+              <select
+                className="bg-gray-700 text-white px-2 py-1 rounded"
+                value={difficulty}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  if (DIFFICULTIES[next]) {
+                    setDifficulty(next);
+                    reset();
+                  }
+                }}
+              >
+                {Object.entries(DIFFICULTIES).map(([key, cfg]) => (
+                  <option key={key} value={key}>
+                    {cfg.label} ({cfg.size}×{cfg.size}, {cfg.mines} mines)
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="mb-2 flex items-center">
               <label className="w-40">Question Marks</label>
               <input
@@ -1141,6 +1166,16 @@ const Minesweeper = () => {
                 checked={showRisk}
                 onChange={(e) => setShowRisk(e.target.checked)}
               />
+            </div>
+            <div className="mt-4 text-sm text-gray-300">
+              <div className="font-semibold mb-1">Personal Bests</div>
+              <ul className="space-y-1">
+                {bestSummary.map(({ key, label, time }) => (
+                  <li key={key}>
+                    {label}: {time ? `${time.toFixed(2)}s` : '--'}
+                  </li>
+                ))}
+              </ul>
             </div>
             <button
               className="mt-2 px-2 py-1 bg-blue-500"
