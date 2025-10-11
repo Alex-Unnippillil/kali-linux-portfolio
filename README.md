@@ -147,12 +147,15 @@ playwright/           # Playwright helpers for end-to-end testing
 | X / Twitter | `/apps/x` | Utility / Media |
 | Todoist | `/apps/todoist` | Utility / Media |
 | Gedit | `/apps/gedit` | Utility / Media (contact form) |
+| Input Lab | `/apps/input-lab` | Device diagnostics and input telemetry |
 | Settings | `/apps/settings` | Utility / Media |
 | Trash | `/apps/trash` | Utility / Media |
 | Project Gallery | `/apps/project-gallery` | Utility / Media |
 | Quote | `/apps/quote` | Utility / Media |
 
 The Spotify app lets users map moods to playlists, persist preferences in OPFS, and recall the last session automatically.
+
+See [`docs/input-lab.md`](./docs/input-lab.md) for detailed coverage notes on the Input Lab utility.
 
 ### Games
 | Game | Route |

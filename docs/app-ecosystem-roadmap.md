@@ -40,7 +40,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | qr | QR Tool | Core maintainers | **In progress** – camera selector and downloadable output | MediaDevices API |
 | ascii_art | ASCII Art | Core maintainers | **In progress** – text/image conversion pipeline | Canvas sampling |
 | quote | Quote | Core maintainers | **In progress** – offline JSON source and no-repeat option | Local JSON |
-| input-lab | Input Lab | Core maintainers | **Needs polish** – ensure device coverage (keyboard, mouse, gamepad) | Device APIs |
+| input-lab | Input Lab | Core maintainers | **Ready** – live coverage for keyboard, mouse, touch, and gamepad inputs | Device APIs |
 | subnet-calculator | Subnet Calculator | Core maintainers | **Needs polish** – validation UX and shared presets | Network calc utils |
 | sticky_notes | Sticky Notes | Core maintainers | **Needs polish** – confirm persistence model and drag handles | localStorage |
 | trash | Trash | Core maintainers | **In progress** – soft-delete metadata with restore/empty flows | Virtual filesystem metadata |
