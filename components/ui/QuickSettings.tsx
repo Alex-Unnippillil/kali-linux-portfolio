@@ -5,9 +5,11 @@ import usePersistentState from '../../hooks/usePersistentState';
 
 interface Props {
   open: boolean;
+  onReplayTour?: () => void;
+  tourActive?: boolean;
 }
 
-const QuickSettings = ({ open }: Props) => {
+const QuickSettings = ({ open, onReplayTour, tourActive }: Props) => {
   const [theme, setTheme] = usePersistentState('qs-theme', 'light');
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
@@ -58,6 +60,8 @@ const QuickSettings = ({ open }: Props) => {
       icon: <MotionIcon />,
     },
   ];
+
+  const replayDisabled = !onReplayTour || Boolean(tourActive);
 
   return (
     <div
@@ -169,6 +173,34 @@ const QuickSettings = ({ open }: Props) => {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/80">Desktop tour</p>
+            <p className="text-xs text-white/70">Replay the guided overview whenever you need a refresher.</p>
+          </div>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              if (replayDisabled) return;
+              onReplayTour?.();
+            }}
+            disabled={replayDisabled}
+            className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
+              replayDisabled
+                ? 'cursor-not-allowed border border-white/10 bg-white/10 text-white/50'
+                : 'border border-white/30 bg-white/90 text-slate-900 hover:bg-white'
+            }`}
+          >
+            Replay desktop tour
+          </button>
+        </div>
+        {tourActive && (
+          <p className="mt-2 text-[11px] text-white/60">The tour is already running.</p>
+        )}
       </div>
     </div>
   );

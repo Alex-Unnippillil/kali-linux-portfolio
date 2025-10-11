@@ -3,6 +3,7 @@
 import React, { Component } from 'react';
 import BootingScreen from './screen/booting_screen';
 import Desktop from './screen/desktop';
+import DesktopTour from './ui/DesktopTour';
 import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import Layout from './desktop/Layout';
@@ -12,33 +13,48 @@ import { safeLocalStorage } from '../utils/safeStorage';
 export default class Ubuntu extends Component {
 	constructor() {
 		super();
-		this.state = {
-			screen_locked: false,
-			bg_image_name: 'wall-2',
-			booting_screen: true,
-			shutDownScreen: false
-		};
-		this.bootScreenLoadHandler = null;
-	}
+                this.state = {
+                        screen_locked: false,
+                        bg_image_name: 'wall-2',
+                        booting_screen: true,
+                        shutDownScreen: false,
+                        showDesktopTour: false,
+                        desktopTourComplete: false
+                };
+                this.startTourWhenReady = false;
+                this.pendingTourSource = 'auto';
+                this.bootScreenLoadHandler = null;
+        }
 
 	componentDidMount() {
 		this.getLocalData();
 	}
 
-	componentWillUnmount() {
-		this.detachBootScreenLoadHandler();
-	}
+        componentWillUnmount() {
+                this.detachBootScreenLoadHandler();
+        }
 
-	detachBootScreenLoadHandler = () => {
-		if (typeof window === 'undefined' || !this.bootScreenLoadHandler) return;
+        componentDidUpdate(prevProps, prevState) {
+                if (prevState.booting_screen && !this.state.booting_screen) {
+                        this.maybeStartDesktopTour();
+                }
+                if (prevState.shutDownScreen && !this.state.shutDownScreen) {
+                        this.maybeStartDesktopTour();
+                }
+        }
 
-		window.removeEventListener('load', this.bootScreenLoadHandler);
-		this.bootScreenLoadHandler = null;
+        detachBootScreenLoadHandler = () => {
+                if (typeof window === 'undefined' || !this.bootScreenLoadHandler) return;
+
+                window.removeEventListener('load', this.bootScreenLoadHandler);
+                this.bootScreenLoadHandler = null;
 	};
 
-	hideBootScreen = () => {
-		this.setState({ booting_screen: false });
-	};
+        hideBootScreen = () => {
+                this.setState({ booting_screen: false }, () => {
+                        this.maybeStartDesktopTour();
+                });
+        };
 
 	waitForBootSequence = () => {
 		if (typeof window === 'undefined' || typeof document === 'undefined') return;
@@ -57,34 +73,133 @@ export default class Ubuntu extends Component {
 		}
 	};
 
-	getLocalData = () => {
-		// Get Previously selected Background Image
+        getLocalData = () => {
+                // Get Previously selected Background Image
                 let bg_image_name = safeLocalStorage?.getItem('bg-image');
-		if (bg_image_name !== null && bg_image_name !== undefined) {
-			this.setState({ bg_image_name });
-		}
+                if (bg_image_name !== null && bg_image_name !== undefined) {
+                        this.setState({ bg_image_name });
+                }
+
+                let desktopTourComplete = false;
+                try {
+                        desktopTourComplete = safeLocalStorage?.getItem('desktop-tour-complete') === 'true';
+                } catch (error) {
+                        desktopTourComplete = false;
+                }
+                this.setState({ desktopTourComplete });
+                if (!desktopTourComplete) {
+                        this.requestDesktopTour();
+                }
 
                 let booting_screen = safeLocalStorage?.getItem('booting_screen');
-		if (booting_screen !== null && booting_screen !== undefined) {
-			// user has visited site before
-			this.setState({ booting_screen: false });
-		} else {
-			// user is visiting site for the first time
+                if (booting_screen !== null && booting_screen !== undefined) {
+                        // user has visited site before
+                        this.setState({ booting_screen: false }, () => {
+                                this.maybeStartDesktopTour();
+                        });
+                } else {
+                        // user is visiting site for the first time
                         safeLocalStorage?.setItem('booting_screen', false);
-			this.waitForBootSequence();
-		}
+                        this.waitForBootSequence();
+                }
 
 		// get shutdown state
                 let shut_down = safeLocalStorage?.getItem('shut-down');
-		if (shut_down !== null && shut_down !== undefined && shut_down === 'true') this.shutDown();
-		else {
-			// Get previous lock screen state
+                if (shut_down !== null && shut_down !== undefined && shut_down === 'true') this.shutDown();
+                else {
+                        // Get previous lock screen state
                         let screen_locked = safeLocalStorage?.getItem('screen-locked');
-			if (screen_locked !== null && screen_locked !== undefined) {
-				this.setState({ screen_locked: screen_locked === 'true' ? true : false });
-			}
-		}
-	};
+                        if (screen_locked !== null && screen_locked !== undefined) {
+                                this.setState({ screen_locked: screen_locked === 'true' ? true : false });
+                        }
+                }
+        };
+
+        requestDesktopTour = (source = 'auto') => {
+                if (this.state.desktopTourComplete) return;
+                this.startTourWhenReady = true;
+                this.pendingTourSource = source;
+                this.maybeStartDesktopTour();
+        };
+
+        maybeStartDesktopTour = () => {
+                if (!this.startTourWhenReady) return;
+                if (this.state.booting_screen || this.state.shutDownScreen) return;
+                this.startTourWhenReady = false;
+                const source = this.pendingTourSource || 'auto';
+                this.pendingTourSource = 'auto';
+                this.openDesktopTour(source);
+        };
+
+        openDesktopTour = (source = 'auto') => {
+                if (this.state.showDesktopTour) return;
+                this.startTourWhenReady = false;
+                ReactGA.event({
+                        category: 'Desktop Tour',
+                        action: 'Start',
+                        label: source,
+                });
+                this.setState({ showDesktopTour: true });
+        };
+
+        persistDesktopTourCompletion = () => {
+                if (!safeLocalStorage) return;
+                try {
+                        safeLocalStorage.setItem('desktop-tour-complete', 'true');
+                } catch (error) {
+                        // ignore storage errors
+                }
+        };
+
+        setDesktopTourComplete = () => {
+                this.startTourWhenReady = false;
+                this.setState({ showDesktopTour: false, desktopTourComplete: true });
+                this.persistDesktopTourCompletion();
+        };
+
+        handleDesktopTourAdvance = (nextStepIndex) => {
+                const detail = {
+                        category: 'Desktop Tour',
+                        action: 'Advance',
+                };
+                if (typeof nextStepIndex === 'number') {
+                        detail.label = `Step ${nextStepIndex + 1}`;
+                }
+                ReactGA.event(detail);
+        };
+
+        handleDesktopTourSkip = () => {
+                ReactGA.event({
+                        category: 'Desktop Tour',
+                        action: 'Skip',
+                });
+                this.setDesktopTourComplete();
+        };
+
+        handleDesktopTourRestart = () => {
+                ReactGA.event({
+                        category: 'Desktop Tour',
+                        action: 'Restart',
+                });
+        };
+
+        handleDesktopTourComplete = () => {
+                ReactGA.event({
+                        category: 'Desktop Tour',
+                        action: 'Complete',
+                });
+                this.setDesktopTourComplete();
+        };
+
+        handleReplayDesktopTour = () => {
+                if (this.state.showDesktopTour) return;
+                this.persistDesktopTourCompletion();
+                if (this.state.booting_screen || this.state.shutDownScreen) {
+                        this.requestDesktopTour('manual');
+                        return;
+                }
+                this.openDesktopTour('manual');
+        };
 
 	lockScreen = () => {
 		// google analytics
@@ -145,7 +260,7 @@ export default class Ubuntu extends Component {
                 safeLocalStorage?.setItem('shut-down', false);
 	};
 
-	render() {
+        render() {
         return (
                 <Layout id="monitor-screen">
                                 <LockScreen
@@ -153,14 +268,30 @@ export default class Ubuntu extends Component {
                                         bgImgName={this.state.bg_image_name}
                                         unLockScreen={this.unLockScreen}
                                 />
-				<BootingScreen
-					visible={this.state.booting_screen}
-					isShutDown={this.state.shutDownScreen}
-					turnOn={this.turnOn}
-				/>
-                                <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-                                <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+                                <BootingScreen
+                                        visible={this.state.booting_screen}
+                                        isShutDown={this.state.shutDownScreen}
+                                        turnOn={this.turnOn}
+                                />
+                                <Navbar
+                                        lockScreen={this.lockScreen}
+                                        shutDown={this.shutDown}
+                                        onReplayTour={this.handleReplayDesktopTour}
+                                        tourActive={this.state.showDesktopTour}
+                                />
+                                <Desktop
+                                        bg_image_name={this.state.bg_image_name}
+                                        changeBackgroundImage={this.changeBackgroundImage}
+                                        inputSuspended={this.state.showDesktopTour}
+                                />
+                                <DesktopTour
+                                        open={this.state.showDesktopTour}
+                                        onAdvance={this.handleDesktopTourAdvance}
+                                        onSkip={this.handleDesktopTourSkip}
+                                        onRestart={this.handleDesktopTourRestart}
+                                        onComplete={this.handleDesktopTourComplete}
+                                />
                 </Layout>
         );
-	}
+        }
 }

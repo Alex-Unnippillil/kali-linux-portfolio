@@ -297,6 +297,21 @@ export default class Navbar extends PureComponent {
                 }
         };
 
+        handleReplayTour = () => {
+                const replay = this.props && typeof this.props.onReplayTour === 'function'
+                        ? this.props.onReplayTour
+                        : null;
+                if (!replay) return;
+
+                if (this.state.status_card) {
+                        this.setState({ status_card: false }, () => {
+                                replay();
+                        });
+                } else {
+                        replay();
+                }
+        };
+
                 render() {
                         const { workspaces, activeWorkspace } = this.state;
                         return (
@@ -337,7 +352,11 @@ export default class Navbar extends PureComponent {
                                                         }
                                                 >
                                                         <Status />
-                                                        <QuickSettings open={this.state.status_card} />
+                                                        <QuickSettings
+                                                                open={this.state.status_card}
+                                                                onReplayTour={this.handleReplayTour}
+                                                                tourActive={this.props && this.props.tourActive}
+                                                        />
                                                 </div>
                                         </div>
                                 </div>

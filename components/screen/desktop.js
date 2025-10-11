@@ -132,6 +132,7 @@ const createOverlayStateMap = () => {
 export class Desktop extends Component {
     static defaultProps = {
         snapGrid: [8, 8],
+        inputSuspended: false,
     };
 
     constructor(props) {
@@ -193,6 +194,7 @@ export class Desktop extends Component {
         this.iconGridSpacing = { ...this.baseIconGridSpacing };
         this.desktopPadding = { ...this.baseDesktopPadding };
 
+        const initialWindowSizes = this.loadWindowSizes();
         const initialOverlayClosed = createOverlayFlagMap(true);
         const initialOverlayMinimized = createOverlayFlagMap(false);
         const initialOverlayFocused = createOverlayFlagMap(false);
@@ -3578,6 +3580,23 @@ export class Desktop extends Component {
         return elements;
     }
 
+    updateWindowSize = (id, width, height) => {
+        const nextWidth = Number(width);
+        const nextHeight = Number(height);
+        if (!Number.isFinite(nextWidth) || !Number.isFinite(nextHeight)) {
+            return;
+        }
+        this.setWorkspaceState((prev) => {
+            const nextSizes = {
+                ...(prev.window_sizes || {}),
+                [id]: { width: nextWidth, height: nextHeight },
+            };
+            return { window_sizes: nextSizes };
+        }, () => {
+            this.persistWindowSizes(this.state.window_sizes || {});
+        });
+    }
+
     updateWindowPosition = (id, x, y) => {
         const [gridX, gridY] = this.getSnapGrid();
         const snapValue = (value, size) => {
@@ -3694,7 +3713,7 @@ export class Desktop extends Component {
             this.openOverlay(objId);
             return;
         }
-        const context = params && typeof params === 'object'
+        const baseContext = params && typeof params === 'object'
             ? {
                 ...params,
                 ...(params.path && !params.initialPath ? { initialPath: params.path } : {}),
@@ -4085,12 +4104,19 @@ export class Desktop extends Component {
         const launcherOverlay = overlayWindows.launcher || { open: false, minimized: false, maximized: false, transitionState: 'exited' };
         const shortcutOverlay = overlayWindows.shortcutSelector || { open: false, minimized: false, maximized: false };
         const windowSwitcherOverlay = overlayWindows.windowSwitcher || { open: false, minimized: false, maximized: false };
+        const inputSuspended = Boolean(this.props.inputSuspended);
+        const baseDesktopClassName = 'min-h-screen h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent';
+        const desktopClassName = inputSuspended
+            ? `${baseDesktopClassName} pointer-events-none select-none`
+            : baseDesktopClassName;
         return (
             <main
                 id="desktop"
                 role="main"
                 ref={this.desktopRef}
-                className={" min-h-screen h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent"}
+                className={desktopClassName}
+                aria-hidden={inputSuspended ? 'true' : undefined}
+                data-input-suspended={inputSuspended ? 'true' : 'false'}
                 style={desktopStyle}
             >
 

@@ -501,6 +501,7 @@ const WhiskerMenu: React.FC = () => {
         type="button"
         onClick={toggleMenu}
         aria-keyshortcuts="Meta Alt+F1"
+        data-tour-target="applications-menu-button"
         className="flex items-center gap-2 border-b-2 border-transparent py-1 pl-3 pr-3 outline-none transition duration-100 ease-in-out"
         tabIndex={isOpen ? -1 : 0}
       >
