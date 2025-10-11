@@ -29,7 +29,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | converter | Converter | Core maintainers | **In progress** – centralized unit map and Jest coverage | `components/apps/converter/units.js` |
 | file-explorer | Files | Core maintainers | **Needs polish** – ensure virtual FS hooks stay in sync | Virtual filesystem layer |
 | project-gallery | Project Gallery | Core maintainers | **In progress** – load from `projects.json`, add filters and CTA buttons | `projects.json` data |
-| alex | About Alex | Core maintainers | **In progress** – resume widget, skill chips, project links | Resume JSON feed |
+| alex | About Alex | Core maintainers | **Shipped** – resume widget pulls JSON feed with skill chips and tracked project links | Resume JSON feed |
 | settings | Settings | Core maintainers | **In progress** – theme picker, wallpaper selector, reset desktop | `settingsStore.js`, localStorage |
 | resource_monitor | Resource Monitor | Core maintainers | **In progress** – memory/FPS display and synthetic CPU graph | `performance` APIs |
 | screen-recorder | Screen Recorder | Core maintainers | **Needs polish** – permission prompts, storage strategy | MediaRecorder API |

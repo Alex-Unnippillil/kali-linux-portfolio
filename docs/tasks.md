@@ -51,7 +51,7 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 
 ## Other Apps
 ### About Alex
-- Replace static content with resume widget loaded from JSON; show skills as chips and project links.
+- ✅ Resume widget now loads from JSON, renders skill chips, and tracks project link analytics.
 
 ### Settings
 - Add theme picker, wallpaper selector, and "reset desktop" clearing `localStorage` in `settingsStore.js`.
