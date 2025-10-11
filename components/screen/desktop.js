@@ -8,6 +8,7 @@ const BackgroundImage = dynamic(
     { ssr: false }
 );
 import apps, { games } from '../../apps.config';
+import { DEFAULT_DESKTOP_FOLDERS } from '../../data/desktopFolders';
 import Window from '../desktop/Window';
 import UbuntuApp from '../base/ubuntu_app';
 import SystemOverlayWindow from '../base/SystemOverlayWindow';
@@ -227,6 +228,7 @@ export class Desktop extends Component {
         const initialOverlayFocused = createOverlayFlagMap(false);
 
         const initialWindowSizes = this.loadWindowSizes();
+        const storedFolderContents = loadStoredFolderContents();
 
         this.state = {
             focused_windows: { ...initialOverlayFocused },
@@ -238,6 +240,7 @@ export class Desktop extends Component {
             window_sizes: initialWindowSizes,
             desktop_apps: [],
             desktop_icon_positions: {},
+            folder_contents: storedFolderContents,
             window_context: {},
             context_menus: {
                 desktop: false,
@@ -300,6 +303,7 @@ export class Desktop extends Component {
         this.validAppIds = new Set();
         this.appMap = new Map();
         this.overlayRegistry = new Map(OVERLAY_WINDOW_LIST.map((meta) => [meta.id, meta]));
+        this.folderMetadata = new Map(DEFAULT_DESKTOP_FOLDERS.map((folder) => [folder.id, folder]));
         this.windowPreviewCache = new Map();
         this.windowSwitcherRequestId = 0;
         this.refreshAppRegistry();
@@ -1055,6 +1059,25 @@ export class Desktop extends Component {
         }
     };
 
+    persistFolderContents = (contents) => {
+        const source = contents ?? this.state.folder_contents ?? {};
+        const normalized = {};
+        if (source && typeof source === 'object') {
+            Object.entries(source).forEach(([folderId, entries]) => {
+                if (!folderId) return;
+                if (!Array.isArray(entries)) {
+                    normalized[folderId] = [];
+                    return;
+                }
+                const sanitized = entries
+                    .map((entry) => sanitizeFolderItem(entry))
+                    .filter(Boolean);
+                normalized[folderId] = sanitized;
+            });
+        }
+        persistStoredFolderContents(normalized);
+    };
+
     loadWindowSizes = () => loadStoredWindowSizes(this.windowSizeStorageKey);
 
     persistWindowSizes = (sizes) => {
@@ -1203,7 +1226,14 @@ export class Desktop extends Component {
         if (!folderId) return null;
         const contents = this.state.folder_contents?.[folderId];
         if (!Array.isArray(contents)) {
-            return { folderId, folderItems: [] };
+            const meta = this.folderMetadata?.get(folderId) || null;
+            const app = this.getAppById(folderId);
+            return {
+                folderId,
+                folderItems: [],
+                folderTitle: meta?.title || app?.title || folderId,
+                folderDescription: meta?.description,
+            };
         }
         const items = contents.map((item) => {
             if (!item) return null;
@@ -1216,7 +1246,14 @@ export class Desktop extends Component {
                 icon: item.icon,
             };
         }).filter(Boolean);
-        return { folderId, folderItems: items };
+        const meta = this.folderMetadata?.get(folderId) || null;
+        const app = this.getAppById(folderId);
+        return {
+            folderId,
+            folderItems: items,
+            folderTitle: meta?.title || app?.title || folderId,
+            folderDescription: meta?.description,
+        };
     };
 
     getDesktopRect = () => {
@@ -1282,6 +1319,74 @@ export class Desktop extends Component {
         this.appMap = nextAppMap;
         this.validAppIds = nextValidAppIds;
     }
+
+    initializeDefaultFolders = (callback) => {
+        const stored = this.state.folder_contents || {};
+        const nextContents = { ...stored };
+        let changed = false;
+
+        DEFAULT_DESKTOP_FOLDERS.forEach((folder) => {
+            const folderId = folder.id;
+            if (!folderId) return;
+
+            if (!Object.prototype.hasOwnProperty.call(nextContents, folderId)) {
+                const defaults = Array.isArray(folder.items)
+                    ? folder.items
+                        .map((appId) => {
+                            const app = this.getAppById(appId);
+                            if (!app) return null;
+                            return {
+                                id: app.id,
+                                title: app.title || app.id,
+                                icon: app.icon,
+                            };
+                        })
+                        .filter(Boolean)
+                    : [];
+                nextContents[folderId] = defaults;
+                changed = true;
+                return;
+            }
+
+            const currentItems = nextContents[folderId];
+            if (!Array.isArray(currentItems)) {
+                nextContents[folderId] = [];
+                changed = true;
+                return;
+            }
+
+            const sanitizedItems = currentItems
+                .map((entry) => sanitizeFolderItem(entry))
+                .filter(Boolean);
+
+            const lengthChanged = sanitizedItems.length !== currentItems.length;
+            const contentChanged = sanitizedItems.some((item, index) => {
+                const original = currentItems[index];
+                if (!original) return true;
+                if (typeof original === 'string') return true;
+                return (
+                    original.id !== item.id ||
+                    original.title !== item.title ||
+                    original.icon !== item.icon
+                );
+            });
+
+            if (lengthChanged || contentChanged) {
+                nextContents[folderId] = sanitizedItems;
+                changed = true;
+            }
+        });
+
+        if (changed) {
+            this.setState({ folder_contents: nextContents }, () => {
+                this.persistFolderContents(nextContents);
+                if (typeof callback === 'function') callback();
+            });
+            return;
+        }
+
+        if (typeof callback === 'function') callback();
+    };
 
     isOverlayId = (id) => this.overlayRegistry?.has(id);
 
@@ -2648,29 +2753,31 @@ export class Desktop extends Component {
         }
 
         this.savedIconPositions = this.loadDesktopIconPositions();
-        this.fetchAppsData(() => {
-            const session = this.props.session || {};
-            const positions = {};
-            if (session.windows && session.windows.length) {
-                const safeTopOffset = measureWindowTopOffset();
-                session.windows.forEach(({ id, x, y }) => {
-                    positions[id] = {
-                        x,
-                        y: clampWindowTopPosition(y, safeTopOffset),
-                    };
-                });
-                this.setWorkspaceState({ window_positions: positions }, () => {
-                    session.windows.forEach(({ id }) => this.openApp(id));
-                });
-            } else {
-                this.openApp('about');
-            }
+        this.initializeDefaultFolders(() => {
+            this.fetchAppsData(() => {
+                const session = this.props.session || {};
+                const positions = {};
+                if (session.windows && session.windows.length) {
+                    const safeTopOffset = measureWindowTopOffset();
+                    session.windows.forEach(({ id, x, y }) => {
+                        positions[id] = {
+                            x,
+                            y: clampWindowTopPosition(y, safeTopOffset),
+                        };
+                    });
+                    this.setWorkspaceState({ window_positions: positions }, () => {
+                        session.windows.forEach(({ id }) => this.openApp(id));
+                    });
+                } else {
+                    this.openApp('about');
+                }
+            });
+            this.checkForNewFolders();
+            this.checkForAppShortcuts();
+            this.updateTrashIcon();
         });
         this.setContextListeners();
         this.setEventListeners();
-        this.checkForNewFolders();
-        this.checkForAppShortcuts();
-        this.updateTrashIcon();
         window.addEventListener('trash-change', this.updateTrashIcon);
         window.addEventListener('resize', this.handleViewportResize);
         document.addEventListener('keydown', this.handleGlobalShortcut);

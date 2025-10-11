@@ -1,5 +1,7 @@
 import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 
+import { DEFAULT_DESKTOP_FOLDERS } from './data/desktopFolders';
+import { displayDesktopFolder } from './components/apps/desktop-folder';
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
 import { displaySettings } from './components/apps/settings';
@@ -599,7 +601,21 @@ const gameList = [
 
 export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
 
+const folderApps = DEFAULT_DESKTOP_FOLDERS.map((folder) => ({
+  id: folder.id,
+  title: folder.title,
+  icon: folder.icon || '/themes/Yaru/system/folder.png',
+  disabled: false,
+  favourite: false,
+  desktop_shortcut: true,
+  isFolder: true,
+  screen: displayDesktopFolder,
+  defaultWidth: 64,
+  defaultHeight: 70,
+}));
+
 const apps = [
+  ...folderApps,
   {
     id: 'firefox',
     title: 'Firefox',
