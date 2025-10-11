@@ -90,6 +90,18 @@ export const evaluateLine = (line: Cell[], clue: Clue) => {
   return { solved, contradiction };
 };
 
+// Confirm that the grid satisfies every row and column clue
+export const validateSolution = (grid: Grid, rows: Clue[], cols: Clue[]) => {
+  const rowsValid = grid.every(
+    (row, i) => JSON.stringify(lineToClues(row)) === JSON.stringify(rows[i])
+  );
+  const colsValid = cols.every((clue, j) => {
+    const column = grid.map((row) => row[j]);
+    return JSON.stringify(lineToClues(column)) === JSON.stringify(clue);
+  });
+  return rowsValid && colsValid;
+};
+
 // Check contradictions across all rows and columns
 export const checkContradictions = (
   grid: Grid,
@@ -156,6 +168,7 @@ const logicApi = {
   findForcedCellsInLine,
   findHint,
   evaluateLine,
+  validateSolution,
   checkContradictions,
   toggleCross,
   autoFill,

@@ -40,11 +40,12 @@ export const loadPack = (name: string, raw: string): PuzzlePack => ({
 // Load a puzzle pack from JSON data. The JSON should contain an object with
 // a `name` and an array of puzzles where each puzzle has a `name` and `grid`
 // represented as an array of strings using `#` for filled cells and `.` for blanks.
-export const loadPackFromJSON = (raw: string): PuzzlePack => {
-  const data = JSON.parse(raw) as {
-    name: string;
-    puzzles: { name: string; grid: string[] }[];
-  };
+export type RawPuzzlePack = {
+  name: string;
+  puzzles: { name?: string; grid: string[] }[];
+};
+
+const toPack = (data: RawPuzzlePack): PuzzlePack => {
   const puzzles: Puzzle[] = data.puzzles.map((p, idx) => {
     const grid: Grid = p.grid.map((line) =>
       Array.from(line).map((ch) => (ch === '#' ? 1 : 0))
@@ -61,5 +62,23 @@ export const loadPackFromJSON = (raw: string): PuzzlePack => {
   return { name: data.name, puzzles };
 };
 
-const packsApi = { parsePack, loadPack, loadPackFromJSON };
+export const loadPackFromJSON = (raw: string | RawPuzzlePack): PuzzlePack => {
+  const data = typeof raw === 'string' ? (JSON.parse(raw) as RawPuzzlePack) : raw;
+  return toPack(data);
+};
+
+const hash = (str: string): number => {
+  let h = 0;
+  for (let i = 0; i < str.length; i += 1) {
+    h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  }
+  return h;
+};
+
+export const selectPuzzleBySeed = (
+  seed: string,
+  puzzles: Puzzle[]
+): Puzzle => puzzles[hash(seed) % puzzles.length];
+
+const packsApi = { parsePack, loadPack, loadPackFromJSON, selectPuzzleBySeed };
 export default packsApi;
