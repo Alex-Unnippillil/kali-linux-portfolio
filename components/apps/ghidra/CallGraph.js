@@ -49,7 +49,7 @@ export default function CallGraph({ func, callers = [], onSelect }) {
           textAnchor="middle"
           className="fill-white text-xs"
         >
-          {func?.name || 'func'}
+          {func?.displayName || func?.name || 'func'}
         </text>
       </g>
       {neighbors.map((n) => (

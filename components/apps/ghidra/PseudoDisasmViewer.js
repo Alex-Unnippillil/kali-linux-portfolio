@@ -6,18 +6,29 @@ const DEFAULT_SNIPPET = [
   { pseudo: '}', asm: '  ret' },
 ];
 
-export default function PseudoDisasmViewer() {
+export default function PseudoDisasmViewer({ snippet: snippetProp = null }) {
   const [hover, setHover] = useState(null);
-  const [snippet, setSnippet] = useState(DEFAULT_SNIPPET);
+  const [snippet, setSnippet] = useState(snippetProp || DEFAULT_SNIPPET);
 
   useEffect(() => {
+    if (snippetProp && Array.isArray(snippetProp) && snippetProp.length > 0) {
+      setSnippet(snippetProp);
+      return;
+    }
+
+    let cancelled = false;
+
     fetch('/demo-data/ghidra/pseudocode.json')
       .then((r) => r.json())
       .then((data) => {
-        if (data.snippet) setSnippet(data.snippet);
+        if (!cancelled && data.snippet) setSnippet(data.snippet);
       })
       .catch(() => {});
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [snippetProp]);
 
   const handleCopy = (text) => {
     if (navigator && navigator.clipboard) {

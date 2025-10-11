@@ -1,7 +1,32 @@
 {
   "strings": [
-    {"id": "s1", "value": "Hello, world!"},
-    {"id": "s2", "value": "Error occurred"},
-    {"id": "s3", "value": "Done"}
+    {
+      "id": "str_success",
+      "address": "0x402040",
+      "value": "License accepted",
+      "description": "Displayed when the bundled key hashes to the expected digest.",
+      "references": ["main", "log_status"]
+    },
+    {
+      "id": "str_failure",
+      "address": "0x402058",
+      "value": "License failure",
+      "description": "Emitted on validation failure so analysts can trace the branch.",
+      "references": ["main", "log_status"]
+    },
+    {
+      "id": "str_serial",
+      "address": "0x402070",
+      "value": "serial",
+      "description": "Name of the first logging sink configured during init.",
+      "references": ["init_logging"]
+    },
+    {
+      "id": "str_file",
+      "address": "0x402078",
+      "value": "file",
+      "description": "Secondary sink used to showcase multiple outputs.",
+      "references": ["init_logging"]
+    }
   ]
 }
