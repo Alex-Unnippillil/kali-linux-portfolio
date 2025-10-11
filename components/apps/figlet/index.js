@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { toPng } from 'html-to-image';
 import AlignmentControls from '../../../apps/figlet/components/AlignmentControls';
-import FontDropdown from '../../../apps/figlet/components/FontDropdown';
+import FontGrid from '../../../apps/figlet/components/FontGrid';
+import { cacheFont, loadCachedFonts } from './fontCache';
 
 const FigletApp = () => {
   const [text, setText] = useState('');
@@ -26,6 +27,7 @@ const FigletApp = () => {
   const announceTimer = useRef(null);
   const preRef = useRef(null);
   const uploadedFonts = useRef({});
+  const cachedFontNames = useRef(new Set());
   const [serverFontNames, setServerFontNames] = useState([]);
 
   useEffect(() => {
@@ -58,7 +60,12 @@ const FigletApp = () => {
       workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
       workerRef.current.onmessage = (e) => {
         if (e.data?.type === 'font') {
-          setFonts((prev) => [...prev, { name: e.data.font, preview: e.data.preview, mono: e.data.mono }]);
+          setFonts((prev) => {
+            if (prev.some((f) => f.name === e.data.font)) return prev;
+            return [...prev, { name: e.data.font, preview: e.data.preview, mono: e.data.mono }].sort((a, b) =>
+              a.name.localeCompare(b.name)
+            );
+          });
         } else if (e.data?.type === 'render') {
           setRawOutput(e.data.output);
           setAnnounce('Preview updated');
@@ -74,11 +81,32 @@ const FigletApp = () => {
             const handle = await dir.getFileHandle('figlet-last-font.json');
             const file = await handle.getFile();
             const saved = JSON.parse(await file.text());
-            if (saved.data) {
+            if (saved?.data && saved?.font) {
               uploadedFonts.current[saved.font] = saved.data;
-              workerRef.current.postMessage({ type: 'load', name: saved.font, data: saved.data });
+              cachedFontNames.current.add(saved.font);
+              workerRef.current?.postMessage({ type: 'load', name: saved.font, data: saved.data });
+              await cacheFont(saved.font, saved.data);
             }
-            if (saved.font) setFont(saved.font);
+            if (saved?.font) setFont(saved.font);
+          }
+        } catch {
+          /* ignore */
+        }
+
+        try {
+          const cached = await loadCachedFonts();
+          cached.forEach(({ name, data }) => {
+            if (!name || !data) return;
+            cachedFontNames.current.add(name);
+            uploadedFonts.current[name] = data;
+            workerRef.current?.postMessage({ type: 'load', name, data });
+          });
+          if (cached.length) {
+            setServerFontNames((prev) => {
+              const merged = new Set(prev);
+              cached.forEach(({ name }) => merged.add(name));
+              return Array.from(merged).sort();
+            });
           }
         } catch {
           /* ignore */
@@ -88,13 +116,23 @@ const FigletApp = () => {
           const res = await fetch('/api/figlet/fonts');
           if (res.ok) {
             const { fonts: list } = await res.json();
-            const names = [];
-            list.forEach(({ name, data }) => {
-              names.push(name);
-              uploadedFonts.current[name] = data;
-              workerRef.current.postMessage({ type: 'load', name, data });
-            });
-            if (names.length) setServerFontNames(names);
+            const names = list.map(({ name }) => name);
+            await Promise.all(
+              list.map(async ({ name, data }) => {
+                if (cachedFontNames.current.has(name)) return;
+                cachedFontNames.current.add(name);
+                uploadedFonts.current[name] = data;
+                workerRef.current?.postMessage({ type: 'load', name, data });
+                await cacheFont(name, data);
+              })
+            );
+            if (names.length) {
+              setServerFontNames((prev) => {
+                const merged = new Set(prev);
+                names.forEach((n) => merged.add(n));
+                return Array.from(merged).sort();
+              });
+            }
           }
         } catch {
           /* ignore */
@@ -157,21 +195,26 @@ const FigletApp = () => {
     setOutput(transformed);
   }, [rawOutput, align, padding]);
 
-  const selectAll = () => {
-    if (!preRef.current) return;
-    const sel = window.getSelection();
-    if (!sel) return;
-    const range = document.createRange();
-    range.selectNodeContents(preRef.current);
-    sel.removeAllRanges();
-    sel.addRange(range);
-  };
-
-  const copyAll = () => {
-    if (!preRef.current) return;
-    selectAll();
-    navigator.clipboard.writeText(preRef.current.textContent || '');
-    setAnnounce('Copied to clipboard');
+  const copyOutput = async () => {
+    if (!output) return;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(output);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = output;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'absolute';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setAnnounce('Copied to clipboard');
+    } catch {
+      setAnnounce('Copy failed');
+    }
     clearTimeout(announceTimer.current);
     announceTimer.current = setTimeout(() => setAnnounce(''), 2000);
   };
@@ -213,7 +256,14 @@ const FigletApp = () => {
     const name = file.name.replace(/\.flf$/i, '');
     const data = await file.text();
     uploadedFonts.current[name] = data;
+    cachedFontNames.current.add(name);
     workerRef.current?.postMessage({ type: 'load', name, data });
+    await cacheFont(name, data);
+    setServerFontNames((prev) => {
+      const merged = new Set(prev);
+      merged.add(name);
+      return Array.from(merged).sort();
+    });
     setFont(name);
     e.target.value = '';
   };
@@ -275,11 +325,7 @@ const FigletApp = () => {
           />
           Monospace only
         </label>
-        <FontDropdown
-          fonts={displayedFonts}
-          value={font}
-          onChange={setFont}
-        />
+        <FontGrid fonts={displayedFonts} value={font} onChange={setFont} />
         <input
           type="file"
           accept=".flf"
@@ -398,11 +444,11 @@ const FigletApp = () => {
           {wrap ? 'No Wrap' : 'Wrap'}
         </button>
         <button
-          onClick={copyAll}
+          onClick={copyOutput}
           className="px-2 bg-blue-700 hover:bg-blue-600 rounded text-white"
-          aria-label="Copy all"
+          aria-label="Copy banner to clipboard"
         >
-          Copy All
+          Copy Banner
         </button>
         <button
           onClick={exportPNG}

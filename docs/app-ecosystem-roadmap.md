@@ -34,7 +34,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | resource_monitor | Resource Monitor | Core maintainers | **In progress** – memory/FPS display and synthetic CPU graph | `performance` APIs |
 | screen-recorder | Screen Recorder | Core maintainers | **Needs polish** – permission prompts, storage strategy | MediaRecorder API |
 | clipboard-manager | Clipboard Manager | Core maintainers | **Needs polish** – permission UX and fallbacks | Clipboard API |
-| figlet | Figlet | Core maintainers | **In progress** – font selector, copy action, IndexedDB caching | Font assets, IndexedDB |
+| figlet | Figlet | Core maintainers | **Ready** – font selector grid, clipboard export, IndexedDB caching | Font assets, IndexedDB |
 | weather | Weather | Core maintainers | **In progress** – fake data with unit toggle or settings-driven API key | Demo data, settings |
 | weather_widget | Weather Widget | Core maintainers | **In progress** – mirror Weather app parity and settings hand-off | Settings integration |
 | qr | QR Tool | Core maintainers | **In progress** – camera selector and downloadable output | MediaDevices API |
