@@ -1475,7 +1475,7 @@ export class Desktop extends Component {
                 id: 'command-open-settings',
                 title: 'Open Settings',
                 subtitle: 'Launch the settings application',
-                icon: this.normalizePaletteIconPath('/themes/Yaru/apps/gnome-control-center.png'),
+                icon: this.normalizePaletteIconPath('/themes/Yaru/apps/gnome-control-center.svg'),
                 keywords: ['settings', 'preferences', 'control'],
                 data: { action: 'open-settings', target: 'settings' },
             },

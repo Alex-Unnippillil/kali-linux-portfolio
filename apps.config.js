@@ -710,7 +710,7 @@ const apps = [
   {
     id: 'settings',
     title: 'Settings',
-    icon: '/themes/Yaru/apps/gnome-control-center.png',
+    icon: '/themes/Yaru/apps/gnome-control-center.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: true,
