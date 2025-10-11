@@ -46,7 +46,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | trash | Trash | Core maintainers | **In progress** – soft-delete metadata with restore/empty flows | Virtual filesystem metadata |
 | serial-terminal | Serial Terminal | Core maintainers | **Needs polish** – confirm serial transport stubs | Web Serial API mock |
 | plugin-manager | Plugin Manager | Core maintainers | **Needs triage** – document scope and dependencies | Plugin metadata |
-| ssh | SSH Command Builder | Core maintainers | **Needs polish** – preset library and validation | Command templates |
+| ssh | SSH Command Builder | Core maintainers | ✅ Ready – preset library, validation, and export actions shipped | Command templates |
 | http | HTTP Request Builder | Core maintainers | **Needs polish** – form validation and canned responses | HTTP schema mocks |
 | html-rewriter | HTML Rewriter | Core maintainers | **Needs polish** – transformation demos and worker wiring | Worker stubs |
 | contact | Contact | Core maintainers | **In progress** – validation, privacy note, dummy submit endpoint | Form schema, API stub |
