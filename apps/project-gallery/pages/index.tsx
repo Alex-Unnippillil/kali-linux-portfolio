@@ -97,6 +97,20 @@ const PlayIcon = () => (
   </svg>
 );
 
+const CloseIcon = () => (
+  <svg
+    className="w-3.5 h-3.5"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    aria-hidden="true"
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+  </svg>
+);
+
 interface Project {
   id: number;
   title: string;
@@ -124,6 +138,12 @@ interface ProjectCardProps {
   onSwipeClose: () => void;
   isSelectedForCompare: boolean;
 }
+
+type SummaryItem =
+  | { type: 'stack'; label: string }
+  | { type: 'tag'; label: string }
+  | { type: 'year'; label: string }
+  | { type: 'type'; label: string };
 
 function ProjectCard({
   project,
@@ -296,6 +316,7 @@ function ProjectCard({
               </button>
               <button
                 type="button"
+                data-testid={`compare-${project.id}`}
                 className="rounded-md border border-blue-600 px-3 py-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50"
                 onClick={() => onCompare(project)}
                 aria-pressed={isSelectedForCompare}
@@ -404,6 +425,44 @@ export default function ProjectGalleryPage() {
     [projects, tech, year, type, tags, search, demoOnly]
   );
 
+  const filterSummary = useMemo<SummaryItem[]>(
+    () => [
+      ...tech.map((label) => ({ type: 'stack' as const, label })),
+      ...tags.map((label) => ({ type: 'tag' as const, label })),
+      ...(year ? [{ type: 'year' as const, label: year }] : []),
+      ...(type ? [{ type: 'type' as const, label: type }] : []),
+    ],
+    [tech, tags, year, type]
+  );
+
+  const hasActiveFilters = filterSummary.length > 0;
+
+  const handleRemoveFilter = (item: SummaryItem) => {
+    switch (item.type) {
+      case 'stack':
+        setTech((current) => current.filter((entry) => entry !== item.label));
+        break;
+      case 'tag':
+        setTags((current) => current.filter((entry) => entry !== item.label));
+        break;
+      case 'year':
+        setYear('');
+        break;
+      case 'type':
+        setType('');
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleClearFilters = () => {
+    setTech([]);
+    setTags([]);
+    setYear('');
+    setType('');
+  };
+
   const handleOpen = (project: Project) => {
     const url = project.demo || project.repo;
     if (!url) return;
@@ -425,132 +484,210 @@ export default function ProjectGalleryPage() {
     });
   };
 
+  const handleResetComparison = () => {
+    setCompareSelection([]);
+  };
+
+  const handleStartCompare = () => {
+    if (compareSelection.length !== 2) return;
+    const summary = compareSelection.map((project) => project.title).join(' vs ');
+    console.info(`Comparing projects: ${summary}`);
+  };
+
   return (
-    <div className="p-4 space-y-4 text-black">
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          type="text"
-          placeholder="Search..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          aria-label="Search projects"
-          className="px-2 py-1 border rounded"
-        />
-        <FilterChip
-          label="Playable"
-          active={demoOnly}
-          onClick={() => setDemoOnly(!demoOnly)}
-          icon={<PlayIcon />}
-        />
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {tagList.map((t) => (
-          <FilterChip
-            key={t}
-            label={t}
-            active={tags.includes(t)}
-            onClick={() =>
-              setTags(tags.includes(t) ? tags.filter((tag) => tag !== t) : [...tags, t])
-            }
-            icon={<TagIcon />}
-          />
-        ))}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {stacks.map((s) => (
-          <FilterChip
-            key={s}
-            label={s}
-            active={tech.includes(s)}
-            onClick={() =>
-              setTech(tech.includes(s) ? tech.filter((t) => t !== s) : [...tech, s])
-            }
-            icon={<StackIcon />}
-          />
-        ))}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {years.map((y) => (
-          <FilterChip
-            key={y}
-            label={String(y)}
-            active={year === String(y)}
-            onClick={() => setYear(year === String(y) ? '' : String(y))}
-            icon={<CalendarIcon />}
-          />
-        ))}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {types.map((t) => (
-          <FilterChip
-            key={t}
-            label={t}
-            active={type === t}
-            onClick={() => setType(type === t ? '' : t)}
-            icon={<TypeIcon />}
-          />
-        ))}
-      </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {loading
-          ? Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="space-y-3 rounded-lg border p-4">
-                <div className="aspect-video w-full rounded-md bg-gray-200" />
-                <div className="space-y-2">
-                  <div className="h-4 w-3/4 rounded bg-gray-200" />
-                  <div className="h-3 w-2/3 rounded bg-gray-200" />
-                  <div className="h-3 w-1/2 rounded bg-gray-200" />
-                </div>
-              </div>
-            ))
-          : filtered.map((p) => (
-              <ProjectCard
-                key={p.id}
-                project={p}
-                isActive={activeSwipe === p.id}
-                onOpen={handleOpen}
-                onCompare={handleCompare}
-                onSwipeOpen={() => setActiveSwipe(p.id)}
-                onSwipeClose={() => setActiveSwipe((current) => (current === p.id ? null : current))}
-                isSelectedForCompare={compareSelection.some((item) => item.id === p.id)}
-              />
-            ))}
-      </div>
-      {!loading && filtered.length === 0 && (
-        <div className="rounded-lg border border-dashed bg-white/60 p-6 text-center text-sm text-gray-600">
-          <p className="font-medium text-gray-800">No projects match your filters.</p>
-          <p>
-            Try clearing the search or deselecting a few tags to explore the full catalog.
-          </p>
+    <div className="relative text-black">
+      <div className="space-y-4 p-4 pb-32">
+        <div className="sticky top-0 z-20 -mx-4 flex flex-col gap-2 border-b border-gray-200 bg-white/95 px-4 py-3 backdrop-blur">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-sm font-semibold text-gray-700">Active filters</span>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                className="text-sm font-medium text-blue-600 hover:text-blue-700"
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {hasActiveFilters ? (
+              filterSummary.map((item) => (
+                <button
+                  key={`${item.type}-${item.label}`}
+                  type="button"
+                  onClick={() => handleRemoveFilter(item)}
+                  className="flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
+                  aria-label={`Remove ${item.label} ${item.type} filter`}
+                >
+                  <span className="capitalize">{item.label}</span>
+                  <CloseIcon />
+                </button>
+              ))
+            ) : (
+              <p className="text-sm text-gray-600">
+                No filters selected. Use the chips below to add tags, stacks, or years.
+              </p>
+            )}
+          </div>
         </div>
-      )}
-      {compareSelection.length > 0 && (
-        <div className="space-y-3 rounded-lg border bg-white p-4">
-          <h2 className="text-base font-semibold text-gray-900">Compare selection</h2>
-          {compareSelection.length === 1 ? (
-            <p className="text-sm text-gray-600">
-              {compareSelection[0].title} is ready. Swipe another project and tap compare to see them side-by-side.
-            </p>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {compareSelection.map((project) => (
-                <div key={project.id} className="rounded-md border p-3 text-sm text-gray-700">
-                  <h3 className="text-base font-semibold text-gray-900">{project.title}</h3>
-                  <p className="mt-1 text-gray-600">{project.description}</p>
-                  <dl className="mt-3 space-y-1">
-                    <div>
-                      <dt className="font-medium text-gray-800">Stack</dt>
-                      <dd>{project.stack.join(', ')}</dd>
-                    </div>
-                    <div>
-                      <dt className="font-medium text-gray-800">Highlights</dt>
-                      <dd>{project.tags.join(', ')}</dd>
-                    </div>
-                  </dl>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="text"
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search projects"
+            className="px-2 py-1 border rounded"
+          />
+          <FilterChip
+            label="Playable"
+            active={demoOnly}
+            onClick={() => setDemoOnly(!demoOnly)}
+            icon={<PlayIcon />}
+          />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {tagList.map((t) => (
+            <FilterChip
+              key={t}
+              label={t}
+              active={tags.includes(t)}
+              onClick={() =>
+                setTags(tags.includes(t) ? tags.filter((tag) => tag !== t) : [...tags, t])
+              }
+              icon={<TagIcon />}
+            />
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {stacks.map((s) => (
+            <FilterChip
+              key={s}
+              label={s}
+              active={tech.includes(s)}
+              onClick={() =>
+                setTech(tech.includes(s) ? tech.filter((t) => t !== s) : [...tech, s])
+              }
+              icon={<StackIcon />}
+            />
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {years.map((y) => (
+            <FilterChip
+              key={y}
+              label={String(y)}
+              active={year === String(y)}
+              onClick={() => setYear(year === String(y) ? '' : String(y))}
+              icon={<CalendarIcon />}
+            />
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {types.map((t) => (
+            <FilterChip
+              key={t}
+              label={t}
+              active={type === t}
+              onClick={() => setType(type === t ? '' : t)}
+              icon={<TypeIcon />}
+            />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {loading
+            ? Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="space-y-3 rounded-lg border p-4">
+                  <div className="aspect-video w-full rounded-md bg-gray-200" />
+                  <div className="space-y-2">
+                    <div className="h-4 w-3/4 rounded bg-gray-200" />
+                    <div className="h-3 w-2/3 rounded bg-gray-200" />
+                    <div className="h-3 w-1/2 rounded bg-gray-200" />
+                  </div>
                 </div>
+              ))
+            : filtered.map((p) => (
+                <ProjectCard
+                  key={p.id}
+                  project={p}
+                  isActive={activeSwipe === p.id}
+                  onOpen={handleOpen}
+                  onCompare={handleCompare}
+                  onSwipeOpen={() => setActiveSwipe(p.id)}
+                  onSwipeClose={() => setActiveSwipe((current) => (current === p.id ? null : current))}
+                  isSelectedForCompare={compareSelection.some((item) => item.id === p.id)}
+                />
               ))}
+        </div>
+        {!loading && filtered.length === 0 && (
+          <div className="rounded-lg border border-dashed bg-white/60 p-6 text-center text-sm text-gray-600">
+            <p className="font-medium text-gray-800">No projects match your filters.</p>
+            <p className="mt-1">
+              Use the filter chips above to add or remove stacks, tags, or years and rediscover the full catalog.
+            </p>
+          </div>
+        )}
+      </div>
+      {compareSelection.length > 0 && (
+        <div
+          role="region"
+          aria-label="Comparison tray"
+          className="fixed bottom-4 left-4 right-4 z-30 rounded-lg border border-gray-200 bg-white shadow-lg sm:left-auto sm:right-4 sm:w-96"
+        >
+          <div className="flex items-start justify-between gap-3 px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Comparison tray</p>
+              <p className="text-xs text-gray-600">
+                {compareSelection.length === 2
+                  ? 'Ready to compare your selected projects.'
+                  : 'Select one more project to enable comparison.'}
+              </p>
             </div>
-          )}
+            <button
+              type="button"
+              onClick={handleResetComparison}
+              aria-label="Dismiss comparison tray"
+              className="rounded-full border border-gray-200 p-1 text-gray-500 hover:text-gray-700"
+            >
+              <CloseIcon />
+            </button>
+          </div>
+          <ul className="divide-y divide-gray-200">
+            {compareSelection.map((project) => (
+              <li
+                key={project.id}
+                className="flex items-center justify-between gap-2 px-4 py-2 text-sm text-gray-700"
+              >
+                <span className="font-medium text-gray-800">{project.title}</span>
+                <button
+                  type="button"
+                  onClick={() => handleCompare(project)}
+                  aria-label={`Remove ${project.title} from comparison`}
+                  className="rounded-full border border-transparent p-1 text-gray-400 transition hover:border-gray-200 hover:text-gray-600"
+                >
+                  <CloseIcon />
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div className="flex gap-2 border-t border-gray-200 px-4 py-3">
+            <button
+              type="button"
+              className="flex-1 rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+              onClick={handleStartCompare}
+              disabled={compareSelection.length !== 2}
+            >
+              Compare projects
+            </button>
+            <button
+              type="button"
+              className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              onClick={handleResetComparison}
+            >
+              Reset
+            </button>
+          </div>
         </div>
       )}
     </div>
