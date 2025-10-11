@@ -66,7 +66,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | autopsy | Autopsy | Security simulations pod | **In progress** – simulator backlog | Forensic dataset |
 | radare2 | Radare2 | Security simulations pod | **In progress** – simulator backlog | Static analysis fixtures |
 | ghidra | Ghidra | Security simulations pod | **In progress** – simulator backlog | Reverse-engineering fixtures |
-| hashcat | Hashcat | Security simulations pod | **In progress** – simulator backlog | Hash samples |
+| hashcat | Hashcat | Security simulations pod | **Ready for QA** – lab datasets, safe builder, interpretation panels | Hash samples |
 | msf-post | Metasploit Post | Security simulations pod | **In progress** – simulator backlog | Module JSON |
 | evidence-vault | Evidence Vault | Security simulations pod | **Needs polish** – clarify evidence data model | Forensics fixtures |
 | mimikatz | Mimikatz | Security simulations pod | **In progress** – simulator backlog | Credential dump fixtures |
