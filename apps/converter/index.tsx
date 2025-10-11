@@ -34,18 +34,19 @@ const formatNumber = (
   return n.toLocaleString(undefined, opts);
 };
 
-function CopyButton({ value }: { value: string }) {
+function CopyButton({ value, label = "Copy value" }: { value: string; label?: string }) {
   return (
     <div className="relative group">
       <button
         onClick={() => value && copyToClipboard(value)}
         className="w-6 h-6 flex items-center justify-center bg-gray-700 rounded"
-        aria-label="Copy value"
+        aria-label={label}
+        title={label}
       >
         📋
       </button>
       <span className="pointer-events-none absolute -top-6 left-1/2 -translate-x-1/2 rounded bg-black px-1 py-0.5 text-xs opacity-0 transition-opacity delay-100 group-hover:opacity-100 group-focus-within:opacity-100">
-        Copy
+        {label}
       </span>
     </div>
   );
@@ -62,9 +63,11 @@ export default function Converter() {
   const [notation, setNotation] = useState<Notation>("fixed");
   const [trailingZeros, setTrailingZeros] = useState(false);
   const HISTORY_KEY = "converter-history";
+  const HISTORY_PREVIEW_COUNT = 5;
   const [history, setHistory] = useState<
     { fromValue: string; fromUnit: string; toValue: string; toUnit: string }[]
   >([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(HISTORY_KEY);
@@ -173,7 +176,9 @@ export default function Converter() {
           </button>
         ))}
       </div>
-        <div className="mb-4 flex items-center gap-2">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-6">
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-xs uppercase tracking-wide text-gray-300">Notation</span>
           <select
             className="text-black p-1 rounded"
             value={notation}
@@ -183,7 +188,12 @@ export default function Converter() {
             <option value="engineering">Engineering</option>
             <option value="scientific">Scientific</option>
           </select>
-          <div className="flex items-center gap-1 text-sm">
+          <small className="text-[11px] text-gray-400">
+            Controls how formatted previews display large or small numbers.
+          </small>
+        </label>
+        <div className="flex flex-col gap-1 text-sm">
+          <label htmlFor="converter-trailing-zeros" className="flex items-center gap-2">
             <input
               id="converter-trailing-zeros"
               type="checkbox"
@@ -191,8 +201,12 @@ export default function Converter() {
               onChange={(e) => setTrailingZeros(e.target.checked)}
               aria-label="Include trailing zeros"
             />
-            <label htmlFor="converter-trailing-zeros">Trailing zeros</label>
-          </div>
+            Trailing zeros
+          </label>
+          <small className="text-[11px] text-gray-400">
+            Pads previews with zeros up to ten decimal places for consistent length.
+          </small>
+        </div>
       </div>
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-center gap-[6px]">
@@ -231,6 +245,7 @@ export default function Converter() {
               value={
                 formatNumber(fromValue, notation, trailingZeros) || fromValue
               }
+              label="Copy value"
             />
           </div>
           <button
@@ -273,22 +288,45 @@ export default function Converter() {
             </select>
             <CopyButton
               value={formatNumber(toValue, notation, trailingZeros) || toValue}
+              label="Copy value"
             />
           </div>
         </div>
         {history.length > 0 && (
-          <div className="max-h-40 overflow-y-auto space-y-1">
-            {history.map((h, i) => (
+          <div className="bg-gray-900/60 rounded border border-gray-700">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between px-3 py-2 text-sm uppercase tracking-wide"
+              onClick={() => setHistoryOpen((open) => !open)}
+              aria-expanded={historyOpen}
+              aria-controls="converter-history-panel"
+            >
+              <span>
+                {historyOpen ? "Hide history" : "Show history"} (
+                {Math.min(history.length, HISTORY_PREVIEW_COUNT)})
+              </span>
+              <span className="text-lg" aria-hidden>{historyOpen ? "▾" : "▸"}</span>
+            </button>
+            {historyOpen && (
               <div
-                key={i}
-                className="flex items-center justify-between bg-gray-800 px-2 py-1 rounded"
+                id="converter-history-panel"
+                className="max-h-48 overflow-y-auto space-y-1 px-3 pb-3"
               >
-                <span>{`${formatNumber(h.fromValue, notation, trailingZeros)} ${h.fromUnit} = ${formatNumber(h.toValue, notation, trailingZeros)} ${h.toUnit}`}</span>
-                <CopyButton
-                  value={`${formatNumber(h.fromValue, notation, trailingZeros)} ${h.fromUnit} = ${formatNumber(h.toValue, notation, trailingZeros)} ${h.toUnit}`}
-                />
+                {history.slice(0, HISTORY_PREVIEW_COUNT).map((h, i) => {
+                  const formatted = `${formatNumber(h.fromValue, notation, trailingZeros)} ${h.fromUnit} = ${formatNumber(h.toValue, notation, trailingZeros)} ${h.toUnit}`;
+                  return (
+                    <div
+                      key={`${h.fromUnit}-${h.toUnit}-${i}`}
+                      className="flex items-center justify-between gap-2 rounded bg-gray-800 px-2 py-1 text-xs"
+                      data-testid="converter-history-entry"
+                    >
+                      <span className="font-mono leading-tight">{formatted}</span>
+                      <CopyButton value={formatted} label="Copy result" />
+                    </div>
+                  );
+                })}
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>
