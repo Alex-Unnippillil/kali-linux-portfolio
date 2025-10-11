@@ -56,15 +56,20 @@ const normalizeRightCornerSnap = (candidate, regions) => {
     return candidate;
 };
 
-const computeSnapRegions = (viewportWidth, viewportHeight, topInset = DEFAULT_WINDOW_TOP_OFFSET) => {
+const computeSnapRegions = (
+    viewportWidth,
+    viewportHeight,
+    topInset = DEFAULT_WINDOW_TOP_OFFSET,
+    bottomInset = measureSnapBottomInset(),
+) => {
     const normalizedTopInset = typeof topInset === 'number'
         ? Math.max(topInset, DESKTOP_TOP_PADDING)
         : DEFAULT_WINDOW_TOP_OFFSET;
-    const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
-    const snapBottomInset = typeof bottomInset === 'number' && Number.isFinite(bottomInset)
+    const normalizedBottomInset = typeof bottomInset === 'number' && Number.isFinite(bottomInset)
         ? Math.max(bottomInset, 0)
         : measureSnapBottomInset();
-    const availableHeight = Math.max(0, viewportHeight - normalizedTopInset - snapBottomInset - safeBottom);
+    const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
+    const availableHeight = Math.max(0, viewportHeight - normalizedTopInset - normalizedBottomInset - safeBottom);
     const halfWidth = Math.max(viewportWidth / 2, 0);
     const halfHeight = Math.max(availableHeight / 2, 0);
     const rightStart = Math.max(viewportWidth - halfWidth, 0);
@@ -467,7 +472,7 @@ export class Window extends Component {
         const { width, height } = this.state;
         const node = this.getWindowNode();
         if (node) {
-            const offsetTop = region.top - DESKTOP_TOP_PADDING;
+            const offsetTop = region.top;
             this.setTransformMotionPreset(node, 'snap');
             node.style.transform = `translate(${region.left}px, ${offsetTop}px)`;
         }
@@ -676,8 +681,7 @@ export class Window extends Component {
             const currentSize = { width: this.state.width, height: this.state.height };
             if (node) {
                 this.setTransformMotionPreset(node, 'maximize');
-                const translateYOffset = topOffset - DESKTOP_TOP_PADDING;
-                node.style.transform = `translate(-1pt, ${translateYOffset}px)`;
+                node.style.transform = `translate(-1pt, ${topOffset}px)`;
             }
             this.setState({ maximized: true, height: heightPercent, width: 100.2, preMaximizeSize: currentSize }, () => {
                 this.notifySizeChange();
