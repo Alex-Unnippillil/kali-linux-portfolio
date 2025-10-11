@@ -57,7 +57,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   chess: {
     objective: "Checkmate the opposing king.",
-    controls: "Click or drag pieces to legal squares.",
+    controls:
+      "Click or tap squares or use arrow keys + Enter to move. Pause and reset from the top toolbar.",
   },
   "connect-four": {
     objective: "Get four of your discs in a row.",
