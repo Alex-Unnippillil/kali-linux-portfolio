@@ -68,7 +68,8 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 - Persist tasks in `localStorage`.
 
 ### Trash
-- Soft-delete files from virtual FS with restore or empty options; store original path metadata.
+- ✅ Soft-delete files from the virtual FS with restore and empty options while preserving original
+  path metadata. See `docs/trash-retention.md` for the retention policy and QA notes.
 
 ### Contact Me
 - Simple form posting to dummy endpoint with client-side validation and privacy note.

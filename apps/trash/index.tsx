@@ -11,11 +11,14 @@ const FULL_ICON = '/themes/Yaru/status/user-trash-full-symbolic.svg';
 export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   const {
     items,
-    setItems,
     history,
-    pushHistory,
     restoreFromHistory,
     restoreAllFromHistory,
+    restoreItem,
+    removeItem,
+    purgeItem,
+    restoreAllItems,
+    emptyTrash,
   } = useTrashState();
   const [selected, setSelected] = useState<number | null>(null);
   const [purgeDays, setPurgeDays] = useState(30);
@@ -41,28 +44,29 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     return () => clearInterval(id);
   }, []);
 
-  const notifyChange = () => window.dispatchEvent(new Event('trash-change'));
+  const notifyChange = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new Event('trash-change'));
+  }, []);
 
   const restore = useCallback(() => {
     if (selected === null) return;
     const item = items[selected];
     if (!window.confirm(`Restore ${item.title}?`)) return;
-    openApp(item.id);
-    setItems(items => items.filter((_, i) => i !== selected));
+    const restored = restoreItem(selected);
+    if (restored) {
+      openApp(restored.id);
+    }
     setSelected(null);
-    notifyChange();
-  }, [items, selected, openApp, setItems]);
+  }, [items, selected, openApp, restoreItem]);
 
   const remove = useCallback(() => {
     if (selected === null) return;
     const item = items[selected];
     if (!window.confirm(`Delete ${item.title}?`)) return;
-    const next = items.filter((_, i) => i !== selected);
-    setItems(next);
-    pushHistory(item);
+    removeItem(selected);
     setSelected(null);
-    notifyChange();
-  }, [items, selected, setItems, pushHistory]);
+  }, [items, selected, removeItem]);
 
   const purge = useCallback(() => {
     if (selected === null) return;
@@ -73,18 +77,16 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
       )
     )
       return;
-    setItems(items => items.filter((_, i) => i !== selected));
+    purgeItem(selected);
     setSelected(null);
-    notifyChange();
-  }, [items, selected, setItems]);
+  }, [items, selected, purgeItem]);
 
   const restoreAll = () => {
     if (items.length === 0) return;
     if (!window.confirm('Restore all windows?')) return;
-    items.forEach(item => openApp(item.id));
-    setItems([]);
+    const restored = restoreAllItems();
+    restored.forEach(item => openApp(item.id));
     setSelected(null);
-    notifyChange();
   };
 
   const empty = () => {
@@ -96,11 +98,12 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
       count -= 1;
       if (count <= 0) {
         clearInterval(timer);
-        pushHistory(items);
-        setItems([]);
+        const removed = emptyTrash();
+        if (removed.length === 0) {
+          notifyChange();
+        }
         setSelected(null);
         setEmptyCountdown(null);
-        notifyChange();
       } else {
         setEmptyCountdown(count);
       }
@@ -135,6 +138,10 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     restoreAllFromHistory();
     notifyChange();
   }, [restoreAllFromHistory]);
+
+  useEffect(() => {
+    notifyChange();
+  }, [items.length, notifyChange]);
 
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white select-none">
@@ -206,6 +213,14 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
                 <span className="truncate font-mono" title={item.title}>
                   {item.title}
                 </span>
+                {item.originalPath && (
+                  <span
+                    className="ml-2 text-[10px] text-gray-300 truncate max-w-[10rem]"
+                    title={item.originalPath}
+                  >
+                    {item.originalPath}
+                  </span>
+                )}
                 <span
                   className="ml-auto text-xs opacity-70"
                   aria-label={`Purges in ${daysLeft(item.closedAt)} day${

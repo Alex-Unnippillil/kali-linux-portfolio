@@ -43,7 +43,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | input-lab | Input Lab | Core maintainers | **Needs polish** – ensure device coverage (keyboard, mouse, gamepad) | Device APIs |
 | subnet-calculator | Subnet Calculator | Core maintainers | **Needs polish** – validation UX and shared presets | Network calc utils |
 | sticky_notes | Sticky Notes | Core maintainers | **Needs polish** – confirm persistence model and drag handles | localStorage |
-| trash | Trash | Core maintainers | **In progress** – soft-delete metadata with restore/empty flows | Virtual filesystem metadata |
+| trash | Trash | Core maintainers | **Ready** – soft-delete metadata, restore/empty flows, and retention docs complete | Virtual filesystem metadata |
 | serial-terminal | Serial Terminal | Core maintainers | **Needs polish** – confirm serial transport stubs | Web Serial API mock |
 | plugin-manager | Plugin Manager | Core maintainers | **Needs triage** – document scope and dependencies | Plugin metadata |
 | ssh | SSH Command Builder | Core maintainers | **Needs polish** – preset library and validation | Command templates |
