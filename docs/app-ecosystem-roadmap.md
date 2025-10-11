@@ -31,7 +31,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | project-gallery | Project Gallery | Core maintainers | **In progress** – load from `projects.json`, add filters and CTA buttons | `projects.json` data |
 | alex | About Alex | Core maintainers | **In progress** – resume widget, skill chips, project links | Resume JSON feed |
 | settings | Settings | Core maintainers | **In progress** – theme picker, wallpaper selector, reset desktop | `settingsStore.js`, localStorage |
-| resource_monitor | Resource Monitor | Core maintainers | **In progress** – memory/FPS display and synthetic CPU graph | `performance` APIs |
+| resource_monitor | Resource Monitor | Core maintainers | **Beta** – performance.memory telemetry, FPS averaging, and worker-driven CPU benchmark with Jest coverage | `performance` APIs |
 | screen-recorder | Screen Recorder | Core maintainers | **Needs polish** – permission prompts, storage strategy | MediaRecorder API |
 | clipboard-manager | Clipboard Manager | Core maintainers | **Ready** – permission UX, fallbacks, and status telemetry covered | Clipboard API |
 | figlet | Figlet | Core maintainers | **In progress** – font selector, copy action, IndexedDB caching | Font assets, IndexedDB |

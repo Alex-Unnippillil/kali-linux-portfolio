@@ -54,8 +54,9 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 - Add theme picker, wallpaper selector, and "reset desktop" clearing `localStorage` in `settingsStore.js`.
 
 ### Resource Monitor
-- Display `performance.memory` data and FPS from `performance.now()` deltas.
-- Show CPU synthetic load graph using `requestAnimationFrame` buckets.
+- ✅ Display `performance.memory` data with live heap usage, totals, and caps.
+- ✅ Calculate FPS from `requestAnimationFrame` deltas with a rolling average.
+- ✅ Visualize synthetic CPU load using a dedicated worker probe and document the metrics in-app.
 
 ### Project Gallery
 - Load projects from `projects.json`; add filters and buttons for repo and live demo.
