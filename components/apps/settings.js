@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
-import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData, THEME_OPTIONS, WALLPAPER_OPTIONS } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
@@ -9,7 +9,7 @@ export function Settings() {
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
 
-    const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
+    const themeLabel = (themeName) => themeName.charAt(0).toUpperCase() + themeName.slice(1);
 
     const changeBackgroundImage = (e) => {
         const name = e.currentTarget.dataset.path;
@@ -70,28 +70,30 @@ export function Settings() {
                 )}
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Theme:</label>
+                <label htmlFor="theme-select" className="mr-2 text-ubt-grey">Theme:</label>
                 <select
+                    id="theme-select"
                     value={theme}
                     onChange={(e) => setTheme(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
                 >
-                    <option value="default">Default</option>
-                    <option value="dark">Dark</option>
-                    <option value="neon">Neon</option>
-                    <option value="matrix">Matrix</option>
+                    {THEME_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                            {themeLabel(option)}
+                        </option>
+                    ))}
                 </select>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={useKaliWallpaper}
-                        onChange={(e) => setUseKaliWallpaper(e.target.checked)}
-                        className="mr-2"
-                    />
-                    Kali Gradient Wallpaper
-                </label>
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="kali-wallpaper-toggle"
+                    type="checkbox"
+                    checked={useKaliWallpaper}
+                    onChange={(e) => setUseKaliWallpaper(e.target.checked)}
+                    className="mr-2"
+                    aria-label="Kali Gradient Wallpaper"
+                />
+                <label htmlFor="kali-wallpaper-toggle" className="text-ubt-grey">Kali Gradient Wallpaper</label>
             </div>
             {useKaliWallpaper && (
                 <p className="text-center text-xs text-ubt-grey/70 px-6 -mt-2 mb-4">
@@ -115,8 +117,9 @@ export function Settings() {
                 </div>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Density:</label>
+                <label htmlFor="density-select" className="mr-2 text-ubt-grey">Density:</label>
                 <select
+                    id="density-select"
                     value={density}
                     onChange={(e) => setDensity(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
@@ -126,8 +129,9 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Font Size:</label>
+                <label htmlFor="font-size-slider" className="mr-2 text-ubt-grey">Font Size:</label>
                 <input
+                    id="font-size-slider"
                     type="range"
                     min="0.75"
                     max="1.5"
@@ -135,73 +139,74 @@ export function Settings() {
                     value={fontScale}
                     onChange={(e) => setFontScale(parseFloat(e.target.value))}
                     className="ubuntu-slider"
+                    aria-label="Font Size"
                 />
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={reducedMotion}
-                        onChange={(e) => setReducedMotion(e.target.checked)}
-                        className="mr-2"
-                    />
-                    Reduced Motion
-                </label>
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="reduced-motion-toggle"
+                    type="checkbox"
+                    checked={reducedMotion}
+                    onChange={(e) => setReducedMotion(e.target.checked)}
+                    className="mr-2"
+                    aria-label="Reduced Motion"
+                />
+                <label htmlFor="reduced-motion-toggle" className="text-ubt-grey">Reduced Motion</label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={largeHitAreas}
-                        onChange={(e) => setLargeHitAreas(e.target.checked)}
-                        className="mr-2"
-                    />
-                    Large Hit Areas
-                </label>
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="large-hit-areas-toggle"
+                    type="checkbox"
+                    checked={largeHitAreas}
+                    onChange={(e) => setLargeHitAreas(e.target.checked)}
+                    className="mr-2"
+                    aria-label="Large Hit Areas"
+                />
+                <label htmlFor="large-hit-areas-toggle" className="text-ubt-grey">Large Hit Areas</label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={highContrast}
-                        onChange={(e) => setHighContrast(e.target.checked)}
-                        className="mr-2"
-                    />
-                    High Contrast
-                </label>
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="high-contrast-toggle"
+                    type="checkbox"
+                    checked={highContrast}
+                    onChange={(e) => setHighContrast(e.target.checked)}
+                    className="mr-2"
+                    aria-label="High Contrast"
+                />
+                <label htmlFor="high-contrast-toggle" className="text-ubt-grey">High Contrast</label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={allowNetwork}
-                        onChange={(e) => setAllowNetwork(e.target.checked)}
-                        className="mr-2"
-                    />
-                    Allow Network Requests
-                </label>
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="allow-network-toggle"
+                    type="checkbox"
+                    checked={allowNetwork}
+                    onChange={(e) => setAllowNetwork(e.target.checked)}
+                    className="mr-2"
+                    aria-label="Allow Network Requests"
+                />
+                <label htmlFor="allow-network-toggle" className="text-ubt-grey">Allow Network Requests</label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={haptics}
-                        onChange={(e) => setHaptics(e.target.checked)}
-                        className="mr-2"
-                    />
-                    Haptics
-                </label>
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="haptics-toggle"
+                    type="checkbox"
+                    checked={haptics}
+                    onChange={(e) => setHaptics(e.target.checked)}
+                    className="mr-2"
+                    aria-label="Haptics"
+                />
+                <label htmlFor="haptics-toggle" className="text-ubt-grey">Haptics</label>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
-                    <input
-                        type="checkbox"
-                        checked={pongSpin}
-                        onChange={(e) => setPongSpin(e.target.checked)}
-                        className="mr-2"
-                    />
-                    Pong Spin
-                </label>
+            <div className="flex justify-center my-4 items-center">
+                <input
+                    id="pong-spin-toggle"
+                    type="checkbox"
+                    checked={pongSpin}
+                    onChange={(e) => setPongSpin(e.target.checked)}
+                    className="mr-2"
+                    aria-label="Pong Spin"
+                />
+                <label htmlFor="pong-spin-toggle" className="text-ubt-grey">Pong Spin</label>
             </div>
             <div className="flex justify-center my-4">
                 <div
@@ -223,7 +228,7 @@ export function Settings() {
             </div>
             <div className="flex flex-wrap justify-center items-center border-t border-gray-900">
                 {
-                    wallpapers.map((name, index) => (
+                    WALLPAPER_OPTIONS.map((name) => (
                         <div
                             key={name}
                             role="button"
@@ -281,7 +286,7 @@ export function Settings() {
                         setPongSpin(defaults.pongSpin);
                         setAllowNetwork(defaults.allowNetwork);
                         setHaptics(defaults.haptics);
-                        setTheme('default');
+                        setTheme(defaults.theme);
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
@@ -292,6 +297,7 @@ export function Settings() {
                 type="file"
                 accept="application/json"
                 ref={fileInput}
+                aria-label="Import settings file"
                 onChange={async (e) => {
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;

@@ -30,7 +30,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | file-explorer | Files | Core maintainers | **Needs polish** – ensure virtual FS hooks stay in sync | Virtual filesystem layer |
 | project-gallery | Project Gallery | Core maintainers | **In progress** – load from `projects.json`, add filters and CTA buttons | `projects.json` data |
 | alex | About Alex | Core maintainers | **In progress** – resume widget, skill chips, project links | Resume JSON feed |
-| settings | Settings | Core maintainers | **In progress** – theme picker, wallpaper selector, reset desktop | `settingsStore.js`, localStorage |
+| settings | Settings | Core maintainers | **Ready** – Theme picker, wallpaper selector, and desktop reset shipped via `settingsStore` | `settingsStore.js`, localStorage |
 | resource_monitor | Resource Monitor | Core maintainers | **In progress** – memory/FPS display and synthetic CPU graph | `performance` APIs |
 | screen-recorder | Screen Recorder | Core maintainers | **Needs polish** – permission prompts, storage strategy | MediaRecorder API |
 | clipboard-manager | Clipboard Manager | Core maintainers | **Needs polish** – permission UX and fallbacks | Clipboard API |

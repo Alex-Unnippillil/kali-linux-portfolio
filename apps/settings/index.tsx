@@ -8,6 +8,8 @@ import {
   defaults,
   exportSettings as exportSettingsData,
   importSettings as importSettingsData,
+  THEME_OPTIONS,
+  WALLPAPER_OPTIONS,
 } from "../../utils/settingsStore";
 import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
@@ -45,19 +47,8 @@ export default function Settings() {
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
 
-  const wallpapers = [
-    "wall-1",
-    "wall-2",
-    "wall-3",
-    "wall-4",
-    "wall-5",
-    "wall-6",
-    "wall-7",
-    "wall-8",
-  ];
-
   const changeBackground = (name: string) => setWallpaper(name);
-  const wallpaperIndex = Math.max(0, wallpapers.indexOf(wallpaper));
+  const wallpaperIndex = Math.max(0, WALLPAPER_OPTIONS.indexOf(wallpaper));
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -77,12 +68,15 @@ export default function Settings() {
       const parsed = JSON.parse(text);
       if (parsed.accent !== undefined) setAccent(parsed.accent);
       if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
+      if (parsed.useKaliWallpaper !== undefined)
+        setUseKaliWallpaper(parsed.useKaliWallpaper);
       if (parsed.density !== undefined) setDensity(parsed.density);
       if (parsed.reducedMotion !== undefined)
         setReducedMotion(parsed.reducedMotion);
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
+      if (parsed.haptics !== undefined) setHaptics(parsed.haptics);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
     } catch (err) {
       console.error("Invalid settings", err);
@@ -97,14 +91,15 @@ export default function Settings() {
     )
       return;
     await resetSettings();
-    window.localStorage.clear();
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
+    setUseKaliWallpaper(defaults.useKaliWallpaper);
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
-    setTheme("default");
+    setHaptics(defaults.haptics);
+    setTheme(defaults.theme);
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -128,16 +123,18 @@ export default function Settings() {
             )}
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Theme:</label>
+            <label htmlFor="theme-select" className="mr-2 text-ubt-grey">Theme:</label>
             <select
+              id="theme-select"
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
               className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
             >
-              <option value="default">Default</option>
-              <option value="dark">Dark</option>
-              <option value="neon">Neon</option>
-              <option value="matrix">Matrix</option>
+              {THEME_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option.charAt(0).toUpperCase() + option.slice(1)}
+                </option>
+              ))}
             </select>
           </div>
           <div className="flex justify-center my-4">
@@ -156,14 +153,16 @@ export default function Settings() {
               ))}
             </div>
           </div>
-          <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey flex items-center">
-              <input
-                type="checkbox"
-                checked={useKaliWallpaper}
-                onChange={(e) => setUseKaliWallpaper(e.target.checked)}
-                className="mr-2"
-              />
+          <div className="flex justify-center my-4 items-center">
+            <input
+              id="kali-wallpaper-toggle"
+              type="checkbox"
+              checked={useKaliWallpaper}
+              onChange={(e) => setUseKaliWallpaper(e.target.checked)}
+              className="mr-2"
+              aria-label="Kali Gradient Wallpaper"
+            />
+            <label htmlFor="kali-wallpaper-toggle" className="text-ubt-grey">
               Kali Gradient Wallpaper
             </label>
           </div>
@@ -178,11 +177,13 @@ export default function Settings() {
               id="wallpaper-slider"
               type="range"
               min="0"
-              max={wallpapers.length - 1}
+              max={WALLPAPER_OPTIONS.length - 1}
               step="1"
               value={wallpaperIndex}
               onChange={(e) =>
-                changeBackground(wallpapers[parseInt(e.target.value, 10)])
+                changeBackground(
+                  WALLPAPER_OPTIONS[parseInt(e.target.value, 10)]
+                )
               }
               className="ubuntu-slider"
               aria-label="Wallpaper"
@@ -192,7 +193,7 @@ export default function Settings() {
             <BackgroundSlideshow />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 justify-items-center border-t border-gray-900">
-            {wallpapers.map((name) => (
+            {WALLPAPER_OPTIONS.map((name) => (
               <div
                 key={name}
                 role="button"
@@ -248,8 +249,9 @@ export default function Settings() {
             />
           </div>
           <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey">Density:</label>
+            <label htmlFor="density-select" className="mr-2 text-ubt-grey">Density:</label>
             <select
+              id="density-select"
               value={density}
               onChange={(e) => setDensity(e.target.value as any)}
               className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"

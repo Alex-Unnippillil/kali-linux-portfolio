@@ -154,6 +154,16 @@ playwright/           # Playwright helpers for end-to-end testing
 
 The Spotify app lets users map moods to playlists, persist preferences in OPFS, and recall the last session automatically.
 
+### Desktop Settings
+
+The Settings hub centralizes desktop personalization and accessibility controls backed by `settingsStore.js`:
+
+- Theme picker covering **Default**, **Dark**, **Neon**, and **Matrix** presets.
+- Wallpaper selector with eight bundled backdrops plus the Kali gradient overlay option.
+- Accessibility toggles for reduced motion, large hit areas, high contrast, and font scaling.
+- Interaction switches for pong spin, haptics, and simulated network permissions.
+- A **Reset Desktop** action that restores defaults without clearing unrelated `localStorage` entries.
+
 ### Games
 | Game | Route |
 | --- | --- |

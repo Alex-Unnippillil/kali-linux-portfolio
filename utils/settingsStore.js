@@ -1,7 +1,19 @@
 "use client";
 
 import { get, set, del } from 'idb-keyval';
-import { getTheme, setTheme } from './theme';
+import { getTheme, setTheme, THEME_KEY } from './theme';
+
+export const THEME_OPTIONS = Object.freeze(['default', 'dark', 'neon', 'matrix']);
+export const WALLPAPER_OPTIONS = Object.freeze([
+  'wall-1',
+  'wall-2',
+  'wall-3',
+  'wall-4',
+  'wall-5',
+  'wall-6',
+  'wall-7',
+  'wall-8',
+]);
 
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
@@ -15,6 +27,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  theme: THEME_OPTIONS[0],
 };
 
 let hasLoggedStorageWarning = false;
@@ -177,21 +190,39 @@ export async function setAllowNetwork(value) {
 }
 
 export async function resetSettings() {
-  const storage = getLocalStorage();
-  if (!storage) return;
   await Promise.all([
     del('accent'),
     del('bg-image'),
   ]);
-  storage.removeItem('density');
-  storage.removeItem('reduced-motion');
-  storage.removeItem('font-scale');
-  storage.removeItem('high-contrast');
-  storage.removeItem('large-hit-areas');
-  storage.removeItem('pong-spin');
-  storage.removeItem('allow-network');
-  storage.removeItem('haptics');
-  storage.removeItem('use-kali-wallpaper');
+
+  const storage = getLocalStorage();
+  if (storage) {
+    const keysToRemove = [
+      'density',
+      'reduced-motion',
+      'font-scale',
+      'high-contrast',
+      'large-hit-areas',
+      'pong-spin',
+      'allow-network',
+      'haptics',
+      'use-kali-wallpaper',
+      THEME_KEY,
+    ];
+
+    keysToRemove.forEach((key) => {
+      try {
+        storage.removeItem(key);
+      } catch (error) {
+        if (process.env.NODE_ENV !== 'production' && !hasLoggedStorageWarning) {
+          console.warn('Failed to remove setting from localStorage', key, error);
+          hasLoggedStorageWarning = true;
+        }
+      }
+    });
+  }
+
+  setTheme(DEFAULT_SETTINGS.theme);
 }
 
 export async function exportSettings() {

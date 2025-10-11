@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { Settings } from '../components/apps/settings';
 import { SettingsProvider } from '../hooks/useSettings';
 import { defaults, resetSettings } from '../utils/settingsStore';
+import { THEME_KEY } from '../utils/theme';
 
 describe('Settings reset flow', () => {
   beforeEach(async () => {
@@ -65,9 +66,11 @@ describe('Settings reset flow', () => {
     expect(hapticsToggle).not.toBeChecked();
     expect(pongSpinToggle).not.toBeChecked();
 
+    window.localStorage.setItem('unrelated', 'keep');
+
     await user.click(screen.getByRole('button', { name: 'Reset Desktop' }));
 
-    await waitFor(() => expect(themeSelect).toHaveValue('default'));
+    await waitFor(() => expect(themeSelect).toHaveValue(defaults.theme));
     expect(defaultAccentRadio).toHaveAttribute('aria-checked', 'true');
     expect(densitySelect).toHaveValue(defaults.density);
     expect(fontSlider).toHaveValue(String(defaults.fontScale));
@@ -78,6 +81,8 @@ describe('Settings reset flow', () => {
     expect(allowNetworkToggle.checked).toBe(defaults.allowNetwork);
     expect(hapticsToggle.checked).toBe(defaults.haptics);
     expect(pongSpinToggle.checked).toBe(defaults.pongSpin);
+    expect(window.localStorage.getItem('unrelated')).toBe('keep');
+    expect(window.localStorage.getItem(THEME_KEY)).toBe(defaults.theme);
   });
 });
 

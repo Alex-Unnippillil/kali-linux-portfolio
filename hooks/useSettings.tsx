@@ -97,7 +97,7 @@ interface SettingsContextValue {
 }
 
 const DEFAULT_DESKTOP_THEME = resolveDesktopTheme({
-  theme: 'default',
+  theme: defaults.theme,
   accent: defaults.accent,
   wallpaperName: defaults.wallpaper,
   bgImageName: defaults.wallpaper,
@@ -117,7 +117,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
-  theme: 'default',
+  theme: defaults.theme,
   desktopTheme: DEFAULT_DESKTOP_THEME,
   setAccent: () => {},
   setWallpaper: () => {},
