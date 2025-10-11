@@ -42,4 +42,25 @@ describe('Firefox app', () => {
     );
     expect(localStorage.getItem('firefox:last-url')).toBe('https://www.kali.org/get-kali/#kali-platforms');
   });
+
+  it('shows a sandboxed fallback card for live sites', async () => {
+    const user = userEvent.setup();
+    render(<Firefox />);
+    const input = screen.getByLabelText('Address');
+    await user.clear(input);
+    await user.type(input, 'example.com');
+    await user.click(screen.getByRole('button', { name: 'Go' }));
+    expect(await screen.findByRole('heading', { name: 'Sandboxed live preview' })).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /offsec/i })[0]).toHaveAttribute('target', '_blank');
+  });
+
+  it('quick fills the address bar from favicon shortcuts', async () => {
+    const user = userEvent.setup();
+    render(<Firefox />);
+    const quickFill = await screen.findByRole('button', { name: /fill address with offsec/i });
+    await user.click(quickFill);
+    const input = screen.getByLabelText('Address');
+    expect(input).toHaveValue('https://www.offsec.com/?utm_source=kali&utm_medium=os&utm_campaign=firefox');
+    expect(localStorage.getItem('firefox:last-url')).toBeNull();
+  });
 });
