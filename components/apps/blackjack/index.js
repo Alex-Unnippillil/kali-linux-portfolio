@@ -167,6 +167,7 @@ const Blackjack = () => {
   });
   const [practiceFeedback, setPracticeFeedback] = useState('');
   const [dealerPeeking, setDealerPeeking] = useState(false);
+  const [streakSummary, setStreakSummary] = useState({ current: 0, type: null, winRate: 0 });
 
   const [_, dispatch] = useReducer(gameReducer, {
     gameRef,
@@ -183,6 +184,28 @@ const Blackjack = () => {
     setStats({ ...gameRef.current.stats });
     setCurrent(gameRef.current.current);
     setRunningCount(gameRef.current.shoe.runningCount);
+    const history = gameRef.current.history;
+    const flatResults = history.flatMap((round) =>
+      round.playerHands.map((h) => h.result).filter(Boolean),
+    );
+    let type = null;
+    let count = 0;
+    for (let i = flatResults.length - 1; i >= 0; i -= 1) {
+      if (!type) {
+        type = flatResults[i];
+        count = 1;
+      } else if (flatResults[i] === type) {
+        count += 1;
+      } else {
+        break;
+      }
+    }
+    const wins = flatResults.filter((r) => r === 'win').length;
+    setStreakSummary({
+      current: count,
+      type,
+      winRate: flatResults.length ? Math.round((wins / flatResults.length) * 100) : 0,
+    });
   };
 
   useEffect(() => {
@@ -364,119 +387,221 @@ const Blackjack = () => {
     );
   }
 
+  const actionsDisabled = playerHands.length === 0 || current >= playerHands.length;
+  const shoe = gameRef.current.shoe;
+  const shuffleProgress = shoe.shufflePoint ? Math.min(1, shoe.dealt / shoe.shufflePoint) : 0;
+  const shufflePercent = Math.round(shuffleProgress * 100);
+  const penetrationPercent = Math.round((penetration || 0) * 100);
+  const streakLabel = (() => {
+    if (!streakSummary.type || streakSummary.current === 0) return 'No streak yet';
+    const labelMap = { win: 'Winning', lose: 'Losing', push: 'Push' };
+    return `${labelMap[streakSummary.type] || 'Mixed'} streak: ${streakSummary.current}`;
+  })();
+  const actions = [
+    { type: 'hit', label: 'Hit' },
+    { type: 'stand', label: 'Stand' },
+    { type: 'double', label: 'Double' },
+    { type: 'split', label: 'Split' },
+    { type: 'surrender', label: 'Surrender' },
+  ];
+
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
-      <div className="mb-2 flex items-center space-x-4">
-        <div>Bankroll: {availableBankroll}</div>
-        <div className={`h-8 w-6 bg-gray-700 ${shuffling ? 'shuffle' : ''}`}></div>
-        {showCount && <div>RC: {runningCount}</div>}
-      </div>
-        <div className="mb-2 flex items-center space-x-2">
-          <button className="px-2 py-1 bg-gray-700" onClick={() => setShowHints(!showHints)}>
-            {showHints ? 'Hide Hints' : 'Show Hints'}
-          </button>
-          <button className="px-2 py-1 bg-gray-700" onClick={() => setShowCount(!showCount)}>
-            {showCount ? 'Hide Count' : 'Show Count'}
-          </button>
-          <button className="px-2 py-1 bg-gray-700" onClick={startPractice}>
-            Practice Count
-          </button>
-          <label className="flex items-center space-x-1">
-            <span className="text-sm">Pen</span>
-            <input
-              type="range"
-              step="0.05"
-              min="0.5"
-              max="0.95"
-              value={penetration}
-              onChange={(e) => {
-                const val = parseFloat(e.target.value);
-                if (!Number.isNaN(val)) setPenetration(val);
-              }}
-              className="w-24"
-            />
-            <span className="text-sm">{(penetration * 100).toFixed(0)}%</span>
-          </label>
-        </div>
-      {playerHands.length === 0 ? (
-        <div className="mb-4">
-          <div className="mb-2 flex items-center space-x-2" aria-live="polite" role="status">
-            <span>Bet: {bet} x {handCount}</span>
-            <BetChips amount={bet} />
-          </div>
-          <div className="flex space-x-2 mb-2">
-            {CHIP_VALUES.map((v) => (
-              <button
-                key={v}
-                className={`chip ${CHIP_COLORS[v]} ${
-                  bet + v > bankroll / handCount ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-                onClick={() => bet + v <= bankroll / handCount && setBet(bet + v)}
-                aria-label={`Add ${v} chip`}
-              >
-                {v}
-              </button>
-            ))}
-            <button className="px-2 py-1 bg-gray-700" onClick={() => setBet(0)}>
-              Clear
-            </button>
-            <label className="flex items-center space-x-1">
-              <span className="text-sm">Hands</span>
-              <input
-                type="number"
-                min="1"
-                max="4"
-                value={handCount}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  if (!Number.isNaN(val)) setHandCount(val);
-                }}
-                className="w-12 text-black px-1"
-              />
-            </label>
-            <button className="px-2 py-1 bg-gray-700" onClick={start} disabled={bet === 0}>
-              Deal
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="mb-4">
-          <div className="mb-2">Dealer</div>
-          {renderHand(
-            { cards: dealerHand },
-            !message.includes('complete') && current < playerHands.length,
-            false,
-            dealerPeeking,
-          )}
-        </div>
-      )}
-      {playerHands.map((hand, idx) => (
-        <div key={idx} className="mb-2">
-          <div className="mb-1">{`Player${playerHands.length > 1 ? ` ${idx + 1}` : ''}`}</div>
-          <div className="flex items-center space-x-2">
-            <BetChips amount={hand.bet} />
-            {renderHand(hand, false, true, false, idx === current && showHints ? rec : null)}
-          </div>
-          {idx === current && playerHands.length > 0 && (
-            <div className="mt-2 flex flex-col items-start">
-              <div className="flex space-x-2">
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'hit' ? 'border-2 border-yellow-400 text-yellow-300' : ''}`} onClick={() => act('hit')}>Hit</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'stand' ? 'border-2 border-yellow-400 text-yellow-300' : ''}`} onClick={() => act('stand')}>Stand</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'double' ? 'border-2 border-yellow-400 text-yellow-300' : ''}`} onClick={() => act('double')}>Double</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'split' ? 'border-2 border-yellow-400 text-yellow-300' : ''}`} onClick={() => act('split')}>Split</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'surrender' ? 'border-2 border-yellow-400 text-yellow-300' : ''}`} onClick={() => act('surrender')}>Surrender</button>
+    <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
+      <div className="flex w-full max-w-6xl flex-col gap-4 lg:flex-row">
+        <div className="flex flex-1 flex-col gap-4">
+          <section className="rounded-lg bg-black/40 p-4 shadow-lg">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="text-lg font-semibold">
+                Bankroll: <span className="text-green-300">{availableBankroll}</span>
+              </div>
+              <div className="flex items-center gap-2" aria-live="polite" role="status">
+                <span className="text-xs uppercase tracking-wide text-gray-300">Shuffle</span>
+                <div
+                  className={`h-6 w-4 rounded bg-gray-700 ${shuffling ? 'shuffle' : ''}`}
+                  aria-label={shuffling ? 'Shuffling new shoe' : 'Shoe ready'}
+                ></div>
+                <span className="text-xs text-gray-300">{shufflePercent}% to shuffle</span>
+              </div>
+              {showCount && (
+                <div className="rounded bg-black/50 px-2 py-1 text-sm">RC: {runningCount}</div>
+              )}
+              <div className="ml-auto flex flex-wrap items-center gap-2 text-sm">
+                <button
+                  className="rounded bg-gray-700 px-3 py-1 transition hover:bg-gray-600"
+                  onClick={() => setShowHints(!showHints)}
+                >
+                  {showHints ? 'Hide Hints' : 'Show Hints'}
+                </button>
+                <button
+                  className="rounded bg-gray-700 px-3 py-1 transition hover:bg-gray-600"
+                  onClick={() => setShowCount(!showCount)}
+                >
+                  {showCount ? 'Hide Count' : 'Show Count'}
+                </button>
+                <button
+                  className="rounded bg-indigo-700 px-3 py-1 transition hover:bg-indigo-600"
+                  onClick={startPractice}
+                >
+                  Practice Count
+                </button>
               </div>
             </div>
-          )}
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+              <label className="flex items-center gap-2">
+                <span className="text-xs uppercase tracking-wide text-gray-300">Penetration</span>
+                <input
+                  type="range"
+                  step="0.05"
+                  min="0.5"
+                  max="0.95"
+                  value={penetration}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!Number.isNaN(val)) setPenetration(val);
+                  }}
+                  className="w-28"
+                  aria-label="Set shuffle penetration"
+                />
+                <span>{penetrationPercent}%</span>
+              </label>
+            </div>
+            {playerHands.length > 0 && (
+              <div className="mt-4">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
+                  {actions.map(({ type, label }) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => act(type)}
+                      disabled={actionsDisabled}
+                      className={`rounded px-3 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-yellow-400 ${
+                        rec === type && showHints
+                          ? 'border-2 border-yellow-400 bg-gray-700 text-yellow-200 shadow-lg'
+                          : 'bg-gray-700 hover:bg-gray-600'
+                      } ${actionsDisabled ? 'cursor-not-allowed opacity-40 hover:bg-gray-700' : ''}`}
+                      aria-pressed={rec === type && showHints}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+          <section className="flex flex-col gap-4 rounded-lg bg-black/20 p-4 shadow">
+            {playerHands.length === 0 ? (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center gap-3 text-sm" aria-live="polite" role="status">
+                  <span>
+                    Bet: {bet} x {handCount}
+                  </span>
+                  <BetChips amount={bet} />
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {CHIP_VALUES.map((v) => (
+                    <button
+                      key={v}
+                      className={`chip ${CHIP_COLORS[v]} ${
+                        bet + v > bankroll / handCount ? 'cursor-not-allowed opacity-50' : ''
+                      }`}
+                      onClick={() => bet + v <= bankroll / handCount && setBet(bet + v)}
+                      aria-label={`Add ${v} chip`}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                  <button className="rounded bg-gray-700 px-3 py-1" onClick={() => setBet(0)}>
+                    Clear
+                  </button>
+                  <label className="flex items-center gap-2 text-sm">
+                    <span>Hands</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="4"
+                      value={handCount}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!Number.isNaN(val)) setHandCount(val);
+                      }}
+                      className="w-16 rounded border border-gray-600 bg-white px-2 py-1 text-black"
+                    />
+                  </label>
+                  <button
+                    className="rounded bg-green-700 px-3 py-1 font-semibold transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50"
+                    onClick={start}
+                    disabled={bet === 0}
+                  >
+                    Deal
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="mb-2 text-sm uppercase tracking-wide text-gray-300">Dealer</div>
+                {renderHand(
+                  { cards: dealerHand },
+                  !message.includes('complete') && current < playerHands.length,
+                  false,
+                  dealerPeeking,
+                )}
+              </div>
+            )}
+            {playerHands.map((hand, idx) => (
+              <div key={idx} className="space-y-2">
+                <div className="text-sm uppercase tracking-wide text-gray-300">
+                  {`Player${playerHands.length > 1 ? ` ${idx + 1}` : ''}`}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <BetChips amount={hand.bet} />
+                  {renderHand(hand, false, true, false, idx === current && showHints ? rec : null)}
+                </div>
+              </div>
+            ))}
+            {showInsurance && (
+              <button
+                className="w-full rounded bg-blue-800 px-3 py-2 font-semibold transition hover:bg-blue-700"
+                onClick={takeInsurance}
+              >
+                Take Insurance
+              </button>
+            )}
+            <div className="text-sm" aria-live="polite" role="status">
+              {message}
+            </div>
+            <div className="text-xs text-gray-300">
+              Wins: {stats.wins} Losses: {stats.losses} Pushes: {stats.pushes}
+            </div>
+          </section>
         </div>
-      ))}
-      {showInsurance && (
-        <button className="px-3 py-1 bg-gray-700 mb-2" onClick={takeInsurance}>
-          Take Insurance
-        </button>
-      )}
-      <div className="mt-4" aria-live="polite" role="status">{message}</div>
-      <div className="mt-4 text-sm">Wins: {stats.wins} Losses: {stats.losses} Pushes: {stats.pushes}</div>
+        <aside className="w-full shrink-0 rounded-lg bg-black/30 p-4 text-sm shadow lg:w-72">
+          <h2 className="mb-3 text-base font-semibold uppercase tracking-wide text-gray-200">Table Insights</h2>
+          <div className="space-y-3">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-gray-400">Current Advice</div>
+              <div className="text-lg font-semibold text-yellow-200">
+                {playerHands.length > 0 && rec ? rec.toUpperCase() : 'Waiting for deal'}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-wide text-gray-400">Shoe Penetration</div>
+              <div>
+                {shufflePercent}% of target &bull; Shuffle at {penetrationPercent}%
+              </div>
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-wide text-gray-400">Streak Summary</div>
+              <div>{streakLabel}</div>
+              <div className="text-xs text-gray-400">Win rate: {streakSummary.winRate}%</div>
+            </div>
+            {showHints && playerHands.length > 0 && (
+              <p className="rounded bg-black/40 p-2 text-xs text-gray-300">
+                Hints highlight the recommended move above. Trust deviations sparingly for a realistic practice session.
+              </p>
+            )}
+          </div>
+        </aside>
+      </div>
     </div>
   );
 };
