@@ -1,5 +1,4 @@
 import React, { FormEvent, useMemo, useState } from 'react';
-import { FirefoxSimulationView, SIMULATIONS, toSimulationKey } from './simulations';
 
 const DEFAULT_URL = 'https://www.kali.org/docs/';
 const STORAGE_KEY = 'firefox:last-url';
@@ -37,14 +36,17 @@ const normaliseUrl = (value: string) => {
   }
 };
 
-const getSimulation = (value: string) => {
-  const key = toSimulationKey(value);
-  if (!key) {
-    return null;
-  }
-  return SIMULATIONS[key] ?? null;
-};
-
+/**
+ * Firefox renders a lightweight browser shell:
+ * - Header row with the address bar form and navigation CTA.
+ * - Optional bookmark strip with quick links.
+ * - A sandboxed iframe that fills the remaining space.
+ *
+ * Persistence model:
+ * - The last navigated URL is normalised and written to `localStorage` under `STORAGE_KEY`.
+ * - Other apps can stage a one-time launch URL via `sessionStorage` (`START_URL_KEY`).
+ *   When present, the staged value takes precedence, is persisted, and then cleared.
+ */
 const Firefox: React.FC = () => {
   const initialUrl = useMemo(() => {
     if (typeof window === 'undefined') {
@@ -67,13 +69,11 @@ const Firefox: React.FC = () => {
 
   const [address, setAddress] = useState(initialUrl);
   const [inputValue, setInputValue] = useState(initialUrl);
-  const [simulation, setSimulation] = useState(() => getSimulation(initialUrl));
 
   const updateAddress = (value: string) => {
     const url = normaliseUrl(value);
     setAddress(url);
     setInputValue(url);
-    setSimulation(getSimulation(url));
     try {
       localStorage.setItem(STORAGE_KEY, url);
     } catch {
@@ -97,6 +97,8 @@ const Firefox: React.FC = () => {
         </label>
         <input
           id="firefox-address"
+          type="url"
+          aria-label="Address"
           value={inputValue}
           onChange={(event) => setInputValue(event.target.value)}
           placeholder="Enter a URL"
@@ -122,23 +124,17 @@ const Firefox: React.FC = () => {
         ))}
       </nav>
       <div className="flex-1 bg-black">
-        {simulation ? (
-          <FirefoxSimulationView simulation={simulation} />
-        ) : (
-          <iframe
-            key={address}
-            title="Firefox"
-            src={address}
-            className="h-full w-full border-0"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          />
-        )}
+        <iframe
+          key={address}
+          title="Firefox"
+          src={address}
+          className="h-full w-full border-0"
+          sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        />
       </div>
     </div>
   );
 };
-
-export const displayFirefox = () => <Firefox />;
 
 export default Firefox;

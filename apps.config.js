@@ -3,7 +3,6 @@ import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
 import { displaySettings } from './components/apps/settings';
-import { displayFirefox } from './components/apps/firefox';
 import { displayGedit } from './components/apps/gedit';
 import { displayTodoist } from './components/apps/todoist';
 import { displayWeather } from './components/apps/weather';
@@ -14,6 +13,7 @@ import { displayScreenRecorder } from './components/apps/screen-recorder';
 import { displayNikto } from './components/apps/nikto';
 
 // Dynamic applications and games
+const FirefoxApp = createDynamicApp('firefox', 'Firefox');
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
 // VSCode app uses a Stack iframe, so no editor dependencies are required
 const VsCodeApp = createDynamicApp('vscode', 'VsCode');
@@ -110,6 +110,7 @@ const ContactApp = createDynamicApp('contact', 'Contact');
 
 
 
+const displayFirefox = createDisplay(FirefoxApp);
 const displayTerminal = createDisplay(TerminalApp);
 const displayVsCode = createDisplay(VsCodeApp);
 const displayYouTube = createDisplay(YouTubeApp);

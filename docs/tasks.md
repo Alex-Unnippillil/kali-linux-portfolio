@@ -12,9 +12,9 @@ This document tracks planned improvements and new features for the desktop portf
 
 ## Desktop Apps
 ### Firefox
-- Replace legacy Chrome simulation with single iframe shell.
-- Keep navigation minimal: address bar and persisted last URL.
-- Export default `Firefox` and `displayFirefox` via factory.
+- ✅ Replace legacy Chrome simulation with single iframe shell.
+- ✅ Keep navigation minimal: address bar and persisted last URL.
+- ✅ Export default `Firefox` and `displayFirefox` via factory.
 
 ### Calc
 - Replace button-only logic with tokenizer and shunting-yard evaluator for operator precedence.
