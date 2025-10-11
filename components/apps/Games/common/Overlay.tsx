@@ -10,13 +10,18 @@ export default function Overlay({
   onResume,
   muted: externalMuted,
   onToggleSound,
+  paused: externalPaused,
+  onReset,
 }: {
   onPause?: () => void;
   onResume?: () => void;
   muted?: boolean;
   onToggleSound?: (muted: boolean) => void;
+  paused?: boolean;
+  onReset?: () => void;
 }) {
-  const [paused, setPaused] = useState(false);
+  const [internalPaused, setInternalPaused] = useState(externalPaused ?? false);
+  const paused = externalPaused ?? internalPaused;
   const [muted, setMuted] = useState(externalMuted ?? false);
   const [fps, setFps] = useState(0);
   const frame = useRef(performance.now());
@@ -40,13 +45,18 @@ export default function Overlay({
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  const setPausedState = useCallback(
+    (value: boolean) => {
+      setInternalPaused(value);
+      if (value) onPause?.();
+      else onResume?.();
+    },
+    [onPause, onResume],
+  );
+
   const togglePause = useCallback(() => {
-    setPaused((p) => {
-      const np = !p;
-      np ? onPause?.() : onResume?.();
-      return np;
-    });
-  }, [onPause, onResume]);
+    setPausedState(!paused);
+  }, [paused, setPausedState]);
 
   const toggleSound = useCallback(() => {
     setMuted((m) => {
@@ -55,6 +65,12 @@ export default function Overlay({
       return nm;
     });
   }, [onToggleSound]);
+
+  useEffect(() => {
+    if (externalPaused !== undefined) {
+      setInternalPaused(externalPaused);
+    }
+  }, [externalPaused]);
 
   useEffect(() => {
     if (externalMuted !== undefined) {
@@ -66,15 +82,13 @@ export default function Overlay({
     const handleDisconnect = () => {
       pausedByDisconnect.current = true;
       setToast('Controller disconnected. Reconnect to resume.');
-      setPaused(true);
-      onPause?.();
+      setPausedState(true);
     };
     const handleConnect = () => {
       if (pausedByDisconnect.current) {
         pausedByDisconnect.current = false;
         setToast('');
-        setPaused(false);
-        onResume?.();
+        setPausedState(false);
       }
     };
     window.addEventListener('gamepaddisconnected', handleDisconnect);
@@ -83,11 +97,16 @@ export default function Overlay({
       window.removeEventListener('gamepaddisconnected', handleDisconnect);
       window.removeEventListener('gamepadconnected', handleConnect);
     };
-  }, [onPause, onResume]);
+  }, [setPausedState]);
 
   return (
     <>
       <div className="game-overlay">
+        {onReset && (
+          <button onClick={onReset} aria-label="Reset">
+            Reset
+          </button>
+        )}
         <button onClick={togglePause} aria-label={paused ? 'Resume' : 'Pause'}>
           {paused ? 'Resume' : 'Pause'}
         </button>

@@ -4,3 +4,5 @@ export { default as useGamepad } from './useGamepad';
 export { default as useGameLoop } from './useGameLoop';
 export { default as useSaveSlots } from './useSaveSlots';
 export { default as useLeaderboard } from './useLeaderboard';
+export { default as useHighScore } from './useHighScore';
+export { default as useGameAudio } from './useGameAudio';
