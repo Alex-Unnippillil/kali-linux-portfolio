@@ -77,7 +77,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | beef | BeEF | Security simulations pod | **In progress** – simulator backlog | Browser exploit fixtures |
 | metasploit | Metasploit | Security simulations pod | **In progress** – simulator backlog | Module JSON |
 | autopsy | Autopsy | Security simulations pod | **In progress** – simulator backlog | Forensic dataset |
-| radare2 | Radare2 | Security simulations pod | **In progress** – simulator backlog | Static analysis fixtures |
+| radare2 | Radare2 | Security simulations pod | **Needs polish** – expand fixture catalog | Static analysis fixtures, lab-mode gate |
 | ghidra | Ghidra | Security simulations pod | **In progress** – simulator backlog | Reverse-engineering fixtures |
 | hashcat | Hashcat | Security simulations pod | **In progress** – simulator backlog | Hash samples |
 | msf-post | Metasploit Post | Security simulations pod | **In progress** – simulator backlog | Module JSON |

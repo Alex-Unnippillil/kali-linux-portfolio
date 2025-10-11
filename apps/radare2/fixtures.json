@@ -1,0 +1,204 @@
+{
+  "defaultFixtureId": "hello-stub",
+  "fixtures": [
+    {
+      "id": "hello-stub",
+      "title": "Hello stub (ELF64)",
+      "description": "Minimal entry point that returns zero; ideal for introducing stack frame setup.",
+      "file": "hello.bin",
+      "format": "ELF64",
+      "arch": "x86-64",
+      "os": "Linux",
+      "docLinks": [
+        {
+          "label": "radare2 book – Function basics",
+          "url": "https://radare.gitbooks.io/radare2book/content/first_steps/functions.html"
+        },
+        {
+          "label": "ELF 64 ABI supplement",
+          "url": "https://uclibc.org/docs/elf-64-gen.pdf"
+        }
+      ],
+      "analysis": {
+        "entrypoint": "0x401000",
+        "summary": "Observe the push/pop pairing and confirm the epilogue restores rsp before returning.",
+        "functions": [
+          {
+            "addr": "0x401000",
+            "name": "entry0",
+            "summary": "Prologue stub that prepares and tears down the stack frame."
+          }
+        ],
+        "notes": [
+          "Record the relationship between rbp and rsp at entry/exit.",
+          "Use as a baseline before exploring branching flows."
+        ]
+      },
+      "hex": "554889e5b8000000005dc368656c6c6f002072326c61620a",
+      "disasm": [
+        { "addr": "0x401000", "text": "push rbp" },
+        { "addr": "0x401001", "text": "mov rbp, rsp" },
+        { "addr": "0x401004", "text": "mov eax, 0" },
+        { "addr": "0x401009", "text": "pop rbp" },
+        { "addr": "0x40100a", "text": "ret" }
+      ],
+      "xrefs": {
+        "0x401004": ["0x401009"]
+      },
+      "blocks": [
+        { "addr": "0x401000", "edges": ["0x401004"] },
+        { "addr": "0x401004", "edges": ["0x401009"] },
+        { "addr": "0x401009", "edges": [] }
+      ]
+    },
+    {
+      "id": "password-check",
+      "title": "Password check (branch demo)",
+      "description": "Small decision tree that compares a byte sequence and jumps to success/failure paths.",
+      "file": "password.bin",
+      "format": "ELF64",
+      "arch": "x86-64",
+      "os": "Linux",
+      "docLinks": [
+        {
+          "label": "radare2 cookbook – Strings and xrefs",
+          "url": "https://radare.gitbooks.io/radare2book/content/analysis/strings_xrefs.html"
+        }
+      ],
+      "analysis": {
+        "entrypoint": "0x402000",
+        "summary": "Follow the jne/jmp edges to understand how incorrect input diverts execution.",
+        "functions": [
+          {
+            "addr": "0x402000",
+            "name": "main",
+            "summary": "Loads the reference string and branches on comparison."
+          },
+          {
+            "addr": "0x402030",
+            "name": "auth_success",
+            "summary": "Prints success banner."
+          },
+          {
+            "addr": "0x402040",
+            "name": "auth_fail",
+            "summary": "Logs audit message before returning." 
+          }
+        ],
+        "notes": [
+          "Trace the conditional jump at 0x402015 to map false path transitions.",
+          "Document any user-controlled data that flows into strcmp." 
+        ]
+      },
+      "hex": "554889e54883ec2057488b3d20010000488d3524010000e8000000004883c4205dc3e857000000e85700000049636174656c65720052656a65637465640a",
+      "disasm": [
+        { "addr": "0x402000", "text": "push rbp" },
+        { "addr": "0x402001", "text": "mov rbp, rsp" },
+        { "addr": "0x402004", "text": "sub rsp, 0x20" },
+        { "addr": "0x402008", "text": "push rdi" },
+        { "addr": "0x402009", "text": "mov rdi, [rip + 0x120] ; reference" },
+        { "addr": "0x402010", "text": "lea rsi, [rip + 0x124]" },
+        { "addr": "0x402017", "text": "call sym.imp.strcmp" },
+        { "addr": "0x40201c", "text": "add rsp, 0x20" },
+        { "addr": "0x402020", "text": "test eax, eax" },
+        { "addr": "0x402022", "text": "jne 0x402040" },
+        { "addr": "0x402024", "text": "call auth_success" },
+        { "addr": "0x402029", "text": "jmp 0x402050" },
+        { "addr": "0x402030", "text": "auth_success:" },
+        { "addr": "0x402030", "text": "push rbp" },
+        { "addr": "0x402031", "text": "mov rbp, rsp" },
+        { "addr": "0x402034", "text": "mov edi, offset success_str" },
+        { "addr": "0x402039", "text": "call puts" },
+        { "addr": "0x40203e", "text": "pop rbp" },
+        { "addr": "0x40203f", "text": "ret" },
+        { "addr": "0x402040", "text": "auth_fail:" },
+        { "addr": "0x402040", "text": "push rbp" },
+        { "addr": "0x402041", "text": "mov rbp, rsp" },
+        { "addr": "0x402044", "text": "mov edi, offset failure_str" },
+        { "addr": "0x402049", "text": "call puts" },
+        { "addr": "0x40204e", "text": "pop rbp" },
+        { "addr": "0x40204f", "text": "ret" },
+        { "addr": "0x402050", "text": "leave" },
+        { "addr": "0x402051", "text": "ret" }
+      ],
+      "xrefs": {
+        "0x402022": ["0x402040"],
+        "0x402024": ["0x402030"],
+        "0x402029": ["0x402050"]
+      },
+      "blocks": [
+        { "addr": "0x402000", "edges": ["0x402022", "0x402024"] },
+        { "addr": "0x402022", "edges": ["0x402040"] },
+        { "addr": "0x402024", "edges": ["0x402030"] },
+        { "addr": "0x402029", "edges": ["0x402050"] },
+        { "addr": "0x402030", "edges": ["0x402050"] },
+        { "addr": "0x402040", "edges": ["0x402050"] },
+        { "addr": "0x402050", "edges": [] }
+      ]
+    },
+    {
+      "id": "rolling-hash",
+      "title": "Rolling hash (loop demo)",
+      "description": "Illustrates a simple rolling hash with a counted loop and accumulation register.",
+      "file": "rolling.bin",
+      "format": "ELF64",
+      "arch": "x86-64",
+      "os": "Linux",
+      "docLinks": [
+        {
+          "label": "radare2 loops and graph mode",
+          "url": "https://radare.gitbooks.io/radare2book/content/analysis/graphs.html"
+        }
+      ],
+      "analysis": {
+        "entrypoint": "0x403000",
+        "summary": "Focus on the loop at 0x403010 that advances an index register and accumulates the hash.",
+        "functions": [
+          {
+            "addr": "0x403000",
+            "name": "rolling_hash",
+            "summary": "Initializes seed value and iterates over a buffer." 
+          }
+        ],
+        "notes": [
+          "Map loop-carried dependencies: rcx is the counter, rax accumulates the result.",
+          "Consider experimenting with different seed constants in your notes." 
+        ]
+      },
+      "hex": "554889e54883ec1089f9488b15100100008b0d180100008b1d2001000083f90a7d198d51ff4863d2488b04ca4801c04801d889d048ffc983f90a7ce5c9c3ef62616c616e63655f6861736800",
+      "disasm": [
+        { "addr": "0x403000", "text": "push rbp" },
+        { "addr": "0x403001", "text": "mov rbp, rsp" },
+        { "addr": "0x403004", "text": "sub rsp, 0x10" },
+        { "addr": "0x403008", "text": "mov ecx, edi ; length" },
+        { "addr": "0x40300a", "text": "mov rdx, [rip + buffer]" },
+        { "addr": "0x403011", "text": "mov eax, [rip + seed]" },
+        { "addr": "0x403018", "text": "mov ebx, [rip + prime]" },
+        { "addr": "0x40301f", "text": "cmp ecx, 0x0a" },
+        { "addr": "0x403023", "text": "jge 0x403040" },
+        { "addr": "0x403025", "text": "lea edx, [rcx - 1]" },
+        { "addr": "0x403028", "text": "movsxd rdx, edx" },
+        { "addr": "0x40302b", "text": "mov rax, [rdx + rcx*8 + buffer]" },
+        { "addr": "0x403032", "text": "add rax, rax" },
+        { "addr": "0x403035", "text": "add rax, rdx" },
+        { "addr": "0x403038", "text": "add eax, ebx" },
+        { "addr": "0x40303a", "text": "inc ecx" },
+        { "addr": "0x40303b", "text": "cmp ecx, 0x0a" },
+        { "addr": "0x40303f", "text": "jl 0x403025" },
+        { "addr": "0x403041", "text": "leave" },
+        { "addr": "0x403042", "text": "ret" }
+      ],
+      "xrefs": {
+        "0x403023": ["0x403040"],
+        "0x40303f": ["0x403025"]
+      },
+      "blocks": [
+        { "addr": "0x403000", "edges": ["0x403023"] },
+        { "addr": "0x403023", "edges": ["0x403040", "0x403025"] },
+        { "addr": "0x403025", "edges": ["0x40303f"] },
+        { "addr": "0x40303f", "edges": ["0x403025", "0x403040"] },
+        { "addr": "0x403040", "edges": [] }
+      ]
+    }
+  ]
+}
