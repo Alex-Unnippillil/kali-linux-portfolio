@@ -183,9 +183,15 @@ export class Window extends Component {
     }
 
     resizeBoundries = () => {
-        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
-        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
-        const topInset = typeof window !== 'undefined'
+        const hasWindow = typeof window !== 'undefined';
+        const visualViewport = hasWindow && window.visualViewport ? window.visualViewport : null;
+        const viewportHeight = hasWindow
+            ? (visualViewport?.height ?? window.innerHeight)
+            : 0;
+        const viewportWidth = hasWindow
+            ? (visualViewport?.width ?? window.innerWidth)
+            : 0;
+        const topInset = hasWindow
             ? measureWindowTopOffset()
             : DEFAULT_WINDOW_TOP_OFFSET;
         const windowHeightPx = viewportHeight * (this.state.height / 100.0);

@@ -34,10 +34,27 @@ const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: height });
 };
 
+const setVisualViewport = (width?: number, height?: number) => {
+  if (typeof width === 'number' && typeof height === 'number') {
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      writable: true,
+      value: { width, height },
+    });
+    return;
+  }
+
+  delete (window as any).visualViewport;
+};
+
 beforeEach(() => {
   setViewport(1440, 900);
   measureSafeAreaInsetMock.mockReturnValue(0);
   measureWindowTopOffsetMock.mockReturnValue(DESKTOP_TOP_PADDING);
+});
+
+afterEach(() => {
+  setVisualViewport();
 });
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
@@ -837,6 +854,34 @@ describe('Window viewport constraints', () => {
     expect(clampedY).toBeGreaterThanOrEqual(topOffset);
     expect(clampedY).toBeLessThanOrEqual(maxY);
     expect(onPositionChange).toHaveBeenCalledWith(clampedX, clampedY);
+  });
+
+  it('uses visual viewport size when available', () => {
+    const ref = React.createRef<any>();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    setVisualViewport(800, 700);
+
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+
+    const state = ref.current!.state;
+    expect(state.parentSize.width).toBeCloseTo(320);
+    expect(state.parentSize.height).toBeCloseTo(13);
+    expect(state.safeAreaTop).toBe(DESKTOP_TOP_PADDING);
   });
 });
 
