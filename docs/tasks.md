@@ -34,7 +34,7 @@ This document tracks planned improvements and new features for the desktop portf
 - Implement read-only timeline embed with SSR disabled and light/dark toggle.
 
 ### Spotify
-- Use embed player for public tracks with editable playlist JSON and mini-player mode.
+- ✅ Embed player now supports a validated playlist JSON editor, persistence, and a collapsible mini-player mode.
 
 ### YouTube
 - Add search and watch view with click-to-load embeds.

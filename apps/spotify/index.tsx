@@ -5,6 +5,7 @@ import usePersistentState from "../../hooks/usePersistentState";
 import CrossfadePlayer from "./utils/crossfade";
 import Visualizer from "./Visualizer";
 import Lyrics from "./Lyrics";
+import MoodTuner from "./components/MoodTuner";
 
 interface Track {
   title: string;
@@ -242,46 +243,51 @@ const SpotifyApp = () => {
         </div>
       )}
       {!mini && (
-        <div className="flex-1 overflow-auto mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="hidden md:block">
-            <h2 className="mb-2 text-lg">Playlist JSON</h2>
-            <textarea
-              className="w-full h-40 text-black p-1"
-              value={playlistText}
-              onChange={(e) => setPlaylistText(e.target.value)}
-            />
-            <button
-              onClick={loadPlaylist}
-              className="mt-2 rounded bg-blue-600 px-2 py-1 text-sm"
-            >
-              Load Playlist
-            </button>
-            <h2 className="mt-4 mb-2 text-lg">Queue</h2>
-            <ul className="max-h-40 overflow-auto border border-gray-700 rounded">
-              {queue.map((t, i) => (
-                <li key={t.url} className={i === current ? "bg-gray-700" : ""}>
-                  <button
-                    className="w-full text-left px-2 py-1 hover:bg-gray-600 focus:outline-none"
-                    onClick={() => setCurrent(i)}
+        <div className="mt-4 flex-1 space-y-4 overflow-auto">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="hidden md:block">
+              <h2 className="mb-2 text-lg">Playlist JSON</h2>
+              <textarea
+                className="h-40 w-full p-1 text-black"
+                value={playlistText}
+                onChange={(e) => setPlaylistText(e.target.value)}
+              />
+              <button
+                onClick={loadPlaylist}
+                className="mt-2 rounded bg-blue-600 px-2 py-1 text-sm"
+              >
+                Load Playlist
+              </button>
+              <h2 className="mt-4 mb-2 text-lg">Queue</h2>
+              <ul className="max-h-40 overflow-auto rounded border border-gray-700">
+                {queue.map((t, i) => (
+                  <li key={t.url} className={i === current ? "bg-gray-700" : ""}>
+                    <button
+                      className="w-full px-2 py-1 text-left hover:bg-gray-600 focus:outline-none"
+                      onClick={() => setCurrent(i)}
+                    >
+                      {t.title || t.url}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h2 className="mb-2 text-lg">Recently Played</h2>
+              <ul className="max-h-72 overflow-auto rounded border border-gray-700">
+                {recent.map((t) => (
+                  <li
+                    key={t.url}
+                    className="border-b border-gray-700 px-2 py-1 last:border-b-0"
                   >
                     {t.title || t.url}
-                  </button>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-          <div>
-            <h2 className="mb-2 text-lg">Recently Played</h2>
-            <ul className="max-h-72 overflow-auto border border-gray-700 rounded">
-              {recent.map((t) => (
-                <li
-                  key={t.url}
-                  className="px-2 py-1 border-b border-gray-700 last:border-b-0"
-                >
-                  {t.title || t.url}
-                </li>
-              ))}
-            </ul>
+          <div className="min-h-[22rem]">
+            <MoodTuner className="overflow-hidden rounded-xl border border-white/10 shadow-lg" />
           </div>
         </div>
       )}

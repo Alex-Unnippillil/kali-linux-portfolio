@@ -152,7 +152,9 @@ playwright/           # Playwright helpers for end-to-end testing
 | Project Gallery | `/apps/project-gallery` | Utility / Media |
 | Quote | `/apps/quote` | Utility / Media |
 
-The Spotify app lets users map moods to playlists, persist preferences in OPFS, and recall the last session automatically.
+The Spotify app now includes a validated JSON editor that maps moods to public playlist IDs. Changes persist locally via
+`usePersistentState`, the embed refuses more than 12 entries to keep the iframe responsive, and playback commands stay inside
+Spotify's official postMessage API—no OAuth scopes or remote playlist mutations are requested.
 
 ### Games
 | Game | Route |
