@@ -274,70 +274,184 @@ export default function Pinball() {
     [muted, resetGame],
   );
 
-  const statusMessage = useMemo(() => {
-    if (!ready) return "Booting table...";
-    if (gameOver) return "Game over! Hit reset to start a new run.";
-    if (tilt) return "TILT! Controls locked.";
-    if (paused) return "Paused.";
-    if (ballLocked) {
-      return ballsRemaining === MAX_BALLS
+  const status = useMemo(() => {
+    const baseBallSummary = ballLocked
+      ? ballsRemaining === MAX_BALLS
+        ? `Ready (${ballsRemaining} balls)`
+        : `Locked (${ballsRemaining} left)`
+      : `In play (${ballsRemaining} left)`;
+    const baseObjective = ballLocked
+      ? ballsRemaining === MAX_BALLS
         ? "Press Launch or Space to start."
-        : "Launch the next ball when you're ready.";
+        : "Launch the next ball when you're ready."
+      : "Keep the ball alive!";
+
+    if (!ready) {
+      return {
+        overlay: "Booting table...",
+        banner: {
+          toneClass:
+            "border-slate-500/60 bg-slate-900/80 text-slate-100 shadow-inner",
+          ball: "Booting",
+          objective: "Initializing table systems.",
+          tiltLabel: "Calibrating…",
+          tiltTone: "text-slate-200",
+        },
+      } as const;
     }
-    return "Keep the ball alive!";
-  }, [ready, gameOver, tilt, paused, ballLocked, ballsRemaining]);
+
+    if (gameOver) {
+      return {
+        overlay: "Game over! Hit reset to start a new run.",
+        banner: {
+          toneClass:
+            "border-rose-500/40 bg-rose-900/70 text-rose-100 shadow-lg",
+          ball: "Spent (no balls left)",
+          objective: "Hit reset to start a new run.",
+          tiltLabel: "Clear",
+          tiltTone: "text-rose-100",
+        },
+      } as const;
+    }
+
+    if (tilt) {
+      return {
+        overlay: "TILT! Controls locked.",
+        banner: {
+          toneClass:
+            "border-red-500/50 bg-red-900/70 text-red-100 shadow-lg",
+          ball: ballLocked
+            ? `Locked (${ballsRemaining} left)`
+            : `Frozen mid-play (${ballsRemaining} left)`,
+          objective: "Wait for the table to recover.",
+          tiltLabel: "Active",
+          tiltTone: "text-red-100",
+        },
+      } as const;
+    }
+
+    if (paused) {
+      return {
+        overlay: "Paused.",
+        banner: {
+          toneClass:
+            "border-sky-500/40 bg-sky-900/60 text-sky-100 shadow-lg",
+          ball: baseBallSummary,
+          objective: ballLocked
+            ? "Resume and launch when you're ready."
+            : "Resume to keep the run alive.",
+          tiltLabel: "Clear",
+          tiltTone: "text-emerald-200",
+        },
+      } as const;
+    }
+
+    return {
+      overlay: baseObjective,
+      banner: {
+        toneClass: ballLocked
+          ? "border-amber-500/40 bg-amber-900/60 text-amber-100 shadow-lg"
+          : "border-emerald-500/40 bg-emerald-900/60 text-emerald-100 shadow-lg",
+        ball: baseBallSummary,
+        objective: baseObjective,
+        tiltLabel: "Clear",
+        tiltTone: ballLocked ? "text-amber-100" : "text-emerald-100",
+      },
+    } as const;
+  }, [ballLocked, ballsRemaining, gameOver, paused, ready, tilt]);
+
+  const statusMessage = status.overlay;
+  const bannerStatus = status.banner;
 
   return (
-    <div className="flex flex-col items-center space-y-2">
-      <div className="flex space-x-4">
-        <label className="flex flex-col text-xs">
-          Flipper Strength
-          <input
-            type="range"
-            min="0.5"
-            max="2"
-            step="0.1"
-            value={flipperPower}
-            onChange={(event) => setFlipperPower(parseFloat(event.target.value))}
-          />
-        </label>
-        <label className="flex flex-col text-xs">
-          Bounce
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={bounce}
-            onChange={(event) => setBounce(parseFloat(event.target.value))}
-          />
-        </label>
-        <label className="flex flex-col text-xs">
-          Launch Power
-          <input
-            type="range"
-            min="0.4"
-            max="1.4"
-            step="0.05"
-            value={launchPower}
-            onChange={(event) => setLaunchPower(parseFloat(event.target.value))}
-          />
-        </label>
-        <label className="flex flex-col text-xs">
-          Theme
-          <select
-            value={theme}
-            onChange={(event) =>
-              setTheme(event.target.value as keyof typeof themes)
-            }
-          >
-            {Object.keys(themes).map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
+    <div className="flex flex-col items-center space-y-4">
+      <div className="w-full max-w-xl rounded-lg border border-slate-700/60 bg-slate-900/60 p-4 text-xs text-slate-200 shadow-inner">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+              Flippers
+            </h3>
+            <label className="flex flex-col gap-2">
+              <span className="text-[11px] uppercase tracking-wide text-slate-400">
+                Strength
+              </span>
+              <input
+                type="range"
+                min="0.5"
+                max="2"
+                step="0.1"
+                value={flipperPower}
+                onChange={(event) =>
+                  setFlipperPower(parseFloat(event.target.value))
+                }
+                className="w-full accent-amber-400"
+              />
+            </label>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+              Bounce
+            </h3>
+            <label className="flex flex-col gap-2">
+              <span className="text-[11px] uppercase tracking-wide text-slate-400">
+                Elasticity
+              </span>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={bounce}
+                onChange={(event) => setBounce(parseFloat(event.target.value))}
+                className="w-full accent-sky-400"
+              />
+            </label>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+              Launch
+            </h3>
+            <label className="flex flex-col gap-2">
+              <span className="text-[11px] uppercase tracking-wide text-slate-400">
+                Power
+              </span>
+              <input
+                type="range"
+                min="0.4"
+                max="1.4"
+                step="0.05"
+                value={launchPower}
+                onChange={(event) =>
+                  setLaunchPower(parseFloat(event.target.value))
+                }
+                className="w-full accent-emerald-400"
+              />
+            </label>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-col gap-3 text-xs text-slate-300 sm:flex-row sm:items-center sm:justify-between">
+          <label className="flex items-center gap-2">
+            <span className="text-[11px] uppercase tracking-wide text-slate-400">
+              Theme
+            </span>
+            <select
+              value={theme}
+              onChange={(event) =>
+                setTheme(event.target.value as keyof typeof themes)
+              }
+              className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs capitalize text-slate-100 shadow"
+            >
+              {Object.keys(themes).map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <span className="text-[11px] text-slate-400">
+            Tune the table physics to match your style.
+          </span>
+        </div>
       </div>
       <div className="relative">
         <canvas
@@ -383,6 +497,37 @@ export default function Pinball() {
             </div>
           </div>
         )}
+      </div>
+      <div
+        className={`w-full max-w-xl rounded-lg border px-4 py-3 transition-colors ${bannerStatus.toneClass}`}
+        data-testid="pinball-status-banner"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <span className="block text-[11px] uppercase tracking-wide opacity-75">
+              Ball
+            </span>
+            <span className="text-sm font-semibold sm:text-base">
+              {bannerStatus.ball}
+            </span>
+          </div>
+          <div>
+            <span className="block text-[11px] uppercase tracking-wide opacity-75">
+              Tilt
+            </span>
+            <span className={`text-sm font-semibold sm:text-base ${bannerStatus.tiltTone}`}>
+              {bannerStatus.tiltLabel}
+            </span>
+          </div>
+          <div className="sm:flex-1">
+            <span className="block text-[11px] uppercase tracking-wide opacity-75">
+              Objective
+            </span>
+            <span className="text-sm font-medium sm:text-base">
+              {bannerStatus.objective}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );
