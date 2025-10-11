@@ -206,7 +206,7 @@ const utilityList = [
     icon: '/themes/Yaru/apps/qr.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayQr,
   },
   {
@@ -215,7 +215,7 @@ const utilityList = [
     icon: '/themes/Yaru/apps/gedit.png',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayAsciiArt,
   },
   {
@@ -224,7 +224,7 @@ const utilityList = [
     icon: '/themes/Yaru/apps/gedit.png',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayClipboardManager,
   },
   {
@@ -233,7 +233,7 @@ const utilityList = [
     icon: '/themes/Yaru/apps/gedit.png',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayFiglet,
   },
   {
@@ -242,7 +242,7 @@ const utilityList = [
     icon: '/themes/Yaru/apps/quote.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayQuote,
   },
   {
@@ -251,7 +251,7 @@ const utilityList = [
     icon: '/themes/Yaru/apps/project-gallery.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayProjectGallery,
   },
   {
@@ -260,7 +260,7 @@ const utilityList = [
     icon: '/themes/Yaru/apps/input-lab.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayInputLab,
   },
   {
@@ -269,7 +269,7 @@ const utilityList = [
     icon: '/themes/Yaru/apps/subnet-calculator.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displaySubnetCalculator,
   },
 ];
@@ -290,7 +290,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/2048.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayGame2048,
     defaultWidth: 35,
     defaultHeight: 45,
@@ -301,7 +301,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/asteroids.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayAsteroids,
   },
   {
@@ -310,7 +310,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/battleship.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayBattleship,
   },
   {
@@ -319,7 +319,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/blackjack.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayBlackjack,
     ...gameDefaults,
   },
@@ -329,7 +329,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/breakout.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayBreakout,
   },
   {
@@ -338,7 +338,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/car-racer.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayCarRacer,
   },
   {
@@ -347,7 +347,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/car-racer.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayLaneRunner,
   },
   {
@@ -356,7 +356,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/checkers.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayCheckers,
   },
   {
@@ -365,7 +365,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/chess.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayChess,
   },
   // Simple placeholder implementation
@@ -375,7 +375,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/connect-four.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayConnectFour,
   },
   {
@@ -384,7 +384,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/frogger.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayFrogger,
   },
   {
@@ -393,7 +393,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/hangman.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayHangman,
   },
   {
@@ -402,7 +402,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/memory.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayMemory,
   },
   {
@@ -411,7 +411,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/minesweeper.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayMinesweeper,
   },
   {
@@ -420,7 +420,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/pacman.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayPacman,
   },
   {
@@ -429,7 +429,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/platformer.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayPlatformer,
   },
   {
@@ -438,7 +438,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/pong.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayPong,
   },
   {
@@ -447,7 +447,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/reversi.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayReversi,
   },
   {
@@ -456,7 +456,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/simon.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displaySimon,
   },
   {
@@ -465,7 +465,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/snake.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displaySnake,
   },
   {
@@ -474,7 +474,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/sokoban.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displaySokoban,
   },
   {
@@ -483,7 +483,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/solitaire.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displaySolitaire,
   },
   {
@@ -492,7 +492,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/tictactoe.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayTicTacToe,
     ...gameDefaults,
   },
@@ -502,7 +502,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/tetris.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayTetris,
   },
   {
@@ -511,7 +511,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/tower-defense.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayTowerDefense,
   },
   {
@@ -520,7 +520,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/word-search.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayWordSearch,
   },
   {
@@ -529,7 +529,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/wordle.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayWordle,
   },
   {
@@ -538,7 +538,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/nonogram.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayNonogram,
   },
   {
@@ -547,7 +547,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/space-invaders.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displaySpaceInvaders,
   },
   {
@@ -556,7 +556,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/sudoku.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displaySudoku,
   },
   {
@@ -565,7 +565,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/flappy-bird.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayFlappyBird,
   },
   {
@@ -574,7 +574,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/candy-crush.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayCandyCrush,
   },
   {
@@ -583,7 +583,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/gomoku.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayGomoku,
   },
   {
@@ -592,7 +592,7 @@ const gameList = [
     icon: '/themes/Yaru/apps/pinball.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayPinball,
   },
 ];
@@ -615,7 +615,7 @@ const apps = [
     icon: '/themes/Yaru/apps/calc.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayCalculator,
     resizable: false,
     allowMaximize: false,
@@ -628,7 +628,7 @@ const apps = [
     icon: '/themes/Yaru/apps/bash.png',
     disabled: false,
     favourite: true,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayTerminal,
     resizable: true,
     defaultWidth: 68,
@@ -641,7 +641,7 @@ const apps = [
     icon: '/themes/Yaru/apps/vscode.png',
     disabled: false,
     favourite: true,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayVsCode,
     defaultWidth: 85,
     defaultHeight: 85,
@@ -652,7 +652,7 @@ const apps = [
     icon: '/themes/Yaru/apps/x.png',
     disabled: false,
     favourite: true,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayX,
   },
   {
@@ -661,7 +661,7 @@ const apps = [
     icon: '/themes/Yaru/apps/spotify.svg',
     disabled: false,
     favourite: true,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displaySpotify,
   },
   {
@@ -670,7 +670,7 @@ const apps = [
     icon: '/themes/Yaru/apps/youtube.svg',
     disabled: false,
     favourite: true,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayYouTube,
   },
   {
@@ -679,7 +679,7 @@ const apps = [
     icon: '/themes/Yaru/apps/beef.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayBeef,
   },
   {
@@ -697,7 +697,7 @@ const apps = [
     icon: '/themes/Yaru/apps/gnome-control-center.png',
     disabled: false,
     favourite: true,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displaySettings,
   },
   {
@@ -706,7 +706,7 @@ const apps = [
     icon: '/themes/Yaru/system/folder.png',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayFileExplorer,
   },
   {
@@ -715,7 +715,7 @@ const apps = [
     icon: '/themes/Yaru/apps/resource-monitor.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayResourceMonitor,
   },
   {
@@ -724,7 +724,7 @@ const apps = [
     icon: '/themes/Yaru/apps/screen-recorder.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayScreenRecorder,
   },
   {
@@ -733,7 +733,7 @@ const apps = [
     icon: '/themes/Yaru/apps/ettercap.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayEttercap,
   },
   {
@@ -742,7 +742,7 @@ const apps = [
     icon: '/themes/Yaru/apps/bluetooth.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayBleSensor,
   },
   {
@@ -751,7 +751,7 @@ const apps = [
     icon: '/themes/Yaru/apps/metasploit.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayMetasploit,
   },
   {
@@ -760,7 +760,7 @@ const apps = [
     icon: '/themes/Yaru/apps/wireshark.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayWireshark,
   },
   {
@@ -769,7 +769,7 @@ const apps = [
     icon: '/themes/Yaru/apps/todoist.png',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayTodoist,
   },
   {
@@ -778,7 +778,7 @@ const apps = [
     icon: '/themes/Yaru/apps/gedit.png',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayStickyNotes,
   },
   {
@@ -805,7 +805,7 @@ const apps = [
     icon: '/themes/Yaru/apps/calc.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayConverter,
   },
   {
@@ -814,7 +814,7 @@ const apps = [
     icon: '/themes/Yaru/apps/kismet.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayKismet,
   },
   {
@@ -823,7 +823,7 @@ const apps = [
     icon: '/themes/Yaru/apps/nikto.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayNikto,
   },
   {
@@ -832,7 +832,7 @@ const apps = [
     icon: '/themes/Yaru/apps/autopsy.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayAutopsy,
   },
   {
@@ -841,7 +841,7 @@ const apps = [
     icon: '/themes/Yaru/apps/project-gallery.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayPluginManager,
   },
   {    id: 'reaver',
@@ -849,7 +849,7 @@ const apps = [
     icon: '/themes/Yaru/apps/reaver.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayReaver,
   },
   {
@@ -858,7 +858,7 @@ const apps = [
     icon: '/themes/Yaru/apps/nessus.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayNessus,
   },
   {
@@ -867,7 +867,7 @@ const apps = [
     icon: '/themes/Yaru/apps/ghidra.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayGhidra,
   },
   {
@@ -876,7 +876,7 @@ const apps = [
     icon: '/themes/Yaru/apps/mimikatz.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayMimikatz,
   },
   {
@@ -885,7 +885,7 @@ const apps = [
     icon: '/themes/Yaru/apps/mimikatz.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayMimikatzOffline,
   },
   {
@@ -894,7 +894,7 @@ const apps = [
     icon: '/themes/Yaru/apps/ssh.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displaySSH,
   },
   {
@@ -903,7 +903,7 @@ const apps = [
     icon: '/themes/Yaru/apps/http.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayHTTP,
   },
   {
@@ -912,7 +912,7 @@ const apps = [
     icon: '/themes/Yaru/apps/project-gallery.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayHtmlRewrite,
   },
   {
@@ -921,7 +921,7 @@ const apps = [
     icon: '/themes/Yaru/apps/project-gallery.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayContact,
   },
   {
@@ -930,7 +930,7 @@ const apps = [
     icon: '/themes/Yaru/apps/hydra.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayHydra,
   },
   {
@@ -939,7 +939,7 @@ const apps = [
     icon: '/themes/Yaru/apps/nmap-nse.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayNmapNSE,
   },
   {
@@ -948,7 +948,7 @@ const apps = [
     icon: '/themes/Yaru/apps/weather.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayWeather,
   },
   {
@@ -957,7 +957,7 @@ const apps = [
     icon: '/themes/Yaru/apps/weather.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayWeatherWidget,
   },
   {
@@ -966,7 +966,7 @@ const apps = [
     icon: '/themes/Yaru/apps/bash.png',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displaySerialTerminal,
   },
   {
@@ -975,7 +975,7 @@ const apps = [
     icon: '/themes/Yaru/apps/radare2.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayRadare2,
   },
   {
@@ -984,7 +984,7 @@ const apps = [
     icon: '/themes/Yaru/apps/volatility.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayVolatility,
   },
   {
@@ -993,7 +993,7 @@ const apps = [
     icon: '/themes/Yaru/apps/hashcat.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayHashcat,
   },
   {
@@ -1002,7 +1002,7 @@ const apps = [
     icon: '/themes/Yaru/apps/msf-post.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayMsfPost,
   },
   {
@@ -1011,7 +1011,7 @@ const apps = [
     icon: '/themes/Yaru/apps/project-gallery.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayEvidenceVault,
   },
   {
@@ -1020,7 +1020,7 @@ const apps = [
     icon: '/themes/Yaru/apps/dsniff.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayDsniff,
   },
   {
@@ -1029,7 +1029,7 @@ const apps = [
     icon: '/themes/Yaru/apps/john.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayJohn,
   },
   {
@@ -1038,7 +1038,7 @@ const apps = [
     icon: '/themes/Yaru/apps/openvas.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayOpenVAS,
   },
   {
@@ -1047,7 +1047,7 @@ const apps = [
     icon: '/themes/Yaru/apps/reconng.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayReconNG,
   },
   {
@@ -1056,7 +1056,7 @@ const apps = [
     icon: '/themes/Yaru/apps/project-gallery.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displaySecurityTools,
   },
   // Utilities are grouped separately
