@@ -8,6 +8,7 @@ import {
 } from './utils';
 import FormError from '../../ui/FormError';
 import StatsChart from '../../StatsChart';
+import johnPlaceholders from './placeholders';
 
 // Enhanced John the Ripper interface that supports rule uploads,
 // basic hash analysis and mock distribution of cracking tasks.
@@ -140,10 +141,7 @@ const JohnApp = () => {
     setWordlistText(e.target.value);
   };
 
-  const sampleWordlists = [
-    { label: 'Common Passwords', path: '/samples/common.txt' },
-    { label: 'Names', path: '/samples/names.txt' },
-  ];
+  const sampleWordlists = johnPlaceholders.sampleWordlists;
 
   const handleSampleWordlist = async (e) => {
     const path = e.target.value;
@@ -298,7 +296,9 @@ const JohnApp = () => {
 
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white">
-      <p className="text-xs text-yellow-300 p-2">Demo only – no real cracking performed.</p>
+      <p className="text-xs text-yellow-300 p-2">
+        {johnPlaceholders.banners.desktop}
+      </p>
       <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-2">
         <label htmlFor="john-hashes" className="text-sm">
           Hashes (one per line)
