@@ -1,5 +1,5 @@
 import React, { act } from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import Window from '../components/desktop/Window';
 import windowStyles from '../components/base/window.module.css';
 import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET } from '../utils/uiConstants';
@@ -115,6 +115,8 @@ describe('Window snapping preview', () => {
     expect(preview).toBeInTheDocument();
     expect(preview).toHaveClass(windowStyles.snapPreviewGlass);
     expect((preview as HTMLElement).style.backdropFilter).toBe('brightness(1.1) saturate(1.2)');
+    expect(preview).toHaveAttribute('aria-label', 'Snap left half');
+    expect(within(preview).getByText('Snap left half')).toBeInTheDocument();
   });
 
   it('hides preview when away from edge', () => {
@@ -189,6 +191,8 @@ describe('Window snapping preview', () => {
     expect(ref.current!.state.snapPosition).toBe('top');
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx()}px`);
+    expect(preview).toHaveAttribute('aria-label', 'Snap full screen');
+    expect(within(preview).getByText('Snap full screen')).toBeInTheDocument();
   });
 
   it('shows corner preview when dragged near the top-left edge', () => {
@@ -228,6 +232,8 @@ describe('Window snapping preview', () => {
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toHaveStyle(`width: ${window.innerWidth / 2}px`);
     expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx() / 2}px`);
+    expect(preview).toHaveAttribute('aria-label', 'Snap top-left quarter');
+    expect(within(preview).getByText('Snap top-left quarter')).toBeInTheDocument();
   });
 
   it('shows corner preview when dragged near the bottom-right edge', () => {
@@ -270,6 +276,8 @@ describe('Window snapping preview', () => {
       `top: ${measureWindowTopOffset() + computeAvailableHeightPx() / 2}px`
     );
     expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx() / 2}px`);
+    expect(preview).toHaveAttribute('aria-label', 'Snap bottom-right quarter');
+    expect(within(preview).getByText('Snap bottom-right quarter')).toBeInTheDocument();
   });
 });
 
