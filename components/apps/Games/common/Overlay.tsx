@@ -10,11 +10,13 @@ export default function Overlay({
   onResume,
   muted: externalMuted,
   onToggleSound,
+  onReset,
 }: {
   onPause?: () => void;
   onResume?: () => void;
   muted?: boolean;
   onToggleSound?: (muted: boolean) => void;
+  onReset?: () => void;
 }) {
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(externalMuted ?? false);
@@ -91,6 +93,11 @@ export default function Overlay({
         <button onClick={togglePause} aria-label={paused ? 'Resume' : 'Pause'}>
           {paused ? 'Resume' : 'Pause'}
         </button>
+        {onReset && (
+          <button onClick={onReset} aria-label="Reset">
+            Reset
+          </button>
+        )}
         <button onClick={toggleSound} aria-label={muted ? 'Unmute' : 'Mute'}>
           {muted ? 'Sound' : 'Mute'}
         </button>

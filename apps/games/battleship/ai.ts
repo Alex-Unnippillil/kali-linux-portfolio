@@ -1,7 +1,13 @@
 export const BOARD_SIZE = 10;
 export const SHIPS = [5, 4, 3, 3, 2];
 
-type Layout = { x: number; y: number; dir: 0 | 1; len: number; cells: number[] };
+export type Layout = {
+  x: number;
+  y: number;
+  dir: 0 | 1;
+  len: number;
+  cells: number[];
+};
 
 // Utility to pick random integer [0,n)
 const rand = (n: number) => Math.floor(Math.random() * n);
