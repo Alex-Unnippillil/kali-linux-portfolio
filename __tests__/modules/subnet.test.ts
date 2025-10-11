@@ -1,9 +1,13 @@
 import {
   calculateSubnetInfo,
+  COMMON_CIDR_PRESETS,
   getBroadcastAddress,
   getHostRange,
   getNetworkAddress,
   getUsableHostCount,
+  parseCidrInput,
+  prefixToMask,
+  validateIPv4Address,
 } from '../../modules/networking/subnet';
 
 describe('modules/networking/subnet', () => {
@@ -45,6 +49,7 @@ describe('modules/networking/subnet', () => {
       },
       usableHosts: 30,
       cidr: 27,
+      mask: '255.255.255.224',
     });
   });
 
@@ -53,5 +58,34 @@ describe('modules/networking/subnet', () => {
     expect(() => getBroadcastAddress('1.1.1', 24)).toThrow('Invalid IPv4 address');
     expect(() => getHostRange('192.168.0.1', 40)).toThrow('Invalid CIDR prefix');
     expect(() => getUsableHostCount(-1)).toThrow('Invalid CIDR prefix');
+  });
+
+  it('parses CIDR input variations and rejects invalid masks', () => {
+    expect(parseCidrInput('24')).toEqual({ prefix: 24, source: 'prefix', error: null });
+    expect(parseCidrInput(' /30 ')).toEqual({ prefix: 30, source: 'prefix', error: null });
+    expect(parseCidrInput('255.255.255.0')).toEqual({ prefix: 24, source: 'mask', error: null });
+
+    expect(parseCidrInput('255.0.255.0').error).toMatch('Subnet mask');
+    expect(parseCidrInput('not a prefix').error).toMatch('Enter a CIDR prefix');
+  });
+
+  it('derives masks and presets for common prefixes', () => {
+    expect(prefixToMask(20)).toBe('255.255.240.0');
+    expect(COMMON_CIDR_PRESETS.map((preset) => preset.prefix)).toEqual([
+      8, 16, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+    ]);
+
+    const twentyFour = COMMON_CIDR_PRESETS.find((preset) => preset.prefix === 24);
+    expect(twentyFour).toMatchObject({
+      mask: '255.255.255.0',
+      totalAddresses: 256,
+      usableHosts: 254,
+    });
+  });
+
+  it('provides ipv4 validation messaging for UI layers', () => {
+    expect(validateIPv4Address('')).toMatch('Enter an IPv4 address');
+    expect(validateIPv4Address('192.168.1.1')).toBeNull();
+    expect(validateIPv4Address('300.1.1.1')).toMatch('IPv4 address must contain four octets');
   });
 });

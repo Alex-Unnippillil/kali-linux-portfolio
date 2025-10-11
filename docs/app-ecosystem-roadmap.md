@@ -41,7 +41,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | ascii_art | ASCII Art | Core maintainers | **In progress** – text/image conversion pipeline | Canvas sampling |
 | quote | Quote | Core maintainers | **In progress** – offline JSON source and no-repeat option | Local JSON |
 | input-lab | Input Lab | Core maintainers | **Needs polish** – ensure device coverage (keyboard, mouse, gamepad) | Device APIs |
-| subnet-calculator | Subnet Calculator | Core maintainers | **Needs polish** – validation UX and shared presets | Network calc utils |
+| subnet-calculator | Subnet Calculator | Core maintainers | **Ready** – inline validation and shared CIDR presets | Network calc utils |
 | sticky_notes | Sticky Notes | Core maintainers | **Needs polish** – confirm persistence model and drag handles | localStorage |
 | trash | Trash | Core maintainers | **In progress** – soft-delete metadata with restore/empty flows | Virtual filesystem metadata |
 | serial-terminal | Serial Terminal | Core maintainers | **Needs polish** – confirm serial transport stubs | Web Serial API mock |
