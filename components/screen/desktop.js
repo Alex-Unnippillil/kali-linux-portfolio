@@ -2293,6 +2293,149 @@ export class Desktop extends Component {
         window.dispatchEvent(new CustomEvent('workspace-state', { detail }));
     };
 
+    getOverlayDefaults = (key) => {
+        if (key === 'launcher') {
+            return { open: false, minimized: false, maximized: false, transitionState: 'exited' };
+        }
+        return { open: false, minimized: false, maximized: false };
+    };
+
+    getOverlayState = (key) => {
+        const overlays = this.state?.overlayWindows || {};
+        const current = overlays[key];
+        const defaults = this.getOverlayDefaults(key);
+        return current ? { ...defaults, ...current } : { ...defaults };
+    };
+
+    updateOverlayState = (key, updater, callback) => {
+        if (!key) return;
+        this.setState((prevState) => {
+            const overlays = prevState.overlayWindows || {};
+            const previous = overlays[key] ? { ...overlays[key] } : this.getOverlayDefaults(key);
+            const nextState = typeof updater === 'function'
+                ? updater({ ...previous })
+                : { ...previous, ...(updater || {}) };
+
+            if (!nextState || typeof nextState !== 'object') {
+                return null;
+            }
+
+            const next = { ...previous, ...nextState };
+            const keys = new Set([...Object.keys(previous), ...Object.keys(next)]);
+            let changed = false;
+            for (const name of keys) {
+                if (previous[name] !== next[name]) {
+                    changed = true;
+                    break;
+                }
+            }
+
+            if (!changed) {
+                return null;
+            }
+
+            return {
+                overlayWindows: {
+                    ...overlays,
+                    [key]: next,
+                },
+            };
+        }, callback);
+    };
+
+    openOverlay = (key, overrides = {}, callback) => {
+        this.updateOverlayState(
+            key,
+            (current) => {
+                const resolvedOverrides = typeof overrides === 'function' ? overrides({ ...current }) : overrides;
+                const base = {
+                    ...current,
+                    open: true,
+                    minimized: false,
+                };
+                if (typeof base.maximized !== 'boolean') {
+                    base.maximized = false;
+                }
+                if (resolvedOverrides && typeof resolvedOverrides === 'object') {
+                    return { ...base, ...resolvedOverrides };
+                }
+                return base;
+            },
+            callback,
+        );
+    };
+
+    closeOverlay = (key, overrides = {}, callback) => {
+        this.updateOverlayState(
+            key,
+            (current) => {
+                const resolvedOverrides = typeof overrides === 'function' ? overrides({ ...current }) : overrides;
+                const base = {
+                    ...current,
+                    open: false,
+                    minimized: false,
+                    maximized: false,
+                };
+                if (resolvedOverrides && typeof resolvedOverrides === 'object') {
+                    return { ...base, ...resolvedOverrides };
+                }
+                return base;
+            },
+            callback,
+        );
+    };
+
+    restoreOverlay = (key, overrides = {}, callback) => {
+        this.updateOverlayState(
+            key,
+            (current) => {
+                const resolvedOverrides = typeof overrides === 'function' ? overrides({ ...current }) : overrides;
+                const base = {
+                    ...current,
+                    open: true,
+                    minimized: false,
+                };
+                if (resolvedOverrides && typeof resolvedOverrides === 'object') {
+                    return { ...base, ...resolvedOverrides };
+                }
+                return base;
+            },
+            callback,
+        );
+    };
+
+    toggleOverlayMinimize = (key) => {
+        this.updateOverlayState(key, (current) => {
+            const next = { ...current };
+            if (!next.open) {
+                next.open = true;
+                next.minimized = false;
+                next.maximized = false;
+                return next;
+            }
+            next.minimized = !next.minimized;
+            if (next.minimized) {
+                next.maximized = false;
+            }
+            return next;
+        });
+    };
+
+    toggleOverlayMaximize = (key) => {
+        this.updateOverlayState(key, (current) => {
+            const shouldMaximize = !current.maximized;
+            const next = {
+                ...current,
+                maximized: shouldMaximize,
+            };
+            if (shouldMaximize) {
+                next.open = true;
+                next.minimized = false;
+            }
+            return next;
+        });
+    };
+
     componentDidMount() {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
