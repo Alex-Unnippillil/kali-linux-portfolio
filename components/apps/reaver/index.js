@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import data from './data/handshakes.json';
 import SmallArrow from '../../util-components/small_arrow';
 
@@ -7,20 +7,147 @@ const ReaverStepper = () => {
   const messages = handshakes[0]?.messages || [];
   const [current, setCurrent] = useState(0);
   const isSummary = current >= messages.length;
+  const totalSteps = messages.length + 1;
+  const progressStep = Math.min(current + 1, totalSteps);
   const direction =
     messages[current]?.from === 'Access Point' ? 'right' : 'left';
   const logMessages = messages.slice(0, Math.min(current + 1, messages.length));
 
-  const next = () => setCurrent((c) => Math.min(messages.length, c + 1));
-  const prev = () => setCurrent((c) => Math.max(0, c - 1));
-  const restart = () => setCurrent(0);
+  const next = useCallback(
+    () => setCurrent((c) => Math.min(messages.length, c + 1)),
+    [messages.length],
+  );
+  const prev = useCallback(() => setCurrent((c) => Math.max(0, c - 1)), []);
+  const restart = useCallback(() => setCurrent(0), []);
+
+  const getRoleIcon = useCallback((role) => {
+    if (role === 'Access Point') {
+      return '📡';
+    }
+    if (role === 'Client') {
+      return '💻';
+    }
+    return '🔐';
+  }, []);
+
+  const educationalCallouts = useMemo(
+    () => ({
+      M1: [
+        {
+          title: 'Authenticator kickoff',
+          body:
+            'The AP broadcasts a fresh ANonce so both sides can derive matching keys for this session.',
+        },
+        {
+          title: 'Security takeaway',
+          body:
+            'If attackers capture this nonce, they can pair it with later MICs to attempt offline key recovery.',
+        },
+      ],
+      M2: [
+        {
+          title: 'Supplicant response',
+          body:
+            'The client replies with its SNonce and a MIC proving it knows the pre-shared secret.',
+        },
+        {
+          title: 'Security takeaway',
+          body:
+            'Captured MICs let adversaries verify password guesses—strong passphrases are critical here.',
+        },
+      ],
+      M3: [
+        {
+          title: 'GTK delivery',
+          body:
+            'The AP ships the group key (GTK) and instructs the client to install the freshly derived PTK.',
+        },
+        {
+          title: 'Security takeaway',
+          body:
+            'Unpatched clients risk reinstalling old keys (KRACK-style issues), so keep firmware current.',
+        },
+      ],
+      M4: [
+        {
+          title: 'Handshake confirmation',
+          body:
+            'The client acknowledges the install, signaling the secure channel is ready for data frames.',
+        },
+        {
+          title: 'Security takeaway',
+          body:
+            'Repeated confirmations without data can flag deauthentication or capture attempts in progress.',
+        },
+      ],
+    }),
+    [],
+  );
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      const target = event.target;
+      const tagName = target?.tagName;
+      if (
+        target?.isContentEditable ||
+        tagName === 'INPUT' ||
+        tagName === 'TEXTAREA' ||
+        tagName === 'SELECT'
+      ) {
+        return;
+      }
+
+      if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'n') {
+        event.preventDefault();
+        next();
+      }
+
+      if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'p') {
+        event.preventDefault();
+        prev();
+      }
+
+      if ((event.key === 'r' || event.key === 'R') && isSummary) {
+        event.preventDefault();
+        restart();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSummary, next, prev, restart]);
+
+  const activeCallouts = !isSummary
+    ? educationalCallouts[messages[current]?.step] || []
+    : [];
 
   return (
     <div
       id="reaver-stepper"
       className="p-4 bg-ub-cool-grey text-white h-full overflow-y-auto"
     >
-      <h1 className="text-2xl mb-4">EAPOL Handshake Explorer</h1>
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <h1 className="text-2xl">EAPOL Handshake Explorer</h1>
+        <div className="inline-flex items-center gap-2 rounded bg-black/40 px-3 py-1 text-sm">
+          <span className="font-semibold">Step {progressStep}</span>
+          <span className="text-xs text-white/70">of {totalSteps}</span>
+          {isSummary && <span className="text-xs text-ubt-green">Summary</span>}
+        </div>
+      </div>
+
+      <div
+        className="mt-3 flex flex-wrap gap-3 text-xs text-white/80"
+        aria-label="Role legend"
+      >
+        <span className="inline-flex items-center gap-2 rounded border border-white/10 bg-black/40 px-2 py-1">
+          <span aria-hidden>📡</span>
+          Access Point
+        </span>
+        <span className="inline-flex items-center gap-2 rounded border border-white/10 bg-black/40 px-2 py-1">
+          <span aria-hidden>💻</span>
+          Client
+        </span>
+      </div>
 
       {!isSummary && (
         <div className="relative h-12 mb-4">
@@ -35,10 +162,12 @@ const ReaverStepper = () => {
           >
             <SmallArrow angle={direction} />
           </div>
-          <span className="absolute left-0 -top-6 text-xs">
+          <span className="absolute left-0 -top-6 text-xs flex items-center gap-1">
+            <span aria-hidden>{getRoleIcon(messages[current].from)}</span>
             {messages[current].from}
           </span>
-          <span className="absolute right-0 -top-6 text-xs">
+          <span className="absolute right-0 -top-6 text-xs flex items-center gap-1">
+            <span aria-hidden>{getRoleIcon(messages[current].to)}</span>
             {messages[current].to}
           </span>
         </div>
@@ -66,17 +195,46 @@ const ReaverStepper = () => {
         </div>
       ) : (
         <div>
-          <h2 className="text-xl mb-2">
-            {messages[current].step}: {messages[current].from} ➜ {messages[current].to}
+          <h2 className="text-xl mb-2 flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded bg-black/40 px-2 py-1 text-sm">
+              <span aria-hidden>{getRoleIcon(messages[current].from)}</span>
+              {messages[current].from}
+            </span>
+            <SmallArrow angle={direction} />
+            <span className="inline-flex items-center gap-1 rounded bg-black/40 px-2 py-1 text-sm">
+              <span aria-hidden>{getRoleIcon(messages[current].to)}</span>
+              {messages[current].to}
+            </span>
+            <span className="ml-2 text-sm text-white/70">{messages[current].step}</span>
           </h2>
-          <p className="text-sm">{messages[current].description}</p>
+          <p className="text-sm leading-relaxed">
+            {messages[current].description}
+          </p>
+
+          {activeCallouts.length > 0 && (
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              {activeCallouts.map((callout) => (
+                <div
+                  key={callout.title}
+                  className="rounded border border-white/10 bg-black/40 p-3 text-sm"
+                >
+                  <h3 className="font-semibold text-ubt-green">
+                    {callout.title}
+                  </h3>
+                  <p className="mt-1 text-white/90 leading-relaxed">
+                    {callout.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       <div className="mt-4 bg-black text-green-400 font-mono text-xs p-2 h-32 overflow-y-auto">
         {logMessages.map((m) => (
           <div key={m.step}>
-            [{m.step}] {m.from} ➜ {m.to}
+            [{m.step}] {getRoleIcon(m.from)} {m.from} ➜ {getRoleIcon(m.to)} {m.to}
           </div>
         ))}
       </div>
@@ -104,6 +262,19 @@ const ReaverStepper = () => {
             Next
           </button>
         )}
+      </div>
+
+      <div className="mt-3 space-y-1 text-xs text-white/70 print:hidden">
+        <p>
+          Keyboard: use <span className="rounded bg-black/40 px-1 py-0.5">←</span>{' '}
+          / <span className="rounded bg-black/40 px-1 py-0.5">→</span> or press
+          <span className="rounded bg-black/40 px-1 py-0.5 ml-1 mr-1">N</span>
+          and
+          <span className="rounded bg-black/40 px-1 py-0.5 ml-1 mr-1">P</span>
+          to move between steps. On the summary screen, press
+          <span className="rounded bg-black/40 px-1 py-0.5 ml-1">R</span> to
+          restart.
+        </p>
       </div>
 
       <style jsx>{`
