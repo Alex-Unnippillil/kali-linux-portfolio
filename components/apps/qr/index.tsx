@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 
 const QRScanner: React.FC = () => {
@@ -10,33 +10,118 @@ const QRScanner: React.FC = () => {
   const streamRef = useRef<MediaStream | null>(null);
   const [result, setResult] = useState('');
   const [error, setError] = useState('');
-  const [facing, setFacing] = useState<'environment' | 'user'>('environment');
+  const [preferredFacing, setPreferredFacing] = useState<'environment' | 'user'>('environment');
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [torch, setTorch] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
   const [preview, setPreview] = useState('');
+  const [permissionStatus, setPermissionStatus] = useState<
+    'unknown' | 'prompt' | 'granted' | 'denied' | 'unsupported'
+  >('unknown');
+  const [restartToken, setRestartToken] = useState(0);
+
+  const mediaDevices = typeof navigator !== 'undefined' ? navigator.mediaDevices : undefined;
+
+  const updateDeviceList = useCallback(async () => {
+    if (!mediaDevices?.enumerateDevices) return;
+    try {
+      const list = await mediaDevices.enumerateDevices();
+      const videoDevices = list.filter((device) => device.kind === 'videoinput');
+      setDevices(videoDevices);
+      if (videoDevices.length === 0) {
+        setSelectedDeviceId(null);
+        return;
+      }
+      if (
+        selectedDeviceId &&
+        !videoDevices.some((device) => device.deviceId === selectedDeviceId)
+      ) {
+        setSelectedDeviceId(videoDevices[0].deviceId || null);
+      }
+    } catch {
+      setDevices([]);
+    }
+  }, [mediaDevices, selectedDeviceId]);
+
+  useEffect(() => {
+    if (!mediaDevices?.enumerateDevices) return;
+
+    let cancelled = false;
+
+    const syncDevices = async () => {
+      if (cancelled) return;
+      await updateDeviceList();
+    };
+
+    syncDevices();
+
+    const handler = () => {
+      syncDevices();
+    };
+
+    if (mediaDevices.addEventListener) {
+      mediaDevices.addEventListener('devicechange', handler);
+      return () => {
+        cancelled = true;
+        mediaDevices.removeEventListener?.('devicechange', handler);
+      };
+    }
+
+    const original = mediaDevices.ondevicechange;
+    mediaDevices.ondevicechange = handler;
+
+    return () => {
+      cancelled = true;
+      if (mediaDevices.ondevicechange === handler) {
+        mediaDevices.ondevicechange = original;
+      }
+    };
+  }, [mediaDevices, updateDeviceList]);
+
+  const constraints = useMemo<MediaStreamConstraints>(() => {
+    if (selectedDeviceId) {
+      return { video: { deviceId: { exact: selectedDeviceId } } };
+    }
+    return { video: { facingMode: { ideal: preferredFacing } } };
+  }, [preferredFacing, selectedDeviceId]);
 
   useEffect(() => {
     let active = true;
+    let cancelScan: (() => void) | undefined;
     const video = videoRef.current;
+
     const start = async () => {
-      if (!navigator.mediaDevices?.getUserMedia) {
+      if (!mediaDevices?.getUserMedia) {
         setError('Camera API not supported');
+        setPermissionStatus('unsupported');
         return;
       }
+
       try {
+        setPermissionStatus('prompt');
         controlsRef.current?.stop?.();
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: facing },
-        });
+        const stream = await mediaDevices.getUserMedia(constraints);
         streamRef.current = stream;
         trackRef.current = stream.getVideoTracks()[0] || null;
+        setPermissionStatus('granted');
+        setError('');
         if (!active) return;
         const videoEl = videoRef.current;
         if (videoEl) {
           videoEl.srcObject = stream;
           await videoEl.play();
         }
+        const track = trackRef.current as any;
+        const capabilities = track?.getCapabilities?.();
+        const supportsTorch = Boolean(capabilities?.torch);
+        setTorchSupported(supportsTorch);
+        if (!supportsTorch && torch) setTorch(false);
+        await updateDeviceList();
+
         if ('BarcodeDetector' in window) {
           const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+          let rafId = 0;
           const scan = async () => {
             if (!active) return;
             try {
@@ -45,43 +130,53 @@ const QRScanner: React.FC = () => {
             } catch {
               /* ignore */
             }
-            requestAnimationFrame(scan);
+            rafId = requestAnimationFrame(scan);
           };
           scan();
-        } else {
-          const [{ BrowserQRCodeReader }, { NotFoundException }] = await Promise.all([
-            import('@zxing/browser'),
-            import('@zxing/library'),
-          ]);
-          const codeReader = new BrowserQRCodeReader();
-          controlsRef.current = await codeReader.decodeFromVideoDevice(
-            undefined,
-            videoRef.current!,
-            (res, err) => {
-              if (res) setResult(res.getText());
-              if (err && !(err instanceof NotFoundException)) {
-                setError('Failed to read QR code');
-              }
-            },
-          );
+          cancelScan = () => cancelAnimationFrame(rafId);
+          return;
         }
+
+        const [{ BrowserQRCodeReader }, { NotFoundException }] = await Promise.all([
+          import('@zxing/browser'),
+          import('@zxing/library'),
+        ]);
+        const codeReader = new BrowserQRCodeReader();
+        controlsRef.current = await codeReader.decodeFromVideoDevice(
+          undefined,
+          videoRef.current!,
+          (res, err) => {
+            if (res) setResult(res.getText());
+            if (err && !(err instanceof NotFoundException)) {
+              setError('Failed to read QR code');
+            }
+          },
+        );
       } catch (err) {
         if (err instanceof DOMException && err.name === 'NotAllowedError') {
-          setError('Camera access was denied');
+          setPermissionStatus('denied');
+          setError(
+            'Camera access was denied. Allow camera permissions or use the Scan tab to upload images.',
+          );
         } else {
+          setPermissionStatus('unknown');
           setError('Could not start camera');
         }
       }
     };
+
     start();
+
     return () => {
       active = false;
+      cancelScan?.();
       controlsRef.current?.stop?.();
       streamRef.current?.getTracks().forEach((t) => t.stop());
       if (video) video.srcObject = null;
       trackRef.current = null;
+      setTorchSupported(false);
     };
-  }, [facing]);
+  }, [constraints, mediaDevices, restartToken, torch, updateDeviceList]);
 
   useEffect(() => {
     const track = trackRef.current as any;
@@ -110,19 +205,43 @@ const QRScanner: React.FC = () => {
   };
 
   const switchCamera = () => {
-    setFacing((f) => (f === 'environment' ? 'user' : 'environment'));
+    if (devices.length > 1) {
+      setSelectedDeviceId((current) => {
+        if (!current) return devices[1]?.deviceId || null;
+        const currentIndex = devices.findIndex((device) => device.deviceId === current);
+        const nextIndex = (currentIndex + 1) % devices.length;
+        return devices[nextIndex]?.deviceId || null;
+      });
+      setRestartToken((token) => token + 1);
+      return;
+    }
+    setPreferredFacing((f) => (f === 'environment' ? 'user' : 'environment'));
+    setSelectedDeviceId(null);
+    setRestartToken((token) => token + 1);
   };
+
+  const retryCamera = () => {
+    setRestartToken((token) => token + 1);
+  };
+
+  const cameraLabel = devices.length ? 'Camera source' : 'Camera preference';
+  const autoLabel = `Auto (${preferredFacing === 'environment' ? 'rear' : 'front'})`;
 
   return (
     <div className="p-4 space-y-4 text-white bg-ub-cool-grey h-full flex flex-col items-center">
       <div className="relative w-full max-w-sm">
-        <video ref={videoRef} className="w-full rounded-md border-2 border-white bg-black" />
+        <video
+          ref={videoRef}
+          className="w-full rounded-md border-2 border-white bg-black"
+          aria-label="Camera preview"
+        />
         <div className="absolute top-2 right-2 flex gap-2">
           <button
             type="button"
             onClick={toggleTorch}
             aria-label="Toggle flashlight"
-            className="p-1 bg-black/50 rounded"
+            className="p-1 bg-black/50 rounded disabled:opacity-50"
+            disabled={!torchSupported}
           >
             <FlashIcon className="w-6 h-6" />
           </button>
@@ -136,7 +255,46 @@ const QRScanner: React.FC = () => {
           </button>
         </div>
       </div>
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      <div className="w-full max-w-sm flex flex-col gap-2">
+        <label className="text-sm flex flex-col gap-1">
+          <span>{cameraLabel}</span>
+          <select
+            value={selectedDeviceId ?? ''}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSelectedDeviceId(value || null);
+              setRestartToken((token) => token + 1);
+            }}
+            className="rounded p-1 text-black"
+            aria-label={cameraLabel}
+          >
+            <option value="">{autoLabel}</option>
+            {devices.map((device, index) => (
+              <option key={device.deviceId || index} value={device.deviceId}>
+                {device.label || `Camera ${index + 1}`}
+              </option>
+            ))}
+          </select>
+        </label>
+        {permissionStatus === 'denied' && (
+          <div className="text-xs text-red-400 space-y-1" role="alert">
+            <p>Camera access is blocked. Enable permissions in your browser settings to scan live codes.</p>
+            <p>You can also switch to the Scan tab and drop an image while permissions are denied.</p>
+            <button
+              type="button"
+              onClick={retryCamera}
+              className="px-2 py-1 bg-blue-600 rounded text-white text-xs self-start"
+            >
+              Retry camera access
+            </button>
+          </div>
+        )}
+      </div>
+      {error && (
+        <p className="text-sm text-red-500" role="status">
+          {error}
+        </p>
+      )}
       {result && (
         <div className="flex items-center gap-2 p-2 bg-white text-black rounded-md w-full max-w-sm">
           {preview && (
