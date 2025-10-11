@@ -107,7 +107,7 @@ All arcade-style and puzzle titles share the same readiness gap: implement canva
 | hangman | Hangman | Core maintainers | **In progress** – add word list, timer, difficulty | Word list data |
 | frogger | Frogger | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | flappy-bird | Flappy Bird | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
-| 2048 | 2048 | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
+| 2048 | 2048 | Core maintainers | **Beta** – shared toolbar with pause/reset/audio toggles and persistent high score shipped | Game engine |
 | snake | Snake | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | memory | Memory | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | minesweeper | Minesweeper | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |

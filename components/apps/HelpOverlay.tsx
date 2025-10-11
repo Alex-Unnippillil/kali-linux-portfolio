@@ -16,12 +16,17 @@ interface Instruction {
 export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   "2048": {
     objective: "Reach the 2048 tile by merging numbers.",
-    controls: "Use the arrow keys to slide and combine tiles.",
+    controls:
+      "Use the arrow keys to slide and combine tiles. Toolbar buttons or shortcuts offer Pause (P), Reset (R), Undo (U/Backspace), and Sound toggle (M).",
     actions: {
       up: "ArrowUp",
       down: "ArrowDown",
       left: "ArrowLeft",
       right: "ArrowRight",
+      pause: "P",
+      reset: "R",
+      undo: "U / Backspace",
+      mute: "M",
     },
   },
   asteroids: {
