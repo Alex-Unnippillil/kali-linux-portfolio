@@ -6,6 +6,10 @@ const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
 
 export const registerHydraProtocol = (protocol) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
   if (!pluginServices.includes(protocol)) {
     pluginServices.push(protocol);
     window.dispatchEvent(new Event('hydra-protocols-changed'));
