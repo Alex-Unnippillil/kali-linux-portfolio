@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
 import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
 import pcapFixture from '../../../public/demo-data/dsniff/pcap.json';
 import TerminalOutput from '../../TerminalOutput';
+import usePersistentState from '../../../hooks/usePersistentState';
 
 // Simple parser that attempts to extract protocol, host and remaining details
 // Each parsed line is also given a synthetic timestamp for display purposes
@@ -223,11 +224,18 @@ const Dsniff = () => {
   const [domainSummary, setDomainSummary] = useState([]);
   const [timeline, setTimeline] = useState([]);
   const [protocolFilter, setProtocolFilter] = useState([]);
+  const [labMode, setLabMode] = usePersistentState('dsniff:lab-mode', false);
+  const [builderTool, setBuilderTool] = useState('urlsnarf');
+  const [builderInterface, setBuilderInterface] = useState('demo-eth0');
+  const [builderSource, setBuilderSource] = useState('pcap-demo.pcap');
+  const [builderTarget, setBuilderTarget] = useState('198.51.100.10');
+  const [builderGateway, setBuilderGateway] = useState('198.51.100.1');
+  const [builderHostFilter, setBuilderHostFilter] = useState('');
 
   const { summary: pcapSummary, remediation } = pcapFixture;
 
-  const sampleCommand = 'urlsnarf -i eth0';
-  const sampleOutput = urlsnarfFixture.slice(0, 1).join('\n');
+  const sampleCommand = 'urlsnarf -i demo-eth0 -r demo_capture.pcap';
+  const sampleOutput = urlsnarfFixture.join('\n');
 
   const copySampleCommand = () => {
     if (navigator.clipboard) {
@@ -348,6 +356,43 @@ const Dsniff = () => {
     return searchMatch && filterMatch && protocolMatch;
   });
 
+  const cannedOutputs = {
+    urlsnarf: {
+      label: 'urlsnarf',
+      description: 'Captures HTTP requests. Demo data sourced from sanitized lab captures.',
+      output: urlsnarfFixture.join('\n'),
+    },
+    arpspoof: {
+      label: 'arpspoof',
+      description: 'Illustrates ARP replies generated in a controlled lab.',
+      output: arpspoofFixture.join('\n'),
+    },
+  };
+
+  const [activeOutput, setActiveOutput] = useState('urlsnarf');
+
+  const builderCommand = useMemo(() => {
+    if (builderTool === 'urlsnarf') {
+      const readFlag = builderSource ? ` -r ${builderSource}` : '';
+      const hostFlag = builderHostFilter ? ` '${builderHostFilter}'` : '';
+      return `sudo urlsnarf -i ${builderInterface}${readFlag}${hostFlag} # demo capture only`;
+    }
+    const gatewayFlag = builderGateway ? ` ${builderGateway}` : '';
+    return `sudo arpspoof -i ${builderInterface} -t ${builderTarget}${gatewayFlag} # lab-safe simulation`;
+  }, [
+    builderGateway,
+    builderHostFilter,
+    builderInterface,
+    builderSource,
+    builderTarget,
+    builderTool,
+  ]);
+
+  const copyBuilderCommand = () => {
+    if (!labMode || !navigator.clipboard) return;
+    navigator.clipboard.writeText(builderCommand);
+  };
+
   return (
     <div className="h-full w-full bg-ub-cool-grey text-white p-2 overflow-auto">
       <div className="mb-2 flex items-center justify-between">
@@ -359,8 +404,27 @@ const Dsniff = () => {
           Export summary
         </button>
       </div>
-      <div className="mb-2 text-yellow-300 text-sm">
-        For lab use only – simulated traffic
+      <div className="mb-3 p-2 bg-black/60 border border-yellow-500 rounded" data-testid="lab-mode-banner">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+          <p className="text-yellow-200 text-sm">
+            For lab use only – commands stay in simulation space and never touch live targets.
+          </p>
+          <label className="flex items-center space-x-2 text-xs uppercase tracking-wide">
+            <input
+              id="dsniff-lab-toggle"
+              type="checkbox"
+              checked={labMode}
+              onChange={(e) => setLabMode(e.target.checked)}
+              aria-label="Toggle lab mode"
+            />
+            <span>{labMode ? 'Lab mode enabled' : 'Lab mode paused'}</span>
+          </label>
+        </div>
+        {!labMode && (
+          <p className="mt-2 text-xs text-yellow-300">
+            Enable lab mode to interact with the command builder. Output panels always use sanitized fixtures.
+          </p>
+        )}
       </div>
       <div className="mb-4" data-testid="suite-tools">
         <h2 className="font-bold mb-2 text-sm">Suite tools</h2>
@@ -393,6 +457,170 @@ const Dsniff = () => {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="mb-4" data-testid="canned-output-library">
+        <h2 className="font-bold mb-2 text-sm">Canned output library</h2>
+        <p className="text-xs text-gray-200 mb-2">
+          Review sanitized captures for each tool to understand what lab-mode sessions surface.
+        </p>
+        <div className="flex flex-wrap gap-2 mb-2" role="tablist">
+          {Object.entries(cannedOutputs).map(([key, meta]) => (
+            <button
+              key={key}
+              role="tab"
+              aria-selected={activeOutput === key}
+              className={`px-2 py-1 rounded ${
+                activeOutput === key ? 'bg-black text-green-400' : 'bg-ub-grey'
+              }`}
+              onClick={() => setActiveOutput(key)}
+            >
+              {meta.label}
+            </button>
+          ))}
+        </div>
+        <div className="bg-black p-2 rounded border border-ub-grey" role="tabpanel">
+          <p className="text-xs text-gray-300 mb-2">
+            {cannedOutputs[activeOutput].description}
+          </p>
+          <TerminalOutput
+            text={cannedOutputs[activeOutput].output}
+            ariaLabel={`${cannedOutputs[activeOutput].label} canned output`}
+          />
+        </div>
+      </div>
+
+      <div className="mb-4" data-testid="command-builder">
+        <h2 className="font-bold mb-2 text-sm">Safe command builder</h2>
+        <p className="text-xs text-gray-200 mb-2">
+          Generate sanitized commands that reference demo interfaces and capture files. Copying requires lab mode.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+          <div className="flex flex-col text-xs">
+            <label
+              htmlFor="dsniff-builder-tool"
+              className="mb-1 uppercase tracking-wide"
+            >
+              Tool
+            </label>
+            <select
+              id="dsniff-builder-tool"
+              value={builderTool}
+              onChange={(e) => setBuilderTool(e.target.value)}
+              className="text-black p-1"
+              disabled={!labMode}
+            >
+              <option value="urlsnarf">urlsnarf</option>
+              <option value="arpspoof">arpspoof</option>
+            </select>
+          </div>
+          <div className="flex flex-col text-xs">
+            <label
+              htmlFor="dsniff-builder-interface"
+              className="mb-1 uppercase tracking-wide"
+            >
+              Interface
+            </label>
+            <select
+              id="dsniff-builder-interface"
+              value={builderInterface}
+              onChange={(e) => setBuilderInterface(e.target.value)}
+              className="text-black p-1"
+              disabled={!labMode}
+            >
+              <option value="demo-eth0">demo-eth0</option>
+              <option value="demo-wlan0">demo-wlan0</option>
+            </select>
+          </div>
+          {builderTool === 'urlsnarf' ? (
+            <>
+              <div className="flex flex-col text-xs">
+                <label
+                  htmlFor="dsniff-builder-source"
+                  className="mb-1 uppercase tracking-wide"
+                >
+                  Capture source
+                </label>
+                <select
+                  id="dsniff-builder-source"
+                  value={builderSource}
+                  onChange={(e) => setBuilderSource(e.target.value)}
+                  className="text-black p-1"
+                  disabled={!labMode}
+                >
+                  <option value="pcap-demo.pcap">pcap-demo.pcap</option>
+                  <option value="demo-http-capture.pcap">demo-http-capture.pcap</option>
+                  <option value="">Live interface (simulated)</option>
+                </select>
+              </div>
+              <div className="flex flex-col text-xs">
+                <label
+                  htmlFor="dsniff-builder-host"
+                  className="mb-1 uppercase tracking-wide"
+                >
+                  Optional host filter
+                </label>
+                <input
+                  id="dsniff-builder-host"
+                  type="text"
+                  value={builderHostFilter}
+                  onChange={(e) => setBuilderHostFilter(e.target.value)}
+                  placeholder="host 198.51.100.25"
+                  className="text-black p-1"
+                  disabled={!labMode}
+                  aria-label="Optional host filter"
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex flex-col text-xs">
+                <label
+                  htmlFor="dsniff-builder-target"
+                  className="mb-1 uppercase tracking-wide"
+                >
+                  Target IP
+                </label>
+                <input
+                  id="dsniff-builder-target"
+                  type="text"
+                  value={builderTarget}
+                  onChange={(e) => setBuilderTarget(e.target.value)}
+                  className="text-black p-1"
+                  disabled={!labMode}
+                  aria-label="Target IP"
+                />
+              </div>
+              <div className="flex flex-col text-xs">
+                <label
+                  htmlFor="dsniff-builder-gateway"
+                  className="mb-1 uppercase tracking-wide"
+                >
+                  Gateway IP
+                </label>
+                <input
+                  id="dsniff-builder-gateway"
+                  type="text"
+                  value={builderGateway}
+                  onChange={(e) => setBuilderGateway(e.target.value)}
+                  className="text-black p-1"
+                  disabled={!labMode}
+                  aria-label="Gateway IP"
+                />
+              </div>
+            </>
+          )}
+        </div>
+        <div className="bg-black p-2 rounded border border-ub-grey" data-testid="command-preview">
+          <code className="block text-xs break-words">{builderCommand}</code>
+          <button
+            className="mt-2 px-2 py-1 bg-ub-grey rounded text-xs disabled:opacity-50"
+            onClick={copyBuilderCommand}
+            disabled={!labMode}
+          >
+            Copy command
+          </button>
+        </div>
       </div>
 
       <div className="mb-4 flex flex-col md:flex-row gap-4" data-testid="how-it-works">
@@ -589,6 +817,7 @@ const Dsniff = () => {
           placeholder="Search logs"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          aria-label="Search logs"
         />
       </div>
       <div className="mb-2">
@@ -597,6 +826,7 @@ const Dsniff = () => {
             value={newField}
             onChange={(e) => setNewField(e.target.value)}
             className="text-black"
+            aria-label="Filter field"
           >
             <option value="host">host</option>
             <option value="protocol">protocol</option>
@@ -606,6 +836,7 @@ const Dsniff = () => {
             placeholder="Value"
             value={newValue}
             onChange={(e) => setNewValue(e.target.value)}
+            aria-label="Filter value"
           />
           <button
             className="bg-ub-blue text-white px-2"

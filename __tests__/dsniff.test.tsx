@@ -38,5 +38,49 @@ describe('Dsniff component', () => {
     fireEvent.click(showBtn);
     expect(await screen.findByText('demo123')).toBeInTheDocument();
   });
+
+  it('renders canned output panels backed by fixtures', async () => {
+    render(<Dsniff />);
+    const library = await screen.findByTestId('canned-output-library');
+    expect(
+      within(library).getByLabelText('urlsnarf canned output')
+    ).toHaveTextContent('HTTP example.com /index.html');
+
+    const arpspoofTab = within(library).getByRole('tab', { name: /arpspoof/i });
+    fireEvent.click(arpspoofTab);
+    expect(
+      within(library).getByLabelText('arpspoof canned output')
+    ).toHaveTextContent('ARP reply 192.168.0.1');
+  });
+
+  it('builds lab-safe commands once lab mode is enabled', async () => {
+    render(<Dsniff />);
+
+    const copyButton = screen.getByText('Copy command');
+    expect(copyButton).toBeDisabled();
+
+    const toggle = screen.getByLabelText('Toggle lab mode');
+    fireEvent.click(toggle);
+    expect(copyButton).not.toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText('Tool'), {
+      target: { value: 'arpspoof' },
+    });
+
+    const preview = screen.getByTestId('command-preview');
+    expect(
+      within(preview).getByText(/sudo arpspoof/)
+    ).toHaveTextContent(
+      'sudo arpspoof -i demo-eth0 -t 198.51.100.10 198.51.100.1 # lab-safe simulation'
+    );
+
+    fireEvent.change(screen.getByLabelText('Interface'), {
+      target: { value: 'demo-wlan0' },
+    });
+
+    expect(
+      within(preview).getByText(/sudo arpspoof/)
+    ).toHaveTextContent('demo-wlan0');
+  });
 });
 
