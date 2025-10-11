@@ -10,13 +10,15 @@ export default function Overlay({
   onResume,
   muted: externalMuted,
   onToggleSound,
+  paused: externalPaused,
 }: {
   onPause?: () => void;
   onResume?: () => void;
   muted?: boolean;
   onToggleSound?: (muted: boolean) => void;
+  paused?: boolean;
 }) {
-  const [paused, setPaused] = useState(false);
+  const [paused, setPaused] = useState(externalPaused ?? false);
   const [muted, setMuted] = useState(externalMuted ?? false);
   const [fps, setFps] = useState(0);
   const frame = useRef(performance.now());
@@ -61,6 +63,12 @@ export default function Overlay({
       setMuted(externalMuted);
     }
   }, [externalMuted]);
+
+  useEffect(() => {
+    if (externalPaused !== undefined) {
+      setPaused(externalPaused);
+    }
+  }, [externalPaused]);
 
   useEffect(() => {
     const handleDisconnect = () => {
