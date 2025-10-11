@@ -1,31 +1,35 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import useWeatherState, {
   City,
-  ForecastDay,
   useWeatherGroups,
   useCurrentGroup,
+  useWeatherUnit,
 } from './state';
 import Forecast from './components/Forecast';
 import CityDetail from './components/CityDetail';
+import WeatherIcon from './components/WeatherIcon';
+import { buildDemoWeather, DemoWeatherSnapshot } from './demoData';
+import { TemperatureUnit, formatTemperature } from './units';
 
-interface ReadingUpdate {
-  temp: number;
-  condition: number;
-  time: number;
+interface CityWeatherEntry {
+  city: City;
+  weather: DemoWeatherSnapshot;
 }
 
-function CityTile({ city }: { city: City }) {
+function CityTile({ entry, unit }: { entry: CityWeatherEntry; unit: TemperatureUnit }) {
+  const { city, weather } = entry;
   return (
     <div>
       <div className="font-bold mb-1.5">{city.name}</div>
-      {city.lastReading ? (
-        <div className="mb-1.5">{Math.round(city.lastReading.temp)}°C</div>
-      ) : (
-        <div className="opacity-70 mb-1.5">No data</div>
-      )}
-      {city.forecast && <Forecast days={city.forecast.slice(0, 5)} />}
+      <div className="flex items-center gap-3 mb-1.5">
+        <WeatherIcon code={weather.reading.condition} className="w-12 h-12" />
+        <div className="text-2xl font-semibold">
+          {formatTemperature(weather.reading.temp, unit)}
+        </div>
+      </div>
+      <Forecast days={weather.forecast.slice(0, 5)} unit={unit} />
     </div>
   );
 }
@@ -34,6 +38,7 @@ export default function WeatherApp() {
   const [cities, setCities] = useWeatherState();
   const [groups, setGroups] = useWeatherGroups();
   const [currentGroup, setCurrentGroup] = useCurrentGroup();
+  const [unit, setUnit] = useWeatherUnit();
   const [name, setName] = useState('');
   const [lat, setLat] = useState('');
   const [lon, setLon] = useState('');
@@ -41,7 +46,7 @@ export default function WeatherApp() {
   const [offline, setOffline] = useState(
     typeof navigator !== 'undefined' ? !navigator.onLine : false,
   );
-  const [selected, setSelected] = useState<City | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const dragSrc = useRef<number | null>(null);
 
   useEffect(() => {
@@ -51,6 +56,7 @@ export default function WeatherApp() {
   }, [currentGroup, groups, setCities]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const onOnline = () => setOffline(false);
     const onOffline = () => setOffline(true);
     window.addEventListener('online', onOnline);
@@ -61,38 +67,20 @@ export default function WeatherApp() {
     };
   }, []);
 
+  const cityWeather = useMemo<CityWeatherEntry[]>(
+    () => cities.map((city) => ({ city, weather: buildDemoWeather(city) })),
+    [cities],
+  );
+
+  const selectedEntry = selectedId
+    ? cityWeather.find((entry) => entry.city.id === selectedId) || null
+    : null;
+
   useEffect(() => {
-    if (offline) return;
-    cities.forEach((city, i) => {
-      fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current_weather=true&daily=weathercode,temperature_2m_max&forecast_days=5&timezone=auto`,
-      )
-        .then((res) => res.json())
-        .then((data) => {
-          const reading: ReadingUpdate = {
-            temp: data.current_weather.temperature,
-            condition: data.current_weather.weathercode,
-            time: Date.now(),
-          };
-          const forecast: ForecastDay[] = data.daily.time.map(
-            (date: string, idx: number) => ({
-              date,
-              temp: data.daily.temperature_2m_max[idx],
-              condition: data.daily.weathercode[idx],
-            }),
-          );
-          setCities((prev) => {
-            const next = [...prev];
-            if (!next[i]) return prev;
-            next[i] = { ...next[i], lastReading: reading, forecast };
-            return next;
-          });
-        })
-        .catch(() => {
-          // ignore fetch errors
-        });
-    });
-    }, [offline, cities, setCities]);
+    if (selectedId && !selectedEntry) {
+      setSelectedId(null);
+    }
+  }, [selectedId, selectedEntry]);
 
   const addCity = () => {
     const latNum = parseFloat(lat);
@@ -144,14 +132,15 @@ export default function WeatherApp() {
 
   return (
     <div className="p-4 text-white">
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4 flex-wrap items-center">
         <input
           className="text-black px-1"
           placeholder="Group"
           value={groupName}
           onChange={(e) => setGroupName(e.target.value)}
+          aria-label="Group name"
         />
-        <button className="bg-blue-600 px-2 rounded" onClick={saveGroup}>
+        <button className="bg-blue-600 px-2 rounded" onClick={saveGroup} type="button">
           Save Group
         </button>
         {groups.map((g) => (
@@ -161,56 +150,94 @@ export default function WeatherApp() {
               currentGroup === g.name ? 'bg-blue-800' : 'bg-white/20'
             }`}
             onClick={() => switchGroup(g.name)}
+            type="button"
           >
             {g.name}
           </button>
         ))}
+        <div className="ml-auto flex items-center gap-2 text-sm">
+          <span className="text-white/70">Units</span>
+          <button
+            className={`px-1.5 rounded ${
+              unit === 'metric' ? 'bg-blue-600' : 'bg-white/20'
+            }`}
+            onClick={() => setUnit('metric')}
+            type="button"
+          >
+            °C
+          </button>
+          <button
+            className={`px-1.5 rounded ${
+              unit === 'imperial' ? 'bg-blue-600' : 'bg-white/20'
+            }`}
+            onClick={() => setUnit('imperial')}
+            type="button"
+          >
+            °F
+          </button>
+        </div>
       </div>
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4 flex-wrap">
         <input
           className="text-black px-1"
           placeholder="Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          aria-label="City name"
         />
         <input
           className="text-black px-1 w-20"
           placeholder="Lat"
           value={lat}
           onChange={(e) => setLat(e.target.value)}
+          aria-label="Latitude"
         />
         <input
           className="text-black px-1 w-20"
           placeholder="Lon"
           value={lon}
           onChange={(e) => setLon(e.target.value)}
+          aria-label="Longitude"
         />
-        <button className="bg-blue-600 px-2 rounded" onClick={addCity}>
+        <button className="bg-blue-600 px-2 rounded" onClick={addCity} type="button">
           Add
         </button>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        {cities.map((city, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {cityWeather.map((entry, i) => (
           <div
-            key={city.id}
+            key={entry.city.id}
             draggable
             onDragStart={() => onDragStart(i)}
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => onDrop(i)}
-            onClick={() => setSelected(city)}
-            className="bg-white/10 p-4 rounded cursor-pointer"
+            onClick={() => setSelectedId(entry.city.id)}
+            className="bg-white/10 p-4 rounded cursor-pointer focus:outline focus:outline-blue-500"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                setSelectedId(entry.city.id);
+              }
+            }}
           >
-            <CityTile city={city} />
+            <CityTile entry={entry} unit={unit} />
           </div>
         ))}
       </div>
       {offline && (
-        <div className="mt-4 text-sm">Offline - showing cached data</div>
+        <div className="mt-4 text-sm">Offline – showing demo data</div>
       )}
-      {selected && (
-        <CityDetail city={selected} onClose={() => setSelected(null)} />
+      {selectedEntry && (
+        <CityDetail
+          city={selectedEntry.city}
+          weather={selectedEntry.weather}
+          unit={unit}
+          onUnitChange={setUnit}
+          onClose={() => setSelectedId(null)}
+        />
       )}
     </div>
   );
 }
-

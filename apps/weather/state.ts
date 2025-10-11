@@ -1,6 +1,7 @@
 'use client';
 
 import usePersistentState from '../../hooks/usePersistentState';
+import { TemperatureUnit, isTemperatureUnit } from './units';
 
 export interface WeatherReading {
   temp: number;
@@ -47,8 +48,21 @@ const isCity = (v: any): v is City =>
 
 const isCityArray = (v: unknown): v is City[] => Array.isArray(v) && v.every(isCity);
 
+const DEFAULT_CITIES: City[] = [
+  { id: 'berlin-52.52-13.405', name: 'Berlin', lat: 52.52, lon: 13.405 },
+  { id: 'singapore-1.3521-103.8198', name: 'Singapore', lat: 1.3521, lon: 103.8198 },
+  { id: 'new-york-40.7128--74.006', name: 'New York', lat: 40.7128, lon: -74.006 },
+  { id: 'sydney--33.8688-151.2093', name: 'Sydney', lat: -33.8688, lon: 151.2093 },
+];
+
+const createDefaultCities = () => DEFAULT_CITIES.map((city) => ({ ...city }));
+
 export default function useWeatherState() {
-  return usePersistentState<City[]>('weather-cities', [], isCityArray);
+  return usePersistentState<City[]>(
+    'weather-cities',
+    createDefaultCities,
+    isCityArray,
+  );
 }
 
 const isCityGroup = (v: any): v is CityGroup =>
@@ -66,5 +80,13 @@ const isStringOrNull = (v: unknown): v is string | null =>
 
 export function useCurrentGroup() {
   return usePersistentState<string | null>('weather-current-group', null, isStringOrNull);
+}
+
+export function useWeatherUnit() {
+  return usePersistentState<TemperatureUnit>(
+    'weather-unit',
+    'metric',
+    isTemperatureUnit,
+  );
 }
 

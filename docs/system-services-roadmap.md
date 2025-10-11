@@ -33,7 +33,7 @@ This document establishes a shared roadmap for the desktop shell services that p
 
 ## Data Flow & Extension Guidelines
 
-- **Persistence**: Maintain all desktop-level settings through `safeLocalStorage`. New keys must include a version prefix (e.g., `v2:session:active`) and feature-flag guards to support migrations.
+- **Persistence**: Maintain all desktop-level settings through `safeLocalStorage`. New keys must include a version prefix (e.g., `v2:session:active`) and feature-flag guards to support migrations. The weather application now stores its unit preference in localStorage as `weather-unit` via `usePersistentState`, serving as the canonical reference for additional settings-driven mock data.
 - **Analytics**: Emit screen and service events through `ReactGA` helpers. Add new semantic wrappers in `utils/analytics.ts` instead of inline GA calls to keep typings centralized. All analytics additions require accompanying unit tests that validate the wrapper usage.
 - **Mock services**: Background features should rely on in-repo mock modules (e.g., `utils/moduleStore.ts`, `utils/pubsub.ts`) rather than network calls. When creating a new mock service, provide TypeScript types and a Jest suite covering success, timeout, and failure paths.
 - **Feature flags**: Gate experimental services behind `utils/feature.ts` toggles or environment variables defined in `.env.local.example`. Document each flag in this roadmap and in the README when promoted to stable.
