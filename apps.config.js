@@ -854,7 +854,7 @@ const apps = [
   {
     id: 'plugin-manager',
     title: 'Plugin Manager',
-    icon: '/themes/Yaru/apps/project-gallery.svg',
+    icon: '/themes/Yaru/apps/plugin-manager.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: true,
