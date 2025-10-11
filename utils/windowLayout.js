@@ -3,12 +3,61 @@ import { NAVBAR_HEIGHT, SNAP_BOTTOM_INSET } from './uiConstants';
 const NAVBAR_SELECTOR = '.main-navbar-vp';
 const NAVBAR_VERTICAL_PADDING = 10; // 0.375rem top + 0.25rem bottom
 const DEFAULT_NAVBAR_HEIGHT = NAVBAR_HEIGHT + NAVBAR_VERTICAL_PADDING;
-const WINDOW_TOP_MARGIN = 2;
+const WINDOW_TOP_MARGIN = 1;
 const SAFE_AREA_PROPERTIES = {
   top: '--safe-area-top',
   right: '--safe-area-right',
   bottom: '--safe-area-bottom',
   left: '--safe-area-left',
+};
+
+const TASKBAR_HEIGHT_PROPERTY = '--shell-taskbar-height';
+const DEFAULT_FONT_SIZE = 16;
+
+export const DEFAULT_SNAP_BOTTOM_INSET = SNAP_BOTTOM_INSET;
+
+const parseFontSize = (value) => {
+  if (typeof value !== 'string') return DEFAULT_FONT_SIZE;
+  const parsed = parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : DEFAULT_FONT_SIZE;
+};
+
+const parseCssLengthValue = (value, computed) => {
+  if (typeof value !== 'string') return 0;
+  const trimmed = value.trim();
+  if (!trimmed) return 0;
+
+  const numeric = parseFloat(trimmed);
+  if (!Number.isFinite(numeric)) return 0;
+
+  if (trimmed.endsWith('rem') || trimmed.endsWith('em')) {
+    const baseFontSize = parseFontSize(computed?.fontSize);
+    return numeric * baseFontSize;
+  }
+
+  if (
+    trimmed.endsWith('vh') ||
+    trimmed.endsWith('svh') ||
+    trimmed.endsWith('lvh') ||
+    trimmed.endsWith('dvh')
+  ) {
+    if (typeof window === 'undefined') return 0;
+    const viewportHeight = typeof window.innerHeight === 'number' ? window.innerHeight : 0;
+    return viewportHeight ? (numeric / 100) * viewportHeight : 0;
+  }
+
+  if (
+    trimmed.endsWith('vw') ||
+    trimmed.endsWith('svw') ||
+    trimmed.endsWith('lvw') ||
+    trimmed.endsWith('dvw')
+  ) {
+    if (typeof window === 'undefined') return 0;
+    const viewportWidth = typeof window.innerWidth === 'number' ? window.innerWidth : 0;
+    return viewportWidth ? (numeric / 100) * viewportWidth : 0;
+  }
+
+  return numeric;
 };
 
 const parseSafeAreaValue = (value) => {
@@ -45,7 +94,7 @@ export const measureSafeAreaInset = (side) => {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 };
 
-export const DEFAULT_WINDOW_TOP_OFFSET = DEFAULT_NAVBAR_HEIGHT + WINDOW_TOP_MARGIN;
+export const DEFAULT_WINDOW_TOP_OFFSET = NAVBAR_HEIGHT + WINDOW_TOP_MARGIN;
 
 export const measureWindowTopOffset = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -59,7 +108,40 @@ export const measureWindowTopOffset = () => {
 
   const { height } = navbar.getBoundingClientRect();
   const measured = Number.isFinite(height) ? Math.ceil(height) : DEFAULT_NAVBAR_HEIGHT;
-  return Math.max(measured + WINDOW_TOP_MARGIN, DEFAULT_WINDOW_TOP_OFFSET);
+  const trimmedHeight = Math.max(measured - NAVBAR_VERTICAL_PADDING, NAVBAR_HEIGHT);
+  return Math.max(trimmedHeight + WINDOW_TOP_MARGIN, DEFAULT_WINDOW_TOP_OFFSET);
+};
+
+export const measureTaskbarHeight = () => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return DEFAULT_SNAP_BOTTOM_INSET;
+  }
+
+  const root = document.documentElement;
+  if (!root) {
+    return DEFAULT_SNAP_BOTTOM_INSET;
+  }
+
+  const computed = window.getComputedStyle(root);
+  if (!computed) {
+    return DEFAULT_SNAP_BOTTOM_INSET;
+  }
+
+  const raw = computed.getPropertyValue(TASKBAR_HEIGHT_PROPERTY);
+  const parsed = parseCssLengthValue(raw, computed);
+  if (parsed > 0) {
+    return parsed;
+  }
+
+  return DEFAULT_SNAP_BOTTOM_INSET;
+};
+
+export const measureSnapBottomInset = () => {
+  const measured = measureTaskbarHeight();
+  if (typeof measured === 'number' && Number.isFinite(measured)) {
+    return Math.max(measured, DEFAULT_SNAP_BOTTOM_INSET);
+  }
+  return DEFAULT_SNAP_BOTTOM_INSET;
 };
 
 export const clampWindowTopPosition = (value, topOffset) => {
@@ -109,6 +191,9 @@ export const clampWindowPositionWithinViewport = (
   const bottomInset = typeof options.bottomInset === 'number'
     ? Math.max(options.bottomInset, 0)
     : Math.max(0, measureSafeAreaInset('bottom'));
+  const snapBottomInset = typeof options.snapBottomInset === 'number'
+    ? Math.max(options.snapBottomInset, 0)
+    : measureSnapBottomInset();
 
   if (!viewportWidth || !viewportHeight) {
     return {
@@ -131,7 +216,7 @@ export const clampWindowPositionWithinViewport = (
     : 0;
 
   const horizontalSpace = Math.max(viewportWidth - width, 0);
-  const availableVertical = Math.max(viewportHeight - topOffset - SNAP_BOTTOM_INSET - bottomInset, 0);
+  const availableVertical = Math.max(viewportHeight - topOffset - snapBottomInset - bottomInset, 0);
   const verticalSpace = Math.max(availableVertical - height, 0);
 
   const minX = 0;

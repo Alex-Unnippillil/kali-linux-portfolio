@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import johnPlaceholders from '../../../components/apps/john/placeholders';
 
 interface UserRecord {
   username: string;
@@ -12,22 +13,9 @@ interface Finding {
   tip: string;
 }
 
-const SAMPLE_USERS: UserRecord[] = [
-  { username: 'alice', password: 'password123' },
-  { username: 'bob', password: 'letmein' },
-  { username: 'charlie', password: 'S3curePass!' },
-  { username: 'dave', password: '123456' },
-];
+const SAMPLE_USERS: UserRecord[] = johnPlaceholders.auditUsers;
 
-const WEAK_PASSWORDS = new Set([
-  'password',
-  'password123',
-  '123456',
-  'qwerty',
-  'letmein',
-  'admin',
-  'welcome',
-]);
+const WEAK_PASSWORDS = new Set(johnPlaceholders.weakPasswords);
 
 const AuditSimulator: React.FC = () => {
   const [findings, setFindings] = useState<Finding[]>([]);

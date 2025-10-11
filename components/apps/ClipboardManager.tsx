@@ -108,7 +108,8 @@ const ClipboardManager: React.FC = () => {
         return;
       }
       try {
-        const status = await permissionsApi({ name } as PermissionDescriptor);
+        const descriptor = { name } as unknown as PermissionDescriptor;
+        const status = await permissionsApi(descriptor);
         const state = (status?.state as PermissionState | undefined) ?? 'unknown';
         setter(state);
       } catch {

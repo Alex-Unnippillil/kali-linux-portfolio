@@ -1,0 +1,97 @@
+{
+  "wordlists": [
+    {
+      "id": "seclists-top-20",
+      "name": "SecLists Top 20 (trimmed)",
+      "description": "High-frequency passwords pulled from the SecLists common credentials set.",
+      "source": "SecLists",
+      "sourceUrl": "https://github.com/danielmiessler/SecLists/blob/master/Passwords/Common-Credentials/top-20.txt",
+      "fixturePath": "/fixtures/john/seclists-top-20.txt",
+      "entries": ["123456", "password", "123456789", "qwerty", "abc123", "letmein", "monkey", "dragon", "111111", "baseball"]
+    },
+    {
+      "id": "seclists-names",
+      "name": "SecLists Names (excerpt)",
+      "description": "Common given names useful for username-style candidates.",
+      "source": "SecLists",
+      "sourceUrl": "https://github.com/danielmiessler/SecLists/blob/master/Usernames/Names/names.txt",
+      "fixturePath": "/fixtures/john/seclists-names.txt",
+      "entries": ["alice", "bob", "charlie", "dave", "erin", "mallory", "oscar", "peggy", "trent", "victor"]
+    },
+    {
+      "id": "ncsc-top-10",
+      "name": "UK NCSC Top 10 (2023 excerpt)",
+      "description": "Public stats from the UK National Cyber Security Centre on most common passwords.",
+      "source": "UK NCSC",
+      "sourceUrl": "https://www.ncsc.gov.uk/blog-post/most-common-passwords-2023",
+      "fixturePath": "/fixtures/john/ncsc-top-10.txt",
+      "entries": ["123456", "password", "qwerty", "123456789", "football", "12345", "abc123", "111111", "charlie", "iloveyou"]
+    }
+  ],
+  "commands": [
+    {
+      "id": "raw-md5-single",
+      "label": "Raw MD5 single hash",
+      "description": "Demo of cracking a lone raw MD5 hash using a trimmed SecLists wordlist.",
+      "format": "raw-md5",
+      "wordlistId": "seclists-top-20",
+      "target": "samples/raw-md5-demo.hash",
+      "flags": ["--format=raw-md5"],
+      "notes": [
+        "Use trimmed fixtures only; do not point at live systems.",
+        "Pair with the \"SecLists Top 20\" excerpt to keep runtime tiny."
+      ]
+    },
+    {
+      "id": "zip-demo",
+      "label": "Zip archive hash",
+      "description": "Illustrates format selection for PKZIP hashes backed by a names-based wordlist.",
+      "format": "zip",
+      "wordlistId": "seclists-names",
+      "target": "samples/encrypted.zip.hash",
+      "flags": ["--format=zip"],
+      "notes": [
+        "These samples mimic training vault exports.",
+        "Names list keeps the keyspace approachable for workshops."
+      ]
+    },
+    {
+      "id": "sha1-lab",
+      "label": "SHA1 audit replay",
+      "description": "Replays a failed run against a SHA1 hash to teach follow-up tactics.",
+      "format": "raw-sha1",
+      "wordlistId": "ncsc-top-10",
+      "target": "samples/raw-sha1-demo.hash",
+      "flags": ["--format=raw-sha1"],
+      "notes": [
+        "Pairs with the \"Wordlist exhausted\" interpretation card.",
+        "Encourage iterating on rules once the baseline fails."
+      ]
+    }
+  ],
+  "results": [
+    {
+      "id": "raw-md5-success",
+      "title": "Raw-MD5 quick win",
+      "summary": "SecLists excerpt finds an MD5 password immediately.",
+      "relatedCommand": "raw-md5-single",
+      "output": "Loaded 1 password hash (Raw-MD5 [MD5 128/128 AVX2 8x1])\nPress 'q' or Ctrl-C to abort, almost any other key for status\npassword (alice)\n1g 0:00:00:00 DONE (2024-01-01 00:00) 100.0g/s 0p/s 0c/s 0C/s\nUse the \"--show\" option to display all of the cracked passwords reliably\nSession completed.",
+      "interpretation": [
+        "Header confirms the hash format and SIMD backend in use.",
+        "Credential pairs print in the `password (username)` format on success.",
+        "Tiny runtime reflects the trimmed training wordlist."
+      ]
+    },
+    {
+      "id": "wordlist-exhausted",
+      "title": "Wordlist exhausted without match",
+      "summary": "SHA1 hash remains after running the NCSC excerpt.",
+      "relatedCommand": "sha1-lab",
+      "output": "Loaded 1 password hash (Raw-SHA1 [SHA1 256/256 AVX2 8x])\nPress 'q' or Ctrl-C to abort, almost any other key for status\nSession completed.\n0 password hashes cracked, 1 left",
+      "interpretation": [
+        "Header still provides format confirmation even on failure.",
+        "Footer states how many hashes remain, steering students to new tactics."
+      ]
+    }
+  ]
+}

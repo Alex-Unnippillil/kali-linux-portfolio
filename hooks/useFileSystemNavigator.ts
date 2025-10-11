@@ -10,6 +10,11 @@ export interface DirectoryEntry {
   handle: FileSystemDirectoryHandle;
 }
 
+export interface FileEntry {
+  name: string;
+  handle: FileSystemFileHandle;
+}
+
 export type Breadcrumb = DirectoryEntry;
 
 interface SyncOptions {
@@ -24,10 +29,30 @@ interface OpenHandleOptions {
   recordRecent?: boolean;
 }
 
+interface DirectoryHandleWithEntries extends FileSystemDirectoryHandle {
+  entries: () => AsyncIterableIterator<[string, FileSystemHandle]>;
+}
+
+function isDirectoryHandle(
+  handle: FileSystemHandle,
+): handle is FileSystemDirectoryHandle {
+  return handle.kind === 'directory';
+}
+
+function isFileHandle(handle: FileSystemHandle): handle is FileSystemFileHandle {
+  return handle.kind === 'file';
+}
+
+function hasEntries(
+  handle: FileSystemDirectoryHandle,
+): handle is DirectoryHandleWithEntries {
+  return typeof (handle as DirectoryHandleWithEntries).entries === 'function';
+}
+
 interface UseFileSystemNavigatorReturn {
   currentDirectory: FileSystemDirectoryHandle | null;
   directories: DirectoryEntry[];
-  files: DirectoryEntry[];
+  files: FileEntry[];
   breadcrumbs: Breadcrumb[];
   recent: RecentDirectoryEntry[];
   locationError: string | null;
@@ -42,17 +67,17 @@ interface UseFileSystemNavigatorReturn {
 
 async function iterateEntries(handle: FileSystemDirectoryHandle) {
   const directories: DirectoryEntry[] = [];
-  const files: DirectoryEntry[] = [];
+  const files: FileEntry[] = [];
 
-  if (!handle?.entries) {
+  if (!handle || !hasEntries(handle)) {
     return { directories, files };
   }
 
   for await (const [name, entry] of handle.entries()) {
     if (!entry) continue;
-    if (entry.kind === 'directory') {
+    if (isDirectoryHandle(entry)) {
       directories.push({ name, handle: entry });
-    } else if (entry.kind === 'file') {
+    } else if (isFileHandle(entry)) {
       files.push({ name, handle: entry });
     }
   }
@@ -67,7 +92,7 @@ export default function useFileSystemNavigator(): UseFileSystemNavigatorReturn {
   const [root, setRoot] = useState<FileSystemDirectoryHandle | null>(null);
   const [currentDirectory, setCurrentDirectory] = useState<FileSystemDirectoryHandle | null>(null);
   const [directories, setDirectories] = useState<DirectoryEntry[]>([]);
-  const [files, setFiles] = useState<DirectoryEntry[]>([]);
+  const [files, setFiles] = useState<FileEntry[]>([]);
   const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([]);
   const [recent, setRecent] = useState<RecentDirectoryEntry[]>([]);
   const [locationError, setLocationError] = useState<string | null>(null);
