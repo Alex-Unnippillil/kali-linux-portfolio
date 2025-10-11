@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import { Engine, Render, World, Bodies, Body, Runner, Events } from "matter-js";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Overlay, useGameLoop } from "../../components/apps/Games/common";
+import { useGamePersistence } from "../../components/apps/useGameControls";
+import { createPinballWorld, constants, type PinballWorld } from "./physics";
 import { useTiltSensor } from "./tilt";
 
 const themes: Record<string, { bg: string; flipper: string }> = {
@@ -10,45 +12,129 @@ const themes: Record<string, { bg: string; flipper: string }> = {
   forest: { bg: "#064e3b", flipper: "#9acd32" },
 };
 
+const formatScore = (value: number) => value.toString().padStart(6, "0");
+
 export default function Pinball() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  // References for core Matter.js entities
-
-  const engineRef = useRef<Engine | null>(null);
-  const leftFlipperRef = useRef<Body | null>(null);
-  const rightFlipperRef = useRef<Body | null>(null);
-  const ballRef = useRef<Body | null>(null);
-  const sparksRef = useRef<{ x: number; y: number; life: number }[]>([]);
-  const laneGlowRef = useRef<{ left: boolean; right: boolean }>({
-    left: false,
-    right: false,
-  });
+  const worldRef = useRef<PinballWorld | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
   const [theme, setTheme] = useState<keyof typeof themes>("classic");
   const [power, setPower] = useState(1);
   const [bounce, setBounce] = useState(0.5);
   const [tilt, setTilt] = useState(false);
   const [score, setScore] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [ready, setReady] = useState(false);
   const nudgesRef = useRef<number[]>([]);
   const lastNudgeRef = useRef(0);
+  const { getHighScore, setHighScore } = useGamePersistence("pinball");
+  const [highScore, setHighScoreState] = useState(0);
+  const scoreHandlerRef = useRef<(value: number) => void>(() => {});
+  const initialThemeRef = useRef(themes[theme]);
+  const initialBounceRef = useRef(bounce);
+
+  useEffect(() => {
+    setHighScoreState(getHighScore());
+  }, [getHighScore]);
+
+  useEffect(() => {
+    if (score > highScore) {
+      setHighScore(score);
+      setHighScoreState(score);
+    }
+  }, [score, highScore, setHighScore]);
 
   const handleTilt = useCallback(() => {
     setTilt(true);
-    setTimeout(() => {
+    window.setTimeout(() => {
       setTilt(false);
       nudgesRef.current = [];
     }, 3000);
   }, []);
 
+  const playScoreSound = useCallback(() => {
+    if (muted) return;
+    try {
+      const AudioCtor =
+        typeof window !== "undefined"
+          ? ((window.AudioContext ||
+              (window as typeof window & {
+                webkitAudioContext?: typeof AudioContext;
+              }).webkitAudioContext) as typeof AudioContext | undefined)
+          : undefined;
+      if (!AudioCtor) return;
+      const ctx = audioCtxRef.current || new AudioCtor();
+      audioCtxRef.current = ctx;
+      if (ctx.state === "suspended") {
+        ctx.resume().catch(() => undefined);
+      }
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      oscillator.type = "triangle";
+      oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+      gain.gain.setValueAtTime(0.001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+      oscillator.start();
+      oscillator.stop(ctx.currentTime + 0.21);
+    } catch {
+      /* ignore audio errors */
+    }
+  }, [muted]);
+
+  const handleScore = useCallback(
+    (value: number) => {
+      setScore((prev) => prev + value);
+      playScoreSound();
+    },
+    [playScoreSound],
+  );
+
+  useEffect(() => {
+    scoreHandlerRef.current = handleScore;
+  }, [handleScore]);
+
+  useTiltSensor(25, handleTilt);
+
+  useEffect(() => {
+    if (!canvasRef.current) return undefined;
+
+    const world = createPinballWorld(
+      canvasRef.current,
+      {
+        onScore: (value) => {
+          scoreHandlerRef.current(value);
+        },
+      },
+      initialThemeRef.current,
+      initialBounceRef.current,
+    );
+    worldRef.current = world;
+    setReady(true);
+
+    return () => {
+      world.destroy();
+      worldRef.current = null;
+      setReady(false);
+    };
+  }, []);
+
+  useEffect(() => {
+    worldRef.current?.setBounce(bounce);
+  }, [bounce]);
+
+  useEffect(() => {
+    worldRef.current?.setTheme(themes[theme]);
+  }, [theme]);
+
   const handleNudge = useCallback(() => {
     const now = Date.now();
     nudgesRef.current = nudgesRef.current.filter((t) => now - t < 3000);
     nudgesRef.current.push(now);
-    if (ballRef.current) {
-      Body.applyForce(ballRef.current, ballRef.current.position, {
-        x: 0.02,
-        y: 0,
-      });
-    }
+    worldRef.current?.nudge({ x: 0.02, y: 0 });
     if (nudgesRef.current.length >= 3) {
       handleTilt();
     }
@@ -62,178 +148,36 @@ export default function Pinball() {
     handleNudge();
   }, [tilt, handleNudge]);
 
-  useTiltSensor(25, handleTilt);
-
   useEffect(() => {
-    if (!canvasRef.current) return;
-    const engine = Engine.create();
-    engine.gravity.y = 1;
-    const render = Render.create({
-      canvas: canvasRef.current,
-      engine,
-      options: {
-        width: 400,
-        height: 600,
-        wireframes: false,
-        background: themes[theme].bg,
-      },
-    });
-    engineRef.current = engine;
-
-    const ball = Bodies.circle(200, 100, 12, {
-      restitution: 0.9,
-      render: { visible: false },
-    });
-    ballRef.current = ball;
-    const walls = [
-      Bodies.rectangle(200, 0, 400, 40, { isStatic: true }),
-      Bodies.rectangle(200, 600, 400, 40, { isStatic: true }),
-      Bodies.rectangle(0, 300, 40, 600, { isStatic: true }),
-      Bodies.rectangle(400, 300, 40, 600, { isStatic: true }),
-    ];
-    const leftFlipper = Bodies.rectangle(120, 560, 80, 20, {
-      isStatic: true,
-      angle: Math.PI / 8,
-      restitution: bounce,
-      render: { fillStyle: themes[theme].flipper },
-    });
-    const rightFlipper = Bodies.rectangle(280, 560, 80, 20, {
-      isStatic: true,
-      angle: -Math.PI / 8,
-      restitution: bounce,
-      render: { fillStyle: themes[theme].flipper },
-    });
-    leftFlipperRef.current = leftFlipper;
-    rightFlipperRef.current = rightFlipper;
-    const leftLane = Bodies.rectangle(80, 80, 40, 10, {
-      isStatic: true,
-      isSensor: true,
-    });
-    const rightLane = Bodies.rectangle(320, 80, 40, 10, {
-      isStatic: true,
-      isSensor: true,
-    });
-    World.add(engine.world, [
-      ball,
-      ...walls,
-      leftFlipper,
-      rightFlipper,
-      leftLane,
-      rightLane,
-    ]);
-    Render.run(render);
-    const runner = Runner.create();
-    Runner.run(runner, engine);
-
-    Events.on(engine, "collisionStart", (evt) => {
-      evt.pairs.forEach((pair) => {
-        const bodies = [pair.bodyA, pair.bodyB];
-        if (bodies.includes(ball) && bodies.includes(leftFlipper)) {
-          const { x, y } = pair.collision.supports[0];
-          sparksRef.current.push({ x, y, life: 1 });
-        }
-        if (bodies.includes(ball) && bodies.includes(rightFlipper)) {
-          const { x, y } = pair.collision.supports[0];
-          sparksRef.current.push({ x, y, life: 1 });
-        }
-        if (bodies.includes(ball) && bodies.includes(leftLane)) {
-          laneGlowRef.current.left = true;
-          setScore((s) => s + 100);
-          setTimeout(() => (laneGlowRef.current.left = false), 500);
-        }
-        if (bodies.includes(ball) && bodies.includes(rightLane)) {
-          laneGlowRef.current.right = true;
-          setScore((s) => s + 100);
-          setTimeout(() => (laneGlowRef.current.right = false), 500);
-        }
-      });
-    });
-
-    Events.on(render, "afterRender", () => {
-      const ctx = render.context;
-      if (!ballRef.current) return;
-      const ball = ballRef.current;
-      const { x, y } = ball.position;
-      const radius = 12;
-      const gradient = ctx.createRadialGradient(
-        x - 4,
-        y - 4,
-        radius / 4,
-        x,
-        y,
-        radius,
-      );
-      gradient.addColorStop(0, "#fff");
-      gradient.addColorStop(1, "#999");
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      [
-        { lane: leftLane, glow: laneGlowRef.current.left },
-        { lane: rightLane, glow: laneGlowRef.current.right },
-      ].forEach(({ lane, glow }) => {
-        const { x: lx, y: ly } = lane.position;
-        ctx.save();
-        if (glow) {
-          ctx.shadowColor = "#ffff00";
-          ctx.shadowBlur = 20;
-          ctx.fillStyle = "#ff0";
-        } else {
-          ctx.fillStyle = "#555";
-        }
-        ctx.fillRect(lx - 20, ly - 5, 40, 10);
-        ctx.restore();
-      });
-
-      sparksRef.current = sparksRef.current.filter((s) => {
-        const r = 8 * s.life;
-        const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, r);
-        g.addColorStop(0, "rgba(255,255,200,0.8)");
-        g.addColorStop(1, "rgba(255,200,0,0)");
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, r, 0, Math.PI * 2);
-        ctx.fill();
-        s.life -= 0.05;
-        return s.life > 0;
-      });
-    });
-
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (tilt) return;
-      if (e.code === "ArrowLeft") {
-        Body.setAngle(leftFlipper, (-Math.PI / 4) * power);
-      } else if (e.code === "ArrowRight") {
-        Body.setAngle(rightFlipper, (Math.PI / 4) * power);
-      } else if (e.code === "KeyN") {
+      if (event.code === "ArrowLeft") {
+        worldRef.current?.setLeftFlipper((-Math.PI / 4) * power);
+      } else if (event.code === "ArrowRight") {
+        worldRef.current?.setRightFlipper((Math.PI / 4) * power);
+      } else if (event.code === "KeyN") {
         tryNudge();
       }
     };
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === "ArrowLeft") {
-        Body.setAngle(leftFlipper, Math.PI / 8);
-      }
-      if (e.code === "ArrowRight") {
-        Body.setAngle(rightFlipper, -Math.PI / 8);
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (event.code === "ArrowLeft") {
+        worldRef.current?.setLeftFlipper(constants.DEFAULT_LEFT_ANGLE);
+      } else if (event.code === "ArrowRight") {
+        worldRef.current?.setRightFlipper(constants.DEFAULT_RIGHT_ANGLE);
       }
     };
+
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
-
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
-      Render.stop(render);
-      Runner.stop(runner);
-      World.clear(engine.world, false);
-      Engine.clear(engine);
     };
-  }, [theme, power, bounce, tilt, tryNudge]);
+  }, [power, tilt, tryNudge]);
 
   useEffect(() => {
-    let raf: number;
+    let frame = 0;
     let lastPressed = false;
     const poll = () => {
       const gp = navigator.getGamepads ? navigator.getGamepads()[0] : null;
@@ -244,25 +188,39 @@ export default function Pinball() {
         }
         lastPressed = pressed;
       }
-      raf = requestAnimationFrame(poll);
+      frame = requestAnimationFrame(poll);
     };
-    raf = requestAnimationFrame(poll);
-    return () => cancelAnimationFrame(raf);
+    frame = requestAnimationFrame(poll);
+    return () => cancelAnimationFrame(frame);
   }, [tryNudge]);
 
-  useEffect(() => {
-    if (leftFlipperRef.current) {
-      leftFlipperRef.current.restitution = bounce;
-      leftFlipperRef.current.render.fillStyle = themes[theme].flipper;
-    }
-    if (rightFlipperRef.current) {
-      rightFlipperRef.current.restitution = bounce;
-      rightFlipperRef.current.render.fillStyle = themes[theme].flipper;
-    }
-    if (engineRef.current) {
-      (engineRef.current.render.options as any).background = themes[theme].bg;
-    }
-  }, [bounce, theme]);
+  useGameLoop(
+    (delta) => {
+      worldRef.current?.step(delta);
+    },
+    ready && !paused,
+  );
+
+  const resetGame = useCallback(() => {
+    setScore(0);
+    worldRef.current?.resetBall();
+    worldRef.current?.resetFlippers();
+    setTilt(false);
+    nudgesRef.current = [];
+  }, []);
+
+  const overlay = useMemo(
+    () => (
+      <Overlay
+        onPause={() => setPaused(true)}
+        onResume={() => setPaused(false)}
+        muted={muted}
+        onToggleSound={(next) => setMuted(next)}
+        onReset={resetGame}
+      />
+    ),
+    [muted, resetGame],
+  );
 
   return (
     <div className="flex flex-col items-center space-y-2">
@@ -275,7 +233,7 @@ export default function Pinball() {
             max="2"
             step="0.1"
             value={power}
-            onChange={(e) => setPower(parseFloat(e.target.value))}
+            onChange={(event) => setPower(parseFloat(event.target.value))}
           />
         </label>
         <label className="flex flex-col text-xs">
@@ -286,27 +244,37 @@ export default function Pinball() {
             max="1"
             step="0.1"
             value={bounce}
-            onChange={(e) => setBounce(parseFloat(e.target.value))}
+            onChange={(event) => setBounce(parseFloat(event.target.value))}
           />
         </label>
         <label className="flex flex-col text-xs">
           Theme
           <select
             value={theme}
-            onChange={(e) => setTheme(e.target.value as keyof typeof themes)}
+            onChange={(event) =>
+              setTheme(event.target.value as keyof typeof themes)
+            }
           >
-            {Object.keys(themes).map((t) => (
-              <option key={t} value={t}>
-                {t}
+            {Object.keys(themes).map((name) => (
+              <option key={name} value={name}>
+                {name}
               </option>
             ))}
           </select>
         </label>
       </div>
       <div className="relative">
-        <canvas ref={canvasRef} width={400} height={600} className="border" />
+        <canvas
+          ref={canvasRef}
+          width={constants.WIDTH}
+          height={constants.HEIGHT}
+          className="border"
+        />
         <div className="absolute top-2 left-1/2 -translate-x-1/2 text-white font-mono text-xl">
-          {score.toString().padStart(6, "0")}
+          {formatScore(score)}
+        </div>
+        <div className="absolute top-10 left-1/2 -translate-x-1/2 text-white font-mono text-xs tracking-widest">
+          HI {formatScore(highScore)}
         </div>
         {!tilt && (
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-white text-xs opacity-75">
@@ -320,6 +288,7 @@ export default function Pinball() {
             </div>
           </div>
         )}
+        <div className="absolute top-2 right-2">{overlay}</div>
       </div>
     </div>
   );
