@@ -63,6 +63,9 @@
 }
 
 .snapPreviewGlass {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 8px;
   border: 1px solid rgba(64, 145, 255, 0.8);
   background: linear-gradient(
@@ -75,6 +78,19 @@
     0 24px 48px rgba(15, 23, 42, 0.35);
   backdrop-filter: brightness(1.1) saturate(1.2);
   -webkit-backdrop-filter: brightness(1.1) saturate(1.2);
+}
+
+.snapPreviewLabel {
+  color: rgba(15, 23, 42, 0.92);
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.45);
+  padding: 0.5rem 0.75rem;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .windowTitlebar {

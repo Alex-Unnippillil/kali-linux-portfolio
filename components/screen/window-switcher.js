@@ -8,12 +8,13 @@ const clampIndex = (value, length) => {
     return modulo;
 };
 
-export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
+export default function WindowSwitcher({ windows = [], onSelect, onClose, containerRef }) {
     const [query, setQuery] = useState('');
     const [selected, setSelected] = useState(0);
     const [showSearch, setShowSearch] = useState(false);
-    const containerRef = useRef(null);
+    const internalRef = useRef(null);
     const inputRef = useRef(null);
+    const resolvedContainerRef = containerRef ?? internalRef;
 
     const filtered = useMemo(() => {
         const term = query.trim().toLowerCase();
@@ -40,9 +41,9 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
     }, [windows]);
 
     useEffect(() => {
-        if (!containerRef.current) return;
-        containerRef.current.focus();
-    }, []);
+        if (!resolvedContainerRef.current) return;
+        resolvedContainerRef.current.focus();
+    }, [resolvedContainerRef]);
 
     useEffect(() => {
         if (showSearch) {
@@ -147,112 +148,110 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose }) {
     const hideSearch = () => {
         setShowSearch(false);
         setQuery('');
-        containerRef.current?.focus();
+        resolvedContainerRef.current?.focus();
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-lg text-white">
-            <div
-                ref={containerRef}
-                tabIndex={-1}
-                onKeyDown={handleContainerKeyDown}
-                className="max-w-5xl w-full px-6 focus:outline-none"
-                role="presentation"
-            >
-                <div className="bg-ub-grey/80 border border-white/10 rounded-xl shadow-2xl p-6">
-                    <div className="flex items-center justify-between gap-4 mb-4">
-                        <h2 className="text-lg font-semibold tracking-wide">Switch windows</h2>
-                        <div className="flex items-center gap-2 text-sm">
-                            {showSearch ? (
-                                <button
-                                    type="button"
-                                    onClick={hideSearch}
-                                    className="rounded-md px-2 py-1 bg-white/10 hover:bg-white/20 transition"
-                                >
-                                    Hide search
-                                </button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={() => setShowSearch(true)}
-                                    className="rounded-md px-2 py-1 bg-white/10 hover:bg-white/20 transition"
-                                >
-                                    Search
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                    {showSearch && (
-                        <div className="mb-4">
-                            <input
-                                ref={inputRef}
-                                value={query}
-                                onChange={handleQueryChange}
-                                onKeyDown={handleInputKeyDown}
-                                placeholder="Filter windows"
-                                aria-label="Filter windows"
-                                className="w-full rounded-md bg-black/40 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ub-orange"
-                            />
-                        </div>
-                    )}
-                    <div
-                        className="flex gap-4 overflow-x-auto pb-2"
-                        role="listbox"
-                        aria-label="Open windows"
-                        aria-activedescendant={filtered[selected]?.id ? `window-switcher-${filtered[selected].id}` : undefined}
-                    >
-                        {filtered.map((window, index) => {
-                            const isSelected = index === selected;
-                            return (
-                                <button
-                                    key={window.id}
-                                    id={`window-switcher-${window.id}`}
-                                    type="button"
-                                    className={`flex-shrink-0 w-[280px] rounded-xl border-2 transition focus:outline-none focus:ring-2 focus:ring-ub-orange ${
-                                        isSelected
-                                            ? 'border-ub-orange bg-white/10 shadow-xl'
-                                            : 'border-transparent bg-white/5 hover:bg-white/10'
-                                    }`}
-                                    onClick={() => handleCardClick(index)}
-                                    onMouseEnter={() => setSelected(index)}
-                                    role="option"
-                                    aria-selected={isSelected}
-                                    aria-label={window.title || window.id}
-                                >
-                                    <div className="flex flex-col h-full text-left">
-                                        <div className="relative rounded-t-xl overflow-hidden bg-black/70" style={{ height: CARD_PREVIEW_HEIGHT }}>
-                                            {window.preview ? (
-                                                <img
-                                                    src={window.preview}
-                                                    alt={`${window.title} preview`}
-                                                    className="h-full w-full object-cover"
-                                                />
-                                            ) : (
-                                                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-white/10 to-white/5">
-                                                    {window.icon ? (
-                                                        <img src={window.icon} alt="" className="h-12 w-12" />
-                                                    ) : (
-                                                        <span className="text-xs text-white/60">No preview</span>
-                                                    )}
-                                                </div>
-                                            )}
-                                            {window.icon && (
-                                                <div className="absolute bottom-3 left-3 flex h-12 w-12 items-center justify-center rounded-xl bg-black/70 shadow-lg">
-                                                    <img src={window.icon} alt="" className="h-8 w-8" />
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="px-4 py-3 text-sm font-medium truncate">
-                                            {window.title || window.id}
-                                        </div>
-                                    </div>
-                                </button>
-                            );
-                        })}
-                        {!filtered.length && (
-                            <div className="w-full text-center text-sm text-white/70">No windows match your search.</div>
+        <div
+            ref={resolvedContainerRef}
+            tabIndex={-1}
+            onKeyDown={handleContainerKeyDown}
+            className="flex h-full w-full flex-col focus:outline-none text-white"
+            role="presentation"
+        >
+            <div className="flex flex-col gap-4 rounded-xl border border-white/10 bg-ub-grey/80 p-6 shadow-2xl">
+                <div className="flex items-center justify-between gap-4">
+                    <h2 className="text-lg font-semibold tracking-wide">Switch windows</h2>
+                    <div className="flex items-center gap-2 text-sm">
+                        {showSearch ? (
+                            <button
+                                type="button"
+                                onClick={hideSearch}
+                                className="rounded-md px-2 py-1 bg-white/10 hover:bg-white/20 transition"
+                            >
+                                Hide search
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => setShowSearch(true)}
+                                className="rounded-md px-2 py-1 bg-white/10 hover:bg-white/20 transition"
+                            >
+                                Search
+                            </button>
                         )}
                     </div>
+                </div>
+                {showSearch && (
+                    <div>
+                        <input
+                            ref={inputRef}
+                            value={query}
+                            onChange={handleQueryChange}
+                            onKeyDown={handleInputKeyDown}
+                            placeholder="Filter windows"
+                            aria-label="Filter windows"
+                            className="w-full rounded-md bg-black/40 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ub-orange"
+                        />
+                    </div>
+                )}
+                <div
+                    className="flex gap-4 overflow-x-auto pb-2"
+                    role="listbox"
+                    aria-label="Open windows"
+                    aria-activedescendant={filtered[selected]?.id ? `window-switcher-${filtered[selected].id}` : undefined}
+                >
+                    {filtered.map((window, index) => {
+                        const isSelected = index === selected;
+                        return (
+                            <button
+                                key={window.id}
+                                id={`window-switcher-${window.id}`}
+                                type="button"
+                                className={`flex-shrink-0 w-[280px] rounded-xl border-2 transition focus:outline-none focus:ring-2 focus:ring-ub-orange ${
+                                    isSelected
+                                        ? 'border-ub-orange bg-white/10 shadow-xl'
+                                        : 'border-transparent bg-white/5 hover:bg-white/10'
+                                }`}
+                                onClick={() => handleCardClick(index)}
+                                onMouseEnter={() => setSelected(index)}
+                                role="option"
+                                aria-selected={isSelected}
+                                aria-label={window.title || window.id}
+                            >
+                                <div className="flex h-full flex-col text-left">
+                                    <div className="relative overflow-hidden rounded-t-xl bg-black/70" style={{ height: CARD_PREVIEW_HEIGHT }}>
+                                        {window.preview ? (
+                                            <img
+                                                src={window.preview}
+                                                alt={`${window.title} preview`}
+                                                className="h-full w-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-white/10 to-white/5">
+                                                {window.icon ? (
+                                                    <img src={window.icon} alt="" className="h-12 w-12" />
+                                                ) : (
+                                                    <span className="text-xs text-white/60">No preview</span>
+                                                )}
+                                            </div>
+                                        )}
+                                        {window.icon && (
+                                            <div className="absolute bottom-3 left-3 flex h-12 w-12 items-center justify-center rounded-xl bg-black/70 shadow-lg">
+                                                <img src={window.icon} alt="" className="h-8 w-8" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="truncate px-4 py-3 text-sm font-medium">
+                                        {window.title || window.id}
+                                    </div>
+                                </div>
+                            </button>
+                        );
+                    })}
+                    {!filtered.length && (
+                        <div className="w-full text-center text-sm text-white/70">No windows match your search.</div>
+                    )}
                 </div>
             </div>
         </div>
