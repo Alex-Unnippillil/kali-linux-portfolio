@@ -80,7 +80,7 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 - Support text-to-ASCII and image-to-ASCII via hidden canvas sampling.
 
 ### Figlet
-- Provide font selector, copy-to-clipboard, and cache fonts in IndexedDB.
+- ✅ Font selector grid, clipboard export, and IndexedDB caching for remote/uploaded fonts.
 
 ### Quote Generator
 - Use offline JSON quotes with tags and "no repeats" option.
