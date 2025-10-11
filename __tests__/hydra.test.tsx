@@ -1,10 +1,25 @@
 import React from 'react';
-import { render, fireEvent, screen, act } from '@testing-library/react';
+import { render, fireEvent, screen, act, within } from '@testing-library/react';
 import HydraApp from '../components/apps/hydra';
 
 describe('Hydra wordlists', () => {
   beforeEach(() => {
     localStorage.clear();
+  });
+
+  it('seeds lab fixtures with read-only protection', () => {
+    render(<HydraApp />);
+
+    const userFixture = screen.getByTestId('user-list-lab-ssh-users.txt');
+    expect(userFixture).toBeInTheDocument();
+    expect(userFixture.textContent).toContain('lab fixture');
+    const userRemove = within(userFixture).getByRole('button', { name: /Remove/i });
+    expect(userRemove).toBeDisabled();
+
+    const passFixture = screen.getByTestId('pass-list-lab-common-passwords.txt');
+    expect(passFixture.textContent).toContain('lab fixture');
+    const passRemove = within(passFixture).getByRole('button', { name: /Remove/i });
+    expect(passRemove).toBeDisabled();
   });
 
   it('persists added wordlists in localStorage', async () => {
@@ -23,15 +38,15 @@ describe('Hydra wordlists', () => {
       target: { files: [file] },
     });
 
-    await screen.findByText('users.txt', { selector: 'li' });
+    await screen.findByTestId('user-list-users.txt');
     unmount();
     render(<HydraApp />);
-    expect(screen.getAllByText('users.txt').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('user-list-users.txt')).toBeInTheDocument();
   });
 });
 
 describe('Hydra target validation', () => {
-  it('disables run button for empty or malformed targets', () => {
+  it('requires lab mode and a valid target before running', async () => {
     render(<HydraApp />);
     const targetInput = screen.getByPlaceholderText('192.168.0.1');
     const runBtn = screen.getByText('Run Hydra');
@@ -41,7 +56,54 @@ describe('Hydra target validation', () => {
     expect(runBtn).toBeDisabled();
 
     fireEvent.change(targetInput, { target: { value: '1.2.3.4' } });
+    // still disabled because lab mode off
+    expect(runBtn).toBeDisabled();
+
+    fireEvent.click(screen.getByLabelText('Enable lab mode'));
+    fireEvent.change(screen.getByLabelText('User List'), {
+      target: { value: 'lab-ssh-users.txt' },
+    });
+    fireEvent.change(screen.getByLabelText('Password List'), {
+      target: { value: 'lab-common-passwords.txt' },
+    });
+
+    await screen.findByTestId('hydra-command-preview');
     expect(runBtn).not.toBeDisabled();
+  });
+});
+
+describe('Hydra dry run output', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('builds a command preview without executing hydra', () => {
+    render(<HydraApp />);
+    fireEvent.change(screen.getByPlaceholderText('192.168.0.1'), {
+      target: { value: '10.0.0.1' },
+    });
+    fireEvent.change(screen.getByLabelText('User List'), {
+      target: { value: 'lab-ssh-users.txt' },
+    });
+    fireEvent.change(screen.getByLabelText('Password List'), {
+      target: { value: 'lab-common-passwords.txt' },
+    });
+
+    const preview = screen.getByTestId('hydra-command-preview');
+    expect(preview.textContent).toContain(
+      'hydra -L lab-ssh-users.txt -P lab-common-passwords.txt ssh://10.0.0.1'
+    );
+
+    fireEvent.click(screen.getByText('Dry Run'));
+
+    expect(
+      screen.getByText(
+        /Lab mode disabled – this stays offline as a rehearsal./i
+      )
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Dry run only - no network requests made./i)
+    ).toBeInTheDocument();
   });
 });
 
@@ -55,6 +117,7 @@ describe('Hydra pause and resume', () => {
       'hydraPassLists',
       JSON.stringify([{ name: 'p', content: 'b' }])
     );
+    localStorage.setItem('hydra:labMode', JSON.stringify(true));
   });
 
   it('pauses and resumes cracking progress', async () => {
@@ -105,6 +168,7 @@ describe('Hydra session restore', () => {
       'hydraPassLists',
       JSON.stringify([{ name: 'p', content: 'b' }])
     );
+    localStorage.setItem('hydra:labMode', JSON.stringify(true));
   });
 
   afterEach(() => {

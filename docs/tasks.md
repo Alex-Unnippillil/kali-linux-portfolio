@@ -43,6 +43,7 @@ Implement safe, non-executing simulators for each tool. Features:
 - Load sample outputs from JSON fixtures and explain them.
 - Provide command builder UI that crafts strings but never runs them.
 - Show "For lab use only" banner and optional "enable lab mode" flag (off by default).
+- ✅ Hydra loads credential fixtures, surfaces the lab toggle, and limits execution to command previews and stubbed API calls.
 
 Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy, Nessus, Hydra, Nmap NSE, Radare2, Volatility, Hashcat, Metasploit Post, dsniff, John the Ripper, OpenVAS, Recon-ng, Ghidra, Mimikatz, Reaver**.
 
