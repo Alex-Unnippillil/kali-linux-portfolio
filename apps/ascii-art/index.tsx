@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, ChangeEvent } from 'react';
+import { useState, useEffect, useRef, useCallback, ChangeEvent, ReactNode } from 'react';
 import figlet from 'figlet';
 import Standard from 'figlet/importable-fonts/Standard.js';
 import Slant from 'figlet/importable-fonts/Slant.js';
@@ -35,6 +35,81 @@ const CopyIcon = () => (
       d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M16 8h2a2 2 0 012 2v8a2 2 0 01-2 2h-8a2 2 0 01-2-2v-2"
     />
   </svg>
+);
+
+type ControlPanelProps = {
+  title: string;
+  children: ReactNode;
+  className?: string;
+};
+
+const ControlPanel = ({ title, children, className }: ControlPanelProps) => (
+  <section className={`bg-gray-800/60 border border-gray-700 rounded p-3 ${className ?? ''}`}>
+    <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-300 mb-2">{title}</h2>
+    <div className="flex flex-col gap-2">{children}</div>
+  </section>
+);
+
+type ControlRowProps = {
+  children: ReactNode;
+  className?: string;
+};
+
+const ControlRow = ({ children, className }: ControlRowProps) => (
+  <div className={`flex flex-wrap items-center gap-2 ${className ?? ''}`}>{children}</div>
+);
+
+type ColorControlsProps = {
+  fgColor: string;
+  bgColor: string;
+  onFgChange: (value: string) => void;
+  onBgChange: (value: string) => void;
+};
+
+const ColorControls = ({ fgColor, bgColor, onFgChange, onBgChange }: ColorControlsProps) => (
+  <ControlRow>
+    <label className="flex items-center gap-1">
+      FG
+      <input
+        type="color"
+        value={fgColor}
+        onChange={(e) => onFgChange(e.target.value)}
+        className="w-10 h-6 p-0 border-0 bg-transparent"
+      />
+    </label>
+    <label className="flex items-center gap-1">
+      BG
+      <input
+        type="color"
+        value={bgColor}
+        onChange={(e) => onBgChange(e.target.value)}
+        className="w-10 h-6 p-0 border-0 bg-transparent"
+      />
+    </label>
+  </ControlRow>
+);
+
+type FontSizeSelectProps = {
+  value: number;
+  onChange: (value: number) => void;
+};
+
+const FontSizeSelect = ({ value, onChange }: FontSizeSelectProps) => (
+  <label className="flex flex-col gap-1 text-sm text-gray-200">
+    <span className="text-xs uppercase tracking-wide text-gray-400">Font size</span>
+    <select
+      aria-label="Font size"
+      value={value}
+      onChange={(e) => onChange(Number(e.target.value))}
+      className="px-2 py-1 text-black rounded"
+    >
+      {fontSizes.map((s) => (
+        <option key={s} value={s}>
+          {s}
+        </option>
+      ))}
+    </select>
+  </label>
 );
 
 function download(text: string, filename: string) {
@@ -246,58 +321,44 @@ const AsciiArtApp = () => {
         </button>
       </div>
       {tab === 'text' && (
-        <div className="flex flex-col gap-2">
-          <textarea
-            ref={textAreaRef}
-            rows={1}
-            className="px-2 py-1 text-black rounded resize-none overflow-hidden font-mono leading-none"
-            style={{ fontFamily: 'monospace', lineHeight: '1', fontSize: `${fontSize}px` }}
-            placeholder="Enter text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
-          <select
-            value={font}
-            onChange={(e) => setFont(e.target.value as figlet.Fonts)}
-            className="px-2 py-1 text-black rounded"
-          >
-            {fontList.map((f) => (
-              <option key={f} value={f}>
-                {f}
-              </option>
-            ))}
-          </select>
-          <select
-            value={fontSize}
-            onChange={(e) => setFontSize(Number(e.target.value))}
-            className="px-2 py-1 text-black rounded"
-          >
-            {fontSizes.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-          <div className="flex gap-2">
-            <label className="flex items-center gap-1">
-              FG
-              <input
-                type="color"
-                value={fgColor}
-                onChange={(e) => setFgColor(e.target.value)}
-                className="w-10 h-6 p-0 border-0 bg-transparent"
-              />
-            </label>
-            <label className="flex items-center gap-1">
-              BG
-              <input
-                type="color"
-                value={bgColor}
-                onChange={(e) => setBgColor(e.target.value)}
-                className="w-10 h-6 p-0 border-0 bg-transparent"
-              />
-            </label>
-          </div>
+        <div className="flex flex-col gap-3">
+          <ControlPanel title="Text styling">
+            <textarea
+              ref={textAreaRef}
+              rows={1}
+              className="px-2 py-1 text-black rounded resize-none overflow-hidden font-mono leading-none"
+              style={{ fontFamily: 'monospace', lineHeight: '1', fontSize: `${fontSize}px` }}
+              placeholder="Enter text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <label className="flex flex-col gap-1 text-sm text-gray-200">
+                <span className="text-xs uppercase tracking-wide text-gray-400">Font</span>
+                <select
+                  aria-label="Font selection"
+                  value={font}
+                  onChange={(e) => setFont(e.target.value as figlet.Fonts)}
+                  className="px-2 py-1 text-black rounded"
+                >
+                  {fontList.map((f) => (
+                    <option key={f} value={f}>
+                      {f}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <FontSizeSelect value={fontSize} onChange={setFontSize} />
+            </div>
+          </ControlPanel>
+          <ControlPanel title="Color">
+            <ColorControls
+              fgColor={fgColor}
+              bgColor={bgColor}
+              onFgChange={setFgColor}
+              onBgChange={setBgColor}
+            />
+          </ControlPanel>
           <div className="flex gap-2">
             <button
               className="px-2 py-1 bg-blue-700 rounded flex items-center gap-1"
@@ -345,59 +406,47 @@ const AsciiArtApp = () => {
         </div>
       )}
       {tab === 'image' && (
-        <div className="flex flex-col gap-2">
-          <input type="file" accept="image/*" onChange={handleImage} />
-          <div className="flex items-center gap-2">
-            <label className="text-sm">Brightness</label>
-            <input
-              type="range"
-              min="-1"
-              max="1"
-              step="0.1"
-              value={brightness}
-              onChange={(e) => setBrightness(Number(e.target.value))}
+        <div className="flex flex-col gap-3">
+          <ControlPanel title="Image">
+            <input type="file" accept="image/*" onChange={handleImage} />
+            <ControlRow className="gap-4">
+              <label className="flex items-center gap-2 text-sm text-gray-200">
+                <span className="text-xs uppercase tracking-wide text-gray-400">Brightness</span>
+                <input
+                  type="range"
+                  min="-1"
+                  max="1"
+                  step="0.1"
+                  value={brightness}
+                  aria-label="Adjust brightness"
+                  onChange={(e) => setBrightness(Number(e.target.value))}
+                />
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-200">
+                <span className="text-xs uppercase tracking-wide text-gray-400">Contrast</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="2"
+                  step="0.1"
+                  value={contrast}
+                  aria-label="Adjust contrast"
+                  onChange={(e) => setContrast(Number(e.target.value))}
+                />
+              </label>
+            </ControlRow>
+          </ControlPanel>
+          <ControlPanel title="Color">
+            <ColorControls
+              fgColor={fgColor}
+              bgColor={bgColor}
+              onFgChange={setFgColor}
+              onBgChange={setBgColor}
             />
-            <label className="text-sm">Contrast</label>
-            <input
-              type="range"
-              min="0"
-              max="2"
-              step="0.1"
-              value={contrast}
-              onChange={(e) => setContrast(Number(e.target.value))}
-            />
-          </div>
-          <div className="flex gap-2">
-            <label className="flex items-center gap-1">
-              FG
-              <input
-                type="color"
-                value={fgColor}
-                onChange={(e) => setFgColor(e.target.value)}
-                className="w-10 h-6 p-0 border-0 bg-transparent"
-              />
-            </label>
-            <label className="flex items-center gap-1">
-              BG
-              <input
-                type="color"
-                value={bgColor}
-                onChange={(e) => setBgColor(e.target.value)}
-                className="w-10 h-6 p-0 border-0 bg-transparent"
-              />
-            </label>
-          </div>
-          <select
-            value={fontSize}
-            onChange={(e) => setFontSize(Number(e.target.value))}
-            className="px-2 py-1 text-black rounded"
-          >
-            {fontSizes.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
+          </ControlPanel>
+          <ControlPanel title="Text styling">
+            <FontSizeSelect value={fontSize} onChange={setFontSize} />
+          </ControlPanel>
           <div className="flex gap-2">
             <button
               className="px-2 py-1 bg-blue-700 rounded flex items-center gap-1"
