@@ -6,6 +6,7 @@ import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import { getDailySeed } from '../../utils/dailySeed';
 
 const SIZE = 4;
+const isTestEnv = process.env.NODE_ENV === 'test';
 
 // simple seeded PRNG
 const mulberry32 = (seed: number) => () => {
@@ -110,7 +111,14 @@ const saveReplay = (replay: any) => {
   };
 };
 
-const Page2048 = () => {
+type Page2048Props = {
+  testOverrides?: {
+    won?: boolean;
+    lost?: boolean;
+  };
+};
+
+const Page2048 = ({ testOverrides }: Page2048Props) => {
   const prefersReducedMotion = usePrefersReducedMotion();
   // Skip tile transition classes if the user prefers reduced motion
   const rngRef = useRef(mulberry32(0));
@@ -127,6 +135,7 @@ const Page2048 = () => {
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
   const [history, setHistory] = useState<number[][][]>([]);
+  const [shareStatus, setShareStatus] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -141,6 +150,7 @@ const Page2048 = () => {
       setBoard(b);
       rngRef.current = rand;
       seedRef.current = seed;
+      setHighest(checkHighest(b));
     })();
     return () => {
       mounted = false;
@@ -221,8 +231,9 @@ const Page2048 = () => {
     setHistory([]);
     setWon(false);
     setLost(false);
-    setHighest(0);
+    setHighest(checkHighest(b));
     resetTimer();
+    setShareStatus(null);
   }, [resetTimer]);
 
   useEffect(() => {
@@ -257,6 +268,41 @@ const Page2048 = () => {
     return v;
   };
 
+  const handleShareReplay = useCallback(async () => {
+    const payload = {
+      seed: seedRef.current,
+      boardType,
+      hard,
+      moves,
+      highest,
+    };
+    if (typeof navigator !== 'undefined') {
+      try {
+        if (navigator.share) {
+          await navigator.share({
+            title: '2048 Replay',
+            text: JSON.stringify(payload, null, 2),
+          });
+          setShareStatus('Share dialog opened.');
+          return;
+        }
+      } catch (err) {
+        // ignore share cancellations
+      }
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+          setShareStatus('Replay copied to clipboard.');
+          return;
+        } catch (err) {
+          // ignore clipboard failures
+        }
+      }
+    }
+    console.info('2048 replay data', payload);
+    setShareStatus('Share unavailable. Replay logged to console.');
+  }, [boardType, hard, moves, highest]);
+
   useEffect(() => {
     if (won || lost) {
       saveReplay({ date: new Date().toISOString(), moves, boardType, hard });
@@ -274,31 +320,44 @@ const Page2048 = () => {
     }
   }, [won, lost, moves, boardType, hard, highest]);
 
+  useEffect(() => {
+    if (!isTestEnv || !testOverrides) return;
+    if (typeof testOverrides.won === 'boolean') setWon(testOverrides.won);
+    if (typeof testOverrides.lost === 'boolean') setLost(testOverrides.lost);
+  }, [testOverrides]);
+
   return (
-    <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
-      <div className="flex space-x-2">
-        <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={restart}>
-          Restart
-        </button>
-        <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={handleUndo}>
-          Undo
-        </button>
-        <label className="flex items-center space-x-1 px-2">
-          <input type="checkbox" checked={hard} onChange={(e) => setHard(e.target.checked)} />
-          <span>Hard</span>
-        </label>
-        <select
-          className="text-black px-1 rounded"
-          value={boardType}
-          onChange={(e) => setBoardType(e.target.value as any)}
-        >
-          <option value="classic">Classic</option>
-          <option value="hex">Hex 2048</option>
-        </select>
-        <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={close}>
-          Close
-        </button>
-        {hard && <div className="ml-2">{timer}</div>}
+    <div className="relative flex h-full w-full flex-col space-y-4 bg-gray-900 p-4 text-white">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <button className="rounded bg-gray-700 px-4 py-2 hover:bg-gray-600" onClick={restart}>
+            Restart
+          </button>
+          <button className="rounded bg-gray-700 px-4 py-2 hover:bg-gray-600" onClick={handleUndo}>
+            Undo
+          </button>
+          <label className="flex items-center space-x-1 rounded bg-gray-800/80 px-3 py-2">
+            <input type="checkbox" checked={hard} onChange={(e) => setHard(e.target.checked)} />
+            <span>Hard</span>
+          </label>
+          <select
+            className="rounded bg-gray-800 px-2 py-2 text-white"
+            value={boardType}
+            onChange={(e) => setBoardType(e.target.value as any)}
+          >
+            <option value="classic">Classic</option>
+            <option value="hex">Hex 2048</option>
+          </select>
+          <button className="rounded bg-gray-700 px-4 py-2 hover:bg-gray-600" onClick={close}>
+            Close
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-4 rounded border border-gray-700 bg-gray-800/60 px-4 py-2 text-sm md:text-base">
+          <span className="font-semibold text-gray-200">Score: {highest}</span>
+          <span className="text-gray-300">Moves: {moves.length}</span>
+          <span className="text-gray-300">Timer: {hard ? `${timer}s` : '—'}</span>
+          <span className="text-gray-300">Board: {boardType === 'classic' ? 'Classic' : 'Hex'}</span>
+        </div>
       </div>
       <div className="grid w-full max-w-sm grid-cols-4 gap-2">
         {board.map((row, rIdx) =>
@@ -318,8 +377,38 @@ const Page2048 = () => {
           ))
         )}
       </div>
+      {shareStatus && !(won || lost) && (
+        <div className="text-sm text-gray-400" role="status" aria-live="polite">
+          {shareStatus}
+        </div>
+      )}
       {(won || lost) && (
-        <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-gray-900/90 px-4">
+          <div
+            className="w-full max-w-sm space-y-4 rounded-lg border border-gray-700 bg-gray-800 p-6 text-center shadow-lg"
+            role="dialog"
+            aria-modal="true"
+          >
+            <h2 className="text-2xl font-bold">{won ? 'Victory!' : 'Game Over'}</h2>
+            <p className="text-gray-300">
+              Highest Tile: <span className="font-semibold text-white">{highest}</span>
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+              <button className="rounded bg-gray-700 px-4 py-2 hover:bg-gray-600" onClick={restart}>
+                Play Again
+              </button>
+              <button className="rounded bg-gray-700 px-4 py-2 hover:bg-gray-600" onClick={handleShareReplay}>
+                Share Replay
+              </button>
+              <button className="rounded bg-gray-700 px-4 py-2 hover:bg-gray-600" onClick={close}>
+                Close Window
+              </button>
+            </div>
+            {shareStatus && (
+              <p className="text-sm text-gray-400">{shareStatus}</p>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
