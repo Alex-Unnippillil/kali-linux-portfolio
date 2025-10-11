@@ -89,6 +89,41 @@ html {
   scrollbar-color: var(--kali-border, var(--color-border)) transparent;
 }
 
+/* Shared in-game overlay controls */
+.game-overlay {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  z-index: 60;
+}
+
+.game-overlay button {
+  background-color: rgba(31, 41, 55, 0.85);
+  color: #ffffff;
+  padding: 0.25rem 0.6rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.game-overlay button:hover {
+  background-color: rgba(55, 65, 81, 0.9);
+}
+
+.game-overlay button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.game-overlay .fps {
+  color: #ffffff;
+  font-size: 0.75rem;
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

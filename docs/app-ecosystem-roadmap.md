@@ -122,7 +122,7 @@ All arcade-style and puzzle titles share the same readiness gap: implement canva
 | simon | Simon | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | sokoban | Sokoban | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | solitaire/index | Solitaire | Core maintainers | **Needs polish** – align with shared game scaffolding | Enhanced TS solitaire module |
-| tower-defense | Tower Defense | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
+| tower-defense | Tower Defense | Core maintainers | ✅ Ready – shared scheduler, overlay controls, persistent highscores | Game engine |
 | word-search | Word Search | Core maintainers | **In progress** – add timer, difficulty, found words list | Word lists, timer |
 | wordle | Wordle | Core maintainers | **Needs polish** – align with shared game scaffolding | Word list |
 | blackjack | Blackjack | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
