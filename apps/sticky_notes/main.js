@@ -39,11 +39,24 @@ function getDB() {
 }
 
 let notes = [];
+let highestZ = 1;
+
+function persistToLocalStorage() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem('stickyNotes', JSON.stringify(notes));
+  } catch (storageErr) {
+    console.error('Failed to persist sticky notes to localStorage', storageErr);
+  }
+}
 
 async function saveNotes() {
   try {
     const dbp = getDB();
-    if (!dbp) return;
+    if (!dbp) {
+      persistToLocalStorage();
+      return;
+    }
     const db = await dbp;
     const tx = db.transaction(STORE_NAME, 'readwrite');
     await tx.store.clear();
@@ -53,6 +66,7 @@ async function saveNotes() {
     await tx.done;
   } catch (err) {
     console.error('Failed to save notes', err);
+    persistToLocalStorage();
   }
 }
 
@@ -66,6 +80,22 @@ function createNoteElement(note) {
   el.style.width = (note.width || 200) + 'px';
   el.style.height = (note.height || 200) + 'px';
   el.dataset.id = note.id;
+
+  if (!note.zIndex) {
+    highestZ += 1;
+    note.zIndex = highestZ;
+  }
+  highestZ = Math.max(highestZ, note.zIndex);
+  el.style.zIndex = String(note.zIndex);
+
+  const header = document.createElement('div');
+  header.className = 'note-header';
+
+  const handle = document.createElement('button');
+  handle.type = 'button';
+  handle.className = 'note-handle';
+  handle.title = 'Drag note';
+  handle.setAttribute('aria-label', 'Drag note');
 
   const controls = document.createElement('div');
   controls.className = 'controls';
@@ -90,7 +120,9 @@ function createNoteElement(note) {
 
   controls.appendChild(colorInput);
   controls.appendChild(deleteBtn);
-  el.appendChild(controls);
+  header.appendChild(handle);
+  header.appendChild(controls);
+  el.appendChild(header);
 
   const textarea = document.createElement('textarea');
   textarea.value = note.content;
@@ -102,34 +134,60 @@ function createNoteElement(note) {
   el.addEventListener('mouseup', () => {
     note.width = el.offsetWidth;
     note.height = el.offsetHeight;
-    saveNotes();
+    void saveNotes();
   });
 
-  enableDrag(el, note);
+  const focusNote = () => {
+    if (!notesContainer) return;
+    if (note.zIndex === highestZ && el.classList.contains('note-active')) {
+      return;
+    }
+    const siblings = notesContainer.querySelectorAll('.note');
+    siblings.forEach((node) => {
+      if (node !== el) {
+        node.classList.remove('note-active');
+      }
+    });
+    highestZ += 1;
+    note.zIndex = highestZ;
+    el.style.zIndex = String(note.zIndex);
+    el.classList.add('note-active');
+    void saveNotes();
+  };
+
+  el.addEventListener('mousedown', focusNote);
+
+  enableDrag(handle, el, note, focusNote);
   notesContainer.appendChild(el);
 }
 
 function addNote(content = '') {
+  const initialContent = typeof content === 'string' ? content : '';
   const note = {
     id: Date.now(),
-    content,
+    content: initialContent,
     x: 50,
     y: 50,
     color: '#fffa65',
     width: 200,
     height: 200,
+    zIndex: highestZ + 1,
   };
+  highestZ = note.zIndex;
   notes.push(note);
   createNoteElement(note);
   void saveNotes();
 }
 
-function enableDrag(el, note) {
+function enableDrag(handle, el, note, focusNote) {
   let offsetX, offsetY;
   function onMouseDown(e) {
-    if (['TEXTAREA', 'INPUT', 'BUTTON'].includes(e.target.tagName)) return;
-    offsetX = e.clientX - el.offsetLeft;
-    offsetY = e.clientY - el.offsetTop;
+    if (e.button && e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    focusNote();
+    offsetX = e.clientX - note.x;
+    offsetY = e.clientY - note.y;
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
   }
@@ -144,12 +202,27 @@ function enableDrag(el, note) {
     document.removeEventListener('mouseup', onMouseUp);
     void saveNotes();
   }
-  el.addEventListener('mousedown', onMouseDown);
+  handle.addEventListener('mousedown', onMouseDown);
 }
 async function init() {
   try {
     const dbp = getDB();
-    if (!dbp) return;
+    if (!dbp) {
+      if (typeof localStorage !== 'undefined') {
+        notes = JSON.parse(localStorage.getItem('stickyNotes') || '[]');
+      }
+      if (notes.length) {
+        const maxZ = notes.reduce((max, note) => {
+          if (typeof note.zIndex === 'number') {
+            return Math.max(max, note.zIndex);
+          }
+          return max;
+        }, highestZ);
+        highestZ = Math.max(highestZ, maxZ);
+      }
+      notes.forEach(createNoteElement);
+      return;
+    }
     const db = await dbp;
     notes = await db.getAll(STORE_NAME);
 
@@ -164,6 +237,16 @@ async function init() {
       }
     }
 
+    if (notes.length) {
+      const maxZ = notes.reduce((max, note) => {
+        if (typeof note.zIndex === 'number') {
+          return Math.max(max, note.zIndex);
+        }
+        return max;
+      }, highestZ);
+      highestZ = Math.max(highestZ, maxZ);
+    }
+
     notes.forEach(createNoteElement);
 
     const params = new URLSearchParams(location.search);
@@ -175,7 +258,18 @@ async function init() {
   } catch (err) {
     console.error('Failed to load notes', err);
     try {
-      notes = JSON.parse(localStorage.getItem('stickyNotes') || '[]');
+      if (typeof localStorage !== 'undefined') {
+        notes = JSON.parse(localStorage.getItem('stickyNotes') || '[]');
+      }
+      if (notes.length) {
+        const maxZ = notes.reduce((max, note) => {
+          if (typeof note.zIndex === 'number') {
+            return Math.max(max, note.zIndex);
+          }
+          return max;
+        }, highestZ);
+        highestZ = Math.max(highestZ, maxZ);
+      }
       notes.forEach(createNoteElement);
     } catch (e) {
       console.error('Failed to load legacy notes', e);
