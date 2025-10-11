@@ -1,15 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import data from './data.json';
+import networkFixtures, { defaultFilterSamples } from './fixtures';
 import ArpLab from './components/ArpLab';
 import vendors from '../kismet/oui.json';
-
-const { arpTable, flows } = data;
 const attackerMac = 'aa:aa:aa:aa:aa:aa';
-
-const filterExamples = {
-  'Block HTTP': "if (ip.proto == 'TCP' && tcp.port == 80) {\n  drop();\n}",
-  'Pass DNS': "if (udp.port == 53) {\n  pass();\n}",
-};
 
 const randomMac = () =>
   Array.from({ length: 6 }, () =>
@@ -19,6 +12,18 @@ const randomMac = () =>
   ).join(':');
 
 const EttercapApp = () => {
+  const [fixtureId, setFixtureId] = useState(networkFixtures[0].id);
+  const fixture = useMemo(
+    () =>
+      networkFixtures.find((candidate) => candidate.id === fixtureId) ??
+      networkFixtures[0],
+    [fixtureId]
+  );
+  const arpTable = fixture.hosts;
+  const flows = fixture.flows;
+  const filterSamples = fixture.filterSamples;
+  const samplePackets = fixture.samplePackets;
+  const datasetMeta = fixture.dataset;
   const [target1, setTarget1] = useState('');
   const [target2, setTarget2] = useState('');
   const [mac1, setMac1] = useState('');
@@ -27,7 +32,12 @@ const EttercapApp = () => {
   const [status, setStatus] = useState('');
   const [logs, setLogs] = useState([]);
   const [flowIndex, setFlowIndex] = useState(0);
-  const [filterText, setFilterText] = useState(filterExamples['Block HTTP']);
+  const [hostFilter, setHostFilter] = useState('');
+  const [protocolFilter, setProtocolFilter] = useState('All');
+  const [filterSelection, setFilterSelection] = useState(0);
+  const [filterText, setFilterText] = useState(
+    defaultFilterSamples[0]?.code || ''
+  );
 
   const containerRef = useRef(null);
   const attackerRef = useRef(null);
@@ -44,6 +54,28 @@ const EttercapApp = () => {
   });
   const canvasRef = useRef(null);
   const hostPositions = useRef({});
+  const protocolOptions = useMemo(() => {
+    const protocols = Array.from(new Set(flows.map((f) => f.protocol))).sort();
+    return ['All', ...protocols];
+  }, [flows]);
+  const { list: flowsForDisplay, fallback: isFilterFallback } = useMemo(() => {
+    const trimmed = flows.filter((flow) => {
+      const matchesHost = hostFilter
+        ? [flow.source, flow.destination]
+            .join(' ')
+            .toLowerCase()
+            .includes(hostFilter.toLowerCase())
+        : true;
+      const matchesProtocol =
+        protocolFilter === 'All' || flow.protocol === protocolFilter;
+      return matchesHost && matchesProtocol;
+    });
+    const hasFiltersActive = hostFilter || protocolFilter !== 'All';
+    return {
+      list: trimmed.length ? trimmed : flows,
+      fallback: trimmed.length === 0 && hasFiltersActive,
+    };
+  }, [flows, hostFilter, protocolFilter]);
   const arpEntries = useMemo(
     () =>
       arpTable.map(({ ip, mac }) => ({
@@ -51,7 +83,7 @@ const EttercapApp = () => {
         mac,
         vendor: vendors[mac.slice(0, 8).toUpperCase()] || 'Unknown',
       })),
-    []
+    [arpTable]
   );
 
   // storyboard state for interactive canvas
@@ -153,6 +185,13 @@ const EttercapApp = () => {
     nodesRef.current = nodes;
     drawStoryboard();
   }, [nodes, drawStoryboard]);
+
+  useEffect(() => {
+    setFilterSelection(0);
+    setFilterText(filterSamples[0]?.code || '');
+    setHostFilter('');
+    setProtocolFilter('All');
+  }, [filterSamples]);
 
   useEffect(() => {
     const canvas = boardRef.current;
@@ -331,7 +370,7 @@ const EttercapApp = () => {
       ctx.textAlign = 'center';
       ctx.fillText(ip, pos.x, pos.y + 25);
     });
-    flows.forEach((f, i) => {
+    flowsForDisplay.forEach((f, i) => {
       const from = hostPositions.current[f.source];
       const to = hostPositions.current[f.destination];
       if (!from || !to) return;
@@ -341,7 +380,7 @@ const EttercapApp = () => {
       ctx.lineTo(to.x, to.y);
       ctx.stroke();
     });
-  }, [flowIndex]);
+  }, [flowIndex, flowsForDisplay]);
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -370,20 +409,21 @@ const EttercapApp = () => {
     });
     hostPositions.current = positions;
     drawMap();
-  }, [drawMap]);
+  }, [arpTable, drawMap]);
 
   useEffect(() => {
     drawMap();
   }, [drawMap]);
 
   useEffect(() => {
-    if (!flows.length) return;
+    if (!flowsForDisplay.length) return;
+    setFlowIndex(0);
     const id = setInterval(
-      () => setFlowIndex((i) => (i + 1) % flows.length),
+      () => setFlowIndex((i) => (i + 1) % flowsForDisplay.length),
       1500
     );
     return () => clearInterval(id);
-  }, []);
+  }, [flowsForDisplay]);
 
   const computeLines = () => {
     const container = containerRef.current?.getBoundingClientRect();
@@ -635,17 +675,131 @@ const stopSpoof = () => {
         </div>
       </div>
       <div className="mt-4">
-        <h2 className="font-semibold">Host Pairs</h2>
-        <canvas
-          ref={canvasRef}
-          width={300}
-          height={200}
-          className="bg-gray-800 rounded mt-2"
-        />
-        <div className="text-xs mt-2">
-          {flows[flowIndex]
-            ? `Traffic ${flows[flowIndex].source} → ${flows[flowIndex].destination} (${flows[flowIndex].protocol})`
-            : ''}
+        <h2 className="font-semibold">Network Capture Fixtures</h2>
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <label htmlFor="ettercap-fixture" className="text-sm">
+            Fixture
+          </label>
+          <select
+            id="ettercap-fixture"
+            value={fixtureId}
+            onChange={(e) => setFixtureId(e.target.value)}
+            className="p-2 rounded text-black"
+          >
+            {networkFixtures.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+          {fixture.recommendedFlags && fixture.recommendedFlags.length > 0 && (
+            <div className="text-xs bg-gray-800 text-gray-200 px-2 py-1 rounded">
+              Recommended flags: {fixture.recommendedFlags.join(' ')}
+            </div>
+          )}
+        </div>
+        <p className="mt-2 text-sm text-gray-200">{fixture.summary}</p>
+        <div className="mt-2 text-xs text-gray-300 space-y-1">
+          <div>
+            Source:{' '}
+            <a
+              className="text-blue-300 underline"
+              href={datasetMeta.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {datasetMeta.name}
+            </a>
+          </div>
+          <p className="italic text-gray-400">{datasetMeta.citation}</p>
+        </div>
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <div>
+            <h3 className="font-semibold">Host map</h3>
+            <canvas
+              ref={canvasRef}
+              width={300}
+              height={200}
+              className="bg-gray-800 rounded mt-2"
+            />
+            <div className="text-xs mt-2">
+              {flowsForDisplay[flowIndex]
+                ? `Traffic ${flowsForDisplay[flowIndex].source} → ${flowsForDisplay[flowIndex].destination} (${flowsForDisplay[flowIndex].protocol})`
+                : ''}
+            </div>
+          </div>
+          <div>
+            <h3 className="font-semibold">Observed flows</h3>
+            <div className="mt-2 flex flex-wrap gap-2 text-sm items-center">
+              <label htmlFor="ettercap-host-filter" className="sr-only">
+                Host filter
+              </label>
+              <input
+                id="ettercap-host-filter"
+                className="p-2 rounded text-black"
+                placeholder="Filter by IP or MAC"
+                value={hostFilter}
+                onChange={(e) => setHostFilter(e.target.value)}
+              />
+              <label htmlFor="ettercap-protocol-filter" className="sr-only">
+                Protocol filter
+              </label>
+              <select
+                id="ettercap-protocol-filter"
+                className="p-2 rounded text-black"
+                value={protocolFilter}
+                onChange={(e) => setProtocolFilter(e.target.value)}
+              >
+                {protocolOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {isFilterFallback && (
+              <p className="mt-2 text-xs text-yellow-300">
+                No flows matched the filters; showing the full capture instead.
+              </p>
+            )}
+            <div className="mt-2 overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[360px]">
+                <caption className="sr-only">Network capture flows</caption>
+                <thead>
+                  <tr>
+                    <th scope="col" className="border-b px-2 py-1">
+                      Time
+                    </th>
+                    <th scope="col" className="border-b px-2 py-1">
+                      Source
+                    </th>
+                    <th scope="col" className="border-b px-2 py-1">
+                      Destination
+                    </th>
+                    <th scope="col" className="border-b px-2 py-1">
+                      Protocol
+                    </th>
+                    <th scope="col" className="border-b px-2 py-1">
+                      Detail
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {flowsForDisplay.map((f, i) => (
+                    <tr key={`${f.source}-${f.destination}-${i}`}>
+                      <td className="px-2 py-1 font-mono whitespace-nowrap">
+                        {f.timestamp}
+                      </td>
+                      <td className="px-2 py-1 font-mono">{f.source}</td>
+                      <td className="px-2 py-1 font-mono">{f.destination}</td>
+                      <td className="px-2 py-1">{f.protocol}</td>
+                      <td className="px-2 py-1 text-xs">{f.info}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
       <div className="mt-4">
@@ -677,47 +831,33 @@ const stopSpoof = () => {
         </table>
       </div>
       <div className="mt-4">
-        <h2 className="font-semibold">Observed Flows</h2>
-        <table className="w-full text-left border-collapse mt-2">
-          <caption className="sr-only">Mock network flows</caption>
-          <thead>
-            <tr>
-              <th scope="col" className="border-b px-2 py-1">
-                Source
-              </th>
-              <th scope="col" className="border-b px-2 py-1">
-                Destination
-              </th>
-              <th scope="col" className="border-b px-2 py-1">
-                Protocol
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {flows.map((f, i) => (
-              <tr key={`${f.source}-${f.destination}-${i}`}>
-                <td className="px-2 py-1 font-mono">{f.source}</td>
-                <td className="px-2 py-1 font-mono">{f.destination}</td>
-                <td className="px-2 py-1">{f.protocol}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="mt-4">
         <h2 className="font-semibold">Filter Editor</h2>
-        <select
-          className="mt-2 p-1 rounded text-black"
-          onChange={(e) => setFilterText(filterExamples[e.target.value])}
-        >
-          {Object.keys(filterExamples).map((k) => (
-            <option key={k}>{k}</option>
-          ))}
-        </select>
+        <div className="mt-2 flex flex-wrap gap-2 items-center">
+          <label htmlFor="ettercap-filter-select" className="text-sm">
+            Sample
+          </label>
+          <select
+            id="ettercap-filter-select"
+            className="p-2 rounded text-black"
+            value={filterSelection}
+            onChange={(e) => {
+              const idx = Number(e.target.value);
+              setFilterSelection(idx);
+              setFilterText(filterSamples[idx]?.code || '');
+            }}
+          >
+            {filterSamples.map((sample, idx) => (
+              <option key={sample.name} value={idx}>
+                {sample.name}
+              </option>
+            ))}
+          </select>
+        </div>
         <textarea
           className="w-full h-24 mt-2 p-2 rounded text-black font-mono"
           value={filterText}
           onChange={(e) => setFilterText(e.target.value)}
+          aria-label="Filter source"
         />
         <pre
           className="mt-2 p-2 bg-gray-800 rounded overflow-auto text-xs font-mono"
@@ -727,6 +867,16 @@ const stopSpoof = () => {
             dangerouslySetInnerHTML={{ __html: highlightFilter(filterText) }}
           />
         </pre>
+        <div className="mt-2">
+          <h3 className="font-semibold text-sm">Sample packets</h3>
+          <ul className="mt-1 space-y-1 text-xs bg-gray-800 rounded p-2">
+            {samplePackets.map((pkt, idx) => (
+              <li key={idx} className="font-mono">
+                {pkt}
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
       <ArpLab />
       <div className="mt-4 text-xs bg-gray-800 p-2 rounded">
