@@ -27,7 +27,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | youtube | YouTube | Core maintainers | **In progress** – search, watch view, history storage, component test | YouTube embeds, localStorage |
 | calculator | Calculator | Core maintainers | **In progress** – tokenizer, shunting-yard evaluator, keyboard support | Expression parser |
 | converter | Converter | Core maintainers | **In progress** – centralized unit map and Jest coverage | `components/apps/converter/units.js` |
-| file-explorer | Files | Core maintainers | **Needs polish** – ensure virtual FS hooks stay in sync | Virtual filesystem layer |
+| file-explorer | Files | Core maintainers | **In progress** – shared navigator hook keeps breadcrumbs and recents aligned | Virtual filesystem layer |
 | project-gallery | Project Gallery | Core maintainers | **In progress** – load from `projects.json`, add filters and CTA buttons | `projects.json` data |
 | alex | About Alex | Core maintainers | **In progress** – resume widget, skill chips, project links | Resume JSON feed |
 | settings | Settings | Core maintainers | **In progress** – theme picker, wallpaper selector, reset desktop | `settingsStore.js`, localStorage |
