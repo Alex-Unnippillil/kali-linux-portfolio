@@ -1,0 +1,4 @@
+"timestamp","event","notes"
+"2024-02-19T21:55:12Z","SMTP attachment","Outbound message with 4.2 MB ZIP attachment to external recipient"
+"2024-02-19T21:55:49Z","Proxy allow","HTTPS POST 2.1 MB to storage.sync-cloud.example via user agent rclone/1.63"
+"2024-02-19T21:56:07Z","DLP alert","Policy EXFIL-OUTBOUND triggered for project roadmap.xlsx"
