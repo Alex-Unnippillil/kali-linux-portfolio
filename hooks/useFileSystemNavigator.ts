@@ -24,6 +24,16 @@ interface OpenHandleOptions {
   recordRecent?: boolean;
 }
 
+interface DirectoryHandleWithEntries extends FileSystemDirectoryHandle {
+  entries: () => AsyncIterableIterator<[string, FileSystemHandle]>;
+}
+
+function hasEntries(
+  handle: FileSystemDirectoryHandle,
+): handle is DirectoryHandleWithEntries {
+  return typeof (handle as DirectoryHandleWithEntries).entries === 'function';
+}
+
 interface UseFileSystemNavigatorReturn {
   currentDirectory: FileSystemDirectoryHandle | null;
   directories: DirectoryEntry[];
@@ -44,7 +54,7 @@ async function iterateEntries(handle: FileSystemDirectoryHandle) {
   const directories: DirectoryEntry[] = [];
   const files: DirectoryEntry[] = [];
 
-  if (!handle?.entries) {
+  if (!handle || !hasEntries(handle)) {
     return { directories, files };
   }
 

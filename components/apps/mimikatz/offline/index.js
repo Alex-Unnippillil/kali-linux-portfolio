@@ -146,10 +146,15 @@ const MimikatzOffline = () => {
             Upload `.txt` or `.log` exports from your own drills to parse usernames and passwords locally. Files never
             leave this browser tab.
           </p>
+          <label htmlFor="custom-import-file" className="sr-only">
+            Upload sanitized dump
+          </label>
           <input
+            id="custom-import-file"
             type="file"
             accept=".txt,.log,application/octet-stream"
             onChange={handleFile}
+            aria-label="Upload sanitized dump"
             className="block w-full rounded border border-gray-700 bg-black/40 p-2 text-sm"
           />
         </section>
