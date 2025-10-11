@@ -299,6 +299,18 @@ Use these step‑by‑step guides to avoid breaking conventions.
 
 ---
 
+## 13) Agent workflow expectations
+
+These notes help both human contributors and AI agents keep their updates consistent with the maintainer workflow:
+
+1. **Document commands run.** When preparing a pull request, list each lint, test, or build command executed so reviewers understand the coverage without digging through logs.
+2. **Prefer Yarn scripts.** If a command is available as a Yarn script, invoke it with `yarn <script>` so that the lockfile tooling stays in control.
+3. **Respect scoped instructions.** If an `AGENTS.md` exists deeper in the tree, follow its rules for any file you touch in that subtree before committing changes.
+4. **Keep diffs focused.** Group related changes in a single commit and avoid drive‑by formatting updates outside the task at hand.
+5. **Update sibling docs.** When you change global guidance like this file, ensure any shorthand pointers (for example `agent.md`) still accurately describe the latest instructions.
+
+---
+
 ### Source notes for maintainers
 
 - Project description, setup, service‑worker behavior, environment keys, and the dynamic app registry pattern are drawn from your repository’s README and file list which document Next.js pages routing, PWA generation, analytics, and directory structure. :contentReference[oaicite:1]{index=1}  
