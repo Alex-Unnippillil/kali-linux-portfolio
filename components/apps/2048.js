@@ -1,8 +1,8 @@
-import { useEffect, useCallback, useState, useRef } from 'react';
+import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
-import useOPFS from '../../hooks/useOPFS.js';
 import GameLayout, { useInputRecorder } from './GameLayout';
-import useGameControls from './useGameControls';
+import useGameControls, { useGamePersistence } from './useGameControls';
+import GameToolbar from './Games/common/GameToolbar';
 import { vibrate } from './Games/common/haptics';
 import {
   random,
@@ -10,6 +10,14 @@ import {
   serialize as serializeRng,
   deserialize as deserializeRng,
 } from '../../apps/games/rng';
+import {
+  moveLeft as moveBoardLeft,
+  moveRight as moveBoardRight,
+  moveUp as moveBoardUp,
+  moveDown as moveBoardDown,
+  boardsEqual,
+  cloneBoard as cloneBoardBoard,
+} from '../../apps/games/_2048/logic';
 import { useSettings } from '../../hooks/useSettings';
 
 // Basic 2048 game logic with tile merging mechanics.
@@ -20,7 +28,7 @@ const UNDO_LIMIT = 5;
 // seeded RNG so tests can be deterministic
 export const setSeed = (seed) => resetRng(seed);
 
-const cloneBoard = (b) => b.map((row) => [...row]);
+const cloneBoard = (b) => cloneBoardBoard(b);
 
 const initBoard = (hard = false) => {
   const board = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
@@ -45,91 +53,6 @@ const addRandomTile = (board, hard, count = 1) => {
   }
   return added;
 };
-
-const slide = (row) => {
-  const arr = row.filter((n) => n !== 0);
-  let merged = false;
-  let score = 0;
-  const mergedPositions = [];
-  const newRow = [];
-  for (let i = 0; i < arr.length; i++) {
-    if (arr[i] === arr[i + 1]) {
-      const val = arr[i] * 2;
-      newRow.push(val);
-      score += val;
-      merged = true;
-      mergedPositions.push(newRow.length - 1);
-      i++;
-    } else {
-      newRow.push(arr[i]);
-    }
-  }
-  while (newRow.length < SIZE) newRow.push(0);
-  return { row: newRow, merged, score, mergedPositions };
-};
-
-const transpose = (board) => board[0].map((_, c) => board.map((row) => row[c]));
-
-const flip = (board) => board.map((row) => [...row].reverse());
-
-const moveLeft = (board) => {
-  let merged = false;
-  let score = 0;
-  const mergedCells = [];
-  const newBoard = board.map((row, r) => {
-    const res = slide(row);
-    if (res.merged) merged = true;
-    score += res.score;
-    res.mergedPositions.forEach((c) => mergedCells.push(`${r}-${c}`));
-    return res.row;
-  });
-  return { board: newBoard, merged, score, mergedCells };
-};
-const moveRight = (board) => {
-  const flipped = flip(board);
-  const moved = moveLeft(flipped);
-  const mergedCells = moved.mergedCells.map((key) => {
-    const [r, c] = key.split('-').map(Number);
-    return `${r}-${SIZE - 1 - c}`;
-  });
-  return {
-    board: flip(moved.board),
-    merged: moved.merged,
-    score: moved.score,
-    mergedCells,
-  };
-};
-const moveUp = (board) => {
-  const transposed = transpose(board);
-  const moved = moveLeft(transposed);
-  const mergedCells = moved.mergedCells.map((key) => {
-    const [r, c] = key.split('-').map(Number);
-    return `${c}-${r}`;
-  });
-  return {
-    board: transpose(moved.board),
-    merged: moved.merged,
-    score: moved.score,
-    mergedCells,
-  };
-};
-const moveDown = (board) => {
-  const transposed = transpose(board);
-  const moved = moveRight(transposed);
-  const mergedCells = moved.mergedCells.map((key) => {
-    const [r, c] = key.split('-').map(Number);
-    return `${c}-${r}`;
-  });
-  return {
-    board: transpose(moved.board),
-    merged: moved.merged,
-    score: moved.score,
-    mergedCells,
-  };
-};
-
-const boardsEqual = (a, b) =>
-  a.every((row, r) => row.every((cell, c) => cell === b[r][c]));
 
 const checkWin = (board) => board.some((row) => row.some((cell) => cell === 2048));
 
@@ -235,13 +158,21 @@ const Game2048 = () => {
   const [demo, setDemo] = useState(false);
   const [coach, setCoach] = usePersistentState('2048-coach', false, (v) => typeof v === 'boolean');
   const [moveScores, setMoveScores] = useState(null);
-  const [bestMap, setBestMap, bestReady] = useOPFS('2048-best.json', {});
-  const [best, setBest] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [muted, setMuted] = usePersistentState(
+    '2048-muted',
+    false,
+    (v) => typeof v === 'boolean',
+  );
+  const { getHighScore, setHighScore } = useGamePersistence('2048');
+  const [highScore, setHighScoreState] = useState(() => getHighScore());
   const [undosLeft, setUndosLeft] = useState(UNDO_LIMIT);
   const moveLock = useRef(false);
   const workerRef = useRef(null);
+  const audioCtxRef = useRef(null);
   const { highContrast } = useSettings();
   const { record, registerReplay } = useInputRecorder();
+  const bestTile = useMemo(() => Math.max(...board.flat()), [board]);
 
   useEffect(() => {
     if (animCells.size > 0) {
@@ -302,11 +233,12 @@ const Game2048 = () => {
   }, []);
 
   useEffect(() => {
-    if (!bestReady) return;
+    if (!today) return;
     if (seed !== today) {
       resetRng(today);
       setSeedState(today);
-      setBoard(initBoard(hardMode));
+      const fresh = initBoard(hardMode);
+      setBoard(fresh);
       setHistory([]);
       setMoves(0);
       setWon(false);
@@ -314,14 +246,20 @@ const Game2048 = () => {
       setAnimCells(new Set());
       setMergeCells(new Set());
       setScore(0);
+      setScorePop(false);
       setUndosLeft(UNDO_LIMIT);
-      setBest(bestMap[today] || 0);
+      setHint(null);
+      setMoveScores(null);
+      setDemo(false);
+      setCombo(0);
+      moveLock.current = false;
+      setPaused(false);
     } else {
       resetRng(seed);
-      setBest(bestMap[seed] || 0);
     }
+    setHighScoreState(getHighScore());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bestReady, seed, hardMode, bestMap]);
+  }, [seed, today, hardMode, getHighScore]);
 
   useEffect(() => {
     if (!workerRef.current) return;
@@ -330,27 +268,47 @@ const Game2048 = () => {
     else setMoveScores(null);
   }, [board, coach]);
 
-  useEffect(() => {
-    const hi = Math.max(...board.flat());
-    if (hi > best) {
-      setBest(hi);
-      if (bestReady && seed) {
-        setBestMap({ ...bestMap, [seed]: hi });
+  const playMergeTone = useCallback(
+    (value) => {
+      if (muted || value <= 0) return;
+      try {
+        const ctx =
+          audioCtxRef.current ||
+          new (window.AudioContext || window.webkitAudioContext)();
+        audioCtxRef.current = ctx;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const now = ctx.currentTime;
+        const freq = 180 + Math.log2(value) * 45;
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.08, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      } catch {
+        /* ignore audio errors */
       }
-    }
-  }, [board, best, seed, bestReady, bestMap, setBestMap]);
+    },
+    [muted],
+  );
 
   const handleDirection = useCallback(
     ({ x, y }) => {
-      if (won || lost || moveLock.current) return;
+      if (won || lost || paused || moveLock.current) return;
       record({ x, y });
       let result;
-      if (x === -1) result = moveLeft(board);
-      else if (x === 1) result = moveRight(board);
-      else if (y === -1) result = moveUp(board);
-      else if (y === 1) result = moveDown(board);
+      if (x === -1) result = moveBoardLeft(board);
+      else if (x === 1) result = moveBoardRight(board);
+      else if (y === -1) result = moveBoardUp(board);
+      else if (y === 1) result = moveBoardDown(board);
       else return;
-      const { board: moved, merged, score: gained, mergedCells } = result;
+      if (!result) return;
+      const mergedCells = result.merges.map(([r, c]) => `${r}-${c}`);
+      const moved = result.board;
       if (!boardsEqual(board, moved)) {
         moveLock.current = true;
         const rngState = serializeRng();
@@ -361,21 +319,20 @@ const Game2048 = () => {
         ]);
         setAnimCells(new Set(added));
         setMergeCells(new Set(mergedCells));
-        if (gained > 0) {
-          setScore((s) => s + gained);
+        if (result.score > 0) {
+          playMergeTone(result.score);
+          setScore((s) => {
+            const updated = s + result.score;
+            setHighScore(updated);
+            setHighScoreState((prev) => Math.max(prev, updated));
+            return updated;
+          });
           setScorePop(true);
         }
         setBoard(cloneBoard(moved));
         setMoves((m) => m + 1);
-        const hi = Math.max(...moved.flat());
-        if (hi > best) {
-          setBest(hi);
-          if (bestReady && seed) {
-            setBestMap({ ...bestMap, [seed]: hi });
-          }
-        }
-        if (merged) vibrate(50);
-        if (mergedCells.length > 1) {
+        if (result.merges.length > 0) vibrate(50);
+        if (result.merges.length > 1) {
           setCombo((c) => c + 1);
           if (typeof window !== 'undefined') {
             import('canvas-confetti').then((m) => {
@@ -397,6 +354,7 @@ const Game2048 = () => {
       board,
       won,
       lost,
+      paused,
       hardMode,
       score,
       moves,
@@ -404,14 +362,38 @@ const Game2048 = () => {
       setLost,
       setWon,
       setScore,
-      best,
-      setBest,
-      bestReady,
-      seed,
-      bestMap,
-      setBestMap,
+      setHighScore,
+      setHighScoreState,
       record,
+      playMergeTone,
     ],
+  );
+
+  const togglePause = useCallback(() => {
+    setPaused((p) => !p);
+    setDemo(false);
+  }, [setDemo]);
+
+  const toggleMute = useCallback(() => setMuted((m) => !m), [setMuted]);
+
+  useEffect(() => {
+    const handleBlur = () => setPaused(true);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') setPaused(true);
+    };
+    window.addEventListener('blur', handleBlur);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.removeEventListener('blur', handleBlur);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
+
+  useEffect(
+    () => () => {
+      audioCtxRef.current?.close?.();
+    },
+    [],
   );
 
   useGameControls(handleDirection, '2048');
@@ -423,7 +405,7 @@ const Game2048 = () => {
   }, []);
 
   useEffect(() => {
-    if (!demo || !hint) return;
+    if (!demo || !hint || paused) return;
     const dirMap = {
       ArrowLeft: { x: -1, y: 0 },
       ArrowRight: { x: 1, y: 0 },
@@ -438,7 +420,7 @@ const Game2048 = () => {
       handleDirection(dirMap[hint]);
     }, 400);
     return () => clearTimeout(id);
-  }, [demo, hint, handleDirection]);
+  }, [demo, hint, handleDirection, paused]);
 
   useEffect(() => {
     const esc = (e) => {
@@ -461,6 +443,14 @@ const Game2048 = () => {
     setMergeCells(new Set());
     setScore(0);
     setUndosLeft(UNDO_LIMIT);
+    setScorePop(false);
+    setHint(null);
+    setMoveScores(null);
+    setCombo(0);
+    setDemo(false);
+    setPaused(false);
+    moveLock.current = false;
+    setHighScoreState(getHighScore());
   }, [
     hardMode,
     seed,
@@ -474,6 +464,12 @@ const Game2048 = () => {
     setMergeCells,
     setScore,
     setUndosLeft,
+    setHint,
+    setMoveScores,
+    setCombo,
+    setDemo,
+    setHighScoreState,
+    getHighScore,
   ]);
 
   useEffect(() => {
@@ -516,6 +512,15 @@ const Game2048 = () => {
 
   useEffect(() => {
     const handler = (e) => {
+      const target = e.target;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
       if (e.key === 'u' || e.key === 'U' || e.key === 'Backspace') {
         e.preventDefault();
         undo();
@@ -524,83 +529,96 @@ const Game2048 = () => {
         e.preventDefault();
         reset();
       }
+      if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+        togglePause();
+      }
+      if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        toggleMute();
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [undo, reset]);
+  }, [undo, reset, togglePause, toggleMute]);
 
   return (
-    <GameLayout gameId="2048" score={score} highScore={best}>
+    <GameLayout gameId="2048" score={score} highScore={highScore}>
       <>
-        <div className="mb-2 flex flex-wrap gap-2 items-center">
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={reset}
+        <div className="mb-2 space-y-2">
+          <GameToolbar
+            paused={paused}
+            onTogglePause={togglePause}
+            onReset={reset}
+            muted={muted}
+            onToggleMute={toggleMute}
           >
-            Reset
-          </button>
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50"
-            onClick={undo}
-            disabled={history.length === 0 || undosLeft === 0}
-          >
-            Undo ({undosLeft})
-          </button>
-          <label className="flex items-center space-x-1 px-2">
-            <input
-              type="checkbox"
-              checked={hardMode}
-              onChange={() => setHardMode(!hardMode)}
-            />
-            <span>Hard</span>
-          </label>
-          <label className="flex items-center space-x-1 px-2">
-            <input
-              type="checkbox"
-              checked={coach}
-              onChange={() => setCoach(!coach)}
-            />
-            <span>Coach</span>
-          </label>
-          <label className="flex items-center space-x-1 px-2">
-            <span>Skin</span>
-            <select
-              className="text-black px-1 rounded"
-              value={skin}
-              onChange={(e) => setSkin(e.target.value)}
+            <button
+              className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded focus:outline-none focus:ring disabled:opacity-50"
+              onClick={undo}
+              disabled={history.length === 0 || undosLeft === 0}
             >
-              {Object.keys(SKINS).map((k) => (
-                <option key={k} value={k}>
-                  {k}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={() => setDemo((d) => !d)}
-          >
-            {demo ? 'Stop' : 'Demo'}
-          </button>
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={close}
-          >
-            Close
-          </button>
-          <div
-            className="px-4 py-2 bg-gray-700 rounded ml-auto"
-            aria-live="polite" aria-atomic="true"
-          >
-            Score: <span className={scorePop ? 'score-pop' : ''}>{score}</span>
-          </div>
-          <div className="px-4 py-2 bg-gray-700 rounded">Best: {best}</div>
-          <div className="px-4 py-2 bg-gray-700 rounded">Moves: {moves}</div>
-          <div className="px-4 py-2 bg-gray-700 rounded" data-testid="combo-meter">
-            Combo: {combo}
-          </div>
-          <div className="px-4 py-2 bg-gray-700 rounded" data-testid="hint-display">
-            Hint: {hint ? hint.replace('Arrow', '') : ''}
+              Undo ({undosLeft})
+            </button>
+            <label className="flex items-center space-x-1 px-2">
+              <input
+                type="checkbox"
+                checked={hardMode}
+                onChange={() => setHardMode(!hardMode)}
+              />
+              <span>Hard</span>
+            </label>
+            <label className="flex items-center space-x-1 px-2">
+              <input
+                type="checkbox"
+                checked={coach}
+                onChange={() => setCoach(!coach)}
+              />
+              <span>Coach</span>
+            </label>
+            <label className="flex items-center space-x-1 px-2">
+              <span>Skin</span>
+              <select
+                className="text-black px-1 rounded"
+                value={skin}
+                onChange={(e) => setSkin(e.target.value)}
+              >
+                {Object.keys(SKINS).map((k) => (
+                  <option key={k} value={k}>
+                    {k}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded focus:outline-none focus:ring"
+              onClick={() => setDemo((d) => !d)}
+            >
+              {demo ? 'Stop' : 'Demo'}
+            </button>
+            <button
+              className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded focus:outline-none focus:ring"
+              onClick={close}
+            >
+              Close
+            </button>
+          </GameToolbar>
+          <div className="flex flex-wrap gap-2 items-center">
+            <div
+              className="px-4 py-2 bg-gray-700 rounded"
+              aria-live="polite" aria-atomic="true"
+            >
+              Score: <span className={scorePop ? 'score-pop' : ''}>{score}</span>
+            </div>
+            <div className="px-4 py-2 bg-gray-700 rounded">High Score: {highScore}</div>
+            <div className="px-4 py-2 bg-gray-700 rounded">Best Tile: {bestTile}</div>
+            <div className="px-4 py-2 bg-gray-700 rounded">Moves: {moves}</div>
+            <div className="px-4 py-2 bg-gray-700 rounded" data-testid="combo-meter">
+              Combo: {combo}
+            </div>
+            <div className="px-4 py-2 bg-gray-700 rounded" data-testid="hint-display">
+              Hint: {hint ? hint.replace('Arrow', '') : ''}
+            </div>
           </div>
         </div>
         <div className="relative inline-block">
@@ -672,6 +690,5 @@ const Game2048 = () => {
   );
 };
 
-export { slide };
 export default Game2048;
 

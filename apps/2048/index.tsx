@@ -1,9 +1,19 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import { getDailySeed } from '../../utils/dailySeed';
+import GameToolbar from '../../components/apps/Games/common/GameToolbar';
+import { useGamePersistence } from '../../components/apps/useGameControls';
+import {
+  moveLeft as moveBoardLeft,
+  moveRight as moveBoardRight,
+  moveUp as moveBoardUp,
+  moveDown as moveBoardDown,
+  boardsEqual,
+  cloneBoard,
+} from '../../apps/games/_2048/logic';
 
 const SIZE = 4;
 
@@ -23,30 +33,6 @@ const hashSeed = (str: string): number => {
   }
   return h >>> 0;
 };
-
-const slideRow = (row: number[]) => {
-  const arr = row.filter((n) => n !== 0);
-  for (let i = 0; i < arr.length - 1; i += 1) {
-    if (arr[i] === arr[i + 1]) {
-      arr[i] *= 2;
-      arr[i + 1] = 0;
-    }
-  }
-  const newRow = arr.filter((n) => n !== 0);
-  while (newRow.length < SIZE) newRow.push(0);
-  return newRow;
-};
-
-const transpose = (board: number[][]) => board[0].map((_, c) => board.map((row) => row[c]));
-const flip = (board: number[][]) => board.map((row) => [...row].reverse());
-
-const moveLeft = (board: number[][]) => board.map((row) => slideRow(row));
-const moveRight = (board: number[][]) => flip(moveLeft(flip(board)));
-const moveUp = (board: number[][]) => transpose(moveLeft(transpose(board)));
-const moveDown = (board: number[][]) => transpose(moveRight(transpose(board)));
-
-const boardsEqual = (a: number[][], b: number[][]) =>
-  a.every((row, r) => row.every((cell, c) => cell === b[r][c]));
 
 const hasMoves = (board: number[][]) => {
   for (let r = 0; r < SIZE; r += 1) {
@@ -122,11 +108,45 @@ const Page2048 = () => {
   const [timer, setTimer] = useState(3);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [moves, setMoves] = useState<string[]>([]);
+  const [score, setScore] = useState(0);
+  const { getHighScore, setHighScore } = useGamePersistence('2048');
+  const [highScore, setHighScoreState] = useState(() => getHighScore());
+  const [paused, setPaused] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
   const [highest, setHighest] = useState(0);
   const [boardType, setBoardType] = useState<'classic' | 'hex'>('classic');
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
-  const [history, setHistory] = useState<number[][][]>([]);
+  const [history, setHistory] = useState<Array<{ board: number[][]; score: number }>>([]);
+  const bestTile = useMemo(() => Math.max(...board.flat()), [board]);
+
+  const togglePause = useCallback(() => setPaused((p) => !p), []);
+  const toggleMute = useCallback(() => setMuted((m) => !m), []);
+
+  useEffect(() => {
+    setHighScoreState(getHighScore());
+  }, [getHighScore]);
+
+  useEffect(() => {
+    const handleBlur = () => setPaused(true);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') setPaused(true);
+    };
+    window.addEventListener('blur', handleBlur);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.removeEventListener('blur', handleBlur);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
+
+  useEffect(
+    () => () => {
+      audioCtxRef.current?.close?.();
+    },
+    [],
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -139,6 +159,13 @@ const Page2048 = () => {
       addRandomTile(b, rand);
       if (!mounted) return;
       setBoard(b);
+      setScore(0);
+      setMoves([]);
+      setHistory([]);
+      setPaused(false);
+      setWon(false);
+      setLost(false);
+      setHighest(checkHighest(b));
       rngRef.current = rand;
       seedRef.current = seed;
     })();
@@ -153,7 +180,7 @@ const Page2048 = () => {
   }, [hard]);
 
   useEffect(() => {
-    if (!hard) return;
+    if (!hard || paused) return;
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setTimer((t) => {
@@ -169,40 +196,92 @@ const Page2048 = () => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [hard, moves, boardType]);
+  }, [hard, moves, boardType, paused]);
+
+  const playMergeTone = useCallback(
+    (value: number) => {
+      if (muted || value <= 0) return;
+      try {
+        const Ctor = (window as any).AudioContext || (window as any).webkitAudioContext;
+        if (!Ctor) return;
+        const ctx = audioCtxRef.current || new Ctor();
+        audioCtxRef.current = ctx;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const now = ctx.currentTime;
+        const freq = 180 + Math.log2(value) * 45;
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.08, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      } catch {
+        // ignore audio errors
+      }
+    },
+    [muted],
+  );
 
   const handleMove = useCallback(
     (dir: 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown') => {
-      if (won || lost) return;
-      let moved: number[][] | undefined;
-      if (dir === 'ArrowLeft') moved = moveLeft(board);
-      if (dir === 'ArrowRight') moved = moveRight(board);
-      if (dir === 'ArrowUp') moved = moveUp(board);
-      if (dir === 'ArrowDown') moved = moveDown(board);
-      if (!moved || boardsEqual(board, moved)) return;
-      setHistory((h) => [...h, board.map((row) => [...row])]);
-      addRandomTile(moved, rngRef.current);
-      const newHighest = checkHighest(moved);
+      if (won || lost || paused) return;
+      let result;
+      if (dir === 'ArrowLeft') result = moveBoardLeft(board);
+      if (dir === 'ArrowRight') result = moveBoardRight(board);
+      if (dir === 'ArrowUp') result = moveBoardUp(board);
+      if (dir === 'ArrowDown') result = moveBoardDown(board);
+      if (!result) return;
+      if (boardsEqual(board, result.board)) return;
+      const next = result.board.map((row) => [...row]);
+      setHistory((h) => [...h, { board: board.map((row) => [...row]), score }]);
+      addRandomTile(next, rngRef.current);
+      if (result.score > 0) {
+        playMergeTone(result.score);
+        setScore((s) => {
+          const updated = s + result.score;
+          setHighScore(updated);
+          setHighScoreState((prev) => Math.max(prev, updated));
+          return updated;
+        });
+      }
+      const newHighest = checkHighest(next);
       if ((newHighest === 2048 || newHighest === 4096) && newHighest > highest) {
         ReactGA.event('post_score', { score: newHighest, board: boardType });
       }
       setHighest(newHighest);
-      setBoard(moved);
+      setBoard(next);
       setMoves((m) => [...m, dir]);
       resetTimer();
       if (newHighest >= 2048) setWon(true);
-      else if (!hasMoves(moved)) setLost(true);
+      else if (!hasMoves(next)) setLost(true);
     },
-    [board, won, lost, highest, boardType, resetTimer]
+    [
+      board,
+      won,
+      lost,
+      paused,
+      score,
+      highest,
+      boardType,
+      resetTimer,
+      playMergeTone,
+      setHighScore,
+      setHighScoreState,
+    ],
   );
 
   const handleUndo = useCallback(() => {
     setHistory((h) => {
       if (!h.length) return h;
       const prev = h[h.length - 1];
-      setBoard(prev.map((row) => [...row]));
+      setBoard(cloneBoard(prev.board));
+      setScore(prev.score);
       setMoves((m) => m.slice(0, -1));
-      setHighest(checkHighest(prev));
+      setHighest(checkHighest(prev.board));
       setWon(false);
       setLost(false);
       resetTimer();
@@ -219,15 +298,28 @@ const Page2048 = () => {
     setBoard(b);
     setMoves([]);
     setHistory([]);
+    setScore(0);
     setWon(false);
     setLost(false);
     setHighest(0);
+    setPaused(false);
+    setHighScoreState(getHighScore());
     resetTimer();
-  }, [resetTimer]);
+  }, [getHighScore, resetTimer]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        e.preventDefault();
         handleMove(e.key as any);
         return;
       }
@@ -239,11 +331,20 @@ const Page2048 = () => {
       if (['u', 'U', 'Backspace'].includes(e.key)) {
         e.preventDefault();
         handleUndo();
+        return;
+      }
+      if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+        togglePause();
+      }
+      if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        toggleMute();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [handleMove, restart, handleUndo]);
+  }, [handleMove, restart, handleUndo, togglePause, toggleMute]);
 
   const close = () => {
     if (typeof document !== 'undefined') {
@@ -276,29 +377,55 @@ const Page2048 = () => {
 
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
-      <div className="flex space-x-2">
-        <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={restart}>
-          Restart
-        </button>
-        <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={handleUndo}>
-          Undo
-        </button>
-        <label className="flex items-center space-x-1 px-2">
-          <input type="checkbox" checked={hard} onChange={(e) => setHard(e.target.checked)} />
-          <span>Hard</span>
-        </label>
-        <select
-          className="text-black px-1 rounded"
-          value={boardType}
-          onChange={(e) => setBoardType(e.target.value as any)}
+      <div className="space-y-3">
+        <GameToolbar
+          paused={paused}
+          onTogglePause={togglePause}
+          onReset={restart}
+          muted={muted}
+          onToggleMute={toggleMute}
         >
-          <option value="classic">Classic</option>
-          <option value="hex">Hex 2048</option>
-        </select>
-        <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={close}>
-          Close
-        </button>
-        {hard && <div className="ml-2">{timer}</div>}
+          <button
+            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded focus:outline-none focus:ring disabled:opacity-50"
+            onClick={handleUndo}
+            disabled={history.length === 0}
+          >
+            Undo
+          </button>
+          <label className="flex items-center space-x-1 px-2">
+            <input
+              type="checkbox"
+              checked={hard}
+              onChange={(e) => setHard(e.target.checked)}
+            />
+            <span>Hard</span>
+          </label>
+          <label className="flex items-center space-x-1 px-2">
+            <span>Board</span>
+            <select
+              className="text-black px-1 rounded"
+              value={boardType}
+              onChange={(e) => setBoardType(e.target.value as 'classic' | 'hex')}
+            >
+              <option value="classic">Classic</option>
+              <option value="hex">Hex 2048</option>
+            </select>
+          </label>
+          <button
+            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded focus:outline-none focus:ring"
+            onClick={close}
+          >
+            Close
+          </button>
+        </GameToolbar>
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="px-4 py-2 bg-gray-700 rounded">Score: {score}</div>
+          <div className="px-4 py-2 bg-gray-700 rounded">High Score: {highScore}</div>
+          <div className="px-4 py-2 bg-gray-700 rounded">Best Tile: {bestTile}</div>
+          <div className="px-4 py-2 bg-gray-700 rounded">Moves: {moves.length}</div>
+          {hard && <div className="px-4 py-2 bg-gray-700 rounded">Timer: {timer}</div>}
+          {paused && <div className="px-4 py-2 bg-gray-700 rounded">Paused</div>}
+        </div>
       </div>
       <div className="grid w-full max-w-sm grid-cols-4 gap-2">
         {board.map((row, rIdx) =>

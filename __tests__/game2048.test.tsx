@@ -42,25 +42,23 @@ test.skip('merge triggers animation', async () => {
   expect(firstCell?.querySelector('.merge-ripple')).toBeTruthy();
 });
 
-test.skip('score persists in localStorage', async () => {
+test('stores new high score in localStorage', async () => {
   window.localStorage.setItem('2048-board', JSON.stringify([
     [2, 2, 0, 0],
     [0, 0, 0, 0],
     [0, 0, 0, 0],
     [0, 0, 0, 0],
   ]));
-  const { unmount } = render(<Game2048 />);
+  const { getByText, getAllByText } = render(<Game2048 />);
+  fireEvent.click(getAllByText('Close')[0]);
   await waitFor(() => {
-    const b = JSON.parse(window.localStorage.getItem('2048-board') || '[]');
-    expect(b[0][0]).toBe(2);
+    expect(window.localStorage.getItem('2048-board')).toBeTruthy();
   });
   fireEvent.keyDown(window, { key: 'ArrowLeft' });
   await waitFor(() => {
-    expect(window.localStorage.getItem('2048-score')).toBe('4');
+    expect(window.localStorage.getItem('highscore:2048')).toBe('4');
+    expect(getByText(/High Score: 4/)).toBeTruthy();
   });
-  unmount();
-  const { getAllByText } = render(<Game2048 />);
-  expect(getAllByText(/Score:/)[0].textContent).toContain('4');
 });
 
 test('ignores browser key repeat events', () => {

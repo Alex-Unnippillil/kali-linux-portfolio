@@ -27,6 +27,21 @@ describe('2048 logic', () => {
     ]);
   });
 
+  it('tracks merge score and coordinates', () => {
+    const board: Board = [
+      [2, 2, 4, 4],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ];
+    const { score, merges } = moveLeft(board);
+    expect(score).toBe(12);
+    expect(merges).toEqual([
+      [0, 0],
+      [0, 1],
+    ]);
+  });
+
   it('uses seeded RNG for random tiles', () => {
     const board: Board = Array.from({ length: 4 }, () => Array(4).fill(0));
     reset('test');
