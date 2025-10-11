@@ -1,5 +1,6 @@
 {
   "id": "demo",
   "sandbox": "worker",
+  "description": "Echoes a static message from a sandboxed worker.",
   "code": "self.postMessage('content');"
 }

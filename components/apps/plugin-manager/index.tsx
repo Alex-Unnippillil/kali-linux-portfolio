@@ -1,13 +1,47 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-interface PluginInfo { id: string; file: string; }
+interface PluginInfo {
+  id: string;
+  file: string;
+  sandbox: 'worker' | 'iframe';
+  size: number;
+  description?: string;
+}
 
 interface PluginManifest {
   id: string;
   sandbox: 'worker' | 'iframe';
   code: string;
 }
+
+interface LastRun {
+  id: string;
+  output: string[];
+  timestamp: string;
+  error: boolean;
+}
+
+const formatBytes = (bytes: number) => {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return '0 B';
+  }
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const exponent = Math.min(
+    Math.floor(Math.log(bytes) / Math.log(1024)),
+    units.length - 1
+  );
+  const value = bytes / 1024 ** exponent;
+  return `${value < 10 && exponent > 0 ? value.toFixed(1) : Math.round(value)} ${units[exponent]}`;
+};
+
+const formatTimestamp = (timestamp: string) => {
+  try {
+    return new Date(timestamp).toLocaleString();
+  } catch {
+    return timestamp;
+  }
+};
 
 export default function PluginManager() {
   const [plugins, setPlugins] = useState<PluginInfo[]>([]);
@@ -24,15 +58,28 @@ export default function PluginManager() {
     }
   );
 
-  interface LastRun {
-    id: string;
-    output: string[];
-  }
-
   const [lastRun, setLastRun] = useState<LastRun | null>(() => {
     if (typeof window !== 'undefined') {
       try {
-        return JSON.parse(localStorage.getItem('lastPluginRun') || 'null');
+        const raw = JSON.parse(localStorage.getItem('lastPluginRun') || 'null');
+        if (!raw) return null;
+        const normalized: LastRun = {
+          id: raw.id,
+          output: Array.isArray(raw.output) ? raw.output : [],
+          timestamp:
+            typeof raw.timestamp === 'string'
+              ? raw.timestamp
+              : new Date().toISOString(),
+          error: Boolean(raw.error),
+        };
+        if (typeof raw.timestamp !== 'string') {
+          try {
+            localStorage.setItem('lastPluginRun', JSON.stringify(normalized));
+          } catch {
+            /* ignore */
+          }
+        }
+        return normalized;
       } catch {
         return null;
       }
@@ -59,8 +106,14 @@ export default function PluginManager() {
     const manifest = installed[plugin.id];
     if (!manifest) return;
     const output: string[] = [];
+    let hadError = false;
     const finalize = () => {
-      const result = { id: plugin.id, output };
+      const result: LastRun = {
+        id: plugin.id,
+        output,
+        timestamp: new Date().toISOString(),
+        error: hadError,
+      };
       setLastRun(result);
       try {
         localStorage.setItem('lastPluginRun', JSON.stringify(result));
@@ -78,6 +131,7 @@ export default function PluginManager() {
       };
       worker.onerror = () => {
         output.push('error');
+        hadError = true;
       };
       // collect messages briefly then terminate
       setTimeout(() => {
@@ -91,16 +145,22 @@ export default function PluginManager() {
       const url = URL.createObjectURL(blob);
       const iframe = document.createElement('iframe');
       iframe.sandbox.add('allow-scripts');
+      const handleError = () => {
+        output.push('error');
+        hadError = true;
+      };
       const listener = (e: MessageEvent) => {
         if (e.source === iframe.contentWindow) {
           output.push(String(e.data));
         }
       };
       window.addEventListener('message', listener);
+      iframe.addEventListener('error', handleError);
       iframe.src = url;
       document.body.appendChild(iframe);
       setTimeout(() => {
         window.removeEventListener('message', listener);
+        iframe.removeEventListener('error', handleError);
         document.body.removeChild(iframe);
         URL.revokeObjectURL(url);
         finalize();
@@ -125,8 +185,17 @@ export default function PluginManager() {
       <h1 className="text-xl mb-4">Plugin Catalog</h1>
       <ul>
         {plugins.map((p) => (
-          <li key={p.id} className="flex items-center mb-2">
-            <span className="flex-grow">{p.id}</span>
+          <li
+            key={p.id}
+            className="flex items-center mb-3 gap-3 rounded border border-white/10 bg-black/40 p-3"
+            title={p.description || undefined}
+          >
+            <div className="flex flex-col flex-grow">
+              <span className="font-semibold">{p.id}</span>
+              <span className="text-xs text-ubt-grey">
+                Sandbox: {p.sandbox === 'worker' ? 'Worker' : 'Iframe'} · Size: {formatBytes(p.size)}
+              </span>
+            </div>
             <button
               className="bg-ub-orange px-2 py-1 rounded disabled:opacity-50"
               onClick={() => install(p)}
@@ -146,17 +215,32 @@ export default function PluginManager() {
         ))}
       </ul>
       {lastRun && (
-        <div className="mt-4">
-          <h2 className="text-lg mb-2">Last Run: {lastRun.id}</h2>
-          <pre className="bg-black p-2 mb-2 overflow-auto text-xs">
-            {lastRun.output.join('\n')}
-          </pre>
-          <button
-            onClick={exportCsv}
-            className="bg-ub-green text-black px-2 py-1 rounded"
-          >
-            Export CSV
-          </button>
+        <div className="mt-4 max-w-xl">
+          <div className="rounded-lg border border-white/10 bg-black/50 p-4 shadow-lg">
+            <div className="mb-2 flex items-baseline justify-between gap-3">
+              <h2 className="text-lg font-semibold">Last Run: {lastRun.id}</h2>
+              <time className="text-xs text-ubt-grey">
+                {formatTimestamp(lastRun.timestamp)}
+              </time>
+            </div>
+            {lastRun.error && (
+              <div
+                className="mb-3 rounded border border-red-500/60 bg-red-900/60 px-3 py-2 text-sm text-red-100"
+                role="alert"
+              >
+                The last run reported an error. Review the output below for details.
+              </div>
+            )}
+            <pre className="mb-3 max-h-48 overflow-auto rounded bg-black/70 p-3 text-xs">
+              {lastRun.output.join('\n')}
+            </pre>
+            <button
+              onClick={exportCsv}
+              className="bg-ub-green text-black px-3 py-1 rounded"
+            >
+              Export CSV
+            </button>
+          </div>
         </div>
       )}
     </div>
