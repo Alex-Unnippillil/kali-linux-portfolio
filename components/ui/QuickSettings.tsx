@@ -14,6 +14,19 @@ const QuickSettings = ({ open }: Props) => {
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const [focusMode, setFocusMode] = usePersistentState('qs-focus-mode', false);
+  const [brightness, setBrightness] = usePersistentState(
+    'qs-brightness',
+    75,
+    (value): value is number =>
+      typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100,
+  );
+  const [volume, setVolume] = usePersistentState(
+    'qs-volume',
+    70,
+    (value): value is number =>
+      typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100,
+  );
   const panelRef = useRef<HTMLDivElement>(null);
   const [shouldRender, setShouldRender] = useState(open);
   const [isVisible, setIsVisible] = useState(open);
@@ -59,6 +72,30 @@ const QuickSettings = ({ open }: Props) => {
     }
   }, [open]);
 
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-focus-mode', focusMode);
+
+    return () => {
+      document.documentElement.removeAttribute('data-focus-mode');
+    };
+  }, [focusMode]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--qs-brightness', `${brightness}`);
+
+    return () => {
+      document.documentElement.style.removeProperty('--qs-brightness');
+    };
+  }, [brightness]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--qs-volume', `${volume}`);
+
+    return () => {
+      document.documentElement.style.removeProperty('--qs-volume');
+    };
+  }, [volume]);
+
   if (!shouldRender) {
     return null;
   }
@@ -67,6 +104,8 @@ const QuickSettings = ({ open }: Props) => {
     { id: 'theme', label: 'Theme', value: theme === 'light' ? 'Light' : 'Dark' },
     { id: 'audio', label: 'Sound', value: sound ? 'On' : 'Muted' },
     { id: 'network', label: 'Network', value: online ? 'Online' : 'Offline' },
+    { id: 'focus', label: 'Focus mode', value: focusMode ? 'On' : 'Off' },
+    { id: 'volume', label: 'Volume', value: `${volume}%` },
   ];
 
   const toggles: Array<{
@@ -104,6 +143,54 @@ const QuickSettings = ({ open }: Props) => {
       onToggle: () => setReduceMotion(!reduceMotion),
       accent: 'from-purple-400/30 via-purple-500/10 to-transparent',
       icon: <MotionIcon />,
+    },
+    {
+      id: 'quick-settings-focus-mode',
+      label: 'Focus mode',
+      description: 'Silence badges and notifications.',
+      value: focusMode,
+      onToggle: () => setFocusMode(!focusMode),
+      accent: 'from-amber-400/30 via-amber-500/10 to-transparent',
+      icon: <FocusIcon />,
+    },
+  ];
+
+  const sliderControls: Array<{
+    id: string;
+    label: string;
+    value: number;
+    description: string;
+    onChange: (value: number) => void;
+    icon: ReactNode;
+    accent: string;
+    unit?: string;
+    ariaValueText?: string;
+    disabled?: boolean;
+  }> = [
+    {
+      id: 'quick-settings-brightness',
+      label: 'Brightness',
+      description: 'Tune the simulated display glow.',
+      value: brightness,
+      onChange: (value) => setBrightness(Math.min(100, Math.max(0, value))),
+      icon: <SunIcon />,
+      accent: 'from-sky-400 via-sky-500 to-transparent',
+      unit: '%',
+      ariaValueText: `${brightness}% brightness`,
+    },
+    {
+      id: 'quick-settings-volume',
+      label: 'Master volume',
+      description: sound ? 'Adjust feedback alerts.' : 'Sound is muted — enable it above to hear alerts.',
+      value: volume,
+      onChange: (value) => setVolume(Math.min(100, Math.max(0, value))),
+      icon: <VolumeIcon muted={!sound} />,
+      accent: sound
+        ? 'from-emerald-400 via-emerald-500 to-transparent'
+        : 'from-slate-400 via-slate-500 to-transparent',
+      unit: '%',
+      ariaValueText: sound ? `${volume}% volume` : 'Muted',
+      disabled: !sound,
     },
   ];
 
@@ -187,6 +274,96 @@ const QuickSettings = ({ open }: Props) => {
               </button>
             );
           })}
+        </div>
+      </section>
+
+      <section
+        aria-label="Device controls"
+        className="mt-4 space-y-3 rounded-xl border border-white/5 bg-white/5 p-3 shadow-inner"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-white/80">Device</span>
+          <span className="text-[10px] uppercase tracking-[0.2em] text-white/50">Fine tune</span>
+        </div>
+        <div className="space-y-3">
+          {sliderControls.map(
+            ({
+              id,
+              label,
+              description,
+              value,
+              onChange,
+              icon,
+              accent,
+              unit = '',
+              ariaValueText,
+              disabled,
+            }) => {
+              const labelId = `${id}-label`;
+              const descriptionId = `${id}-description`;
+              return (
+                <div
+                  key={id}
+                  className={`group flex items-start gap-3 rounded-lg border border-white/5 bg-white/5 p-3 transition duration-150 hover:border-white/15 hover:bg-white/10 ${
+                    disabled ? 'opacity-70' : ''
+                  }`}
+                aria-disabled={disabled}
+              >
+                <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/80">
+                  <span
+                    className={`absolute inset-0 rounded-xl bg-gradient-to-br ${accent} opacity-0 transition-opacity duration-200 group-hover:opacity-100`}
+                    aria-hidden
+                  />
+                  <span className="relative text-lg" aria-hidden>
+                    {icon}
+                  </span>
+                </span>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between gap-2 text-xs text-white/70">
+                    <div className="flex flex-col">
+                      <span id={labelId} className="font-semibold text-white">
+                        {label}
+                      </span>
+                      <span id={descriptionId}>{description}</span>
+                    </div>
+                    <span className="font-semibold text-white/80">
+                      {value}
+                      {unit}
+                    </span>
+                  </div>
+                  <div className="relative mt-3 h-2 w-full overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${
+                        disabled
+                          ? 'from-white/60 via-white/40 to-transparent'
+                          : 'from-white via-white/70 to-transparent'
+                      }`}
+                      style={{ width: `${value}%` }}
+                      aria-hidden
+                    />
+                    <input
+                      id={id}
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={value}
+                      onChange={(event) => onChange(Number(event.target.value))}
+                      className="relative h-2 w-full cursor-pointer appearance-none bg-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                      tabIndex={focusableTabIndex}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={value}
+                      aria-valuetext={ariaValueText}
+                      aria-labelledby={labelId}
+                      aria-describedby={descriptionId}
+                      disabled={disabled}
+                    />
+                  </div>
+                </div>
+              </div>
+              );
+            },
+          )}
         </div>
       </section>
 
@@ -349,6 +526,61 @@ const MotionIcon = () => (
       strokeLinecap="round"
       strokeLinejoin="round"
     />
+  </svg>
+);
+
+const FocusIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="text-white"
+  >
+    <path
+      d="M4 12H2m10-8V2m8 10h2m-10 8v2M7 12a5 5 0 1 0 10 0 5 5 0 0 0-10 0Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const VolumeIcon = ({ muted }: { muted: boolean }) => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="text-white"
+  >
+    <path
+      d="M6 9.5v5h2.5l3.5 3V6.5l-3.5 3H6Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    {muted ? (
+      <path
+        d="m16 15 3 3m0-3-3 3"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    ) : (
+      <path
+        d="M16.5 9a3 3 0 0 1 0 6M18.5 6a6 6 0 0 1 0 12"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    )}
   </svg>
 );
 
