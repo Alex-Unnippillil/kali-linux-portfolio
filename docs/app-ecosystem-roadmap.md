@@ -92,7 +92,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | nmap-nse | Nmap NSE | Security simulations pod | **In progress** – simulator backlog | Script outputs |
 | openvas | OpenVAS | Security simulations pod | **In progress** – simulator backlog | Scan report fixtures |
 | reconng | Recon-ng | Security simulations pod | **In progress** – simulator backlog | Recon dataset |
-| kismet.jsx | Kismet | Security simulations pod | **In progress** – simulator backlog | Wireless fixtures |
+| kismet.jsx | Kismet | Security simulations pod | **Beta** – fixture dataset with channel/device filters behind Lab Mode | Wireless fixtures, lab mode flag |
 | security-tools | Security Tools | Security simulations pod | **Needs polish** – ensure catalog UX & lab-mode flag | Tool registry |
 
 ### Games & Interactive Experiences
