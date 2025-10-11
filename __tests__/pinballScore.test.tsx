@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import React from "react";
 import Pinball from "../apps/pinball";
 
@@ -165,7 +165,10 @@ describe("Pinball ball lifecycle", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/game over/i)).toBeInTheDocument();
+      const banner = screen.getByTestId("pinball-status-banner");
+      expect(
+        within(banner).getByText(/Hit reset to start a new run/i),
+      ).toBeInTheDocument();
     });
 
     expect(screen.getByRole("button", { name: /launch ball/i })).toBeDisabled();
