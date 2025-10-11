@@ -13,7 +13,12 @@ import {
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
-import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET, WINDOW_TOP_INSET } from '../../utils/uiConstants';
+import {
+    DESKTOP_TOP_PADDING,
+    SNAP_BOTTOM_INSET,
+    SNAP_TOP_OFFSET,
+    WINDOW_TOP_INSET,
+} from '../../utils/uiConstants';
 
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
@@ -44,9 +49,10 @@ const getSnapLabel = (position) => {
 };
 
 const computeSnapRegions = (viewportWidth, viewportHeight, topInset = DEFAULT_WINDOW_TOP_OFFSET) => {
-    const normalizedTopInset = typeof topInset === 'number'
-        ? Math.max(topInset, DESKTOP_TOP_PADDING)
+    const baseTopInset = typeof topInset === 'number'
+        ? topInset
         : DEFAULT_WINDOW_TOP_OFFSET;
+    const normalizedTopInset = Math.max(baseTopInset, SNAP_TOP_OFFSET);
     const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
     const availableHeight = Math.max(0, viewportHeight - normalizedTopInset - SNAP_BOTTOM_INSET - safeBottom);
     const halfWidth = Math.max(viewportWidth / 2, 0);
@@ -76,9 +82,10 @@ export class Window extends Component {
         this.id = null;
         const isPortrait =
             typeof window !== "undefined" && window.innerHeight > window.innerWidth;
-        const initialTopInset = typeof window !== 'undefined'
+        const measuredTopInset = typeof window !== 'undefined'
             ? measureWindowTopOffset()
             : DEFAULT_WINDOW_TOP_OFFSET;
+        const initialTopInset = Math.max(measuredTopInset, SNAP_TOP_OFFSET);
         this.startX =
             props.initialX ??
             (isPortrait ? window.innerWidth * 0.05 : 60);
@@ -191,9 +198,10 @@ export class Window extends Component {
         const viewportWidth = hasWindow
             ? (visualViewport?.width ?? window.innerWidth)
             : 0;
-        const topInset = hasWindow
+        const measuredTopInset = hasWindow
             ? measureWindowTopOffset()
             : DEFAULT_WINDOW_TOP_OFFSET;
+        const topInset = Math.max(measuredTopInset, SNAP_TOP_OFFSET);
         const windowHeightPx = viewportHeight * (this.state.height / 100.0);
         const windowWidthPx = viewportWidth * (this.state.width / 100.0);
         const safeAreaBottom = Math.max(0, measureSafeAreaInset('bottom'));
@@ -390,7 +398,8 @@ export class Window extends Component {
         const node = this.getWindowNode();
         if (!node) return;
         const rect = node.getBoundingClientRect();
-        const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const storedTopInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const topInset = Math.max(storedTopInset, SNAP_TOP_OFFSET);
         const snappedX = this.snapToGrid(rect.x, 'x');
         const relativeY = rect.y - topInset;
         const snappedRelativeY = this.snapToGrid(relativeY, 'y');
@@ -439,7 +448,8 @@ export class Window extends Component {
         this.focusWindow();
         const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
         const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
-        const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const storedTopInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const topInset = Math.max(storedTopInset, SNAP_TOP_OFFSET);
         if (!viewportWidth || !viewportHeight) return;
         const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset);
         const region = regions[position];
@@ -489,7 +499,8 @@ export class Window extends Component {
 
         const horizontalThreshold = computeEdgeThreshold(viewportWidth);
         const verticalThreshold = computeEdgeThreshold(viewportHeight);
-        const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const storedTopInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const topInset = Math.max(storedTopInset, SNAP_TOP_OFFSET);
         const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset);
 
         const nearTop = rect.top <= topInset + verticalThreshold;
@@ -644,7 +655,8 @@ export class Window extends Component {
             this.setWinowsPosition();
             // translate window to maximize position
             const viewportHeight = window.innerHeight;
-            const topOffset = measureWindowTopOffset();
+            const measuredTopOffset = measureWindowTopOffset();
+            const topOffset = Math.max(measuredTopOffset, SNAP_TOP_OFFSET);
             const availableHeight = Math.max(
                 0,
                 viewportHeight - topOffset - SNAP_BOTTOM_INSET - Math.max(0, measureSafeAreaInset('bottom')),

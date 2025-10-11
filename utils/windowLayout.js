@@ -1,4 +1,4 @@
-import { NAVBAR_HEIGHT, SNAP_BOTTOM_INSET } from './uiConstants';
+import { NAVBAR_HEIGHT, SNAP_BOTTOM_INSET, SNAP_TOP_OFFSET } from './uiConstants';
 
 const NAVBAR_SELECTOR = '.main-navbar-vp';
 const NAVBAR_VERTICAL_PADDING = 10; // 0.375rem top + 0.25rem bottom
@@ -45,7 +45,10 @@ export const measureSafeAreaInset = (side) => {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 };
 
-export const DEFAULT_WINDOW_TOP_OFFSET = DEFAULT_NAVBAR_HEIGHT + WINDOW_TOP_MARGIN;
+export const DEFAULT_WINDOW_TOP_OFFSET = Math.max(
+  DEFAULT_NAVBAR_HEIGHT + WINDOW_TOP_MARGIN,
+  SNAP_TOP_OFFSET,
+);
 
 export const measureWindowTopOffset = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -59,15 +62,17 @@ export const measureWindowTopOffset = () => {
 
   const { height } = navbar.getBoundingClientRect();
   const measured = Number.isFinite(height) ? Math.ceil(height) : DEFAULT_NAVBAR_HEIGHT;
-  return Math.max(measured + WINDOW_TOP_MARGIN, DEFAULT_WINDOW_TOP_OFFSET);
+  const computedOffset = measured + WINDOW_TOP_MARGIN;
+  return Math.max(computedOffset, SNAP_TOP_OFFSET);
 };
 
 export const clampWindowTopPosition = (value, topOffset) => {
   const safeOffset = typeof topOffset === 'number' ? topOffset : measureWindowTopOffset();
+  const normalizedOffset = Math.max(safeOffset, SNAP_TOP_OFFSET);
   if (typeof value !== 'number' || Number.isNaN(value)) {
-    return safeOffset;
+    return normalizedOffset;
   }
-  return Math.max(value, safeOffset);
+  return Math.max(value, normalizedOffset);
 };
 
 const parseDimension = (value) => {
@@ -103,9 +108,10 @@ export const clampWindowPositionWithinViewport = (
 
   const viewportWidth = getViewportDimension(options.viewportWidth, 'innerWidth');
   const viewportHeight = getViewportDimension(options.viewportHeight, 'innerHeight');
-  const topOffset = typeof options.topOffset === 'number'
+  const rawTopOffset = typeof options.topOffset === 'number'
     ? options.topOffset
     : measureWindowTopOffset();
+  const topOffset = Math.max(rawTopOffset, SNAP_TOP_OFFSET);
   const bottomInset = typeof options.bottomInset === 'number'
     ? Math.max(options.bottomInset, 0)
     : Math.max(0, measureSafeAreaInset('bottom'));

@@ -2,7 +2,7 @@ import React, { act } from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import Window from '../components/desktop/Window';
 import windowStyles from '../components/base/window.module.css';
-import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET } from '../utils/uiConstants';
+import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET, SNAP_TOP_OFFSET } from '../utils/uiConstants';
 import { measureSafeAreaInset, measureWindowTopOffset } from '../utils/windowLayout';
 
 jest.mock('../utils/windowLayout', () => {
@@ -503,6 +503,48 @@ describe('Window snapping finalize and release', () => {
     expect(winEl.style.transform).toBe(`translate(0px, ${topSnapOffset}px)`);
   });
 
+  it('respects the navbar offset when snapping to the top with a small measured inset', () => {
+    setViewport(1280, 800);
+    measureWindowTopOffsetMock.mockReturnValue(Math.max(SNAP_TOP_OFFSET - 12, 0));
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 200,
+      top: 4,
+      right: 300,
+      bottom: 104,
+      width: 100,
+      height: 100,
+      x: 200,
+      y: 4,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(ref.current!.state.snapped).toBe('top');
+    const expectedOffset = SNAP_TOP_OFFSET - DESKTOP_TOP_PADDING;
+    expect(winEl.style.transform).toBe(`translate(0px, ${expectedOffset}px)`);
+  });
+
   it('snaps window on drag stop near the top-left corner', () => {
     setViewport(1440, 900);
     const ref = React.createRef<any>();
@@ -880,7 +922,11 @@ describe('Window viewport constraints', () => {
 
     const state = ref.current!.state;
     expect(state.parentSize.width).toBeCloseTo(320);
-    expect(state.parentSize.height).toBeCloseTo(13);
+    const expectedHeight = Math.max(
+      700 - state.safeAreaTop - SNAP_BOTTOM_INSET - Math.max(0, measureSafeAreaInset('bottom')) - (700 * (state.height / 100)),
+      0,
+    );
+    expect(state.parentSize.height).toBeCloseTo(expectedHeight);
     expect(state.safeAreaTop).toBe(DESKTOP_TOP_PADDING);
   });
 });
