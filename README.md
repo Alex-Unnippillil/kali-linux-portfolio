@@ -359,6 +359,7 @@ CSP whitelists hosts such as `*.twitter.com`, `cdn.jsdelivr.net`, `cdnjs.cloudfl
 | Blank app grid after static export | Ensure `NEXT_PUBLIC_STATIC_EXPORT=true` and that apps depending on `/api/*` are behind feature flags or demo data fallbacks. |
 | Service worker ignores new assets | Clear site data or bump the cache version in the PWA config. |
 | Gamepad input not detected | Confirm the browser supports `navigator.getGamepads()` and update bindings in `components/apps/Games/common/input-remap`. |
+| Screen Recorder keeps asking for permissions | The app shows explicit states when access is requested or denied. Re-run the recording, choose a screen/window, and approve the prompt. If MediaRecorder is missing, switch to a Chromium-based browser or use the download flow instead of IndexedDB storage. |
 | Analytics not reporting | Verify `NEXT_PUBLIC_ENABLE_ANALYTICS` is `true`, confirm GA scripts load, and check ad blockers. |
 | External embeds refuse to load | The remote site may send `X-Frame-Options` or restrictive CSP headers. Provide alternative content or documentation in-app. |
 
