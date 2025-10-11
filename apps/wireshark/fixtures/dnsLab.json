@@ -1,0 +1,60 @@
+[
+  {
+    "timestamp": "1686176645.000321",
+    "src": "10.0.0.10",
+    "dest": "8.8.8.8",
+    "sport": 53321,
+    "dport": 53,
+    "protocol": 17,
+    "info": "Standard query 0x1a2b A www.example.com",
+    "layers": {
+      "eth": {
+        "src": "00:16:3e:7f:8a:6b",
+        "dest": "00:16:3e:7f:8a:6c",
+        "type": "IPv4"
+      },
+      "ip": {
+        "src": "10.0.0.10",
+        "dest": "8.8.8.8",
+        "ttl": 64
+      },
+      "udp": { "sport": 53321, "dport": 53 },
+      "dns": {
+        "id": "0x1a2b",
+        "opcode": "Query",
+        "questions": ["www.example.com A"],
+        "answers": []
+      }
+    },
+    "dataHex": "00163e7f8a6b00163e7f8a6c0800450000311c4940004011b1cd0a00000a080808080d1d0035001d00000100000000000103777777076578616d706c6503636f6d0000010001"
+  },
+  {
+    "timestamp": "1686176645.004512",
+    "src": "8.8.8.8",
+    "dest": "10.0.0.10",
+    "sport": 53,
+    "dport": 53321,
+    "protocol": 17,
+    "info": "Standard query response 0x1a2b A www.example.com A 93.184.216.34",
+    "layers": {
+      "eth": {
+        "src": "00:16:3e:7f:8a:6c",
+        "dest": "00:16:3e:7f:8a:6b",
+        "type": "IPv4"
+      },
+      "ip": {
+        "src": "8.8.8.8",
+        "dest": "10.0.0.10",
+        "ttl": 57
+      },
+      "udp": { "sport": 53, "dport": 53321 },
+      "dns": {
+        "id": "0x1a2b",
+        "opcode": "Response",
+        "questions": ["www.example.com A"],
+        "answers": ["www.example.com A 93.184.216.34"]
+      }
+    },
+    "dataHex": "00163e7f8a6c00163e7f8a6b08004500003c3c1840003811a985080808080a00000a00350d1d002800000100000001000003777777076578616d706c6503636f6d0000010001c00c000100010000003c00045db8d822"
+  }
+]

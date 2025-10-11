@@ -32,6 +32,13 @@ export default function LabMode({ children }: Props) {
     }
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(
+      new CustomEvent('lab-mode-changed', { detail: { enabled } })
+    );
+  }, [enabled]);
+
   const toggle = () => {
     const next = !enabled;
     setEnabled(next);
@@ -68,12 +75,12 @@ export default function LabMode({ children }: Props) {
       const next = !prev;
       try {
         localStorage.setItem('lab-mode:auto', String(next));
-        if (next) {
-          setEnabled(true);
-          if (persistChoice) {
-            localStorage.setItem('lab-mode', 'true');
+          if (next) {
+            setEnabled(true);
+            if (persistChoice) {
+              localStorage.setItem('lab-mode', 'true');
+            }
           }
-        }
       } catch {
         /* ignore */
       }

@@ -58,7 +58,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | App ID | Display Name | Owner | Status | Key Dependencies / Notes |
 | --- | --- | --- | --- | --- |
 | nikto | Nikto | Security simulations pod | **In progress** – load canned outputs and lab banner | JSON fixtures, lab mode flag |
-| wireshark | Wireshark | Security simulations pod | **In progress** – simulator backlog | Packet capture fixtures |
+| wireshark | Wireshark | Security simulations pod | **Shipped** – fixture-driven lab with filter explainers | Packet capture fixtures, lab gating |
 | ble-sensor | BLE Sensor | Security simulations pod | **Needs polish** – finalize simulator UX and datasets | BLE datasets |
 | dsniff | dsniff | Security simulations pod | **In progress** – command builder and sample outputs | Command templates |
 | beef | BeEF | Security simulations pod | **In progress** – simulator backlog | Browser exploit fixtures |
