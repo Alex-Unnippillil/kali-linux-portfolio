@@ -2,7 +2,7 @@ import React, { act } from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import Window from '../components/desktop/Window';
 import windowStyles from '../components/base/window.module.css';
-import { DESKTOP_TOP_PADDING } from '../utils/uiConstants';
+import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET } from '../utils/uiConstants';
 import {
   DEFAULT_SNAP_BOTTOM_INSET,
   measureSafeAreaInset,
@@ -34,6 +34,16 @@ const computeAvailableHeightPx = () => {
 const computeSnappedHeightPercent = () => (computeAvailableHeightPx() / window.innerHeight) * 100;
 
 const computeQuarterHeightPercent = () => computeSnappedHeightPercent() / 2;
+
+const computeLeftSnapTestTop = () => {
+  const available = computeAvailableHeightPx();
+  const offset = DESKTOP_TOP_PADDING;
+  const preferred = offset + available * 0.75;
+  const upperBound = window.innerHeight - 120;
+  const lowerBound = offset + 16;
+  const clamped = Math.min(Math.max(preferred, lowerBound), upperBound);
+  return Math.round(clamped);
+};
 
 const getSnapOffsetTop = () => measureWindowTopOffset() - DESKTOP_TOP_PADDING;
 
@@ -398,15 +408,16 @@ describe('Window snapping finalize and release', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
+    const leftSnapTop = computeLeftSnapTestTop();
     winEl.getBoundingClientRect = () => ({
       left: 5,
-      top: 120,
+      top: leftSnapTop,
       right: 105,
-      bottom: 220,
+      bottom: leftSnapTop + 100,
       width: 100,
       height: 100,
       x: 5,
-      y: 120,
+      y: leftSnapTop,
       toJSON: () => {}
     });
 
@@ -617,15 +628,16 @@ describe('Window snapping finalize and release', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
+    const leftSnapTop = computeLeftSnapTestTop();
     winEl.getBoundingClientRect = () => ({
       left: 5,
-      top: 120,
+      top: leftSnapTop,
       right: 105,
-      bottom: 220,
+      bottom: leftSnapTop + 100,
       width: 100,
       height: 100,
       x: 5,
-      y: 120,
+      y: leftSnapTop,
       toJSON: () => {}
     });
 
