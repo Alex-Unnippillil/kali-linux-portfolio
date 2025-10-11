@@ -272,11 +272,15 @@ export function Settings() {
                         await resetSettings();
                         setAccent(defaults.accent);
                         setWallpaper(defaults.wallpaper);
+                        setUseKaliWallpaper(defaults.useKaliWallpaper);
                         setDensity(defaults.density);
                         setReducedMotion(defaults.reducedMotion);
                         setLargeHitAreas(defaults.largeHitAreas);
                         setFontScale(defaults.fontScale);
                         setHighContrast(defaults.highContrast);
+                        setPongSpin(defaults.pongSpin);
+                        setAllowNetwork(defaults.allowNetwork);
+                        setHaptics(defaults.haptics);
                         setTheme('default');
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
@@ -297,9 +301,13 @@ export function Settings() {
                         const parsed = JSON.parse(text);
                         if (parsed.accent !== undefined) setAccent(parsed.accent);
                         if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
+                        if (parsed.useKaliWallpaper !== undefined) setUseKaliWallpaper(parsed.useKaliWallpaper);
                         if (parsed.density !== undefined) setDensity(parsed.density);
                         if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
                         if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
+                        if (parsed.pongSpin !== undefined) setPongSpin(parsed.pongSpin);
+                        if (parsed.allowNetwork !== undefined) setAllowNetwork(parsed.allowNetwork);
+                        if (parsed.haptics !== undefined) setHaptics(parsed.haptics);
                         if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
                         if (parsed.theme !== undefined) { setTheme(parsed.theme); }
                     } catch (err) {
