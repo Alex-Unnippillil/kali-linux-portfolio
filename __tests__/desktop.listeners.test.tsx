@@ -1,31 +1,109 @@
 import React from 'react';
-import { render } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { act } from 'react';
 import { Desktop } from '../components/screen/desktop';
+
+jest.mock('next/image', () => {
+  function MockNextImage({ src, alt, ...rest }: any) {
+    return <img src={src} alt={alt} {...rest} />;
+  }
+  MockNextImage.displayName = 'MockNextImage';
+  return {
+    __esModule: true,
+    default: MockNextImage,
+  };
+});
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('html-to-image', () => ({ toPng: jest.fn().mockResolvedValue('data:image/png;base64,') }));
-jest.mock('../components/util-components/background-image', () => () => <div data-testid="background" />);
-jest.mock('../components/base/window', () => () => <div data-testid="window" />);
-jest.mock('../components/base/ubuntu_app', () => () => <div data-testid="ubuntu-app" />);
-jest.mock('../components/screen/all-applications', () => () => <div data-testid="all-apps" />);
-jest.mock('../components/screen/shortcut-selector', () => () => <div data-testid="shortcut-selector" />);
-jest.mock('../components/screen/window-switcher', () => () => <div data-testid="window-switcher" />);
-jest.mock('../components/context-menus/desktop-menu', () => ({
-  __esModule: true,
-  default: () => <div data-testid="desktop-menu" />,
-}));
-jest.mock('../components/context-menus/default', () => ({
-  __esModule: true,
-  default: () => <div data-testid="default-menu" />,
-}));
-jest.mock('../components/context-menus/app-menu', () => ({
-  __esModule: true,
-  default: () => <div data-testid="app-menu" />,
-}));
-jest.mock('../components/context-menus/taskbar-menu', () => ({
-  __esModule: true,
-  default: () => <div data-testid="taskbar-menu" />,
-}));
+function createMockComponent(testId: string, displayName: string) {
+  function MockComponent() {
+    return <div data-testid={testId} />;
+  }
+  MockComponent.displayName = displayName;
+  return MockComponent;
+}
+
+jest.mock('../components/base/window', () => {
+  const MockWindow = createMockComponent('window', 'MockWindow');
+  function MockWindowTopBar({ title }: { title: string }) {
+    return (
+      <div data-testid="window-top-bar" role="presentation">
+        {title}
+      </div>
+    );
+  }
+  MockWindowTopBar.displayName = 'MockWindowTopBar';
+  function MockWindowEditButtons({ minimize, maximize, close, id, allowMaximize, isMaximised }: any) {
+    return (
+      <div data-testid={`window-controls-${id}`}>
+        <button type="button" aria-label="Window minimize" onClick={minimize}>
+          minimize
+        </button>
+        {allowMaximize !== false && (
+          <button type="button" aria-label={isMaximised ? 'Window restore' : 'Window maximize'} onClick={maximize}>
+            maximize
+          </button>
+        )}
+        <button type="button" aria-label="Window close" onClick={close}>
+          close
+        </button>
+      </div>
+    );
+  }
+  MockWindowEditButtons.displayName = 'MockWindowEditButtons';
+  return {
+    __esModule: true,
+    default: MockWindow,
+    WindowTopBar: MockWindowTopBar,
+    WindowEditButtons: MockWindowEditButtons,
+  };
+});
+
+jest.mock('../components/util-components/background-image', () => {
+  const MockBackgroundImage = createMockComponent('background', 'MockBackgroundImage');
+  return { __esModule: true, default: MockBackgroundImage };
+});
+
+jest.mock('../components/base/ubuntu_app', () => {
+  const MockUbuntuApp = createMockComponent('ubuntu-app', 'MockUbuntuApp');
+  return { __esModule: true, default: MockUbuntuApp };
+});
+
+jest.mock('../components/screen/all-applications', () => {
+  const MockAllApps = createMockComponent('all-apps', 'MockAllApps');
+  return { __esModule: true, default: MockAllApps };
+});
+
+jest.mock('../components/screen/shortcut-selector', () => {
+  const MockShortcutSelector = createMockComponent('shortcut-selector', 'MockShortcutSelector');
+  return { __esModule: true, default: MockShortcutSelector };
+});
+
+jest.mock('../components/screen/window-switcher', () => {
+  const MockWindowSwitcher = createMockComponent('window-switcher', 'MockWindowSwitcher');
+  return { __esModule: true, default: MockWindowSwitcher };
+});
+
+jest.mock('../components/context-menus/desktop-menu', () => {
+  const MockDesktopMenu = createMockComponent('desktop-menu', 'MockDesktopMenu');
+  return { __esModule: true, default: MockDesktopMenu };
+});
+
+jest.mock('../components/context-menus/default', () => {
+  const MockDefaultMenu = createMockComponent('default-menu', 'MockDefaultMenu');
+  return { __esModule: true, default: MockDefaultMenu };
+});
+
+jest.mock('../components/context-menus/app-menu', () => {
+  const MockAppMenu = createMockComponent('app-menu', 'MockAppMenu');
+  return { __esModule: true, default: MockAppMenu };
+});
+
+jest.mock('../components/context-menus/taskbar-menu', () => {
+  const MockTaskbarMenu = createMockComponent('taskbar-menu', 'MockTaskbarMenu');
+  return { __esModule: true, default: MockTaskbarMenu };
+});
 jest.mock('../utils/recentStorage', () => ({ addRecentApp: jest.fn() }));
 
 describe('Desktop event listeners', () => {
@@ -69,7 +147,6 @@ describe('Desktop event listeners', () => {
         value: originalMatchMedia,
       });
     } else {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error matchMedia can be removed for the test cleanup
       delete window.matchMedia;
     }
@@ -141,9 +218,113 @@ describe('Desktop event listeners', () => {
   });
 });
 
+describe('Desktop overlay window controls', () => {
+  beforeEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('updates launcher overlay flags when window controls are used', () => {
+    jest.useFakeTimers();
+    const desktopRef = React.createRef<Desktop>();
+    render(
+      <Desktop
+        ref={desktopRef}
+        clearSession={() => {}}
+        changeBackgroundImage={() => {}}
+        bg_image_name="aurora"
+        snapEnabled
+      />
+    );
+
+    const instance = desktopRef.current!;
+    act(() => {
+      instance.openAllAppsOverlay();
+    });
+
+    const minimizeButton = screen.getByLabelText('Window minimize');
+    fireEvent.click(minimizeButton);
+    expect(instance.state.overlayWindows.launcher.minimized).toBe(true);
+
+    fireEvent.click(minimizeButton);
+    expect(instance.state.overlayWindows.launcher.minimized).toBe(false);
+
+    const maximizeButton = screen.getByLabelText('Window maximize');
+    fireEvent.click(maximizeButton);
+    expect(instance.state.overlayWindows.launcher.maximized).toBe(true);
+
+    const closeButton = screen.getByLabelText('Window close');
+    fireEvent.click(closeButton);
+    expect(instance.state.overlayWindows.launcher.open).toBe(false);
+
+    act(() => {
+      jest.runAllTimers();
+    });
+    expect(instance.state.overlayWindows.launcher.transitionState).toBe('exited');
+    jest.useRealTimers();
+  });
+
+  it('tracks shortcut selector overlay state changes from window controls', () => {
+    const desktopRef = React.createRef<Desktop>();
+    render(
+      <Desktop
+        ref={desktopRef}
+        clearSession={() => {}}
+        changeBackgroundImage={() => {}}
+        bg_image_name="aurora"
+        snapEnabled
+      />
+    );
+
+    const instance = desktopRef.current!;
+    act(() => {
+      instance.openShortcutSelector();
+    });
+
+    const minimizeButton = screen.getByLabelText('Window minimize');
+    fireEvent.click(minimizeButton);
+    expect(instance.state.overlayWindows.shortcutSelector.minimized).toBe(true);
+
+    fireEvent.click(minimizeButton);
+    expect(instance.state.overlayWindows.shortcutSelector.minimized).toBe(false);
+
+    const closeButton = screen.getByLabelText('Window close');
+    fireEvent.click(closeButton);
+    expect(instance.state.overlayWindows.shortcutSelector.open).toBe(false);
+  });
+
+  it('updates window switcher overlay flags through controls', () => {
+    const desktopRef = React.createRef<Desktop>();
+    render(
+      <Desktop
+        ref={desktopRef}
+        clearSession={() => {}}
+        changeBackgroundImage={() => {}}
+        bg_image_name="aurora"
+        snapEnabled
+      />
+    );
+
+    const instance = desktopRef.current!;
+    act(() => {
+      instance.openOverlay('windowSwitcher');
+    });
+
+    const minimizeButton = screen.getByLabelText('Window minimize');
+    fireEvent.click(minimizeButton);
+    expect(instance.state.overlayWindows.windowSwitcher.minimized).toBe(true);
+
+    fireEvent.click(minimizeButton);
+    expect(instance.state.overlayWindows.windowSwitcher.minimized).toBe(false);
+
+    const closeButton = screen.getByLabelText('Window close');
+    fireEvent.click(closeButton);
+    expect(instance.state.overlayWindows.windowSwitcher.open).toBe(false);
+  });
+});
+
 describe('Desktop gesture handlers', () => {
   it('releases pointer and touch references after interactions', () => {
-    const desktop = new Desktop();
+    const desktop = new Desktop({});
     desktop.dispatchWindowCommand = jest.fn().mockReturnValue(false);
     desktop.focus = jest.fn();
     // prevent state updates from throwing warnings
