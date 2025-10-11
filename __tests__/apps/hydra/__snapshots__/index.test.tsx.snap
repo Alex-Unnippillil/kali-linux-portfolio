@@ -1,0 +1,477 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`HydraPreview layout renders the hydra workbench layout 1`] = `
+<DocumentFragment>
+  <div
+    class="min-h-screen bg-gray-950 text-white"
+  >
+    <div
+      class="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-6 py-10"
+    >
+      <header
+        class="space-y-3"
+      >
+        <p
+          class="text-sm font-semibold uppercase tracking-widest text-sky-300"
+        >
+          Hydra Simulation Lab
+        </p>
+        <h1
+          class="text-3xl font-semibold text-white sm:text-4xl"
+        >
+          Credential Testing Workbench
+        </h1>
+        <p
+          class="max-w-3xl text-sm text-gray-300 sm:text-base"
+        >
+          Explore password spraying strategies without touching a live target. Each run is a sandboxed recreation of the Hydra CLI so you can practice configuring services, wordlists, and lockout handling inside the desktop shell.
+        </p>
+      </header>
+      <div
+        class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
+      >
+        <section
+          class="space-y-4"
+        >
+          <div
+            class="flex flex-col w-full h-full"
+            tabindex="0"
+          >
+            <div
+              class="flex flex-shrink-0 items-center gap-1 bg-gray-800 text-white text-sm"
+            >
+              <div
+                class="flex-1 overflow-hidden"
+              >
+                <div
+                  aria-orientation="horizontal"
+                  class="flex overflow-x-auto scrollbar-thin scroll-smooth"
+                  role="tablist"
+                >
+                  <div
+                    aria-selected="true"
+                    class="flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none flex-shrink-0 bg-gray-700"
+                    draggable="true"
+                    role="tab"
+                    tabindex="0"
+                  >
+                    <span
+                      class="max-w-[150px]"
+                    >
+                      Run 1
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <button
+                aria-label="New Tab"
+                class="px-2 py-1 bg-gray-800 hover:bg-gray-700"
+              >
+                +
+              </button>
+            </div>
+            <div
+              class="flex-grow relative overflow-hidden"
+            >
+              <div
+                class="absolute inset-0 w-full h-full block"
+              >
+                <div
+                  class="h-full w-full p-4 bg-gray-900 text-white overflow-auto"
+                >
+                  <div
+                    class="grid grid-cols-2 gap-1.5"
+                  >
+                    <div
+                      class="col-span-2 flex gap-1.5"
+                    >
+                      <div
+                        class="flex items-center p-2 rounded border cursor-pointer text-sm bg-blue-600"
+                      >
+                        <img
+                          alt="SSH"
+                          class="w-6 h-6 mr-2"
+                          src="/themes/Yaru/apps/ssh.svg"
+                        />
+                        <span>
+                          SSH
+                        </span>
+                      </div>
+                      <div
+                        class="flex items-center p-2 rounded border cursor-pointer text-sm bg-gray-700"
+                      >
+                        <img
+                          alt="FTP"
+                          class="w-6 h-6 mr-2"
+                          src="/themes/Yaru/apps/ftp.svg"
+                        />
+                        <span>
+                          FTP
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <label
+                        class="block mb-1"
+                      >
+                        Target
+                      </label>
+                      <input
+                        class="w-full p-2 rounded text-black"
+                        placeholder="192.168.0.1"
+                        type="text"
+                        value=""
+                      />
+                    </div>
+                    <div>
+                      <label
+                        class="block mb-1"
+                      >
+                        Service
+                      </label>
+                      <select
+                        class="w-full p-2 rounded text-black"
+                      >
+                        <option
+                          value="ssh"
+                        >
+                          ssh
+                        </option>
+                        <option
+                          value="ftp"
+                        >
+                          ftp
+                        </option>
+                        <option
+                          value="http-get"
+                        >
+                          http-get
+                        </option>
+                        <option
+                          value="http-post-form"
+                        >
+                          http-post-form
+                        </option>
+                        <option
+                          value="smtp"
+                        >
+                          smtp
+                        </option>
+                      </select>
+                    </div>
+                    <div>
+                      <label
+                        class="block mb-1"
+                      >
+                        User List
+                      </label>
+                      <select
+                        class="w-full p-2 rounded text-black mb-1"
+                      />
+                      <input
+                        accept="text/plain"
+                        class="w-full p-2 rounded text-black mb-1"
+                        data-testid="user-file-input"
+                        type="file"
+                      />
+                      <ul />
+                    </div>
+                    <div>
+                      <label
+                        class="block mb-1"
+                      >
+                        Password List
+                      </label>
+                      <select
+                        class="w-full p-2 rounded text-black mb-1"
+                      />
+                      <input
+                        accept="text/plain"
+                        class="w-full p-2 rounded text-black mb-1"
+                        data-testid="pass-file-input"
+                        type="file"
+                      />
+                      <ul />
+                    </div>
+                    <div>
+                      <label
+                        class="block mb-1"
+                      >
+                        Charset
+                      </label>
+                      <input
+                        class="w-full p-2 rounded text-black"
+                        placeholder="abc123"
+                        type="text"
+                        value="abc123"
+                      />
+                    </div>
+                    <div
+                      class="col-span-2"
+                    >
+                      <label
+                        class="block mb-1"
+                      >
+                        Rule (min:max length)
+                      </label>
+                      <input
+                        class="w-full p-2 rounded text-black"
+                        placeholder="1:3"
+                        type="text"
+                        value="1:3"
+                      />
+                      <p
+                        class="mt-1 text-sm"
+                      >
+                        Candidate space: 258
+                      </p>
+                      <canvas
+                        class="bg-gray-800 mt-2 w-full"
+                        height="100"
+                        width="300"
+                      />
+                    </div>
+                    <div
+                      class="col-span-2 flex flex-wrap gap-1.5 mt-2"
+                    >
+                      <button
+                        class="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
+                        disabled=""
+                      >
+                        Run Hydra
+                      </button>
+                      <button
+                        class="px-4 py-2 bg-purple-600 rounded disabled:opacity-50"
+                      >
+                        Dry Run
+                      </button>
+                      <button
+                        class="px-4 py-2 bg-gray-700 rounded"
+                      >
+                        Save Config
+                      </button>
+                      <button
+                        class="px-4 py-2 bg-gray-700 rounded"
+                      >
+                        Copy Config
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    class="mt-4"
+                  >
+                    <div
+                      aria-hidden="true"
+                      class="flex space-x-1"
+                    >
+                      <div
+                        class="w-4 h-4 rounded bg-gray-500"
+                      />
+                      <div
+                        class="w-4 h-4 rounded bg-gray-500"
+                      />
+                      <div
+                        class="w-4 h-4 rounded bg-gray-500"
+                      />
+                      <div
+                        class="w-4 h-4 rounded bg-gray-500"
+                      />
+                      <div
+                        class="w-4 h-4 rounded bg-gray-500"
+                      />
+                      <div
+                        class="w-4 h-4 rounded bg-gray-500"
+                      />
+                      <div
+                        class="w-4 h-4 rounded bg-gray-500"
+                      />
+                      <div
+                        class="w-4 h-4 rounded bg-gray-500"
+                      />
+                      <div
+                        class="w-4 h-4 rounded bg-gray-500"
+                      />
+                      <div
+                        class="w-4 h-4 rounded bg-gray-500"
+                      />
+                    </div>
+                    <div
+                      class="text-white mt-1"
+                    >
+                      Attempt 0 of 10
+                    </div>
+                    <div
+                      class="mt-2 w-full bg-gray-700 h-2 rounded"
+                    >
+                      <div
+                        class="bg-yellow-500 h-2 rounded"
+                        data-testid="backoff-bar"
+                        style="width: 12.5%;"
+                      />
+                    </div>
+                    <div
+                      class="text-xs text-yellow-300 mt-1"
+                    >
+                      Delay: 500ms
+                    </div>
+                  </div>
+                  <div
+                    class="mt-4 flex items-center gap-2"
+                  >
+                    <img
+                      alt="credentials"
+                      class="w-5 h-5"
+                      src="/themes/Yaru/status/changes-prevent-symbolic.svg"
+                    />
+                    <div
+                      class="flex-1 bg-gray-700 h-2 rounded"
+                    >
+                      <div
+                        class="bg-green-500 h-2 rounded"
+                        style="width: 0%;"
+                      />
+                    </div>
+                  </div>
+                  <p
+                    class="mt-2 text-sm text-yellow-300"
+                  >
+                    This demo slows after 5 tries to mimic password spray throttling and stops at 10 attempts to illustrate account lockout.
+                  </p>
+                  <p
+                    class="mt-4 text-sm text-gray-300"
+                  >
+                    Common password lists succeed because many users choose simple, predictable passwords or reuse credentials across sites. These habits allow attackers to guess passwords without exploring the full candidate space.
+                  </p>
+                  <div
+                    aria-live="polite"
+                    class="sr-only"
+                    role="status"
+                  >
+                    Attempt 0 of 0
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+            class="rounded-lg border border-sky-500/30 bg-sky-900/40 p-4 text-sm text-sky-100"
+            role="note"
+          >
+            <h2
+              class="text-xs font-semibold uppercase tracking-widest text-sky-200"
+            >
+              Hydra run tabs
+            </h2>
+            <p
+              class="mt-2 text-sky-100/90"
+            >
+              Every tab spins up a simulated Hydra session with canned targets and output, giving you a safe sandbox for experimenting with credential combinations and pause/resume flows.
+            </p>
+            <a
+              class="mt-3 inline-flex items-center text-xs font-medium text-sky-200 underline hover:text-sky-100"
+              href="/docs/app-ecosystem-roadmap.md"
+              rel="noreferrer"
+              target="_blank"
+            >
+              Simulation scope & fixtures (docs/app-ecosystem-roadmap.md)
+            </a>
+          </div>
+        </section>
+        <aside
+          class="space-y-4"
+        >
+          <div
+            class="p-4 bg-gray-800 rounded mt-0"
+          >
+            <h2
+              class="text-xl mb-4"
+            >
+              Strategy Trainer
+            </h2>
+            <div
+              class="mb-4"
+            >
+              <label
+                class="block mb-1"
+                for="hydra-strategy-parallelism"
+                id="hydra-strategy-parallelism-label"
+              >
+                Parallelism: 4
+              </label>
+              <input
+                aria-labelledby="hydra-strategy-parallelism-label"
+                class="w-full"
+                id="hydra-strategy-parallelism"
+                max="16"
+                min="1"
+                type="range"
+                value="4"
+              />
+            </div>
+            <div
+              class="mb-4"
+            >
+              <label
+                class="block mb-1"
+                for="hydra-strategy-lockout"
+                id="hydra-strategy-lockout-label"
+              >
+                Lockout Threshold: 10
+              </label>
+              <input
+                aria-labelledby="hydra-strategy-lockout-label"
+                class="w-full"
+                id="hydra-strategy-lockout"
+                max="50"
+                min="1"
+                type="range"
+                value="10"
+              />
+            </div>
+            <svg
+              class="bg-black"
+              height="150"
+              width="300"
+            >
+              <polyline
+                fill="none"
+                points="0,150 15,122.17593749999997 30,99.51306469335934 45,89.81054088575678 60,89.81054088575678 75,89.81054088575678 90,89.81054088575678 105,89.81054088575678 120,89.81054088575678 135,89.81054088575678 150,89.81054088575678 165,89.81054088575678 180,89.81054088575678 195,89.81054088575678 210,89.81054088575678 225,89.81054088575678 240,89.81054088575678 255,89.81054088575678 270,89.81054088575678 285,89.81054088575678 300,89.81054088575678"
+                stroke="lime"
+                stroke-width="2"
+              />
+            </svg>
+            <p
+              class="mt-2 text-sm"
+            >
+              Estimated success chance: 40.1%
+            </p>
+          </div>
+          <div
+            class="rounded-lg border border-purple-500/30 bg-purple-900/40 p-4 text-sm text-purple-100"
+            role="note"
+          >
+            <h2
+              class="text-xs font-semibold uppercase tracking-widest text-purple-200"
+            >
+              Strategy trainer
+            </h2>
+            <p
+              class="mt-2 text-purple-100/90"
+            >
+              Adjust parallelism and lockout thresholds to see how defensive controls change your odds of success over time. It models a simplified probability curve instead of talking to real services.
+            </p>
+            <a
+              class="mt-3 inline-flex items-center text-xs font-medium text-purple-200 underline hover:text-purple-100"
+              href="/docs/tasks.md"
+              rel="noreferrer"
+              target="_blank"
+            >
+              Lab planning checklist (docs/tasks.md)
+            </a>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+</DocumentFragment>
+`;
