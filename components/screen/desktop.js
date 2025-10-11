@@ -56,6 +56,7 @@ export class Desktop extends Component {
         };
         const initialTheme = this.normalizeTheme(props.desktopTheme);
         this.workspaceThemes = Array.from({ length: this.workspaceCount }, () => ({ ...initialTheme }));
+        this.workspaceThemeStorageKey = 'desktop_workspace_themes';
         this.initFavourite = {};
         this.allWindowClosed = false;
 
@@ -236,7 +237,59 @@ export class Desktop extends Component {
             this.workspaceThemes = [];
         }
         this.workspaceThemes[index] = this.normalizeTheme(theme);
+        this.persistWorkspaceThemes();
     }
+
+    persistWorkspaceThemes = () => {
+        if (!safeLocalStorage || !this.workspaceThemes) {
+            return;
+        }
+        try {
+            const payload = JSON.stringify(
+                this.workspaceThemes.map((theme) => this.normalizeTheme(theme))
+            );
+            safeLocalStorage.setItem(this.workspaceThemeStorageKey, payload);
+        } catch (e) {
+            // ignore serialization errors
+        }
+    };
+
+    loadWorkspaceThemesFromStorage = () => {
+        if (!safeLocalStorage) {
+            return null;
+        }
+        try {
+            const stored = safeLocalStorage.getItem(this.workspaceThemeStorageKey);
+            if (!stored) {
+                return null;
+            }
+            const parsed = JSON.parse(stored);
+            if (!Array.isArray(parsed)) {
+                return null;
+            }
+            return parsed.map((theme) => this.normalizeTheme(theme));
+        } catch (e) {
+            return null;
+        }
+    };
+
+    hydrateWorkspaceThemesFromStorage = () => {
+        const storedThemes = this.loadWorkspaceThemesFromStorage();
+        if (!storedThemes || !storedThemes.length) {
+            return;
+        }
+        const fallbackTheme = this.normalizeTheme(this.props.desktopTheme);
+        const hydratedThemes = Array.from({ length: this.workspaceCount }, (_, index) => {
+            const storedTheme = storedThemes[index];
+            return storedTheme ? this.normalizeTheme(storedTheme) : { ...fallbackTheme };
+        });
+        this.workspaceThemes = hydratedThemes;
+        const activeTheme = this.workspaceThemes[this.state.activeWorkspace] || fallbackTheme;
+        if (!this.themesAreEqual(this.state.currentTheme, activeTheme)) {
+            this.setState({ currentTheme: activeTheme });
+        }
+        this.defaultThemeConfig = { ...this.defaultThemeConfig, ...activeTheme };
+    };
     getIconSizePresetConfig = (preset) => {
         if (preset && this.iconSizePresets && this.iconSizePresets[preset]) {
             return this.iconSizePresets[preset];
@@ -1761,6 +1814,8 @@ export class Desktop extends Component {
     };
 
     componentDidMount() {
+        this.hydrateWorkspaceThemesFromStorage();
+
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
