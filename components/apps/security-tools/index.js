@@ -15,11 +15,50 @@ const tabs = [
   { id: 'fixtures', label: 'Fixtures' },
 ];
 
+const catalogMeta = {
+  repeater: {
+    status: 'Stable simulation',
+    dataset: 'Generated commands – no live targets',
+    warning: 'Commands are never sent; copy output if you want to study syntax.',
+  },
+  suricata: {
+    status: 'Fixture demo',
+    dataset: 'fixtures/suricata.json (local sample alerts)',
+    warning: 'Logs never leave the browser. Use them to rehearse alert triage.',
+  },
+  zeek: {
+    status: 'Fixture demo',
+    dataset: 'fixtures/zeek.json (local session summaries)',
+    warning: 'Packets are not captured live; review flow metadata safely.',
+  },
+  sigma: {
+    status: 'Fixture demo',
+    dataset: 'fixtures/sigma.json (static detection rules)',
+    warning: 'Rules are read-only. Adapt copies for your own lab stack.',
+  },
+  yara: {
+    status: 'Preview',
+    dataset: 'fixtures/yara_sample.txt (embedded sample file)',
+    warning: 'Pattern checks run against demo text and cannot touch the host OS.',
+  },
+  mitre: {
+    status: 'Fixture demo',
+    dataset: 'fixtures/mitre.json (ATT&CK tactics/techniques snapshot)',
+    warning: 'Navigator is informational only; no integration with live tooling.',
+  },
+  fixtures: {
+    status: 'Fixture loader',
+    dataset: 'Upload local JSON and inspect in Result Viewer (in-browser only)',
+    warning: 'Files stay in-memory; refresh clears all imported artifacts.',
+  },
+};
+
 export default function SecurityTools() {
   const [active, setActive] = useState('repeater');
   const [query, setQuery] = useState('');
   const [authorized, setAuthorized] = useState(false);
   const [fixtureData, setFixtureData] = useState([]);
+  const [acknowledged, setAcknowledged] = useState(false);
 
   // Logs, rules and fixtures
   const [suricata, setSuricata] = useState([]);
@@ -62,6 +101,24 @@ export default function SecurityTools() {
     setAuthorized(true);
   };
 
+  const toolSummary = (id) => {
+    const meta = catalogMeta[id];
+    if (!meta) return null;
+    return (
+      <section
+        className="mb-3 w-full rounded border border-white/20 bg-black/30 p-3 text-xs"
+        aria-label={`${tabs.find(t => t.id === id)?.label ?? 'Tool'} catalog summary`}
+      >
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+          <h2 className="text-sm font-semibold">Status: {meta.status}</h2>
+          <span className="rounded bg-ub-yellow px-2 py-0.5 text-[11px] font-semibold text-black">Training Lab Only</span>
+        </div>
+        <p className="mt-2 leading-snug"><span className="font-semibold">Dataset:</span> {meta.dataset}</p>
+        <p className="mt-1 text-[11px] text-ub-peach/90" role="note">{meta.warning}</p>
+      </section>
+    );
+  };
+
   // Global search results
   const lower = query.toLowerCase();
   const suricataResults = lower ? suricata.filter(log => JSON.stringify(log).toLowerCase().includes(lower)) : [];
@@ -95,8 +152,31 @@ export default function SecurityTools() {
   if (!authorized) {
     return (
       <div className="w-full h-full bg-ub-dark text-white p-4 flex flex-col items-center justify-center text-center">
-        <p className="mb-4 text-sm">
-          Security tools are for lab use only. Review{' '}
+        <p className="mb-3 text-sm font-semibold">Security simulators require an explicit acknowledgement.</p>
+        <p className="mb-3 text-xs">
+          Review the lab policies and only continue if you are in a controlled training environment. Nothing here triggers real
+          scans.
+        </p>
+        <ul className="mb-4 list-disc space-y-1 text-left text-xs">
+          <li>Outputs come from static datasets – never from production targets.</li>
+          <li>Do not paste sensitive client or production data into the fixtures.</li>
+          <li>
+            Enable Lab Mode after entering to unlock the catalog. The yellow banner controls read-only simulations.
+          </li>
+        </ul>
+        <div className="mb-4 flex items-center gap-2 text-left text-xs">
+          <input
+            id="lab-ack"
+            type="checkbox"
+            checked={acknowledged}
+            onChange={e => setAcknowledged(e.target.checked)}
+          />
+          <label htmlFor="lab-ack" className="cursor-pointer">
+            I understand the simulations are for educational use and remain isolated.
+          </label>
+        </div>
+        <p className="mb-4 text-xs">
+          Reference{' '}
           <a
             href="https://csrc.nist.gov/publications/detail/sp/800-115/final"
             target="_blank"
@@ -114,13 +194,14 @@ export default function SecurityTools() {
           >
             OWASP Testing Guide
           </a>{' '}
-          before proceeding.
+          for live engagements.
         </p>
         <button
           onClick={acceptLab}
-          className="px-2 py-1 bg-ub-green text-black text-xs rounded"
+          className="px-2 py-1 bg-ub-green text-black text-xs rounded disabled:opacity-40"
+          disabled={!acknowledged}
         >
-          Enter Lab
+          Enter Lab and continue to Lab Mode banner
         </button>
       </div>
     );
@@ -199,6 +280,7 @@ export default function SecurityTools() {
 
               {active === 'repeater' && (
                 <div>
+                  {toolSummary('repeater')}
                   <CommandBuilder
                     doc="Build a curl command. Output is copy-only and not executed."
                     build={({ target = '', opts = '' }) => `curl ${opts} ${target}`.trim()}
@@ -208,6 +290,7 @@ export default function SecurityTools() {
 
               {active === 'suricata' && (
                 <div>
+                  {toolSummary('suricata')}
                   <p className="text-xs mb-2">Sample Suricata alerts from local JSON fixture.</p>
                   {suricata.map((log, i) => (
                     <pre key={i} className="mb-1 overflow-x-auto overflow-y-hidden bg-black p-1 text-xs">
@@ -219,6 +302,7 @@ export default function SecurityTools() {
 
               {active === 'zeek' && (
                 <div>
+                  {toolSummary('zeek')}
                   <p className="text-xs mb-2">Sample Zeek logs from local JSON fixture.</p>
                   {zeek.map((log, i) => (
                     <pre key={i} className="mb-1 overflow-x-auto overflow-y-hidden bg-black p-1 text-xs">
@@ -230,6 +314,7 @@ export default function SecurityTools() {
 
               {active === 'sigma' && (
                 <div>
+                  {toolSummary('sigma')}
                   <p className="text-xs mb-2">Static Sigma rules loaded from fixture.</p>
                   {sigma.map((rule) => (
                     <div key={rule.id} className="mb-2">
@@ -244,6 +329,7 @@ export default function SecurityTools() {
 
               {active === 'yara' && (
                 <div>
+                  {toolSummary('yara')}
                   <p className="text-xs mb-2">Simplified YARA tester using sample text. Pattern matching is simulated.</p>
                   <textarea
                     value={yaraRule}
@@ -265,6 +351,7 @@ export default function SecurityTools() {
 
               {active === 'mitre' && (
                 <div>
+                  {toolSummary('mitre')}
                   <p className="text-xs mb-2">Mini MITRE ATT&CK navigator from static data.</p>
                   {mitre.tactics.map((tac) => (
                     <div key={tac.id} className="mb-2">
@@ -281,6 +368,7 @@ export default function SecurityTools() {
 
               {active === 'fixtures' && (
                 <div className="flex flex-col gap-3 lg:flex-row">
+                  {toolSummary('fixtures')}
                   <div className="w-full pr-0 lg:w-1/2 lg:pr-2">
                     <FixturesLoader onData={setFixtureData} />
                   </div>
