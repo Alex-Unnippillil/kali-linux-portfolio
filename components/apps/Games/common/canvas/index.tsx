@@ -12,30 +12,39 @@ export interface CanvasHandle {
   getInputCoords: (
     e: MouseEvent | TouchEvent
   ) => { x: number; y: number };
+  getContext: (type: '2d') => CanvasRenderingContext2D | null;
+  element: HTMLCanvasElement | null;
 }
 
-interface CanvasProps {
+interface CanvasProps extends React.CanvasHTMLAttributes<HTMLCanvasElement> {
   width: number;
   height: number;
   className?: string;
+  renderMode?: 'auto' | 'dom';
 }
 
 const Canvas = forwardRef<CanvasHandle, CanvasProps>(
-  ({ width, height, className }, ref) => {
+  ({ width, height, className, renderMode = 'auto', ...rest }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const workerRef = useRef<Worker | null>(null);
+    const usingWorkerRef = useRef(false);
 
     useEffect(() => {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
       // Prefer OffscreenCanvas with a worker when supported
-      if (typeof Worker === 'function' && hasOffscreenCanvas()) {
+      if (
+        renderMode === 'auto' &&
+        typeof Worker === 'function' &&
+        hasOffscreenCanvas()
+      ) {
         const worker = new Worker(
           new URL('../../../../../workers/game-loop.worker.ts', import.meta.url)
         );
         workerRef.current = worker;
         const offscreen = canvas.transferControlToOffscreen();
+        usingWorkerRef.current = true;
 
         const resize = () => {
           const dpr = window.devicePixelRatio || 1;
@@ -60,6 +69,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(
         return () => {
           worker.terminate();
           window.removeEventListener('resize', resize);
+          usingWorkerRef.current = false;
         };
       }
 
@@ -78,8 +88,11 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(
 
       resize();
       window.addEventListener('resize', resize);
-      return () => window.removeEventListener('resize', resize);
-    }, [width, height]);
+      return () => {
+        window.removeEventListener('resize', resize);
+        usingWorkerRef.current = false;
+      };
+    }, [width, height, renderMode]);
 
     useImperativeHandle(ref, () => ({
       getInputCoords(e) {
@@ -93,6 +106,12 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(
           y: ((clientY - rect.top) * height) / rect.height,
         };
       },
+      getContext(type: '2d') {
+        if (usingWorkerRef.current) return null;
+        const canvas = canvasRef.current;
+        return canvas ? canvas.getContext(type) : null;
+      },
+      element: canvasRef.current,
     }));
 
     return (
@@ -100,6 +119,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(
         ref={canvasRef}
         className={className}
         style={{ imageRendering: 'pixelated' }}
+        {...rest}
       />
     );
   }

@@ -6,6 +6,7 @@ import React, {
   useCallback,
   createContext,
   useContext,
+  useMemo,
 } from 'react';
 import HelpOverlay from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
@@ -43,6 +44,20 @@ const RecorderContext = createContext<RecorderContextValue>({
 
 export const useInputRecorder = () => useContext(RecorderContext);
 
+interface GameShellContextValue {
+  paused: boolean;
+  setPaused: (next: boolean) => void;
+  registerReset: (fn: (() => void) | null) => void;
+}
+
+const GameShellContext = createContext<GameShellContextValue>({
+  paused: false,
+  setPaused: () => {},
+  registerReset: () => {},
+});
+
+export const useGameShell = () => useContext(GameShellContext);
+
 const GameLayout: React.FC<GameLayoutProps> = ({
   gameId = 'unknown',
   children,
@@ -59,6 +74,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     ((input: any, index: number) => void) | undefined
   >(undefined);
   const [replaying, setReplaying] = useState(false);
+  const [resetHandler, setResetHandler] = useState<(() => void) | null>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
 
   const close = useCallback(() => setShowHelp(false), []);
@@ -110,6 +126,10 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     },
     [],
   );
+
+  const registerReset = useCallback((fn: (() => void) | null) => {
+    setResetHandler(() => (fn ? () => fn() : null));
+  }, []);
 
   const snapshot = useCallback(() => {
     const data = JSON.stringify(log, null, 2);
@@ -208,15 +228,26 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   const resume = useCallback(() => setPaused(false), []);
 
   const contextValue = { record, registerReplay };
+  const shellValue = useMemo(
+    () => ({ paused, setPaused, registerReset }),
+    [paused, registerReset],
+  );
+
+  const triggerReset = useCallback(() => {
+    if (resetHandler) {
+      resetHandler();
+    }
+  }, [resetHandler]);
 
   return (
     <RecorderContext.Provider value={contextValue}>
-      <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
-        {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
-        {paused && (
-          <div
-            className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
-            role="dialog"
+      <GameShellContext.Provider value={shellValue}>
+        <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
+          {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
+          {paused && (
+            <div
+              className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
+              role="dialog"
           aria-modal="true"
         >
           <button
@@ -236,6 +267,14 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
         >
           {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button
+          type="button"
+          onClick={triggerReset}
+          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring disabled:opacity-50"
+          disabled={!resetHandler}
+        >
+          Reset
         </button>
         <button
           type="button"
@@ -288,7 +327,8 @@ const GameLayout: React.FC<GameLayoutProps> = ({
       {editor && (
         <div className="absolute bottom-2 left-2 z-30">{editor}</div>
       )}
-      </div>
+        </div>
+      </GameShellContext.Provider>
     </RecorderContext.Provider>
   );
 };

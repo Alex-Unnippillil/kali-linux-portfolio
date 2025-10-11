@@ -1,6 +1,16 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import { Chess } from "chess.js";
 import { suggestMoves } from "../../games/chess/engine/wasmEngine";
+import GameLayout, { useGameShell } from "./GameLayout";
+import Canvas from "./Games/common/canvas";
+import useGameLoop from "./Games/common/useGameLoop";
+import useGameAudio from "../../hooks/useGameAudio";
+import {
+  loadHistory,
+  recordMatch,
+  clearHistory,
+  loadBestElo,
+} from "../../apps/chess/history";
 
 // 0x88 board representation utilities
 const EMPTY = 0;
@@ -279,16 +289,19 @@ const getBestMove = (board, side, depth) => {
   return best;
 };
 
-const playBeep = () => {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const osc = ctx.createOscillator();
-  osc.frequency.value = 400;
-  osc.connect(ctx.destination);
-  osc.start();
-  osc.stop(ctx.currentTime + 0.1);
-};
+const getInitialElo = () =>
+  typeof window === "undefined"
+    ? 1200
+    : Number(window.localStorage.getItem("chessElo") || 1200);
 
-const ChessGame = () => {
+const ChessGameInner = ({
+  elo,
+  setElo,
+  bestElo,
+  setBestElo,
+  matchHistory,
+  setMatchHistory,
+}) => {
   const canvasRef = useRef(null);
   const boardRef = useRef(createInitialBoard());
   const chessRef = useRef(new Chess());
@@ -299,18 +312,39 @@ const ChessGame = () => {
   const [cursor, setCursor] = useState(0);
   const [moves, setMoves] = useState([]);
   const [status, setStatus] = useState("Your move");
-  const [paused, setPaused] = useState(false);
-  const [sound, setSound] = useState(true);
+  const [manualPaused, setManualPaused] = useState(false);
+  const { paused: shellPaused, setPaused: setShellPaused, registerReset } =
+    useGameShell();
+  const manualPausedRef = useRef(manualPaused);
+  const shellPausedRef = useRef(shellPaused);
+  useEffect(() => {
+    manualPausedRef.current = manualPaused;
+  }, [manualPaused]);
+  useEffect(() => {
+    shellPausedRef.current = shellPaused;
+  }, [shellPaused]);
+  const audio = useGameAudio();
+  const playMoveSound = useCallback(() => {
+    const ctx = audio.context;
+    if (!ctx || audio.muted) return;
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.value = 660;
+      gain.gain.value = Math.max(0.05, audio.volume * 0.2);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.1);
+    } catch {
+      /* ignore audio errors */
+    }
+  }, [audio]);
   const [sanLog, setSanLog] = useState([]);
   const particlesRef = useRef([]);
   const [showHints, setShowHints] = useState(false);
   const [mateSquares, setMateSquares] = useState([]);
-  const [elo, setElo] = useState(() =>
-    typeof window === "undefined"
-      ? 1200
-      : Number(localStorage.getItem("chessElo") || 1200),
-  );
-  const animRef = useRef(null);
   const trailsRef = useRef([]);
   const [evalScore, setEvalScore] = useState(0);
   const [displayEval, setDisplayEval] = useState(0);
@@ -321,6 +355,7 @@ const ChessGame = () => {
   const [analysisMoves, setAnalysisMoves] = useState([]);
   const [analysisDepth, setAnalysisDepth] = useState(2);
   const pgnInputRef = useRef(null);
+  const gameOverRef = useRef(false);
   const evalPercent = (1 / (1 + Math.exp(-displayEval / 200))) * 100;
 
   useEffect(() => {
@@ -351,7 +386,10 @@ const ChessGame = () => {
     spritesRef.current = imgs;
   }, []);
 
-  const updateEval = () => setEvalScore(evaluate(boardRef.current));
+  const updateEval = useCallback(
+    () => setEvalScore(evaluate(boardRef.current)),
+    [],
+  );
 
   useEffect(() => {
     updateEval();
@@ -424,147 +462,158 @@ const ChessGame = () => {
     setAnalysisMoves(suggestions);
   };
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    const render = () => {
-      ctx.clearRect(0, 0, SIZE, SIZE);
-      for (let r = 0; r < 8; r++) {
-        for (let f = 0; f < 8; f++) {
-          const x = f * SQ;
-          const y = (7 - r) * SQ;
-          const light = (r + f) % 2 === 0;
-          ctx.fillStyle = light ? "#eee" : "#555";
-          ctx.fillRect(x, y, SQ, SQ);
+  const drawBoard = useCallback(() => {
+    const ctx = canvasRef.current?.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    for (let r = 0; r < 8; r++) {
+      for (let f = 0; f < 8; f++) {
+        const x = f * SQ;
+        const y = (7 - r) * SQ;
+        const light = (r + f) % 2 === 0;
+        ctx.fillStyle = light ? "#eee" : "#555";
+        ctx.fillRect(x, y, SQ, SQ);
 
-          const sq = r * 16 + f;
-          if (
-            lastMoveRef.current &&
-            (sq === lastMoveRef.current.from || sq === lastMoveRef.current.to)
-          ) {
-            ctx.strokeStyle = "#ff0";
-            ctx.lineWidth = 3;
-            ctx.strokeRect(x + 1, y + 1, SQ - 2, SQ - 2);
-          }
-          if (selected === sq) {
+        const sq = r * 16 + f;
+        if (
+          lastMoveRef.current &&
+          (sq === lastMoveRef.current.from || sq === lastMoveRef.current.to)
+        ) {
+          ctx.strokeStyle = "#ff0";
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x + 1, y + 1, SQ - 2, SQ - 2);
+        }
+        if (selected === sq) {
+          ctx.strokeStyle = "#ff0";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x + 2, y + 2, SQ - 4, SQ - 4);
+        } else {
+          const move = moves.find((m) => m.to === sq);
+          if (move) {
             ctx.strokeStyle = "#ff0";
             ctx.lineWidth = 2;
-            ctx.strokeRect(x + 2, y + 2, SQ - 4, SQ - 4);
+            ctx.strokeRect(x + 4, y + 4, SQ - 8, SQ - 8);
+          }
+        }
+
+        if (cursor === sq) {
+          ctx.strokeStyle = "#ff0";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x + 2, y + 2, SQ - 4, SQ - 4);
+        }
+
+        if (mateSquares.includes(sq)) {
+          ctx.beginPath();
+          ctx.arc(x + SQ / 2, y + SQ / 2, SQ / 6, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(0,0,255,0.5)";
+          ctx.fill();
+        }
+
+        const piece = boardRef.current[sq];
+        if (piece) {
+          const img =
+            spritesRef.current[Math.abs(piece)]?.[piece > 0 ? WHITE : BLACK];
+          if (pieceSet === "sprites" && img && spritesReady) {
+            ctx.drawImage(img, x + 2, y + 2, SQ - 4, SQ - 4);
           } else {
-            const move = moves.find((m) => m.to === sq);
-            if (move) {
-              ctx.strokeStyle = "#ff0";
-              ctx.lineWidth = 2;
-              ctx.strokeRect(x + 4, y + 4, SQ - 8, SQ - 8);
-            }
-          }
-
-          if (cursor === sq) {
-            ctx.strokeStyle = "#ff0";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x + 2, y + 2, SQ - 4, SQ - 4);
-          }
-
-          if (mateSquares.includes(sq)) {
-            ctx.beginPath();
-            ctx.arc(x + SQ / 2, y + SQ / 2, SQ / 6, 0, Math.PI * 2);
-            ctx.fillStyle = "rgba(0,0,255,0.5)";
-            ctx.fill();
-          }
-
-          const piece = boardRef.current[sq];
-          if (piece) {
-            const img =
-              spritesRef.current[Math.abs(piece)]?.[piece > 0 ? WHITE : BLACK];
-            if (pieceSet === "sprites" && img && spritesReady) {
-              ctx.drawImage(img, x + 2, y + 2, SQ - 4, SQ - 4);
-            } else {
-              ctx.font = `${SQ - 10}px serif`;
-              ctx.textAlign = "center";
-              ctx.textBaseline = "middle";
-              ctx.fillStyle = piece > 0 ? "#000" : "#fff";
-              ctx.fillText(
-                pieceUnicode[Math.abs(piece)][piece > 0 ? WHITE : BLACK],
-                x + SQ / 2,
-                y + SQ / 2,
-              );
-            }
+            ctx.font = `${SQ - 10}px serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillStyle = piece > 0 ? "#000" : "#fff";
+            ctx.fillText(
+              pieceUnicode[Math.abs(piece)][piece > 0 ? WHITE : BLACK],
+              x + SQ / 2,
+              y + SQ / 2,
+            );
           }
         }
       }
-      const now = performance.now();
-      trailsRef.current = trailsRef.current.filter((t) => now - t.t < 1000);
-      for (const t of trailsRef.current) {
-        const age = (now - t.t) / 1000;
-        const alpha = reduceMotionRef.current ? 0.6 : Math.max(0, 1 - age);
-        ctx.strokeStyle = `rgba(255,0,0,${alpha})`;
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(t.fx, t.fy);
-        ctx.lineTo(t.tx, t.ty);
-        ctx.stroke();
-        const angle = Math.atan2(t.ty - t.fy, t.tx - t.fx);
-        const head = 10;
-        ctx.beginPath();
-        ctx.moveTo(t.tx, t.ty);
-        ctx.lineTo(
-          t.tx - head * Math.cos(angle - Math.PI / 6),
-          t.ty - head * Math.sin(angle - Math.PI / 6),
-        );
-        ctx.lineTo(
-          t.tx - head * Math.cos(angle + Math.PI / 6),
-          t.ty - head * Math.sin(angle + Math.PI / 6),
-        );
-        ctx.closePath();
-        ctx.fillStyle = `rgba(255,0,0,${alpha})`;
-        ctx.fill();
-      }
-      particlesRef.current = particlesRef.current.filter(
-        (p) => now - p.t < 500,
+    }
+    const now = performance.now();
+    trailsRef.current = trailsRef.current.filter((t) => now - t.t < 1000);
+    for (const t of trailsRef.current) {
+      const age = (now - t.t) / 1000;
+      const alpha = reduceMotionRef.current ? 0.6 : Math.max(0, 1 - age);
+      ctx.strokeStyle = `rgba(255,0,0,${alpha})`;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(t.fx, t.fy);
+      ctx.lineTo(t.tx, t.ty);
+      ctx.stroke();
+      const angle = Math.atan2(t.ty - t.fy, t.tx - t.fx);
+      const head = 10;
+      ctx.beginPath();
+      ctx.moveTo(t.tx, t.ty);
+      ctx.lineTo(
+        t.tx - head * Math.cos(angle - Math.PI / 6),
+        t.ty - head * Math.sin(angle - Math.PI / 6),
       );
-      for (const p of particlesRef.current) {
-        const age = (now - p.t) / 1000;
-        const px = p.x + p.vx * age;
-        const py = p.y + p.vy * age;
-        const alpha = reduceMotionRef.current ? 0.7 : Math.max(0, 1 - age * 2);
-        ctx.fillStyle = `rgba(255,215,0,${alpha})`;
-        ctx.beginPath();
-        ctx.arc(px, py, 3, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      animRef.current = requestAnimationFrame(render);
-    };
-    animRef.current = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(animRef.current);
-  }, [selected, moves, mateSquares, cursor, spritesReady, pieceSet]);
+      ctx.lineTo(
+        t.tx - head * Math.cos(angle + Math.PI / 6),
+        t.ty - head * Math.sin(angle + Math.PI / 6),
+      );
+      ctx.closePath();
+      ctx.fillStyle = `rgba(255,0,0,${alpha})`;
+      ctx.fill();
+    }
+    particlesRef.current = particlesRef.current.filter(
+      (p) => now - p.t < 500,
+    );
+    for (const p of particlesRef.current) {
+      const age = (now - p.t) / 1000;
+      const px = p.x + p.vx * age;
+      const py = p.y + p.vy * age;
+      const alpha = reduceMotionRef.current ? 0.7 : Math.max(0, 1 - age * 2);
+      ctx.fillStyle = `rgba(255,215,0,${alpha})`;
+      ctx.beginPath();
+      ctx.arc(px, py, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }, [cursor, mateSquares, moves, pieceSet, selected, spritesReady]);
 
-  const endGame = (result) => {
-    // result: 1 win, 0 draw, -1 loss
-    const score = result === 1 ? 1 : result === 0 ? 0.5 : 0;
-    const opp = 1200;
-    const expected = 1 / (1 + 10 ** ((opp - elo) / 400));
-    const k = 32;
-    const newElo = Math.round(elo + k * (score - expected));
-    setElo(newElo);
-    if (typeof window !== "undefined")
-      localStorage.setItem("chessElo", String(newElo));
-  };
+  useGameLoop(drawBoard, !manualPaused && !shellPaused);
+
+  const finalizeMatch = useCallback(
+    (outcome) => {
+      setElo((current) => {
+        const score = outcome === "win" ? 1 : outcome === "draw" ? 0.5 : 0;
+        const opp = 1200;
+        const expected = 1 / (1 + 10 ** ((opp - current) / 400));
+        const k = 32;
+        const newElo = Math.round(current + k * (score - expected));
+        if (typeof window !== "undefined") {
+          localStorage.setItem("chessElo", String(newElo));
+        }
+        const { history: nextHistory, bestElo: nextBest } = recordMatch({
+          result: outcome,
+          finalElo: newElo,
+          moves: chessRef.current.history().length,
+          pgn: chessRef.current.pgn(),
+        });
+        setMatchHistory(nextHistory);
+        setBestElo(nextBest);
+        return newElo;
+      });
+      gameOverRef.current = true;
+    },
+    [setBestElo, setElo, setMatchHistory],
+  );
 
   const checkGameState = (defaultStatus, skipElo = false) => {
     const game = chessRef.current;
     if (game.isCheckmate()) {
       if (game.turn() === "w") {
         setStatus("Checkmate! You lose");
-        if (!skipElo) endGame(-1);
+        if (!skipElo && !gameOverRef.current) finalizeMatch("loss");
       } else {
         setStatus("Checkmate! You win");
-        if (!skipElo) endGame(1);
+        if (!skipElo && !gameOverRef.current) finalizeMatch("win");
       }
       return true;
     }
     if (game.isDraw()) {
       setStatus("Draw");
-      if (!skipElo) endGame(0);
+      if (!skipElo && !gameOverRef.current) finalizeMatch("draw");
       return true;
     }
     if (game.isCheck()) {
@@ -576,6 +625,8 @@ const ChessGame = () => {
   };
 
   const aiMove = () => {
+    if (manualPausedRef.current || shellPausedRef.current || gameOverRef.current)
+      return;
     const move = getBestMove(boardRef.current, sideRef.current, 2);
     if (move) {
       const capture = boardRef.current[move.to] !== EMPTY;
@@ -592,7 +643,7 @@ const ChessGame = () => {
       historyRef.current.push(boardRef.current.slice());
       setSanLog((l) => [...l, res.san]);
       sideRef.current = -sideRef.current;
-      if (sound) playBeep();
+      playMoveSound();
       setSelected(null);
       setMoves([]);
       lastMoveRef.current = { from: move.from, to: move.to };
@@ -603,7 +654,7 @@ const ChessGame = () => {
   };
 
   const handleSquare = (sq) => {
-    if (paused) return;
+    if (manualPaused || shellPaused || gameOverRef.current) return;
     setCursor(sq);
     const side = sideRef.current;
 
@@ -621,7 +672,7 @@ const ChessGame = () => {
           boardRef.current[legal.from] = EMPTY;
           addTrail(legal.from, legal.to);
           if (capture) addCaptureSparks(legal.to);
-          if (sound) playBeep();
+          playMoveSound();
           historyRef.current.push(boardRef.current.slice());
           setSanLog((l) => [...l, res.san]);
           sideRef.current = -side;
@@ -651,16 +702,18 @@ const ChessGame = () => {
     }
   };
 
-  const handleClick = (e) => {
-    const rect = e.target.getBoundingClientRect();
-    const file = Math.floor(((e.clientX - rect.left) / SIZE) * 8);
-    const rank = 7 - Math.floor(((e.clientY - rect.top) / SIZE) * 8);
-    const sq = rank * 16 + file;
-    handleSquare(sq);
+  const handlePointer = (event) => {
+    event.preventDefault();
+    const native = event.nativeEvent;
+    const coords = canvasRef.current?.getInputCoords(native);
+    if (!coords) return;
+    const file = Math.floor((coords.x / SIZE) * 8);
+    const rank = 7 - Math.floor((coords.y / SIZE) * 8);
+    handleSquare(rank * 16 + file);
   };
 
   const handleKey = (e) => {
-    if (paused) return;
+    if (manualPaused || shellPaused) return;
     let next = cursor;
     if (e.key === "ArrowUp") next += 16;
     else if (e.key === "ArrowDown") next -= 16;
@@ -677,7 +730,7 @@ const ChessGame = () => {
     }
   };
 
-  const reset = () => {
+  const reset = useCallback(() => {
     boardRef.current = createInitialBoard();
     chessRef.current.reset();
     sideRef.current = WHITE;
@@ -690,16 +743,22 @@ const ChessGame = () => {
     setSanLog([]);
     updateEval();
     updateMateHints();
-    setPaused(false);
+    setManualPaused(false);
+    setShellPaused(false);
     setStatus("Your move");
     lastMoveRef.current = null;
-  };
+    gameOverRef.current = false;
+  }, [setShellPaused, updateEval, updateMateHints]);
 
-  const togglePause = () => setPaused((p) => !p);
-  const toggleSound = () => setSound((s) => !s);
+  useEffect(() => {
+    registerReset(reset);
+    return () => registerReset(null);
+  }, [registerReset, reset]);
+
   const toggleHints = () => setShowHints((s) => !s);
   const togglePieces = () =>
     setPieceSet((p) => (p === "sprites" ? "unicode" : "sprites"));
+  const toggleMute = () => audio.setMuted((m) => !m);
   const undoMove = () => {
     let undone = 0;
     if (historyRef.current.length <= 1) return;
@@ -728,6 +787,7 @@ const ChessGame = () => {
     updateMateHints();
     lastMoveRef.current = null;
     setStatus("Your move");
+    gameOverRef.current = false;
   };
 
   const copyMoves = () => {
@@ -748,12 +808,12 @@ const ChessGame = () => {
     historyRef.current = [boardRef.current.slice()];
     setSanLog([]);
     sideRef.current = WHITE;
-    setPaused(true);
+    setManualPaused(true);
     setStatus("Replaying PGN...");
     let i = 0;
     const playNext = () => {
       if (i >= moves.length) {
-        setPaused(false);
+        setManualPaused(false);
         checkGameState("Your move", true);
         return;
       }
@@ -772,7 +832,7 @@ const ChessGame = () => {
       sideRef.current = chessRef.current.turn() === "w" ? WHITE : BLACK;
       updateEval();
       updateMateHints();
-      if (sound) playBeep();
+      playMoveSound();
       checkGameState(undefined, true);
       setTimeout(playNext, 500);
     };
@@ -799,6 +859,12 @@ const ChessGame = () => {
     );
   }
 
+  const handleClearHistory = useCallback(() => {
+    clearHistory();
+    setMatchHistory([]);
+    setBestElo(elo);
+  }, [elo, setBestElo, setMatchHistory]);
+
   const statusClass = status.includes("Checkmate")
     ? "bg-red-700 text-white"
     : status.includes("Check")
@@ -809,15 +875,18 @@ const ChessGame = () => {
     <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white p-2 select-none">
       <div className="flex gap-4">
         <div className="flex flex-col items-center">
-          <canvas
+          <Canvas
             ref={canvasRef}
             width={SIZE}
             height={SIZE}
-            onClick={handleClick}
+            renderMode="dom"
+            onPointerDown={handlePointer}
             onKeyDown={handleKey}
             tabIndex={0}
+            role="application"
             aria-label="Chess board"
             className="border border-gray-600"
+            onContextMenu={(e) => e.preventDefault()}
           />
           <input
             type="file"
@@ -828,17 +897,11 @@ const ChessGame = () => {
             aria-label="PGN file input"
           />
           <div className="mt-2 flex flex-wrap gap-2 justify-center">
-            <button className="px-2 py-1 bg-gray-700" onClick={reset}>
-              Reset
-            </button>
             <button className="px-2 py-1 bg-gray-700" onClick={undoMove}>
               Undo
             </button>
-            <button className="px-2 py-1 bg-gray-700" onClick={togglePause}>
-              {paused ? "Resume" : "Pause"}
-            </button>
-            <button className="px-2 py-1 bg-gray-700" onClick={toggleSound}>
-              {sound ? "Sound Off" : "Sound On"}
+            <button className="px-2 py-1 bg-gray-700" onClick={toggleMute}>
+              {audio.muted ? "Sound On" : "Sound Off"}
             </button>
             <button className="px-2 py-1 bg-gray-700" onClick={togglePieces}>
               {pieceSet === "sprites" ? "Unicode" : "Sprites"}
@@ -886,11 +949,12 @@ const ChessGame = () => {
                 style={{ width: `${evalPercent}%` }}
               />
             </div>
-            <div className="mt-1" aria-live="polite">
-              Eval: {(evalScore / 100).toFixed(2)}
-            </div>
+          <div className="mt-1" aria-live="polite">
+            Eval: {(evalScore / 100).toFixed(2)}
           </div>
+        </div>
           <div className="mt-1">ELO: {elo}</div>
+          <div className="text-xs text-gray-300">High ELO: {bestElo}</div>
           {analysisMoves.length > 0 && (
             <div className="mt-2 w-full" aria-label="Suggested moves">
               <div>Suggested moves:</div>
@@ -914,6 +978,43 @@ const ChessGame = () => {
           <button className="mt-2 px-2 py-1 bg-gray-700" onClick={copyMoves}>
             Copy Moves
           </button>
+          <div className="mt-2">
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide">
+              <span>Recent matches</span>
+              <button
+                type="button"
+                className="px-2 py-0.5 bg-gray-700 rounded disabled:opacity-50"
+                onClick={handleClearHistory}
+                disabled={matchHistory.length === 0}
+              >
+                Clear
+              </button>
+            </div>
+            <ul className="mt-1 max-h-32 overflow-y-auto space-y-1 text-xs">
+              {matchHistory.length === 0 ? (
+                <li className="text-gray-400">No matches yet.</li>
+              ) : (
+                matchHistory.map((entry) => {
+                  const when = new Date(entry.timestamp).toLocaleString(undefined, {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    month: "short",
+                    day: "numeric",
+                  });
+                  return (
+                    <li
+                      key={`${entry.timestamp}-${entry.finalElo}`}
+                      className="flex flex-wrap justify-between gap-x-2 gap-y-0.5"
+                    >
+                      <span className="capitalize">{entry.result}</span>
+                      <span className="text-gray-300">{entry.finalElo}</span>
+                      <span className="text-gray-400">{when}</span>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          </div>
           <div className="mt-1 text-xs break-words">
             PGN: {chessRef.current.pgn()}
           </div>
@@ -923,4 +1024,44 @@ const ChessGame = () => {
   );
 };
 
+const ChessGame = () => {
+  const [elo, setElo] = useState(getInitialElo);
+  const [matchHistory, setMatchHistory] = useState(() => loadHistory());
+  const [bestElo, setBestElo] = useState(() =>
+    Math.max(loadBestElo(), getInitialElo()),
+  );
+
+  useEffect(() => {
+    setBestElo((prev) => Math.max(prev, elo));
+  }, [elo]);
+
+  return (
+    <GameLayout gameId="chess" score={elo} highScore={bestElo}>
+      <ChessGameInner
+        elo={elo}
+        setElo={setElo}
+        bestElo={bestElo}
+        setBestElo={setBestElo}
+        matchHistory={matchHistory}
+        setMatchHistory={setMatchHistory}
+      />
+    </GameLayout>
+  );
+};
+
 export default ChessGame;
+
+export {
+  createInitialBoard,
+  generateMoves,
+  sqToAlg,
+  algToSq,
+  WHITE,
+  BLACK,
+  PAWN,
+  KNIGHT,
+  BISHOP,
+  ROOK,
+  QUEEN,
+  KING,
+};
