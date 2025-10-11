@@ -32,6 +32,9 @@ import {
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 
+const WINDOW_Z_INDEX_BASE = 16;
+const WINDOW_Z_INDEX_MAX = 48;
+
 
 export class Desktop extends Component {
     static defaultProps = {
@@ -2817,6 +2820,7 @@ export class Desktop extends Component {
             const app = appMap.get(id);
             if (!app) return null;
             const pos = this.state.window_positions[id];
+            const computedZIndex = Math.min(WINDOW_Z_INDEX_MAX, WINDOW_Z_INDEX_BASE + index);
             const props = {
                 title: app.title,
                 id: app.id,
@@ -2838,7 +2842,7 @@ export class Desktop extends Component {
                 snapEnabled: this.props.snapEnabled,
                 snapGrid,
                 context: this.state.window_context[id],
-                zIndex: 200 + index,
+                zIndex: computedZIndex,
             };
 
             return <Window key={id} {...props} />;
