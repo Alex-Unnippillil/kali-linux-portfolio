@@ -33,6 +33,7 @@ import {
 } from '../../utils/windowLayout';
 
 const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
+const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
 
 const sanitizeFolderItem = (item) => {
     if (!item) return null;
@@ -128,6 +129,27 @@ const createOverlayStateMap = () => {
     return next;
 };
 
+const loadStoredWindowSizes = (storageKey = WINDOW_SIZE_STORAGE_KEY) => {
+    if (!safeLocalStorage) return {};
+    try {
+        const stored = safeLocalStorage.getItem(storageKey);
+        if (!stored) return {};
+        const parsed = JSON.parse(stored);
+        if (!parsed || typeof parsed !== 'object') return {};
+        const normalized = {};
+        Object.entries(parsed).forEach(([key, value]) => {
+            if (!value || typeof value !== 'object') return;
+            const width = Number(value.width);
+            const height = Number(value.height);
+            if (Number.isFinite(width) && Number.isFinite(height)) {
+                normalized[key] = { width, height };
+            }
+        });
+        return normalized;
+    } catch (e) {
+        return {};
+    }
+};
 
 export class Desktop extends Component {
     static defaultProps = {
@@ -145,7 +167,7 @@ export class Desktop extends Component {
             'window_positions',
             'window_sizes',
         ]);
-        this.windowSizeStorageKey = 'desktop_window_sizes';
+        this.windowSizeStorageKey = WINDOW_SIZE_STORAGE_KEY;
         this.defaultThemeConfig = {
             id: 'default',
             accent: (props.desktopTheme && props.desktopTheme.accent) || '#1793d1',
@@ -156,6 +178,7 @@ export class Desktop extends Component {
             overlay: props.desktopTheme ? props.desktopTheme.overlay : undefined,
             useKaliWallpaper: Boolean(props.desktopTheme && props.desktopTheme.useKaliWallpaper),
         };
+        const initialWindowSizes = loadStoredWindowSizes(this.windowSizeStorageKey);
         const initialTheme = this.normalizeTheme(props.desktopTheme);
         this.workspaceThemes = Array.from({ length: this.workspaceCount }, () => ({ ...initialTheme }));
         this.initFavourite = {};
@@ -1017,27 +1040,7 @@ export class Desktop extends Component {
         }
     };
 
-    loadWindowSizes = () => {
-        if (!safeLocalStorage) return {};
-        try {
-            const stored = safeLocalStorage.getItem(this.windowSizeStorageKey);
-            if (!stored) return {};
-            const parsed = JSON.parse(stored);
-            if (!parsed || typeof parsed !== 'object') return {};
-            const normalized = {};
-            Object.entries(parsed).forEach(([key, value]) => {
-                if (!value || typeof value !== 'object') return;
-                const width = Number(value.width);
-                const height = Number(value.height);
-                if (Number.isFinite(width) && Number.isFinite(height)) {
-                    normalized[key] = { width, height };
-                }
-            });
-            return normalized;
-        } catch (e) {
-            return {};
-        }
-    };
+    loadWindowSizes = () => loadStoredWindowSizes(this.windowSizeStorageKey);
 
     persistWindowSizes = (sizes) => {
         if (!safeLocalStorage) return;
@@ -3593,6 +3596,24 @@ export class Desktop extends Component {
         }), () => {
             this.persistWindowSizes(this.state.window_sizes || {});
             this.saveSession();
+        });
+    }
+
+    updateWindowSize = (id, width, height) => {
+        if (!id) return;
+        const normalizedWidth = Number(width);
+        const normalizedHeight = Number(height);
+        if (!Number.isFinite(normalizedWidth) || !Number.isFinite(normalizedHeight)) {
+            return;
+        }
+        const safeWidth = Math.max(0, Math.round(normalizedWidth));
+        const safeHeight = Math.max(0, Math.round(normalizedHeight));
+        this.setWorkspaceState((prev) => {
+            const nextSizes = { ...(prev.window_sizes || {}) };
+            nextSizes[id] = { width: safeWidth, height: safeHeight };
+            return { window_sizes: nextSizes };
+        }, () => {
+            this.persistWindowSizes(this.state.window_sizes || {});
         });
     }
 
