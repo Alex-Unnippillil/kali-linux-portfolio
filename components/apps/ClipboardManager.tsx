@@ -108,7 +108,13 @@ const ClipboardManager: React.FC = () => {
         return;
       }
       try {
-        const status = await permissionsApi({ name } as PermissionDescriptor);
+        const descriptor = { name } as { name: 'clipboard-read' | 'clipboard-write' };
+        const status = await permissionsApi(
+          // The DOM lib's PermissionDescriptor name union does not yet include 'clipboard-write'.
+          // Casting through unknown keeps the runtime behaviour (modern browsers accept it)
+          // while satisfying the stricter type definition during builds.
+          descriptor as unknown as PermissionDescriptor
+        );
         const state = (status?.state as PermissionState | undefined) ?? 'unknown';
         setter(state);
       } catch {

@@ -92,6 +92,13 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
   });
 }
 
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Object.defineProperty(Element.prototype, 'scrollIntoView', {
+    configurable: true,
+    value: jest.fn(),
+  });
+}
+
 // Minimal IntersectionObserver mock so components relying on it don't crash in tests
 if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
   class IntersectionObserverMock {

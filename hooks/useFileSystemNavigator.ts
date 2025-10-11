@@ -10,6 +10,11 @@ export interface DirectoryEntry {
   handle: FileSystemDirectoryHandle;
 }
 
+export interface FileEntry {
+  name: string;
+  handle: FileSystemFileHandle;
+}
+
 export type Breadcrumb = DirectoryEntry;
 
 interface SyncOptions {
@@ -27,7 +32,7 @@ interface OpenHandleOptions {
 interface UseFileSystemNavigatorReturn {
   currentDirectory: FileSystemDirectoryHandle | null;
   directories: DirectoryEntry[];
-  files: DirectoryEntry[];
+  files: FileEntry[];
   breadcrumbs: Breadcrumb[];
   recent: RecentDirectoryEntry[];
   locationError: string | null;
@@ -40,11 +45,24 @@ interface UseFileSystemNavigatorReturn {
   setLocationError: (value: string | null) => void;
 }
 
+type DirectoryEntryTuple = [string, FileSystemDirectoryHandle | FileSystemFileHandle];
+type DirectoryEntriesIterator = AsyncIterableIterator<DirectoryEntryTuple>;
+
+function hasDirectoryEntries(
+  handle: FileSystemDirectoryHandle | null | undefined,
+): handle is FileSystemDirectoryHandle & {
+  entries: () => DirectoryEntriesIterator;
+} {
+  if (!handle) return false;
+  const candidate = handle as unknown as { entries?: unknown };
+  return typeof candidate.entries === 'function';
+}
+
 async function iterateEntries(handle: FileSystemDirectoryHandle) {
   const directories: DirectoryEntry[] = [];
-  const files: DirectoryEntry[] = [];
+  const files: FileEntry[] = [];
 
-  if (!handle?.entries) {
+  if (!hasDirectoryEntries(handle)) {
     return { directories, files };
   }
 
@@ -67,7 +85,7 @@ export default function useFileSystemNavigator(): UseFileSystemNavigatorReturn {
   const [root, setRoot] = useState<FileSystemDirectoryHandle | null>(null);
   const [currentDirectory, setCurrentDirectory] = useState<FileSystemDirectoryHandle | null>(null);
   const [directories, setDirectories] = useState<DirectoryEntry[]>([]);
-  const [files, setFiles] = useState<DirectoryEntry[]>([]);
+  const [files, setFiles] = useState<FileEntry[]>([]);
   const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([]);
   const [recent, setRecent] = useState<RecentDirectoryEntry[]>([]);
   const [locationError, setLocationError] = useState<string | null>(null);

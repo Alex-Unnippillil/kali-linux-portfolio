@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import dynamic from 'next/dynamic';
 import Meta from '../components/SEO/Meta';
 import BetaBadge from '../components/BetaBadge';
@@ -14,7 +15,7 @@ const Ubuntu = dynamic(
   }
 );
 
-const App = (): JSX.Element => (
+const App = (): ReactElement => (
   <>
     <a href="#window-area" className="sr-only focus:not-sr-only">
       Skip to content
