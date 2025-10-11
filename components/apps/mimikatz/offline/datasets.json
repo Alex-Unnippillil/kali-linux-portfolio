@@ -4,6 +4,7 @@
     "title": "Training Workstation Snapshot",
     "summary": "Extract from a sanitized LSASS memory capture of a training workstation where a domain admin signed in to the demo environment.",
     "labSafety": "Redacted and synthetic credentials. Use only inside the closed training lab. Do not export or reuse in production networks.",
+    "riskRating": "Moderate (synthetic admin exposure)",
     "artifacts": [
       { "label": "Capture time", "value": "2024-04-02 18:22 UTC" },
       { "label": "Acquisition", "value": "sekurlsa::logonpasswords" }
@@ -20,6 +21,7 @@
     "title": "Incident Playback Timeline",
     "summary": "Canned event timeline from an incident response tabletop with two exposed service accounts.",
     "labSafety": "All values are fictional and reserved for tabletop exercises. Keep the dataset offline and delete exports after drills.",
+    "riskRating": "Low (tabletop replay)",
     "artifacts": [
       { "label": "Source", "value": "Event log replay" },
       { "label": "Suggested module", "value": "sekurlsa::tickets" }
