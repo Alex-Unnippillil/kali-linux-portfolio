@@ -1,16 +1,15 @@
 {
-  "name": "London",
-  "tempC": 15,
+  "label": "London, United Kingdom",
+  "temperatureC": 15,
   "feelsLikeC": 13,
-  "condition": "cloudy",
-  "icon": "04d",
-  "sunrise": 1716351600,
-  "sunset": 1716410400,
+  "conditionCode": 3,
+  "sunrise": "2024-05-22T04:57:00Z",
+  "sunset": "2024-05-22T20:13:00Z",
   "forecast": [
-    { "day": "Mon", "tempC": 16, "icon": "04d", "condition": "cloudy" },
-    { "day": "Tue", "tempC": 17, "icon": "10d", "condition": "rain" },
-    { "day": "Wed", "tempC": 18, "icon": "01d", "condition": "clear" },
-    { "day": "Thu", "tempC": 14, "icon": "04d", "condition": "cloudy" },
-    { "day": "Fri", "tempC": 15, "icon": "02d", "condition": "partly cloudy" }
+    { "date": "2024-05-23", "tempC": 16, "conditionCode": 3 },
+    { "date": "2024-05-24", "tempC": 17, "conditionCode": 61 },
+    { "date": "2024-05-25", "tempC": 18, "conditionCode": 0 },
+    { "date": "2024-05-26", "tempC": 14, "conditionCode": 3 },
+    { "date": "2024-05-27", "tempC": 15, "conditionCode": 2 }
   ]
 }

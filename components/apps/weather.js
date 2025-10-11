@@ -20,8 +20,10 @@ export async function fetchWeather(provider, opts = {}) {
       `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
         city,
       )}&units=metric&appid=${apiKey}`,
-    openMeteo: ({ lat, lon }) =>
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=weathercode,temperature_2m_max&forecast_days=5&timezone=auto`,
+    openMeteo: ({ lat, lon, timezone = 'auto' }) =>
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&hourly=apparent_temperature&daily=weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset&forecast_days=5&timezone=${encodeURIComponent(
+        timezone,
+      )}`,
   };
 
   const buildUrl = providers[provider];
