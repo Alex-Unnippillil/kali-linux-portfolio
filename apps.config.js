@@ -934,7 +934,7 @@ const apps = [
   {
     id: 'contact',
     title: 'Contact',
-    icon: '/themes/Yaru/apps/project-gallery.svg',
+    icon: '/themes/Yaru/apps/contact.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: true,
