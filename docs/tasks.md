@@ -86,7 +86,7 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 - Use offline JSON quotes with tags and "no repeats" option.
 
 ### Weather
-- Show fake data with city picker and unit toggle, or accept user-provided API key in settings.
+- ~~Show fake data with city picker and unit toggle, or accept user-provided API key in settings.~~ Completed – weather app now ships with deterministic demo data, shared unit preference, and offline fallback.
 
 ## Games
 For each game below, build a canvas-based component with `requestAnimationFrame` game loop, `reset()` function, pause, sound toggle, small default window size, and localStorage highscores. Register each with `createDynamicApp('<name>','<Title>')` and `createDisplay`.
