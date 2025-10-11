@@ -23,6 +23,12 @@ interface GameLayoutProps {
   score?: number;
   highScore?: number;
   editor?: React.ReactNode;
+  paused?: boolean;
+  onPause?: () => void;
+  onResume?: () => void;
+  onRestart?: () => void;
+  muted?: boolean;
+  onToggleSound?: (muted: boolean) => void;
 }
 
 interface RecordedInput {
@@ -51,15 +57,27 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   score,
   highScore,
   editor,
+  paused: pausedProp,
+  onPause,
+  onResume,
+  onRestart,
+  muted: mutedProp,
+  onToggleSound,
 }) => {
   const [showHelp, setShowHelp] = useState(false);
-  const [paused, setPaused] = useState(false);
+  const [internalPaused, setInternalPaused] = useState(false);
+  const [internalMuted, setInternalMuted] = useState(false);
   const [log, setLog] = useState<RecordedInput[]>([]);
   const [replayHandler, setReplayHandler] = useState<
     ((input: any, index: number) => void) | undefined
   >(undefined);
   const [replaying, setReplaying] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+
+  const paused = pausedProp ?? internalPaused;
+  const muted = mutedProp ?? internalMuted;
+  const isPauseControlled = pausedProp !== undefined;
+  const isMuteControlled = mutedProp !== undefined;
 
   const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
@@ -189,23 +207,56 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     return () => window.removeEventListener('keydown', handler);
   }, [showHelp]);
 
+  const pauseGame = useCallback(() => {
+    if (paused) return;
+    if (!isPauseControlled) setInternalPaused(true);
+    onPause?.();
+  }, [isPauseControlled, onPause, paused]);
+
+  const resumeGame = useCallback(() => {
+    if (!paused) return;
+    if (!isPauseControlled) setInternalPaused(false);
+    onResume?.();
+  }, [isPauseControlled, onResume, paused]);
+
+  const togglePaused = useCallback(() => {
+    if (paused) resumeGame();
+    else pauseGame();
+  }, [pauseGame, paused, resumeGame]);
+
+  const toggleSound = useCallback(() => {
+    if (isMuteControlled) {
+      onToggleSound?.(!muted);
+      return;
+    }
+    setInternalMuted((m) => {
+      const next = !m;
+      onToggleSound?.(next);
+      return next;
+    });
+  }, [isMuteControlled, muted, onToggleSound]);
+
+  useEffect(() => {
+    if (isMuteControlled && mutedProp !== undefined) {
+      setInternalMuted(mutedProp);
+    }
+  }, [isMuteControlled, mutedProp]);
+
   // Auto-pause when page becomes hidden or window loses focus
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
-        setPaused(true);
+        pauseGame();
       }
     };
-    const handleBlur = () => setPaused(true);
+    const handleBlur = () => pauseGame();
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('blur', handleBlur);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('blur', handleBlur);
     };
-  }, []);
-
-  const resume = useCallback(() => setPaused(false), []);
+  }, [pauseGame]);
 
   const contextValue = { record, registerReplay };
 
@@ -221,7 +272,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         >
           <button
             type="button"
-            onClick={resume}
+            onClick={resumeGame}
             className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
             autoFocus
           >
@@ -232,11 +283,29 @@ const GameLayout: React.FC<GameLayoutProps> = ({
       <div className="absolute top-2 right-2 z-40 flex space-x-2">
         <button
           type="button"
-          onClick={() => setPaused((p) => !p)}
+          onClick={togglePaused}
           className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
         >
           {paused ? 'Resume' : 'Pause'}
         </button>
+        {onRestart && (
+          <button
+            type="button"
+            onClick={onRestart}
+            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          >
+            Reset
+          </button>
+        )}
+        {onToggleSound && (
+          <button
+            type="button"
+            onClick={toggleSound}
+            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          >
+            {muted ? 'Unmute' : 'Mute'}
+          </button>
+        )}
         <button
           type="button"
           onClick={snapshot}
