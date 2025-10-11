@@ -19,7 +19,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 
 | App ID | Display Name | Owner | Status | Key Dependencies / Notes |
 | --- | --- | --- | --- | --- |
-| terminal | Terminal | Core maintainers | **Blocked** – xterm CSS, FitAddon wiring, and command registry outstanding | `@xterm/xterm`, FitAddon |
+| terminal | Terminal | Core maintainers | **Ready** – session manager, command registry, and xterm fit wiring shipped | `@xterm/xterm`, FitAddon |
 | vscode | VsCode | Core maintainers | **Needs polish** – StackBlitz iframe embed flow requires validation | StackBlitz embed permissions |
 | firefox | Firefox | Core maintainers | **In progress** – rebuild around iframe shell with persisted URL | Browser iframe, storage |
 | x | X | Core maintainers | **In progress** – read-only embed with SSR disabled and theme toggle | Social embed script |

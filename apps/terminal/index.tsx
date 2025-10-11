@@ -1,5 +1,6 @@
 'use client';
 
+import '@xterm/xterm/css/xterm.css';
 import React, {
   useEffect,
   useRef,
@@ -7,10 +8,12 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useCallback,
+  useMemo,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
+import { createSessionManager } from './utils/sessionManager';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -81,7 +84,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const termRef = useRef<any>(null);
   const fitRef = useRef<any>(null);
   const searchRef = useRef<any>(null);
-  const commandRef = useRef('');
   const contentRef = useRef('');
   const registryRef = useRef(commandRegistry);
   const workerRef = useRef<Worker | null>(null);
@@ -97,6 +99,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       aliasesRef.current[n] = v;
     },
     runWorker: async () => {},
+    clear: () => {},
+    openApp,
+    listCommands: () => Object.keys(registryRef.current),
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
@@ -153,6 +158,31 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     termRef.current.write('\x1b[1;34m└─\x1b[0m$ ');
   }, []);
 
+  const sessionManager = useMemo(
+    () =>
+      createSessionManager({
+        getRegistry: () => registryRef.current,
+        context: contextRef.current,
+        prompt,
+        write: (text: string) => {
+          if (termRef.current) termRef.current.write(text);
+        },
+        writeLine,
+      }),
+    [prompt, writeLine],
+  );
+
+  const clearTerminal = useCallback(() => {
+    termRef.current?.clear();
+    contentRef.current = '';
+    if (opfsSupported && dirRef.current) {
+      deleteFile('history.txt', dirRef.current);
+    }
+    setOverflow({ top: false, bottom: false });
+    sessionManager.setBuffer('');
+  }, [opfsSupported, deleteFile, sessionManager]);
+
+
   const handleCopy = () => {
     navigator.clipboard.writeText(contentRef.current).catch(() => {});
   };
@@ -160,7 +190,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
-      handleInput(text);
+      sessionManager.handlePaste(text);
     } catch {}
   };
 
@@ -191,40 +221,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     [writeLine],
   );
 
+  contextRef.current.writeLine = writeLine;
   contextRef.current.runWorker = runWorker;
-
-  useEffect(() => {
-    registryRef.current = {
-      ...commandRegistry,
-      help: () => {
-        writeLine(
-          `Available commands: ${Object.keys(registryRef.current).join(', ')}`,
-        );
-        writeLine(
-          'Example scripts: https://github.com/unnippillil/kali-linux-portfolio/tree/main/scripts/examples',
-        );
-      },
-      ls: () => writeLine(Object.keys(filesRef.current).join('  ')),
-      clear: () => {
-        termRef.current?.clear();
-        contentRef.current = '';
-        if (opfsSupported && dirRef.current) {
-          deleteFile('history.txt', dirRef.current);
-        }
-        setOverflow({ top: false, bottom: false });
-      },
-      open: (arg) => {
-        if (!arg) {
-          writeLine('Usage: open <app>');
-        } else {
-          openApp?.(arg.trim());
-          writeLine(`Opening ${arg}`);
-        }
-      },
-      date: () => writeLine(new Date().toString()),
-      about: () => writeLine('This terminal is powered by xterm.js'),
-    };
-    }, [openApp, opfsSupported, deleteFile, writeLine]);
+  contextRef.current.clear = clearTerminal;
+  contextRef.current.openApp = openApp;
+  contextRef.current.listCommands = () => Object.keys(registryRef.current);
+  contextRef.current.files = filesRef.current;
+  contextRef.current.history = historyRef.current;
+  contextRef.current.aliases = aliasesRef.current;
 
   useEffect(() => {
     if (typeof Worker === 'function') {
@@ -235,61 +239,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     return () => workerRef.current?.terminate();
   }, []);
 
-    const runCommand = useCallback(
-      async (cmd: string) => {
-        const [name, ...rest] = cmd.trim().split(/\s+/);
-        const expanded =
-          aliasesRef.current[name]
-            ? `${aliasesRef.current[name]} ${rest.join(' ')}`.trim()
-            : cmd;
-        const [cmdName, ...cmdRest] = expanded.split(/\s+/);
-        const handler = registryRef.current[cmdName];
-        historyRef.current.push(cmd);
-        if (handler) await handler(cmdRest.join(' '), contextRef.current);
-        else if (cmdName) await runWorker(expanded);
-      },
-      [runWorker],
-    );
-
-    const autocomplete = useCallback(() => {
-      const current = commandRef.current;
-      const registry = registryRef.current;
-      const matches = Object.keys(registry).filter((c) => c.startsWith(current));
-      if (matches.length === 1) {
-        const completion = matches[0].slice(current.length);
-        termRef.current?.write(completion);
-        commandRef.current = matches[0];
-      } else if (matches.length > 1) {
-        writeLine(matches.join('  '));
-        prompt();
-        termRef.current?.write(commandRef.current);
-      }
-    }, [prompt, writeLine]);
-
-    const handleInput = useCallback(
-      (data: string) => {
-        for (const ch of data) {
-          if (ch === '\r') {
-            termRef.current?.writeln('');
-            runCommand(commandRef.current.trim());
-            commandRef.current = '';
-            prompt();
-          } else if (ch === '\u007F') {
-            if (commandRef.current.length > 0) {
-              termRef.current?.write('\b \b');
-              commandRef.current = commandRef.current.slice(0, -1);
-            }
-          } else {
-            commandRef.current += ch;
-            termRef.current?.write(ch);
-          }
-        }
-      },
-      [runCommand, prompt],
-    );
-
   useImperativeHandle(ref, () => ({
-    runCommand: (c: string) => runCommand(c),
+    runCommand: (c: string) => sessionManager.runCommand(c),
     getContent: () => contentRef.current,
   }));
 
@@ -301,11 +252,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         import('@xterm/addon-fit'),
         import('@xterm/addon-search'),
       ]);
-      await import('@xterm/xterm/css/xterm.css');
       if (disposed) return;
       const term = new XTerm({
         cursorBlink: true,
-        scrollback: 1000,
+        scrollback: sessionManager.getScrollbackLimit(),
         cols: 80,
         rows: 24,
         fontFamily: '"Fira Code", monospace',
@@ -323,6 +273,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       term.loadAddon(fit);
       term.loadAddon(search);
       term.open(containerRef.current!);
+      sessionManager.setTerminal(term);
       fit.fit();
       term.focus();
       if (opfsSupported) {
@@ -343,11 +294,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       writeLine('Welcome to the web terminal!');
       writeLine('Type "help" to see available commands.');
       prompt();
-      term.onData((d: string) => handleInput(d));
+      term.onData((d: string) => sessionManager.handleInput(d));
       term.onKey(({ domEvent }: any) => {
         if (domEvent.key === 'Tab') {
           domEvent.preventDefault();
-          autocomplete();
+          sessionManager.autocomplete();
         } else if (domEvent.ctrlKey && domEvent.key === 'f') {
           domEvent.preventDefault();
           const q = window.prompt('Search');
@@ -363,7 +314,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               termRef.current.write('\u001b[2K\r');
               prompt();
               termRef.current.write(match);
-              commandRef.current = match;
+              sessionManager.setBuffer(match);
             } else {
               writeLine(`No match: ${q}`);
               prompt();
@@ -371,14 +322,15 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           }
         }
       });
+      term.onPaste?.((text: string) => sessionManager.handlePaste(text));
       updateOverflow();
-      term.onScroll?.(updateOverflow);
+      term.onScroll?.(() => updateOverflow());
     })();
     return () => {
       disposed = true;
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, handleInput, autocomplete, updateOverflow]);
+    }, [opfsSupported, getDir, readFile, writeLine, prompt, sessionManager, updateOverflow]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
@@ -420,9 +372,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               className="w-full mb-2 bg-black text-white p-2"
               value={paletteInput}
               onChange={(e) => setPaletteInput(e.target.value)}
+              aria-label="Command palette input"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
-                  runCommand(paletteInput);
+                  sessionManager.runCommand(paletteInput);
                   setPaletteInput('');
                   setPaletteOpen(false);
                   termRef.current?.focus();

@@ -75,7 +75,7 @@ For each directory listed below, capture the following:
 - Many apps still hand-roll registration instead of using a shared factory, leading to inconsistent window sizes and analytics hooks.【F:docs/tasks.md†L6-L15】
 
 ### Next Feature
-- Implement the command registry and terminal fit/resize improvements so `/apps/terminal` behaves like a modern shell emulator.【F:docs/tasks.md†L18-L28】
+- Maintain the terminal session manager and expand the command registry as new utilities are defined so `/apps/terminal` keeps shell parity.【F:docs/tasks.md†L18-L28】
 
 ### Blockers
 - Some embed-based apps (Spotify, YouTube, X) require updated iframe policies and local storage helpers; validating them demands test credentials or mocked responses that are not yet defined.【F:docs/tasks.md†L34-L60】
