@@ -1,0 +1,333 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`MimikatzPage layout renders hero and explainer sections after confirmation 1`] = `
+<div>
+  <div
+    class="space-y-8 bg-[#080b12] p-6 text-white"
+  >
+    <section
+      class="space-y-4 rounded-lg border border-gray-700 bg-black/50 p-6 shadow-lg"
+    >
+      <div>
+        <h1
+          class="text-2xl font-semibold"
+        >
+          Mimikatz Credential Simulator
+        </h1>
+        <p
+          class="mt-2 text-sm text-gray-300"
+        >
+          Practice credential harvesting workflows without touching production hosts. The environment operates entirely on canned data and never executes commands on your machine.
+        </p>
+      </div>
+      <div
+        class="grid gap-4 text-sm md:grid-cols-3"
+      >
+        <div
+          class="rounded-md border border-gray-700 bg-black/40 p-4"
+        >
+          <h2
+            class="text-base font-semibold"
+          >
+            Safe-mode by design
+          </h2>
+          <p
+            class="mt-2 text-gray-300"
+          >
+            Dumps, tokens, and tickets are pre-seeded with fictional payloads so you can explore the UI flows while the simulator blocks any real system calls or network traffic.
+          </p>
+        </div>
+        <div
+          class="rounded-md border border-gray-700 bg-black/40 p-4"
+        >
+          <h2
+            class="text-base font-semibold"
+          >
+            Recommended workflow
+          </h2>
+          <p
+            class="mt-2 text-gray-300"
+          >
+            Step through each tab, mask sensitive values until you are ready to export, and compare the canned output with your incident response playbook to rehearse safe credential handling.
+          </p>
+        </div>
+        <div
+          class="rounded-md border border-gray-700 bg-black/40 p-4"
+        >
+          <h2
+            class="text-base font-semibold"
+          >
+            Offline practice lab
+          </h2>
+          <p
+            class="mt-2 text-gray-300"
+          >
+            Need a distraction-free drill? Launch the standalone workbench for tabletop sessions or classroom demos.
+          </p>
+          <a
+            class="mt-3 inline-flex items-center gap-2 rounded-md bg-purple-600 px-3 py-2 text-sm font-medium text-white hover:bg-purple-500"
+            href="/apps/mimikatz/offline"
+          >
+            Open offline version
+            <span
+              aria-hidden="true"
+            >
+              ↗
+            </span>
+          </a>
+        </div>
+      </div>
+    </section>
+    <section
+      class="space-y-6"
+    >
+      <div
+        class="overflow-hidden rounded-lg border border-gray-800 bg-black/60 shadow-inner"
+      >
+        <div
+          class="h-full w-full flex flex-col bg-ub-cool-grey text-white"
+        >
+          <div
+            class="flex items-center bg-amber-100 text-amber-900 p-2"
+            role="alert"
+          >
+            <span
+              aria-label="warning"
+              class="mr-2"
+              role="img"
+            >
+              ⚠️
+            </span>
+            <span>
+              Demo only. No real credentials are used.
+            </span>
+          </div>
+          <div
+            class="flex border-b border-gray-700"
+          >
+            <button
+              class="flex items-center gap-1 px-4 py-2 bg-purple-700"
+            >
+              <span>
+                💾
+              </span>
+              <span>
+                Dump
+              </span>
+            </button>
+            <button
+              class="flex items-center gap-1 px-4 py-2 bg-purple-600"
+            >
+              <span>
+                🔑
+              </span>
+              <span>
+                Tokens
+              </span>
+            </button>
+            <button
+              class="flex items-center gap-1 px-4 py-2 bg-purple-600"
+            >
+              <span>
+                🎫
+              </span>
+              <span>
+                Tickets
+              </span>
+            </button>
+          </div>
+          <div
+            class="p-2 flex-1 overflow-auto"
+          >
+            <div
+              class="flex justify-between items-center mb-2 text-xs"
+            >
+              <label
+                class="flex items-center gap-1"
+              >
+                <input
+                  type="checkbox"
+                />
+                Show tokens
+              </label>
+              <button
+                class="bg-gray-700 px-2 py-1 rounded"
+              >
+                Export
+              </button>
+            </div>
+            <div
+              class="bg-black text-green-400 font-mono text-sm p-2 rounded"
+            >
+              <div
+                class="flex items-start"
+              >
+                <span
+                  class="flex-1 whitespace-pre-wrap"
+                >
+                  [*] lsass.exe (1234)
+                </span>
+                <button
+                  aria-label="copy line"
+                  class="ml-2 text-gray-400 hover:text-white"
+                >
+                  📋
+                </button>
+              </div>
+              <div
+                class="flex items-start"
+              >
+                <span
+                  class="flex-1 whitespace-pre-wrap"
+                >
+                  [+] Dump saved to C:/dumps/lsass.dmp
+                </span>
+                <button
+                  aria-label="copy line"
+                  class="ml-2 text-gray-400 hover:text-white"
+                >
+                  📋
+                </button>
+              </div>
+              <div
+                class="flex items-start"
+              >
+                <span
+                  class="flex-1 whitespace-pre-wrap"
+                >
+                  Token
+                  : 
+                  <span
+                    class="p-[6px]"
+                  >
+                    ********
+                  </span>
+                </span>
+                <button
+                  aria-label="copy line"
+                  class="ml-2 text-gray-400 hover:text-white"
+                >
+                  📋
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="border-t border-gray-800 pt-6"
+      >
+        <h2
+          class="mb-4 text-xl font-semibold"
+        >
+          Exposure simulator explainer
+        </h2>
+        <div
+          class="text-white p-4"
+        >
+          <div
+            class="bg-yellow-400 text-black text-center font-bold mb-4"
+          >
+            Demonstration of LSASS memory exposure for educational purposes only.
+          </div>
+          <div
+            class="relative h-40 flex items-center justify-center mb-4"
+          >
+            <div
+              class="absolute transition-opacity duration-700 ease-in-out opacity-100"
+            >
+              <div
+                class="relative w-64 h-32 border-2 border-blue-400 flex items-center justify-center"
+              >
+                <span
+                  class="text-blue-200 font-bold"
+                >
+                  LSASS Memory
+                </span>
+              </div>
+            </div>
+            <div
+              class="absolute transition-opacity duration-700 ease-in-out opacity-0"
+            >
+              <div
+                class="relative w-64 h-32 border-2 border-blue-400"
+              >
+                <div
+                  class="absolute inset-0 bg-red-500 opacity-40 animate-pulse"
+                />
+                <span
+                  class="absolute inset-0 flex items-center justify-center text-red-200 font-bold"
+                >
+                  Dumping...
+                </span>
+              </div>
+            </div>
+            <div
+              class="absolute transition-opacity duration-700 ease-in-out opacity-0"
+            >
+              <div
+                class="relative w-64 h-32 border-2 border-blue-400 flex flex-col justify-center p-2"
+              >
+                <div
+                  class="h-3 bg-green-500 mb-1 animate-bounce"
+                />
+                <div
+                  class="h-3 bg-green-500 mb-1 animate-bounce"
+                  style="animation-delay: 0.1s;"
+                />
+                <div
+                  class="h-3 bg-green-500 animate-bounce"
+                  style="animation-delay: 0.2s;"
+                />
+              </div>
+            </div>
+            <div
+              class="absolute transition-opacity duration-700 ease-in-out opacity-0"
+            >
+              <div
+                class="relative w-64 h-32 border-2 border-green-400 flex items-center justify-center"
+              >
+                <span
+                  class="text-green-200 font-bold"
+                >
+                  Guarded
+                </span>
+              </div>
+            </div>
+          </div>
+          <h3
+            class="text-lg font-bold text-center mb-2"
+          >
+            LSASS Running
+          </h3>
+          <p
+            class="text-center max-w-md mx-auto mb-4"
+          >
+            The Local Security Authority Subsystem Service stores authentication secrets in memory while the system is running.
+          </p>
+          <div
+            class="flex justify-center space-x-2"
+          >
+            <button
+              aria-label="Show step 1"
+              class="h-3 w-3 rounded-full bg-blue-400"
+            />
+            <button
+              aria-label="Show step 2"
+              class="h-3 w-3 rounded-full bg-gray-600"
+            />
+            <button
+              aria-label="Show step 3"
+              class="h-3 w-3 rounded-full bg-gray-600"
+            />
+            <button
+              aria-label="Show step 4"
+              class="h-3 w-3 rounded-full bg-gray-600"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+`;
