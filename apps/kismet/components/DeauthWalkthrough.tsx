@@ -22,8 +22,7 @@ const frames: Frame[] = [
 
 const DeauthWalkthrough: React.FC = () => {
   return (
-    <div className="p-4">
-      <h2 className="text-lg font-bold mb-2">Deauthentication Walkthrough</h2>
+    <div className="space-y-4 text-sm">
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left">
