@@ -28,6 +28,21 @@ const percentOf = (value, total) => {
     return (value / total) * 100;
 };
 
+const SNAP_LABELS = {
+    left: 'Snap left half',
+    right: 'Snap right half',
+    top: 'Snap full screen',
+    'top-left': 'Snap top-left quarter',
+    'top-right': 'Snap top-right quarter',
+    'bottom-left': 'Snap bottom-left quarter',
+    'bottom-right': 'Snap bottom-right quarter',
+};
+
+const getSnapLabel = (position) => {
+    if (!position) return 'Snap window';
+    return SNAP_LABELS[position] || 'Snap window';
+};
+
 const computeSnapRegions = (viewportWidth, viewportHeight, topInset = DEFAULT_WINDOW_TOP_OFFSET) => {
     const normalizedTopInset = typeof topInset === 'number'
         ? Math.max(topInset, DESKTOP_TOP_PADDING)
@@ -728,7 +743,14 @@ export class Window extends Component {
                             WebkitBackdropFilter: 'brightness(1.1) saturate(1.2)'
 
                         }}
-                    />
+                        aria-live="polite"
+                        aria-label={getSnapLabel(this.state.snapPosition)}
+                        role="status"
+                    >
+                        <span className={styles.snapPreviewLabel} aria-hidden="true">
+                            {getSnapLabel(this.state.snapPosition)}
+                        </span>
+                    </div>
                 )}
                 <Draggable
                     nodeRef={this.windowRef}
