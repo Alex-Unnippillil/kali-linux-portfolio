@@ -34,9 +34,9 @@ This document tracks planned improvements and new features for the desktop portf
 - Use embed player for public tracks with editable playlist JSON and mini-player mode.
 
 ### YouTube
-- Add search and watch view with click-to-load embeds.
-- Store "recently watched" in `localStorage`.
-- Add a basic component test similar to existing ones.
+- ✅ Debounced search results hit the YouTube API when configured and fall back to the demo catalog when offline.
+- ✅ Watch view loads embeds on selection and remembers recently watched videos with a clear history action.
+- ✅ Component tests cover the search filtering, watch flow, and history persistence.
 
 ## Security Tool Simulators
 Implement safe, non-executing simulators for each tool. Features:
