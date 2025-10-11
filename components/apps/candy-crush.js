@@ -1,114 +1,389 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Overlay, useGameLoop } from './Games/common';
+import {
+  BOARD_WIDTH,
+  CANDY_COLORS,
+  createBoard,
+  detonateColorBomb,
+  findMatches,
+  initialBoosters,
+  isAdjacent,
+  resolveBoard,
+  scoreCascade,
+  shuffleBoard,
+  swapCandies,
+  useCandyCrushStats,
+} from './candy-crush-logic';
+import usePersistentState from '../../hooks/usePersistentState';
+import { getAudioContext } from '../../utils/audio';
 
-const width = 8;
-const candyColors = ['#ff6666', '#66b3ff', '#66ff66', '#ffcc66'];
+const cellSize = 44;
+
+const isBoolean = (value) => typeof value === 'boolean';
 
 const CandyCrush = () => {
-  const [board, setBoard] = useState([]);
-  const [dragged, setDragged] = useState(null);
-  const [replaced, setReplaced] = useState(null);
+  const rngRef = useRef(() => Math.random());
+  const [board, setBoard] = useState(() => createBoard(BOARD_WIDTH, CANDY_COLORS, rngRef.current));
+  const [score, setScore] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [moves, setMoves] = useState(0);
+  const [message, setMessage] = useState('Match three candies to start.');
+  const [selected, setSelected] = useState(null);
+  const [boosters, setBoosters] = useState(() => ({ ...initialBoosters }));
+  const [paused, setPaused] = useState(false);
+  const [lastCascade, setLastCascade] = useState(null);
+  const dragSource = useRef(null);
+  const cascadeSource = useRef('auto');
+  const started = useRef(false);
+  const { bestScore, bestStreak, updateStats } = useCandyCrushStats();
+  const [muted, setMuted] = usePersistentState('candy-crush:muted', false, isBoolean);
 
-  const createBoard = () => {
-    const randomBoard = Array.from({ length: width * width }, () =>
-      candyColors[Math.floor(Math.random() * candyColors.length)]
-    );
-    setBoard(randomBoard);
-  };
-
-  const checkForRowOfThree = useCallback(() => {
-    for (let i = 0; i < width * width; i++) {
-      const row = [i, i + 1, i + 2];
-      const color = board[i];
-      const invalid = [6, 7, 14, 15, 22, 23, 30, 31, 38, 39, 46, 47, 54, 55, 62, 63];
-      if (invalid.includes(i)) continue;
-      if (row.every((index) => board[index] === color)) {
-        row.forEach((index) => (board[index] = ''));
-        return true;
+  const playTone = useCallback(
+    (frequency, duration = 0.35) => {
+      if (muted || typeof window === 'undefined') return;
+      try {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(frequency, now);
+        oscillator.connect(gain);
+        gain.connect(ctx.destination);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.2, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+        oscillator.start(now);
+        oscillator.stop(now + duration + 0.05);
+      } catch (error) {
+        // Ignore AudioContext errors in environments without audio support.
       }
-    }
-    return false;
-  }, [board]);
+    },
+    [muted],
+  );
 
-  const checkForColumnOfThree = useCallback(() => {
-    for (let i = 0; i <= width * (width - 3); i++) {
-      const column = [i, i + width, i + width * 2];
-      const color = board[i];
-      if (column.every((index) => board[index] === color)) {
-        column.forEach((index) => (board[index] = ''));
-        return true;
-      }
-    }
-    return false;
-  }, [board]);
+  const playMatchSound = useCallback(() => playTone(720, 0.3), [playTone]);
+  const playFailSound = useCallback(() => playTone(220, 0.25), [playTone]);
 
-  const moveDown = useCallback(() => {
-    for (let i = board.length - 1; i >= 0; i--) {
-      if (board[i] === '' && i >= width) {
-        board[i] = board[i - width];
-        board[i - width] = '';
-      }
-      if (i < width && board[i] === '') {
-        board[i] = candyColors[Math.floor(Math.random() * candyColors.length)];
-      }
-    }
-  }, [board]);
-
-  const dragStart = (e) => setDragged(e.target);
-  const dragDrop = (e) => setReplaced(e.target);
-  const dragEnd = () => {
-    if (!dragged || !replaced) return;
-    const dragId = parseInt(dragged.getAttribute('data-id'));
-    const replaceId = parseInt(replaced.getAttribute('data-id'));
-    const validMoves = [dragId - 1, dragId + 1, dragId - width, dragId + width];
-    if (!validMoves.includes(replaceId)) return;
-
-    board[replaceId] = dragged.style.backgroundColor;
-    board[dragId] = replaced.style.backgroundColor;
-
-    const valid = checkForRowOfThree() || checkForColumnOfThree();
-    if (!valid) {
-      board[dragId] = dragged.style.backgroundColor;
-      board[replaceId] = replaced.style.backgroundColor;
-    }
-
-    setBoard([...board]);
-    setDragged(null);
-    setReplaced(null);
-  };
+  const stats = useMemo(
+    () => [
+      { label: 'Score', value: score },
+      { label: 'Moves', value: moves },
+      { label: 'Streak', value: streak },
+      { label: 'Best Score', value: bestScore },
+      { label: 'Best Streak', value: bestStreak },
+    ],
+    [bestScore, bestStreak, moves, score, streak],
+  );
 
   useEffect(() => {
-    createBoard();
+    updateStats(score, streak);
+  }, [score, streak, updateStats]);
+
+  const step = useCallback(() => {
+    setBoard((current) => {
+      const result = resolveBoard(current, BOARD_WIDTH, CANDY_COLORS, rngRef.current);
+      if (result.cascades.length === 0) {
+        return current;
+      }
+
+      const totalPoints = result.cascades.reduce(
+        (total, cascade, index) => total + scoreCascade(cascade, index + 1),
+        0,
+      );
+
+      if (totalPoints > 0) {
+        setScore((prev) => prev + totalPoints);
+        const shouldAnnounce = cascadeSource.current !== 'auto' || started.current;
+        if (shouldAnnounce) {
+          setLastCascade({
+            chain: result.cascades.length,
+            cleared: result.cleared,
+            points: totalPoints,
+          });
+          playMatchSound();
+          setMessage(
+            result.cascades.length > 1
+              ? `Chain x${result.cascades.length}! Cleared ${result.cleared} candies (+${totalPoints}).`
+              : `Cleared ${result.cleared} candies (+${totalPoints}).`,
+          );
+        }
+      }
+
+      if (cascadeSource.current === 'player') {
+        setStreak((prev) => prev + 1);
+        cascadeSource.current = 'auto';
+      }
+
+      return result.board;
+    });
+  }, [playMatchSound]);
+
+  useGameLoop(step, !paused);
+
+  const attemptSwap = useCallback(
+    (from, to) => {
+      if (!isAdjacent(from, to, BOARD_WIDTH)) {
+        setSelected(to);
+        setMessage('Choose an adjacent candy to swap.');
+        return;
+      }
+
+      let matched = false;
+      let shouldBuzz = false;
+
+      setBoard((current) => {
+        const next = swapCandies(current, from, to);
+        const matches = findMatches(next, BOARD_WIDTH);
+        if (matches.length === 0) {
+          shouldBuzz = true;
+          return current;
+        }
+        matched = true;
+        cascadeSource.current = 'player';
+        return next;
+      });
+
+      setSelected(null);
+
+      if (!matched) {
+        setStreak(0);
+        setMessage('No match. Streak reset.');
+        if (shouldBuzz) playFailSound();
+        return;
+      }
+
+      started.current = true;
+      setMoves((prev) => prev + 1);
+      setMessage('Match found! Watch the cascade.');
+    },
+    [playFailSound],
+  );
+
+  const handleCellClick = useCallback(
+    (index) => {
+      if (selected === null) {
+        setSelected(index);
+        setMessage('Select an adjacent candy to swap.');
+        return;
+      }
+      if (selected === index) {
+        setSelected(null);
+        return;
+      }
+      attemptSwap(selected, index);
+    },
+    [attemptSwap, selected],
+  );
+
+  const handleDragStart = useCallback(
+    (index, event) => {
+      dragSource.current = index;
+      setSelected(index);
+      event.dataTransfer.effectAllowed = 'move';
+    },
+    [],
+  );
+
+  const handleDrop = useCallback(
+    (index) => {
+      if (dragSource.current === null) return;
+      attemptSwap(dragSource.current, index);
+      dragSource.current = null;
+    },
+    [attemptSwap],
+  );
+
+  const handleDragEnd = useCallback(() => {
+    dragSource.current = null;
+    setSelected(null);
   }, []);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const matched = checkForRowOfThree() || checkForColumnOfThree();
-      if (matched) moveDown();
-      setBoard([...board]);
-    }, 200);
-    return () => clearInterval(timer);
-  }, [board, checkForRowOfThree, checkForColumnOfThree, moveDown]);
+  const handleShuffle = useCallback(() => {
+    let allowed = false;
+    setBoosters((prev) => {
+      if (prev.shuffle === 0) return prev;
+      allowed = true;
+      return { ...prev, shuffle: prev.shuffle - 1 };
+    });
+    if (!allowed) {
+      setMessage('No shuffle boosters remaining.');
+      return;
+    }
+    started.current = true;
+    cascadeSource.current = 'player';
+    setBoard((current) => shuffleBoard(current, rngRef.current));
+    setMoves((prev) => prev + 1);
+    setMessage('Board shuffled. Look for new matches.');
+  }, []);
+
+  const handleColorBomb = useCallback(() => {
+    let allowed = false;
+    setBoosters((prev) => {
+      if (prev.colorBomb === 0) return prev;
+      allowed = true;
+      return { ...prev, colorBomb: prev.colorBomb - 1 };
+    });
+    if (!allowed) {
+      setMessage('No color bombs available.');
+      return;
+    }
+
+    let removed = 0;
+    setBoard((current) => {
+      const result = detonateColorBomb(current, BOARD_WIDTH, CANDY_COLORS, rngRef.current);
+      removed = result.removed;
+      if (removed > 0) {
+        cascadeSource.current = 'player';
+        started.current = true;
+        return result.board;
+      }
+      return current;
+    });
+
+    if (removed === 0) {
+      setMessage('Color bomb fizzled—no candies cleared.');
+      return;
+    }
+
+    const bonus = removed * 12;
+    setScore((prev) => prev + bonus);
+    setMoves((prev) => prev + 1);
+    setMessage(`Color bomb cleared ${removed} candies (+${bonus}).`);
+    setLastCascade({ chain: 1, cleared: removed, points: bonus });
+    playMatchSound();
+  }, [playMatchSound]);
+
+  const handleReset = useCallback(() => {
+    setBoard(createBoard(BOARD_WIDTH, CANDY_COLORS, rngRef.current));
+    setScore(0);
+    setStreak(0);
+    setMoves(0);
+    setBoosters({ ...initialBoosters });
+    setSelected(null);
+    setLastCascade(null);
+    setPaused(false);
+    cascadeSource.current = 'auto';
+    started.current = false;
+    setMessage('New board ready. Match three candies!');
+  }, []);
+
+  const handlePause = useCallback(() => {
+    setPaused(true);
+    setMessage('Game paused.');
+  }, []);
+
+  const handleResume = useCallback(() => {
+    setPaused(false);
+    setMessage('Game resumed.');
+  }, []);
+
+  const handleToggleSound = useCallback(
+    (nextMuted) => {
+      setMuted(nextMuted);
+      setMessage(nextMuted ? 'Sound muted.' : 'Sound on.');
+    },
+    [setMuted],
+  );
+
+  const gridStyle = useMemo(
+    () => ({
+      gridTemplateColumns: `repeat(${BOARD_WIDTH}, ${cellSize}px)`,
+      gridAutoRows: `${cellSize}px`,
+    }),
+    [],
+  );
 
   return (
-    <div className="flex justify-center items-center p-4 select-none">
-      <div className="grid grid-cols-8 gap-1">
-        {board.map((color, index) => (
-          <div
-            key={index}
-            data-id={index}
-            style={{ backgroundColor: color, width: '40px', height: '40px' }}
-            draggable
-            onDragStart={dragStart}
-            onDragOver={(e) => e.preventDefault()}
-            onDragEnter={(e) => e.preventDefault()}
-            onDragLeave={(e) => e.preventDefault()}
-            onDrop={dragDrop}
-            onDragEnd={dragEnd}
-          />
-        ))}
+    <div className="relative flex flex-col gap-4 p-4 text-sm sm:text-base">
+      <Overlay
+        onPause={handlePause}
+        onResume={handleResume}
+        muted={muted}
+        onToggleSound={handleToggleSound}
+      />
+      <div className="flex flex-wrap items-start gap-6 pr-24">
+        <div className="flex flex-wrap gap-6">
+          {stats.map((item) => (
+            <div key={item.label} className="rounded-md border border-slate-700/40 bg-slate-900/40 px-3 py-2 shadow">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                {item.label}
+              </div>
+              <div className="font-semibold tabular-nums text-lg text-slate-50">{item.value}</div>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleReset}
+              className="rounded-md border border-slate-600/50 bg-slate-800/70 px-3 py-1.5 text-slate-100 shadow hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+            >
+              Reset
+            </button>
+            <button
+              type="button"
+              onClick={handleShuffle}
+              disabled={boosters.shuffle === 0}
+              className="rounded-md border border-slate-600/50 bg-purple-800/70 px-3 py-1.5 text-slate-100 shadow hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+            >
+              Shuffle ({boosters.shuffle})
+            </button>
+            <button
+              type="button"
+              onClick={handleColorBomb}
+              disabled={boosters.colorBomb === 0}
+              className="rounded-md border border-slate-600/50 bg-amber-800/70 px-3 py-1.5 text-slate-100 shadow hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+            >
+              Color Bomb ({boosters.colorBomb})
+            </button>
+          </div>
+          <div className="rounded-lg border border-slate-700/40 bg-slate-900/40 px-4 py-3 text-slate-100 shadow-inner">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">Status</div>
+            <p className="mt-1 text-sm leading-snug">{message}</p>
+            {lastCascade && (
+              <p className="mt-1 text-xs text-slate-300">
+                Last chain: cleared {lastCascade.cleared} candies for {lastCascade.points} points
+                {lastCascade.chain > 1 ? ` (x${lastCascade.chain})` : ''}.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-col items-center gap-3">
+        <div className="grid gap-1" style={gridStyle}>
+          {board.map((color, index) => (
+            <button
+              key={index}
+              type="button"
+              draggable
+              onDragStart={(event) => handleDragStart(index, event)}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault();
+                handleDrop(index);
+              }}
+              onDragEnd={handleDragEnd}
+              onClick={() => handleCellClick(index)}
+              aria-pressed={selected === index}
+              className={`relative rounded-md border border-slate-700/40 shadow-inner transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 ${
+                selected === index ? 'ring-2 ring-orange-400' : ''
+              }`}
+              style={{
+                backgroundColor: color || 'transparent',
+                width: cellSize,
+                height: cellSize,
+              }}
+            >
+              <span className="sr-only">Candy {index + 1}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
 };
 
 export default CandyCrush;
+
