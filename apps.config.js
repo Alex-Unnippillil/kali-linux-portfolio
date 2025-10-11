@@ -791,7 +791,7 @@ const apps = [
   {
     id: 'sticky_notes',
     title: 'Sticky Notes',
-    icon: '/themes/Yaru/apps/gedit.png',
+    icon: '/themes/Yaru/apps/sticky-notes.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: true,
