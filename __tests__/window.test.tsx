@@ -45,7 +45,7 @@ const computeLeftSnapTestTop = () => {
   return Math.round(clamped);
 };
 
-const getSnapOffsetTop = () => measureWindowTopOffset() - DESKTOP_TOP_PADDING;
+const getSnapTranslateY = () => measureWindowTopOffset();
 
 const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: width });
@@ -432,7 +432,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.width).toBeCloseTo(50);
     const expectedHeight = computeSnappedHeightPercent();
     expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 5);
-    const snapOffset = getSnapOffsetTop();
+    const snapOffset = getSnapTranslateY();
     expect(winEl.style.transform).toBe(`translate(0px, ${snapOffset}px)`);
   });
 
@@ -476,7 +476,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.width).toBeCloseTo(50);
     const expectedHeight = computeSnappedHeightPercent();
     expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 5);
-    const rightSnapOffset = getSnapOffsetTop();
+    const rightSnapOffset = getSnapTranslateY();
     expect(winEl.style.transform).toBe(`translate(${window.innerWidth / 2}px, ${rightSnapOffset}px)`);
   });
 
@@ -519,7 +519,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('top');
     expect(ref.current!.state.width).toBeCloseTo(100, 2);
     expect(ref.current!.state.height).toBeCloseTo(computeSnappedHeightPercent(), 5);
-    const topSnapOffset = getSnapOffsetTop();
+    const topSnapOffset = getSnapTranslateY();
     expect(winEl.style.transform).toBe(`translate(0px, ${topSnapOffset}px)`);
   });
 
@@ -562,7 +562,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('top-left');
     expect(ref.current!.state.width).toBeCloseTo(50, 2);
     expect(ref.current!.state.height).toBeCloseTo(computeQuarterHeightPercent(), 5);
-    const snapOffset = getSnapOffsetTop();
+    const snapOffset = getSnapTranslateY();
     expect(winEl.style.transform).toBe(`translate(0px, ${snapOffset}px)`);
   });
 
@@ -607,7 +607,7 @@ describe('Window snapping finalize and release', () => {
     const expectedHeight = computeSnappedHeightPercent();
     expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 5);
     const expectedX = window.innerWidth / 2;
-    const expectedY = getSnapOffsetTop();
+    const expectedY = getSnapTranslateY();
     expect(winEl.style.transform).toBe(`translate(${expectedX}px, ${expectedY}px)`);
   });
 
@@ -745,7 +745,7 @@ describe('Window maximize behavior', () => {
     fireEvent.click(maximizeButton);
 
     const winEl = document.getElementById('test-window') as HTMLElement | null;
-    expect(winEl?.style.transform).toBe(`translate(-1pt, ${safeTop - DESKTOP_TOP_PADDING}px)`);
+    expect(winEl?.style.transform).toBe(`translate(-1pt, ${safeTop}px)`);
   });
 });
 
