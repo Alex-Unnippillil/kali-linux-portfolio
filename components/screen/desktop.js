@@ -14,6 +14,7 @@ import SystemOverlayWindow from '../base/SystemOverlayWindow';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
+import CommandPalette from '../ui/CommandPalette';
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
@@ -33,6 +34,7 @@ import {
 } from '../../utils/windowLayout';
 
 const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
+const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
 
 const sanitizeFolderItem = (item) => {
     if (!item) return null;
@@ -119,12 +121,18 @@ const OVERLAY_WINDOWS = Object.freeze({
         title: 'Window Switcher',
         icon: '/themes/Yaru/window/window-restore-symbolic.svg',
     },
+    commandPalette: {
+         id: 'overlay-command-palette',
+         title: 'Command Palette',
+         icon: '/themes/Yaru/apps/word-search.svg',
+    },
 });
 
 const OVERLAY_WINDOW_LIST = Object.values(OVERLAY_WINDOWS);
 const LAUNCHER_OVERLAY_ID = OVERLAY_WINDOWS.launcher.id;
 const SHORTCUT_OVERLAY_ID = OVERLAY_WINDOWS.shortcutSelector.id;
 const SWITCHER_OVERLAY_ID = OVERLAY_WINDOWS.windowSwitcher.id;
+const COMMAND_PALETTE_OVERLAY_ID = OVERLAY_WINDOWS.commandPalette.id;
 
 const createOverlayFlagMap = (value) => {
     const flags = {};
@@ -150,6 +158,27 @@ const createOverlayStateMap = () => {
     return next;
 };
 
+const loadStoredWindowSizes = (storageKey = WINDOW_SIZE_STORAGE_KEY) => {
+    if (!safeLocalStorage) return {};
+    try {
+        const stored = safeLocalStorage.getItem(storageKey);
+        if (!stored) return {};
+        const parsed = JSON.parse(stored);
+        if (!parsed || typeof parsed !== 'object') return {};
+        const normalized = {};
+        Object.entries(parsed).forEach(([key, value]) => {
+            if (!value || typeof value !== 'object') return;
+            const width = Number(value.width);
+            const height = Number(value.height);
+            if (Number.isFinite(width) && Number.isFinite(height)) {
+                normalized[key] = { width, height };
+            }
+        });
+        return normalized;
+    } catch (e) {
+        return {};
+    }
+};
 
 export class Desktop extends Component {
     static defaultProps = {
@@ -179,6 +208,7 @@ export class Desktop extends Component {
             overlay: props.desktopTheme ? props.desktopTheme.overlay : undefined,
             useKaliWallpaper: Boolean(props.desktopTheme && props.desktopTheme.useKaliWallpaper),
         };
+        const initialWindowSizes = loadStoredWindowSizes(this.windowSizeStorageKey);
         const initialTheme = this.normalizeTheme(props.desktopTheme);
         this.workspaceThemes = Array.from({ length: this.workspaceCount }, () => ({ ...initialTheme }));
         this.initFavourite = {};
@@ -219,6 +249,8 @@ export class Desktop extends Component {
         const initialOverlayClosed = createOverlayFlagMap(true);
         const initialOverlayMinimized = createOverlayFlagMap(false);
         const initialOverlayFocused = createOverlayFlagMap(false);
+
+        const initialWindowSizes = this.loadWindowSizes();
 
         this.state = {
             focused_windows: { ...initialOverlayFocused },
@@ -309,6 +341,13 @@ export class Desktop extends Component {
         this.allAppsFocusTrapHandler = null;
 
         this.desktopSelectionState = null;
+
+        this.commandPaletteUsesMeta = false;
+        if (typeof navigator !== 'undefined') {
+            const platform = navigator.platform || '';
+            const userAgent = navigator.userAgent || '';
+            this.commandPaletteUsesMeta = /Mac|iPhone|iPad|iPod/i.test(platform || userAgent);
+        }
 
     }
 
@@ -1291,6 +1330,171 @@ export class Desktop extends Component {
     isOverlayOpen = (id) => Boolean(this.state.overlayWindows?.[id]?.open);
 
     getLauncherState = () => this.state.overlayWindows?.[LAUNCHER_OVERLAY_ID] || null;
+
+    normalizePaletteIconPath = (icon) => {
+        if (!icon || typeof icon !== 'string') return undefined;
+        if (/^(https?:|data:)/i.test(icon)) return icon;
+        const sanitized = icon.replace(/^\.\//, '').replace(/^\/+/, '');
+        if (!sanitized) return undefined;
+        return sanitized.startsWith('/') ? sanitized : `/${sanitized}`;
+    };
+
+    getCommandPaletteAppItems = () => {
+        return apps
+            .filter((app) => !app.disabled)
+            .map((app) => ({
+                id: app.id,
+                title: app.title,
+                icon: this.normalizePaletteIconPath(app.icon),
+                subtitle: undefined,
+                keywords: [app.id, app.title].filter(Boolean),
+            }));
+    };
+
+    getCommandPaletteRecentWindows = () => {
+        const stack = this.getActiveStack();
+        const seen = new Set();
+        const overlays = this.state.overlayWindows || {};
+        const results = [];
+        stack.forEach((id) => {
+            if (!id || seen.has(id)) return;
+            seen.add(id);
+            if (this.isOverlayId(id)) {
+                const overlayState = overlays[id] || {};
+                if (!overlayState.open) return;
+                const meta = this.getOverlayMeta(id);
+                if (!meta) return;
+                results.push({
+                    id,
+                    title: meta.title || id,
+                    icon: this.normalizePaletteIconPath(meta.icon),
+                    subtitle: 'System overlay',
+                    keywords: [id, meta.title, 'overlay'].filter(Boolean),
+                });
+                return;
+            }
+            const closedWindows = this.state.closed_windows || {};
+            if (closedWindows[id] !== false) return;
+            const app = this.getAppById(id);
+            if (!app) return;
+            results.push({
+                id,
+                title: app.title || id,
+                icon: this.normalizePaletteIconPath(app.icon),
+                subtitle: 'Open window',
+                keywords: [id, app.title, 'window'].filter(Boolean),
+            });
+        });
+        return results;
+    };
+
+    getCommandPaletteSettingsActions = () => {
+        const actions = [
+            {
+                id: 'command-open-settings',
+                title: 'Open Settings',
+                subtitle: 'Launch the settings application',
+                icon: this.normalizePaletteIconPath('/themes/Yaru/apps/gnome-control-center.png'),
+                keywords: ['settings', 'preferences', 'control'],
+                data: { action: 'open-settings', target: 'settings' },
+            },
+        ];
+
+        const presets = [
+            { preset: 'small', title: 'Use small desktop icons', keywords: ['small', 'icons', 'desktop'] },
+            { preset: 'medium', title: 'Use medium desktop icons', keywords: ['medium', 'icons', 'desktop'] },
+            { preset: 'large', title: 'Use large desktop icons', keywords: ['large', 'icons', 'desktop'] },
+        ];
+
+        presets.forEach(({ preset, title, keywords }) => {
+            if (this.state.iconSizePreset === preset) return;
+            actions.push({
+                id: `command-set-icon-size-${preset}`,
+                title,
+                subtitle: 'Desktop setting',
+                icon: this.normalizePaletteIconPath('/themes/Yaru/system/user-desktop.png'),
+                keywords: ['icon size', ...keywords],
+                data: { action: 'set-icon-size', preset },
+            });
+        });
+
+        return actions;
+    };
+
+    openCommandPalette = () => {
+        this.openOverlay(COMMAND_PALETTE_OVERLAY_ID, { transitionState: 'entered' }, () => {
+            this.focus(COMMAND_PALETTE_OVERLAY_ID);
+        });
+    };
+
+    closeCommandPalette = () => {
+        this.closeOverlay(COMMAND_PALETTE_OVERLAY_ID, undefined, () => {
+            const stack = this.getActiveStack();
+            const index = stack.indexOf(COMMAND_PALETTE_OVERLAY_ID);
+            if (index !== -1) {
+                stack.splice(index, 1);
+            }
+            this.setState((prev) => ({
+                focused_windows: { ...prev.focused_windows, [COMMAND_PALETTE_OVERLAY_ID]: false },
+            }), () => {
+                this.giveFocusToLastApp();
+            });
+        });
+    };
+
+    toggleCommandPalette = () => {
+        if (this.isOverlayOpen(COMMAND_PALETTE_OVERLAY_ID)) {
+            this.closeCommandPalette();
+        } else {
+            this.openCommandPalette();
+        }
+    };
+
+    isCommandPaletteShortcut = (event) => {
+        if (!event || typeof event !== 'object') return false;
+        if (event.repeat) return false;
+        const key = event.key || '';
+        const code = event.code || '';
+        const isSpace = key === ' ' || key === 'Spacebar' || key === 'Space' || code === 'Space';
+        if (!isSpace) return false;
+        if (event.altKey || event.shiftKey) return false;
+        if (this.commandPaletteUsesMeta) {
+            return Boolean(event.metaKey);
+        }
+        return Boolean(event.ctrlKey);
+    };
+
+    handleCommandPaletteAction = (item) => {
+        if (!item || typeof item !== 'object') return false;
+        const actionType = item?.data?.action;
+        if (actionType === 'open-settings') {
+            this.openApp('settings');
+            return true;
+        }
+        if (actionType === 'set-icon-size') {
+            const preset = item?.data?.preset;
+            if (preset && this.iconSizePresets?.[preset]) {
+                this.setIconSizePreset(preset);
+                return true;
+            }
+        }
+        return false;
+    };
+
+    handleCommandPaletteSelect = (item) => {
+        if (!item || typeof item !== 'object') return;
+        if (item.type === 'action') {
+            const handled = this.handleCommandPaletteAction(item);
+            if (handled) {
+                this.closeCommandPalette();
+            }
+            return;
+        }
+        if (item.id) {
+            this.openApp(item.id);
+        }
+        this.closeCommandPalette();
+    };
 
     openOverlay = (id, options = {}) => {
         if (!this.isOverlayId(id)) return;
@@ -2805,7 +3009,11 @@ export class Desktop extends Component {
                 document.getElementById(id)?.dispatchEvent(event);
             }
         }
-        else if (e.key === 'Meta' && !e.repeat) {
+        else if (this.isCommandPaletteShortcut(e)) {
+            e.preventDefault();
+            this.toggleCommandPalette();
+        }
+        else if (e.key === 'Meta' && !e.repeat && !this.commandPaletteUsesMeta) {
             if (typeof e.preventDefault === 'function') {
                 e.preventDefault();
             }
@@ -3578,6 +3786,36 @@ export class Desktop extends Component {
             );
         }
 
+        const commandPaletteState = overlays[COMMAND_PALETTE_OVERLAY_ID];
+        if (commandPaletteState) {
+            const paletteActive = commandPaletteState.open && !commandPaletteState.minimized;
+            elements.push(
+                <SystemOverlayWindow
+                    key={COMMAND_PALETTE_OVERLAY_ID}
+                    id={COMMAND_PALETTE_OVERLAY_ID}
+                    title="Command Palette"
+                    open={Boolean(commandPaletteState.open)}
+                    minimized={Boolean(commandPaletteState.minimized)}
+                    maximized={Boolean(commandPaletteState.maximized)}
+                    onMinimize={() => this.toggleOverlayMinimize(COMMAND_PALETTE_OVERLAY_ID)}
+                    onClose={this.closeCommandPalette}
+                    allowMaximize={false}
+                    overlayClassName="bg-slate-950/70 backdrop-blur-xl transition-opacity duration-200 ease-out"
+                    frameClassName="w-full max-w-3xl"
+                    bodyClassName="bg-transparent p-0"
+                >
+                    <CommandPalette
+                        open={paletteActive}
+                        apps={this.getCommandPaletteAppItems()}
+                        recentWindows={this.getCommandPaletteRecentWindows()}
+                        settingsActions={this.getCommandPaletteSettingsActions()}
+                        onSelect={this.handleCommandPaletteSelect}
+                        onClose={this.closeCommandPalette}
+                    />
+                </SystemOverlayWindow>
+            );
+        }
+
         return elements;
     }
 
@@ -3596,6 +3834,24 @@ export class Desktop extends Component {
         }), () => {
             this.persistWindowSizes(this.state.window_sizes || {});
             this.saveSession();
+        });
+    }
+
+    updateWindowSize = (id, width, height) => {
+        if (!id) return;
+        const normalizedWidth = Number(width);
+        const normalizedHeight = Number(height);
+        if (!Number.isFinite(normalizedWidth) || !Number.isFinite(normalizedHeight)) {
+            return;
+        }
+        const safeWidth = Math.max(0, Math.round(normalizedWidth));
+        const safeHeight = Math.max(0, Math.round(normalizedHeight));
+        this.setWorkspaceState((prev) => {
+            const nextSizes = { ...(prev.window_sizes || {}) };
+            nextSizes[id] = { width: safeWidth, height: safeHeight };
+            return { window_sizes: nextSizes };
+        }, () => {
+            this.persistWindowSizes(this.state.window_sizes || {});
         });
     }
 
