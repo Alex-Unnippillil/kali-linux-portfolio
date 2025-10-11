@@ -7,6 +7,10 @@ import {
   isGameOver,
   importWordList,
   FAMILY_WORDS,
+  DIFFICULTY_CONFIG,
+  computeTimeLimit,
+  tickTimer,
+  isTimeExpired,
 } from '../apps/hangman/engine';
 
 describe('hangman engine', () => {
@@ -56,5 +60,28 @@ describe('hangman engine', () => {
     importWordList('colors', ['red', 'blue']);
     const customGame = createGame({ category: 'colors' });
     expect(['red', 'blue']).toContain(customGame.word);
+  });
+
+  test('difficulty presets control hints and timer', () => {
+    const easyGame = createGame({ word: 'otter', difficulty: 'easy' });
+    expect(easyGame.difficulty).toBe('easy');
+    expect(easyGame.hints).toBe(DIFFICULTY_CONFIG.easy.hintTokens);
+    expect(easyGame.timeLimit).toBe(computeTimeLimit('otter', 'easy'));
+
+    const hardGame = createGame({ word: 'cipher', difficulty: 'hard' });
+    expect(hardGame.difficulty).toBe('hard');
+    expect(hardGame.hints).toBe(DIFFICULTY_CONFIG.hard.hintTokens);
+    expect(hardGame.timeLimit).toBe(computeTimeLimit('cipher', 'hard'));
+  });
+
+  test('timer countdown expires the game', () => {
+    const game = createGame({ word: 'cipher', difficulty: 'hard' });
+    expect(game.timeRemaining).toBe(game.timeLimit);
+    tickTimer(game, game.timeLimit - 1);
+    expect(game.timeRemaining).toBe(1);
+    tickTimer(game, 5);
+    expect(game.timeRemaining).toBe(0);
+    expect(isTimeExpired(game)).toBe(true);
+    expect(isGameOver(game)).toBe(true);
   });
 });
