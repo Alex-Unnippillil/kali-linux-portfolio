@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { ZodError } from 'zod';
 import FormError from '../../ui/FormError';
 import { copyToClipboard } from '../../../utils/clipboard';
 import { openMailto } from '../../../utils/mailto';
@@ -19,71 +20,110 @@ const sanitize = (str: string) =>
     "'": '&#39;',
   }[c]!));
 
+const CONTACT_ENDPOINT =
+  process.env.NEXT_PUBLIC_CONTACT_ENDPOINT || '/api/dummy';
+
+export const CONTACT_OFFLINE_ERROR =
+  'Network unavailable. Copy your message or try email instead.';
+
 const errorMap: Record<string, string> = {
   rate_limit: 'Too many requests. Please try again later.',
   invalid_input: 'Please check your input and try again.',
-  invalid_csrf: 'Security token mismatch. Refresh and retry.',
-  invalid_recaptcha: 'Captcha verification failed. Please try again.',
-  recaptcha_disabled:
-    'Captcha service is not configured. Please use the options above.',
-
+  network_error: CONTACT_OFFLINE_ERROR,
+  offline: CONTACT_OFFLINE_ERROR,
 };
 
+type ContactFormData = {
+  name: string;
+  email: string;
+  message: string;
+  honeypot?: string;
+};
+
+type ContactFormResult = {
+  success: boolean;
+  error?: string;
+  code?: string;
+};
+
+const clientSchema = contactSchema.omit({
+  csrfToken: true,
+  recaptchaToken: true,
+});
+
 export const processContactForm = async (
-  data: {
-    name: string;
-    email: string;
-    message: string;
-    honeypot: string;
-    csrfToken: string;
-    recaptchaToken: string;
-  },
+  data: ContactFormData,
   fetchImpl: typeof fetch = fetch,
-) => {
+): Promise<ContactFormResult> => {
+  if (
+    typeof navigator !== 'undefined' &&
+    'onLine' in navigator &&
+    !navigator.onLine
+  ) {
+    return { success: false, error: CONTACT_OFFLINE_ERROR, code: 'offline' };
+  }
+
+  let parsed: ContactFormData & { honeypot: string };
   try {
-    const parsed = contactSchema.parse(data);
-    const res = await fetchImpl('/api/contact', {
+    parsed = clientSchema.parse({ ...data, honeypot: data.honeypot ?? '' });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      return {
+        success: false,
+        error: 'Please check your input and try again.',
+        code: 'invalid_input',
+      };
+    }
+    return { success: false, error: 'Submission failed' };
+  }
+
+  if (parsed.honeypot) {
+    return {
+      success: false,
+      error: 'Submission blocked',
+      code: 'honeypot',
+    };
+  }
+
+  let response: Response;
+  try {
+    response = await fetchImpl(CONTACT_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRF-Token': parsed.csrfToken,
       },
       body: JSON.stringify({
         name: sanitize(parsed.name),
         email: parsed.email,
         message: sanitize(parsed.message),
-        honeypot: parsed.honeypot,
-        recaptchaToken: parsed.recaptchaToken,
       }),
     });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      return {
-        success: false,
-        error: errorMap[body.code as string] || 'Submission failed',
-        code: body.code as string,
-      };
-    }
-    return { success: true };
   } catch {
-    return { success: false, error: 'Submission failed' };
+    return {
+      success: false,
+      error: CONTACT_OFFLINE_ERROR,
+      code: 'network_error',
+    };
   }
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    const code = typeof body.code === 'string' ? body.code : undefined;
+    const errorMessage =
+      (code && errorMap[code]) ||
+      (typeof body.message === 'string' ? body.message : 'Submission failed');
+    return {
+      success: false,
+      error: errorMessage,
+      code,
+    };
+  }
+
+  return { success: true };
 };
 
 const DRAFT_FILE = 'contact-draft.json';
 const EMAIL = 'alex.unnippillil@hotmail.com';
-
-const getRecaptchaToken = (siteKey: string): Promise<string> =>
-  new Promise((resolve) => {
-    const g: any = (window as any).grecaptcha;
-    if (!g || !siteKey) return resolve('');
-    g.ready(() => {
-      g
-        .execute(siteKey, { action: 'submit' })
-        .then((token: string) => resolve(token))
-        .catch(() => resolve(''));
-    });
-  });
 
 const writeDraft = async (draft: {
   name: string;
@@ -150,10 +190,28 @@ const ContactApp: React.FC = () => {
     { type: 'success' | 'error'; message: string } | null
   >(null);
   const [submitting, setSubmitting] = useState(false);
-  const [csrfToken, setCsrfToken] = useState('');
   const [fallback, setFallback] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [messageError, setMessageError] = useState('');
+  const [nameError, setNameError] = useState('');
+
+  useEffect(() => {
+    const updateFallback = () => {
+      const shouldFallback =
+        typeof navigator !== 'undefined' &&
+        'onLine' in navigator &&
+        !navigator.onLine;
+      setFallback(shouldFallback);
+    };
+
+    updateFallback();
+    window.addEventListener('online', updateFallback);
+    window.addEventListener('offline', updateFallback);
+    return () => {
+      window.removeEventListener('online', updateFallback);
+      window.removeEventListener('offline', updateFallback);
+    };
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -164,12 +222,6 @@ const ContactApp: React.FC = () => {
         setMessage(draft.message || '');
       }
     })();
-    const meta = document.querySelector('meta[name="csrf-token"]');
-    setCsrfToken(meta?.getAttribute('content') || '');
-    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
-    if (!siteKey || !(window as any).grecaptcha) {
-      setFallback(true);
-    }
   }, []);
 
   useEffect(() => {
@@ -184,10 +236,16 @@ const ContactApp: React.FC = () => {
     setBanner(null);
     setEmailError('');
     setMessageError('');
+    setNameError('');
 
     const emailResult = contactSchema.shape.email.safeParse(email);
     const messageResult = contactSchema.shape.message.safeParse(message);
+    const nameResult = contactSchema.shape.name.safeParse(name);
     let hasValidationError = false;
+    if (!nameResult.success) {
+      setNameError('1-100 chars');
+      hasValidationError = true;
+    }
     if (!emailResult.success) {
       setEmailError('Invalid email');
       hasValidationError = true;
@@ -212,29 +270,11 @@ const ContactApp: React.FC = () => {
       setSubmitting(false);
       return;
     }
-    let recaptchaToken = '';
-    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
-    let shouldFallback = fallback;
-    if (!shouldFallback && siteKey && (window as any).grecaptcha) {
-      recaptchaToken = await getRecaptchaToken(siteKey);
-      if (!recaptchaToken) shouldFallback = true;
-    } else {
-      shouldFallback = true;
-    }
-    if (shouldFallback) {
-      setFallback(true);
-      setError('Email service unavailable. Use the options above.');
-      setBanner({ type: 'error', message: 'Failed to send' });
-      setSubmitting(false);
-      return;
-    }
     const result = await processContactForm({
       name,
       email,
       message,
       honeypot,
-      csrfToken,
-      recaptchaToken,
     });
     if (result.success) {
       setBanner({ type: 'success', message: 'Message sent' });
@@ -249,11 +289,7 @@ const ContactApp: React.FC = () => {
       const msg = result.error || 'Submission failed';
       setError(msg);
       setBanner({ type: 'error', message: msg });
-      if (
-        result.code === 'server_not_configured' ||
-        result.error?.toLowerCase().includes('captcha') ||
-        result.error === 'Submission failed'
-      ) {
+      if (result.code === 'network_error' || result.code === 'offline') {
         setFallback(true);
       }
     }
@@ -265,6 +301,8 @@ const ContactApp: React.FC = () => {
       <h1 className="mb-6 text-2xl">Contact</h1>
       {banner && (
         <div
+          role="status"
+          aria-live="polite"
           className={`mb-6 rounded p-3 text-sm ${
             banner.type === 'success' ? 'bg-green-600' : 'bg-red-600'
           }`}
@@ -273,8 +311,8 @@ const ContactApp: React.FC = () => {
         </div>
       )}
       {fallback && (
-        <p className="mb-6 text-sm">
-          Service unavailable. You can{' '}
+        <p className="mb-6 text-sm" role="status" aria-live="polite">
+          We can&apos;t reach the message service right now. You can{' '}
           <button
             type="button"
             onClick={() => copyToClipboard(EMAIL)}
@@ -306,14 +344,23 @@ const ContactApp: React.FC = () => {
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
+            aria-invalid={!!nameError}
+            aria-describedby={nameError ? 'contact-name-error' : undefined}
+            aria-labelledby="contact-name-label"
             placeholder=" "
           />
           <label
             htmlFor="contact-name"
+            id="contact-name-label"
             className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
           >
             Name
           </label>
+          {nameError && (
+            <FormError id="contact-name-error" className="mt-3">
+              {nameError}
+            </FormError>
+          )}
         </div>
         <div className="relative">
           <input
@@ -325,10 +372,12 @@ const ContactApp: React.FC = () => {
             required
             aria-invalid={!!emailError}
             aria-describedby={emailError ? 'contact-email-error' : undefined}
+            aria-labelledby="contact-email-label"
             placeholder=" "
           />
           <label
             htmlFor="contact-email"
+            id="contact-email-label"
             className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
           >
             Email
@@ -349,10 +398,12 @@ const ContactApp: React.FC = () => {
             required
             aria-invalid={!!messageError}
             aria-describedby={messageError ? 'contact-message-error' : undefined}
+            aria-labelledby="contact-message-label"
             placeholder=" "
           />
           <label
             htmlFor="contact-message"
+            id="contact-message-label"
             className="absolute left-3 -top-2 bg-gray-800 px-1 text-xs text-gray-400 transition-all peer-placeholder-shown:top-3 peer-placeholder-shown:text-base peer-focus:-top-2 peer-focus:text-xs peer-focus:text-blue-400"
           >
             Message
@@ -381,8 +432,17 @@ const ContactApp: React.FC = () => {
           className="hidden"
           tabIndex={-1}
           autoComplete="off"
+          aria-hidden="true"
         />
         {error && <FormError className="mt-3">{error}</FormError>}
+        <p
+          id="contact-privacy"
+          className="text-xs text-gray-400"
+        >
+          By submitting, you agree that we may use your name and email solely
+          to respond to this inquiry. Messages stay within this portfolio
+          environment and aren&apos;t sent to external services.
+        </p>
         <button
           type="submit"
           disabled={submitting}

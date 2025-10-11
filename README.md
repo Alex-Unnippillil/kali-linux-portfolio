@@ -250,7 +250,8 @@ Copy `.env.local.example` to `.env.local` and populate the keys relevant to your
 | `NEXT_PUBLIC_UI_EXPERIMENTS` | Enables experimental UI heuristics. |
 | `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during static export to disable server APIs. |
 | `NEXT_PUBLIC_SHOW_BETA` | Displays a beta badge when truthy. |
-| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | Client-side ReCAPTCHA key used by the contact form. |
+| `NEXT_PUBLIC_CONTACT_ENDPOINT` | Override the contact form submission target (defaults to `/api/dummy`). |
+| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | Client-side ReCAPTCHA key for the legacy server-backed contact form. |
 | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client-side Supabase credentials (optional). |
 | `FEATURE_TOOL_APIS` | `enabled` or `disabled`; wraps all tool API routes. |
 | `FEATURE_HYDRA` | Additional toggle for `/api/hydra` demo route. |
