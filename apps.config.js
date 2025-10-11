@@ -223,7 +223,7 @@ const utilityList = [
   {
     id: 'clipboard-manager',
     title: 'Clipboard Manager',
-    icon: '/themes/Yaru/apps/gedit.png',
+    icon: '/themes/Yaru/apps/clipboard-manager.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: true,
