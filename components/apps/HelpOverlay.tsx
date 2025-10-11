@@ -148,9 +148,9 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   "flappy-bird": {
     objective:
-      "Fly through gaps between pipes. Practice gates, slow-motion, easy mode, and skins available.",
+      "Fly through gaps between pipes. Choose skins and difficulty, chase high scores, and avoid pipes.",
     controls:
-      "Space/click to flap. P: practice, G: easy gravity, M: reduced motion, O: pipe skin, H: hitbox preview, R: replay, Shift+R: best run.",
+      "Space/click to flap. P: pause/resume, R: reset, M: mute toggle. Use the toolbar buttons for pause, reset, and audio.",
   },
   "candy-crush": {
     objective: "Match three candies to clear them.",
