@@ -13,24 +13,30 @@ const themes: Record<string, { bg: string; flipper: string }> = {
 };
 
 const formatScore = (value: number) => value.toString().padStart(6, "0");
+const MAX_BALLS = 3;
 
 export default function Pinball() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const worldRef = useRef<PinballWorld | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const [theme, setTheme] = useState<keyof typeof themes>("classic");
-  const [power, setPower] = useState(1);
+  const [flipperPower, setFlipperPower] = useState(1);
   const [bounce, setBounce] = useState(0.5);
   const [tilt, setTilt] = useState(false);
   const [score, setScore] = useState(0);
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(false);
   const [ready, setReady] = useState(false);
+  const [ballsRemaining, setBallsRemaining] = useState(MAX_BALLS);
+  const [ballLocked, setBallLocked] = useState(true);
+  const [gameOver, setGameOver] = useState(false);
+  const [launchPower, setLaunchPower] = useState(0.8);
   const nudgesRef = useRef<number[]>([]);
   const lastNudgeRef = useRef(0);
   const { getHighScore, setHighScore } = useGamePersistence("pinball");
   const [highScore, setHighScoreState] = useState(0);
   const scoreHandlerRef = useRef<(value: number) => void>(() => {});
+  const ballLostHandlerRef = useRef<() => void>(() => {});
   const initialThemeRef = useRef(themes[theme]);
   const initialBounceRef = useRef(bounce);
 
@@ -97,6 +103,23 @@ export default function Pinball() {
     scoreHandlerRef.current = handleScore;
   }, [handleScore]);
 
+  const handleBallLost = useCallback(() => {
+    setBallsRemaining((prev) => {
+      const next = Math.max(prev - 1, 0);
+      if (next <= 0) {
+        setGameOver(true);
+      }
+      return next;
+    });
+    setBallLocked(true);
+    worldRef.current?.resetFlippers();
+    worldRef.current?.resetBall();
+  }, []);
+
+  useEffect(() => {
+    ballLostHandlerRef.current = handleBallLost;
+  }, [handleBallLost]);
+
   useTiltSensor(25, handleTilt);
 
   useEffect(() => {
@@ -108,11 +131,19 @@ export default function Pinball() {
         onScore: (value) => {
           scoreHandlerRef.current(value);
         },
+        onBallLost: () => {
+          ballLostHandlerRef.current();
+        },
       },
       initialThemeRef.current,
       initialBounceRef.current,
     );
     worldRef.current = world;
+    world.resetBall();
+    world.resetFlippers();
+    setBallsRemaining(MAX_BALLS);
+    setBallLocked(world.isBallLocked());
+    setGameOver(false);
     setReady(true);
 
     return () => {
@@ -148,15 +179,32 @@ export default function Pinball() {
     handleNudge();
   }, [tilt, handleNudge]);
 
+  const handleLaunch = useCallback(() => {
+    if (
+      !worldRef.current ||
+      !ballLocked ||
+      ballsRemaining <= 0 ||
+      paused ||
+      tilt ||
+      gameOver
+    )
+      return;
+    worldRef.current.launchBall(launchPower);
+    setBallLocked(false);
+  }, [ballLocked, ballsRemaining, paused, tilt, gameOver, launchPower]);
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (tilt) return;
       if (event.code === "ArrowLeft") {
-        worldRef.current?.setLeftFlipper((-Math.PI / 4) * power);
+        worldRef.current?.setLeftFlipper((-Math.PI / 4) * flipperPower);
       } else if (event.code === "ArrowRight") {
-        worldRef.current?.setRightFlipper((Math.PI / 4) * power);
+        worldRef.current?.setRightFlipper((Math.PI / 4) * flipperPower);
       } else if (event.code === "KeyN") {
         tryNudge();
+      } else if (event.code === "Space") {
+        event.preventDefault();
+        handleLaunch();
       }
     };
 
@@ -174,7 +222,7 @@ export default function Pinball() {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [power, tilt, tryNudge]);
+  }, [flipperPower, tilt, tryNudge, handleLaunch]);
 
   useEffect(() => {
     let frame = 0;
@@ -198,7 +246,7 @@ export default function Pinball() {
     (delta) => {
       worldRef.current?.step(delta);
     },
-    ready && !paused,
+    ready && !paused && !gameOver,
   );
 
   const resetGame = useCallback(() => {
@@ -207,6 +255,10 @@ export default function Pinball() {
     worldRef.current?.resetFlippers();
     setTilt(false);
     nudgesRef.current = [];
+    setBallsRemaining(MAX_BALLS);
+    setBallLocked(true);
+    setGameOver(false);
+    setPaused(false);
   }, []);
 
   const overlay = useMemo(
@@ -222,18 +274,31 @@ export default function Pinball() {
     [muted, resetGame],
   );
 
+  const statusMessage = useMemo(() => {
+    if (!ready) return "Booting table...";
+    if (gameOver) return "Game over! Hit reset to start a new run.";
+    if (tilt) return "TILT! Controls locked.";
+    if (paused) return "Paused.";
+    if (ballLocked) {
+      return ballsRemaining === MAX_BALLS
+        ? "Press Launch or Space to start."
+        : "Launch the next ball when you're ready.";
+    }
+    return "Keep the ball alive!";
+  }, [ready, gameOver, tilt, paused, ballLocked, ballsRemaining]);
+
   return (
     <div className="flex flex-col items-center space-y-2">
       <div className="flex space-x-4">
         <label className="flex flex-col text-xs">
-          Power
+          Flipper Strength
           <input
             type="range"
             min="0.5"
             max="2"
             step="0.1"
-            value={power}
-            onChange={(event) => setPower(parseFloat(event.target.value))}
+            value={flipperPower}
+            onChange={(event) => setFlipperPower(parseFloat(event.target.value))}
           />
         </label>
         <label className="flex flex-col text-xs">
@@ -245,6 +310,17 @@ export default function Pinball() {
             step="0.1"
             value={bounce}
             onChange={(event) => setBounce(parseFloat(event.target.value))}
+          />
+        </label>
+        <label className="flex flex-col text-xs">
+          Launch Power
+          <input
+            type="range"
+            min="0.4"
+            max="1.4"
+            step="0.05"
+            value={launchPower}
+            onChange={(event) => setLaunchPower(parseFloat(event.target.value))}
           />
         </label>
         <label className="flex flex-col text-xs">
@@ -270,17 +346,36 @@ export default function Pinball() {
           height={constants.HEIGHT}
           className="border"
         />
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 text-white font-mono text-xl">
+        <div className="absolute top-3 left-3 text-white text-xs font-mono bg-black/40 px-2 py-1 rounded">
+          Balls: {ballsRemaining}
+        </div>
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 text-white font-mono text-2xl">
           {formatScore(score)}
         </div>
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 text-white font-mono text-xs tracking-widest">
+        <div className="absolute top-12 left-1/2 -translate-x-1/2 text-white font-mono text-xs tracking-widest">
           HI {formatScore(highScore)}
         </div>
-        {!tilt && (
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-white text-xs opacity-75">
-            Press N or RB to nudge
+        <div className="absolute top-3 right-3 flex flex-col items-end space-y-2">
+          <div>{overlay}</div>
+          <button
+            type="button"
+            onClick={handleLaunch}
+            disabled={!ballLocked || ballsRemaining <= 0 || paused || tilt || gameOver}
+            className="rounded bg-black/70 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white transition disabled:opacity-40 hover:bg-black/80"
+          >
+            Launch Ball
+          </button>
+        </div>
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center text-center text-white">
+          <div className="rounded bg-black/70 px-3 py-2 text-sm shadow-lg">
+            {statusMessage}
           </div>
-        )}
+          {!gameOver && !tilt && (
+            <div className="mt-2 rounded bg-black/40 px-2 py-1 text-xs uppercase tracking-wide">
+              Space to launch • N / RB to nudge
+            </div>
+          )}
+        </div>
         {tilt && (
           <div className="absolute inset-0 flex items-center justify-center bg-red-700/80">
             <div className="text-white font-bold text-4xl px-6 py-3 border-4 border-white rounded">
@@ -288,7 +383,6 @@ export default function Pinball() {
             </div>
           </div>
         )}
-        <div className="absolute top-2 right-2">{overlay}</div>
       </div>
     </div>
   );

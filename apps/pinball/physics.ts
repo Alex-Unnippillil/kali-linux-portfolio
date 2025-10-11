@@ -13,6 +13,14 @@ const HEIGHT = 600;
 const BALL_RADIUS = 12;
 const DEFAULT_LEFT_ANGLE = Math.PI / 8;
 const DEFAULT_RIGHT_ANGLE = -Math.PI / 8;
+const MAX_SPARKS = 60;
+const PLUNGER_X = WIDTH - 60;
+const PLUNGER_Y = HEIGHT - 110;
+const BUMPER_RADIUS = 28;
+const DRAIN_LABEL = "drain";
+const BUMPER_LABEL = "bumper";
+const SLING_LABEL = "sling";
+const TARGET_LABEL = "target";
 
 export interface ThemeConfig {
   bg: string;
@@ -21,6 +29,7 @@ export interface ThemeConfig {
 
 export interface PinballCallbacks {
   onScore: (points: number) => void;
+  onBallLost?: () => void;
 }
 
 export interface PinballWorld {
@@ -33,12 +42,15 @@ export interface PinballWorld {
   resetFlippers: () => void;
   nudge: (force: { x: number; y: number }) => void;
   resetBall: () => void;
+  launchBall: (power: number) => void;
+  isBallLocked: () => boolean;
 }
 
 interface Spark {
   x: number;
   y: number;
   life: number;
+  hue: number;
 }
 
 interface LaneGlow {
@@ -55,7 +67,7 @@ export function createPinballWorld(
   bounce: number,
 ): PinballWorld {
   const engine = Engine.create();
-  engine.gravity.y = 1;
+  engine.gravity.y = 1.1;
 
   const render = Render.create({
     canvas,
@@ -68,17 +80,41 @@ export function createPinballWorld(
     },
   });
 
-  const ball = Bodies.circle(WIDTH / 2, 100, BALL_RADIUS, {
-    restitution: 0.9,
+  const spawnPosition = { x: PLUNGER_X, y: PLUNGER_Y };
+
+  const ball = Bodies.circle(spawnPosition.x, spawnPosition.y, BALL_RADIUS, {
+    restitution: 0.92,
+    friction: 0.001,
     render: { visible: false },
     label: "ball",
   });
 
-  const walls = [
-    Bodies.rectangle(WIDTH / 2, 0, WIDTH, 40, { isStatic: true }),
-    Bodies.rectangle(WIDTH / 2, HEIGHT, WIDTH, 40, { isStatic: true }),
-    Bodies.rectangle(0, HEIGHT / 2, 40, HEIGHT, { isStatic: true }),
-    Bodies.rectangle(WIDTH, HEIGHT / 2, 40, HEIGHT, { isStatic: true }),
+  Body.setInertia(ball, Infinity);
+
+  const boundaries = [
+    Bodies.rectangle(WIDTH / 2, -20, WIDTH, 40, { isStatic: true }),
+    Bodies.rectangle(WIDTH / 2, HEIGHT + 20, WIDTH, 40, { isStatic: true, isSensor: true, label: DRAIN_LABEL }),
+    Bodies.rectangle(-20, HEIGHT / 2, 40, HEIGHT, { isStatic: true }),
+    Bodies.rectangle(WIDTH + 20, HEIGHT / 2, 40, HEIGHT, { isStatic: true }),
+  ];
+
+  const funnelGuides = [
+    Bodies.rectangle(WIDTH / 2 - 70, 130, 140, 16, {
+      isStatic: true,
+      angle: 0.32,
+      render: { fillStyle: "#1f2937" },
+    }),
+    Bodies.rectangle(WIDTH / 2 + 70, 130, 140, 16, {
+      isStatic: true,
+      angle: -0.32,
+      render: { fillStyle: "#1f2937" },
+    }),
+    Bodies.rectangle(WIDTH - 40, HEIGHT / 2, 20, HEIGHT, { isStatic: true }),
+    Bodies.rectangle(WIDTH - 100, HEIGHT - 60, 160, 16, {
+      isStatic: true,
+      angle: -0.3,
+      render: { fillStyle: "#1f2937" },
+    }),
   ];
 
   const leftFlipper = Bodies.rectangle(120, HEIGHT - 40, 80, 20, {
@@ -107,18 +143,81 @@ export function createPinballWorld(
     label: "lane-right",
   });
 
+  const bumpers = [
+    Bodies.circle(WIDTH / 2, 210, BUMPER_RADIUS, {
+      isStatic: true,
+      restitution: 1.3,
+      label: `${BUMPER_LABEL}-center`,
+      render: { fillStyle: "#f59e0b" },
+    }),
+    Bodies.circle(WIDTH / 2 - 80, 260, BUMPER_RADIUS, {
+      isStatic: true,
+      restitution: 1.25,
+      label: `${BUMPER_LABEL}-left`,
+      render: { fillStyle: "#f59e0b" },
+    }),
+    Bodies.circle(WIDTH / 2 + 80, 260, BUMPER_RADIUS, {
+      isStatic: true,
+      restitution: 1.25,
+      label: `${BUMPER_LABEL}-right`,
+      render: { fillStyle: "#f59e0b" },
+    }),
+  ];
+
+  const slings = [
+    Bodies.rectangle(85, HEIGHT - 120, 120, 16, {
+      isStatic: true,
+      angle: 0.7,
+      restitution: 1.05,
+      label: `${SLING_LABEL}-left`,
+      render: { fillStyle: "#4ade80" },
+    }),
+    Bodies.rectangle(WIDTH - 85, HEIGHT - 120, 120, 16, {
+      isStatic: true,
+      angle: -0.7,
+      restitution: 1.05,
+      label: `${SLING_LABEL}-right`,
+      render: { fillStyle: "#4ade80" },
+    }),
+  ];
+
+  const targets = [
+    Bodies.rectangle(120, 320, 14, 40, {
+      isStatic: true,
+      isSensor: true,
+      label: `${TARGET_LABEL}-1`,
+    }),
+    Bodies.rectangle(WIDTH - 120, 320, 14, 40, {
+      isStatic: true,
+      isSensor: true,
+      label: `${TARGET_LABEL}-2`,
+    }),
+    Bodies.rectangle(WIDTH / 2, 360, 14, 40, {
+      isStatic: true,
+      isSensor: true,
+      label: `${TARGET_LABEL}-3`,
+    }),
+  ];
+
   World.add(engine.world, [
     ball,
-    ...walls,
+    ...boundaries,
+    ...funnelGuides,
     leftFlipper,
     rightFlipper,
     leftLane,
     rightLane,
+    ...bumpers,
+    ...slings,
+    ...targets,
   ]);
 
   const sparks: Spark[] = [];
   const glow: LaneGlow = { left: false, right: false };
   const glowTimers: Partial<Record<Lane, number>> = {};
+  const bumperTimers = new Map<Matter.Body, number>();
+  const targetStates = new Map<Matter.Body, boolean>();
+  let locked = true;
 
   const lightLane = (lane: Lane) => {
     glow[lane] = true;
@@ -130,16 +229,38 @@ export function createPinballWorld(
     }, 500);
   };
 
+  const flashBumper = (bumper: Matter.Body) => {
+    if (bumperTimers.has(bumper)) {
+      window.clearTimeout(bumperTimers.get(bumper));
+    }
+    bumper.render.fillStyle = "#fde68a";
+    const timer = window.setTimeout(() => {
+      bumper.render.fillStyle = "#f59e0b";
+      bumperTimers.delete(bumper);
+    }, 150);
+    bumperTimers.set(bumper, timer);
+  };
+
+  const dropTarget = (target: Matter.Body) => {
+    if (targetStates.get(target)) return;
+    targetStates.set(target, true);
+    callbacks.onScore(250);
+    const timer = window.setTimeout(() => {
+      targetStates.set(target, false);
+    }, 4000);
+    bumperTimers.set(target, timer);
+  };
+
   const handleCollision = ({ pairs }: Matter.IEventCollision<Engine>) => {
     pairs.forEach((pair) => {
       const bodies = [pair.bodyA, pair.bodyB];
       if (bodies.includes(ball) && bodies.includes(leftFlipper)) {
         const { x, y } = pair.collision.supports[0];
-        sparks.push({ x, y, life: 1 });
+        sparks.push({ x, y, life: 1, hue: 45 });
       }
       if (bodies.includes(ball) && bodies.includes(rightFlipper)) {
         const { x, y } = pair.collision.supports[0];
-        sparks.push({ x, y, life: 1 });
+        sparks.push({ x, y, life: 1, hue: 45 });
       }
       if (bodies.includes(ball) && bodies.includes(leftLane)) {
         lightLane("left");
@@ -148,6 +269,31 @@ export function createPinballWorld(
       if (bodies.includes(ball) && bodies.includes(rightLane)) {
         lightLane("right");
         callbacks.onScore(100);
+      }
+      bumpers.forEach((bumper) => {
+        if (bodies.includes(ball) && bodies.includes(bumper)) {
+          const { x, y } = pair.collision.supports[0];
+          sparks.push({ x, y, life: 1, hue: 50 });
+          flashBumper(bumper);
+          callbacks.onScore(50);
+        }
+      });
+      slings.forEach((sling) => {
+        if (bodies.includes(ball) && bodies.includes(sling)) {
+          const { x, y } = pair.collision.supports[0];
+          sparks.push({ x, y, life: 1, hue: 150 });
+          callbacks.onScore(25);
+        }
+      });
+      targets.forEach((target) => {
+        if (bodies.includes(ball) && bodies.includes(target)) {
+          dropTarget(target);
+        }
+      });
+      const drain = boundaries[1];
+      if (bodies.includes(ball) && bodies.includes(drain)) {
+        locked = true;
+        callbacks.onBallLost?.();
       }
     });
   };
@@ -187,6 +333,35 @@ export function createPinballWorld(
     drawLane(leftLane, glow.left);
     drawLane(rightLane, glow.right);
 
+    bumpers.forEach((bumper) => {
+      const angle = bumper.render.fillStyle === "#fde68a" ? 0.6 : 0.3;
+      ctx.save();
+      ctx.translate(bumper.position.x, bumper.position.y);
+      const gradientBumper = ctx.createRadialGradient(0, 0, 6, 0, 0, BUMPER_RADIUS);
+      gradientBumper.addColorStop(0, "rgba(255,255,255,0.9)");
+      gradientBumper.addColorStop(1, bumper.render.fillStyle || "#f59e0b");
+      ctx.fillStyle = gradientBumper;
+      ctx.beginPath();
+      ctx.arc(0, 0, BUMPER_RADIUS, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.4)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    });
+
+    targets.forEach((target) => {
+      ctx.save();
+      ctx.translate(target.position.x, target.position.y);
+      ctx.fillStyle = targetStates.get(target) ? "#111827" : "#f43f5e";
+      ctx.fillRect(-7, -20, 14, 40);
+      if (!targetStates.get(target)) {
+        ctx.fillStyle = "rgba(255,255,255,0.7)";
+        ctx.fillRect(-7, -18, 14, 6);
+      }
+      ctx.restore();
+    });
+
     for (let i = sparks.length - 1; i >= 0; i -= 1) {
       const spark = sparks[i];
       const radius = 8 * spark.life;
@@ -198,7 +373,8 @@ export function createPinballWorld(
         spark.y,
         radius,
       );
-      sparkGradient.addColorStop(0, "rgba(255,255,200,0.8)");
+      const hue = spark.hue ?? 45;
+      sparkGradient.addColorStop(0, `hsla(${hue}, 100%, 70%, 0.9)`);
       sparkGradient.addColorStop(1, "rgba(255,200,0,0)");
       ctx.fillStyle = sparkGradient;
       ctx.beginPath();
@@ -209,6 +385,10 @@ export function createPinballWorld(
         sparks.splice(i, 1);
       }
     }
+
+    while (sparks.length > MAX_SPARKS) {
+      sparks.shift();
+    }
   };
 
   Events.on(engine, "collisionStart", handleCollision);
@@ -216,6 +396,10 @@ export function createPinballWorld(
 
   const step = (delta: number) => {
     Engine.update(engine, delta * 1000);
+    if (locked) {
+      Body.setPosition(ball, spawnPosition);
+      Body.setVelocity(ball, { x: 0, y: 0 });
+    }
     Render.world(render);
   };
 
@@ -244,12 +428,21 @@ export function createPinballWorld(
   };
 
   const resetBall = () => {
-    Body.setPosition(ball, { x: WIDTH / 2, y: 120 });
+    Body.setPosition(ball, spawnPosition);
     Body.setVelocity(ball, { x: 0, y: 0 });
+    locked = true;
   };
 
   const nudge = (force: { x: number; y: number }) => {
     Body.applyForce(ball, ball.position, force);
+  };
+
+  const launchBall = (power: number) => {
+    if (!locked) return;
+    locked = false;
+    const launchForce = Math.min(Math.max(power, 0.2), 1.5);
+    Body.setPosition(ball, spawnPosition);
+    Body.setVelocity(ball, { x: -launchForce * 2, y: -launchForce * 24 });
   };
 
   return {
@@ -260,6 +453,7 @@ export function createPinballWorld(
       Object.values(glowTimers).forEach((timer) => {
         if (timer) window.clearTimeout(timer);
       });
+      bumperTimers.forEach((timer) => window.clearTimeout(timer));
       Render.stop(render);
       World.clear(engine.world, false);
       Engine.clear(engine);
@@ -271,6 +465,8 @@ export function createPinballWorld(
     resetFlippers,
     nudge,
     resetBall,
+    launchBall,
+    isBallLocked: () => locked,
   };
 }
 

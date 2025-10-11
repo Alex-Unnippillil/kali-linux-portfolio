@@ -134,7 +134,7 @@ All arcade-style and puzzle titles share the same readiness gap: implement canva
 | tetris | Tetris | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | candy-crush | Candy Crush | Core maintainers | **Needs polish** – align with shared game scaffolding | Match-3 logic |
 | gomoku | Gomoku | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
-| pinball | Pinball | Core maintainers | **QA ready** – shared overlay, pause/reset/audio, persistent highscores | Physics engine |
+| pinball | Pinball | Core maintainers | **Ready** – multi-ball flow, bumpers, plunger launch, and persistent highscores | Physics engine |
 
 ## Outstanding Feature Work by Category
 

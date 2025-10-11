@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import Pinball from "../apps/pinball";
 
@@ -13,9 +13,13 @@ jest.mock("../apps/pinball/physics", () => {
     resetFlippers: jest.fn(),
     nudge: jest.fn(),
     resetBall: jest.fn(),
+    launchBall: jest.fn(),
+    isBallLocked: jest.fn(() => true),
   };
 
-  let callbacks: { onScore: (value: number) => void } | null = null;
+  let callbacks:
+    | { onScore: (value: number) => void; onBallLost?: () => void }
+    | null = null;
 
   return {
     createPinballWorld: jest.fn((_, cb) => {
@@ -23,6 +27,7 @@ jest.mock("../apps/pinball/physics", () => {
       return mockWorld;
     }),
     __callbacks: () => callbacks,
+    __world: () => mockWorld,
     constants: {
       WIDTH: 400,
       HEIGHT: 600,
@@ -84,6 +89,13 @@ describe("Pinball scoring", () => {
     (window as any).AudioContext = FakeAudioContext as unknown as typeof AudioContext;
     (window as any).webkitAudioContext = FakeAudioContext as unknown as typeof AudioContext;
     (navigator as any).getGamepads = () => [];
+    const { __world } = require("../apps/pinball/physics");
+    const world = __world();
+    Object.values(world).forEach((value) => {
+      if (typeof value === "function" && "mockClear" in value) {
+        (value as jest.Mock).mockClear();
+      }
+    });
   });
 
   afterEach(() => {
@@ -97,9 +109,10 @@ describe("Pinball scoring", () => {
   });
 
   it("updates score and persists high score", async () => {
-    const { __callbacks } = require("../apps/pinball/physics");
+    const { __callbacks, __world } = require("../apps/pinball/physics");
     const { unmount } = render(<Pinball />);
 
+    expect(__world().resetBall).toHaveBeenCalled();
     const callbacks = __callbacks();
     expect(callbacks).toBeTruthy();
 
@@ -119,5 +132,43 @@ describe("Pinball scoring", () => {
     await waitFor(() => {
       expect(screen.getByText(/HI 000150/)).toBeInTheDocument();
     });
+  });
+});
+
+describe("Pinball ball lifecycle", () => {
+  it("launches, tracks ball count, and ends the game", async () => {
+    const { __callbacks, __world } = require("../apps/pinball/physics");
+    render(<Pinball />);
+
+    const launchButton = screen.getByRole("button", { name: /launch ball/i });
+    expect(launchButton).toBeEnabled();
+    expect(screen.getByText(/Balls: 3/)).toBeInTheDocument();
+
+    fireEvent.click(launchButton);
+    expect(__world().launchBall).toHaveBeenCalledWith(0.8);
+    expect(screen.getByRole("button", { name: /launch ball/i })).toBeDisabled();
+
+    const callbacks = __callbacks();
+    act(() => {
+      callbacks?.onBallLost?.();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Balls: 2/)).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole("button", { name: /launch ball/i })).toBeEnabled();
+
+    act(() => {
+      callbacks?.onBallLost?.();
+      callbacks?.onBallLost?.();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/game over/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole("button", { name: /launch ball/i })).toBeDisabled();
+    expect(__world().resetBall.mock.calls.length).toBeGreaterThanOrEqual(4);
   });
 });
