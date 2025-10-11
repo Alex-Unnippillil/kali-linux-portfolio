@@ -1,5 +1,7 @@
 import { solve } from '../../../workers/sudokuSolver';
 
+export type SudokuDifficulty = 'easy' | 'medium' | 'hard';
+
 export const SIZE = 9;
 const range = (n: number) => Array.from({ length: n }, (_, i) => i);
 
@@ -96,14 +98,14 @@ export const getCandidates = (
   return cand;
 };
 
-const HOLES_BY_DIFFICULTY: Record<string, number> = {
+export const HOLES_BY_DIFFICULTY: Record<SudokuDifficulty, number> = {
   easy: 35,
   medium: 45,
   hard: 55,
 };
 
 export const generateSudoku = (
-  difficulty: 'easy' | 'medium' | 'hard' = 'easy',
+  difficulty: SudokuDifficulty = 'easy',
   seed = Date.now(),
 ): { puzzle: number[][]; solution: number[][] } => {
   const rng = createRNG(seed);

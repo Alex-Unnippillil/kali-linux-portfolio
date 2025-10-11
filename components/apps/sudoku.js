@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { generateSudoku, isValidPlacement } from '../../apps/games/sudoku';
 import { getHint } from '../../workers/sudokuSolver';
 import {
@@ -7,9 +7,15 @@ import {
   toggleCandidate,
   cellsToBoard,
 } from '../../apps/games/sudoku/cell';
+import usePersistentState from '../../hooks/usePersistentState';
+import { useGameSettings } from './useGameControls';
+import PencilMarks from '../../games/sudoku/components/PencilMarks';
+import EliminationHelper from '../../games/sudoku/components/EliminationHelper';
+import { recordBestTime, getBestTime } from '../../apps/games/sudoku/stats';
 
 const SIZE = 9;
-const range = (n) => Array.from({ length: n }, (_, i) => i);
+const formatTime = (seconds) =>
+  `${Math.floor(seconds / 60)}:${(`0${seconds % 60}`).slice(-2)}`;
 
 const dailySeed = () => {
   const str = new Date().toISOString().slice(0, 10);
@@ -31,7 +37,57 @@ const Sudoku = () => {
   const [hintCells, setHintCells] = useState([]);
   const [ariaMessage, setAriaMessage] = useState('');
   const [selectedCell, setSelectedCell] = useState(null);
+  const [bestTimes, setBestTimes] = usePersistentState('sudoku-best-times', {});
+  const [showEliminations, setShowEliminations] = useState(false);
+  const { paused, togglePause, muted, toggleMute } = useGameSettings('sudoku');
   const timerRef = useRef(null);
+  const audioCtxRef = useRef(null);
+  const mode = useDaily ? 'daily' : 'random';
+  const modeLabel = mode === 'daily' ? 'Daily' : 'Random';
+  const boardMatrix = useMemo(() => cellsToBoard(board), [board]);
+  const bestTime = getBestTime(bestTimes, mode, difficulty);
+
+  useEffect(() => {
+    return () => {
+      if (audioCtxRef.current && typeof audioCtxRef.current.close === 'function') {
+        audioCtxRef.current.close();
+      }
+    };
+  }, []);
+
+  const playTone = useCallback(
+    (frequency, duration = 0.12) => {
+      if (muted || typeof window === 'undefined') return;
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        if (!audioCtxRef.current) {
+          audioCtxRef.current = new Ctx();
+        }
+        const ctx = audioCtxRef.current;
+        if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
+          ctx.resume();
+        }
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = frequency;
+        gain.gain.value = 0.08;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        const stopAt = ctx.currentTime + duration;
+        osc.stop(stopAt);
+        osc.onended = () => {
+          osc.disconnect();
+          gain.disconnect();
+        };
+      } catch (err) {
+        // Ignore audio errors so the game remains playable without sound
+      }
+    },
+    [muted],
+  );
 
   useEffect(() => {
     startGame(useDaily ? dailySeed() : Date.now());
@@ -39,14 +95,12 @@ const Sudoku = () => {
   }, []);
 
   useEffect(() => {
-    if (completed) {
-      clearInterval(timerRef.current);
-    } else {
-      clearInterval(timerRef.current);
+    clearInterval(timerRef.current);
+    if (!paused && !completed) {
       timerRef.current = setInterval(() => setTime((t) => t + 1), 1000);
     }
     return () => clearInterval(timerRef.current);
-  }, [completed]);
+  }, [paused, completed]);
 
   const startGame = (seed) => {
     const { puzzle, solution } = generateSudoku(difficulty, seed);
@@ -57,10 +111,29 @@ const Sudoku = () => {
     setHint('');
     setHintCells([]);
     setSelectedCell(null);
+    setShowEliminations(false);
     setTime(0);
+    setAriaMessage('New puzzle ready');
+    if (paused) togglePause();
+  };
+
+  const handlePauseToggle = () => {
+    if (paused) {
+      togglePause();
+      setAriaMessage('Sudoku resumed');
+    } else {
+      togglePause();
+      setAriaMessage('Sudoku paused');
+    }
+  };
+
+  const handleToggleMute = () => {
+    toggleMute();
+    setAriaMessage(muted ? 'Sound on' : 'Sound muted');
   };
 
   const handleValue = (r, c, value, forcePencil = false) => {
+    if (paused || completed) return;
     if (puzzle[r][c] !== 0) return;
     const v = parseInt(value, 10);
     const newBoard = board.map((row) => row.map((cell) => cloneCell(cell)));
@@ -71,22 +144,34 @@ const Sudoku = () => {
       const val = !v || v < 1 || v > 9 ? 0 : v;
       if (val !== 0 && !isValidPlacement(cellsToBoard(newBoard), r, c, val)) {
         setAriaMessage(`Move at row ${r + 1}, column ${c + 1} invalid`);
+        playTone(180, 0.2);
         return;
       }
       cell.value = val;
       cell.candidates = [];
       if (hasConflict(newBoard, r, c, cell.value)) {
         setAriaMessage(`Conflict at row ${r + 1}, column ${c + 1}`);
+        playTone(220, 0.15);
       } else if (
         solution.length > 0 &&
         cell.value !== 0 &&
         cell.value !== solution[r][c]
       ) {
         setAriaMessage(`Incorrect value at row ${r + 1}, column ${c + 1}`);
+        playTone(240, 0.15);
+      } else if (cell.value !== 0) {
+        playTone(620, 0.1);
       }
       if (isBoardComplete(newBoard)) {
+        const finalTime = time;
         setCompleted(true);
         setAriaMessage('Sudoku completed');
+        setHint('');
+        setHintCells([]);
+        setShowEliminations(false);
+        setBestTimes((records) => recordBestTime(records, mode, difficulty, finalTime));
+        playTone(880, 0.3);
+        if (!paused) togglePause();
       }
     }
     setBoard(newBoard);
@@ -118,11 +203,12 @@ const Sudoku = () => {
   };
 
   const getHintHandler = () => {
-    const h = getHint(cellsToBoard(board));
+    if (paused || completed) return;
+    const h = getHint(boardMatrix);
     if (h) {
       if (h.type === 'pair') {
         setHint(
-          `Cells (${h.cells[0].r + 1},${h.cells[0].c + 1}) and (${h.cells[1].r + 1},${h.cells[1].c + 1}) form ${h.values.join(", ")}`,
+          `Cells (${h.cells[0].r + 1},${h.cells[0].c + 1}) and (${h.cells[1].r + 1},${h.cells[1].c + 1}) form ${h.values.join(', ')}`
         );
         setHintCells(h.cells);
         setAriaMessage('Pair hint available');
@@ -131,10 +217,12 @@ const Sudoku = () => {
         setHintCells([{ r: h.r, c: h.c }]);
         setAriaMessage(`Hint: row ${h.r + 1} column ${h.c + 1} is ${h.value}`);
       }
+      playTone(700, 0.12);
     } else {
       setHint('No hints available');
       setHintCells([]);
       setAriaMessage('No hints available');
+      playTone(200, 0.12);
     }
   };
 
@@ -194,9 +282,9 @@ const Sudoku = () => {
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 select-none overflow-y-auto">
       <div className="sr-only" aria-live="polite">{ariaMessage}</div>
-      <div className="mb-2 flex space-x-2">
+      <div className="mb-3 flex w-full max-w-xl flex-wrap items-center gap-2">
         <select
-          className="text-black p-1"
+          className="text-black p-1 rounded"
           value={difficulty}
           onChange={(e) => {
             setDifficulty(e.target.value);
@@ -207,31 +295,63 @@ const Sudoku = () => {
           <option value="medium">Medium</option>
           <option value="hard">Hard</option>
         </select>
-        <label className="flex items-center space-x-1">
-          <input type="checkbox" checked={pencilMode} onChange={(e) => setPencilMode(e.target.checked)} />
-          <span>Pencil</span>
-        </label>
-        <button className="px-2 py-1 bg-gray-700 rounded" onClick={getHintHandler}>
-          Hint
-        </button>
-        <button
-          className="px-2 py-1 bg-gray-700 rounded"
-          onClick={() => startGame(useDaily ? dailySeed() : Date.now())}
-        >
-          New Game
-        </button>
         <button
           className="px-2 py-1 bg-gray-700 rounded"
           onClick={() => {
             setUseDaily(!useDaily);
             startGame(!useDaily ? dailySeed() : Date.now());
           }}
+          aria-pressed={useDaily}
         >
-          {useDaily ? 'Daily' : 'Random'}
+          {modeLabel}
         </button>
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={() => startGame(useDaily ? dailySeed() : Date.now())}
+        >
+          Reset
+        </button>
+        <button className="px-2 py-1 bg-gray-700 rounded" onClick={handlePauseToggle}>
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button className="px-2 py-1 bg-gray-700 rounded" onClick={handleToggleMute}>
+          {muted ? 'Unmute' : 'Mute'}
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={getHintHandler}
+          disabled={paused || completed}
+        >
+          Hint
+        </button>
+        <button
+          className={`px-2 py-1 rounded ${showEliminations ? 'bg-blue-600' : 'bg-gray-700'}`}
+          onClick={() =>
+            setShowEliminations((v) => {
+              const next = !v;
+              setAriaMessage(next ? 'Validation helper opened' : 'Validation helper closed');
+              return next;
+            })
+          }
+          aria-pressed={showEliminations}
+        >
+          {showEliminations ? 'Hide Validation' : 'Show Validation'}
+        </button>
+        <label className="ml-auto flex items-center space-x-1" htmlFor="sudoku-pencil-mode">
+          <input
+            id="sudoku-pencil-mode"
+            type="checkbox"
+            checked={pencilMode}
+            aria-label="Toggle pencil mode"
+            onChange={(e) => setPencilMode(e.target.checked)}
+          />
+          <span>Pencil</span>
+        </label>
       </div>
-      <div className="mb-2">
-        Time: {Math.floor(time / 60)}:{('0' + (time % 60)).slice(-2)}
+      <div className="mb-3 flex w-full max-w-xl flex-wrap items-center gap-3 text-sm sm:text-base">
+        <span>Time: {formatTime(time)}</span>
+        {bestTime !== undefined && <span>Best ({modeLabel}): {formatTime(bestTime)}</span>}
+        {paused && !completed && <span className="text-yellow-300">Paused</span>}
       </div>
       <div className="grid grid-cols-9" style={{ gap: '2px' }}>
         {board.map((row, r) =>
@@ -283,16 +403,18 @@ const Sudoku = () => {
                   disabled={original}
                   inputMode="numeric"
                 />
-                {cell.candidates.length > 0 && val === 0 && (
-                  <div className="absolute inset-0 grid grid-cols-3 text-[8px] leading-3 pointer-events-none">
-                    {range(9).map((n) => (
-                      <div
-                        key={n}
-                        className="flex items-center justify-center text-gray-700"
-                      >
-                        {cell.candidates.includes(n + 1) ? n + 1 : ''}
-                      </div>
-                    ))}
+                {!original && val === 0 && (
+                  <div className="absolute inset-0">
+                    <PencilMarks
+                      marks={cell.candidates}
+                      hidden={cell.candidates.length === 0}
+                      onChange={(marks) => {
+                        if (paused || completed) return;
+                        const nb = board.map((row) => row.map((cell) => cloneCell(cell)));
+                        nb[r][c].candidates = marks;
+                        setBoard(nb);
+                      }}
+                    />
                   </div>
                 )}
               </div>
@@ -300,6 +422,11 @@ const Sudoku = () => {
           })
         )}
       </div>
+      {showEliminations && (
+        <div className="mt-3 w-full max-w-xl rounded bg-gray-800 p-3 text-sm text-left">
+          <EliminationHelper board={boardMatrix} />
+        </div>
+      )}
       {completed && <div className="mt-2">Completed!</div>}
       {hint && <div className="mt-2 text-yellow-300">{hint}</div>}
       <style jsx>{`
