@@ -49,6 +49,14 @@ function hasEntries(
   return typeof (handle as DirectoryHandleWithEntries).entries === 'function';
 }
 
+function isDirectoryHandle(handle: FileSystemHandle): handle is FileSystemDirectoryHandle {
+  return handle.kind === 'directory';
+}
+
+function isFileHandle(handle: FileSystemHandle): handle is FileSystemFileHandle {
+  return handle.kind === 'file';
+}
+
 interface UseFileSystemNavigatorReturn {
   currentDirectory: FileSystemDirectoryHandle | null;
   directories: DirectoryEntry[];
