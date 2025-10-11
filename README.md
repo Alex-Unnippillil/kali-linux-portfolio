@@ -230,6 +230,7 @@ Copy `.env.local.example` to `.env.local` and populate the keys relevant to your
 | `NEXT_PUBLIC_ENABLE_ANALYTICS` | Toggles Google Analytics 4 tracking on the client. |
 | `NEXT_PUBLIC_TRACKING_ID` | GA4 Measurement ID (`G-XXXXXXX`). |
 | `NEXT_PUBLIC_SERVICE_ID` / `NEXT_PUBLIC_TEMPLATE_ID` / `NEXT_PUBLIC_USER_ID` | EmailJS identifiers for the Gedit contact app. |
+| `NEXT_PUBLIC_ENABLE_GEDIT_EMAILJS` | Enables the EmailJS fallback path inside the Gedit desktop contact app. |
 | `NEXT_PUBLIC_YOUTUBE_API_KEY` | Enables enhanced search within the YouTube app. |
 | `NEXT_PUBLIC_BEEF_URL` / `NEXT_PUBLIC_GHIDRA_URL` / `NEXT_PUBLIC_GHIDRA_WASM` | Optional remote iframe targets for simulated tooling. |
 | `NEXT_PUBLIC_UI_EXPERIMENTS` | Enables experimental UI heuristics. |
@@ -242,6 +243,8 @@ Copy `.env.local.example` to `.env.local` and populate the keys relevant to your
 | `RECAPTCHA_SECRET` | Server-side verification for ReCAPTCHA. |
 | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_ANON_KEY` | Server-side Supabase credentials. |
 | `ADMIN_READ_KEY` | Secret used by admin message APIs; configure in the hosting platform. |
+
+When `NEXT_PUBLIC_ENABLE_GEDIT_EMAILJS` is disabled, Gedit submits exclusively through the validated `/api/contact` pipeline. When enabled (and paired with EmailJS identifiers), the app will attempt the API first and then fall back to EmailJS if ReCAPTCHA is unavailable.
 
 > Never commit secrets. Use local `.env.local`, CI secrets, or host-level configuration.
 

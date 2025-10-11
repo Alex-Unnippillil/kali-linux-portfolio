@@ -50,7 +50,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | http | HTTP Request Builder | Core maintainers | **Needs polish** – form validation and canned responses | HTTP schema mocks |
 | html-rewriter | HTML Rewriter | Core maintainers | **Needs polish** – transformation demos and worker wiring | Worker stubs |
 | contact | Contact | Core maintainers | **In progress** – validation, privacy note, dummy submit endpoint | Form schema, API stub |
-| gedit | Gedit | Core maintainers | **Needs polish** – ensure contact workflow alignment and EmailJS option | EmailJS config |
+| gedit | Gedit | Core maintainers | **Ready** – reuses validated contact pipeline with optional EmailJS fallback | EmailJS config & flag |
 | todoist | Todoist | Core maintainers | **In progress** – sections, due dates, drag-drop, quick-add, persistence | localStorage, DnD |
 
 ### Security Tool Simulators
