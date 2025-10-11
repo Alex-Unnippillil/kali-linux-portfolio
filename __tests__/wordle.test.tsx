@@ -1,5 +1,9 @@
-import { render, screen, fireEvent } from '@testing-library/react';
-import { getWordOfTheDay, buildResultMosaic } from '../utils/wordle';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import {
+  getWordOfTheDay,
+  buildResultMosaic,
+  dictionaries,
+} from '../utils/wordle';
 import type { ComponentType } from 'react';
 
 let Wordle: ComponentType;
@@ -71,6 +75,16 @@ describe('Wordle', () => {
     expect(w1).not.toBe(w3);
   });
 
+  test('rejects guesses not in dictionary', () => {
+    render(<Wordle />);
+    const input = screen.getByPlaceholderText('Guess');
+    fireEvent.change(input, { target: { value: 'xxxxx' } });
+    fireEvent.submit(input.closest('form')!);
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Word not in dictionary.'
+    );
+  });
+
   test('stores attempt history locally', async () => {
     render(<Wordle />);
     const solution = getWordOfTheDay(
@@ -85,6 +99,36 @@ describe('Wordle', () => {
     const history = JSON.parse(historyRaw as string);
     expect(history['2024-01-01'].solution).toBe(solution);
     expect(history['2024-01-01'].success).toBe(true);
+  });
+
+  test('rehydrates saved guesses on mount', async () => {
+    const { unmount } = render(<Wordle />);
+    const solution = getWordOfTheDay(
+      'common',
+      new Date('2024-01-01T00:00:00Z')
+    );
+    const candidates = ['ABACK', 'ABACA', 'ABASE', 'ABASH'];
+    const guess =
+      candidates.find(
+        (word) => word !== solution && dictionaries.common.includes(word)
+      ) || candidates[0];
+    const input = screen.getByPlaceholderText('Guess');
+    fireEvent.change(input, { target: { value: guess } });
+    fireEvent.submit(input.closest('form')!);
+
+    await screen.findAllByRole('gridcell');
+
+    unmount();
+    render(<Wordle />);
+    const rows = screen.getAllByRole('row');
+    await waitFor(() => {
+      const letters = Array.from(
+        within(rows[0]).getAllByRole('gridcell')
+      )
+        .map((cell) => cell.textContent)
+        .join('');
+      expect(letters).toBe(guess);
+    });
   });
 
   test('builds shareable result text mosaic', () => {
