@@ -48,7 +48,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | plugin-manager | Plugin Manager | Core maintainers | **Needs triage** – document scope and dependencies | Plugin metadata |
 | ssh | SSH Command Builder | Core maintainers | **Needs polish** – preset library and validation | Command templates |
 | http | HTTP Request Builder | Core maintainers | **Needs polish** – form validation and canned responses | HTTP schema mocks |
-| html-rewriter | HTML Rewriter | Core maintainers | **Needs polish** – transformation demos and worker wiring | Worker stubs |
+| html-rewriter | HTML Rewriter | Core maintainers | **Ready** – worker-based demos, documented sandbox constraints, Jest coverage | Worker sandbox |
 | contact | Contact | Core maintainers | **In progress** – validation, privacy note, dummy submit endpoint | Form schema, API stub |
 | gedit | Gedit | Core maintainers | **Needs polish** – ensure contact workflow alignment and EmailJS option | EmailJS config |
 | todoist | Todoist | Core maintainers | **In progress** – sections, due dates, drag-drop, quick-add, persistence | localStorage, DnD |
