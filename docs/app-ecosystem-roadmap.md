@@ -71,7 +71,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | evidence-vault | Evidence Vault | Security simulations pod | **Needs polish** – clarify evidence data model | Forensics fixtures |
 | mimikatz | Mimikatz | Security simulations pod | **In progress** – simulator backlog | Credential dump fixtures |
 | mimikatz/offline | Mimikatz Offline | Security simulations pod | **In progress** – simulator backlog | Offline dataset |
-| ettercap | Ettercap | Security simulations pod | **In progress** – simulator backlog | Network capture fixtures |
+| ettercap | Ettercap | Security simulations pod | **QA ready** – fixture browser, lab-gated command builder, tests added | Network capture fixtures |
 | reaver | Reaver | Security simulations pod | **In progress** – simulator backlog | Wi-Fi fixtures |
 | hydra | Hydra | Security simulations pod | **In progress** – simulator backlog | Credential list fixtures |
 | john | John the Ripper | Security simulations pod | **In progress** – simulator backlog | Wordlists |

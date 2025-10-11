@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 
-interface SampleFilter {
+export interface SampleFilter {
   name: string;
   code: string;
 }
@@ -19,7 +19,7 @@ const EXAMPLE_PACKETS = [
   'SSH handshake from 10.0.0.1',
 ];
 
-const applyFilters = (text: string, packets: string[]) => {
+export const applyFilters = (text: string, packets: string[]) => {
   let result = packets;
   text
     .split(/\n+/)
@@ -35,32 +35,84 @@ const applyFilters = (text: string, packets: string[]) => {
         if (pattern && replacement !== undefined) {
           result = result.map((p) => p.split(pattern).join(replacement));
         }
+      } else if (cmd === 'alert') {
+        result = result.map((p) =>
+          p.includes(rest.join(' ')) ? `${p} [ALERT]` : p,
+        );
       }
     });
   return result;
 };
 
-export default function FilterEditor() {
-  const [samples, setSamples] = usePersistentState<SampleFilter[]>(
-    'ettercap-samples',
-    DEFAULT_SAMPLES,
+interface FilterEditorProps {
+  samples?: SampleFilter[];
+  packets?: string[];
+  disabled?: boolean;
+  storageKey?: string;
+}
+
+const mergeSamples = (base: SampleFilter[], user: SampleFilter[]) => {
+  const map = new Map<string, SampleFilter>();
+  base.forEach((s) => map.set(s.name, s));
+  user.forEach((s) => map.set(s.name, s));
+  return Array.from(map.values());
+};
+
+export default function FilterEditor({
+  samples = DEFAULT_SAMPLES,
+  packets = EXAMPLE_PACKETS,
+  disabled = false,
+  storageKey = 'ettercap',
+}: FilterEditorProps) {
+  const sampleKey = useMemo(
+    () => samples.map((sample) => sample.name).join('|'),
+    [samples],
   );
+  const [customSamples, setCustomSamples] = usePersistentState<SampleFilter[]>(
+    `${storageKey}-custom-samples`,
+    [],
+  );
+  const mergedSamples = useMemo(
+    () => mergeSamples(samples, customSamples),
+    [customSamples, samples],
+  );
+  const [filterSelection, setFilterSelection] = useState(0);
   const [filterText, setFilterText] = usePersistentState(
-    'ettercap-filter-text',
-    DEFAULT_SAMPLES[0].code,
+    `${storageKey}-filter-text`,
+    mergedSamples[0]?.code ?? '',
   );
-  const output = applyFilters(filterText, EXAMPLE_PACKETS);
+  useEffect(() => {
+    setFilterSelection(0);
+    setFilterText(samples[0]?.code ?? mergedSamples[0]?.code ?? '');
+  }, [sampleKey, samples, mergedSamples, setFilterText]);
+  useEffect(() => {
+    if (filterSelection >= mergedSamples.length) {
+      const nextIndex = mergedSamples.length > 0 ? mergedSamples.length - 1 : 0;
+      setFilterSelection(nextIndex);
+      setFilterText(mergedSamples[nextIndex]?.code ?? '');
+    }
+  }, [filterSelection, mergedSamples, setFilterText]);
+  const output = useMemo(
+    () => applyFilters(filterText, packets),
+    [filterText, packets],
+  );
 
   const loadSample = useCallback(
-    (idx: number) => setFilterText(samples[idx]?.code || ''),
-    [samples, setFilterText],
+    (idx: number) => {
+      setFilterSelection(idx);
+      setFilterText(mergedSamples[idx]?.code || '');
+    },
+    [mergedSamples, setFilterText],
   );
 
-  const saveSample = () => {
+  const saveSample = useCallback(() => {
+    if (disabled) return;
     const name = window.prompt('Sample name');
     if (!name) return;
-    setSamples((s) => [...s, { name, code: filterText }]);
-  };
+    const entry = { name, code: filterText };
+    setCustomSamples((prev) => [...prev, entry]);
+    setFilterSelection(mergedSamples.length);
+  }, [disabled, filterText, mergedSamples.length, setCustomSamples]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -70,8 +122,10 @@ export default function FilterEditor() {
           id="sampleSelect"
           className="border p-1"
           onChange={(e) => loadSample(Number(e.target.value))}
+          value={filterSelection}
+          disabled={disabled || mergedSamples.length === 0}
         >
-          {samples.map((s, i) => (
+          {mergedSamples.map((s, i) => (
             <option key={s.name} value={i}>
               {s.name}
             </option>
@@ -79,27 +133,33 @@ export default function FilterEditor() {
         </select>
         <button
           type="button"
-          className="border px-2 py-1"
+          className="border px-2 py-1 disabled:opacity-50"
           onClick={saveSample}
+          disabled={disabled}
         >
           Save
         </button>
       </div>
-        <label htmlFor="ettercap-filter-text" className="sr-only" id="ettercap-filter-text-label">
-          Filter source
-        </label>
-        <textarea
-          id="ettercap-filter-text"
-          className="w-full h-32 border p-2 font-mono"
-          value={filterText}
-          onChange={(e) => setFilterText(e.target.value)}
-          aria-labelledby="ettercap-filter-text-label"
-        />
-      <div className="grid grid-cols-2 gap-4">
+      <label
+        htmlFor="ettercap-filter-text"
+        className="sr-only"
+        id="ettercap-filter-text-label"
+      >
+        Filter source
+      </label>
+      <textarea
+        id="ettercap-filter-text"
+        className="w-full h-32 border p-2 font-mono"
+        value={filterText}
+        onChange={(e) => setFilterText(e.target.value)}
+        aria-labelledby="ettercap-filter-text-label"
+        disabled={disabled}
+      />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <h3 className="font-bold mb-2">Before</h3>
           <ul className="bg-gray-100 p-2 font-mono text-sm space-y-1">
-            {EXAMPLE_PACKETS.map((p, i) => (
+            {packets.map((p, i) => (
               <li key={i}>{p}</li>
             ))}
           </ul>
