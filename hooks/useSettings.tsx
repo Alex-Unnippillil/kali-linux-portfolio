@@ -250,19 +250,43 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     if (typeof window === 'undefined') return;
     if (!fetchRef.current) fetchRef.current = window.fetch.bind(window);
     if (!allowNetwork) {
+      const normalizeRequest = (input: RequestInfo | URL): URL | null => {
+        if (typeof window === 'undefined') return null;
+        try {
+          if (typeof input === 'string') {
+            return new URL(input, window.location.href);
+          }
+          if (input instanceof URL) {
+            return new URL(input.href, window.location.href);
+          }
+          if (typeof Request !== 'undefined' && input instanceof Request) {
+            return new URL(input.url, window.location.href);
+          }
+          if (typeof input === 'object' && input) {
+            const candidate =
+              (input as { url?: string | URL }).url ?? (input as { href?: string | URL }).href;
+            if (candidate instanceof URL) {
+              return new URL(candidate.href, window.location.href);
+            }
+            if (typeof candidate === 'string') {
+              return new URL(candidate, window.location.href);
+            }
+          }
+        } catch {
+          return null;
+        }
+        return null;
+      };
+
       window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
-        const url =
-          typeof input === 'string'
-            ? input
-            : 'url' in input
-              ? input.url
-              : input.href;
-        if (
-          /^https?:/i.test(url) &&
-          !url.startsWith(window.location.origin) &&
-          !url.startsWith('/')
-        ) {
-          return Promise.reject(new Error('Network requests disabled'));
+        const resolvedUrl = normalizeRequest(input);
+        if (resolvedUrl) {
+          const protocol = resolvedUrl.protocol.toLowerCase();
+          const isHttp = protocol === 'http:' || protocol === 'https:';
+          const isSameOrigin = resolvedUrl.origin === window.location.origin;
+          if (isHttp && !isSameOrigin) {
+            return Promise.reject(new Error('Network requests disabled'));
+          }
         }
         return fetchRef.current!(input, init);
       };
