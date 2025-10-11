@@ -1,14 +1,23 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  calculateFps,
+  extractMemoryStats,
+  normalizeCpuDuration,
+  rollingAverage,
+  METRIC_BASELINES,
+} from './resource_monitor.metrics';
 
 // Number of samples to keep in the timeline
 const MAX_POINTS = 60;
+const CPU_PROBE_ITERATIONS = 60000;
 
 const ResourceMonitor = () => {
   const cpuCanvas = useRef(null);
   const memCanvas = useRef(null);
   const fpsCanvas = useRef(null);
   const netCanvas = useRef(null);
-  const workerRef = useRef(null);
+  const netWorkerRef = useRef(null);
+  const cpuWorkerRef = useRef(null);
 
   const dataRef = useRef({ cpu: [], mem: [], fps: [], net: [] });
   const displayRef = useRef({ cpu: [], mem: [], fps: [], net: [] });
@@ -19,65 +28,197 @@ const ResourceMonitor = () => {
   const [paused, setPaused] = useState(false);
   const [stress, setStress] = useState(false);
   const [fps, setFps] = useState(0);
+  const [memoryStats, setMemoryStats] = useState(() => extractMemoryStats());
 
   const stressWindows = useRef([]);
   const stressEls = useRef([]);
   const containerRef = useRef(null);
+  const fpsBufferRef = useRef([]);
+  const memoryStatsRef = useRef(memoryStats);
+  const pausedRef = useRef(paused);
 
-  useEffect(() => () => cancelAnimationFrame(animRef.current), []);
+  const pushSample = useCallback((key, value) => {
+    const arr = dataRef.current[key];
+    arr.push(value);
+    if (arr.length > MAX_POINTS) arr.shift();
+  }, []);
 
-  // Spawn worker for network speed tests
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof Worker !== 'function') return;
-    workerRef.current = new Worker(
-      new URL('./speedtest.worker.js', import.meta.url),
-    );
-    workerRef.current.onmessage = (e) => {
-      const { speed } = e.data || {};
-      pushSample('net', speed);
-      scheduleDraw();
+  const drawCharts = useCallback(
+    (dataset = dataRef.current) => {
+      drawChart(cpuCanvas.current, dataset.cpu, '#00ff00', 'Synthetic CPU %', 100);
+      drawChart(memCanvas.current, dataset.mem, '#ffd700', 'Memory %', 100);
+      drawChart(fpsCanvas.current, dataset.fps, '#00ffff', 'FPS', 144);
+      drawChart(netCanvas.current, dataset.net, '#ff00ff', 'Mbps', 100);
+    },
+    [],
+  );
+
+  const animateCharts = useCallback(() => {
+    const from = { ...displayRef.current };
+    const to = { ...dataRef.current };
+    const start = performance.now();
+    const duration = 300;
+
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      const interpolated = {};
+      ['cpu', 'mem', 'fps', 'net'].forEach((key) => {
+        const fromArr = from[key];
+        const toArr = to[key];
+        interpolated[key] = toArr.map((v, i) => {
+          const a = fromArr[i] ?? fromArr[fromArr.length - 1] ?? 0;
+          return a + (v - a) * t;
+        });
+      });
+      drawCharts(interpolated);
+      if (t < 1) {
+        animRef.current = requestAnimationFrame(step);
+      } else {
+        displayRef.current = to;
+      }
     };
-    workerRef.current.postMessage({ type: 'start' });
-    return () => workerRef.current?.terminate();
-  }, [scheduleDraw]);
+
+    cancelAnimationFrame(animRef.current);
+    animRef.current = requestAnimationFrame(step);
+  }, [drawCharts]);
+
+  const scheduleDraw = useCallback(() => {
+    const now = performance.now();
+    if (now - lastDrawRef.current >= THROTTLE_MS) {
+      lastDrawRef.current = now;
+      animateCharts();
+    }
+  }, [animateCharts]);
 
   useEffect(() => {
-    if (workerRef.current) {
-      workerRef.current.postMessage({ type: paused ? 'stop' : 'start' });
+    if (paused) {
+      fpsBufferRef.current = [];
     }
   }, [paused]);
 
-  // Sampling loop using requestAnimationFrame
+  useEffect(() => () => cancelAnimationFrame(animRef.current), []);
+
   useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
+
+  useEffect(() => {
+    memoryStatsRef.current = memoryStats;
+  }, [memoryStats]);
+
+  // Spawn worker for network speed tests
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof Worker !== 'function') return undefined;
+    const worker = new Worker(new URL('./speedtest.worker.js', import.meta.url));
+    netWorkerRef.current = worker;
+    worker.onmessage = (e) => {
+      const { speed } = e.data || {};
+      if (!pausedRef.current) {
+        pushSample('net', speed);
+        scheduleDraw();
+      }
+    };
+    worker.postMessage({ type: 'start' });
+    return () => worker.terminate();
+  }, [pushSample, scheduleDraw]);
+
+  useEffect(() => {
+    if (netWorkerRef.current) {
+      netWorkerRef.current.postMessage({ type: paused ? 'stop' : 'start' });
+    }
+  }, [paused]);
+
+  useEffect(() => {
+    if (cpuWorkerRef.current) {
+      cpuWorkerRef.current.postMessage({ type: paused ? 'stop' : 'start' });
+    }
+  }, [paused]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
     let raf;
     let lastFrame = performance.now();
-    let lastSample = performance.now();
+    let lastSample = lastFrame;
 
-    const sample = (now) => {
-      const dt = now - lastFrame;
+    const loop = (now) => {
+      const delta = now - lastFrame;
       lastFrame = now;
-      const currentFps = 1000 / dt;
-      if (!paused) setFps(currentFps);
 
-      if (!paused && now - lastSample >= 1000) {
-        const target = 1000 / 60; // 60 FPS ideal frame time
-        const cpu = Math.min(100, Math.max(0, ((dt - target) / target) * 100));
-        let mem = 0;
-        if (performance && performance.memory) {
-          const { usedJSHeapSize, totalJSHeapSize } = performance.memory;
-          mem = (usedJSHeapSize / totalJSHeapSize) * 100;
+      if (!pausedRef.current) {
+        const instantFps = calculateFps(delta);
+        if (Number.isFinite(instantFps) && instantFps > 0) {
+          fpsBufferRef.current.push(instantFps);
+          if (fpsBufferRef.current.length > MAX_POINTS) fpsBufferRef.current.shift();
         }
-        pushSample('cpu', cpu);
-        pushSample('mem', mem);
-        pushSample('fps', currentFps);
-        scheduleDraw();
-        lastSample = now;
+        const averageFps = rollingAverage(fpsBufferRef.current);
+        setFps(averageFps);
+
+        if (now - lastSample >= 1000) {
+          const perfMemory = typeof performance !== 'undefined' ? performance.memory : undefined;
+          const stats = extractMemoryStats(perfMemory);
+          const prev = memoryStatsRef.current;
+          const changed =
+            !prev ||
+            prev.usedMB !== stats.usedMB ||
+            prev.totalMB !== stats.totalMB ||
+            prev.limitMB !== stats.limitMB ||
+            prev.usagePercent !== stats.usagePercent ||
+            prev.supported !== stats.supported;
+          memoryStatsRef.current = stats;
+          if (changed) {
+            setMemoryStats(stats);
+          }
+          pushSample('fps', averageFps);
+          if (stats.supported) {
+            pushSample('mem', stats.usagePercent);
+          }
+          scheduleDraw();
+          lastSample = now;
+        }
       }
-      raf = requestAnimationFrame(sample);
+
+      raf = requestAnimationFrame(loop);
     };
-    raf = requestAnimationFrame(sample);
+
+    raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [paused, scheduleDraw]);
+  }, [pushSample, scheduleDraw]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof Worker !== 'function') return undefined;
+    const worker = new Worker(new URL('./resource_monitor.worker.js', import.meta.url));
+    cpuWorkerRef.current = worker;
+    worker.onmessage = (event) => {
+      const { type, duration, baselineMs, memory } = event.data || {};
+      if (type !== 'probe') return;
+      if (memory) {
+        const stats = extractMemoryStats(memory);
+        const prev = memoryStatsRef.current;
+        const changed =
+          !prev ||
+          prev.usedMB !== stats.usedMB ||
+          prev.totalMB !== stats.totalMB ||
+          prev.limitMB !== stats.limitMB ||
+          prev.usagePercent !== stats.usagePercent ||
+          prev.supported !== stats.supported;
+        memoryStatsRef.current = stats;
+        if (!pausedRef.current && changed) {
+          setMemoryStats(stats);
+        }
+      }
+      if (pausedRef.current) return;
+      const percent = normalizeCpuDuration(duration, baselineMs || METRIC_BASELINES.cpuProbeBaselineMs);
+      pushSample('cpu', percent);
+      scheduleDraw();
+    };
+    worker.postMessage({
+      type: 'start',
+      intervalMs: 1000,
+      iterations: CPU_PROBE_ITERATIONS,
+      baselineMs: METRIC_BASELINES.cpuProbeBaselineMs,
+    });
+    return () => worker.terminate();
+  }, [pushSample, scheduleDraw]);
 
   // Stress test animation – many moving windows
   useEffect(() => {
@@ -120,56 +261,6 @@ const ResourceMonitor = () => {
     }
   }, [stress]);
 
-  const pushSample = (key, value) => {
-    const arr = dataRef.current[key];
-    arr.push(value);
-    if (arr.length > MAX_POINTS) arr.shift();
-  };
-
-  const drawCharts = (dataset = dataRef.current) => {
-    drawChart(cpuCanvas.current, dataset.cpu, '#00ff00', 'CPU %', 100);
-    drawChart(memCanvas.current, dataset.mem, '#ffd700', 'Memory %', 100);
-    drawChart(fpsCanvas.current, dataset.fps, '#00ffff', 'FPS', 120);
-    drawChart(netCanvas.current, dataset.net, '#ff00ff', 'Mbps', 100);
-  };
-
-  const animateCharts = useCallback(() => {
-    const from = { ...displayRef.current };
-    const to = { ...dataRef.current };
-    const start = performance.now();
-    const duration = 300;
-
-    const step = (now) => {
-      const t = Math.min(1, (now - start) / duration);
-      const interpolated = {};
-      ['cpu', 'mem', 'fps', 'net'].forEach((key) => {
-        const fromArr = from[key];
-        const toArr = to[key];
-        interpolated[key] = toArr.map((v, i) => {
-          const a = fromArr[i] ?? fromArr[fromArr.length - 1] ?? 0;
-          return a + (v - a) * t;
-        });
-      });
-      drawCharts(interpolated);
-      if (t < 1) {
-        animRef.current = requestAnimationFrame(step);
-      } else {
-        displayRef.current = to;
-      }
-    };
-
-    cancelAnimationFrame(animRef.current);
-    animRef.current = requestAnimationFrame(step);
-  }, []);
-
-  const scheduleDraw = useCallback(() => {
-    const now = performance.now();
-    if (now - lastDrawRef.current >= THROTTLE_MS) {
-      lastDrawRef.current = now;
-      animateCharts();
-    }
-  }, [animateCharts]);
-
   const togglePause = () => setPaused((p) => !p);
   const toggleStress = () => setStress((s) => !s);
 
@@ -185,7 +276,18 @@ const ResourceMonitor = () => {
         <button onClick={toggleStress} className="px-2 py-1 bg-ub-dark-grey rounded">
           {stress ? 'Stop Stress' : 'Stress Test'}
         </button>
-        <span className="ml-auto text-sm">FPS: {fps.toFixed(1)}</span>
+        <div className="ml-auto flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-100">
+          <span>FPS: {fps.toFixed(1)}</span>
+          <span>
+            Memory:{' '}
+            {memoryStats.supported
+              ? `${memoryStats.usedMB.toFixed(1)} / ${Math.max(
+                  memoryStats.limitMB,
+                  memoryStats.totalMB,
+                ).toFixed(1)} MB (${memoryStats.usagePercent.toFixed(1)}%)`
+              : 'performance.memory unsupported'}
+          </span>
+        </div>
       </div>
       <div className="flex flex-1 items-center justify-evenly gap-4 p-4">
         <canvas
@@ -220,6 +322,19 @@ const ResourceMonitor = () => {
           aria-label="Network speed chart"
           className="bg-ub-dark-grey"
         />
+      </div>
+      <div className="px-4 pb-4 text-xs text-gray-200 space-y-2">
+        <p className="uppercase tracking-wide text-[10px] text-gray-300">Metric notes</p>
+        <p>
+          Synthetic CPU load measures how long a dedicated worker takes to crunch{' '}
+          {CPU_PROBE_ITERATIONS.toLocaleString()} floating-point iterations relative to a{' '}
+          {METRIC_BASELINES.cpuProbeBaselineMs.toFixed(1)}ms baseline. Higher percentages mean slower loop execution.
+        </p>
+        <p>
+          FPS is sampled with <code>requestAnimationFrame</code> and averaged across the last {MAX_POINTS} frames to smooth out
+          jitter. Memory statistics come directly from <code>performance.memory</code> when the browser exposes it; values
+          include current heap usage, the active allocation pool, and the runtime cap.
+        </p>
       </div>
       {stressWindows.current.map((_, i) => (
         <div
