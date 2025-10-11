@@ -7,6 +7,8 @@ if (typeof global.structuredClone !== 'function') {
 }
 require('fake-indexeddb/auto');
 import '@testing-library/jest-dom';
+import fs from 'fs';
+import path from 'path';
 
 // Provide TextEncoder/TextDecoder for libraries that expect them in the test environment
 // @ts-ignore
@@ -179,4 +181,22 @@ jest.mock(
 
   }),
   { virtual: true }
+);
+
+const standardFontPath = path.join(
+  path.dirname(require.resolve('figlet/package.json')),
+  'importable-fonts/Standard.js',
+);
+const standardFontData = fs
+  .readFileSync(standardFontPath, 'utf8')
+  .replace(/^export default\s*`/u, '')
+  .replace(/`;\s*$/u, '');
+
+jest.mock(
+  'figlet/importable-fonts/Standard.js',
+  () => ({
+    __esModule: true,
+    default: standardFontData,
+  }),
+  { virtual: true },
 );
