@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
+import useGameAudio from '../../../hooks/useGameAudio';
+import { useGameSettings, useGamePersistence } from 'components/apps/useGameControls';
 import {
   initializeGame,
   drawFromStock,
@@ -16,16 +18,8 @@ import {
   suits,
 } from './engine';
 import { solve } from './solver';
-
-type Variant = 'klondike' | 'spider' | 'freecell';
-type Stats = {
-  gamesPlayed: number;
-  gamesWon: number;
-  bestScore: number;
-  bestTime: number;
-  dailyStreak: number;
-  lastDaily: string | null;
-};
+import { createDefaultStats, Variant, Stats } from './types';
+import { SNAPSHOT_VERSION, prepareForStorage, reviveSnapshot } from './persistence';
 
 const getStatsKey = (v: Variant, mode: 1 | 3, passes: number) =>
   `solitaireStats-${v}-d${mode}-p${passes === Infinity ? 'u' : passes}`;
@@ -63,19 +57,13 @@ const Solitaire = () => {
   const [time, setTime] = useState(0);
   const [moves, setMoves] = useState(0);
   const [isDaily, setIsDaily] = useState(false);
-  const [stats, setStats] = useState<Stats>({
-    gamesPlayed: 0,
-    gamesWon: 0,
-    bestScore: 0,
-    bestTime: 0,
-    dailyStreak: 0,
-    lastDaily: null,
-  });
+  const [stats, setStats] = useState<Stats>(() => createDefaultStats());
   const prefersReducedMotion = usePrefersReducedMotion();
   const [cascade, setCascade] = useState<AnimatedCard[]>([]);
   const [ariaMessage, setAriaMessage] = useState('');
   const timer = useRef<NodeJS.Timeout | null>(null);
-  const [paused, setPaused] = useState(prefersReducedMotion);
+  const { paused, togglePause, muted, toggleMute } = useGameSettings('solitaire');
+  const { setMuted: setAudioMuted } = useGameAudio();
   const [scale, setScale] = useState(1);
   const foundationRefs = useRef<(HTMLDivElement | null)[]>([]);
   const tableauRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -90,6 +78,20 @@ const Solitaire = () => {
   const [bankroll, setBankroll] = useState(0);
   const [bankrollReady, setBankrollReady] = useState(false);
   const foundationCountRef = useRef(0);
+  const { saveSnapshot, loadSnapshot, getHighScore, setHighScore } =
+    useGamePersistence('solitaire');
+  const [highScore, setHighScoreState] = useState(() => getHighScore());
+  const [snapshotLoaded, setSnapshotLoaded] = useState(false);
+  const [restoredFromSnapshot, setRestoredFromSnapshot] = useState(false);
+  const [initialised, setInitialised] = useState(false);
+
+  const pauseGame = useCallback(() => {
+    if (!paused) togglePause();
+  }, [paused, togglePause]);
+
+  const resumeGame = useCallback(() => {
+    if (paused) togglePause();
+  }, [paused, togglePause]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -103,18 +105,16 @@ const Solitaire = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const saved = JSON.parse(
-      localStorage.getItem(getStatsKey(variant, drawMode, passLimit)) || '{}',
-    );
-    setStats({
-      gamesPlayed: 0,
-      gamesWon: 0,
-      bestScore: 0,
-      bestTime: 0,
-      dailyStreak: 0,
-      lastDaily: null,
-      ...saved,
-    });
+    let saved: Partial<Stats> = {};
+    try {
+      const raw = window.localStorage.getItem(
+        getStatsKey(variant, drawMode, passLimit),
+      );
+      if (raw) saved = JSON.parse(raw) as Partial<Stats>;
+    } catch {
+      saved = {};
+    }
+    setStats({ ...createDefaultStats(), ...saved });
   }, [variant, drawMode, passLimit]);
 
   useEffect(() => {
@@ -132,18 +132,111 @@ const Solitaire = () => {
   }, []);
 
   useEffect(() => {
+    setAudioMuted(muted);
+  }, [muted, setAudioMuted]);
+
+  useEffect(() => {
+    const raw = loadSnapshot();
+    const restored = reviveSnapshot(raw);
+    if (restored) {
+      setVariant(restored.variant);
+      setDrawMode(restored.drawMode);
+      setPassLimit(restored.passLimit);
+      setMoves(restored.moves);
+      setTime(restored.time);
+      setIsDaily(restored.isDaily);
+      setWon(restored.won);
+      setWinnableOnly(restored.winnableOnly);
+      setBankroll(restored.bankroll);
+      setStats({ ...restored.stats });
+      setHighScoreState((prev) =>
+        restored.stats.bestScore > prev ? restored.stats.bestScore : prev,
+      );
+      setCascade([]);
+      setFlying([]);
+      setAutoCompleting(false);
+      setHint(null);
+      foundationCountRef.current = restored.game.foundations.reduce(
+        (sum, pile) => sum + pile.length,
+        0,
+      );
+      setGame(restored.game);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(
+          getStatsKey(restored.variant, restored.drawMode, restored.passLimit),
+          JSON.stringify(restored.stats),
+        );
+      }
+      setRestoredFromSnapshot(true);
+      setInitialised(true);
+    }
+    setSnapshotLoaded(true);
+  }, [loadSnapshot]);
+
+  useEffect(() => {
+    if (!snapshotLoaded) return;
+    const snapshot = prepareForStorage({
+      version: SNAPSHOT_VERSION,
+      variant,
+      drawMode,
+      passLimit,
+      game,
+      moves,
+      time,
+      bankroll,
+      stats,
+      isDaily,
+      won,
+      winnableOnly,
+      timestamp: Date.now(),
+    });
+    saveSnapshot(snapshot);
+  }, [
+    snapshotLoaded,
+    variant,
+    drawMode,
+    passLimit,
+    game,
+    moves,
+    time,
+    bankroll,
+    stats,
+    isDaily,
+    won,
+    winnableOnly,
+    saveSnapshot,
+  ]);
+
+  useEffect(() => {
+    if (!bankrollReady || !snapshotLoaded || initialised) return;
+    if (variant !== 'klondike') {
+      setInitialised(true);
+      return;
+    }
+    if (restoredFromSnapshot) return;
+    start(drawMode, variant);
+    setInitialised(true);
+  }, [
+    bankrollReady,
+    snapshotLoaded,
+    initialised,
+    restoredFromSnapshot,
+    start,
+    drawMode,
+    variant,
+  ]);
+
+  useEffect(() => {
     const handleVis = () => {
-      if (document.visibilityState === 'hidden') setPaused(true);
+      if (document.visibilityState === 'hidden') pauseGame();
     };
     document.addEventListener('visibilitychange', handleVis);
     return () => document.removeEventListener('visibilitychange', handleVis);
-  }, []);
+  }, [pauseGame]);
 
   useEffect(() => {
-    if (prefersReducedMotion) setPaused(true);
-  }, [prefersReducedMotion]);
-
-  const resume = useCallback(() => setPaused(false), []);
+    if (prefersReducedMotion) pauseGame();
+  }, [prefersReducedMotion, pauseGame]);
 
   const start = useCallback(
     (
@@ -151,6 +244,7 @@ const Solitaire = () => {
       v: Variant = variant,
       daily = false,
       winnable = winnableOnly,
+      passCap: number = passLimit,
     ) => {
       const seed = daily
         ? Number(new Date().toISOString().slice(0, 10).replace(/-/g, ''))
@@ -159,14 +253,14 @@ const Solitaire = () => {
       if (winnable && !daily) {
         for (let attempt = 0; attempt < 1000; attempt += 1) {
           const d = createDeck();
-          const test = initializeGame(mode, d.slice(), undefined, passLimit);
+          const test = initializeGame(mode, d.slice(), undefined, passCap);
           if (findHint(test)) {
             deck = d;
             break;
           }
         }
       }
-      setGame(initializeGame(mode, deck, seed, passLimit));
+      setGame(initializeGame(mode, deck, seed, passCap));
       setWon(false);
       setCascade([]);
       setTime(0);
@@ -184,7 +278,7 @@ const Solitaire = () => {
         const ns = { ...s, gamesPlayed: s.gamesPlayed + 1 };
         if (typeof window !== 'undefined') {
           localStorage.setItem(
-            getStatsKey(v, mode, passLimit),
+            getStatsKey(v, mode, passCap),
             JSON.stringify(ns),
           );
         }
@@ -193,10 +287,6 @@ const Solitaire = () => {
     },
     [drawMode, variant, winnableOnly, passLimit],
   );
-
-  useEffect(() => {
-    if (bankrollReady && variant === 'klondike') start(drawMode, variant);
-  }, [drawMode, variant, start, bankrollReady]);
 
   const vegasScore =
     game.foundations.reduce((sum, p) => sum + p.length, 0) * 5 - 52;
@@ -238,6 +328,8 @@ const Solitaire = () => {
         }
         return ns;
       });
+      setHighScore(vegasScore);
+      setHighScoreState((prev) => (vegasScore > prev ? vegasScore : prev));
       return;
     }
     if (paused) {
@@ -248,7 +340,19 @@ const Solitaire = () => {
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
-  }, [won, paused, game, time, isDaily, variant, drawMode, passLimit, setStats, vegasScore]);
+  }, [
+    won,
+    paused,
+    game,
+    time,
+    isDaily,
+    variant,
+    drawMode,
+    passLimit,
+    vegasScore,
+    setHighScore,
+    setHighScoreState,
+  ]);
 
   useEffect(() => {
     if (game.foundations.every((p) => p.length === 13)) {
@@ -655,6 +759,36 @@ const Solitaire = () => {
       className="h-full w-full bg-green-700 text-white select-none p-2 pt-8 relative overflow-hidden"
       style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
     >
+      <div className="absolute top-1 right-2 z-50 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            if (paused) resumeGame();
+            else pauseGame();
+          }}
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded focus:outline-none focus:ring"
+        >
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button
+          type="button"
+          onClick={toggleMute}
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded focus:outline-none focus:ring"
+        >
+          {muted ? 'Unmute' : 'Mute'}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (variant === 'klondike') {
+              start(drawMode, variant, isDaily, winnableOnly, passLimit);
+            }
+          }}
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded focus:outline-none focus:ring"
+        >
+          Reset
+        </button>
+      </div>
       <div className="absolute top-0 left-0 right-0 flex justify-between px-2 text-sm pointer-events-none">
         <span>Moves: {moves}</span>
         <span>Time: {time}s</span>
@@ -670,7 +804,7 @@ const Solitaire = () => {
         >
           <button
             type="button"
-            onClick={resume}
+            onClick={resumeGame}
             className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
             autoFocus
           >
@@ -718,6 +852,7 @@ const Solitaire = () => {
         <div>
           Best: {stats.bestScore ? `${stats.bestScore} (${stats.bestTime}s)` : 'N/A'}
         </div>
+        <div>High Score: {Math.max(highScore, stats.bestScore)}</div>
         <div>
           Wins: {stats.gamesWon}/{stats.gamesPlayed}
         </div>
@@ -729,6 +864,9 @@ const Solitaire = () => {
             const v = e.target.value as Variant;
             ReactGA.event({ category: 'Solitaire', action: 'variant_select', label: v });
             setVariant(v);
+            if (v === 'klondike') {
+              start(drawMode, v, isDaily, winnableOnly, passLimit);
+            }
           }}
         >
           <option value="klondike">Klondike</option>
@@ -763,6 +901,7 @@ const Solitaire = () => {
               label: mode === 1 ? 'draw1' : 'draw3',
             });
             setDrawMode(mode);
+            start(mode, variant, isDaily, winnableOnly, passLimit);
           }}
         >
           Draw {drawMode === 1 ? '1' : '3'}
@@ -778,6 +917,7 @@ const Solitaire = () => {
               label: `passes_${next === Infinity ? 'unlimited' : next}`,
             });
             setPassLimit(next);
+            start(drawMode, variant, isDaily, winnableOnly, next);
           }}
         >
           Passes {passLimit === Infinity ? '∞' : passLimit}
@@ -786,13 +926,30 @@ const Solitaire = () => {
           <input
             type="checkbox"
             checked={winnableOnly}
-            onChange={(e) => setWinnableOnly(e.target.checked)}
+            onChange={(e) => {
+              const checked = e.target.checked;
+              setWinnableOnly(checked);
+              start(drawMode, variant, isDaily, checked, passLimit);
+            }}
+            aria-label="Toggle winnable deals"
           />
           <span className="select-none">Winnable Only</span>
         </label>
       </div>
       <div className="flex space-x-4 mb-4">
-        <div className="w-16 h-24 min-w-[24px] min-h-[24px]" onClick={draw}>
+        <div
+          className="w-16 h-24 min-w-[24px] min-h-[24px]"
+          role="button"
+          tabIndex={0}
+          aria-label="Draw from stock"
+          onClick={draw}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              draw();
+            }
+          }}
+        >
           {game.stock.length ? renderFaceDown() : <div />}
         </div>
         <div className="w-16 h-24 min-w-[24px] min-h-[24px]" onDragOver={(e) => e.preventDefault()}>

@@ -92,6 +92,14 @@ describe('Solitaire engine', () => {
     expect(r.tableau[0].length).toBe(1);
   });
 
+  test('moveTableauToTableau blocks face-down cards', () => {
+    const state = emptyState();
+    state.tableau[0] = [card('♠', 7, false), card('♥', 6, true)];
+    state.tableau[1] = [];
+    const result = moveTableauToTableau(state, 0, 0, 1);
+    expect(result).toBe(state);
+  });
+
   test('moveToFoundation builds correctly', () => {
     const state = emptyState();
     state.tableau[0] = [card('♠', 1, true)];
@@ -100,6 +108,13 @@ describe('Solitaire engine', () => {
     state.tableau[0] = [card('♠', 2, true)];
     r = moveToFoundation(state, 'tableau', 0);
     expect(r.tableau[0].length).toBe(1);
+  });
+
+  test('moveToFoundation ignores face-down tableau cards', () => {
+    const state = emptyState();
+    state.tableau[0] = [card('♠', 1, false)];
+    const result = moveToFoundation(state, 'tableau', 0);
+    expect(result).toBe(state);
   });
 
   test('autoMove moves aces from waste', () => {
