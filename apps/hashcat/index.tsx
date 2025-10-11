@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import RulesSandbox from './components/RulesSandbox';
 import StatsChart from '../../components/StatsChart';
@@ -27,6 +27,47 @@ const defaultRuleSets: RuleSets = {
   best64: ['c', 'u', 'l', 'r', 'd', 'p', 't', 's'],
   quick: ['l', 'u', 'c', 'd'],
 };
+
+const maskPresets = [
+  {
+    label: '4-digit PIN',
+    mask: '?d?d?d?d',
+    description: 'Numeric keypad brute-force covering 0000-9999.',
+  },
+  {
+    label: 'Mixed 6',
+    mask: '?l?l?l?d?d?d',
+    description:
+      'Lowercase letters followed by digits – useful for simple word+number combos.',
+  },
+  {
+    label: 'Alphanumeric 8',
+    mask: '?u?l?l?l?d?d?d?d',
+    description:
+      'Common corporate-style password with an uppercase letter and trailing digits.',
+  },
+];
+
+const difficultyToneStyles = {
+  easy: {
+    container: 'border-green-500/60 bg-green-900/30',
+    badge: 'border-green-400/70 bg-green-800/60 text-green-100',
+  },
+  moderate: {
+    container: 'border-yellow-500/60 bg-yellow-900/30',
+    badge: 'border-yellow-400/70 bg-yellow-800/60 text-yellow-100',
+  },
+  hard: {
+    container: 'border-red-500/60 bg-red-900/30',
+    badge: 'border-red-400/70 bg-red-800/60 text-red-100',
+  },
+  unknown: {
+    container: 'border-gray-600 bg-gray-800/70',
+    badge: 'border-gray-500 bg-gray-700/70 text-gray-100',
+  },
+};
+
+type DifficultyTone = keyof typeof difficultyToneStyles;
 
 const Hashcat: React.FC = () => {
   const [attackMode, setAttackMode] = useState('0');
@@ -129,6 +170,38 @@ const Hashcat: React.FC = () => {
 
   const showMask = attackMode === '3' || attackMode === '6' || attackMode === '7';
 
+  const activeMode = useMemo(
+    () => attackModes.find((m) => m.value === attackMode),
+    [attackMode],
+  );
+
+  const difficulty = useMemo(() => {
+    if (showMask && maskStats.count > 0) {
+      if (maskStats.count < 1_000_000) {
+        return { tone: 'easy' as DifficultyTone, label: 'Estimated difficulty: Easy' };
+      }
+      if (maskStats.count < 1_000_000_000) {
+        return {
+          tone: 'moderate' as DifficultyTone,
+          label: 'Estimated difficulty: Moderate',
+        };
+      }
+      return { tone: 'hard' as DifficultyTone, label: 'Estimated difficulty: Hard' };
+    }
+    const fallback: Record<string, { tone: DifficultyTone; label: string }> = {
+      '0': { tone: 'moderate', label: 'Estimated difficulty: Moderate' },
+      '3': { tone: 'hard', label: 'Estimated difficulty: Hard' },
+      '6': { tone: 'moderate', label: 'Estimated difficulty: Moderate' },
+      '7': { tone: 'hard', label: 'Estimated difficulty: Hard' },
+    };
+    return fallback[attackMode] ?? {
+      tone: 'unknown' as DifficultyTone,
+      label: 'Estimated difficulty: Unknown',
+    };
+  }, [attackMode, maskStats.count, showMask]);
+
+  const difficultyStyles = difficultyToneStyles[difficulty.tone];
+
   const formatTime = (seconds: number) => {
     if (seconds < 60) return `${seconds.toFixed(2)}s`;
     const minutes = seconds / 60;
@@ -172,6 +245,51 @@ const Hashcat: React.FC = () => {
     <div className="p-4 bg-gray-900 text-white min-h-screen space-y-4">
       <h1 className="text-2xl">Hashcat Simulator</h1>
 
+      <section
+        aria-label="Hashcat cracking summary"
+        className={`rounded-lg border p-4 shadow-inner transition-colors ${difficultyStyles.container}`}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">Summary</h2>
+          <span
+            className={`text-xs uppercase tracking-wide px-2 py-1 rounded-full border ${difficultyStyles.badge}`}
+            data-testid="summary-difficulty"
+          >
+            {difficulty.label}
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-gray-200/80">
+          Live status for the current cracking configuration.
+        </p>
+        <dl className="mt-3 grid gap-3 sm:grid-cols-3" aria-live="polite">
+          <div>
+            <dt className="text-xs uppercase tracking-wide text-gray-300/70">
+              Attack Mode
+            </dt>
+            <dd
+              className="text-base font-medium"
+              data-testid="summary-attack-mode"
+            >
+              {activeMode?.label ?? 'Unknown'}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase tracking-wide text-gray-300/70">
+              Detected Hash Type
+            </dt>
+            <dd className="text-base font-medium" data-testid="summary-hash-type">
+              {hashType}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase tracking-wide text-gray-300/70">ETA</dt>
+            <dd className="text-base font-medium" data-testid="summary-eta">
+              {eta}
+            </dd>
+          </div>
+        </dl>
+      </section>
+
       <div>
         <label className="block mb-1">Attack Mode</label>
         <div className="grid grid-cols-2 gap-2">
@@ -191,19 +309,19 @@ const Hashcat: React.FC = () => {
         </div>
       </div>
 
-        {showMask && (
-          <div>
-            <label className="block mb-1" htmlFor="hashcat-mask-input">
-              Mask
-            </label>
-            <input
-              id="hashcat-mask-input"
-              type="text"
-              value={mask}
-              onChange={(e) => setMask(e.target.value)}
-              className="text-black p-1 w-full font-mono mb-2"
-              aria-label="Mask pattern"
-            />
+      {showMask && (
+        <div>
+          <label className="block mb-1" htmlFor="hashcat-mask-input">
+            Mask
+          </label>
+          <input
+            id="hashcat-mask-input"
+            type="text"
+            value={mask}
+            onChange={(e) => setMask(e.target.value)}
+            className="text-black p-1 w-full font-mono mb-2"
+            aria-label="Mask pattern"
+          />
           <div className="space-x-2">
             {['?l', '?u', '?d', '?s', '?a'].map((t) => (
               <button
@@ -214,6 +332,35 @@ const Hashcat: React.FC = () => {
               >
                 {t}
               </button>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-gray-300">
+            Special tokens: <code className="text-blue-200">?l</code> lowercase,{' '}
+            <code className="text-blue-200">?u</code> uppercase,{' '}
+            <code className="text-blue-200">?d</code> digits,{' '}
+            <code className="text-blue-200">?s</code> symbols,{' '}
+            <code className="text-blue-200">?a</code> printable ASCII.
+          </p>
+          <div className="mt-3 space-y-2" aria-label="Mask presets">
+            {maskPresets.map((preset) => (
+              <div key={preset.mask} className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMask(preset.mask)}
+                  className="px-3 py-1 bg-gray-800 rounded border border-gray-700 text-sm hover:bg-gray-700 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
+                >
+                  <span className="font-semibold">{preset.label}</span>{' '}
+                  <span className="font-mono text-xs text-gray-300">({preset.mask})</span>
+                </button>
+                <span
+                  className="cursor-help text-sm text-gray-200"
+                  role="img"
+                  aria-label={`${preset.label} details`}
+                  title={preset.description}
+                >
+                  ⓘ
+                </span>
+              </div>
             ))}
           </div>
           {mask && (
