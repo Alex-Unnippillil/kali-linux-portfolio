@@ -82,7 +82,7 @@ const persistStoredFolderContents = (contents) => {
     }
 };
 
-const loadStoredWindowSizes = (storageKey) => {
+const loadStoredWindowSizes = (storageKey = WINDOW_SIZE_STORAGE_KEY) => {
     if (!safeLocalStorage) return {};
     try {
         const stored = safeLocalStorage.getItem(storageKey);
@@ -158,28 +158,6 @@ const createOverlayStateMap = () => {
     return next;
 };
 
-const loadStoredWindowSizes = (storageKey = WINDOW_SIZE_STORAGE_KEY) => {
-    if (!safeLocalStorage) return {};
-    try {
-        const stored = safeLocalStorage.getItem(storageKey);
-        if (!stored) return {};
-        const parsed = JSON.parse(stored);
-        if (!parsed || typeof parsed !== 'object') return {};
-        const normalized = {};
-        Object.entries(parsed).forEach(([key, value]) => {
-            if (!value || typeof value !== 'object') return;
-            const width = Number(value.width);
-            const height = Number(value.height);
-            if (Number.isFinite(width) && Number.isFinite(height)) {
-                normalized[key] = { width, height };
-            }
-        });
-        return normalized;
-    } catch (e) {
-        return {};
-    }
-};
-
 export class Desktop extends Component {
     static defaultProps = {
         snapGrid: [8, 8],
@@ -197,7 +175,6 @@ export class Desktop extends Component {
             'window_sizes',
         ]);
         this.windowSizeStorageKey = 'desktop_window_sizes';
-        const initialWindowSizes = loadStoredWindowSizes(this.windowSizeStorageKey);
         this.defaultThemeConfig = {
             id: 'default',
             accent: (props.desktopTheme && props.desktopTheme.accent) || '#1793d1',
@@ -208,7 +185,6 @@ export class Desktop extends Component {
             overlay: props.desktopTheme ? props.desktopTheme.overlay : undefined,
             useKaliWallpaper: Boolean(props.desktopTheme && props.desktopTheme.useKaliWallpaper),
         };
-        const initialWindowSizes = loadStoredWindowSizes(this.windowSizeStorageKey);
         const initialTheme = this.normalizeTheme(props.desktopTheme);
         this.workspaceThemes = Array.from({ length: this.workspaceCount }, () => ({ ...initialTheme }));
         this.initFavourite = {};
