@@ -1,6 +1,10 @@
+'use client';
+
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import GameLayout from './GameLayout';
 import { createDeck, PATTERN_THEMES, fisherYatesShuffle } from './memory_utils';
+import usePersistentState from '../../hooks/usePersistentState';
+import { MemoryControls, getMemoryScore, recordMemoryScore } from '../../apps/memory';
 
 const DEFAULT_TIME = { 2: 30, 4: 60, 6: 120 };
 
@@ -43,8 +47,12 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
   const [time, setTime] = useState(0);
   const [stars, setStars] = useState(3);
   const [paused, setPaused] = useState(false);
-  const [sound, setSound] = useState(true);
-  const [best, setBest] = useState({ moves: null, time: null });
+  const [muted, setMuted] = usePersistentState(
+    `game:memory:player:${player}:muted`,
+    false,
+    (value) => typeof value === 'boolean'
+  );
+  const [best, setBest] = useState(null);
   const [announcement, setAnnouncement] = useState('');
   const [deckType, setDeckType] = useState('emoji');
   const [patternTheme, setPatternTheme] = useState('vibrant');
@@ -62,9 +70,18 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
   const reduceMotion = useRef(false);
   const previewTimeout = useRef();
 
-  const bestKey = useMemo(
-    () => `game:memory:${player}:${size}:${timerMode}:best`,
-    [player, size, timerMode]
+  const mode = useMemo(
+    () => ({
+      variant: 'desktop',
+      player,
+      size,
+      timerMode,
+      deckType,
+      patternTheme: deckType === 'pattern' ? patternTheme : undefined,
+      themeName: deckType === 'theme' ? themeName : undefined,
+      previewTime,
+    }),
+    [player, size, timerMode, deckType, patternTheme, themeName, previewTime]
   );
 
   useEffect(() => {
@@ -82,7 +99,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
   useEffect(() => () => clearTimeout(previewTimeout.current), []);
 
   const beep = useCallback(() => {
-    if (!sound || typeof window === 'undefined') return;
+    if (muted || typeof window === 'undefined') return;
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
@@ -97,7 +114,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
     } catch {
       // ignore audio errors
     }
-  }, [sound]);
+  }, [muted]);
 
   const reset = useCallback(() => {
     clearTimeout(previewTimeout.current);
@@ -142,45 +159,17 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
 
   useEffect(() => {
     reset();
-    try {
-      const raw = window.localStorage.getItem(bestKey);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (typeof parsed === 'object' && parsed !== null) setBest(parsed);
-      } else {
-        setBest({ moves: null, time: null });
-      }
-    } catch {
-      try {
-        window.localStorage.removeItem(bestKey);
-      } catch {
-        // ignore storage errors
-      }
-    }
-  }, [reset, bestKey]);
+  }, [reset]);
+
+  useEffect(() => {
+    setBest(getMemoryScore(mode));
+  }, [mode]);
 
   const saveBest = useCallback(() => {
-    try {
-      let stored = {};
-      const raw = window.localStorage.getItem(bestKey);
-      if (raw) {
-        try {
-          stored = JSON.parse(raw) || {};
-        } catch {
-          window.localStorage.removeItem(bestKey);
-        }
-      }
-      const elapsed = timerMode === 'countdown' ? initialTimeRef.current - time : time;
-      const bestMoves = stored.moves != null ? Math.min(stored.moves, moves) : moves;
-      const bestTime = stored.time != null ? Math.min(stored.time, elapsed) : elapsed;
-      const updated = { moves: bestMoves, time: bestTime };
-      const serialized = JSON.stringify(updated);
-      window.localStorage.setItem(bestKey, serialized);
-      setBest(updated);
-    } catch {
-      // ignore storage errors
-    }
-  }, [moves, time, bestKey, timerMode]);
+    const elapsed = timerMode === 'countdown' ? initialTimeRef.current - time : time;
+    const updated = recordMemoryScore(mode, { moves, time: elapsed });
+    setBest(updated);
+  }, [mode, moves, time, timerMode]);
 
   useEffect(() => {
     if (cards.length && matched.length === cards.length) {
@@ -363,25 +352,23 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
         <div>
           Rating: {'★'.repeat(stars)}{'☆'.repeat(3 - stars)}
         </div>
-        {best.moves != null && <div>Best: {best.moves}m/{best.time}s</div>}
+        {best?.moves != null && best?.time != null && (
+          <div>
+            Best: {best.moves}m/
+            {Number.isInteger(best.time) ? best.time : best.time.toFixed(1)}s
+          </div>
+        )}
         <div data-testid="combo-meter">Combo: {streak}</div>
       </div>
       <div className="flex space-x-2">
-        <button onClick={reset} className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded">
-          Reset
-        </button>
-        <button
-          onClick={() => setPaused((p) => !p)}
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-        >
-          {paused ? 'Resume' : 'Pause'}
-        </button>
-        <button
-          onClick={() => setSound((s) => !s)}
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-        >
-          Sound: {sound ? 'On' : 'Off'}
-        </button>
+        <MemoryControls
+          paused={paused}
+          onTogglePause={() => setPaused((p) => !p)}
+          onReset={reset}
+          muted={muted}
+          onToggleSound={() => setMuted((value) => !value)}
+          labelPrefix={`Player ${player}`}
+        />
         <select
           aria-label="Deck"
           value={deckType}

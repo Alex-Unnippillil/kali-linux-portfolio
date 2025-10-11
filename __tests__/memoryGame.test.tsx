@@ -2,30 +2,28 @@ import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react';
 import Memory from '../components/apps/memory';
 
-jest.mock('../components/apps/memory_utils', () => ({
-  createDeck: () => [
-    { id: 0, value: 'A' },
-    { id: 1, value: 'A' },
-    { id: 2, value: 'B' },
-    { id: 3, value: 'B' },
-    { id: 4, value: 'C' },
-    { id: 5, value: 'C' },
-    { id: 6, value: 'D' },
-    { id: 7, value: 'D' },
-    { id: 8, value: 'E' },
-    { id: 9, value: 'E' },
-    { id: 10, value: 'F' },
-    { id: 11, value: 'F' },
-    { id: 12, value: 'G' },
-    { id: 13, value: 'G' },
-    { id: 14, value: 'H' },
-    { id: 15, value: 'H' },
-  ],
-  PATTERN_THEMES: { vibrant: [], pastel: [] },
-}));
+jest.mock('../components/apps/memory_utils', () => {
+  const buildDeck = (size = 4) => {
+    const total = size * size;
+    const pairs = total / 2;
+    const deck: Array<{ id: number; value: string }> = [];
+    for (let i = 0; i < pairs; i++) {
+      const value = String.fromCharCode(65 + i);
+      deck.push({ id: deck.length, value });
+      deck.push({ id: deck.length, value });
+    }
+    return deck;
+  };
+  return {
+    createDeck: jest.fn((size = 4) => buildDeck(size)),
+    PATTERN_THEMES: { vibrant: [], pastel: [] },
+    fisherYatesShuffle: (cards: Array<{ id: number; value: string }>) => cards,
+  };
+});
 
 beforeEach(() => {
   jest.useFakeTimers();
+  localStorage.clear();
   // minimal matchMedia polyfill
   window.matchMedia = window.matchMedia || ((query: string) => ({
     matches: false,
@@ -116,5 +114,36 @@ test('card flip applies transform style', () => {
   expect(inner.style.transform).toBe('rotateY(0deg)');
   fireEvent.click(card);
   expect(inner.style.transform).toBe('rotateY(180deg)');
+});
+
+test('records best score for completed round', () => {
+  const { getByLabelText, getAllByTestId, getByText } = render(<Memory />);
+
+  act(() => {
+    jest.runOnlyPendingTimers();
+  });
+
+  fireEvent.change(getByLabelText('Grid size'), { target: { value: '2' } });
+  fireEvent.change(getByLabelText(/Preview/), { target: { value: '0' } });
+
+  act(() => {
+    jest.runOnlyPendingTimers();
+  });
+
+  const cards = getAllByTestId('card-inner').map((el) => el.parentElement as HTMLElement);
+
+  for (let i = 0; i < cards.length; i += 2) {
+    fireEvent.click(cards[i]);
+    fireEvent.click(cards[i + 1]);
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
+  }
+
+  expect(getByText(/Best:/)).toBeInTheDocument();
+  const stored = JSON.parse(localStorage.getItem('game:memory:highscores') ?? '{}');
+  const entries = Object.values(stored) as Array<{ moves: number; time: number }>;
+  expect(entries.length).toBeGreaterThan(0);
+  expect(entries[0].moves).toBeGreaterThan(0);
 });
 

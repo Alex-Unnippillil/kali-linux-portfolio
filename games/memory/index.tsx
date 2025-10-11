@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import GameShell from '../../components/games/GameShell';
 import SizeSelector from './components/SizeSelector';
 import { generateBoard } from './utils';
@@ -9,6 +9,13 @@ import {
   recordScore,
   type LeaderboardEntry,
 } from '../../components/apps/Games/common/leaderboard';
+import {
+  MemoryControls,
+  getMemoryScore,
+  recordMemoryScore,
+  type MemoryModeDescriptor,
+  type MemoryScore,
+} from '../../apps/memory';
 
 const ATTACK_LIMIT = 60_000; // 60 seconds
 
@@ -19,11 +26,9 @@ const ATTACK_LIMIT = 60_000; // 60 seconds
  */
 const MemoryGame: React.FC = () => {
   const [size, setSize] = useState(4);
-  const cards = useMemo(() => generateBoard(size), [size]);
-
   const [flipped, setFlipped] = useState<number[]>([]);
   const [matched, setMatched] = useState<Set<number>>(new Set());
-  const [startTime, setStartTime] = useState<number | null>(null);
+  const [moves, setMoves] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [completed, setCompleted] = useState(false);
   const [attackMode, setAttackMode] = useState(false);
@@ -31,44 +36,92 @@ const MemoryGame: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() =>
     getLeaderboard('memory'),
   );
+  const [paused, setPaused] = useState(false);
+  const [seed, setSeed] = useState(0);
+  const [best, setBest] = useState<MemoryScore | null>(null);
 
-  // reset board when size or mode changes
+  const startRef = useRef<number | null>(null);
+  const accumulatedRef = useRef(0);
+
+  const descriptor: MemoryModeDescriptor = useMemo(
+    () => ({
+      variant: 'demo',
+      player: 0,
+      size,
+      timerMode: attackMode ? 'countdown' : 'countup',
+      deckType: 'letters',
+    }),
+    [size, attackMode],
+  );
+
+  const cards = useMemo(() => generateBoard(size), [size, seed]);
+
   useEffect(() => {
     setFlipped([]);
     setMatched(new Set());
-    setStartTime(null);
+    setMoves(0);
     setElapsed(0);
     setCompleted(false);
     setTimeLeft(ATTACK_LIMIT);
-  }, [size, attackMode]);
+    setPaused(false);
+    accumulatedRef.current = 0;
+    startRef.current = null;
+  }, [size, attackMode, seed]);
 
-  // timer effect
   useEffect(() => {
-    if (startTime === null) return;
+    if (startRef.current === null || paused || completed) return;
     const id = setInterval(() => {
       const now = Date.now();
-      const diff = now - startTime;
+      const diff = accumulatedRef.current + (now - (startRef.current ?? now));
       setElapsed(diff);
       if (attackMode) {
         const remaining = ATTACK_LIMIT - diff;
         setTimeLeft(remaining);
         if (remaining <= 0) {
           setCompleted(true);
-          setStartTime(null);
+          startRef.current = null;
         }
       }
     }, 100);
     return () => clearInterval(id);
-  }, [startTime, attackMode]);
+  }, [attackMode, paused, completed]);
+
+  useEffect(() => {
+    setBest(getMemoryScore(descriptor));
+  }, [descriptor]);
+
+  const handlePause = useCallback(() => {
+    setPaused(true);
+    if (startRef.current !== null) {
+      accumulatedRef.current += Date.now() - startRef.current;
+      setElapsed(accumulatedRef.current);
+      startRef.current = null;
+    }
+  }, []);
+
+  const handleResume = useCallback(() => {
+    if (completed) return;
+    setPaused(false);
+    if (startRef.current === null && flipped.length > 0 && matched.size < cards.length) {
+      startRef.current = Date.now();
+    }
+  }, [cards.length, completed, flipped.length, matched.size]);
+
+  const resetGame = useCallback(() => {
+    setSeed((s) => s + 1);
+  }, []);
 
   const handleClick = (idx: number) => {
-    if (matched.has(idx) || flipped.includes(idx) || completed) return;
-    if (startTime === null) setStartTime(Date.now());
+    if (matched.has(idx) || flipped.includes(idx) || completed || paused) return;
+    if (startRef.current === null) {
+      startRef.current = Date.now();
+    }
 
     const next = [...flipped, idx];
     setFlipped(next);
 
     if (next.length === 2) {
+      setMoves((m) => m + 1);
       const [a, b] = next;
       if (cards[a] === cards[b]) {
         setTimeout(() => {
@@ -81,17 +134,25 @@ const MemoryGame: React.FC = () => {
     }
   };
 
-  // handle win
   useEffect(() => {
     if (!completed && matched.size === cards.length && cards.length > 0) {
       const final = elapsed;
       setCompleted(true);
-      setStartTime(null);
+      startRef.current = null;
       const name = window.prompt('Enter your name') || 'Anonymous';
       const board = recordScore('memory', name, -final);
       setLeaderboard(board);
+      const recorded = recordMemoryScore(descriptor, {
+        moves,
+        time: final / 1000,
+      });
+      setBest(recorded);
     }
-  }, [matched, cards.length, completed, elapsed]);
+  }, [matched, cards.length, completed, elapsed, descriptor, moves]);
+
+  const infoText = attackMode
+    ? `Time Left: ${(Math.max(timeLeft, 0) / 1000).toFixed(1)}s`
+    : `Time: ${(elapsed / 1000).toFixed(1)}s`;
 
   return (
     <GameShell
@@ -109,11 +170,25 @@ const MemoryGame: React.FC = () => {
           </label>
         </div>
       }
+      onPause={handlePause}
+      onResume={handleResume}
     >
-      <div className="text-center mb-2">
-        {attackMode
-          ? `Time Left: ${(Math.max(timeLeft, 0) / 1000).toFixed(1)}s`
-          : `Time: ${(elapsed / 1000).toFixed(1)}s`}
+      <div className="flex flex-col items-center gap-2 mb-2">
+        <div className="text-center">{infoText}</div>
+        <div className="text-sm text-center">Moves: {moves}</div>
+        {best && (
+          <div className="text-xs text-center text-gray-300">
+            Best: {best.moves} moves / {best.time.toFixed(1)}s
+          </div>
+        )}
+        <MemoryControls
+          paused={paused}
+          onTogglePause={() => (paused ? handleResume() : handlePause())}
+          onReset={resetGame}
+          muted={false}
+          onToggleSound={() => {}}
+          labelPrefix="Demo"
+        />
       </div>
       <div
         className="grid gap-2 mx-auto"
@@ -160,3 +235,4 @@ const MemoryGame: React.FC = () => {
 };
 
 export default MemoryGame;
+

@@ -109,7 +109,7 @@ All arcade-style and puzzle titles share the same readiness gap: implement canva
 | flappy-bird | Flappy Bird | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | 2048 | 2048 | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | snake | Snake | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
-| memory | Memory | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
+| memory | Memory | Core maintainers | **Shipped** – shared controls + persistent ledger | Game engine |
 | minesweeper | Minesweeper | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | pong | Pong | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | pacman | Pacman | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
