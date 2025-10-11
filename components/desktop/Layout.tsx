@@ -1,6 +1,8 @@
 import React from "react";
 import clsx from "clsx";
 
+import { NAVBAR_HEIGHT } from "../../utils/uiConstants";
+
 type LayoutProps = React.HTMLAttributes<HTMLDivElement>;
 
 const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
@@ -21,6 +23,9 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
             --safe-area-right: env(safe-area-inset-right, 0px);
             --safe-area-bottom: env(safe-area-inset-bottom, 0px);
             --safe-area-left: env(safe-area-inset-left, 0px);
+            --desktop-navbar-height: calc(
+              ${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px) + 0.375rem + 0.25rem
+            );
           }
 
           .desktop-shell {
