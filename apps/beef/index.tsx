@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
+import clsx from 'clsx';
 import BeefApp from '../../components/apps/beef';
 
 type Severity = 'Low' | 'Medium' | 'High';
@@ -77,6 +78,8 @@ const formatSince = (seconds: number) => {
   return `${minutes}m ${remainingSeconds}s ago`;
 };
 
+type WindowState = 'normal' | 'minimized' | 'maximized' | 'closed';
+
 const BeefPage: React.FC = () => {
   const logs: LogEntry[] = [
     { offsetSeconds: 0, severity: 'Low', message: 'Hook initialized (simulation)' },
@@ -146,6 +149,19 @@ const BeefPage: React.FC = () => {
             alt="close"
             className="h-6 w-6"
           />
+          <div>
+            <h1 className="text-2xl font-semibold">Window closed</h1>
+            <p className="mt-2 text-sm text-kali-muted">
+              The BeEF demo window has been closed. Reopen it to continue exploring the simulation.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={restoreWindow}
+            className="rounded-md bg-kali-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-kali-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-ub-cool-grey"
+          >
+            Reopen window
+          </button>
         </div>
       </header>
 
@@ -165,6 +181,57 @@ const BeefPage: React.FC = () => {
           </ol>
         </nav>
       </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen w-full items-center justify-center bg-ub-grey/80 p-4 text-white">
+      <section
+        className={frameClasses}
+        data-window-state={windowState}
+        data-testid="beef-window-frame"
+      >
+        <header className="flex items-center justify-between bg-ub-window-title px-4 py-3 text-sm font-medium">
+          <div className="flex items-center gap-3">
+            <Image
+              src="/themes/Yaru/apps/beef.svg"
+              alt="BeEF badge"
+              width={32}
+              height={32}
+              className="drop-shadow"
+              priority
+            />
+            <h1 className="text-lg font-semibold">BeEF Demo</h1>
+            {isMaximized && <span className="rounded bg-black/30 px-2 py-0.5 text-xs uppercase tracking-wide">Maximized</span>}
+            {isMinimized && <span className="rounded bg-black/30 px-2 py-0.5 text-xs uppercase tracking-wide">Minimized</span>}
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              aria-label={isMinimized ? 'Restore window' : 'Minimize window'}
+              onClick={isMinimized ? restoreFromMinimize : handleMinimize}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-lg font-semibold text-white transition hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            >
+              {isMinimized ? '▢' : '–'}
+            </button>
+            <button
+              type="button"
+              aria-label={isMaximized ? 'Restore window size' : 'Maximize window'}
+              onClick={handleMaximize}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-base font-semibold text-white transition hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+            >
+              {isMaximized ? '❐' : '▢'}
+            </button>
+            <button
+              type="button"
+              aria-label="Close window"
+              onClick={handleClose}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-base font-semibold text-white transition hover:bg-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+            >
+              ×
+            </button>
+          </div>
+        </header>
 
       <div className="flex-1 overflow-auto p-4 pt-2">
         <BeefApp />

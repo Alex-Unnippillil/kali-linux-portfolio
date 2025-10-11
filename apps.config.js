@@ -223,7 +223,7 @@ const utilityList = [
   {
     id: 'clipboard-manager',
     title: 'Clipboard Manager',
-    icon: '/themes/Yaru/apps/gedit.png',
+    icon: '/themes/Yaru/apps/clipboard-manager.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: true,
@@ -641,7 +641,7 @@ const apps = [
   {
     id: 'terminal',
     title: 'Terminal',
-    icon: '/themes/Yaru/apps/bash.png',
+    icon: '/themes/Yaru/apps/bash.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: true,
@@ -710,7 +710,7 @@ const apps = [
   {
     id: 'settings',
     title: 'Settings',
-    icon: '/themes/Yaru/apps/gnome-control-center.png',
+    icon: '/themes/Yaru/apps/gnome-control-center.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: true,
@@ -791,7 +791,7 @@ const apps = [
   {
     id: 'sticky_notes',
     title: 'Sticky Notes',
-    icon: '/themes/Yaru/apps/gedit.png',
+    icon: '/themes/Yaru/apps/sticky-notes.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: true,
@@ -925,7 +925,7 @@ const apps = [
   {
     id: 'html-rewriter',
     title: 'HTML Rewriter',
-    icon: '/themes/Yaru/apps/project-gallery.svg',
+    icon: '/themes/Yaru/apps/html-rewriter.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: true,
@@ -934,7 +934,7 @@ const apps = [
   {
     id: 'contact',
     title: 'Contact',
-    icon: '/themes/Yaru/apps/project-gallery.svg',
+    icon: '/themes/Yaru/apps/contact.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: true,
@@ -979,7 +979,7 @@ const apps = [
   {
     id: 'serial-terminal',
     title: 'Serial Terminal',
-    icon: '/themes/Yaru/apps/bash.png',
+    icon: '/themes/Yaru/apps/bash.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: true,
