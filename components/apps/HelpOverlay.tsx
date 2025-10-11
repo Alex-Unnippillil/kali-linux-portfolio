@@ -154,11 +154,13 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   "candy-crush": {
     objective: "Match three candies to clear them.",
-    controls: "Swap adjacent candies by dragging or clicking.",
+    controls:
+      "Swap adjacent candies by dragging or clicking. Use the overlay to pause or mute, and the booster buttons to shuffle or detonate color bombs.",
   },
   gomoku: {
-    objective: "Get five stones in a row.",
-    controls: "Click a grid intersection to place a stone.",
+    objective: "Get five stones in a row before your opponent.",
+    controls:
+      "Click a grid intersection to place a stone. Use the toolbar to switch between local and AI play, adjust difficulty, toggle sound, or reset the board.",
   },
   pinball: {
     objective: "Score points by hitting targets.",
