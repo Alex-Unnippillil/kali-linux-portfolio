@@ -909,6 +909,7 @@ export class WindowYBorder extends Component {
             return (
                 <div
                     className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
+                    draggable
                     onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
                     onDrag={this.props.resize}
                 ></div>
@@ -928,6 +929,7 @@ export class WindowXBorder extends Component {
             return (
                 <div
                     className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
+                    draggable
                     onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
                     onDrag={this.props.resize}
                 ></div>
