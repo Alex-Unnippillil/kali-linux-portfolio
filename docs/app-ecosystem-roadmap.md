@@ -24,7 +24,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | firefox | Firefox | Core maintainers | **In progress** – rebuild around iframe shell with persisted URL | Browser iframe, storage |
 | x | X | Core maintainers | **In progress** – read-only embed with SSR disabled and theme toggle | Social embed script |
 | spotify | Spotify | Core maintainers | **In progress** – playlist editor JSON and mini-player mode pending | Spotify embed |
-| youtube | YouTube | Core maintainers | **In progress** – search, watch view, history storage, component test | YouTube embeds, localStorage |
+| youtube | YouTube | Core maintainers | **Beta** – debounced search, watch view, history storage, and component tests shipped; monitor API fallback | YouTube embeds, localStorage |
 | calculator | Calculator | Core maintainers | **In progress** – tokenizer, shunting-yard evaluator, keyboard support | Expression parser |
 | converter | Converter | Core maintainers | **In progress** – centralized unit map and Jest coverage | `components/apps/converter/units.js` |
 | file-explorer | Files | Core maintainers | **Needs polish** – ensure virtual FS hooks stay in sync | Virtual filesystem layer |
