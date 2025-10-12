@@ -58,6 +58,7 @@ export default function CheckersPage() {
   const [moveLog, setMoveLog] = useState<MoveLogEntry[]>([]);
   const movePathRef = useRef<[number, number][]>([]);
   const captureSequenceRef = useRef(false);
+  const [lastMoveSquares, setLastMoveSquares] = useState<[number, number][]>([]);
 
   const captureOpportunities = useMemo(() => {
     let total = 0;
@@ -147,6 +148,7 @@ export default function CheckersPage() {
       setMoves([]);
       setHint(null);
       if (movePathRef.current.length >= 2) {
+        setLastMoveSquares([...movePathRef.current]);
         const notation = movePathRef.current
           .map(squareNotation)
           .join(captureSequenceRef.current ? 'x' : '-');
@@ -213,6 +215,7 @@ export default function CheckersPage() {
     setMoveLog([]);
     movePathRef.current = [];
     captureSequenceRef.current = false;
+    setLastMoveSquares([]);
   };
 
   const undo = () => {
@@ -243,6 +246,7 @@ export default function CheckersPage() {
     moveRef.current = false;
     movePathRef.current = [];
     captureSequenceRef.current = false;
+    setLastMoveSquares([]);
   };
 
   useEffect(() => {
@@ -390,6 +394,8 @@ export default function CheckersPage() {
           className={`space-y-2 rounded-md bg-black/30 p-2 ${
             variant === 'mobile' ? 'flex-1 overflow-y-auto' : 'max-h-[28rem] overflow-y-auto'
           }`}
+          aria-label="Move log"
+          aria-live="polite"
         >
           <div className="flex items-center justify-between text-[0.65rem] uppercase tracking-wide text-gray-300">
             <span>Moves</span>
@@ -398,7 +404,7 @@ export default function CheckersPage() {
             </span>
           </div>
           {moveLog.length ? (
-            <ol className="space-y-1 text-sm">
+            <ol className="space-y-1 text-sm" role="list">
               {moveLog.map((entry, idx) => {
                 const moveNumber = Math.floor(idx / 2) + 1;
                 const prefix = idx % 2 === 0 ? `${moveNumber}.` : `${moveNumber}...`;
@@ -421,7 +427,7 @@ export default function CheckersPage() {
               })}
             </ol>
           ) : (
-            <p className="text-xs text-gray-400">No moves yet.</p>
+            <p className="text-xs text-gray-400">Moves will appear once play begins.</p>
           )}
         </section>
       </div>
@@ -438,66 +444,103 @@ export default function CheckersPage() {
         style={{ paddingBottom: 'var(--panel-height)' }}
       >
         <div className="w-[var(--board-size)] max-w-full">
-          <div className="mb-4 rounded-lg border border-ub-orange/40 bg-black/40 px-4 py-3 text-[0.8rem] text-gray-100 shadow-lg shadow-black/40">
+          <div className="mb-4 space-y-2 rounded-2xl border border-ub-orange/40 bg-black/40 px-4 py-3 text-[0.8rem] text-gray-100 shadow-lg shadow-black/40">
             <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-ub-orange">
               Match briefing
             </p>
-            <ul className="mt-2 space-y-1 text-[0.75rem] leading-relaxed">
-              <li>
-                <span className="font-semibold text-white">
-                  {winner
-                    ? winner === 'Draw'
-                      ? 'The match ends in a draw.'
-                      : `${formatPlayer(winner as 'red' | 'black')} wins the match.`
-                    : `It's ${formatPlayer(turn)}'s move.`}
-                </span>
-              </li>
-              <li>
-                <span className="font-semibold text-ub-orange">Hint:</span>{' '}
+            <p className="text-[0.75rem] leading-relaxed text-gray-200">
+              <span className="font-semibold text-white">
                 {winner
-                  ? 'Hints are disabled after the final move.'
-                  : `Tap the Hint button to light up a ${formatPlayer(turn)} move for a second.`}
-              </li>
-              <li>
-                <span className="font-semibold text-ub-orange">Rules:</span>{' '}
-                {rule === 'forced'
-                  ? 'Forced capture is active — jumps must be taken when available.'
-                  : 'Relaxed capture is active — jumps are optional if you prefer positioning.'}
-              </li>
-            </ul>
+                  ? winner === 'Draw'
+                    ? 'The match ends in a draw.'
+                    : `${formatPlayer(winner as 'red' | 'black')} wins the match.`
+                  : `It's ${formatPlayer(turn)}'s move.`}
+              </span>{' '}
+              Use the board or the Tab key to focus a square, then press Enter to select a
+              piece and complete moves.
+            </p>
+            <p className="text-[0.75rem] leading-relaxed text-gray-200">
+              <span className="font-semibold text-ub-orange">Quick tip:</span>{' '}
+              {winner
+                ? 'Hints are disabled after the final move.'
+                : `Tap Hint to briefly light up a ${formatPlayer(turn)} move. Undo rewinds the last turn if you need a redo.`}
+            </p>
+            <p className="text-[0.75rem] leading-relaxed text-gray-200">
+              <span className="font-semibold text-ub-orange">Rule set:</span>{' '}
+              {rule === 'forced'
+                ? 'Forced capture is active — jumps must be taken when available.'
+                : 'Relaxed capture is active — jumps are optional if you prefer positioning.'}
+            </p>
           </div>
-          <div className="grid h-[var(--board-size)] w-full grid-cols-8 rounded-lg shadow-lg shadow-black/30">
-            {board.map((row, r) =>
-              row.map((cell, c) => {
-                const isDark = (r + c) % 2 === 1;
-                const isMove = moves.some((m) => m.to[0] === r && m.to[1] === c);
-                const isSelected = selected && selected[0] === r && selected[1] === c;
-                const isCrowned = crowned && crowned[0] === r && crowned[1] === c;
-                const isHint = hint && hint.from[0] === r && hint.from[1] === c;
-                const isHintDest = hint && hint.to[0] === r && hint.to[1] === c;
-                return (
-                  <div
-                    key={`${r}-${c}`}
-                    {...pointerHandlers(() => (selected ? tryMove(r, c) : selectPiece(r, c)))}
-                    className={`aspect-square flex items-center justify-center transition ${
-                      isDark ? 'bg-gray-700' : 'bg-gray-400'
-                    } ${isMove ? 'move-square' : ''} ${isSelected ? 'selected-square' : ''} ${
-                      isHint || isHintDest ? 'hint-square' : ''
-                    }`}
-                  >
-                    {cell && (
-                      <div
-                        className={`flex h-3/4 w-3/4 items-center justify-center rounded-full ${
-                          cell.color === 'red' ? 'bg-red-500' : 'bg-black'
-                        } ${cell.king ? 'border-4 border-yellow-300' : ''} ${
-                          isCrowned ? 'motion-safe:animate-flourish' : ''
-                        }`}
-                      />
-                    )}
-                  </div>
-                );
-              }),
-            )}
+          <div
+            className="relative h-[var(--board-size)] w-full rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/60 p-3 shadow-xl shadow-black/40"
+          >
+            <div className="grid h-full w-full grid-cols-8 grid-rows-8 gap-[0.35rem]">
+              {board.map((row, r) =>
+                row.map((cell, c) => {
+                  const isDark = (r + c) % 2 === 1;
+                  const isMove = moves.some((m) => m.to[0] === r && m.to[1] === c);
+                  const isSelected = selected && selected[0] === r && selected[1] === c;
+                  const isCrowned = crowned && crowned[0] === r && crowned[1] === c;
+                  const isHint = hint && hint.from[0] === r && hint.from[1] === c;
+                  const isHintDest = hint && hint.to[0] === r && hint.to[1] === c;
+                  const lastMoveIndex = lastMoveSquares.findIndex(
+                    ([lr, lc]) => lr === r && lc === c,
+                  );
+                  const isLastMoveSquare = lastMoveIndex !== -1;
+                  const isLastMoveStart =
+                    lastMoveSquares.length > 0 &&
+                    lastMoveSquares[0][0] === r &&
+                    lastMoveSquares[0][1] === c;
+                  const isLastMoveEnd =
+                    lastMoveSquares.length > 0 &&
+                    lastMoveSquares[lastMoveSquares.length - 1][0] === r &&
+                    lastMoveSquares[lastMoveSquares.length - 1][1] === c;
+                  const notation = squareNotation([r, c]);
+                  const occupantLabel = cell
+                    ? `${cell.king ? 'King ' : ''}${cell.color === 'red' ? 'Red' : 'Black'} piece`
+                    : 'Empty square';
+                  const activateSquare = () =>
+                    selected ? tryMove(r, c) : selectPiece(r, c);
+                  const squareClasses = [
+                    'board-square',
+                    isDark
+                      ? 'bg-slate-700/90 text-white shadow-[inset_0_2px_6px_rgba(15,23,42,0.65)]'
+                      : 'bg-slate-200/90 text-slate-900 shadow-[inset_0_2px_6px_rgba(148,163,184,0.6)]',
+                  ];
+                  if (isLastMoveSquare) squareClasses.push('last-move-square');
+                  if (isLastMoveStart) squareClasses.push('last-move-start');
+                  if (isLastMoveEnd) squareClasses.push('last-move-end');
+                  if (isMove) squareClasses.push('move-square');
+                  if (isHint || isHintDest) squareClasses.push('hint-square');
+                  if (isSelected) squareClasses.push('selected-square');
+                  return (
+                    <button
+                      key={`${r}-${c}`}
+                      type="button"
+                      {...pointerHandlers(activateSquare)}
+                      className={squareClasses.join(' ')}
+                      aria-label={`${notation}: ${occupantLabel}`}
+                      aria-pressed={isSelected}
+                    >
+                      {cell && (
+                        <div
+                          className={`flex h-[70%] w-[70%] items-center justify-center rounded-full shadow-lg shadow-black/60 ${
+                            cell.color === 'red'
+                              ? 'bg-gradient-to-b from-red-300 via-red-500 to-red-700 text-red-100'
+                              : 'bg-gradient-to-b from-slate-300 via-slate-600 to-slate-900 text-slate-100'
+                          } ${
+                            cell.king
+                              ? 'ring-4 ring-offset-2 ring-offset-black/60 ring-yellow-300'
+                              : 'ring-2 ring-offset-2 ring-offset-black/60 ring-black/30'
+                          } ${isCrowned ? 'motion-safe:animate-flourish' : ''}`}
+                        />
+                      )}
+                    </button>
+                  );
+                }),
+              )}
+            </div>
           </div>
         </div>
       </div>
