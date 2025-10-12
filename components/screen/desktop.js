@@ -130,7 +130,10 @@ const OVERLAY_WINDOWS = Object.freeze({
     },
 });
 
-const OVERLAY_WINDOW_LIST = Object.values(OVERLAY_WINDOWS);
+const OVERLAY_WINDOW_LIST = Object.entries(OVERLAY_WINDOWS).map(([key, meta]) => ({
+    ...meta,
+    key,
+}));
 const LAUNCHER_OVERLAY_ID = OVERLAY_WINDOWS.launcher.id;
 const SHORTCUT_OVERLAY_ID = OVERLAY_WINDOWS.shortcutSelector.id;
 const SWITCHER_OVERLAY_ID = OVERLAY_WINDOWS.windowSwitcher.id;
@@ -146,16 +149,18 @@ const createOverlayFlagMap = (value) => {
 
 const createOverlayStateMap = () => {
     const next = {};
-    OVERLAY_WINDOW_LIST.forEach(({ id }) => {
-        next[id] = {
+    OVERLAY_WINDOW_LIST.forEach(({ id, key }) => {
+        const state = {
             open: false,
             minimized: false,
             maximized: false,
             focused: false,
         };
         if (id === LAUNCHER_OVERLAY_ID) {
-            next[id].transitionState = 'exited';
+            state.transitionState = 'exited';
         }
+        next[id] = state;
+        next[key] = state;
     });
     return next;
 };
@@ -305,7 +310,12 @@ export class Desktop extends Component {
 
         this.validAppIds = new Set();
         this.appMap = new Map();
-        this.overlayRegistry = new Map(OVERLAY_WINDOW_LIST.map((meta) => [meta.id, meta]));
+        const overlayEntries = [];
+        OVERLAY_WINDOW_LIST.forEach((meta) => {
+            overlayEntries.push([meta.id, meta]);
+            overlayEntries.push([meta.key, meta]);
+        });
+        this.overlayRegistry = new Map(overlayEntries);
         this.folderMetadata = new Map(DEFAULT_DESKTOP_FOLDERS.map((folder) => [folder.id, folder]));
         this.windowPreviewCache = new Map();
         this.windowSwitcherRequestId = 0;
@@ -1417,13 +1427,22 @@ export class Desktop extends Component {
     };
 
     buildOverlayStateMap = (prev, id, partial) => {
-        const current = (prev && prev[id]) || {};
+        const meta = this.getOverlayMeta(id);
+        if (!meta) {
+            return prev || {};
+        }
+        const stateKey = meta.key;
+        const overlayId = meta.id;
+        const previous = prev || {};
+        const current = previous[overlayId] || previous[stateKey] || {};
+        const nextState = {
+            ...current,
+            ...partial,
+        };
         return {
-            ...prev,
-            [id]: {
-                ...current,
-                ...partial,
-            },
+            ...previous,
+            [overlayId]: nextState,
+            [stateKey]: nextState,
         };
     };
 
@@ -1597,89 +1616,171 @@ export class Desktop extends Component {
     };
 
     openOverlay = (id, options = {}) => {
-        if (!this.isOverlayId(id)) return;
+        const meta = this.getOverlayMeta(id);
+        if (!meta) return;
+        const overlayId = meta.id;
+        const stateKey = meta.key;
         const { transitionState } = options;
-        this.recentlyClosedOverlays.delete(id);
-        this.promoteWindowInStack(id);
+        this.recentlyClosedOverlays.delete(overlayId);
+        this.promoteWindowInStack(overlayId);
         this.setState((prev) => {
-            const overlayWindows = this.buildOverlayStateMap(prev.overlayWindows, id, {
+            const overlayWindows = this.buildOverlayStateMap(prev.overlayWindows, overlayId, {
                 open: true,
                 minimized: false,
                 focused: true,
             });
-            if (id === LAUNCHER_OVERLAY_ID) {
-                const current = overlayWindows[id] || {};
+            if (overlayId === LAUNCHER_OVERLAY_ID) {
+                const current = overlayWindows[overlayId] || overlayWindows[stateKey] || {};
                 const nextTransition = transitionState
                     || (current.transitionState === 'entered' ? 'entered' : 'entering');
-                overlayWindows[id] = { ...current, transitionState: nextTransition };
+                const nextState = { ...current, transitionState: nextTransition };
+                overlayWindows[overlayId] = nextState;
+                overlayWindows[stateKey] = nextState;
+            }
+            const nextClosed = { ...prev.closed_windows, [overlayId]: false };
+            if (stateKey !== overlayId) {
+                nextClosed[stateKey] = false;
+            }
+            const nextMinimized = { ...prev.minimized_windows, [overlayId]: false };
+            if (stateKey !== overlayId) {
+                nextMinimized[stateKey] = false;
             }
             return {
                 overlayWindows,
-                closed_windows: { ...prev.closed_windows, [id]: false },
-                minimized_windows: { ...prev.minimized_windows, [id]: false },
+                closed_windows: nextClosed,
+                minimized_windows: nextMinimized,
             };
         }, () => {
-            this.focus(id);
+            this.focus(overlayId);
         });
     };
 
     toggleOverlayMinimize = (id) => {
-        if (!this.isOverlayId(id)) return;
-        if (this.state.minimized_windows?.[id]) {
-            this.openOverlay(id, { transitionState: 'entered' });
+        const meta = this.getOverlayMeta(id);
+        if (!meta) return;
+        const overlayId = meta.id;
+        const stateKey = meta.key;
+        const minimizedState = this.state.minimized_windows || {};
+        const isMinimized = Boolean(minimizedState[overlayId] ?? minimizedState[stateKey]);
+        if (isMinimized) {
+            this.openOverlay(overlayId, { transitionState: 'entered' });
         } else {
-            this.minimizeOverlay(id);
+            this.minimizeOverlay(overlayId);
         }
     };
 
     minimizeOverlay = (id) => {
-        if (!this.isOverlayId(id)) return;
-        this.setState((prev) => ({
-            overlayWindows: this.buildOverlayStateMap(prev.overlayWindows, id, {
+        const meta = this.getOverlayMeta(id);
+        if (!meta) return;
+        const overlayId = meta.id;
+        const stateKey = meta.key;
+        this.setState((prev) => {
+            const overlayWindows = this.buildOverlayStateMap(prev.overlayWindows, overlayId, {
                 minimized: true,
                 focused: false,
-            }),
-            minimized_windows: { ...prev.minimized_windows, [id]: true },
-            focused_windows: { ...prev.focused_windows, [id]: false },
-        }), () => {
+            });
+            const nextMinimized = { ...prev.minimized_windows, [overlayId]: true };
+            const nextFocused = { ...prev.focused_windows, [overlayId]: false };
+            if (stateKey !== overlayId) {
+                nextMinimized[stateKey] = true;
+                nextFocused[stateKey] = false;
+            }
+            return {
+                overlayWindows,
+                minimized_windows: nextMinimized,
+                focused_windows: nextFocused,
+            };
+        }, () => {
+            if (overlayId === LAUNCHER_OVERLAY_ID) {
+                setTimeout(() => {
+                    this.setState((prev) => ({
+                        overlayWindows: this.buildOverlayStateMap(prev.overlayWindows, overlayId, {
+                            transitionState: 'exited',
+                        }),
+                    }));
+                }, 160);
+            }
             this.giveFocusToLastApp();
         });
     };
 
     closeOverlay = (id, options = {}) => {
-        if (!this.isOverlayId(id)) return;
-        this.recentlyClosedOverlays.add(id);
+        const meta = this.getOverlayMeta(id);
+        if (!meta) return;
+        const overlayId = meta.id;
+        const stateKey = meta.key;
+        this.recentlyClosedOverlays.add(overlayId);
         const stack = this.getActiveStack();
-        const index = stack.indexOf(id);
+        const index = stack.indexOf(overlayId);
         if (index !== -1) {
             stack.splice(index, 1);
         }
-        if (this.windowPreviewCache?.has(id)) {
-            this.windowPreviewCache.delete(id);
+        if (this.windowPreviewCache?.has(overlayId)) {
+            this.windowPreviewCache.delete(overlayId);
         }
         const { transitionState } = options;
         this.setState((prev) => {
-            const overlayWindows = this.buildOverlayStateMap(prev.overlayWindows, id, {
+            const overlayWindows = this.buildOverlayStateMap(prev.overlayWindows, overlayId, {
                 open: false,
                 minimized: false,
                 maximized: false,
                 focused: false,
             });
-            if (id === LAUNCHER_OVERLAY_ID) {
-                const current = overlayWindows[id] || {};
-                overlayWindows[id] = {
+            if (overlayId === LAUNCHER_OVERLAY_ID) {
+                const current = overlayWindows[overlayId] || overlayWindows[stateKey] || {};
+                const nextState = {
                     ...current,
                     transitionState: transitionState || 'exiting',
                 };
+                overlayWindows[overlayId] = nextState;
+                overlayWindows[stateKey] = nextState;
+            }
+            const nextClosed = { ...prev.closed_windows, [overlayId]: true };
+            const nextMinimized = { ...prev.minimized_windows, [overlayId]: false };
+            const nextFocused = { ...prev.focused_windows, [overlayId]: false };
+            if (stateKey !== overlayId) {
+                nextClosed[stateKey] = true;
+                nextMinimized[stateKey] = false;
+                nextFocused[stateKey] = false;
             }
             return {
                 overlayWindows,
-                closed_windows: { ...prev.closed_windows, [id]: true },
-                minimized_windows: { ...prev.minimized_windows, [id]: false },
-                focused_windows: { ...prev.focused_windows, [id]: false },
+                closed_windows: nextClosed,
+                minimized_windows: nextMinimized,
+                focused_windows: nextFocused,
             };
         }, () => {
             this.giveFocusToLastApp();
+        });
+    };
+
+    toggleOverlayMaximize = (id) => {
+        const meta = this.getOverlayMeta(id);
+        if (!meta) return;
+        const overlayId = meta.id;
+        const stateKey = meta.key;
+        const current = this.getOverlayState(overlayId) || this.getOverlayState(stateKey) || {};
+        const shouldMaximize = !current.maximized;
+        this.setState((prev) => {
+            const overlayWindows = this.buildOverlayStateMap(prev.overlayWindows, overlayId, {
+                maximized: shouldMaximize,
+                minimized: false,
+                open: true,
+                focused: true,
+            });
+            const nextMinimized = { ...prev.minimized_windows, [overlayId]: false };
+            const nextFocused = { ...prev.focused_windows, [overlayId]: true };
+            if (stateKey !== overlayId) {
+                nextMinimized[stateKey] = false;
+                nextFocused[stateKey] = true;
+            }
+            return {
+                overlayWindows,
+                minimized_windows: nextMinimized,
+                focused_windows: nextFocused,
+            };
+        }, () => {
+            this.focus(overlayId);
         });
     };
 
@@ -2685,151 +2786,6 @@ export class Desktop extends Component {
             iconSizePreset: this.state.iconSizePreset,
         };
         window.dispatchEvent(new CustomEvent('workspace-state', { detail }));
-    };
-
-    getOverlayDefaults = (key) => {
-        if (key === 'launcher') {
-            return { open: false, minimized: false, maximized: false, transitionState: 'exited' };
-        }
-        return { open: false, minimized: false, maximized: false };
-    };
-
-    getOverlayState = (key) => {
-        const overlays = this.state?.overlayWindows || {};
-        const current = overlays[key];
-        const defaults = this.getOverlayDefaults(key);
-        return current ? { ...defaults, ...current } : { ...defaults };
-    };
-
-    updateOverlayState = (key, updater, callback) => {
-        if (!key) return;
-        this.setState((prevState) => {
-            const overlays = prevState.overlayWindows || {};
-            const previous = overlays[key] ? { ...overlays[key] } : this.getOverlayDefaults(key);
-            const nextState = typeof updater === 'function'
-                ? updater({ ...previous })
-                : { ...previous, ...(updater || {}) };
-
-            if (!nextState || typeof nextState !== 'object') {
-                return null;
-            }
-
-            const next = { ...previous, ...nextState };
-            const keys = new Set([...Object.keys(previous), ...Object.keys(next)]);
-            let changed = false;
-            for (const name of keys) {
-                if (previous[name] !== next[name]) {
-                    changed = true;
-                    break;
-                }
-            }
-
-            if (!changed) {
-                return null;
-            }
-
-            return {
-                overlayWindows: {
-                    ...overlays,
-                    [key]: next,
-                },
-            };
-        }, callback);
-    };
-
-    openOverlay = (key, overrides = {}, callback) => {
-        this.recentlyClosedOverlays.delete(key);
-        this.updateOverlayState(
-            key,
-            (current) => {
-                const resolvedOverrides = typeof overrides === 'function' ? overrides({ ...current }) : overrides;
-                const base = {
-                    ...current,
-                    open: true,
-                    minimized: false,
-                };
-                if (typeof base.maximized !== 'boolean') {
-                    base.maximized = false;
-                }
-                if (resolvedOverrides && typeof resolvedOverrides === 'object') {
-                    return { ...base, ...resolvedOverrides };
-                }
-                return base;
-            },
-            callback,
-        );
-    };
-
-    closeOverlay = (key, overrides = {}, callback) => {
-        this.recentlyClosedOverlays.add(key);
-        this.updateOverlayState(
-            key,
-            (current) => {
-                const resolvedOverrides = typeof overrides === 'function' ? overrides({ ...current }) : overrides;
-                const base = {
-                    ...current,
-                    open: false,
-                    minimized: false,
-                    maximized: false,
-                };
-                if (resolvedOverrides && typeof resolvedOverrides === 'object') {
-                    return { ...base, ...resolvedOverrides };
-                }
-                return base;
-            },
-            callback,
-        );
-    };
-
-    restoreOverlay = (key, overrides = {}, callback) => {
-        this.updateOverlayState(
-            key,
-            (current) => {
-                const resolvedOverrides = typeof overrides === 'function' ? overrides({ ...current }) : overrides;
-                const base = {
-                    ...current,
-                    open: true,
-                    minimized: false,
-                };
-                if (resolvedOverrides && typeof resolvedOverrides === 'object') {
-                    return { ...base, ...resolvedOverrides };
-                }
-                return base;
-            },
-            callback,
-        );
-    };
-
-    toggleOverlayMinimize = (key) => {
-        this.updateOverlayState(key, (current) => {
-            const next = { ...current };
-            if (!next.open) {
-                next.open = true;
-                next.minimized = false;
-                next.maximized = false;
-                return next;
-            }
-            next.minimized = !next.minimized;
-            if (next.minimized) {
-                next.maximized = false;
-            }
-            return next;
-        });
-    };
-
-    toggleOverlayMaximize = (key) => {
-        this.updateOverlayState(key, (current) => {
-            const shouldMaximize = !current.maximized;
-            const next = {
-                ...current,
-                maximized: shouldMaximize,
-            };
-            if (shouldMaximize) {
-                next.open = true;
-                next.minimized = false;
-            }
-            return next;
-        });
     };
 
     componentDidMount() {
@@ -3913,72 +3869,108 @@ export class Desktop extends Component {
         const launcherState = overlays[LAUNCHER_OVERLAY_ID];
         if (launcherState) {
             const transitionState = launcherState.transitionState || (launcherState.open ? 'entered' : 'exited');
-            const shouldRender = launcherState.open || ['entering', 'exiting'].includes(transitionState);
-            const overlayActive = launcherState.open && !launcherState.minimized;
+            const shouldRender = launcherState.open || launcherState.minimized || ['entering', 'exiting'].includes(transitionState);
             if (shouldRender) {
-                const overlayClasses = [
-                    'fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto px-4 py-12 sm:py-16',
-                    'bg-slate-950/70 backdrop-blur-xl transition-opacity duration-200 ease-out',
-                    overlayActive ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
-                ].join(' ');
-                const panelClasses = [
-                    'w-full max-w-6xl transform transition-all duration-200 ease-out focus:outline-none',
-                    overlayActive ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 -translate-y-2',
-                ].join(' ');
-
+                const overlayActive = launcherState.open && !launcherState.minimized;
+                const overlayOpen = launcherState.open || transitionState === 'entering';
+                const frameStateClasses = overlayActive
+                    ? 'scale-100 opacity-100 translate-y-0'
+                    : 'scale-95 opacity-0 -translate-y-2';
                 elements.push(
-                    <div
+                    <SystemOverlayWindow
                         key={LAUNCHER_OVERLAY_ID}
-                        ref={this.allAppsOverlayRef}
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="all-apps-overlay-title"
-                        aria-hidden={!overlayActive}
-                        tabIndex={-1}
-                        className={overlayClasses}
+                        id={LAUNCHER_OVERLAY_ID}
+                        title="Applications"
+                        open={overlayOpen}
+                        minimized={Boolean(launcherState.minimized)}
+                        maximized={Boolean(launcherState.maximized)}
+                        onMinimize={() => this.toggleOverlayMinimize(LAUNCHER_OVERLAY_ID)}
+                        onMaximize={() => this.toggleOverlayMaximize(LAUNCHER_OVERLAY_ID)}
+                        onClose={() => this.closeOverlay(LAUNCHER_OVERLAY_ID, { transitionState: 'exiting' })}
+                        overlayRef={this.allAppsOverlayRef}
+                        overlayClassName="bg-slate-950/70 backdrop-blur-xl transition-opacity duration-200 ease-out"
+                        frameClassName={`w-full max-w-6xl transform transition-all duration-200 ease-out focus:outline-none ${frameStateClasses}`.trim()}
+                        bodyClassName="bg-transparent p-0 overflow-visible"
                     >
-                        <div className={panelClasses}>
-                            <AllApplications
-                                apps={apps}
-                                games={games}
-                                recentApps={this.getActiveStack()}
-                                openApp={this.openApp}
-                                searchInputRef={this.allAppsSearchRef}
-                                headingId="all-apps-overlay-title"
-                            />
-                        </div>
-                    </div>
+                        <AllApplications
+                            apps={apps}
+                            games={games}
+                            recentApps={this.getActiveStack()}
+                            openApp={this.openApp}
+                            searchInputRef={this.allAppsSearchRef}
+                            headingId="all-apps-overlay-title"
+                        />
+                    </SystemOverlayWindow>
                 );
             }
         }
 
         const shortcutState = overlays[SHORTCUT_OVERLAY_ID];
-        if (shortcutState?.open && !shortcutState.minimized) {
-            elements.push(
-                <ShortcutSelector
-                    key={SHORTCUT_OVERLAY_ID}
-                    apps={apps}
-                    games={games}
-                    onSelect={this.addShortcutToDesktop}
-                    onClose={() => this.closeOverlay(SHORTCUT_OVERLAY_ID)}
-                />
-            );
+        if (shortcutState) {
+            const shouldRenderShortcut = shortcutState.open || shortcutState.minimized;
+            if (shouldRenderShortcut) {
+                elements.push(
+                    <SystemOverlayWindow
+                        key={SHORTCUT_OVERLAY_ID}
+                        id={SHORTCUT_OVERLAY_ID}
+                        title="Add to Desktop"
+                        open={Boolean(shortcutState.open)}
+                        minimized={Boolean(shortcutState.minimized)}
+                        maximized={Boolean(shortcutState.maximized)}
+                        onMinimize={() => this.toggleOverlayMinimize(SHORTCUT_OVERLAY_ID)}
+                        onClose={() => this.closeOverlay(SHORTCUT_OVERLAY_ID)}
+                        allowMaximize={false}
+                        overlayClassName="bg-slate-950/70 backdrop-blur-xl transition-opacity duration-200 ease-out"
+                        frameClassName="w-full max-w-3xl"
+                        bodyClassName="bg-transparent p-0"
+                    >
+                        <ShortcutSelector
+                            apps={apps}
+                            games={games}
+                            onSelect={this.addShortcutToDesktop}
+                            onClose={() => this.closeOverlay(SHORTCUT_OVERLAY_ID)}
+                        />
+                    </SystemOverlayWindow>
+                );
+            }
         }
 
         const switcherState = overlays[SWITCHER_OVERLAY_ID];
-        if (switcherState?.open && !switcherState.minimized) {
-            elements.push(
-                <WindowSwitcher
-                    key={SWITCHER_OVERLAY_ID}
-                    windows={this.state.switcherWindows}
-                    onSelect={this.selectWindow}
-                    onClose={this.closeWindowSwitcher}
-                />
-            );
+        if (switcherState) {
+            const shouldRenderSwitcher = switcherState.open || switcherState.minimized;
+            if (shouldRenderSwitcher) {
+                elements.push(
+                    <SystemOverlayWindow
+                        key={SWITCHER_OVERLAY_ID}
+                        id={SWITCHER_OVERLAY_ID}
+                        title="Window Switcher"
+                        open={Boolean(switcherState.open)}
+                        minimized={Boolean(switcherState.minimized)}
+                        maximized={Boolean(switcherState.maximized)}
+                        onMinimize={() => this.toggleOverlayMinimize(SWITCHER_OVERLAY_ID)}
+                        onClose={this.closeWindowSwitcher}
+                        allowMaximize={false}
+                        overlayClassName="bg-slate-950/70 backdrop-blur-xl transition-opacity duration-200 ease-out"
+                        frameClassName="w-full max-w-4xl"
+                        bodyClassName="bg-transparent p-0"
+                    >
+                        <WindowSwitcher
+                            windows={this.state.switcherWindows}
+                            onSelect={this.selectWindow}
+                            onClose={this.closeWindowSwitcher}
+                        />
+                    </SystemOverlayWindow>
+                );
+            }
         }
 
         const commandPaletteState = overlays[COMMAND_PALETTE_OVERLAY_ID];
-        if (commandPaletteState) {
+        const shouldRenderPalette = Boolean(
+            commandPaletteState?.open
+            || commandPaletteState?.minimized
+            || commandPaletteState?.maximized,
+        );
+        if (shouldRenderPalette && commandPaletteState) {
             const paletteActive = commandPaletteState.open && !commandPaletteState.minimized;
             elements.push(
                 <SystemOverlayWindow

@@ -341,7 +341,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
                 }}
                 className={`group flex flex-shrink-0 cursor-pointer select-none items-center gap-2 rounded-md border px-3 py-1.5 text-gray-200 transition-colors focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange ${
                   t.id === activeId
-                    ? 'border-ub-orange/60 bg-white/20 text-white shadow-inner'
+                    ? 'border-ub-orange/60 bg-gray-700 text-white shadow-inner'
                     : 'border-transparent hover:bg-white/10 hover:text-white'
                 }`}
                 draggable
