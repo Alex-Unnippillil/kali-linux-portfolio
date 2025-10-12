@@ -57,7 +57,7 @@ export function Settings() {
     }, [accent, accentText, contrastRatio]);
 
     return (
-        <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
+        <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-kali-surface text-kali-text"}>
             <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4 relative overflow-hidden rounded-lg shadow-inner">
                 {useKaliWallpaper ? (
                     <KaliWallpaper />
@@ -70,12 +70,12 @@ export function Settings() {
                 )}
             </div>
             <div className="flex justify-center my-4">
-                <label htmlFor="theme-select" className="mr-2 text-ubt-grey">Theme:</label>
+                <label htmlFor="theme-select" className="mr-2 text-kali-text/80">Theme:</label>
                 <select
                     id="theme-select"
                     value={theme}
                     onChange={(e) => setTheme(e.target.value)}
-                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                    className="bg-kali-secondary/80 text-kali-text px-2 py-1 rounded-md border border-kali-border/60 transition-colors hover:border-kali-focus/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
                 >
                     <option value="default">Default</option>
                     <option value="dark">Dark</option>
@@ -84,7 +84,7 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-kali-text/80 flex items-center">
                     <input
                         type="checkbox"
                         checked={useKaliWallpaper}
@@ -96,12 +96,12 @@ export function Settings() {
                 </label>
             </div>
             {useKaliWallpaper && (
-                <p className="text-center text-xs text-ubt-grey/70 px-6 -mt-2 mb-4">
+                <p className="text-center text-xs text-kali-text/70 px-6 -mt-2 mb-4">
                     Your previous wallpaper selection is preserved for when you turn this off.
                 </p>
             )}
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey" id="accent-picker-label">Accent:</label>
+                <label className="mr-2 text-kali-text/80" id="accent-picker-label">Accent:</label>
                 <div aria-labelledby="accent-picker-label" role="radiogroup" className="flex gap-2">
                     {ACCENT_OPTIONS.map((c) => (
                         <button
@@ -117,19 +117,19 @@ export function Settings() {
                 </div>
             </div>
             <div className="flex justify-center my-4">
-                <label htmlFor="density-select" className="mr-2 text-ubt-grey">Density:</label>
+                <label htmlFor="density-select" className="mr-2 text-kali-text/80">Density:</label>
                 <select
                     id="density-select"
                     value={density}
                     onChange={(e) => setDensity(e.target.value)}
-                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                    className="bg-kali-secondary/80 text-kali-text px-2 py-1 rounded-md border border-kali-border/60 transition-colors hover:border-kali-focus/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
                 >
                     <option value="regular">Regular</option>
                     <option value="compact">Compact</option>
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label htmlFor="font-scale-slider" className="mr-2 text-ubt-grey">Font Size:</label>
+                <label htmlFor="font-scale-slider" className="mr-2 text-kali-text/80">Font Size:</label>
                 <input
                     id="font-scale-slider"
                     type="range"
@@ -138,12 +138,12 @@ export function Settings() {
                     step="0.05"
                     value={fontScale}
                     onChange={(e) => setFontScale(parseFloat(e.target.value))}
-                    className="kali-slider"
+                    className="kali-slider focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
                     aria-label="Adjust font scale"
                 />
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-kali-text/80 flex items-center">
                     <input
                         type="checkbox"
                         checked={reducedMotion}
@@ -155,7 +155,7 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-kali-text/80 flex items-center">
                     <input
                         type="checkbox"
                         checked={largeHitAreas}
@@ -167,7 +167,7 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-kali-text/80 flex items-center">
                     <input
                         type="checkbox"
                         checked={highContrast}
@@ -179,7 +179,7 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-kali-text/80 flex items-center">
                     <input
                         type="checkbox"
                         checked={allowNetwork}
@@ -191,7 +191,7 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-kali-text/80 flex items-center">
                     <input
                         type="checkbox"
                         checked={haptics}
@@ -203,7 +203,7 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey flex items-center">
+                <label className="mr-2 text-kali-text/80 flex items-center">
                     <input
                         type="checkbox"
                         checked={pongSpin}
@@ -216,8 +216,8 @@ export function Settings() {
             </div>
             <div className="flex justify-center my-4">
                 <div
-                    className="p-4 rounded transition-colors duration-300 motion-reduce:transition-none"
-                    style={{ backgroundColor: '#0f1317', color: '#ffffff' }}
+                    className="p-4 rounded-lg border border-kali-border/60 bg-kali-secondary/80 text-kali-text transition-colors duration-300 motion-reduce:transition-none"
+                    style={{ backgroundColor: 'var(--color-dark)', color: 'var(--color-text)' }}
                 >
                     <p className="mb-2 text-center">Preview</p>
                     <button
@@ -232,7 +232,7 @@ export function Settings() {
                     <span ref={liveRegion} role="status" aria-live="polite" className="sr-only"></span>
                 </div>
             </div>
-            <div className="flex flex-wrap justify-center items-center border-t border-gray-900">
+            <div className="flex flex-wrap justify-center items-center border-t border-kali-border/60">
                 {
                     wallpapers.map((name, index) => (
                         <div
@@ -250,13 +250,13 @@ export function Settings() {
                                 }
                             }}
                             data-path={name}
-                            className={((name === wallpaper) ? " border-yellow-700 " : " border-transparent ") + " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"}
+                            className={`md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 rounded-lg transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${name === wallpaper ? 'border-kali-primary/80 shadow-[0_0_0_1px_rgba(15,148,210,0.45)]' : 'border-transparent hover:border-white/10'}`}
                             style={{ backgroundImage: `url(/wallpapers/${name}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
                         ></div>
                     ))
                 }
             </div>
-            <div className="flex justify-center my-4 border-t border-gray-900 pt-4 space-x-4">
+            <div className="flex justify-center my-4 border-t border-kali-border/60 pt-4 space-x-4">
                 <button
                     onClick={async () => {
                         const data = await exportSettingsData();
@@ -268,13 +268,13 @@ export function Settings() {
                         a.click();
                         URL.revokeObjectURL(url);
                     }}
-                    className="px-4 py-2 rounded bg-ub-orange text-white"
+                    className="px-4 py-2 rounded-md bg-kali-primary text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
                 >
                     Export Settings
                 </button>
                 <button
                     onClick={() => fileInput.current && fileInput.current.click()}
-                    className="px-4 py-2 rounded bg-ub-orange text-white"
+                    className="px-4 py-2 rounded-md bg-kali-primary text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
                 >
                     Import Settings
                 </button>
@@ -294,7 +294,7 @@ export function Settings() {
                         setHaptics(defaults.haptics);
                         setTheme('default');
                     }}
-                    className="px-4 py-2 rounded bg-ub-orange text-white"
+                    className="px-4 py-2 rounded-md bg-kali-primary text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
                 >
                     Reset Desktop
                 </button>
