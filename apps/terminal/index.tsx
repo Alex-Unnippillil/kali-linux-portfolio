@@ -278,7 +278,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           foreground: '#e3eaf6',
           cursor: '#5cc8ff',
           cursorAccent: '#080d12',
-          selection: '#1c2a3b',
+          selectionBackground: '#1c2a3b',
           black: '#1a222c',
           red: '#f66a6a',
           green: '#6dd48c',
