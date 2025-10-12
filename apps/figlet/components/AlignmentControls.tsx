@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 interface AlignmentControlsProps {
   align: string;
@@ -14,12 +14,12 @@ const AlignmentControls: React.FC<AlignmentControlsProps> = ({
   setPadding,
 }) => {
   return (
-    <div className="flex items-center gap-1 text-sm">
+    <div className="flex items-center gap-2 text-xs uppercase tracking-wide">
       Align
       <select
         value={align}
         onChange={(e) => setAlign(e.target.value)}
-        className="px-1 bg-gray-700 text-white"
+        className="rounded border border-black/40 bg-gray-800 px-2 py-1 text-white"
         aria-label="Alignment"
       >
         <option value="left">Left</option>
@@ -27,14 +27,14 @@ const AlignmentControls: React.FC<AlignmentControlsProps> = ({
         <option value="right">Right</option>
         <option value="justify">Justify</option>
       </select>
-      <label className="flex items-center gap-1">
+      <label className="flex items-center gap-2">
         Padding
         <input
           type="number"
           min="0"
           value={padding}
           onChange={(e) => setPadding(Number(e.target.value))}
-          className="w-12 px-1 bg-gray-700 text-white"
+          className="w-16 rounded border border-black/40 bg-gray-800 px-2 py-1 text-white"
           aria-label="Padding"
         />
       </label>

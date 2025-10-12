@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { toPng, toSvg } from "html-to-image";
 import AlignmentControls from "./components/AlignmentControls";
 import FontGrid from "./components/FontGrid";
@@ -355,190 +361,219 @@ const FigletApp: React.FC = () => {
     })();
   }, [font]);
 
+  const previewStyle = useMemo(() => {
+    const baseColor = inverted ? "#121212" : "#f7f7f7";
+    const style: React.CSSProperties = {
+      fontSize: `${fontSize}px`,
+      lineHeight,
+      letterSpacing: `${kerning}px`,
+    };
+
+    if (gradient !== 0) {
+      style.backgroundImage = `linear-gradient(to right, hsl(${gradient},100%,60%), hsl(${(gradient + 120) % 360},100%,60%))`;
+      style.backgroundSize = "100% 100%";
+      style.WebkitBackgroundClip = "text";
+      style.WebkitTextFillColor = "transparent";
+      style.color = baseColor;
+    } else {
+      style.color = baseColor;
+    }
+
+    return style;
+  }, [fontSize, gradient, inverted, kerning, lineHeight]);
+
   return (
-    <div className="flex flex-col h-full w-full bg-ub-cool-grey text-white font-mono">
-      <div className="p-2 flex flex-wrap gap-2 bg-ub-gedit-dark items-center">
-        <label className="flex items-center gap-1 text-sm">
+    <div className="flex h-full w-full flex-col bg-ub-cool-grey text-white font-mono">
+      <div className="flex flex-col gap-3 border-b border-black/40 bg-ub-gedit-dark p-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-2 rounded border border-transparent bg-black/30 px-2 py-1 text-xs uppercase tracking-wide">
+            <input
+              type="checkbox"
+              checked={monoOnly}
+              onChange={() => setMonoOnly((m) => !m)}
+              aria-label="Show monospace fonts only"
+            />
+            Monospace only
+          </label>
+          <FontGrid fonts={displayedFonts} value={font} onChange={setFont} />
           <input
-            type="checkbox"
-            checked={monoOnly}
-            onChange={() => setMonoOnly((m) => !m)}
-            aria-label="Show monospace fonts only"
+            type="file"
+            accept=".flf"
+            onChange={handleUpload}
+            className="rounded border border-black/30 bg-gray-800 px-2 py-1 text-xs"
+            aria-label="Upload font"
           />
-          Monospace only
-        </label>
-        <FontGrid fonts={displayedFonts} value={font} onChange={setFont} />
-        <input
-          type="file"
-          accept=".flf"
-          onChange={handleUpload}
-          className="text-sm"
-          aria-label="Upload font"
-        />
-        {serverFontNames.length > 0 && (
-          <select
-            value=""
-            onChange={(e) => setFont(e.target.value)}
-            className="px-1 bg-gray-700 text-white"
-            aria-label="Select uploaded font"
-          >
-            <option value="" disabled>
-              Uploaded Fonts
-            </option>
-            {serverFontNames.map((name) => (
-              <option key={name} value={name}>
-                {name}
+          {serverFontNames.length > 0 && (
+            <select
+              value=""
+              onChange={(e) => setFont(e.target.value)}
+              className="rounded border border-black/40 bg-gray-800 px-2 py-1 text-xs"
+              aria-label="Select uploaded font"
+            >
+              <option value="" disabled>
+                Uploaded Fonts
               </option>
-            ))}
-          </select>
-        )}
-        <input
-          type="text"
-          className="flex-1 px-2 bg-gray-700 text-white"
-          placeholder="Type here"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          aria-label="Text to convert"
-        />
-        <label className="flex items-center gap-1 text-sm">
-          Size
-          <input
-            type="range"
-            min="8"
-            max="72"
-            value={fontSize}
-            onChange={(e) => setFontSize(Number(e.target.value))}
-            aria-label="Font size"
+              {serverFontNames.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex flex-1 min-w-[16rem] items-center gap-2 text-sm">
+            <span className="whitespace-nowrap text-xs uppercase tracking-wide text-gray-200">
+              Sample Text
+            </span>
+            <input
+              type="text"
+              className="flex-1 rounded border border-black/40 bg-gray-800 px-2 py-1 text-white placeholder:text-gray-400"
+              placeholder="Type here"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              aria-label="Text to convert"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-xs uppercase tracking-wide">
+            Size
+            <input
+              type="range"
+              min="8"
+              max="72"
+              value={fontSize}
+              onChange={(e) => setFontSize(Number(e.target.value))}
+              aria-label="Font size"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-xs uppercase tracking-wide">
+            Line
+            <input
+              type="range"
+              min="0.8"
+              max="2"
+              step="0.1"
+              value={lineHeight}
+              onChange={(e) => setLineHeight(Number(e.target.value))}
+              aria-label="Line height"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-xs uppercase tracking-wide">
+            Width
+            <input
+              type="number"
+              min="20"
+              max="200"
+              value={width}
+              onChange={(e) => setWidth(Number(e.target.value))}
+              className="w-20 rounded border border-black/40 bg-gray-800 px-2 py-1 text-white"
+              aria-label="Width"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-xs uppercase tracking-wide">
+            Layout
+            <select
+              value={layout}
+              onChange={(e) => setLayout(e.target.value)}
+              className="rounded border border-black/40 bg-gray-800 px-2 py-1 text-white"
+              aria-label="Layout"
+            >
+              <option value="default">Default</option>
+              <option value="full">Full</option>
+              <option value="fitted">Fitted</option>
+              <option value="smush">Smush</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-xs uppercase tracking-wide">
+            Gradient
+            <input
+              type="range"
+              min="0"
+              max="360"
+              value={gradient}
+              onChange={(e) => setGradient(Number(e.target.value))}
+              aria-label="Gradient hue"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-xs uppercase tracking-wide">
+            Kerning
+            <input
+              type="range"
+              min="-2"
+              max="10"
+              step="0.1"
+              value={kerning}
+              onChange={(e) => setKerning(Number(e.target.value))}
+              aria-label="Kerning"
+            />
+          </label>
+          <AlignmentControls
+            align={align}
+            setAlign={setAlign}
+            padding={padding}
+            setPadding={setPadding}
           />
-        </label>
-        <label className="flex items-center gap-1 text-sm">
-          Line
-          <input
-            type="range"
-            min="0.8"
-            max="2"
-            step="0.1"
-            value={lineHeight}
-            onChange={(e) => setLineHeight(Number(e.target.value))}
-            aria-label="Line height"
-          />
-        </label>
-        <label className="flex items-center gap-1 text-sm">
-          Width
-          <input
-            type="number"
-            min="20"
-            max="200"
-            value={width}
-            onChange={(e) => setWidth(Number(e.target.value))}
-            className="w-16 px-1 bg-gray-700 text-white"
-            aria-label="Width"
-          />
-        </label>
-        <label className="flex items-center gap-1 text-sm">
-          Layout
-          <select
-            value={layout}
-            onChange={(e) => setLayout(e.target.value)}
-            className="px-1 bg-gray-700 text-white"
-            aria-label="Layout"
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={copyOutput}
+            className="rounded bg-blue-700 px-3 py-1 text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:bg-blue-600"
+            aria-label="Banner to clipboard"
           >
-            <option value="default">Default</option>
-            <option value="full">Full</option>
-            <option value="fitted">Fitted</option>
-            <option value="smush">Smush</option>
-          </select>
-        </label>
-        <label className="flex items-center gap-1 text-sm">
-          Gradient
-          <input
-            type="range"
-            min="0"
-            max="360"
-            value={gradient}
-            onChange={(e) => setGradient(Number(e.target.value))}
-            aria-label="Gradient hue"
-          />
-        </label>
-        <label className="flex items-center gap-1 text-sm">
-          Kerning
-          <input
-            type="range"
-            min="-2"
-            max="10"
-            step="0.1"
-            value={kerning}
-            onChange={(e) => setKerning(Number(e.target.value))}
-            aria-label="Kerning"
-          />
-        </label>
-        <AlignmentControls
-          align={align}
-          setAlign={setAlign}
-          padding={padding}
-          setPadding={setPadding}
-        />
-        <button
-          onClick={copyOutput}
-          className="px-2 bg-blue-700 hover:bg-blue-600 rounded text-white"
-          aria-label="Banner to clipboard"
-        >
-          Banner to Clipboard
-        </button>
-        <button
-          onClick={exportPNG}
-          className="p-1 bg-green-700 hover:bg-green-600 rounded"
-          aria-label="Export PNG"
-        >
-          <img
-            src="/themes/Yaru/actions/document-save-as-png-symbolic.svg"
-            alt=""
-            className="w-6 h-6"
-          />
-        </button>
-        <button
-          onClick={exportSVG}
-          className="p-1 bg-yellow-700 hover:bg-yellow-600 rounded"
-          aria-label="Export SVG"
-        >
-          <img
-            src="/themes/Yaru/actions/document-save-as-svg-symbolic.svg"
-            alt=""
-            className="w-6 h-6"
-          />
-        </button>
-        <button
-          onClick={exportText}
-          className="px-2 bg-purple-700 hover:bg-purple-600 rounded text-white"
-          aria-label="Export text file"
-        >
-          TXT
-        </button>
-        <button
-          onClick={() => setInverted((i) => !i)}
-          className="px-2 bg-gray-700 hover:bg-gray-600 rounded text-white"
-          aria-label="Invert colors"
-        >
-          Invert
-        </button>
+            Banner to Clipboard
+          </button>
+          <button
+            onClick={exportPNG}
+            className="rounded bg-green-700 p-1 transition-colors hover:bg-green-600"
+            aria-label="Export PNG"
+          >
+            <img
+              src="/themes/Yaru/actions/document-save-as-png-symbolic.svg"
+              alt=""
+              className="h-6 w-6"
+            />
+          </button>
+          <button
+            onClick={exportSVG}
+            className="rounded bg-yellow-700 p-1 transition-colors hover:bg-yellow-600"
+            aria-label="Export SVG"
+          >
+            <img
+              src="/themes/Yaru/actions/document-save-as-svg-symbolic.svg"
+              alt=""
+              className="h-6 w-6"
+            />
+          </button>
+          <button
+            onClick={exportText}
+            className="rounded bg-purple-700 px-3 py-1 text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:bg-purple-600"
+            aria-label="Export text file"
+          >
+            TXT
+          </button>
+          <button
+            onClick={() => setInverted((i) => !i)}
+            className="rounded bg-gray-700 px-3 py-1 text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:bg-gray-600"
+            aria-label="Invert colors"
+          >
+            Invert
+          </button>
+        </div>
       </div>
-      <div className="flex-1 overflow-auto">
-        <pre
-          ref={preRef}
-          className={`min-w-full p-2 whitespace-pre font-mono transition-colors motion-reduce:transition-none ${
+      <div className="flex-1 min-h-[18rem] overflow-hidden">
+        <div
+          className={`h-full overflow-auto border-b border-black/30 ${
             inverted ? "bg-white" : "bg-black"
           }`}
-          style={{
-            fontSize: `${fontSize}px`,
-            lineHeight,
-            letterSpacing: `${kerning}px`,
-            backgroundImage: `linear-gradient(to right, hsl(${gradient},100%,50%), hsl(${(gradient + 120) % 360},100%,50%))`,
-            WebkitBackgroundClip: "text",
-            color: "transparent",
-          }}
         >
-          {output}
-        </pre>
+          <pre
+            ref={preRef}
+            className="min-h-full w-full whitespace-pre px-4 py-5 font-mono"
+            style={previewStyle}
+          >
+            {output}
+          </pre>
+        </div>
       </div>
       <div className="p-2 text-xs text-right">
         About this feature{" "}

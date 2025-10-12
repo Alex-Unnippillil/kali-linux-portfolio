@@ -31,7 +31,7 @@ const FontGrid: React.FC<Props> = ({ fonts, value, onChange }) => {
     <div className="relative" ref={containerRef}>
       <button
         type="button"
-        className="px-1 bg-gray-700 text-white min-w-[6rem] text-left"
+        className="min-w-[8rem] rounded border border-black/40 bg-gray-800 px-3 py-1 text-left text-xs uppercase tracking-wide text-white transition-colors hover:bg-gray-700"
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
@@ -40,10 +40,10 @@ const FontGrid: React.FC<Props> = ({ fonts, value, onChange }) => {
       </button>
       {open && (
         <div
-          className="absolute z-10 bg-gray-800 text-white max-h-60 overflow-auto p-1"
+          className="absolute z-10 mt-1 max-h-72 w-72 overflow-auto rounded border border-black/60 bg-gray-900 p-2 shadow-lg"
           role="listbox"
         >
-          <div className="grid grid-cols-2 gap-x-2 gap-y-[6px]">
+          <div className="grid grid-cols-2 gap-2">
             {fonts.map((f) => (
               <button
                 key={f.name}
@@ -54,8 +54,10 @@ const FontGrid: React.FC<Props> = ({ fonts, value, onChange }) => {
                   onChange(f.name);
                   setOpen(false);
                 }}
-                className={`text-left font-mono px-2 rounded ${
-                  value === f.name ? "bg-blue-600" : "hover:bg-gray-700"
+                className={`rounded px-3 py-2 text-left font-mono text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${
+                  value === f.name
+                    ? "bg-blue-700/80 text-white shadow-inner ring-1 ring-blue-300"
+                    : "bg-gray-800/70 text-gray-100 hover:bg-gray-700/80"
                 }`}
                 style={{ lineHeight: "1" }}
                 title={f.name}
