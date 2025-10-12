@@ -32,6 +32,60 @@ const MAX_HISTORY_ITEMS = 10;
 
 const hasOwnText = (value?: string) => Boolean(value && value.trim().length);
 
+type FilterId = 'all' | 'recent' | 'tutorials' | 'tools' | 'ctf';
+
+type FilterOption = {
+  id: FilterId;
+  label: string;
+  predicate: (video: VideoResult) => boolean;
+};
+
+const keywordMatcher = (keywords: string[]) => {
+  const loweredKeywords = keywords.map((keyword) => keyword.toLowerCase());
+  return (video: VideoResult) => {
+    const haystack = `${video.title} ${video.description}`.toLowerCase();
+    return loweredKeywords.some((keyword) => haystack.includes(keyword));
+  };
+};
+
+const isWithinYears = (value: string, years: number) => {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return false;
+  }
+  const diffMs = Date.now() - parsed.getTime();
+  const yearsMs = years * 365 * 24 * 60 * 60 * 1000;
+  return diffMs <= yearsMs;
+};
+
+const filterOptions: FilterOption[] = [
+  {
+    id: 'all',
+    label: 'All videos',
+    predicate: () => true,
+  },
+  {
+    id: 'recent',
+    label: 'Latest uploads',
+    predicate: (video) => isWithinYears(video.publishedAt, 2),
+  },
+  {
+    id: 'tutorials',
+    label: 'Tutorials & Guides',
+    predicate: keywordMatcher(['tutorial', 'guide', 'walkthrough', 'how to']),
+  },
+  {
+    id: 'tools',
+    label: 'Tooling deep dives',
+    predicate: keywordMatcher(['metasploit', 'wireshark', 'tool', 'automation', 'workflow']),
+  },
+  {
+    id: 'ctf',
+    label: 'CTF & Challenges',
+    predicate: keywordMatcher(['ctf', 'challenge', 'forensic', 'capture the flag']),
+  },
+];
+
 function normalizeVideo(video: VideoResult): VideoResult {
   return {
     id: video.id,
@@ -164,6 +218,7 @@ export default function YouTubeApp({ initialResults }: Props) {
   const [lastSearchSource, setLastSearchSource] = useState<'api' | 'demo' | null>(
     null,
   );
+  const [activeFilter, setActiveFilter] = useState<FilterId>('all');
   const [rawHistory, setHistoryState, , clearHistoryState] =
     usePersistentState<VideoResult[]>(HISTORY_STORAGE_KEY, [], isVideoList);
 
@@ -171,6 +226,21 @@ export default function YouTubeApp({ initialResults }: Props) {
     () => rawHistory.map((item) => normalizeVideo(item)),
     [rawHistory],
   );
+
+  const visibleResults = useMemo(() => {
+    const filter = filterOptions.find((option) => option.id === activeFilter);
+    if (!filter) {
+      return results;
+    }
+    return results.filter((item) => {
+      try {
+        return filter.predicate(item);
+      } catch (error_) {
+        console.error('Failed to evaluate filter predicate', error_);
+        return true;
+      }
+    });
+  }, [activeFilter, results]);
 
   const hasApiKey = Boolean(YOUTUBE_API_KEY);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -378,36 +448,38 @@ export default function YouTubeApp({ initialResults }: Props) {
       </header>
 
       <main className="flex flex-1 flex-col gap-6 px-6 py-6 lg:flex-row">
-        <section className="flex-1 rounded-lg border border-white/10 bg-black/40 p-5 shadow-sm">
+        <section className="flex-1 rounded-2xl border border-white/10 bg-black/40 p-6 shadow-lg shadow-black/20">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-ubt-grey">
             Watch
           </h2>
-          <div className="mt-3 aspect-video overflow-hidden rounded-lg bg-black/60">
-            {selectedVideo ? (
-              <iframe
-                key={selectedVideo.id}
-                title={`YouTube player for ${selectedVideo.title}`}
-                src={`https://www.youtube-nocookie.com/embed/${selectedVideo.id}`}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="h-full w-full"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-ubt-grey">
-                Search and choose a video to start watching.
-              </div>
-            )}
+          <div className="mt-4 overflow-hidden rounded-xl border border-white/5 bg-black/60 shadow-inner">
+            <div className="aspect-video">
+              {selectedVideo ? (
+                <iframe
+                  key={selectedVideo.id}
+                  title={`YouTube player for ${selectedVideo.title}`}
+                  src={`https://www.youtube-nocookie.com/embed/${selectedVideo.id}`}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="h-full w-full"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-ubt-grey">
+                  Search and choose a video to start watching.
+                </div>
+              )}
+            </div>
           </div>
           {selectedVideo && (
-            <div className="mt-4 space-y-2 text-sm text-ubt-grey">
-              <h3 className="text-lg font-semibold text-white">
+            <div className="mt-5 space-y-3 text-sm text-ubt-grey">
+              <h3 className="text-xl font-semibold text-white">
                 {selectedVideo.title}
               </h3>
-              <p className="text-xs text-ubt-grey">
+              <p className="text-xs uppercase tracking-wide text-ubt-cool-grey">
                 {selectedVideo.channelTitle} • Published {formatDate(selectedVideo.publishedAt)}
               </p>
               {selectedVideo.description && (
-                <p className="text-sm leading-relaxed text-ubt-cool-grey">
+                <p className="text-sm leading-relaxed text-ubt-cool-grey/90">
                   {selectedVideo.description}
                 </p>
               )}
@@ -416,7 +488,7 @@ export default function YouTubeApp({ initialResults }: Props) {
         </section>
 
         <aside className="lg:w-80">
-          <div className="rounded-lg border border-white/10 bg-black/40 p-5 shadow-sm">
+          <div className="rounded-2xl border border-white/10 bg-black/40 p-5 shadow-lg shadow-black/20">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-ubt-grey">
                 Recently watched
@@ -437,17 +509,19 @@ export default function YouTubeApp({ initialResults }: Props) {
                     <button
                       type="button"
                       onClick={() => handleSelectVideo(video)}
-                      className="flex w-full items-center gap-3 rounded-md border border-white/10 bg-black/40 p-3 text-left transition hover:border-ubt-green/60 hover:text-ubt-green"
+                      className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-black/50 p-3 text-left transition hover:border-ubt-green/60 hover:text-ubt-green focus:outline-none focus:ring-2 focus:ring-ubt-green/60"
                       aria-label={`Watch ${video.title} again`}
                     >
                       {video.thumbnail ? (
-                        <img
-                          src={video.thumbnail}
-                          alt=""
-                          className="h-12 w-20 rounded object-cover"
-                        />
+                        <div className="relative aspect-video w-24 overflow-hidden rounded-lg border border-white/10">
+                          <img
+                            src={video.thumbnail}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
                       ) : (
-                        <div className="flex h-12 w-20 items-center justify-center rounded bg-black/60 text-xs text-ubt-grey">
+                        <div className="flex h-12 w-24 items-center justify-center rounded-lg bg-black/60 text-xs text-ubt-grey">
                           No preview
                         </div>
                       )}
@@ -473,52 +547,76 @@ export default function YouTubeApp({ initialResults }: Props) {
       </main>
 
       <section className="border-t border-white/5 bg-black/40 px-6 py-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-ubt-grey">
-            Search results
-          </h2>
-          {loading && (
-            <span className="flex items-center gap-2 text-xs text-ubt-green">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-ubt-green" aria-hidden />
-              Loading results…
-            </span>
-          )}
+        <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-ubt-grey">
+              Search results
+            </h2>
+            {loading && (
+              <span className="mt-2 flex items-center gap-2 text-xs text-ubt-green">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-ubt-green" aria-hidden />
+                Loading results…
+              </span>
+            )}
+          </div>
+          <div className="flex max-w-full flex-wrap items-center gap-2 overflow-x-auto pb-1 text-xs">
+            {filterOptions.map((option) => {
+              const isActive = option.id === activeFilter;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setActiveFilter(option.id)}
+                  aria-pressed={isActive}
+                  className={`rounded-full px-4 py-2 font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ubt-green/70 ${
+                    isActive
+                      ? 'bg-ubt-green/20 text-ubt-green ring-1 ring-ubt-green'
+                      : 'bg-white/5 text-ubt-grey hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
-        {results.length ? (
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {results.map((video) => {
+        {visibleResults.length ? (
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            {visibleResults.map((video) => {
               const isActive = selectedVideo?.id === video.id;
               return (
                 <button
                   key={video.id}
                   type="button"
                   onClick={() => handleSelectVideo(video)}
-                  className={`flex h-full flex-col overflow-hidden rounded-lg border bg-black/40 text-left transition focus:outline-none focus:ring-2 focus:ring-ubt-green/60 ${
+                  className={`group flex h-full flex-col overflow-hidden rounded-2xl border bg-black/40 text-left transition focus:outline-none focus:ring-2 focus:ring-ubt-green/60 ${
                     isActive
-                      ? 'border-ubt-green/80 shadow-lg'
-                      : 'border-white/10 hover:border-ubt-green/50 hover:shadow-lg'
+                      ? 'border-ubt-green/80 shadow-lg shadow-ubt-green/20'
+                      : 'border-white/10 hover:border-ubt-green/50 hover:shadow-lg hover:shadow-black/40'
                   }`}
                   aria-label={`Watch ${video.title}`}
                 >
-                  {video.thumbnail ? (
-                    <img
-                      src={video.thumbnail}
-                      alt=""
-                      className="h-40 w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-40 w-full items-center justify-center bg-black/60 text-xs text-ubt-grey">
-                      No preview available
-                    </div>
-                  )}
-                  <div className="flex flex-1 flex-col gap-2 p-4">
+                  <div className="relative aspect-video w-full overflow-hidden border-b border-white/5">
+                    {video.thumbnail ? (
+                      <img
+                        src={video.thumbnail}
+                        alt=""
+                        className="h-full w-full object-cover transition duration-200 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-black/60 text-xs text-ubt-grey">
+                        No preview available
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-1 flex-col gap-3 p-4">
                     <h3 className="text-base font-semibold text-white line-clamp-2">
                       {video.title}
                     </h3>
-                    <p className="text-xs text-ubt-grey">
+                    <p className="text-xs uppercase tracking-wide text-ubt-grey">
                       {video.channelTitle}
                     </p>
-                    <p className="line-clamp-3 text-xs text-ubt-cool-grey/80">
+                    <p className="line-clamp-3 text-xs text-ubt-cool-grey/90">
                       {video.description || 'No description available.'}
                     </p>
                     <p className="mt-auto text-[11px] uppercase tracking-wide text-ubt-grey">
@@ -533,7 +631,7 @@ export default function YouTubeApp({ initialResults }: Props) {
           <p className="text-sm text-ubt-grey">
             {loading
               ? 'Fetching results…'
-              : 'No matches yet. Try a different search term or clear the search box to see featured videos.'}
+              : 'No matches for this filter. Try a different chip or clear the search box to see featured videos.'}
           </p>
         )}
       </section>
