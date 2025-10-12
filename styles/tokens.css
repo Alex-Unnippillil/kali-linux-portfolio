@@ -35,6 +35,8 @@
   --kali-panel: rgba(17, 27, 36, 0.92);
   --kali-panel-border: rgba(15, 148, 210, 0.18);
   --kali-panel-highlight: rgba(15, 148, 210, 0.06);
+  --kali-info: #38bdf8;
+  --kali-success: #45ff9a;
   --kali-terminal-green: #45ff9a;
   --kali-terminal-text: #f8fafc;
   --kali-border: rgba(15, 148, 210, 0.18);
@@ -100,6 +102,8 @@
   --color-ub-orange: #ffff00;
   --color-ub-lite-abrgn: #00ffff;
   --color-ub-border-orange: #ffff00;
+  --color-info: #00ffff;
+  --color-success: #00ff00;
   --game-color-secondary: #ffff00;
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
