@@ -20,6 +20,7 @@ import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import TaskbarMenu from '../context-menus/taskbar-menu';
+import { MinimizedWindowShelf, ClosedWindowShelf } from '../desktop/WindowStateShelf';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -266,6 +267,8 @@ export class Desktop extends Component {
             currentTheme: initialTheme,
             iconSizePreset: initialIconSizePreset,
             overlayWindows: createOverlayStateMap(),
+            minimizedShelfOpen: false,
+            closedShelfOpen: false,
         };
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -315,6 +318,8 @@ export class Desktop extends Component {
         this.liveRegionTimeout = null;
 
         this.previousFocusElement = null;
+
+        this.recentlyClosedOverlays = new Set();
         this.allAppsTriggerKey = null;
         this.allAppsCloseTimeout = null;
         this.allAppsEnterRaf = null;
@@ -1580,6 +1585,7 @@ export class Desktop extends Component {
     openOverlay = (id, options = {}) => {
         if (!this.isOverlayId(id)) return;
         const { transitionState } = options;
+        this.recentlyClosedOverlays.delete(id);
         this.promoteWindowInStack(id);
         this.setState((prev) => {
             const overlayWindows = this.buildOverlayStateMap(prev.overlayWindows, id, {
@@ -1628,6 +1634,7 @@ export class Desktop extends Component {
 
     closeOverlay = (id, options = {}) => {
         if (!this.isOverlayId(id)) return;
+        this.recentlyClosedOverlays.add(id);
         const stack = this.getActiveStack();
         const index = stack.indexOf(id);
         if (index !== -1) {
@@ -1671,6 +1678,75 @@ export class Desktop extends Component {
             }
         }
         return this.appMap.get(id);
+    };
+
+    buildWindowShelfEntry = (id) => {
+        const app = this.getAppById(id);
+        if (!app) return null;
+        const title = app.title || app.name || id;
+        const icon = typeof app.icon === 'string' ? app.icon : undefined;
+        return { id, title, icon };
+    };
+
+    getMinimizedWindowEntries = () => {
+        const closed = this.state.closed_windows || {};
+        const minimized = this.state.minimized_windows || {};
+        const entries = [];
+        Object.keys(minimized).forEach((id) => {
+            if (!minimized[id]) return;
+            if (!this.validAppIds.has(id)) return;
+            if (this.isOverlayId(id)) {
+                const overlayState = this.state.overlayWindows?.[id];
+                if (!overlayState || overlayState.open === false) {
+                    return;
+                }
+            } else if (closed[id]) {
+                return;
+            }
+            const entry = this.buildWindowShelfEntry(id);
+            if (entry) {
+                entries.push(entry);
+            }
+        });
+        return entries;
+    };
+
+    getClosedWindowOrderMap = () => {
+        const order = new Map();
+        if (!safeLocalStorage) return order;
+        try {
+            const raw = safeLocalStorage.getItem('window-trash');
+            if (!raw) return order;
+            const parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) return order;
+            parsed.forEach((item) => {
+                if (item && typeof item.id === 'string') {
+                    const closedAt = Number(item.closedAt);
+                    order.set(item.id, Number.isFinite(closedAt) ? closedAt : 0);
+                }
+            });
+        } catch (e) {
+            return order;
+        }
+        return order;
+    };
+
+    getClosedWindowEntries = () => {
+        const closed = this.state.closed_windows || {};
+        const order = this.getClosedWindowOrderMap();
+        const entries = [];
+        Object.keys(closed).forEach((id) => {
+            if (!closed[id]) return;
+            if (!this.validAppIds.has(id)) return;
+            if (this.isOverlayId(id) && !this.recentlyClosedOverlays.has(id)) return;
+            const entry = this.buildWindowShelfEntry(id);
+            if (entry) {
+                const closedAt = order.has(id) ? order.get(id) : 0;
+                entries.push({ ...entry, closedAt });
+            }
+        });
+        entries.sort((a, b) => (b.closedAt || 0) - (a.closedAt || 0));
+        return entries.map(({ id, title, icon }) => ({ id, title, icon }));
     };
 
     getDesktopAppIndex = (id) => {
@@ -2648,6 +2724,7 @@ export class Desktop extends Component {
     };
 
     openOverlay = (key, overrides = {}, callback) => {
+        this.recentlyClosedOverlays.delete(key);
         this.updateOverlayState(
             key,
             (current) => {
@@ -2670,6 +2747,7 @@ export class Desktop extends Component {
     };
 
     closeOverlay = (key, overrides = {}, callback) => {
+        this.recentlyClosedOverlays.add(key);
         this.updateOverlayState(
             key,
             (current) => {
@@ -4020,6 +4098,53 @@ export class Desktop extends Component {
         }
     }
 
+    toggleMinimizedShelf = () => {
+        this.setState((prev) => ({ minimizedShelfOpen: !prev.minimizedShelfOpen }));
+    };
+
+    toggleClosedShelf = () => {
+        this.setState((prev) => ({ closedShelfOpen: !prev.closedShelfOpen }));
+    };
+
+    handleMinimizedWindowActivate = (id) => {
+        if (!id) return;
+        if (this.isOverlayId(id)) {
+            this.openOverlay(id, { transitionState: 'entered' });
+        } else {
+            this.openApp(id);
+        }
+        this.setState({ minimizedShelfOpen: false });
+    };
+
+    handleClosedWindowActivate = (id) => {
+        if (!id) return;
+        if (this.isOverlayId(id)) {
+            this.openOverlay(id, { transitionState: 'entered' });
+        } else {
+            this.openApp(id);
+        }
+        this.setState({ closedShelfOpen: false });
+    };
+
+    dismissClosedWindowEntry = (id) => {
+        if (!id) return;
+        this.setState((prev) => {
+            const current = prev.closed_windows || {};
+            if (!Object.prototype.hasOwnProperty.call(current, id)) {
+                return null;
+            }
+            const closed_windows = { ...current };
+            delete closed_windows[id];
+            this.commitWorkspacePartial({ closed_windows }, prev.activeWorkspace);
+            return { closed_windows };
+        }, () => {
+            if (this.isOverlayId(id)) {
+                this.recentlyClosedOverlays.delete(id);
+            }
+            this.saveSession();
+        });
+    };
+
     checkAllMinimised = () => {
         let result = true;
         for (const key in this.state.minimized_windows) {
@@ -4445,6 +4570,10 @@ export class Desktop extends Component {
         const launcherOverlay = overlayWindows.launcher || { open: false, minimized: false, maximized: false, transitionState: 'exited' };
         const shortcutOverlay = overlayWindows.shortcutSelector || { open: false, minimized: false, maximized: false };
         const windowSwitcherOverlay = overlayWindows.windowSwitcher || { open: false, minimized: false, maximized: false };
+        const minimizedEntries = this.getMinimizedWindowEntries();
+        const closedEntries = this.getClosedWindowEntries();
+        const showMinimizedShelf = this.state.minimizedShelfOpen || minimizedEntries.length > 0;
+        const showClosedShelf = this.state.closedShelfOpen || closedEntries.length > 0;
         return (
             <main
                 id="desktop"
@@ -4527,6 +4656,29 @@ export class Desktop extends Component {
                         : null
                     )
                 }
+
+                {showMinimizedShelf ? (
+                    <MinimizedWindowShelf
+                        label="Minimized windows"
+                        entries={minimizedEntries}
+                        open={this.state.minimizedShelfOpen}
+                        onToggle={this.toggleMinimizedShelf}
+                        onActivate={this.handleMinimizedWindowActivate}
+                        emptyLabel="No windows are minimized"
+                    />
+                ) : null}
+
+                {showClosedShelf ? (
+                    <ClosedWindowShelf
+                        label="Closed windows"
+                        entries={closedEntries}
+                        open={this.state.closedShelfOpen}
+                        onToggle={this.toggleClosedShelf}
+                        onActivate={this.handleClosedWindowActivate}
+                        onRemove={this.dismissClosedWindowEntry}
+                        emptyLabel="No recently closed windows"
+                    />
+                ) : null}
 
                 {this.renderOverlayWindows()}
 
