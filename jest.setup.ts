@@ -107,6 +107,13 @@ if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
   global.IntersectionObserver = IntersectionObserverMock as any;
 }
 
+// jsdom does not implement scrollIntoView; provide a no-op stub so components
+// depending on it do not fail during tests.
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  // eslint-disable-next-line no-empty-function
+  Element.prototype.scrollIntoView = () => {};
+}
+
 // Simple localStorage mock for environments without it
 if (typeof window !== 'undefined' && !window.localStorage) {
   const store: Record<string, string> = {};
