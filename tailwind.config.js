@@ -52,6 +52,7 @@ module.exports = {
           selection: 'var(--color-selection)',
           control: 'var(--color-control-accent)',
           backdrop: 'var(--kali-bg)',
+          magenta: 'var(--kali-magenta)',
         },
       },
       boxShadow: {

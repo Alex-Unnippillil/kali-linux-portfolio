@@ -27,7 +27,8 @@
   --color-text: #f5faff;
   --kali-bg: rgba(9, 15, 23, 0.9);
   --kali-blue: #0f94d2;
-
+  --kali-magenta: #c77dff;
+  
   /* Kali theme tokens */
   --kali-blue-dark: #0a6fa6;
   --kali-blue-glow: rgba(15, 148, 210, 0.35);
@@ -38,6 +39,7 @@
   --kali-terminal-green: #45ff9a;
   --kali-terminal-text: #f8fafc;
   --kali-border: rgba(15, 148, 210, 0.18);
+  --kali-magenta-glow: rgba(199, 125, 255, 0.24);
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
