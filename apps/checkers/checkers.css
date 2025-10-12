@@ -1,11 +1,27 @@
+.board-square {
+  @apply relative isolate flex h-full w-full items-center justify-center rounded-md transition-colors duration-150 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange;
+}
+
 .selected-square {
-  @apply ring-2 ring-green-400;
+  @apply ring-2 ring-offset-2 ring-offset-slate-900/70 ring-emerald-400 shadow-[0_0_0_1px_rgba(16,185,129,0.45)];
 }
 
 .move-square {
-  @apply ring-2 ring-yellow-300 bg-yellow-200/40 animate-pulse;
+  @apply ring-2 ring-offset-2 ring-offset-slate-900/60 ring-amber-300 bg-amber-200/40 shadow-[0_0_0_1px_rgba(251,191,36,0.45)] motion-safe:animate-pulse;
 }
 
 .hint-square {
-  @apply ring-2 ring-blue-400 animate-pulse;
+  @apply ring-2 ring-offset-2 ring-offset-slate-900/60 ring-sky-400 bg-sky-300/25 shadow-[0_0_0_1px_rgba(56,189,248,0.4)] motion-safe:animate-pulse;
+}
+
+.last-move-square {
+  @apply ring-2 ring-offset-2 ring-offset-slate-900/60 ring-orange-400/70;
+}
+
+.last-move-start {
+  @apply bg-orange-400/15;
+}
+
+.last-move-end {
+  @apply bg-orange-400/25;
 }
