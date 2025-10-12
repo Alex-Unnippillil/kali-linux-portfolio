@@ -419,6 +419,14 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
     );
   }
 
+  const baseCellClasses =
+    'word-search-cell flex items-center justify-center border font-semibold tracking-wide cursor-pointer select-none transition-colors duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-selection focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900';
+  const defaultCellClasses = 'word-search-cell-default';
+  const foundCellClasses = 'word-search-cell-found';
+  const hintCellClasses = 'word-search-cell-hint';
+  const selectionCellClasses = 'word-search-cell-selected';
+  const selectionStrokeColor: string = highContrast ? '#facc15' : 'var(--color-selection, #fbbf24)';
+
   return (
     <div className="p-4 select-none">
       <div aria-live="polite" role="status" className="sr-only">
@@ -455,6 +463,7 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
           value={pack}
           onChange={(e) => setPack(e.target.value as PackName | 'random' | 'custom')}
           className="px-2 py-1 border rounded"
+          aria-label="Word list pack"
         >
           <option value="random">Random</option>
           <option value="custom">Custom</option>
@@ -464,19 +473,23 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
             </option>
           ))}
         </select>
-        <label className="flex items-center space-x-1">
+        <label htmlFor="word-search-backwards" className="flex items-center space-x-1">
           <input
+            id="word-search-backwards"
             type="checkbox"
             checked={allowBackwards}
             onChange={(e) => setAllowBackwards(e.target.checked)}
+            aria-label="Allow backwards words"
           />
           <span className="text-sm">Backwards</span>
         </label>
-        <label className="flex items-center space-x-1">
+        <label htmlFor="word-search-diagonal" className="flex items-center space-x-1">
           <input
+            id="word-search-diagonal"
             type="checkbox"
             checked={allowDiagonal}
             onChange={(e) => setAllowDiagonal(e.target.checked)}
+            aria-label="Allow diagonal words"
           />
           <span className="text-sm">Diagonal</span>
         </label>
@@ -506,7 +519,13 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
         >
           Import LB
         </button>
-        <input ref={inputRef} type="file" className="hidden" onChange={importLeaderboard} />
+        <input
+          ref={inputRef}
+          type="file"
+          className="hidden"
+          onChange={importLeaderboard}
+          aria-label="Import leaderboard file"
+        />
         <button
           type="button"
           onClick={useFirstHint}
@@ -523,22 +542,26 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
         >
           Last Hint ({lastHints})
         </button>
-        <label className="flex items-center space-x-1">
+        <label htmlFor="word-search-quality" className="flex items-center space-x-1">
           <span className="text-sm">Quality</span>
           <input
+            id="word-search-quality"
             type="range"
             min="0.5"
             max="1"
             step="0.1"
             value={quality}
             onChange={(e) => setQuality(parseFloat(e.target.value))}
+            aria-label="Grid scale quality"
           />
         </label>
-        <label className="flex items-center space-x-1">
+        <label htmlFor="word-search-high-contrast" className="flex items-center space-x-1">
           <input
+            id="word-search-high-contrast"
             type="checkbox"
             checked={highContrast}
             onChange={(e) => setHighContrast(e.target.checked)}
+            aria-label="Enable high contrast letters"
           />
           <span className="text-sm">High Contrast Letters</span>
         </label>
@@ -553,7 +576,7 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
             gridTemplateColumns: `repeat(${GRID_SIZE}, ${CELL_SIZE}px)`,
             gridTemplateRows: `repeat(${GRID_SIZE}, ${CELL_SIZE}px)`,
           }}
-          className={`grid border w-max ${highContrast ? 'contrast-200' : ''}`}
+          className={`grid w-max overflow-hidden rounded-lg border border-slate-300 bg-white/80 shadow-sm dark:border-slate-700 dark:bg-slate-900/60 ${highContrast ? 'contrast-200' : ''}`}
           role="grid"
           aria-label="Word search grid"
         >
@@ -563,6 +586,13 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
               const isSelected = selection.some((p) => p.row === r && p.col === c);
               const isFound = foundCells.has(posKey);
               const isHint = hintCells.has(posKey);
+              const stateClasses = isFound
+                ? foundCellClasses
+                : isSelected
+                ? selectionCellClasses
+                : isHint
+                ? hintCellClasses
+                : defaultCellClasses;
               return (
                 <div
                   key={posKey}
@@ -578,7 +608,7 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
                   aria-selected={isSelected}
                   onKeyDown={(e) => handleKeyDown(e, r, c)}
                   onKeyUp={handleKeyUp}
-                  className={`flex items-center justify-center border font-bold cursor-pointer select-none ${isFound ? 'bg-blue-300' : isSelected ? 'selection' : isHint ? 'bg-purple-200' : 'bg-white'}`}
+                  className={`${baseCellClasses} ${stateClasses}`}
                   style={{ width: CELL_SIZE, height: CELL_SIZE, fontSize: CELL_SIZE * 0.6 }}
                   aria-label={`row ${r + 1} column ${c + 1} letter ${letter}${isFound ? ' found' : ''}`}
                 >
@@ -595,10 +625,11 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
             height={GRID_SIZE * CELL_SIZE}
           >
             <polyline
+              className="word-search-selection-line"
               points={selection
                 .map((p) => `${p.col * CELL_SIZE + CELL_SIZE / 2},${p.row * CELL_SIZE + CELL_SIZE / 2}`)
                 .join(' ')}
-              stroke="#fbbf24"
+              stroke={selectionStrokeColor}
               strokeWidth={CELL_SIZE - 4}
               fill="none"
               strokeLinecap="round"
@@ -606,11 +637,11 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
           </svg>
         )}
       </div>
-      <ul className="mt-4 flex flex-wrap gap-2 list-none p-0">
+      <ul className="mt-6 grid gap-3 list-none p-0 sm:grid-cols-2 lg:grid-cols-3">
         {words.map((w) => (
           <li
             key={w}
-            className={`px-2 py-1 border rounded-full ${found.has(w) ? 'line-through opacity-60 word-found' : ''}`}
+            className={`word-search-clue${found.has(w) ? ' word-search-clue-found word-found' : ''}`}
           >
             {w}
           </li>
