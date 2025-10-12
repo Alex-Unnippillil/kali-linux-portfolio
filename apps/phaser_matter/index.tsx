@@ -67,6 +67,12 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
     null | { device: 'key' | 'pad'; action: Action }
   >(null);
 
+  const actions: { action: Action; label: string }[] = [
+    { action: 'left', label: 'Left' },
+    { action: 'right', label: 'Right' },
+    { action: 'jump', label: 'Jump' },
+  ];
+
   useEffect(() => {
     // ensure container receives keyboard focus
     containerRef.current?.focus();
@@ -410,87 +416,98 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
         };
 
   return (
-    <div ref={containerRef} className="relative" tabIndex={0}>
-      <button className="absolute left-4 bottom-4" {...bind('left')}>
-        ◀
-      </button>
-      <button className="absolute left-20 bottom-4" {...bind('right')}>
-        ▶
-      </button>
-      <button className="absolute right-4 bottom-4" {...bind('jump')}>
-        ⇧
-      </button>
-      <div className="absolute top-4 left-4 bg-white bg-opacity-80 p-2 rounded text-xs space-y-1">
-        {waiting && <div>Press a {waiting.device === 'key' ? 'key' : 'button'}...</div>}
-        <div>Keyboard</div>
-        <div>
-          Left:
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+      <div
+        ref={containerRef}
+        className="relative flex-1 min-h-[420px] overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/90 shadow-lg focus:outline-none focus:ring-2 focus:ring-cyan-400/60"
+        tabIndex={0}
+      >
+        <div className="pointer-events-none absolute inset-0 rounded-2xl border border-slate-700/60" aria-hidden="true" />
+        <div className="absolute inset-x-6 bottom-6 flex items-center justify-between gap-4 pointer-events-none">
           <button
-            onClick={() => setWaiting({ device: 'key', action: 'left' })}
-            className="ml-1 border px-1"
+            type="button"
+            aria-label="Move left"
+            className="pointer-events-auto rounded-full bg-slate-900/80 px-4 py-3 text-xl font-semibold text-slate-100 shadow transition hover:bg-slate-800"
+            {...bind('left')}
           >
-            {keyMap.left}
+            ◀
           </button>
-        </div>
-        <div>
-          Right:
           <button
-            onClick={() => setWaiting({ device: 'key', action: 'right' })}
-            className="ml-1 border px-1"
+            type="button"
+            aria-label="Move right"
+            className="pointer-events-auto rounded-full bg-slate-900/80 px-4 py-3 text-xl font-semibold text-slate-100 shadow transition hover:bg-slate-800"
+            {...bind('right')}
           >
-            {keyMap.right}
+            ▶
           </button>
-        </div>
-        <div>
-          Jump:
           <button
-            onClick={() => setWaiting({ device: 'key', action: 'jump' })}
-            className="ml-1 border px-1"
+            type="button"
+            aria-label="Jump"
+            className="pointer-events-auto rounded-full bg-slate-900/80 px-4 py-3 text-xl font-semibold text-slate-100 shadow transition hover:bg-slate-800"
+            {...bind('jump')}
           >
-            {keyMap.jump}
+            ⇧
           </button>
-        </div>
-        <div className="pt-2">Gamepad</div>
-        <div>
-          Left:
-          <button
-            onClick={() => setWaiting({ device: 'pad', action: 'left' })}
-            className="ml-1 border px-1"
-          >
-            {padMap.left}
-          </button>
-        </div>
-        <div>
-          Right:
-          <button
-            onClick={() => setWaiting({ device: 'pad', action: 'right' })}
-            className="ml-1 border px-1"
-          >
-            {padMap.right}
-          </button>
-        </div>
-        <div>
-          Jump:
-          <button
-            onClick={() => setWaiting({ device: 'pad', action: 'jump' })}
-            className="ml-1 border px-1"
-          >
-            {padMap.jump}
-          </button>
-        </div>
-        <div className="pt-2">
-          Buffer:
-          <input
-            type="range"
-            min={0}
-            max={300}
-            value={bufferWindow}
-            onChange={(e) => setBufferWindow(Number(e.target.value))}
-            className="mx-1"
-          />
-          {bufferWindow}ms
         </div>
       </div>
+      <aside className="w-full space-y-4 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-sm leading-relaxed text-slate-100 shadow-lg lg:w-72">
+        {waiting && (
+          <div className="rounded-lg bg-amber-500/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-amber-200">
+            Press a {waiting.device === 'key' ? 'key' : 'button'}...
+          </div>
+        )}
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Keyboard</h2>
+          <div className="space-y-2">
+            {actions.map((entry) => (
+              <div key={`key-${entry.action}`} className="flex items-center justify-between gap-2">
+                <span>{entry.label}</span>
+                <button
+                  type="button"
+                  onClick={() => setWaiting({ device: 'key', action: entry.action })}
+                  className="rounded-md border border-slate-600/80 bg-slate-950/40 px-2 py-1 text-xs font-medium text-slate-100 transition hover:border-cyan-400 hover:text-cyan-200"
+                >
+                  {keyMap[entry.action]}
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Gamepad</h2>
+          <div className="space-y-2">
+            {actions.map((entry) => (
+              <div key={`pad-${entry.action}`} className="flex items-center justify-between gap-2">
+                <span>{entry.label}</span>
+                <button
+                  type="button"
+                  onClick={() => setWaiting({ device: 'pad', action: entry.action })}
+                  className="rounded-md border border-slate-600/80 bg-slate-950/40 px-2 py-1 text-xs font-medium text-slate-100 transition hover:border-cyan-400 hover:text-cyan-200"
+                >
+                  {padMap[entry.action]}
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Jump Buffer</h2>
+          <label htmlFor="jump-buffer" className="block space-y-2 text-xs text-slate-400">
+            <span>Control how long a jump input remains buffered after pressing the button.</span>
+            <input
+              id="jump-buffer"
+              type="range"
+              min={0}
+              max={300}
+              value={bufferWindow}
+              onChange={(e) => setBufferWindow(Number(e.target.value))}
+              aria-label="Jump buffer window"
+              className="w-full accent-cyan-400"
+            />
+          </label>
+          <div className="text-right text-xs font-semibold text-cyan-200">{bufferWindow}ms</div>
+        </section>
+      </aside>
     </div>
   );
 };
