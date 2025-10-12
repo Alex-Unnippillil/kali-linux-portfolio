@@ -16,6 +16,8 @@
   --color-inverse: #000000; /* inverse of text */
   --color-border: var(--kali-border); /* subtle borders */
   --color-terminal: var(--kali-terminal-green); /* terminal green */
+  --color-success: var(--kali-terminal-green);
+  --color-warning: color-mix(in srgb, #f59e0b 80%, var(--kali-bg) 20%);
   --color-dark: #09121c; /* card back */
   --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
@@ -41,6 +43,8 @@ html[data-theme='dark'] {
   --color-inverse: #ffffff;
   --color-border: #333333;
   --color-terminal: #00ff00;
+  --color-success: #00ff00;
+  --color-warning: #fbbf24;
   --color-dark: #0a0a0a;
 }
 
@@ -56,6 +60,8 @@ html[data-theme='neon'] {
   --color-inverse: #ffffff;
   --color-border: #333333;
   --color-terminal: #39ff14;
+  --color-success: #39ff14;
+  --color-warning: #ff7f00;
   --color-dark: #000000;
 }
 
@@ -71,6 +77,8 @@ html[data-theme='matrix'] {
   --color-inverse: #ffffff;
   --color-border: #003300;
   --color-terminal: #00ff00;
+  --color-success: #00ff00;
+  --color-warning: #66ff00;
   --color-dark: #000000;
 
 }
