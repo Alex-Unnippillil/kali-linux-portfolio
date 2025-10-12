@@ -38,6 +38,9 @@
   --kali-terminal-green: #45ff9a;
   --kali-terminal-text: #f8fafc;
   --kali-border: rgba(15, 148, 210, 0.18);
+  --kali-surface: rgba(17, 27, 36, 0.92);
+  --kali-overlay: rgba(17, 27, 36, 0.7);
+  --kali-control: var(--kali-blue);
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
