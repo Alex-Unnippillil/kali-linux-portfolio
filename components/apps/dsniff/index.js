@@ -47,12 +47,12 @@ const protocolIcons = {
   SSH: '🔐',
 };
 
-const protocolColors = {
-  HTTP: 'bg-blue-500',
-  HTTPS: 'bg-green-500',
-  ARP: 'bg-yellow-500',
-  FTP: 'bg-red-500',
-  SSH: 'bg-purple-500',
+const protocolAccents = {
+  HTTP: 'from-blue-500/70 via-blue-400/60 to-blue-500/40 text-blue-200',
+  HTTPS: 'from-emerald-500/70 via-emerald-400/60 to-emerald-500/40 text-emerald-200',
+  ARP: 'from-amber-500/70 via-amber-400/60 to-amber-500/40 text-amber-200',
+  FTP: 'from-rose-500/70 via-rose-400/60 to-rose-500/40 text-rose-200',
+  SSH: 'from-violet-500/70 via-violet-400/60 to-violet-500/40 text-violet-200',
 };
 
 const protocolRisks = {
@@ -63,10 +63,10 @@ const protocolRisks = {
   SSH: 'Medium',
 };
 
-const riskColors = {
-  High: 'text-red-400',
-  Medium: 'text-yellow-300',
-  Low: 'text-green-400',
+const riskBadgeStyles = {
+  High: 'bg-red-500/20 text-red-200 ring-1 ring-inset ring-red-500/40',
+  Medium: 'bg-amber-500/20 text-amber-200 ring-1 ring-inset ring-amber-500/40',
+  Low: 'bg-emerald-500/15 text-emerald-200 ring-1 ring-inset ring-emerald-400/40',
 };
 
 const suiteTools = [
@@ -111,20 +111,26 @@ const LogRow = ({ log, prefersReduced }) => {
   }, [prefersReduced]);
 
   return (
-    <tr ref={rowRef} className="odd:bg-black even:bg-ub-grey">
-      <td className="pr-2 text-gray-400 whitespace-nowrap">{log.timestamp}</td>
-      <td className="pr-2 text-green-400">
-
+    <tr
+      ref={rowRef}
+      className="odd:bg-slate-950/40 even:bg-slate-950/70 transition-colors"
+    >
+      <td className="whitespace-nowrap px-3 py-2 text-[11px] uppercase tracking-wide text-slate-500">
+        {log.timestamp}
+      </td>
+      <td className="px-3 py-2 text-xs font-semibold text-emerald-300">
         <abbr
           title={protocolInfo[log.protocol] || log.protocol}
-          className="underline decoration-dotted cursor-help"
+          className="cursor-help underline decoration-dotted decoration-emerald-400/70"
           tabIndex={0}
         >
           {log.protocol}
         </abbr>
       </td>
-      <td className="px-2 py-[6px] text-white">{log.host}</td>
-      <td className="px-2 py-[6px] text-green-400">{log.details}</td>
+      <td className="px-3 py-2 text-sm text-slate-100">{log.host}</td>
+      <td className="px-3 py-2 font-mono text-xs leading-5 text-emerald-300">
+        {log.details}
+      </td>
     </tr>
   );
 };
@@ -142,8 +148,12 @@ const TimelineItem = ({ log, prefersReduced }) => {
   }, [prefersReduced]);
 
   return (
-    <li ref={itemRef} className="mb-1">
-      <span className="text-green-400">{log.protocol}</span> {log.host} {log.details}
+    <li
+      ref={itemRef}
+      className="rounded-lg border border-slate-800/70 bg-slate-950/60 px-3 py-2 text-xs leading-5 text-slate-200 shadow-sm"
+    >
+      <span className="font-semibold text-emerald-300">{log.protocol}</span> {log.host}{' '}
+      <span className="text-emerald-200/80">{log.details}</span>
     </li>
   );
 };
@@ -152,15 +162,15 @@ const Credential = ({ cred }) => {
   const [show, setShow] = useState(false);
   const hidden = cred.password && !show;
   return (
-    <span className="mr-2 inline-flex items-center">
-      <span className="mr-1">{protocolIcons[cred.protocol] || '❓'}</span>
-      <span>{cred.username}</span>
+    <span className="mr-2 inline-flex items-center gap-1 rounded-full border border-slate-800 bg-slate-950/60 px-2 py-1 text-[11px] text-slate-100 shadow-sm">
+      <span aria-hidden>{protocolIcons[cred.protocol] || '❓'}</span>
+      <span className="font-medium">{cred.username}</span>
       {cred.password && (
         <>
-          <span>:</span>
-          <span className="ml-1">{hidden ? '***' : cred.password}</span>
+          <span className="text-slate-500">•</span>
+          <span>{hidden ? '•••' : cred.password}</span>
           <button
-            className="ml-1 text-ubt-blue text-xs"
+            className="ml-1 rounded px-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-300 transition hover:text-emerald-200"
             onClick={() => setShow(!show)}
           >
             {hidden ? 'Show' : 'Hide'}
@@ -172,18 +182,23 @@ const Credential = ({ cred }) => {
 };
 
 const SessionTile = ({ session, onView }) => (
-  <div className="flex bg-ub-grey rounded overflow-hidden">
+  <div className="group flex items-start gap-3 rounded-xl border border-slate-800/80 bg-slate-900/70 p-3 shadow-sm transition hover:border-slate-700 hover:bg-slate-900">
     <div
-      className={`w-1 ${protocolColors[session.protocol] || 'bg-gray-500'}`}
-    />
-    <div className="flex-1 p-2 space-y-1">
-      <div className="flex items-center justify-between">
-        <span className="text-xl">
-          {protocolIcons[session.protocol] || '❓'}
-        </span>
-        <div className="flex space-x-1">
+      className={`flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br text-xl font-semibold ${
+        protocolAccents[session.protocol] || 'from-slate-600 via-slate-500 to-slate-600 text-slate-100'
+      }`}
+      aria-hidden
+    >
+      {protocolIcons[session.protocol] || '❓'}
+    </div>
+    <div className="flex-1 space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="text-sm font-medium text-slate-100">
+          {session.protocol} session
+        </div>
+        <div className="flex items-center gap-2">
           <button
-            className="w-6 h-6 flex items-center justify-center bg-gray-700 rounded"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-700 bg-slate-800/70 text-xs text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
             title="Copy session"
             onClick={() =>
               navigator.clipboard?.writeText(
@@ -194,7 +209,7 @@ const SessionTile = ({ session, onView }) => (
             📋
           </button>
           <button
-            className="w-6 h-6 flex items-center justify-center bg-gray-700 rounded"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-700 bg-slate-800/70 text-xs text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
             title="View details"
             onClick={onView}
           >
@@ -202,10 +217,20 @@ const SessionTile = ({ session, onView }) => (
           </button>
         </div>
       </div>
-      <div className="text-xs text-white">
-        {session.src} → {session.dst}
+      <div className="space-y-1 text-xs leading-relaxed text-slate-300">
+        <div className="flex flex-wrap items-center gap-1 text-[11px] uppercase tracking-wide text-slate-400">
+          <span className="rounded-full bg-slate-800/80 px-2 py-0.5 text-slate-200 shadow-inner">
+            {session.src}
+          </span>
+          <span className="text-slate-500">→</span>
+          <span className="rounded-full bg-slate-800/80 px-2 py-0.5 text-slate-200 shadow-inner">
+            {session.dst}
+          </span>
+        </div>
+        <div className="rounded-lg bg-slate-950/60 px-3 py-2 font-mono text-[11px] text-emerald-300 shadow-inner">
+          {session.info}
+        </div>
       </div>
-      <div className="text-xs text-green-400">{session.info}</div>
     </div>
   </div>
 );
@@ -349,316 +374,407 @@ const Dsniff = () => {
   });
 
   return (
-    <div className="h-full w-full bg-ub-cool-grey text-white p-2 overflow-auto">
-      <div className="mb-2 flex items-center justify-between">
-        <h1 className="text-lg">dsniff</h1>
-        <button
-          onClick={exportSummary}
-          className="px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400"
-        >
-          Export summary
-        </button>
-      </div>
-      <div className="mb-2 text-yellow-300 text-sm">
-        For lab use only – simulated traffic
-      </div>
-      <div className="mb-4" data-testid="suite-tools">
-        <h2 className="font-bold mb-2 text-sm">Suite tools</h2>
-        <table className="w-full text-left text-xs">
-          <thead>
-            <tr className="text-green-400">
-              <th className="pr-2">Tool</th>
-              <th className="pr-2">Description</th>
-              <th className="pr-2">Risk</th>
-              <th>Reference</th>
-            </tr>
-          </thead>
-          <tbody>
-            {suiteTools.map((t) => (
-              <tr key={t.tool} className="odd:bg-black even:bg-ub-grey">
-                <td className="pr-2 text-green-400">{t.tool}</td>
-                <td className="pr-2 text-white">{t.description}</td>
-                <td className="pr-2 text-red-400">{t.risk}</td>
-                <td>
-                  <a
-                    href={t.reference}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline text-ubt-blue"
-                  >
-                    man
-                  </a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="mb-4 flex flex-col md:flex-row gap-4" data-testid="how-it-works">
-        <div className="md:w-1/2 bg-black p-2">
-          <h2 className="font-bold mb-2 text-sm">How it works</h2>
-          <svg
-            viewBox="0 0 200 80"
-            role="img"
-            aria-label="Attacker intercepting traffic between victim and server"
-            className="w-full h-32"
+    <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 md:px-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold text-slate-100 md:text-2xl">dsniff capture console</h1>
+            <p className="max-w-xl text-sm leading-relaxed text-slate-300/90">
+              Review simulated urlsnarf and arpspoof captures alongside analyst-friendly summaries and mitigations.
+            </p>
+          </div>
+          <button
+            onClick={exportSummary}
+            className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-200 shadow-sm transition hover:border-emerald-400/70 hover:bg-emerald-500/20 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 focus:ring-offset-2 focus:ring-offset-slate-900"
           >
-            <title>dsniff flow</title>
-            <desc>Attacker positioned between victim and server capturing HTTP requests</desc>
-            <defs>
-              <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-                <polygon points="0 0,10 3.5,0 7" fill="#fbbf24" />
-              </marker>
-            </defs>
-            <rect x="10" y="25" width="50" height="30" fill="#1f2937" />
-            <text x="35" y="43" fontSize="10" fill="#fff" textAnchor="middle">
-              Victim
-            </text>
-            <rect x="140" y="25" width="50" height="30" fill="#1f2937" />
-            <text x="165" y="43" fontSize="10" fill="#fff" textAnchor="middle">
-              Server
-            </text>
-            <rect x="80" y="10" width="40" height="60" fill="#374151" />
-            <text x="100" y="43" fontSize="10" fill="#fff" textAnchor="middle">
-              Attacker
-            </text>
-            <line x1="60" y1="40" x2="80" y2="40" stroke="#fbbf24" strokeWidth="2" markerEnd="url(#arrow)" />
-            <line x1="120" y1="40" x2="140" y2="40" stroke="#fbbf24" strokeWidth="2" markerEnd="url(#arrow)" />
-          </svg>
-          <p className="text-xs mt-2">
-            Tools like <code>urlsnarf</code> sniff traffic and log requests for analysis.
-          </p>
+            <span>Export summary</span>
+          </button>
         </div>
-        <div className="md:w-1/2 bg-black p-2 flex flex-col">
-          <div className="flex items-center justify-between mb-2">
-            <span className="font-bold text-sm">Sample command</span>
-            <button
-              onClick={copySampleCommand}
-              className="px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400"
+
+        <div
+          className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 shadow-inner"
+          role="alert"
+        >
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 text-lg" aria-hidden>
+              ⚠️
+            </span>
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-200/90">
+                Lab notice
+              </p>
+              <p className="leading-relaxed text-amber-100/90">
+                For lab use only – simulated traffic
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <section className="space-y-3" data-testid="suite-tools">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+            Suite tools
+          </h2>
+          <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/50 shadow-sm">
+            <table className="w-full table-fixed text-left text-xs md:text-sm">
+              <thead className="bg-slate-900/60 text-[11px] uppercase tracking-[0.25em] text-slate-400">
+                <tr>
+                  <th className="px-4 py-3">Tool</th>
+                  <th className="px-4 py-3">Description</th>
+                  <th className="px-4 py-3">Risk</th>
+                  <th className="px-4 py-3">Reference</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/70">
+                {suiteTools.map((t) => (
+                  <tr key={t.tool} className="transition hover:bg-slate-900/40">
+                    <td className="px-4 py-3 font-semibold text-emerald-300">{t.tool}</td>
+                    <td className="px-4 py-3 text-slate-200">{t.description}</td>
+                    <td className="px-4 py-3 text-rose-200/90">{t.risk}</td>
+                    <td className="px-4 py-3">
+                      <a
+                        href={t.reference}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-ubt-blue underline decoration-dotted underline-offset-4 hover:text-blue-200"
+                      >
+                        man page ↗
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-2" data-testid="how-it-works">
+          <div className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">How it works</h2>
+            <svg
+              viewBox="0 0 200 80"
+              role="img"
+              aria-label="Attacker intercepting traffic between victim and server"
+              className="mt-4 h-32 w-full"
             >
-              Copy sample command
+              <title>dsniff flow</title>
+              <desc>Attacker positioned between victim and server capturing HTTP requests</desc>
+              <defs>
+                <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                  <polygon points="0 0,10 3.5,0 7" fill="#fbbf24" />
+                </marker>
+              </defs>
+              <rect x="10" y="25" width="50" height="30" fill="#1f2937" />
+              <text x="35" y="43" fontSize="10" fill="#fff" textAnchor="middle">
+                Victim
+              </text>
+              <rect x="140" y="25" width="50" height="30" fill="#1f2937" />
+              <text x="165" y="43" fontSize="10" fill="#fff" textAnchor="middle">
+                Server
+              </text>
+              <rect x="80" y="10" width="40" height="60" fill="#374151" />
+              <text x="100" y="43" fontSize="10" fill="#fff" textAnchor="middle">
+                Attacker
+              </text>
+              <line x1="60" y1="40" x2="80" y2="40" stroke="#fbbf24" strokeWidth="2" markerEnd="url(#arrow)" />
+              <line x1="120" y1="40" x2="140" y2="40" stroke="#fbbf24" strokeWidth="2" markerEnd="url(#arrow)" />
+            </svg>
+            <p className="mt-3 text-xs leading-relaxed text-slate-300">
+              Tools like <code>urlsnarf</code> sniff traffic and log requests for analysis.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-semibold uppercase tracking-wide text-slate-300">Sample command</span>
+              <button
+                onClick={copySampleCommand}
+                className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-100 transition hover:border-slate-500 hover:bg-slate-900"
+              >
+                Copy sample command
+              </button>
+            </div>
+            <div className="overflow-hidden rounded-lg border border-slate-800 bg-black/60">
+              <TerminalOutput text={`${sampleCommand}\n${sampleOutput}`} ariaLabel="sample command output" />
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-4" data-testid="pcap-demo">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+            PCAP credential leakage demo
+          </h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+            {pcapSummary.map((pkt, i) => (
+              <SessionTile key={`tile-${i}`} session={pkt} onView={() => setSelectedPacket(i)} />
+            ))}
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/50 shadow-sm">
+            <table className="w-full text-left text-xs md:text-sm">
+              <thead className="bg-slate-900/60 text-[11px] uppercase tracking-[0.25em] text-slate-400">
+                <tr>
+                  <th className="px-4 py-3">Src</th>
+                  <th className="px-4 py-3">Dst</th>
+                  <th className="px-4 py-3">Protocol</th>
+                  <th className="px-4 py-3">Info</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/70">
+                {pcapSummary.map((pkt, i) => (
+                  <tr
+                    key={i}
+                    tabIndex={0}
+                    onClick={() => setSelectedPacket(i)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') setSelectedPacket(i);
+                    }}
+                    className={`cursor-pointer transition ${
+                      selectedPacket === i
+                        ? 'bg-emerald-500/10'
+                        : 'hover:bg-slate-900/40'
+                    }`}
+                  >
+                    <td className="px-4 py-3 text-slate-100">{pkt.src}</td>
+                    <td className="px-4 py-3 text-slate-100">{pkt.dst}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+                        protocolAccents[pkt.protocol] || 'from-slate-600 via-slate-500 to-slate-600 text-slate-100'
+                      } bg-gradient-to-br`}
+                      >
+                        {pkt.protocol}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs leading-5 text-emerald-300">{pkt.info}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <button
+              onClick={copySelectedPacket}
+              disabled={selectedPacket === null}
+              className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-900/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-100 transition hover:border-slate-500 hover:bg-slate-900 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-500"
+            >
+              Copy selected row
+            </button>
+            <div className="rounded-xl border border-slate-800/80 bg-slate-950/60 p-4">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Remediation</h3>
+              <ul className="mt-2 space-y-1 text-xs leading-relaxed text-slate-200">
+                {remediation.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-3" data-testid="domain-summary">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+            Parsed credentials/URLs by domain
+          </h2>
+          <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/50 shadow-sm">
+            <table className="w-full text-left text-xs md:text-sm">
+              <thead className="bg-slate-900/60 text-[11px] uppercase tracking-[0.25em] text-slate-400">
+                <tr>
+                  <th className="px-4 py-3">Domain</th>
+                  <th className="px-4 py-3">URLs</th>
+                  <th className="px-4 py-3">Credentials</th>
+                  <th className="px-4 py-3">Risk</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/70">
+                {domainSummary.map((d) => (
+                  <tr key={d.domain} className="transition hover:bg-slate-900/40">
+                    <td className="px-4 py-3 text-slate-100">{d.domain}</td>
+                    <td className="px-4 py-3 text-emerald-300">
+                      {d.urls.length ? d.urls.join(', ') : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-slate-100">
+                      {d.credentials.length ? (
+                        <div className="flex flex-wrap gap-2">
+                          {d.credentials.map((c, i) => (
+                            <Credential cred={c} key={i} />
+                          ))}
+                        </div>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+                          riskBadgeStyles[d.risk] || 'bg-slate-800 text-slate-200'
+                        }`}
+                      >
+                        {d.risk}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="space-y-3" data-testid="capture-timeline">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Capture timeline</h2>
+          <ol className="space-y-2 text-xs">
+            {timeline.map((log, i) => (
+              <TimelineItem key={i} log={log} prefersReduced={prefersReduced} />
+            ))}
+          </ol>
+        </section>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="inline-flex rounded-full border border-slate-700 bg-slate-900/60 p-1">
+            <button
+              className={`rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-wide transition ${
+                activeTab === 'urlsnarf'
+                  ? 'bg-slate-800 text-emerald-300'
+                  : 'text-slate-300 hover:text-emerald-200'
+              }`}
+              onClick={() => setActiveTab('urlsnarf')}
+            >
+              urlsnarf
+            </button>
+            <button
+              className={`rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-wide transition ${
+                activeTab === 'arpspoof'
+                  ? 'bg-slate-800 text-emerald-300'
+                  : 'text-slate-300 hover:text-emerald-200'
+              }`}
+              onClick={() => setActiveTab('arpspoof')}
+            >
+              arpspoof
             </button>
           </div>
-          <TerminalOutput
-            text={`${sampleCommand}\n${sampleOutput}`}
-            ariaLabel="sample command output"
-          />
-        </div>
-      </div>
-      <div className="mb-4" data-testid="pcap-demo">
-        <h2 className="font-bold mb-2 text-sm">PCAP credential leakage demo</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 mb-2">
-          {pcapSummary.map((pkt, i) => (
-            <SessionTile key={`tile-${i}`} session={pkt} onView={() => setSelectedPacket(i)} />
-          ))}
-        </div>
-        <table className="w-full text-left text-xs mb-2">
-          <thead>
-            <tr className="text-green-400">
-              <th className="pr-2">Src</th>
-              <th className="pr-2">Dst</th>
-              <th className="pr-2">Protocol</th>
-              <th>Info</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pcapSummary.map((pkt, i) => (
-              <tr
-                key={i}
-                tabIndex={0}
-                onClick={() => setSelectedPacket(i)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') setSelectedPacket(i);
-                }}
-                className={`cursor-pointer ${
-                  selectedPacket === i
-                    ? 'bg-ubt-blue'
-                    : i % 2 === 0
-                    ? 'bg-black'
-                    : 'bg-ub-grey'
-                }`}
-              >
-                <td className="pr-2 text-white">{pkt.src}</td>
-                <td className="pr-2 text-white">{pkt.dst}</td>
-                <td className="pr-2 text-green-400">{pkt.protocol}</td>
-                <td className="text-green-400">{pkt.info}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <button
-          onClick={copySelectedPacket}
-          disabled={selectedPacket === null}
-          className="mb-2 px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50"
-        >
-          Copy selected row
-        </button>
-        <div className="bg-black p-2">
-          <h3 className="font-bold mb-1 text-sm">Remediation</h3>
-          <ul className="list-disc pl-5 text-xs">
-            {remediation.map((item, i) => (
-              <li key={i}>{item}</li>
-            ))}
-          </ul>
-        </div>
-      </div>
-      <div className="mb-4" data-testid="domain-summary">
-        <h2 className="font-bold mb-2 text-sm">
-          Parsed credentials/URLs by domain
-        </h2>
-        <table className="w-full text-left text-xs mb-2">
-          <thead>
-            <tr className="text-green-400">
-              <th className="pr-2">Domain</th>
-              <th className="pr-2">URLs</th>
-              <th className="pr-2">Credentials</th>
-              <th>Risk</th>
-            </tr>
-          </thead>
-          <tbody>
-            {domainSummary.map((d) => (
-              <tr key={d.domain} className="odd:bg-black even:bg-ub-grey">
-                <td className="pr-2 text-white">{d.domain}</td>
-                <td className="pr-2 text-green-400">{d.urls.join(', ')}</td>
-                <td className="pr-2 text-white">
-                  {d.credentials.length ? (
-                    <div className="flex flex-col">
-                      {d.credentials.map((c, i) => (
-                        <Credential cred={c} key={i} />
-                      ))}
-                    </div>
-                  ) : (
-                    '—'
-                  )}
-                </td>
-                <td className={riskColors[d.risk]}>{d.risk}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="mb-4" data-testid="capture-timeline">
-        <h2 className="font-bold mb-2 text-sm">Capture timeline</h2>
-        <ol className="list-decimal pl-5 text-xs">
-          {timeline.map((log, i) => (
-            <TimelineItem key={i} log={log} prefersReduced={prefersReduced} />
-          ))}
-        </ol>
-      </div>
-      <div className="mb-2 flex space-x-2 items-center">
-        <button
-          className={`px-2 ${
-            activeTab === 'urlsnarf' ? 'bg-black text-green-500' : 'bg-ub-grey'
-          }`}
-          onClick={() => setActiveTab('urlsnarf')}
-        >
-          urlsnarf
-        </button>
-        <button
-          className={`px-2 ${
-            activeTab === 'arpspoof' ? 'bg-black text-green-500' : 'bg-ub-grey'
-          }`}
-          onClick={() => setActiveTab('arpspoof')}
-        >
-          arpspoof
-        </button>
-      </div>
-      <div className="mb-2 flex flex-wrap gap-2">
-        {Object.entries(protocolRisks).map(([proto, risk]) => (
-          <button
-            key={proto}
-            className={`px-2 ${
-              protocolFilter.includes(proto) ? 'bg-black' : 'bg-ub-grey'
-            } ${riskColors[risk]}`}
-            onClick={() =>
-              setProtocolFilter((prev) =>
-                prev.includes(proto)
-                  ? prev.filter((p) => p !== proto)
-                  : [...prev, proto]
-              )
-            }
-          >
-            {proto}
-          </button>
-        ))}
-      </div>
-      <div className="mb-2">
-        <input
-          className="w-full text-black p-1"
-          placeholder="Search logs"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-      <div className="mb-2">
-        <div className="flex space-x-2 mb-2">
-          <select
-            value={newField}
-            onChange={(e) => setNewField(e.target.value)}
-            className="text-black"
-          >
-            <option value="host">host</option>
-            <option value="protocol">protocol</option>
-          </select>
-          <input
-            className="flex-1 text-black p-1"
-            placeholder="Value"
-            value={newValue}
-            onChange={(e) => setNewValue(e.target.value)}
-          />
-          <button
-            className="bg-ub-blue text-white px-2"
-            onClick={addFilter}
-          >
-            Add
-          </button>
-        </div>
-        <div className="flex flex-wrap">
-          {filters.map((f, i) => (
-            <span
-              key={i}
-              className="bg-ub-grey text-white px-2 py-1 mr-1 mb-1"
-            >
-              {`${f.field}:${f.value}`}
+          <div className="flex flex-wrap items-center gap-2">
+            {Object.entries(protocolRisks).map(([proto, risk]) => (
               <button
-                className="ml-1 text-red-400"
-                onClick={() => removeFilter(i)}
+                key={proto}
+                className={`inline-flex items-center rounded-full border border-slate-700 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide transition ${
+                  protocolFilter.includes(proto)
+                    ? 'bg-slate-800 text-emerald-300'
+                    : 'bg-slate-900/60 text-slate-300 hover:text-emerald-200'
+                } ${riskBadgeStyles[risk] || ''}`}
+                onClick={() =>
+                  setProtocolFilter((prev) =>
+                    prev.includes(proto)
+                      ? prev.filter((p) => p !== proto)
+                      : [...prev, proto]
+                  )
+                }
               >
-                x
+                {proto}
               </button>
-            </span>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
-      <div
-        className="bg-black text-green-400 p-2 h-40 overflow-auto font-mono"
-        aria-live="polite"
-        role="log"
-      >
-        {filteredLogs.length ? (
-          <table className="w-full text-left text-sm font-mono">
-            <thead>
-              <tr className="text-gray-400">
-                <th className="pr-2">Time</th>
-                <th className="pr-2">Protocol</th>
-                <th className="pr-2">Host</th>
-                <th>Details</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredLogs.map((log, i) => (
-                <LogRow
-                  key={`${log.raw}-${i}`}
-                  log={log}
-                  prefersReduced={prefersReduced}
-                />
+
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div>
+            <label
+              id="dsniff-search-label"
+              className="text-[11px] font-semibold uppercase tracking-wide text-slate-400"
+              htmlFor="dsniff-search"
+            >
+              Search logs
+            </label>
+            <input
+              id="dsniff-search"
+              type="search"
+              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+              placeholder="Filter captured lines"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              aria-labelledby="dsniff-search-label"
+            />
+          </div>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400" id="dsniff-advanced-filter">
+              Advanced filter
+            </p>
+            <div className="mt-1 flex flex-wrap gap-2" aria-labelledby="dsniff-advanced-filter">
+              <label className="sr-only" htmlFor="dsniff-filter-field">
+                Filter field
+              </label>
+              <select
+                id="dsniff-filter-field"
+                value={newField}
+                onChange={(e) => setNewField(e.target.value)}
+                className="rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1 text-sm text-white focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+              >
+                <option value="host">host</option>
+                <option value="protocol">protocol</option>
+              </select>
+              <label className="sr-only" htmlFor="dsniff-filter-value">
+                Filter value
+              </label>
+              <input
+                id="dsniff-filter-value"
+                className="flex-1 rounded-md border border-slate-700 bg-slate-950/60 px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                placeholder="Value"
+                value={newValue}
+                onChange={(e) => setNewValue(e.target.value)}
+                aria-labelledby="dsniff-advanced-filter"
+              />
+              <button
+                className="inline-flex items-center rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-200 transition hover:border-emerald-400/70 hover:bg-emerald-500/20"
+                onClick={addFilter}
+              >
+                Add filter
+              </button>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {filters.map((f, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-[11px] text-slate-100"
+                >
+                  {`${f.field}:${f.value}`}
+                  <button
+                    className="rounded-full bg-slate-800/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-200 transition hover:text-rose-100"
+                    onClick={() => removeFilter(i)}
+                    aria-label={`Remove filter ${f.field}:${f.value}`}
+                  >
+                    ✕
+                  </button>
+                </span>
               ))}
-            </tbody>
-          </table>
-        ) : (
-          <div>No data</div>
-        )}
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="h-56 overflow-auto rounded-2xl border border-slate-800/80 bg-black/70 text-emerald-300 shadow-inner"
+          aria-live="polite"
+          role="log"
+        >
+          {filteredLogs.length ? (
+            <table className="w-full text-left text-sm">
+              <thead className="sticky top-0 bg-black/80 text-[11px] uppercase tracking-[0.25em] text-slate-500">
+                <tr>
+                  <th className="px-3 py-2">Time</th>
+                  <th className="px-3 py-2">Protocol</th>
+                  <th className="px-3 py-2">Host</th>
+                  <th className="px-3 py-2">Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredLogs.map((log, i) => (
+                  <LogRow
+                    key={`${log.raw}-${i}`}
+                    log={log}
+                    prefersReduced={prefersReduced}
+                  />
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="flex h-full items-center justify-center text-sm text-slate-400">
+              No data
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
