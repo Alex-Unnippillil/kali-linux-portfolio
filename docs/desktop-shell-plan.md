@@ -6,7 +6,7 @@
 - Declares overlay metadata (launcher, shortcut selector, window switcher, command palette) and manages normalized state maps so each overlay tracks `open`, `minimized`, `maximized`, `focused`, and launcher transition state flags.【F:components/screen/desktop.js†L108-L158】
 - Bootstraps multi-workspace scaffolding: four workspaces, snapshot storage for window state per workspace, and overlay-aware defaults for focused/closed/minimized windows along with persisted window sizes and desktop layout settings.【F:components/screen/desktop.js†L183-L360】
 - Coordinates runtime shell behavior including workspace switching, stack promotion, and broadcasting `workspace-state` custom events so other modules can react to active workspace, running apps, and icon sizing changes.【F:components/screen/desktop.js†L2440-L2501】
-- Provides overlay orchestration helpers (`updateOverlayState`, `openOverlay`, `closeOverlay`, `restoreOverlay`) that encapsulate focus, transitions, and minimization semantics for both system overlays and app windows.【F:components/screen/desktop.js†L2520-L2600】
+- Provides overlay orchestration helpers (`syncOverlayWindowFlags`, `updateOverlayState`, `openOverlay`, `closeOverlay`, `restoreOverlay`) that encapsulate focus, transitions, and minimization semantics for both system overlays and app windows.【F:components/screen/desktop.js†L1599-L1779】【F:components/screen/desktop.js†L2788-L2835】
 - Handles global shortcuts, including forwarding `super-arrow` events for snapping commands and toggling overlays based on keyboard combos, anchoring accessibility focus loops to overlays such as the all-apps view.【F:components/screen/desktop.js†L2986-L3070】
 
 ### `components/base/window.js`
@@ -29,7 +29,7 @@
 ## Internal APIs & Refactor Opportunities
 
 - **Overlay registry** — IDs such as `overlay-launcher`, `overlay-shortcut-selector`, `overlay-window-switcher`, and `overlay-command-palette` are centralized for consistency; consider extracting them into a typed module so overlays and analytics share the same contract.【F:components/screen/desktop.js†L108-L135】
-- **Overlay state transitions** — `updateOverlayState`, `openOverlay`, and `closeOverlay` merge overrides while enforcing default flags. Refactor into a standalone overlay manager to decouple state mutation from `Desktop`’s render cycle and enable unit testing of transition states.【F:components/screen/desktop.js†L2520-L2593】
+- **Overlay state transitions** — `updateOverlayState`, `openOverlay`, and `closeOverlay` merge overrides while enforcing default flags. Refactor into a standalone overlay manager to decouple state mutation from `Desktop`’s render cycle and enable unit testing of transition states.【F:components/screen/desktop.js†L1599-L1779】【F:components/screen/desktop.js†L2788-L2835】
 - **Workspace telemetry events** — `workspace-state` broadcasts summarize workspace metadata; future refactors could formalize an event bus so external components subscribe through hooks rather than raw `window` listeners.【F:components/screen/desktop.js†L2492-L2501】
 - **Keyboard-driven snapping** — `super-arrow` custom events tie desktop shortcuts to window-level handlers; abstracting event constants and snap math (currently in `Window`) into `utils/windowLayout` would clarify responsibilities between shell command routing and geometry calculations.【F:components/screen/desktop.js†L2986-L3010】【F:components/base/window.js†L31-L67】
 
