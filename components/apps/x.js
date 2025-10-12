@@ -140,18 +140,19 @@ export default function XApp() {
 
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey flex flex-col tweet-container">
-      <div className="p-2 flex flex-col gap-2 border-b border-gray-600 bg-gray-900 text-gray-100">
+      <div className="p-2 flex flex-col gap-2 border-b border-kali-border/60 bg-kali-surface/95 text-white/90">
         <form onSubmit={handleAddFeed} className="flex gap-2">
           <input
             type="text"
             value={feedInput}
             onChange={(e) => setFeedInput(e.target.value)}
             placeholder="Add feed handle"
-            className="flex-1 p-2 rounded bg-gray-800 text-gray-100 placeholder-gray-400"
+            aria-label="Add feed handle"
+            className="flex-1 rounded border border-white/10 bg-white/5 px-3 py-2 text-white/90 placeholder:text-white/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
           />
           <button
             type="submit"
-            className="px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
+            className="rounded border border-transparent bg-kali-control px-3 py-1 text-sm font-medium text-black transition hover:bg-kali-control/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus disabled:opacity-60"
             disabled={!feedInput.trim()}
           >
             Add
@@ -164,10 +165,10 @@ export default function XApp() {
                 key={h}
                 type="button"
                 onClick={() => setFeedUser(h)}
-                className={`px-2 py-1 rounded-full text-sm ${
+                className={`rounded-full border px-3 py-1 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
                   feedUser === h
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-100 hover:bg-gray-600'
+                    ? 'border-kali-control/70 bg-kali-control text-black shadow-[0_0_0_1px_rgba(255,255,255,0.2)]'
+                    : 'border-white/10 bg-white/10 text-white/80 hover:bg-white/20'
                 }`}
               >
                 {h}
@@ -176,11 +177,11 @@ export default function XApp() {
           </div>
         )}
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-gray-300">Timeline theme:</span>
+          <span className="text-white/70">Timeline theme:</span>
           <button
             type="button"
             onClick={handleToggleTheme}
-            className="px-3 py-1 rounded bg-gray-800 text-gray-100 hover:bg-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+            className="rounded border border-white/10 bg-white/10 px-3 py-1 text-white/80 transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             aria-pressed={theme === 'dark'}
           >
             {`Switch to ${getNextEmbedTheme(theme)} mode`}
@@ -189,7 +190,7 @@ export default function XApp() {
             <button
               type="button"
               onClick={handleResetTheme}
-              className="px-3 py-1 rounded border border-gray-700 text-gray-200 hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+              className="rounded border border-white/15 px-3 py-1 text-white/80 transition hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             >
               {`Use system (${systemTheme})`}
             </button>
@@ -202,7 +203,7 @@ export default function XApp() {
             <button
               type="button"
               onClick={() => setShouldLoad(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded"
+              className="rounded border border-transparent bg-kali-control px-4 py-2 text-sm font-semibold text-black transition hover:bg-kali-control/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             >
               Load timeline
             </button>
@@ -213,13 +214,13 @@ export default function XApp() {
             {Array.from({ length: 3 }).map((_, i) => (
               <li
                 key={i}
-                className="flex gap-4 border-b border-gray-700 pb-4 last:border-b-0"
+                className="flex gap-4 border-b border-white/10 pb-4 last:border-b-0"
               >
-                <div className="w-12 h-12 rounded-full bg-gray-700 motion-safe:animate-pulse" />
+                <div className="h-12 w-12 rounded-full bg-white/10 motion-safe:animate-pulse" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-gray-700 rounded w-3/4 motion-safe:animate-pulse" />
-                  <div className="h-4 bg-gray-700 rounded w-1/2 motion-safe:animate-pulse" />
-                  <div className="h-4 bg-gray-700 rounded w-full motion-safe:animate-pulse" />
+                  <div className="h-4 w-3/4 rounded bg-white/10 motion-safe:animate-pulse" />
+                  <div className="h-4 w-1/2 rounded bg-white/10 motion-safe:animate-pulse" />
+                  <div className="h-4 w-full rounded bg-white/10 motion-safe:animate-pulse" />
                 </div>
               </li>
             ))}
@@ -231,12 +232,12 @@ export default function XApp() {
         />
         {scriptError && (
           <div className="p-4 text-center space-y-2">
-            <div className="text-gray-200">Timeline failed to load.</div>
+            <div className="text-white/80">Timeline failed to load.</div>
             <div className="flex justify-center gap-2">
               <button
                 type="button"
                 onClick={handleRetry}
-                className="px-3 py-1 rounded bg-gray-800 text-gray-100 hover:bg-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+                className="rounded border border-white/10 bg-white/10 px-3 py-1 text-white/80 transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               >
                 Retry
               </button>
@@ -244,7 +245,7 @@ export default function XApp() {
                 href={`https://x.com/${sanitizeHandle(feedUser)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline text-blue-400"
+                className="text-kali-control underline underline-offset-4 transition hover:text-kali-control/80"
               >
                 Open on x.com
               </a>
