@@ -161,9 +161,15 @@ const JohnApp: React.FC = () => {
   };
 
   const strengthClass = {
-    weak: 'bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200',
-    medium: 'bg-yellow-200 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200',
-    strong: 'bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200',
+    weak: 'bg-rose-500/15 text-rose-100 ring-1 ring-inset ring-rose-500/50',
+    medium: 'bg-amber-500/15 text-amber-100 ring-1 ring-inset ring-amber-500/40',
+    strong: 'bg-emerald-500/20 text-emerald-100 ring-1 ring-inset ring-emerald-500/40',
+  } as const;
+
+  const statusBadgeClass = {
+    pending: 'bg-slate-500/15 text-slate-100 ring-1 ring-inset ring-slate-400/40',
+    failed: 'bg-rose-500/20 text-rose-100 ring-1 ring-inset ring-rose-500/50',
+    cracked: 'bg-emerald-500/25 text-emerald-100 ring-1 ring-inset ring-emerald-500/50',
   } as const;
 
   const overallProgress =
@@ -176,9 +182,9 @@ const JohnApp: React.FC = () => {
   const nextHints = HINTS.slice(hintsUsed, hintsUsed + 2);
 
   const tagToneClass = {
-    success: 'border-green-500/40 bg-green-500/15 text-green-200',
-    info: 'border-blue-500/40 bg-blue-500/15 text-blue-200',
-    warning: 'border-amber-500/40 bg-amber-500/15 text-amber-100',
+    success: 'border-emerald-400/50 bg-emerald-500/15 text-emerald-100',
+    info: 'border-sky-400/40 bg-sky-500/15 text-sky-100',
+    warning: 'border-amber-400/50 bg-amber-500/15 text-amber-100',
   } as const;
 
   useEffect(() => {
@@ -219,47 +225,68 @@ const JohnApp: React.FC = () => {
   return (
     <div className="h-full w-full overflow-auto bg-gray-900 text-white">
       <div className="mx-auto flex h-full w-full flex-col gap-6 p-4 lg:max-w-6xl lg:flex-row">
-        <div className="flex-1 space-y-6">
+        <section className="flex-1 space-y-7">
           <p className="text-xs text-yellow-300">
             {johnPlaceholders.banners.page}
           </p>
 
-          <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-6">
-            <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                {modes.map((m) => (
-                  <article
-                    key={m.key}
-                    className={`rounded-xl border bg-white/5 shadow-inner backdrop-blur transition-colors hover:border-blue-400/70 hover:bg-blue-500/10 dark:bg-white/5 ${
-                      mode === m.key ? 'border-blue-500/70 bg-blue-500/10' : 'border-white/10'
+          <div className="space-y-5 lg:grid lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start lg:gap-7">
+            <div className="space-y-3">
+              <header className="flex items-end justify-between">
+                <div>
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-200">
+                      Attack profiles
+                    </h2>
+                    <p className="mt-1 text-xs text-gray-400">
+                      Select how the simulator schedules candidates before launching a run.
+                    </p>
+                  </div>
+                  <span
+                    className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-wider ${
+                      running
+                        ? 'bg-sky-500/20 text-sky-100 ring-1 ring-inset ring-sky-400/50'
+                        : 'bg-slate-500/20 text-slate-100 ring-1 ring-inset ring-slate-400/40'
                     }`}
                   >
-                    <button
-                      type="button"
-                      onClick={() => setMode(m.key)}
-                      aria-pressed={mode === m.key}
-                      className="flex w-full flex-col gap-3 rounded-t-xl px-4 py-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                    {running ? 'Active run' : 'Idle'}
+                  </span>
+                </header>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {modes.map((m) => (
+                    <article
+                      key={m.key}
+                      className={`group flex h-full flex-col rounded-2xl border border-white/10 bg-white/5 shadow-inner backdrop-blur transition-colors duration-150 hover:border-sky-400/60 hover:bg-sky-500/10 ${
+                        mode === m.key
+                          ? 'border-sky-400/70 bg-sky-500/10 ring-1 ring-inset ring-sky-400/50'
+                          : 'dark:bg-white/5'
+                      }`}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="text-sm font-semibold text-white">{m.label}</h3>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-[11px] uppercase tracking-wide ${
-                            mode === m.key
-                              ? 'bg-blue-500/20 text-blue-100'
-                              : 'bg-white/10 text-gray-200'
-                          }`}
-                        >
-                          Mode
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-200">{m.description}</p>
-                      <div className="space-y-1 text-xs">
-                        <span className="text-[11px] uppercase tracking-wide text-gray-400">Example</span>
-                        <code className="block rounded bg-black/40 px-3 py-2 text-[11px] text-green-200">
-                          {m.example}
-                        </code>
-                      </div>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setMode(m.key)}
+                        aria-pressed={mode === m.key}
+                        className="flex w-full flex-1 flex-col gap-3 rounded-t-2xl px-4 py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="text-sm font-semibold text-white">{m.label}</h3>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide transition-colors ${
+                              mode === m.key
+                                ? 'bg-sky-500/20 text-sky-100 ring-1 ring-inset ring-sky-400/50'
+                                : 'bg-white/5 text-gray-200 ring-1 ring-inset ring-white/10'
+                            }`}
+                          >
+                            Mode
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-200">{m.description}</p>
+                        <div className="space-y-1 text-xs">
+                          <span className="text-[11px] uppercase tracking-wide text-gray-400">Example</span>
+                          <code className="block rounded bg-black/40 px-3 py-2 text-[11px] text-green-200">
+                            {m.example}
+                          </code>
+                        </div>
+                      </button>
                     {mode === m.key && (
                       <div className="space-y-3 border-t border-white/10 px-4 py-4 text-xs text-gray-100">
                         {m.key === 'single' && (
@@ -318,7 +345,7 @@ const JohnApp: React.FC = () => {
                   type="button"
                   onClick={start}
                   disabled={running}
-                  className="rounded bg-blue-600 px-4 py-1 text-sm font-semibold text-white shadow enabled:hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded bg-sky-500 px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   Start
                 </button>
@@ -330,10 +357,14 @@ const JohnApp: React.FC = () => {
                 </div>
               </div>
 
-              <div className="rounded bg-gray-200 p-3 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
-                <div className="h-2 w-full rounded bg-gray-400 dark:bg-gray-600">
+              <div className="space-y-3 rounded-xl border border-white/10 bg-black/40 p-4 text-gray-200">
+                <header className="flex items-center justify-between text-xs uppercase tracking-wide text-gray-400">
+                  <span>Cracking timeline</span>
+                  <span>{running ? 'Live monitoring' : 'Awaiting start'}</span>
+                </header>
+                <div className="h-2 w-full rounded-full bg-gray-700">
                   <div
-                    className="h-2 rounded bg-blue-500"
+                    className="h-2 rounded-full bg-sky-500 transition-[width]"
                     style={{ width: `${overallProgress}%` }}
                   />
                 </div>
@@ -343,34 +374,51 @@ const JohnApp: React.FC = () => {
                 </div>
               </div>
 
-              <ul className="space-y-1 font-mono">
-                {hashes.map((h) => (
-                  <li
-                    key={h.hash}
-                    className="flex h-9 items-center justify-between rounded bg-gray-800 px-2 text-xs sm:text-sm"
-                  >
-                    <span className="truncate">{h.hash}</span>
-                    {h.status === 'cracked' ? (
-                      <div className="flex items-center gap-2">
-                        <span className="truncate">{h.password}</span>
-                        <span
-                          className={`px-2 py-0.5 text-xs ${strengthClass[h.strength!]}`}
-                        >
-                          {h.strength}
-                        </span>
+              <div className="space-y-2 font-mono">
+                <div className="flex items-center justify-between px-1 text-[11px] uppercase tracking-wide text-gray-400">
+                  <span>Recovered hash list</span>
+                  <span>Status</span>
+                </div>
+                <ul className="divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10 bg-black/40">
+                  {hashes.map((h) => (
+                    <li
+                      key={h.hash}
+                      className="grid gap-3 px-3 py-3 text-xs text-gray-100 sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] sm:items-center sm:text-sm"
+                    >
+                      <div className="space-y-2">
+                        <span className="block truncate text-[13px] sm:text-sm">{h.hash}</span>
+                        <div className="h-1.5 w-full rounded-full bg-gray-700">
+                          <div
+                            className="h-1.5 rounded-full bg-sky-500 transition-[width]"
+                            style={{ width: `${h.progress}%` }}
+                            aria-hidden="true"
+                          />
+                        </div>
                       </div>
-                    ) : h.status === 'failed' ? (
-                      <span className="rounded-full bg-red-200 px-2 py-0.5 text-xs text-red-800 dark:bg-red-800 dark:text-red-200">
-                        Failed
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-gray-500 px-2 py-0.5 text-xs text-gray-100">
-                        Pending
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
+                      {h.status === 'cracked' ? (
+                        <div className="flex flex-col items-end gap-2 text-right">
+                          <span className="truncate text-xs text-emerald-100 sm:text-sm">
+                            {h.password}
+                          </span>
+                          <span
+                            className={`px-2 py-0.5 text-[11px] uppercase tracking-wide ${strengthClass[h.strength!]}`}
+                          >
+                            {h.strength}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-end">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[11px] uppercase tracking-wide ${statusBadgeClass[h.status]}`}
+                          >
+                            {h.status === 'pending' ? 'In progress' : 'Failed'}
+                          </span>
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
               {message && (
                 <div
@@ -454,7 +502,7 @@ const JohnApp: React.FC = () => {
           </div>
 
           <AuditSimulator />
-        </div>
+        </section>
 
         <div className="flex-1 rounded-lg border border-white/10 bg-black/40">
           <LabMode>
