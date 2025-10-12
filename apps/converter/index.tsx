@@ -39,7 +39,7 @@ function CopyButton({ value, label = "Copy value" }: { value: string; label?: st
     <div className="relative group">
       <button
         onClick={() => value && copyToClipboard(value)}
-        className="flex h-7 w-7 items-center justify-center rounded-md bg-gray-700 text-sm transition hover:bg-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+        className="flex h-7 w-7 items-center justify-center rounded-md bg-kali-accent/90 text-sm text-kali-inverse transition hover:bg-kali-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus"
         aria-label={label}
         title={label}
       >
@@ -75,9 +75,9 @@ export default function Converter() {
   });
 
   const cardClass =
-    "rounded-xl border border-gray-700/70 bg-gray-900/40 shadow-sm backdrop-blur-sm";
+    "rounded-xl border border-white/10 bg-kali-surface/80 shadow-kali-panel backdrop-blur-md";
   const sectionTitleClass =
-    "text-xs font-semibold uppercase tracking-wide text-gray-300";
+    "text-xs font-semibold uppercase tracking-wide text-kali-muted";
 
   useEffect(() => {
     const saved = localStorage.getItem(HISTORY_KEY);
@@ -209,10 +209,10 @@ export default function Converter() {
                     focusTabByIndex(index - 1);
                   }
                 }}
-                className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 ${
+                className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus ${
                   isActive
-                    ? "bg-white text-black shadow"
-                    : "bg-white/5 text-gray-200 hover:bg-white/10"
+                    ? "bg-kali-primary text-kali-inverse shadow"
+                    : "border border-white/5 bg-kali-surface/70 text-white/80 hover:bg-kali-surface/90"
                 }`}
               >
                 <span className="text-xl" aria-hidden>
@@ -234,7 +234,7 @@ export default function Converter() {
           </span>
           <select
             id="converter-notation"
-            className="rounded-md border border-gray-600 bg-white/90 px-2 py-1 text-black focus:border-white focus:outline-none focus:ring-2 focus:ring-white/70"
+            className="rounded-md border border-white/20 bg-kali-surface/70 px-2 py-1 text-white focus:border-kali-focus focus:outline-none focus:ring-2 focus:ring-kali-focus/70"
             value={notation}
             onChange={(e) => setNotation(e.target.value as Notation)}
           >
@@ -242,7 +242,7 @@ export default function Converter() {
             <option value="engineering">Engineering</option>
             <option value="scientific">Scientific</option>
           </select>
-          <small className="text-[11px] leading-relaxed text-gray-300">
+          <small className="text-[11px] leading-relaxed text-white/70">
             Controls how formatted previews display large or small numbers.
           </small>
         </label>
@@ -250,7 +250,7 @@ export default function Converter() {
           <span className={sectionTitleClass}>Trailing zeros</span>
           <label
             htmlFor="converter-trailing-zeros"
-            className="flex items-center gap-2 rounded-md border border-transparent bg-white/5 px-3 py-2 transition hover:bg-white/10 focus-within:border-white/60"
+            className="flex items-center gap-2 rounded-md border border-white/10 bg-kali-surface/70 px-3 py-2 transition hover:bg-kali-surface/90 focus-within:border-kali-focus"
           >
             <input
               id="converter-trailing-zeros"
@@ -258,11 +258,11 @@ export default function Converter() {
               checked={trailingZeros}
               onChange={(e) => setTrailingZeros(e.target.checked)}
               aria-label="Include trailing zeros"
-              className="h-4 w-4 rounded border-gray-500 bg-transparent text-blue-400 focus:ring-white/70"
+              className="h-4 w-4 rounded border-white/30 bg-transparent text-kali-accent focus:ring-kali-focus/80"
             />
             <span>Include up to ten decimal places</span>
           </label>
-          <small className="text-[11px] leading-relaxed text-gray-300">
+          <small className="text-[11px] leading-relaxed text-white/70">
             Pads previews with zeros for consistent length when comparing results.
           </small>
         </div>
@@ -271,19 +271,19 @@ export default function Converter() {
         <section className={`${cardClass} p-4`} aria-labelledby="converter-inputs">
           <h3
             id="converter-inputs"
-            className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-300"
+            className="mb-4 text-sm font-semibold uppercase tracking-wide text-kali-muted"
           >
             Conversion inputs
           </h3>
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-start">
             <div className="space-y-3">
               <div className="flex flex-col gap-2">
-                <label className="text-xs uppercase tracking-wide text-gray-300">
+                <label className="text-xs uppercase tracking-wide text-kali-muted">
                   From value
                 </label>
                 <input
                   type="number"
-                  className={`w-full rounded-md border border-gray-600 bg-white/95 px-3 py-2 font-mono text-base text-black shadow-inner focus:border-white focus:outline-none focus:ring-2 focus:ring-white/70 ${
+                  className={`w-full rounded-md border border-white/20 bg-kali-surface/80 px-3 py-2 font-mono text-base text-white shadow-inner shadow-black/40 focus:border-kali-focus focus:outline-none focus:ring-2 focus:ring-kali-focus/70 ${
                     focused === "from" ? "text-2xl" : "text-base"
                   }`}
                   value={fromValue}
@@ -293,12 +293,12 @@ export default function Converter() {
                   aria-label="from value"
                 />
               </div>
-              <span className="block min-h-[1.25rem] text-sm font-mono text-gray-200">
+              <span className="block min-h-[1.25rem] text-sm font-mono text-white/80">
                 {formatNumber(fromValue, notation, trailingZeros)}
               </span>
               <div className="flex flex-wrap items-center gap-2">
                 <select
-                  className="min-w-[7rem] flex-1 rounded-md border border-gray-600 bg-white/90 px-2 py-1 text-black focus:border-white focus:outline-none focus:ring-2 focus:ring-white/70"
+                  className="min-w-[7rem] flex-1 rounded-md border border-white/20 bg-kali-surface/70 px-2 py-1 text-white focus:border-kali-focus focus:outline-none focus:ring-2 focus:ring-kali-focus/70"
                   value={fromUnit}
                   onChange={(e) => {
                     setFromUnit(e.target.value);
@@ -321,7 +321,7 @@ export default function Converter() {
             </div>
             <div className="flex items-center justify-center">
               <button
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-lg transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-kali-secondary/70 text-lg text-kali-inverse transition hover:bg-kali-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus"
                 onClick={swap}
                 aria-label="swap units"
               >
@@ -330,12 +330,12 @@ export default function Converter() {
             </div>
             <div className="space-y-3">
               <div className="flex flex-col gap-2">
-                <label className="text-xs uppercase tracking-wide text-gray-300">
+                <label className="text-xs uppercase tracking-wide text-kali-muted">
                   To value
                 </label>
                 <input
                   type="number"
-                  className={`w-full rounded-md border border-gray-600 bg-white/95 px-3 py-2 font-mono text-base text-black shadow-inner focus:border-white focus:outline-none focus:ring-2 focus:ring-white/70 ${
+                  className={`w-full rounded-md border border-white/20 bg-kali-surface/80 px-3 py-2 font-mono text-base text-white shadow-inner shadow-black/40 focus:border-kali-focus focus:outline-none focus:ring-2 focus:ring-kali-focus/70 ${
                     focused === "to" ? "text-2xl" : "text-base"
                   }`}
                   value={toValue}
@@ -345,12 +345,12 @@ export default function Converter() {
                   aria-label="to value"
                 />
               </div>
-              <span className="block min-h-[1.25rem] text-sm font-mono text-gray-200">
+              <span className="block min-h-[1.25rem] text-sm font-mono text-white/80">
                 {formatNumber(toValue, notation, trailingZeros)}
               </span>
               <div className="flex flex-wrap items-center gap-2">
                 <select
-                  className="min-w-[7rem] flex-1 rounded-md border border-gray-600 bg-white/90 px-2 py-1 text-black focus:border-white focus:outline-none focus:ring-2 focus:ring-white/70"
+                  className="min-w-[7rem] flex-1 rounded-md border border-white/20 bg-kali-surface/70 px-2 py-1 text-white focus:border-kali-focus focus:outline-none focus:ring-2 focus:ring-kali-focus/70"
                   value={toUnit}
                   onChange={(e) => {
                     setToUnit(e.target.value);
@@ -377,7 +377,7 @@ export default function Converter() {
           <section className={`${cardClass} overflow-hidden`}>
             <button
               type="button"
-              className="flex w-full items-center justify-between px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-200 transition hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+              className="flex w-full items-center justify-between px-4 py-3 text-xs font-semibold uppercase tracking-wide text-white/80 transition hover:bg-kali-surface/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus"
               onClick={() => setHistoryOpen((open) => !open)}
               aria-expanded={historyOpen}
               aria-controls="converter-history-panel"
@@ -400,7 +400,7 @@ export default function Converter() {
                   return (
                     <div
                       key={`${h.fromUnit}-${h.toUnit}-${i}`}
-                      className="flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2 text-xs text-gray-100"
+                      className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-kali-surface/70 px-3 py-2 text-xs text-white/90"
                       data-testid="converter-history-entry"
                     >
                       <span className="font-mono leading-tight">
