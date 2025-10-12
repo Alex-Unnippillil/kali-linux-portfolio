@@ -1,4 +1,75 @@
-body { font-family: Arial, sans-serif; margin: 2rem; }
-button { margin-bottom: 1rem; }
-li { cursor: pointer; margin: 0.25rem 0; }
-li:hover { text-decoration: underline; }
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 2rem;
+  line-height: 1.5;
+}
+
+.clipboard {
+  max-width: 32rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.clipboard__header h1 {
+  font-size: 1.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.clipboard__clear {
+  align-self: flex-start;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #9ca3af;
+  background-color: #f3f4f6;
+  cursor: pointer;
+}
+
+.clipboard__clear:hover,
+.clipboard__clear:focus-visible {
+  background-color: #e5e7eb;
+  outline: 2px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+.clipboard__history {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.clipboard__history-item {
+  cursor: pointer;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  background-color: #f9fafb;
+  transition: background-color 120ms ease-in-out, border-color 120ms ease-in-out;
+}
+
+.clipboard__history-item:hover,
+.clipboard__history-item:focus-visible {
+  background-color: #e0f2fe;
+  border-color: #1d4ed8;
+  outline: 2px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
+.clipboard__empty {
+  color: #6b7280;
+  font-style: italic;
+  padding: 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clipboard__history-item {
+    transition: none;
+  }
+}
