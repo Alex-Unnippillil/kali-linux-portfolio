@@ -8,6 +8,13 @@ import { Capstone, Const, loadCapstone } from 'capstone-wasm';
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
 const DEFAULT_WASM = '/wasm/ghidra.wasm';
 
+const paneBaseClasses =
+  'group/pane relative flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-800/80 bg-slate-950/80 shadow-[0_18px_38px_rgba(2,6,23,0.45)] transition-colors duration-200';
+const paneInteractiveClasses =
+  `${paneBaseClasses} focus-within:border-orange-400/70 focus-within:ring-2 focus-within:ring-orange-300/60 focus-within:ring-offset-2 focus-within:ring-offset-slate-950 hover:border-orange-300/50`;
+const sectionHeadingClasses =
+  'text-xs font-semibold uppercase tracking-wide text-slate-300';
+
 async function loadCapstoneModule() {
   if (typeof window === 'undefined') return null;
   await loadCapstone();
@@ -23,7 +30,7 @@ function ControlFlowGraph({ blocks, selected, onSelect, prefersReducedMotion }) 
       role="img"
       aria-label="Control flow graph"
       viewBox="0 0 300 120"
-      className="w-full h-full bg-black"
+      className="h-full w-full rounded-lg bg-slate-950"
     >
       {blocks.map((b) =>
         b.edges.map((e) => {
@@ -35,7 +42,7 @@ function ControlFlowGraph({ blocks, selected, onSelect, prefersReducedMotion }) 
               y1={b.y}
               x2={t.x}
               y2={t.y}
-              stroke="#9ca3af"
+              stroke="#64748b"
             />
           );
         })
@@ -48,16 +55,16 @@ function ControlFlowGraph({ blocks, selected, onSelect, prefersReducedMotion }) 
             width={60}
             height={40}
             className={`${
-              selected === b.id ? 'fill-yellow-600' : 'fill-gray-700'
-            } stroke-gray-400 ${
-              prefersReducedMotion ? '' : 'transition-colors duration-300'
-            }`}
+              selected === b.id
+                ? 'fill-orange-500/80 stroke-orange-200/80'
+                : 'fill-slate-800/90 stroke-slate-600'
+            } ${prefersReducedMotion ? '' : 'transition-colors duration-300'} shadow-[0_0_0_1px_rgba(148,163,184,0.3)]`}
           />
           <text
             x={b.x}
             y={b.y + 5}
             textAnchor="middle"
-            className="fill-white text-sm"
+            className="fill-slate-100 text-xs font-medium"
           >
             {b.label}
           </text>
@@ -244,41 +251,62 @@ export default function GhidraApp() {
   if (engine === 'capstone') {
     return (
       <div
-        className="w-full h-full flex flex-col bg-gray-900 text-gray-100"
+        className="flex h-full w-full flex-col gap-4 bg-slate-950/90 p-4 text-slate-100"
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
       >
-        <div className="p-2 flex space-x-2">
+        <header
+          className={`${paneBaseClasses} flex-wrap items-center gap-3 px-4 py-3`}
+        >
           <button
             onClick={switchEngine}
-            className="px-2 py-1 bg-gray-700 rounded"
+            className="rounded-lg border border-orange-400/40 bg-orange-500/20 px-4 py-2 text-sm font-semibold text-orange-100 transition hover:bg-orange-500/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-200/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
           >
             Use Ghidra
           </button>
-          <select
-            value={arch}
-            onChange={(e) => setArch(e.target.value)}
-            className="text-black rounded"
-          >
-            <option value="x86">x86</option>
-            <option value="arm">ARM</option>
-          </select>
-        </div>
-        {instructions.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center m-2 border-2 border-dashed border-gray-600">
-            Drop a binary file here
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="capstone-arch"
+              className="text-xs font-semibold uppercase tracking-wide text-slate-300"
+            >
+              Architecture
+            </label>
+            <select
+              id="capstone-arch"
+              value={arch}
+              onChange={(e) => setArch(e.target.value)}
+              className="rounded-lg border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 focus:border-orange-400/60 focus:outline-none focus:ring-2 focus:ring-orange-300/60 focus:ring-offset-2 focus:ring-offset-slate-950"
+            >
+              <option value="x86">x86</option>
+              <option value="arm">ARM</option>
+            </select>
           </div>
+        </header>
+        {instructions.length === 0 ? (
+          <section
+            className={`${paneInteractiveClasses} flex flex-1 items-center justify-center border-2 border-dashed border-slate-700/70 text-center`}
+            aria-label="Capstone drop zone"
+          >
+            <p className="px-6 text-sm text-slate-300">
+              Drop a binary file here to disassemble with Capstone.
+            </p>
+          </section>
         ) : (
-          <pre className="flex-1 overflow-auto p-2 whitespace-pre">
-            {instructions
-              .map(
-                (i) =>
-                  `${i.address.toString(16).padStart(8, '0')}: ${Array.from(i.bytes)
-                    .map((b) => b.toString(16).padStart(2, '0'))
-                    .join(' ')}\t${i.mnemonic} ${i.opStr}`
-              )
-              .join('\n')}
-          </pre>
+          <section className={`${paneInteractiveClasses} flex-1`} aria-label="Capstone disassembly">
+            <pre
+              tabIndex={0}
+              className="flex-1 overflow-auto whitespace-pre px-4 py-3 text-sm leading-relaxed"
+            >
+              {instructions
+                .map(
+                  (i) =>
+                    `${i.address.toString(16).padStart(8, '0')}: ${Array.from(i.bytes)
+                      .map((b) => b.toString(16).padStart(2, '0'))
+                      .join(' ')}\t${i.mnemonic} ${i.opStr}`
+                )
+                .join('\n')}
+            </pre>
+          </section>
         )}
       </div>
     );
@@ -293,181 +321,283 @@ export default function GhidraApp() {
   );
 
   return (
-    <div className="w-full h-full flex flex-col bg-gray-900 text-gray-100">
-      <div className="p-2">
+    <div className="flex h-full w-full flex-col gap-4 bg-slate-950/90 p-4 text-slate-100">
+      <header
+        className={`${paneBaseClasses} flex-row items-center justify-between gap-3 px-4 py-3`}
+      >
         <button
           onClick={switchEngine}
-          className="px-2 py-1 bg-gray-700 rounded"
+          className="rounded-lg border border-orange-400/40 bg-orange-500/20 px-4 py-2 text-sm font-semibold text-orange-100 transition hover:bg-orange-500/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-200/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
         >
           Use Capstone
         </button>
-      </div>
-      <div className="p-2 border-t border-gray-700">
-        <ImportAnnotate />
-      </div>
-      <div className="grid flex-1 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-        <div className="border-b md:border-b-0 md:border-r border-gray-700 overflow-auto min-h-0 last:border-b-0 md:last:border-r-0">
-          <div className="p-2">
+      </header>
+      <section className={`${paneBaseClasses} px-0`}>
+        <div className="px-4 py-3">
+          <ImportAnnotate />
+        </div>
+      </section>
+      <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <section
+          className={`${paneInteractiveClasses} min-h-0`}
+          aria-label="Symbol tree and search"
+        >
+          <div className="border-b border-slate-800/70 bg-slate-950/70 px-4 py-3">
+            <label
+              htmlFor="ghidra-symbol-search"
+              className={sectionHeadingClasses}
+            >
+              Symbols
+            </label>
             <input
+              id="ghidra-symbol-search"
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search symbols"
-              className="w-full mb-2 p-1 rounded text-black"
+              aria-label="Search symbols"
+              className="mt-2 w-full rounded-lg border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-400 focus:border-orange-400/60 focus:outline-none focus:ring-2 focus:ring-orange-300/60 focus:ring-offset-2 focus:ring-offset-slate-950"
             />
           </div>
-          {query ? (
-            <ul className="p-2 text-sm space-y-1">
-              {filteredFunctions.map((f) => (
-                <li key={f.name}>
-                  <button
-                    onClick={() => setSelected(f.name)}
-                    className={`text-left w-full ${selected === f.name ? 'font-bold' : ''}`}
+          <div className="flex-1 overflow-y-auto px-4 py-3 text-sm leading-relaxed">
+            {query ? (
+              <ul className="space-y-1">
+                {filteredFunctions.map((f) => (
+                  <li key={f.name}>
+                    <button
+                      onClick={() => setSelected(f.name)}
+                      aria-pressed={selected === f.name}
+                      className={`w-full rounded-md px-2 py-1 text-left text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
+                        selected === f.name
+                          ? 'bg-orange-500/20 text-orange-100 shadow-[0_0_0_1px_rgba(251,191,36,0.45)]'
+                          : 'text-slate-100 hover:bg-slate-800/70'
+                      }`}
+                    >
+                      {f.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <FunctionTree
+                functions={functions}
+                onSelect={setSelected}
+                selected={selected}
+              />
+            )}
+          </div>
+        </section>
+        <section
+          className={`${paneBaseClasses} min-h-0`}
+          aria-label="Control flow graph"
+        >
+          <div className="border-b border-slate-800/70 bg-slate-950/70 px-4 py-3">
+            <h2 className={sectionHeadingClasses}>Control flow</h2>
+          </div>
+          <div className="flex-1 px-4 py-3">
+            <div className="h-full rounded-lg bg-slate-950/80 p-2 ring-1 ring-inset ring-slate-800/60">
+              <ControlFlowGraph
+                blocks={currentFunc.blocks}
+                selected={null}
+                onSelect={() => {}}
+                prefersReducedMotion={prefersReducedMotion}
+              />
+            </div>
+          </div>
+        </section>
+        <section className={`${paneInteractiveClasses} min-h-0`}>
+          <div className="border-b border-slate-800/70 bg-slate-950/70 px-4 py-3">
+            <h2 className={sectionHeadingClasses}>Decompiled code</h2>
+          </div>
+          <pre
+            ref={decompileRef}
+            aria-label="Decompiled code"
+            tabIndex={0}
+            className="flex-1 overflow-auto whitespace-pre-wrap px-4 py-3 text-sm leading-relaxed"
+          >
+            {currentFunc.code.map((line, idx) => {
+              const m = line.match(/call\s+(\w+)/);
+              let codeElem;
+              if (m && funcMap[m[1]]) {
+                const target = m[1];
+                codeElem = (
+                  <div
+                    onClick={() => setSelected(target)}
+                    className="cursor-pointer rounded px-2 py-1 text-sky-200 transition hover:bg-slate-800/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setSelected(target);
+                      }
+                    }}
                   >
-                    {f.name}
+                    {line}
+                  </div>
+                );
+              } else {
+                codeElem = <div className="rounded px-2 py-1">{line}</div>;
+              }
+              const note = lineNotes[selected]?.[idx] || '';
+              return (
+                <div key={idx} className="flex items-start gap-2 py-1">
+                  <div className="flex-1">{codeElem}</div>
+                  <input
+                    value={note}
+                    onChange={(e) =>
+                      setLineNotes({
+                        ...lineNotes,
+                        [selected]: {
+                          ...(lineNotes[selected] || {}),
+                          [idx]: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="Note"
+                    aria-label={`Add note for line ${idx + 1}`}
+                    className="w-28 rounded-md border border-slate-700/80 bg-slate-900/80 px-2 py-1 text-xs text-slate-100 placeholder:text-slate-500 focus:border-orange-400/60 focus:outline-none focus:ring-2 focus:ring-orange-300/60 focus:ring-offset-2 focus:ring-offset-slate-950"
+                  />
+                </div>
+              );
+            })}
+            {(xrefs[selected] || []).length > 0 && (
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+                <span className="font-semibold uppercase tracking-wide text-slate-400">
+                  Xrefs
+                </span>
+                {xrefs[selected].map((xr) => (
+                  <button
+                    key={xr}
+                    onClick={() => setSelected(xr)}
+                    className="rounded-full border border-slate-700/80 px-3 py-1 text-xs font-medium text-sky-200 transition hover:border-orange-300/60 hover:text-orange-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                  >
+                    {xr}
+                  </button>
+                ))}
+              </div>
+            )}
+          </pre>
+        </section>
+        <section className={`${paneInteractiveClasses} min-h-0`}>
+          <div className="border-b border-slate-800/70 bg-slate-950/70 px-4 py-3">
+            <h2 className={sectionHeadingClasses}>Hex view</h2>
+          </div>
+          <pre
+            ref={hexRef}
+            aria-label="Hexadecimal representation"
+            tabIndex={0}
+            className="flex-1 overflow-auto whitespace-pre-wrap px-4 py-3 text-sm leading-relaxed text-slate-200"
+          >
+            {hexMap[selected] || ''}
+          </pre>
+        </section>
+      </div>
+      <PseudoDisasmViewer />
+      <section className={`${paneBaseClasses} h-60`} aria-label="Call graph">
+        <div className="border-b border-slate-800/70 bg-slate-950/70 px-4 py-3">
+          <h2 className={sectionHeadingClasses}>Call graph</h2>
+        </div>
+        <div className="flex-1 px-4 py-3">
+          <CallGraph
+            func={currentFunc}
+            callers={xrefs[selected] || []}
+            onSelect={setSelected}
+          />
+        </div>
+      </section>
+      <section className={`${paneInteractiveClasses} px-0`} aria-label="Function notes">
+        <div className="border-b border-slate-800/70 bg-slate-950/70 px-4 py-3">
+          <h2 className={sectionHeadingClasses}>Notes</h2>
+        </div>
+          <div className="px-4 py-3">
+            <label
+              id="ghidra-function-notes-label"
+              htmlFor="ghidra-function-notes"
+              className="block text-sm text-slate-300"
+            >
+              Notes for {selected || 'function'}
+            </label>
+            <textarea
+              id="ghidra-function-notes"
+              value={funcNotes[selected] || ''}
+              onChange={(e) =>
+                setFuncNotes({ ...funcNotes, [selected]: e.target.value })
+              }
+              className="mt-2 w-full rounded-lg border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-orange-400/60 focus:outline-none focus:ring-2 focus:ring-orange-300/60 focus:ring-offset-2 focus:ring-offset-slate-950"
+              rows={4}
+              aria-labelledby="ghidra-function-notes-label"
+            />
+          </div>
+        </section>
+      <div className="grid gap-4 md:grid-cols-2">
+        <section
+          className={`${paneInteractiveClasses} min-h-[12rem]`}
+          aria-label="String search"
+        >
+          <div className="border-b border-slate-800/70 bg-slate-950/70 px-4 py-3">
+            <label
+              htmlFor="ghidra-string-search"
+              className={sectionHeadingClasses}
+            >
+              Strings
+            </label>
+            <input
+              id="ghidra-string-search"
+              type="text"
+              value={stringQuery}
+              onChange={(e) => setStringQuery(e.target.value)}
+              placeholder="Search strings"
+              aria-label="Search strings"
+              className="mt-2 w-full rounded-lg border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-400 focus:border-orange-400/60 focus:outline-none focus:ring-2 focus:ring-orange-300/60 focus:ring-offset-2 focus:ring-offset-slate-950"
+            />
+          </div>
+          <div className="flex-1 overflow-y-auto px-4 py-3 text-sm leading-relaxed">
+            <ul className="space-y-1">
+              {filteredStrings.map((s) => (
+                <li key={s.id}>
+                  <button
+                    onClick={() => setSelectedString(s.id)}
+                    aria-pressed={selectedString === s.id}
+                    className={`w-full rounded-md px-2 py-1 text-left text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
+                      selectedString === s.id
+                        ? 'bg-orange-500/20 text-orange-100 shadow-[0_0_0_1px_rgba(251,191,36,0.45)]'
+                        : 'text-slate-100 hover:bg-slate-800/70'
+                    }`}
+                  >
+                    {s.value}
                   </button>
                 </li>
               ))}
             </ul>
-          ) : (
-            <FunctionTree functions={functions} onSelect={setSelected} selected={selected} />
-          )}
-        </div>
-        <div className="border-b md:border-b-0 md:border-r border-gray-700 min-h-0 last:border-b-0 md:last:border-r-0">
-          <ControlFlowGraph
-            blocks={currentFunc.blocks}
-            selected={null}
-            onSelect={() => {}}
-            prefersReducedMotion={prefersReducedMotion}
-          />
-        </div>
-        {/* S7: ARIA-labelled panes for decompiled and hex views with cross-reference jumps */}
-        <pre
-          ref={decompileRef}
-          aria-label="Decompiled code"
-          className="overflow-auto p-2 whitespace-pre-wrap border-b md:border-b-0 md:border-r border-gray-700 min-h-0 last:border-b-0 md:last:border-r-0"
-        >
-          {currentFunc.code.map((line, idx) => {
-            const m = line.match(/call\s+(\w+)/);
-            let codeElem;
-            if (m && funcMap[m[1]]) {
-              const target = m[1];
-              codeElem = (
-                <div
-                  onClick={() => setSelected(target)}
-                  className="cursor-pointer text-blue-400 hover:underline"
-                >
-                  {line}
-                </div>
-              );
-            } else {
-              codeElem = <div>{line}</div>;
-            }
-            const note = lineNotes[selected]?.[idx] || '';
-            return (
-              <div key={idx} className="flex items-start">
-                <div className="flex-1">{codeElem}</div>
-                <input
-                  value={note}
-                  onChange={(e) =>
-                    setLineNotes({
-                      ...lineNotes,
-                      [selected]: {
-                        ...(lineNotes[selected] || {}),
-                        [idx]: e.target.value,
-                      },
-                    })
-                  }
-                  placeholder="note"
-                  className="ml-2 w-24 text-xs text-black rounded"
-                />
-              </div>
-            );
-          })}
-          {(xrefs[selected] || []).length > 0 && (
-            <div className="mt-2 text-xs">
-              XREFS:
-              {xrefs[selected].map((xr) => (
-                <button
-                  key={xr}
-                  onClick={() => setSelected(xr)}
-                  className="ml-2 underline text-blue-400"
-                >
-                  {xr}
-                </button>
-              ))}
-            </div>
-          )}
-        </pre>
-        <pre
-          ref={hexRef}
-          aria-label="Hexadecimal representation"
-          className="overflow-auto p-2 whitespace-pre-wrap border-b md:border-b-0 border-gray-700 min-h-0 last:border-b-0 md:last:border-r-0"
-        >
-          {hexMap[selected] || ''}
-        </pre>
-      </div>
-      <PseudoDisasmViewer />
-      <div className="h-48 border-t border-gray-700">
-        <CallGraph
-          func={currentFunc}
-          callers={xrefs[selected] || []}
-          onSelect={setSelected}
-        />
-      </div>
-      <div className="border-t border-gray-700 p-2">
-        <label className="block text-sm mb-1">
-          Notes for {selected || 'function'}
-        </label>
-        <textarea
-          value={funcNotes[selected] || ''}
-          onChange={(e) =>
-            setFuncNotes({ ...funcNotes, [selected]: e.target.value })
-          }
-          className="w-full h-16 p-1 rounded text-black"
-        />
-      </div>
-      <div className="grid border-t border-gray-700 grid-cols-1 md:grid-cols-2 md:h-40">
-        <div className="overflow-auto p-2 border-b md:border-b-0 md:border-r border-gray-700 min-h-0">
-          <input
-            type="text"
-            value={stringQuery}
-            onChange={(e) => setStringQuery(e.target.value)}
-            placeholder="Search strings"
-            className="w-full mb-2 p-1 rounded text-black"
-          />
-          <ul className="text-sm space-y-1">
-            {filteredStrings.map((s) => (
-              <li key={s.id}>
-                <button
-                  onClick={() => setSelectedString(s.id)}
-                  className={`text-left w-full ${
-                    selectedString === s.id ? 'font-bold' : ''
-                  }`}
-                >
-                  {s.value}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="p-2">
-          <label className="block text-sm mb-1">
-            Notes for {
-              strings.find((s) => s.id === selectedString)?.value || 'string'
-            }
-          </label>
-          <textarea
-            value={stringNotes[selectedString] || ''}
-            onChange={(e) =>
-              setStringNotes({
-                ...stringNotes,
-                [selectedString]: e.target.value,
-              })
-            }
-            className="w-full h-full p-1 rounded text-black"
-          />
-        </div>
+          </div>
+        </section>
+        <section className={`${paneInteractiveClasses} px-0`} aria-label="String notes">
+          <div className="border-b border-slate-800/70 bg-slate-950/70 px-4 py-3">
+            <h2 className={sectionHeadingClasses}>String notes</h2>
+          </div>
+          <div className="px-4 py-3">
+            <label
+              id="ghidra-string-notes-label"
+              htmlFor="ghidra-string-notes"
+              className="block text-sm text-slate-300"
+            >
+              Notes for {strings.find((s) => s.id === selectedString)?.value || 'string'}
+            </label>
+            <textarea
+              id="ghidra-string-notes"
+              value={stringNotes[selectedString] || ''}
+              onChange={(e) =>
+                setStringNotes({
+                  ...stringNotes,
+                  [selectedString]: e.target.value,
+                })
+              }
+              className="mt-2 h-36 w-full rounded-lg border border-slate-700/80 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-orange-400/60 focus:outline-none focus:ring-2 focus:ring-orange-300/60 focus:ring-offset-2 focus:ring-offset-slate-950"
+              aria-labelledby="ghidra-string-notes-label"
+            />
+          </div>
+        </section>
       </div>
       {/* S8: Hidden live region for assistive tech announcements */}
       <div aria-live="polite" role="status" className="sr-only">

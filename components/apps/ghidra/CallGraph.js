@@ -19,7 +19,7 @@ export default function CallGraph({ func, callers = [], onSelect }) {
       role="img"
       aria-label="Call graph"
       viewBox={`0 0 ${size} ${size}`}
-      className="w-full h-full bg-black"
+      className="h-full w-full rounded-lg bg-slate-950"
     >
       {(func?.calls || []).map((c) => (
         <line
@@ -28,7 +28,8 @@ export default function CallGraph({ func, callers = [], onSelect }) {
           y1={center.y}
           x2={positions[c].x}
           y2={positions[c].y}
-          stroke="#4ade80"
+          stroke="#38bdf8"
+          strokeWidth={2}
         />
       ))}
       {callers.map((c) => (
@@ -38,16 +39,22 @@ export default function CallGraph({ func, callers = [], onSelect }) {
           y1={positions[c].y}
           x2={center.x}
           y2={center.y}
-          stroke="#f87171"
+          stroke="#f97316"
+          strokeWidth={2}
         />
       ))}
       <g>
-        <circle cx={center.x} cy={center.y} r={20} className="fill-blue-600" />
+        <circle
+          cx={center.x}
+          cy={center.y}
+          r={20}
+          className="fill-orange-500/80 stroke-orange-200/80"
+        />
         <text
           x={center.x}
           y={center.y + 4}
           textAnchor="middle"
-          className="fill-white text-xs"
+          className="fill-slate-100 text-xs font-semibold"
         >
           {func?.name || 'func'}
         </text>
@@ -56,14 +63,28 @@ export default function CallGraph({ func, callers = [], onSelect }) {
         <g
           key={n}
           onClick={() => onSelect && onSelect(n)}
-          className="cursor-pointer"
+          onKeyDown={(event) => {
+            if (onSelect && (event.key === 'Enter' || event.key === ' ')) {
+              event.preventDefault();
+              onSelect(n);
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label={`Focus on ${n}`}
+          className="cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300/60 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
         >
-          <circle cx={positions[n].x} cy={positions[n].y} r={15} className="fill-gray-700" />
+          <circle
+            cx={positions[n].x}
+            cy={positions[n].y}
+            r={15}
+            className="fill-slate-800/90 stroke-slate-600"
+          />
           <text
             x={positions[n].x}
             y={positions[n].y + 4}
             textAnchor="middle"
-            className="fill-white text-xs"
+            className="fill-slate-100 text-xs"
           >
             {n}
           </text>
