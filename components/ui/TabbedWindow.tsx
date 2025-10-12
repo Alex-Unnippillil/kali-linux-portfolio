@@ -304,15 +304,15 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
 
   return (
     <div
-      className={`flex flex-col w-full h-full ${className}`.trim()}
+      className={`flex h-full w-full flex-col ${className}`.trim()}
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      <div className="flex flex-shrink-0 items-center gap-1 bg-gray-800 text-white text-sm">
+      <div className="flex flex-shrink-0 items-center gap-1 border-b border-gray-800 bg-black/60 px-1 text-sm text-gray-200">
         {canScrollLeft && (
           <button
             type="button"
-            className="px-2 py-1 h-full bg-gray-800 hover:bg-gray-700 focus:outline-none"
+            className="h-full rounded px-2 py-1 transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
             onClick={() => scrollByAmount('left')}
             aria-label="Scroll tabs left"
           >
@@ -324,7 +324,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             ref={scrollContainerRef}
             role="tablist"
             aria-orientation="horizontal"
-            className="flex overflow-x-auto scrollbar-thin scroll-smooth"
+            className="flex overflow-x-auto scroll-smooth scrollbar-thin"
           >
             {tabs.map((t, i) => (
               <div
@@ -339,8 +339,10 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
                     tabRefs.current.delete(t.id);
                   }
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none flex-shrink-0 ${
-                  t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
+                className={`group flex flex-shrink-0 cursor-pointer select-none items-center gap-2 rounded-md border px-3 py-1.5 text-gray-200 transition-colors focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange ${
+                  t.id === activeId
+                    ? 'border-ub-orange/60 bg-white/20 text-white shadow-inner'
+                    : 'border-transparent hover:bg-white/10 hover:text-white'
                 }`}
                 draggable
                 onDragStart={handleDragStart(i)}
@@ -354,10 +356,10 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
                   }
                 }}
               >
-                <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
+                <span className="max-w-[150px] whitespace-nowrap">{middleEllipsis(t.title)}</span>
                 {t.closable !== false && tabs.length > 1 && (
                   <button
-                    className="p-0.5"
+                    className="rounded-sm p-1 text-xs text-gray-300 transition-colors hover:bg-white/20 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
                     onClick={(e) => {
                       e.stopPropagation();
                       closeTab(t.id);
@@ -374,7 +376,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         {canScrollRight && (
           <button
             type="button"
-            className="px-2 py-1 h-full bg-gray-800 hover:bg-gray-700 focus:outline-none"
+            className="h-full rounded px-2 py-1 transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
             onClick={() => scrollByAmount('right')}
             aria-label="Scroll tabs right"
           >
@@ -386,7 +388,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             <button
               type="button"
               ref={moreButtonRef}
-              className="px-2 py-1 bg-gray-800 hover:bg-gray-700 focus:outline-none"
+              className="rounded px-2 py-1 transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
               onClick={() => setMoreMenuOpen((open) => !open)}
               aria-haspopup="menu"
               aria-expanded={moreMenuOpen}
@@ -404,7 +406,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
                     key={tab.id}
                     type="button"
                     role="menuitem"
-                    className="flex w-full items-center justify-between px-3 py-1 text-left hover:bg-gray-700"
+                    className="flex w-full items-center justify-between px-3 py-1 text-left text-gray-200 transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
                     onClick={() => handleMoreSelect(tab.id)}
                   >
                     <span className="truncate">{tab.title}</span>
@@ -417,7 +419,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         )}
         {onNewTab && (
           <button
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
+            className="rounded px-2 py-1 transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
             onClick={addTab}
             aria-label="New Tab"
           >
