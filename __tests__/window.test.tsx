@@ -45,7 +45,7 @@ const computeLeftSnapTestTop = () => {
   return Math.round(clamped);
 };
 
-const getSnapOffsetTop = () => measureWindowTopOffset() - DESKTOP_TOP_PADDING;
+const getSnapTranslateTop = () => measureWindowTopOffset();
 
 const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: width });
@@ -432,8 +432,8 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.width).toBeCloseTo(50);
     const expectedHeight = computeSnappedHeightPercent();
     expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 5);
-    const snapOffset = getSnapOffsetTop();
-    expect(winEl.style.transform).toBe(`translate(0px, ${snapOffset}px)`);
+    const snapTop = getSnapTranslateTop();
+    expect(winEl.style.transform).toBe(`translate(0px, ${snapTop}px)`);
   });
 
   it('snaps window on drag stop near right edge on large viewport', () => {
@@ -476,8 +476,8 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.width).toBeCloseTo(50);
     const expectedHeight = computeSnappedHeightPercent();
     expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 5);
-    const rightSnapOffset = getSnapOffsetTop();
-    expect(winEl.style.transform).toBe(`translate(${window.innerWidth / 2}px, ${rightSnapOffset}px)`);
+    const rightSnapTop = getSnapTranslateTop();
+    expect(winEl.style.transform).toBe(`translate(${window.innerWidth / 2}px, ${rightSnapTop}px)`);
   });
 
   it('snaps window on drag stop near top edge', () => {
@@ -519,8 +519,8 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('top');
     expect(ref.current!.state.width).toBeCloseTo(100, 2);
     expect(ref.current!.state.height).toBeCloseTo(computeSnappedHeightPercent(), 5);
-    const topSnapOffset = getSnapOffsetTop();
-    expect(winEl.style.transform).toBe(`translate(0px, ${topSnapOffset}px)`);
+    const topSnapTop = getSnapTranslateTop();
+    expect(winEl.style.transform).toBe(`translate(0px, ${topSnapTop}px)`);
   });
 
   it('snaps window on drag stop near the top-left corner', () => {
@@ -562,8 +562,8 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBe('top-left');
     expect(ref.current!.state.width).toBeCloseTo(50, 2);
     expect(ref.current!.state.height).toBeCloseTo(computeQuarterHeightPercent(), 5);
-    const snapOffset = getSnapOffsetTop();
-    expect(winEl.style.transform).toBe(`translate(0px, ${snapOffset}px)`);
+    const snapTop = getSnapTranslateTop();
+    expect(winEl.style.transform).toBe(`translate(0px, ${snapTop}px)`);
   });
 
   it('snaps window on drag stop near the bottom-right corner', () => {
@@ -607,7 +607,7 @@ describe('Window snapping finalize and release', () => {
     const expectedHeight = computeSnappedHeightPercent();
     expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 5);
     const expectedX = window.innerWidth / 2;
-    const expectedY = getSnapOffsetTop();
+    const expectedY = getSnapTranslateTop();
     expect(winEl.style.transform).toBe(`translate(${expectedX}px, ${expectedY}px)`);
   });
 

@@ -56,7 +56,12 @@ const normalizeRightCornerSnap = (candidate, regions) => {
     return candidate;
 };
 
-const computeSnapRegions = (viewportWidth, viewportHeight, topInset = DEFAULT_WINDOW_TOP_OFFSET) => {
+const computeSnapRegions = (
+    viewportWidth,
+    viewportHeight,
+    topInset = DEFAULT_WINDOW_TOP_OFFSET,
+    bottomInset,
+) => {
     const normalizedTopInset = typeof topInset === 'number'
         ? Math.max(topInset, DESKTOP_TOP_PADDING)
         : DEFAULT_WINDOW_TOP_OFFSET;
@@ -461,15 +466,15 @@ export class Window extends Component {
         const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         if (!viewportWidth || !viewportHeight) return;
-        const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset);
+        const snapBottomInset = measureSnapBottomInset();
+        const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset, snapBottomInset);
         const region = regions[resolvedPosition];
         if (!region) return;
         const { width, height } = this.state;
         const node = this.getWindowNode();
         if (node) {
-            const offsetTop = region.top - DESKTOP_TOP_PADDING;
             this.setTransformMotionPreset(node, 'snap');
-            node.style.transform = `translate(${region.left}px, ${offsetTop}px)`;
+            node.style.transform = `translate(${region.left}px, ${region.top}px)`;
         }
         this.setState({
             snapPreview: null,
