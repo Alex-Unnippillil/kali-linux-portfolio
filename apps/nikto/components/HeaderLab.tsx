@@ -85,45 +85,63 @@ const HeaderLab: React.FC = () => {
   }, [headers]);
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg mb-2">Header Lab</h2>
-        <label htmlFor="nikto-header-lab-input" className="sr-only" id="nikto-header-lab-label">
-          HTTP response headers
-        </label>
-        <textarea
-          id="nikto-header-lab-input"
-          className="w-full h-40 p-2 rounded text-black"
-          placeholder="Paste raw HTTP response headers here"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          aria-labelledby="nikto-header-lab-label"
-        />
+    <section className="space-y-5 rounded-3xl border border-gray-800/80 bg-gray-900/60 p-6 shadow-xl shadow-black/40">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-xl font-semibold text-white">Header Lab</h2>
+        <div className="flex flex-wrap gap-2 text-xs text-gray-300">
+          <span className="rounded-full border border-sky-500/50 bg-sky-500/10 px-3 py-1">Missing header checks</span>
+          <span className="rounded-full border border-emerald-500/50 bg-emerald-500/10 px-3 py-1">Risky value hints</span>
+        </div>
+      </div>
+      <label htmlFor="nikto-header-lab-input" className="sr-only" id="nikto-header-lab-label">
+        HTTP response headers
+      </label>
+      <textarea
+        id="nikto-header-lab-input"
+        className="h-40 w-full rounded-2xl border border-gray-800 bg-gray-950/70 px-4 py-3 text-sm text-white shadow-inner shadow-black/40 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+        placeholder="Paste raw HTTP response headers here"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        aria-labelledby="nikto-header-lab-label"
+      />
       {Object.keys(headers).length > 0 && (
-        <div>
-          <h3 className="text-md mb-1">Parsed Headers</h3>
-          <table className="w-full text-sm">
-            <tbody>
-              {Object.entries(headers).map(([name, value]) => (
-                <tr key={name} className="odd:bg-gray-900">
-                  <td className="p-1 font-mono">{name}</td>
-                  <td className="p-1 font-mono break-all">{value}</td>
+        <div className="overflow-hidden rounded-2xl border border-gray-800 bg-gray-950/60">
+          <header className="border-b border-gray-800/80 bg-gray-900/70 px-4 py-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-300">Parsed Headers</h3>
+          </header>
+          <div className="max-h-60 overflow-auto">
+            <table className="min-w-full divide-y divide-gray-800 text-sm">
+              <thead className="bg-gray-900/60 text-xs uppercase tracking-wide text-gray-400">
+                <tr>
+                  <th scope="col" className="px-4 py-2 text-left">Header</th>
+                  <th scope="col" className="px-4 py-2 text-left">Value</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-900/60 font-mono">
+                {Object.entries(headers).map(([name, value]) => (
+                  <tr key={name} className="odd:bg-gray-900/40">
+                    <td className="px-4 py-2 text-sky-200">{name}</td>
+                    <td className="px-4 py-2 break-all text-gray-200">{value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
       {hints.length > 0 && (
-        <div>
-          <h3 className="text-md mb-1">Security Tips</h3>
-          <ul className="list-disc ml-6 space-y-1 text-green-300">
+        <div className="space-y-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-300">Security Tips</h3>
+          <ul className="space-y-2 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm text-emerald-100">
             {hints.map((tip, i) => (
-              <li key={i}>{tip}</li>
+              <li key={i} className="leading-relaxed">
+                {tip}
+              </li>
             ))}
           </ul>
         </div>
       )}
-    </div>
+    </section>
   );
 };
 
