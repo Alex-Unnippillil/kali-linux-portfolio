@@ -24,48 +24,86 @@ export default function FiltersDrawer({
 }: Props) {
   return (
     <div
-      className={`fixed inset-0 bg-black/50 transition-opacity ${open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+      className={`fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm transition-opacity ${open ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
       onClick={onClose}
+      role="presentation"
     >
-      <div
-        className={`absolute right-0 top-0 h-full w-64 bg-gray-900 p-4 overflow-y-auto transform transition-transform ${open ? 'translate-x-0' : 'translate-x-full'}`}
+      <aside
+        className={`absolute right-0 top-0 flex h-full w-full max-w-xs flex-col overflow-y-auto border-l border-slate-800/70 bg-slate-950/95 p-6 text-slate-200 shadow-2xl shadow-black/40 transition-transform ${open ? 'translate-x-0' : 'translate-x-full'}`}
         onClick={(e) => e.stopPropagation()}
+        aria-label="Nessus filters"
       >
-        <h3 className="text-lg mb-4">Filters</h3>
-        <div className="mb-6">
-          <h4 className="font-semibold mb-2">Severity</h4>
-            {severities.map((sev) => {
-              const inputId = `nessus-filter-${sev.toLowerCase()}`;
-              return (
-                <div key={sev} className="flex items-center gap-2 mb-1">
-                  <input
-                    id={inputId}
-                    type="checkbox"
-                    checked={severityFilters[sev]}
-                    onChange={() => toggleSeverity(sev)}
-                    aria-label={`Toggle ${sev} severity`}
-                  />
-                  <label htmlFor={inputId}>{sev}</label>
-                </div>
-              );
-            })}
+        <div className="flex items-start justify-between">
+          <h3 className="text-base font-semibold uppercase tracking-wide text-slate-300">
+            Filters
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-700/70 text-slate-300 transition hover:border-slate-500 hover:text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            aria-label="Close filters"
+          >
+            ×
+          </button>
         </div>
-        <div>
-          <h4 className="font-semibold mb-2">Tags</h4>
-          <div className="flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => toggleTag(tag)}
-                className={`px-2 py-1 rounded-full border text-sm ${tagFilters.includes(tag) ? 'bg-blue-600 border-blue-600' : 'bg-gray-800 border-gray-700'}`}
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
+
+        <div className="mt-6 space-y-6">
+          <section>
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Severity
+            </h4>
+            <ul className="mt-3 space-y-2 text-sm">
+              {severities.map((sev) => {
+                const inputId = `nessus-filter-${sev.toLowerCase()}`;
+                return (
+                  <li key={sev} className="flex items-center justify-between gap-3 rounded-lg border border-slate-800/80 bg-slate-900/70 px-3 py-2">
+                    <label htmlFor={inputId} className="font-medium text-slate-200">
+                      {sev}
+                    </label>
+                    <input
+                      id={inputId}
+                      type="checkbox"
+                      checked={severityFilters[sev]}
+                      onChange={() => toggleSeverity(sev)}
+                      className="h-4 w-4 cursor-pointer rounded border-slate-600 bg-slate-900 text-sky-500 focus:ring-sky-500"
+                      aria-label={`Toggle ${sev} severity`}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+
+          <section>
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Tags
+            </h4>
+            {tags.length === 0 ? (
+              <p className="mt-3 text-xs text-slate-500">No tags detected in the feed.</p>
+            ) : (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {tags.map((tag) => {
+                  const active = tagFilters.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleTag(tag)}
+                      className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
+                        active
+                          ? 'border-sky-400/80 bg-sky-500/20 text-sky-200 shadow-[0_0_12px_rgba(56,189,248,0.35)]'
+                          : 'border-slate-700/70 bg-slate-900/70 text-slate-300 hover:border-slate-500 hover:text-slate-100'
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </section>
         </div>
-      </div>
+      </aside>
     </div>
   );
 }

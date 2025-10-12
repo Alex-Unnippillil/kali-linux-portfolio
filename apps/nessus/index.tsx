@@ -165,80 +165,154 @@ const Nessus: React.FC = () => {
   };
 
   return (
-    <div className="p-4 bg-gray-900 text-white min-h-screen space-y-6">
-      <h1 className="text-2xl">Nessus Demo</h1>
+    <main className="min-h-screen bg-slate-950 px-4 py-6 text-slate-100 sm:px-8 sm:py-10">
+      <div className="mx-auto flex max-w-6xl flex-col gap-10">
+        <header className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-sky-400">
+            Simulated vulnerability scanner
+          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            Nessus Dashboard
+          </h1>
+          <p className="max-w-2xl text-sm text-slate-400">
+            Explore curated scan data, triage actions, and remediation guidance in a focused analyst workspace.
+          </p>
+        </header>
 
-      <section>
-        <h2 className="text-xl mb-2">Plugin Feed</h2>
-        <button
-          type="button"
-          onClick={() => setDrawerOpen(true)}
-          className="mb-4 px-3 py-1 bg-gray-700 rounded"
-        >
-          Filters
-        </button>
-        <ul
-          ref={listRef}
-          onScroll={handleScroll}
-          className="space-y-2 max-h-96 overflow-auto"
-        >
-          {filtered.slice(0, visibleCount).map((p) => (
-            <li key={p.id}>
-              <FindingCard plugin={p} />
-            </li>
-          ))}
-        </ul>
-        {visibleCount < filtered.length && (
-          <div className="mt-2 text-center text-sm text-gray-400">
-            Scroll to load more...
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-xl font-semibold text-white">Plugin feed</h2>
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-700/70 bg-slate-900/70 px-4 py-2 text-sm font-semibold uppercase tracking-wide text-slate-200 transition hover:border-sky-400/70 hover:bg-slate-900 hover:text-sky-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            >
+              <span className="h-2.5 w-2.5 rounded-full bg-sky-400/80" aria-hidden />
+              Filters
+            </button>
           </div>
-        )}
-      </section>
+          <div className="rounded-2xl border border-slate-800/60 bg-slate-900/60 shadow-[0_25px_60px_rgba(2,6,23,0.55)]">
+            <ul
+              ref={listRef}
+              onScroll={handleScroll}
+              className="max-h-[32rem] space-y-3 overflow-y-auto p-4 pr-2 sm:p-6"
+              aria-label="Filtered plugin results"
+            >
+              {filtered.slice(0, visibleCount).map((p) => (
+                <li key={p.id}>
+                  <FindingCard plugin={p} />
+                </li>
+              ))}
+            </ul>
+            {visibleCount < filtered.length && (
+              <div className="border-t border-slate-800/60 px-6 py-3 text-center text-xs uppercase tracking-wider text-slate-500">
+                Scroll to load more findings
+              </div>
+            )}
+          </div>
+        </section>
 
-      <section>
-        <h2 className="text-xl mb-2">Scan Comparison</h2>
-        <div className="mb-2">
-          {diff.changed.map((c) => (
-            <div key={c.plugin}>
-              Plugin {c.plugin} severity changed from {c.from} to {c.to}
-            </div>
-          ))}
-          {diff.added.map((f) => (
-            <div key={f.plugin}>Plugin {f.plugin} new ({f.severity})</div>
-          ))}
-          {diff.removed.map((f) => (
-            <div key={f.plugin}>Plugin {f.plugin} resolved</div>
-          ))}
-        </div>
-      </section>
+        <section className="rounded-2xl border border-slate-800/60 bg-slate-900/70 p-6 shadow-[0_25px_60px_rgba(2,6,23,0.55)]">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-xl font-semibold text-white">Scan comparison</h2>
+            <p className="text-xs uppercase tracking-wide text-slate-400">
+              Latest import vs. baseline
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {diff.changed.length > 0 && (
+              <div className="rounded-xl border border-amber-400/40 bg-amber-500/5 p-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-200">
+                  Severity shifts
+                </h3>
+                <ul className="mt-2 space-y-2 text-sm text-amber-100">
+                  {diff.changed.map((c) => (
+                    <li key={c.plugin} className="flex items-center justify-between gap-3 rounded-lg bg-amber-500/10 px-3 py-2">
+                      <span className="font-mono text-xs text-amber-200">#{c.plugin}</span>
+                      <span className="text-right text-xs">
+                        {c.from} → <span className="font-semibold text-amber-100">{c.to}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {diff.added.length > 0 && (
+              <div className="rounded-xl border border-rose-500/40 bg-rose-500/5 p-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-rose-200">
+                  Newly detected
+                </h3>
+                <ul className="mt-2 space-y-2 text-sm text-rose-100">
+                  {diff.added.map((f) => (
+                    <li key={f.plugin} className="flex items-center justify-between gap-3 rounded-lg bg-rose-500/10 px-3 py-2">
+                      <span className="font-mono text-xs text-rose-200">#{f.plugin}</span>
+                      <span className="text-right text-xs font-semibold text-rose-100">{f.severity}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {diff.removed.length > 0 && (
+              <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-4">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-200">
+                  Resolved findings
+                </h3>
+                <ul className="mt-2 space-y-2 text-sm text-emerald-100">
+                  {diff.removed.map((f) => (
+                    <li key={f.plugin} className="flex items-center justify-between gap-3 rounded-lg bg-emerald-500/10 px-3 py-2">
+                      <span className="font-mono text-xs text-emerald-200">#{f.plugin}</span>
+                      <span className="text-right text-xs font-semibold text-emerald-100">Cleared</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {diff.changed.length === 0 && diff.added.length === 0 && diff.removed.length === 0 && (
+              <p className="text-sm text-slate-400">
+                No differences detected between the two reference scans.
+              </p>
+            )}
+          </div>
+        </section>
 
-      <section>
-        <h2 className="text-xl mb-2">Executive Summary</h2>
-        <div ref={chartRef}>
-          <SummaryDashboard summary={summary} trend={trend} />
-        </div>
-        <button
-          type="button"
-          onClick={exportChart}
-          className="mt-4 px-4 py-2 bg-blue-700 rounded"
-        >
-          Export
-        </button>
-      </section>
-      <section>
-        <h2 className="text-xl mb-2">Trends</h2>
-        <TrendChart />
-      </section>
-      <FiltersDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        severityFilters={severityFilters}
-        toggleSeverity={toggleSeverity}
-        tags={tags}
-        tagFilters={tagFilters}
-        toggleTag={toggleTag}
-      />
-    </div>
+        <section className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-xl font-semibold text-white">Executive summary</h2>
+            <button
+              type="button"
+              onClick={exportChart}
+              className="inline-flex items-center gap-2 rounded-full border border-sky-500/60 bg-sky-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-sky-200 transition hover:border-sky-400 hover:bg-sky-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            >
+              <span className="h-2.5 w-2.5 rounded-full bg-sky-400" aria-hidden />
+              Export dashboard
+            </button>
+          </div>
+          <div ref={chartRef} className="rounded-2xl border border-slate-800/60 bg-slate-900/70 p-6 shadow-[0_25px_60px_rgba(2,6,23,0.55)]">
+            <SummaryDashboard summary={summary} trend={trend} />
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-slate-800/60 bg-slate-900/70 p-6 shadow-[0_25px_60px_rgba(2,6,23,0.55)]">
+          <h2 className="text-xl font-semibold text-white">Trends</h2>
+          <p className="mt-1 text-xs uppercase tracking-wide text-slate-400">
+            Upload custom history exports to extend the dataset
+          </p>
+          <div className="mt-4">
+            <TrendChart />
+          </div>
+        </section>
+
+        <FiltersDrawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          severityFilters={severityFilters}
+          toggleSeverity={toggleSeverity}
+          tags={tags}
+          tagFilters={tagFilters}
+          toggleTag={toggleTag}
+        />
+      </div>
+    </main>
   );
 };
 
