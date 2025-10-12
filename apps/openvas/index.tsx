@@ -152,6 +152,17 @@ const OpenVASReport: React.FC = () => {
     return summary;
   }, []);
 
+  const prioritizedRisks = useMemo(
+    () =>
+      severityOrder
+        .map((severity) => ({
+          severity,
+          count: riskSummary[severity],
+        }))
+        .filter(({ count }) => count > 0),
+    [riskSummary],
+  );
+
   const severityCounts = useMemo(() => {
     const counts: Record<HostReport['risk'], number> = {
       Low: 0,
@@ -242,20 +253,25 @@ const OpenVASReport: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl">OpenVAS Report</h1>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">OpenVAS Report</h1>
+          <p className="text-sm text-gray-400">
+            Focus on the most critical exposure and work down the queue.
+          </p>
+        </div>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={exportJSON}
-            className="px-2 py-1 bg-blue-600 rounded text-sm"
+            className="rounded border border-sky-600/60 bg-sky-700/40 px-3 py-1 text-sm font-medium text-sky-100 transition hover:bg-sky-600/70"
           >
             Export JSON
           </button>
           <button
             type="button"
             onClick={exportCSV}
-            className="px-2 py-1 bg-blue-600 rounded text-sm"
+            className="rounded border border-sky-600/60 bg-sky-700/40 px-3 py-1 text-sm font-medium text-sky-100 transition hover:bg-sky-600/70"
           >
             Export CSV
           </button>
@@ -263,30 +279,50 @@ const OpenVASReport: React.FC = () => {
       </div>
 
       <section>
-        <h2 className="text-xl mb-2">Scan Overview</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
-          {Object.entries(riskSummary).map(([risk, count]) => (
-            <div
-              key={risk}
-              className={`p-4 rounded ${riskColors[risk as keyof typeof riskColors]}`}
-            >
-              <p className="text-sm">{risk}</p>
-              <p className="text-2xl font-bold">{count}</p>
+        <h2 className="mb-3 text-xl font-semibold">Scan Overview</h2>
+        <div className="rounded-xl border border-gray-800 bg-gray-900/80 p-4 shadow-inner">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {prioritizedRisks.map(({ severity, count }) => {
+              const highlight = severity === prioritizedRisks[0]?.severity;
+              return (
+                <div
+                  key={severity}
+                  className={`flex flex-col gap-1 rounded-lg border p-4 transition ${
+                    highlight
+                      ? 'border-red-400/60 bg-red-900/30 shadow-lg shadow-red-900/30'
+                      : 'border-gray-800 bg-gray-900/60'
+                  }`}
+                >
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-300">
+                    {severity}
+                  </p>
+                  <p className="text-3xl font-bold">{count}</p>
+                  <p className="text-xs text-gray-400">hosts impacted</p>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-200">Exposure trend</p>
+              <p className="text-xs text-gray-500">
+                Weekly findings volume for the monitored scope.
+              </p>
             </div>
-          ))}
+            <svg
+              width={trendWidth}
+              height={trendHeight}
+              className="rounded bg-gray-800/80"
+            >
+              <path d={trendPath} stroke="#38bdf8" strokeWidth={2} fill="none" />
+            </svg>
+          </div>
         </div>
-        <svg
-          width={trendWidth}
-          height={trendHeight}
-          className="bg-gray-800 rounded"
-        >
-          <path d={trendPath} stroke="#0ea5e9" strokeWidth={2} fill="none" />
-        </svg>
       </section>
 
       <section>
-        <h2 className="text-xl mb-2">Findings</h2>
-        <div className="mb-4 space-y-3 rounded border border-gray-700 bg-gray-800 p-3">
+        <h2 className="mb-3 text-xl font-semibold">Findings</h2>
+        <div className="mb-4 space-y-4 rounded-xl border border-gray-800 bg-gray-900/70 p-4">
           <div>
             <p className="text-xs uppercase tracking-wide text-gray-400">
               Severity
@@ -299,14 +335,14 @@ const OpenVASReport: React.FC = () => {
                   aria-pressed={severityFilters[severity]}
                   aria-label={`${severity} severity filter (${severityCounts[severity]} findings)`}
                   onClick={() => toggleSeverity(severity)}
-                  className={`flex items-center gap-2 rounded border px-3 py-1 text-sm transition ${
+                  className={`flex items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold uppercase tracking-wide transition ${
                     severityFilters[severity]
-                      ? 'border-sky-400 bg-sky-700/40 text-white'
-                      : 'border-gray-700 bg-gray-900 text-gray-400'
+                      ? 'border-transparent bg-sky-500/20 text-sky-200 ring-1 ring-sky-400/60'
+                      : 'border-gray-800 bg-gray-900 text-gray-500 hover:border-sky-700/40'
                   }`}
                 >
-                  <span className="font-medium">{severity}</span>
-                  <span className="rounded-full bg-gray-700 px-2 py-0.5 text-xs text-gray-200">
+                  <span>{severity}</span>
+                  <span className="rounded-full bg-gray-800 px-2 py-0.5 text-[10px] text-gray-300">
                     {severityCounts[severity] ?? 0}
                   </span>
                 </button>
@@ -325,14 +361,14 @@ const OpenVASReport: React.FC = () => {
                     aria-pressed={isActive}
                     aria-label={`${type} type filter (${typeCounts[type]} findings)`}
                     onClick={() => toggleType(type)}
-                    className={`flex items-center gap-2 rounded border px-3 py-1 text-sm transition ${
+                    className={`flex items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold uppercase tracking-wide transition ${
                       isActive
-                        ? 'border-emerald-400 bg-emerald-700/40 text-white'
-                        : 'border-gray-700 bg-gray-900 text-gray-400'
+                        ? 'border-transparent bg-emerald-500/20 text-emerald-200 ring-1 ring-emerald-400/60'
+                        : 'border-gray-800 bg-gray-900 text-gray-500 hover:border-emerald-700/40'
                     }`}
                   >
                     <span className="font-medium">{type}</span>
-                    <span className="rounded-full bg-gray-700 px-2 py-0.5 text-xs text-gray-200">
+                    <span className="rounded-full bg-gray-800 px-2 py-0.5 text-[10px] text-gray-300">
                       {typeCounts[type] ?? 0}
                     </span>
                   </button>
@@ -341,114 +377,111 @@ const OpenVASReport: React.FC = () => {
             </div>
           </div>
         </div>
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr>
-              <th className="p-2">Host</th>
-              <th className="p-2">Vulnerability</th>
-              <th className="p-2">CVSS</th>
-            </tr>
-          </thead>
-          <tbody>
+        <div className="overflow-hidden rounded-xl border border-gray-800 bg-gray-900/70 shadow-inner">
+          <div role="table" aria-label="OpenVAS findings" className="divide-y divide-gray-800 text-sm text-gray-200">
+            <div
+              role="row"
+              className="grid grid-cols-[minmax(140px,1fr)_minmax(0,2fr)_minmax(120px,1fr)] gap-4 bg-gray-900/90 px-4 py-3 text-xs uppercase tracking-wide text-gray-400"
+            >
+              <span role="columnheader">Host</span>
+              <span role="columnheader">Vulnerability</span>
+              <span role="columnheader">CVSS</span>
+            </div>
             {filteredFindings.length === 0 && (
-              <tr>
-                <td colSpan={3} className="p-4 text-center text-gray-400">
-                  No findings match the current filters.
-                </td>
-              </tr>
+              <div role="row" className="px-6 py-8 text-center text-gray-500">
+                No findings match the current filters.
+              </div>
             )}
             {filteredFindings.map((f) => {
               const key = `${f.host}-${f.id}`;
+              const outlineClass =
+                f.severity === 'Critical'
+                  ? 'ring-2 ring-red-500/60'
+                  : f.severity === 'High'
+                  ? 'ring-1 ring-orange-500/50'
+                  : '';
               return (
-                <React.Fragment key={key}>
-                  <tr
-                    className="cursor-pointer hover:bg-gray-800"
+                <div key={key} role="rowgroup" className="divide-y divide-gray-900/70">
+                  <button
+                    type="button"
                     onClick={() => toggleRow(key)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        toggleRow(key);
-                      }
-                    }}
-                    tabIndex={0}
+                    className={`grid w-full grid-cols-[minmax(140px,1fr)_minmax(0,2fr)_minmax(120px,1fr)] items-stretch gap-4 px-4 py-4 text-left transition hover:bg-gray-800/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${outlineClass}`}
                     aria-expanded={!!expanded[key]}
-                    aria-label={`Toggle details for ${f.name} on ${f.host}`}
+                    aria-label="Toggle vulnerability details"
                   >
-                    <td className="p-2">{f.host}</td>
-                    <td className="p-2">
-                      <div className="font-medium">{f.name}</div>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                    <span className="flex flex-col gap-1 text-sm">
+                      <span className="font-mono text-xs text-gray-400">{f.host}</span>
+                      <span className="w-fit rounded-full bg-gray-800 px-2 py-0.5 text-[10px] uppercase tracking-wide text-gray-300">
+                        {f.type}
+                      </span>
+                    </span>
+                    <span className="flex flex-col gap-2 text-sm">
+                      <span className="font-semibold text-gray-100">{f.name}</span>
+                      <span className="text-xs text-gray-400">{f.id}</span>
+                      <span className="flex flex-wrap items-center gap-2 text-[11px]">
                         <span
-                          className={`rounded-full px-2 py-0.5 ${riskColors[f.severity]}`}
+                          className={`rounded-full px-3 py-0.5 font-semibold uppercase tracking-wide ${riskColors[f.severity]}`}
                         >
                           {f.severity}
                         </span>
-                        <span className="rounded-full bg-gray-700 px-2 py-0.5">
-                          {f.type}
+                        <span className="rounded-full bg-gray-800/80 px-2 py-0.5 text-gray-300">
+                          EPSS {(f.epss * 100).toFixed(0)}%
                         </span>
-                      </div>
-                    </td>
-                    <td className="p-2">
-                      <div className="w-full bg-gray-700 rounded h-3">
-                        <div
-                          className={`${cvssColor(f.cvss)} h-3 rounded`}
+                      </span>
+                    </span>
+                    <span className="flex flex-col justify-center gap-2 text-xs text-gray-400">
+                      <span className="flex items-center justify-between">
+                        <span>{f.cvss.toFixed(1)}</span>
+                        <span>of 10</span>
+                      </span>
+                      <span className="relative block h-2.5 w-full rounded-full bg-gray-800">
+                        <span
+                          className={`${cvssColor(f.cvss)} absolute inset-y-0 left-0 rounded-full`}
                           style={{ width: `${(f.cvss / 10) * 100}%` }}
                         />
-                      </div>
-                    </td>
-                  </tr>
+                      </span>
+                    </span>
+                  </button>
                   {expanded[key] && (
-                    <tr>
-                      <td colSpan={3} className="p-2 bg-gray-800">
-                        <div className="space-y-3">
-                          <div>
-                            <p className="text-xs uppercase tracking-wide text-gray-400">
-                              Description
-                            </p>
-                            <p className="text-sm text-gray-200">{f.description}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs uppercase tracking-wide text-gray-400">
-                              Remediation
-                            </p>
-                            <p className="text-sm text-yellow-300">{f.remediation}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs uppercase tracking-wide text-gray-400">
-                              Timeline
-                            </p>
-                            <ul className="space-y-1 text-xs text-gray-300">
-                              {f.timeline.map((event) => (
-                                <li
-                                  key={`${f.id}-${event.date}-${event.event}`}
-                                  className="flex gap-3"
-                                >
-                                  <span className="w-24 text-gray-400">
-                                    {event.date}
-                                  </span>
-                                  <span className="flex-1">{event.event}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
+                    <div className="space-y-4 bg-gray-900/80 px-6 py-4 text-sm">
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-gray-400">Description</p>
+                        <p className="text-sm text-gray-200">{f.description}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-gray-400">Remediation</p>
+                        <p className="text-sm text-amber-300">{f.remediation}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-gray-400">Timeline</p>
+                        <ul className="space-y-2 text-xs text-gray-300">
+                          {f.timeline.map((event) => (
+                            <li
+                              key={`${f.id}-${event.date}-${event.event}`}
+                              className="flex gap-3 rounded-lg bg-gray-900/70 px-3 py-2"
+                            >
+                              <span className="w-24 text-gray-400">{event.date}</span>
+                              <span className="flex-1">{event.event}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
                   )}
-                </React.Fragment>
+                </div>
               );
             })}
-          </tbody>
-        </table>
+          </div>
+        </div>
       </section>
 
-      <h2 className="text-xl">Remediation Summary</h2>
+      <h2 className="text-xl font-semibold">Remediation Summary</h2>
       <div className="flex flex-wrap gap-2" role="list">
         {remediationTags.map((tag) => (
           <span
             key={tag}
             role="listitem"
-            className="px-2 py-1 bg-green-700 rounded text-sm"
+            className="rounded-full border border-emerald-500/40 bg-emerald-600/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-200"
           >
             {tag}
           </span>
