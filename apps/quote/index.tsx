@@ -320,82 +320,97 @@ export default function QuoteApp() {
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 overflow-auto">
       {dailyQuote && (
-        <div className="mb-4 p-3 bg-gray-700 rounded" id="daily-quote">
-          <p className="text-sm italic">&ldquo;{dailyQuote.content}&rdquo;</p>
-          <p className="text-xs text-gray-300 text-right">- {dailyQuote.author}</p>
+        <div
+          className="mb-6 w-full max-w-2xl rounded-lg border border-white/10 bg-white/5 p-4 text-left shadow-lg backdrop-blur"
+          id="daily-quote"
+        >
+          <p className="text-base font-medium italic leading-relaxed text-white/90">
+            &ldquo;{dailyQuote.content}&rdquo;
+          </p>
+          <p className="mt-2 text-sm font-semibold uppercase tracking-wide text-white/60">
+            {dailyQuote.author}
+          </p>
         </div>
       )}
-      <div className="w-full max-w-md flex flex-col items-center">
+      <div className="w-full max-w-2xl flex flex-col items-center">
         <div
           ref={cardRef}
           id="quote-card"
-          className="group relative p-6 rounded text-center bg-gradient-to-br from-[var(--color-primary)]/30 to-[var(--color-secondary)]/30 text-white"
+          className="group relative w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[var(--color-primary)]/40 via-[var(--color-primary)]/10 to-[var(--color-secondary)]/30 p-8 text-center text-white shadow-xl backdrop-blur"
         >
           {current ? (
             <div key={keyOf(current)} className="animate-quote">
               <span
-                className="absolute -top-4 left-4 text-[64px] text-white/20 select-none"
+                className="pointer-events-none absolute -top-6 left-6 text-[96px] font-serif text-white/15"
                 aria-hidden="true"
               >
                 &ldquo;
               </span>
-              <p className="mb-4 text-[18px] leading-[24px] sm:text-[20px] sm:leading-[26px] tracking-[6px]">
+              <p className="mb-6 text-xl font-medium leading-8 tracking-tight text-white sm:text-2xl sm:leading-9">
                 {current.content}
               </p>
-              <p className="text-sm text-white/80">— {current.author}</p>
-              <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition">
+              <p className="text-right text-base font-semibold uppercase tracking-[0.35em] text-white/70">
+                {current.author}
+              </p>
+              <div className="absolute top-3 right-3 flex gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
                 <button
                   onClick={copyQuote}
-                  className="p-1 bg-black/30 hover:bg-black/50 rounded"
+                  className="rounded-full border border-white/20 bg-black/30 p-1.5 text-white transition hover:bg-black/50"
                   aria-label="Copy quote"
                 >
                   <CopyIcon className="w-6 h-6" />
                 </button>
                 <button
                   onClick={tweetQuote}
-                  className="p-1 bg-black/30 hover:bg-black/50 rounded"
+                  className="rounded-full border border-white/20 bg-black/30 p-1.5 text-white transition hover:bg-black/50"
                   aria-label="Tweet quote"
                 >
                   <TwitterIcon className="w-6 h-6" />
                 </button>
               </div>
-              <div className="absolute left-2 top-1/2 -translate-y-1/2 flex flex-col items-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition">
+              <div className="absolute left-4 top-1/2 flex -translate-y-1/2 flex-col items-center gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
                 <button
                   onClick={prevQuote}
-                  className="p-2 bg-black/30 hover:bg-black/50 rounded-full"
+                  className="rounded-full border border-white/20 bg-black/30 p-2 text-lg font-semibold transition hover:bg-black/50"
                   aria-label="Previous quote"
                 >
                   ←
                 </button>
-                <kbd className="mt-1 text-xs text-white/70">←</kbd>
+                <kbd className="text-[10px] font-semibold tracking-widest text-white/60">←</kbd>
               </div>
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col items-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition">
+              <div className="absolute right-4 top-1/2 flex -translate-y-1/2 flex-col items-center gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
                 <button
                   onClick={nextQuote}
-                  className="p-2 bg-black/30 hover:bg-black/50 rounded-full"
+                  className="rounded-full border border-white/20 bg-black/30 p-2 text-lg font-semibold transition hover:bg-black/50"
                   aria-label="Next quote"
                 >
                   →
                 </button>
-                <kbd className="mt-1 text-xs text-white/70">→</kbd>
+                <kbd className="text-[10px] font-semibold tracking-widest text-white/60">→</kbd>
               </div>
             </div>
           ) : (
             <p>No quotes found.</p>
           )}
         </div>
-        <div className="flex flex-wrap justify-center gap-2 mt-4">
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-white/20"
             onClick={changeQuote}
             disabled={playing}
           >
             New Quote
           </button>
-          <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={toggleFavorite}>
+          <button
+            className="rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-white/20"
+            onClick={toggleFavorite}
+          >
             {isFav ? 'Unfavorite' : 'Favorite'}
           </button>
-          <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={shareCard}>
+          <button
+            className="rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-white/20"
+            onClick={shareCard}
+          >
             Share as Card
           </button>
           <button
@@ -405,11 +420,14 @@ export default function QuoteApp() {
             {posterize ? 'Close Posterizer' : 'Posterize'}
           </button>
           {canShare() && (
-            <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={shareQuote}>
+            <button
+              className="rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-white/20"
+              onClick={shareQuote}
+            >
               Share
             </button>
           )}
-          <label className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded cursor-pointer">
+          <label className="cursor-pointer rounded-full border border-dashed border-white/20 bg-white/5 px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-white/15">
             Import
             <input type="file" accept="application/json" className="hidden" onChange={importQuotes} />
           </label>
@@ -419,23 +437,23 @@ export default function QuoteApp() {
             <Posterizer quote={current} />
           </div>
         )}
-        <div className="mt-4 flex flex-col w-full gap-2">
+        <div className="mt-6 flex w-full flex-col gap-3">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search"
-            className="px-2 py-1 rounded text-black"
+            className="w-full rounded-lg border border-white/10 bg-white/90 px-3 py-2 text-sm text-gray-900 shadow"
           />
           <input
             value={authorFilter}
             onChange={(e) => setAuthorFilter(e.target.value)}
             placeholder="Author"
-            className="px-2 py-1 rounded text-black"
+            className="w-full rounded-lg border border-white/10 bg-white/90 px-3 py-2 text-sm text-gray-900 shadow"
           />
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="px-2 py-1 rounded text-black"
+            className="w-full rounded-lg border border-white/10 bg-white/90 px-3 py-2 text-sm text-gray-900 shadow"
           >
             <option value="">All Categories</option>
             {categories.map((cat) => (
@@ -446,34 +464,36 @@ export default function QuoteApp() {
           </select>
         </div>
         <PlaylistBuilder quotes={quotes} playlist={playlist} setPlaylist={setPlaylist} />
-        <div className="mt-2 flex flex-wrap justify-center gap-2">
+        <div className="mt-4 flex flex-wrap justify-center gap-3">
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/50"
             onClick={startPlaylist}
             disabled={!playlist.length || playing}
           >
             Play Playlist
           </button>
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/50"
             onClick={stopPlaylist}
             disabled={!playing}
           >
             Stop
           </button>
-          <label className="flex items-center space-x-1">
+          <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/80">
             <input
               type="checkbox"
               checked={loop}
               onChange={(e) => setLoop(e.target.checked)}
+              className="h-4 w-4 rounded border border-white/40 bg-white/10 text-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/60"
             />
             <span>Loop</span>
           </label>
-          <label className="flex items-center space-x-1">
+          <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/80">
             <input
               type="checkbox"
               checked={shuffle}
               onChange={(e) => setShuffle(e.target.checked)}
+              className="h-4 w-4 rounded border border-white/40 bg-white/10 text-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/60"
             />
             <span>Shuffle</span>
           </label>
