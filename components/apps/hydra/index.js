@@ -440,7 +440,7 @@ const HydraApp = () => {
   };
 
   return (
-    <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
+    <div className="h-full w-full p-4 bg-[var(--kali-panel)] text-[var(--color-text)] overflow-auto">
       <div className="grid grid-cols-2 gap-1.5">
         <div className="col-span-2 flex gap-1.5">
           {[
@@ -450,8 +450,10 @@ const HydraApp = () => {
             <div
               key={m.value}
               onClick={() => setService(m.value)}
-              className={`flex items-center p-2 rounded border cursor-pointer text-sm ${
-                service === m.value ? 'bg-blue-600' : 'bg-gray-700'
+              className={`flex items-center p-2 rounded border border-kali-border cursor-pointer text-sm transition-colors ${
+                service === m.value
+                  ? 'bg-kali-control text-[color:var(--color-dark)]'
+                  : 'bg-kali-surface text-[var(--color-text)]'
               }`}
             >
               <img src={m.icon} alt={m.label} className="w-6 h-6 mr-2" />
@@ -460,20 +462,28 @@ const HydraApp = () => {
           ))}
         </div>
         <div>
-          <label className="block mb-1">Target</label>
+          <label className="block mb-1" htmlFor="hydra-target">
+            Target
+          </label>
           <input
             type="text"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
+            id="hydra-target"
+            aria-label="Target host"
             className="w-full p-2 rounded text-black"
             placeholder="192.168.0.1"
           />
         </div>
         <div>
-          <label className="block mb-1">Service</label>
+          <label className="block mb-1" htmlFor="hydra-service">
+            Service
+          </label>
           <select
             value={service}
             onChange={(e) => setService(e.target.value)}
+            id="hydra-service"
+            aria-label="Service protocol"
             className="w-full p-2 rounded text-black"
           >
             {availableServices.map((s) => (
@@ -484,10 +494,14 @@ const HydraApp = () => {
           </select>
         </div>
         <div>
-          <label className="block mb-1">User List</label>
+          <label className="block mb-1" htmlFor="hydra-user-list">
+            User List
+          </label>
           <select
             value={selectedUser}
             onChange={(e) => setSelectedUser(e.target.value)}
+            id="hydra-user-list"
+            aria-label="Select user wordlist"
             className="w-full p-2 rounded text-black mb-1"
           >
             {userLists.map((l) => (
@@ -503,6 +517,7 @@ const HydraApp = () => {
             onChange={(e) =>
               addWordList(e.target.files[0], setUserLists, userLists)
             }
+            aria-label="Upload user wordlist"
             className="w-full p-2 rounded text-black mb-1"
           />
           <ul>
@@ -511,7 +526,7 @@ const HydraApp = () => {
                 {l.name}
                 <button
                   onClick={() => removeWordList(l.name, setUserLists, userLists)}
-                  className="text-red-500"
+                  className="text-[var(--game-color-danger)]"
                 >
                   Remove
                 </button>
@@ -520,10 +535,14 @@ const HydraApp = () => {
           </ul>
         </div>
         <div>
-          <label className="block mb-1">Password List</label>
+          <label className="block mb-1" htmlFor="hydra-pass-list">
+            Password List
+          </label>
           <select
             value={selectedPass}
             onChange={(e) => setSelectedPass(e.target.value)}
+            id="hydra-pass-list"
+            aria-label="Select password wordlist"
             className="w-full p-2 rounded text-black mb-1"
           >
             {passLists.map((l) => (
@@ -539,6 +558,7 @@ const HydraApp = () => {
             onChange={(e) =>
               addWordList(e.target.files[0], setPassLists, passLists)
             }
+            aria-label="Upload password wordlist"
             className="w-full p-2 rounded text-black mb-1"
           />
           <ul>
@@ -547,7 +567,7 @@ const HydraApp = () => {
                 {l.name}
                 <button
                   onClick={() => removeWordList(l.name, setPassLists, passLists)}
-                  className="text-red-500"
+                  className="text-[var(--game-color-danger)]"
                 >
                   Remove
                 </button>
@@ -556,21 +576,29 @@ const HydraApp = () => {
           </ul>
         </div>
         <div>
-          <label className="block mb-1">Charset</label>
+          <label className="block mb-1" htmlFor="hydra-charset">
+            Charset
+          </label>
           <input
             type="text"
             value={charset}
             onChange={(e) => setCharset(e.target.value)}
+            id="hydra-charset"
+            aria-label="Candidate charset"
             className="w-full p-2 rounded text-black"
             placeholder="abc123"
           />
         </div>
         <div className="col-span-2">
-          <label className="block mb-1">Rule (min:max length)</label>
+          <label className="block mb-1" htmlFor="hydra-rule">
+            Rule (min:max length)
+          </label>
           <input
             type="text"
             value={rule}
             onChange={(e) => setRule(e.target.value)}
+            id="hydra-rule"
+            aria-label="Candidate length rule"
             className="w-full p-2 rounded text-black"
             placeholder="1:3"
           />
@@ -581,33 +609,34 @@ const HydraApp = () => {
             ref={canvasRef}
             width="300"
             height="100"
-            className="bg-gray-800 mt-2 w-full"
+            aria-label="Candidate length distribution"
+            className="bg-[var(--color-muted)] mt-2 w-full"
           ></canvas>
         </div>
         <div className="col-span-2 flex flex-wrap gap-1.5 mt-2">
           <button
             onClick={runHydra}
             disabled={running || !isTargetValid}
-            className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
+            className="px-4 py-2 rounded bg-kali-terminal text-[color:var(--color-dark)] disabled:opacity-50"
           >
             {running ? 'Running...' : 'Run Hydra'}
           </button>
           <button
             onClick={dryRunHydra}
             disabled={running}
-            className="px-4 py-2 bg-purple-600 rounded disabled:opacity-50"
+            className="px-4 py-2 rounded bg-kali-primary text-[color:var(--color-dark)] disabled:opacity-50"
           >
             Dry Run
           </button>
           <button
             onClick={handleSaveConfig}
-            className="px-4 py-2 bg-gray-700 rounded"
+            className="px-4 py-2 rounded bg-kali-muted text-[var(--color-text)]"
           >
             Save Config
           </button>
           <button
             onClick={handleCopyConfig}
-            className="px-4 py-2 bg-gray-700 rounded"
+            className="px-4 py-2 rounded bg-kali-muted text-[var(--color-text)]"
           >
             Copy Config
           </button>
@@ -615,7 +644,7 @@ const HydraApp = () => {
             <button
               data-testid="pause-button"
               onClick={pauseHydra}
-              className="px-4 py-2 bg-yellow-600 rounded"
+              className="px-4 py-2 rounded bg-[var(--game-color-warning)] text-[color:var(--color-dark)]"
             >
               Pause
             </button>
@@ -624,7 +653,7 @@ const HydraApp = () => {
             <button
               data-testid="resume-button"
               onClick={resumeHydra}
-              className="px-4 py-2 bg-blue-600 rounded"
+              className="px-4 py-2 rounded bg-kali-control text-[color:var(--color-dark)]"
             >
               Resume
             </button>
@@ -633,7 +662,7 @@ const HydraApp = () => {
             <button
               data-testid="cancel-button"
               onClick={cancelHydra}
-              className="px-4 py-2 bg-red-600 rounded"
+              className="px-4 py-2 rounded bg-[var(--game-color-danger)] text-[var(--color-text)]"
             >
               Cancel
             </button>
@@ -656,14 +685,14 @@ const HydraApp = () => {
           alt="credentials"
           className="w-5 h-5"
         />
-        <div className="flex-1 bg-gray-700 h-2 rounded">
+        <div className="flex-1 bg-kali-muted h-2 rounded">
           <div
-            className="bg-green-500 h-2 rounded"
+            className="bg-kali-terminal h-2 rounded"
             style={{ width: `${progress}%` }}
           ></div>
         </div>
       </div>
-      <p className="mt-2 text-sm text-yellow-300">
+      <p className="mt-2 text-sm text-[var(--game-color-warning)]">
         This demo slows after {BACKOFF_THRESHOLD} tries to mimic password spray
         throttling and stops at {LOCKOUT_THRESHOLD} attempts to illustrate
         account lockout.
@@ -680,7 +709,7 @@ const HydraApp = () => {
           </thead>
           <tbody>
             {timeline.map((t, idx) => (
-              <tr key={idx} className="border-t border-gray-800">
+              <tr key={idx} className="border-t border-kali-border/60">
                 <td className="px-2">{target}</td>
                 <td className="px-2">{t.user}</td>
                 <td className="px-2">{t.password}</td>
@@ -690,7 +719,7 @@ const HydraApp = () => {
         </table>
       )}
 
-      <p className="mt-4 text-sm text-gray-300">
+      <p className="mt-4 text-sm text-kali-muted">
         Common password lists succeed because many users choose simple,
         predictable passwords or reuse credentials across sites. These habits
         allow attackers to guess passwords without exploring the full candidate
@@ -702,10 +731,10 @@ const HydraApp = () => {
       </div>
 
       {output && (
-        <pre className="mt-4 bg-black p-2 overflow-auto h-64 whitespace-pre-wrap font-mono">{output}</pre>
+        <pre className="mt-4 bg-[var(--color-dark)] text-[var(--color-text)] p-2 overflow-auto h-64 whitespace-pre-wrap font-mono">{output}</pre>
       )}
       {showSaved && (
-        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-3 py-1 rounded text-sm">
+        <div className="fixed bottom-4 right-4 bg-kali-terminal text-[color:var(--color-dark)] px-3 py-1 rounded text-sm shadow-lg">
           Saved
         </div>
       )}
