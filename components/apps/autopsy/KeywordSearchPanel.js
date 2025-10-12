@@ -45,15 +45,16 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
     <>
       <div className="flex space-x-2">
         <input
+          aria-label="Keyword search"
           type="text"
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
           placeholder="Keyword search"
-          className="flex-grow bg-ub-grey text-white px-2 py-1 rounded"
+          className="flex-grow rounded border border-white/10 bg-kali-surface/80 px-2 py-1 text-sm text-white/90 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
         />
         <button
           onClick={exportHits}
-          className="bg-ub-orange px-2 py-1 rounded text-sm text-black"
+          className="rounded bg-kali-primary px-2 py-1 text-sm font-semibold text-slate-900 shadow transition hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
         >
           Export Hits
         </button>
@@ -64,7 +65,7 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
             type="button"
             key={`${a.name}-${idx}`}
             onClick={() => onSelect(a)}
-            className="p-2 bg-ub-grey rounded text-sm text-left flex flex-col"
+            className="flex flex-col rounded-lg border border-white/10 bg-kali-surface/90 p-3 text-left text-sm text-white/85 transition hover:border-kali-primary/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
           >
             <div className="flex items-center font-bold">
               <span className="mr-1" aria-hidden="true">
@@ -74,18 +75,20 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
                 dangerouslySetInnerHTML={{ __html: highlight(a.name) }}
               />
             </div>
-            <div className="text-gray-400">{a.type}</div>
-            <div className="text-xs">
+            <div className="text-xs uppercase tracking-wide text-kali-primary/80">
+              {a.type}
+            </div>
+            <div className="text-xs text-white/70">
               {new Date(a.timestamp).toLocaleString()}
             </div>
             {a.user && (
               <div
-                className="text-xs"
+                className="text-xs text-white/70"
                 dangerouslySetInnerHTML={{ __html: `User: ${highlight(a.user)}` }}
               />
             )}
             <div
-              className="text-xs"
+              className="text-xs text-white/80"
               dangerouslySetInnerHTML={{ __html: highlight(a.description) }}
             />
           </button>
