@@ -60,6 +60,14 @@ const Radare2 = ({ initialData = {} }) => {
   const [activeHeuristic, setActiveHeuristic] = useState(null);
   const disasmRef = useRef(null);
   const { theme } = useTheme();
+  const cardSurfaceStyle = useMemo(
+    () => ({
+      backgroundColor: "var(--r2-surface)",
+      border: "1px solid var(--r2-border)",
+      boxShadow: "0 18px 45px -30px rgba(0,0,0,0.65)",
+    }),
+    [],
+  );
 
   const heuristicMatches = useMemo(
     () =>
@@ -81,6 +89,53 @@ const Radare2 = ({ initialData = {} }) => {
     () => (activeHeuristicMeta ? activeHeuristicMeta.matches : disasm),
     [activeHeuristicMeta, disasm],
   );
+
+  const lineWarnings = useMemo(() => {
+    const map = new Map();
+    disasm.forEach((line) => {
+      const matches = SUSPICIOUS_HEURISTICS.filter((heuristic) =>
+        heuristic.predicate(line),
+      );
+      if (matches.length) {
+        map.set(line.addr, matches);
+      }
+    });
+    return map;
+  }, [disasm]);
+
+  const consoleMessages = useMemo(() => {
+    const base = [
+      {
+        id: "load",
+        type: "info",
+        label: `Loaded ${disasm.length} instructions for analysis`,
+      },
+      {
+        id: "strings",
+        type: strings.length ? "info" : "muted",
+        label: strings.length
+          ? `${strings.length} printable strings recovered`
+          : "No printable strings detected in current window",
+      },
+    ];
+
+    const warnings = heuristicMatches
+      .filter((heuristic) => heuristic.matches.length > 0)
+      .map((heuristic) => ({
+        id: `heuristic-${heuristic.id}`,
+        type: activeHeuristic === heuristic.id ? "active" : "warn",
+        label: `${heuristic.label} triggered ${heuristic.matches.length} time${
+          heuristic.matches.length === 1 ? "" : "s"
+        }`,
+      }));
+
+    return [...base, ...warnings];
+  }, [
+    activeHeuristic,
+    disasm.length,
+    heuristicMatches,
+    strings.length,
+  ]);
 
   const lineIndexByAddr = useMemo(() => {
     const map = new Map();
@@ -186,15 +241,12 @@ const Radare2 = ({ initialData = {} }) => {
 
   const sidebar = (
     <aside
-      className="w-full lg:w-64 shrink-0 space-y-3"
+      className="w-full lg:w-72 shrink-0 space-y-4"
       aria-label="Analysis summary sidebar"
     >
       <div
-        className="rounded border p-3 space-y-3"
-        style={{
-          borderColor: "var(--r2-border)",
-          backgroundColor: "var(--r2-surface)",
-        }}
+        className="rounded-xl border p-4 space-y-4 transition-shadow"
+        style={cardSurfaceStyle}
       >
         <h2 className="text-sm font-semibold uppercase tracking-wide">
           Analysis Summary
@@ -247,9 +299,9 @@ const Radare2 = ({ initialData = {} }) => {
             </dd>
           </div>
         </dl>
-        <div>
+        <div className="space-y-2">
           <p
-            className="text-xs uppercase mb-2"
+            className="text-xs uppercase"
             style={{ color: "var(--r2-muted, #888)" }}
           >
             Quick filters
@@ -257,17 +309,20 @@ const Radare2 = ({ initialData = {} }) => {
           <div className="flex flex-wrap gap-2">
             {heuristicMatches.map((heuristic) => {
               const isActive = activeHeuristic === heuristic.id;
+              const hasMatches = heuristic.matches.length > 0;
               return (
                 <button
                   key={heuristic.id}
                   type="button"
-                  className={`px-2 py-1 text-xs rounded border transition-colors ${
+                  className={`px-2 py-1 text-xs rounded border transition-colors focus:outline-none focus-visible:ring ${
                     isActive ? "font-semibold" : ""
-                  }`}
+                  } ${hasMatches ? "shadow-sm" : ""}`}
                   style={{
                     borderColor: "var(--r2-border)",
                     backgroundColor: isActive
                       ? "var(--r2-accent)"
+                      : hasMatches
+                      ? "rgba(251, 191, 36, 0.18)"
                       : "var(--r2-surface)",
                     color: isActive ? "#000" : "var(--r2-text)",
                   }}
@@ -291,11 +346,11 @@ const Radare2 = ({ initialData = {} }) => {
 
   return (
     <div
-      className="h-full w-full p-4 overflow-auto"
+      className="h-full w-full p-6 overflow-auto"
       style={{ backgroundColor: "var(--r2-bg)", color: "var(--r2-text)" }}
     >
       {showGuide && <GuideOverlay onClose={() => setShowGuide(false)} />}
-      <div className="flex gap-2 mb-2 flex-wrap items-center">
+      <div className="flex gap-2 mb-4 flex-wrap items-center">
         <img
           src="/themes/Yaru/apps/radare2.svg"
           alt="Radare2 badge"
@@ -306,6 +361,7 @@ const Radare2 = ({ initialData = {} }) => {
           onChange={(e) => setSeekAddr(e.target.value)}
           placeholder="seek 0x..."
           className="px-2 py-1 rounded"
+          aria-label="Seek to address"
           style={{
             backgroundColor: "var(--r2-surface)",
             color: "var(--r2-text)",
@@ -328,6 +384,7 @@ const Radare2 = ({ initialData = {} }) => {
           onChange={(e) => setFindTerm(e.target.value)}
           placeholder="find"
           className="px-2 py-1 rounded"
+          aria-label="Find instruction"
           style={{
             backgroundColor: "var(--r2-surface)",
             color: "var(--r2-text)",
@@ -368,155 +425,279 @@ const Radare2 = ({ initialData = {} }) => {
       </div>
 
       {mode === "graph" ? (
-        <div className="flex flex-col lg:flex-row gap-4">
-          <div className="flex-1">
+        <div className="flex flex-col xl:flex-row gap-4 items-start">
+          <div
+            className="flex-1 w-full rounded-xl border p-4"
+            style={cardSurfaceStyle}
+          >
             <GraphView blocks={blocks} theme={theme} />
           </div>
           {sidebar}
         </div>
       ) : (
-        <div className="flex flex-col lg:flex-row gap-4">
-          <div className="flex-1 grid md:grid-cols-2 gap-4">
-            <HexEditor hex={hex} theme={theme} />
+        <div className="flex flex-col xl:flex-row gap-4">
+          <div className="flex-1 flex flex-col gap-4">
             <div
-              ref={disasmRef}
-              className="overflow-auto rounded max-h-64 p-1.5 font-mono"
-              style={{
-                backgroundColor: "var(--r2-surface)",
-                border: "1px solid var(--r2-border)",
-                backgroundImage:
-                  "repeating-linear-gradient(to right, transparent, transparent calc(8ch - 1px), var(--r2-border) calc(8ch - 1px), var(--r2-border) 8ch)",
-                backgroundOrigin: "content-box",
-                backgroundClip: "content-box",
-              }}
+              className="rounded-xl border p-4"
+              style={cardSurfaceStyle}
             >
-              <ul className="text-sm space-y-1">
-                {filteredDisasm.map((line) => {
-                  const isSelected = currentAddr === line.addr;
-                  const isBookmarked = bookmarks.includes(line.addr);
-                  return (
-                    <li
-                      key={line.addr}
-                      id={getLineElementId(line.addr)}
-                      data-testid="disasm-item"
-                      className="cursor-pointer rounded border px-2 py-1 transition-colors"
-                      style={{
-                        borderColor: isSelected
-                          ? "var(--r2-border)"
-                          : "transparent",
-                        backgroundColor: isSelected
-                          ? "var(--r2-accent)"
-                          : "transparent",
-                        color: isSelected ? "#000" : "var(--r2-text)",
-                      }}
-                      onClick={() => setCurrentAddr(line.addr)}
-                      aria-selected={isSelected}
-                    >
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleBookmark(line.addr);
-                        }}
-                        className="mr-1"
-                        aria-label={`${
-                          isBookmarked ? "Remove bookmark" : "Bookmark address"
-                        } ${line.addr}`}
-                        title={
-                          isBookmarked
-                            ? `Remove bookmark for ${line.addr}`
-                            : `Bookmark ${line.addr}`
-                        }
-                      >
-                        {isBookmarked ? "★" : "☆"}
-                      </button>
-                      {line.addr}: {line.text}
-                    </li>
-                  );
-                })}
-                {filteredDisasm.length === 0 && (
-                  <li className="text-xs italic" data-testid="disasm-empty">
-                    No instructions match the selected heuristic.
-                  </li>
+              <HexEditor hex={hex} theme={theme} />
+            </div>
+            <div
+              className="rounded-xl border p-4"
+              style={cardSurfaceStyle}
+            >
+              <header className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold uppercase tracking-wide">
+                  Disassembly
+                </h2>
+                {currentAddr && (
+                  <span
+                    className="text-xs px-2 py-1 rounded-full font-mono"
+                    style={{
+                      backgroundColor: "rgba(96, 165, 250, 0.15)",
+                      color: "var(--r2-text)",
+                    }}
+                  >
+                    Active: {currentAddr}
+                  </span>
                 )}
-              </ul>
+              </header>
+              <div
+                ref={disasmRef}
+                className="overflow-auto rounded-lg border"
+                style={{
+                  borderColor: "var(--r2-border)",
+                  backgroundColor: "rgba(17, 24, 39, 0.35)",
+                  maxHeight: "20rem",
+                }}
+              >
+                <ul
+                  className="text-sm space-y-1 p-2 font-mono"
+                  role="listbox"
+                  aria-label="Disassembly listing"
+                >
+                  {filteredDisasm.map((line) => {
+                    const isSelected = currentAddr === line.addr;
+                    const isBookmarked = bookmarks.includes(line.addr);
+                    const heuristicsForLine = lineWarnings.get(line.addr) || [];
+                    const hasWarning = heuristicsForLine.length > 0;
+                    return (
+                      <li
+                        key={line.addr}
+                        id={getLineElementId(line.addr)}
+                        data-testid="disasm-item"
+                        className="cursor-pointer rounded-md border px-2 py-1 transition-colors"
+                        role="option"
+                        style={{
+                          borderColor: isSelected
+                            ? "var(--r2-border)"
+                            : hasWarning
+                            ? "rgba(251, 191, 36, 0.4)"
+                            : "transparent",
+                          backgroundColor: isSelected
+                            ? "var(--r2-accent)"
+                            : hasWarning
+                            ? "rgba(251, 191, 36, 0.12)"
+                            : "transparent",
+                          color: isSelected ? "#000" : "var(--r2-text)",
+                        }}
+                        onClick={() => setCurrentAddr(line.addr)}
+                        aria-selected={isSelected}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleBookmark(line.addr);
+                              }}
+                              className="mr-1"
+                              aria-label={`${
+                                isBookmarked
+                                  ? "Remove bookmark"
+                                  : "Bookmark address"
+                              } ${line.addr}`}
+                              title={
+                                isBookmarked
+                                  ? `Remove bookmark for ${line.addr}`
+                                  : `Bookmark ${line.addr}`
+                              }
+                            >
+                              {isBookmarked ? "★" : "☆"}
+                            </button>
+                            <span>{line.addr}: </span>
+                            <span>{line.text}</span>
+                          </div>
+                          {hasWarning && (
+                            <div className="flex flex-wrap gap-1 text-[10px] uppercase">
+                              {heuristicsForLine.map((heuristic) => (
+                                <span
+                                  key={`${line.addr}-${heuristic.id}`}
+                                  className="px-1.5 py-0.5 rounded-full"
+                                  style={{
+                                    backgroundColor: "rgba(251, 191, 36, 0.25)",
+                                    color: "var(--r2-text)",
+                                  }}
+                                >
+                                  {heuristic.label}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                  {filteredDisasm.length === 0 && (
+                    <li className="text-xs italic" data-testid="disasm-empty">
+                      No instructions match the selected heuristic.
+                    </li>
+                  )}
+                </ul>
+              </div>
             </div>
           </div>
           {sidebar}
         </div>
       )}
 
-      {strings.length > 0 && (
-        <div className="mt-4">
-          <h2 className="text-lg">Strings</h2>
-          <ul
-            className="rounded p-2"
-            style={{
-              backgroundColor: "var(--r2-surface)",
-              border: "1px solid var(--r2-border)",
-            }}
-          >
-            {strings.map((s) => (
-              <li key={s.addr}>
-                <button
-                  onClick={() => scrollToAddr(s.addr)}
-                  className="underline"
+      <div className="mt-6 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        <section
+          className="rounded-xl border p-4 space-y-3"
+          style={cardSurfaceStyle}
+        >
+          <header className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wide">
+              Console Output
+            </h2>
+            <span className="text-[10px] uppercase" style={{ color: "var(--r2-muted, #888)" }}>
+              Simulated
+            </span>
+          </header>
+          <ul className="space-y-2 text-sm">
+            {consoleMessages.map((message) => {
+              const isWarning = message.type === "warn";
+              const isActive = message.type === "active";
+              const isMuted = message.type === "muted";
+              return (
+                <li
+                  key={message.id}
+                  className={`rounded-lg border px-3 py-2 ${
+                    isActive
+                      ? "font-semibold"
+                      : ""
+                  }`}
+                  style={{
+                    borderColor: isActive
+                      ? "var(--r2-accent)"
+                      : isWarning
+                      ? "rgba(251, 191, 36, 0.35)"
+                      : "transparent",
+                    backgroundColor: isActive
+                      ? "var(--r2-accent)"
+                      : isWarning
+                      ? "rgba(251, 191, 36, 0.15)"
+                      : isMuted
+                      ? "rgba(148, 163, 184, 0.1)"
+                      : "rgba(15, 23, 42, 0.3)",
+                    color: isActive ? "#000" : "var(--r2-text)",
+                  }}
                 >
-                  {s.addr}: {s.text}
-                </button>
-              </li>
-            ))}
+                  {message.label}
+                </li>
+              );
+            })}
           </ul>
-        </div>
-      )}
+        </section>
 
-      {currentAddr && (
-        <div className="mt-4">
-          <h2 className="text-lg">Xrefs for {currentAddr}</h2>
-          <p className="mb-2">
-            {(xrefs[currentAddr] || []).join(", ") || "None"}
-          </p>
-          <textarea
-            value={noteText}
-            onChange={(e) => setNoteText(e.target.value)}
-            placeholder="Add note"
-            className="w-full p-2 rounded"
-            style={{
-              backgroundColor: "var(--r2-surface)",
-              color: "var(--r2-text)",
-              border: "1px solid var(--r2-border)",
-            }}
-          />
-          <button
-            onClick={handleAddNote}
-            className="mt-2 px-3 py-1 rounded"
-            style={{
-              backgroundColor: "var(--r2-surface)",
-              border: "1px solid var(--r2-border)",
-            }}
+        {strings.length > 0 && (
+          <section
+            className="rounded-xl border p-4 space-y-3"
+            style={cardSurfaceStyle}
           >
-            Save Note
-          </button>
-        </div>
-      )}
+            <header className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-wide">
+                Strings
+              </h2>
+              <span className="text-xs" style={{ color: "var(--r2-muted, #888)" }}>
+                Click to jump
+              </span>
+            </header>
+            <ul className="space-y-2 text-sm">
+              {strings.map((s) => (
+                <li key={s.addr}>
+                  <button
+                    onClick={() => scrollToAddr(s.addr)}
+                    className="underline"
+                  >
+                    {s.addr}: {s.text}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
-      {notes.length > 0 && (
-        <div className="mt-4">
-          <h2 className="text-lg">Notes</h2>
-          <ul
-            className="rounded p-2"
-            style={{
-              backgroundColor: "var(--r2-surface)",
-              border: "1px solid var(--r2-border)",
-            }}
+        {currentAddr && (
+          <section
+            className="rounded-xl border p-4 space-y-3"
+            style={cardSurfaceStyle}
           >
-            {notes.map((n, i) => (
-              <li key={i}>
-                {n.addr}: {n.text}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+            <header className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-wide">
+                Xrefs
+              </h2>
+              <span className="text-xs font-mono">{currentAddr}</span>
+            </header>
+            <p className="text-sm">
+              {(xrefs[currentAddr] || []).join(", ") || "None"}
+            </p>
+            <div className="space-y-2">
+              <textarea
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                placeholder="Add note"
+                className="w-full p-2 rounded"
+                aria-label={`Add note for ${currentAddr}`}
+                style={{
+                  backgroundColor: "var(--r2-surface)",
+                  color: "var(--r2-text)",
+                  border: "1px solid var(--r2-border)",
+                }}
+              />
+              <button
+                onClick={handleAddNote}
+                className="px-3 py-1 rounded self-end"
+                style={{
+                  backgroundColor: "var(--r2-surface)",
+                  border: "1px solid var(--r2-border)",
+                }}
+              >
+                Save Note
+              </button>
+            </div>
+          </section>
+        )}
+
+        {notes.length > 0 && (
+          <section
+            className="rounded-xl border p-4 space-y-2 lg:col-span-2 xl:col-span-3"
+            style={cardSurfaceStyle}
+          >
+            <h2 className="text-sm font-semibold uppercase tracking-wide">
+              Notes
+            </h2>
+            <ul className="space-y-1 text-sm">
+              {notes.map((n, i) => (
+                <li key={i} className="font-mono">
+                  {n.addr}: {n.text}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
     </div>
   );
 };
