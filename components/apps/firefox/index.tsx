@@ -123,81 +123,97 @@ const Firefox: React.FC = () => {
   };
 
   return (
-    <div className="flex h-full flex-col bg-ub-cool-grey text-gray-100">
+    <div className="flex h-full min-h-0 flex-col bg-ub-grey text-gray-100">
       <form
         onSubmit={handleSubmit}
-        className="flex flex-wrap items-center gap-2 border-b border-gray-700 bg-gray-900 px-3 py-2"
+        className="flex flex-col gap-3 border-b border-white/10 bg-black/40 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
       >
         <label htmlFor="firefox-address" className="sr-only">
           Address
         </label>
-        <input
-          id="firefox-address"
-          ref={inputRef}
-          value={inputValue}
-          onChange={(event) => setInputValue(event.target.value)}
-          placeholder="Enter a URL"
-          className="flex-1 rounded border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 placeholder-gray-400 focus:border-blue-500 focus:outline-none"
-        />
-        <div className="flex items-center gap-2">
-          <div className="hidden items-center gap-1 sm:flex">
-            {BOOKMARKS.slice(0, 5).map((bookmark) => (
-              <button
-                key={`quick-${bookmark.url}`}
-                type="button"
-                onClick={() => handleQuickFill(bookmark.url)}
-                className="rounded border border-transparent bg-gray-800/80 p-1 transition hover:border-blue-400 hover:bg-gray-700"
-                aria-label={`Fill address with ${bookmark.label}`}
-              >
-                <img
-                  src={getFaviconUrl(bookmark.url)}
-                  alt=""
-                  className="h-4 w-4"
-                  loading="lazy"
-                />
-              </button>
-            ))}
+        <div className="flex w-full flex-col gap-2 sm:flex-1">
+          <div className="flex min-w-0 items-center gap-3 rounded-md border border-white/10 bg-black/40 px-3 py-2 shadow-inner focus-within:border-ub-orange focus-within:ring-1 focus-within:ring-ub-orange">
+            <input
+              id="firefox-address"
+              ref={inputRef}
+              value={inputValue}
+              onChange={(event) => setInputValue(event.target.value)}
+              placeholder="Enter a URL"
+              aria-label="Address bar"
+              className="flex-1 bg-transparent text-sm text-gray-100 placeholder-gray-400 focus:outline-none"
+            />
+            <div className="flex items-center" aria-live="polite">
+              {isLoading ? (
+                <span
+                  className="flex h-5 w-5 items-center justify-center"
+                  role="status"
+                  aria-label="Loading address"
+                >
+                  <span className="h-4 w-4 animate-spin rounded-full border border-ub-orange border-t-transparent" />
+                </span>
+              ) : (
+                <span className="text-xs font-medium text-ub-orange">Ready</span>
+              )}
+            </div>
           </div>
-          <kbd className="hidden rounded border border-gray-700 bg-gray-800 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-300 sm:block">
-            Ctrl/⌘ + L
-          </kbd>
-          <div className="flex items-center justify-center">
-            {isLoading ? (
-              <span
-                className="flex h-5 w-5 items-center justify-center"
-                role="status"
-                aria-label="Loading address"
-              >
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
-              </span>
-            ) : (
-              <span className="text-xs text-gray-400">Ready</span>
-            )}
+          <div className="flex items-center justify-between gap-2 text-xs text-gray-300 sm:justify-start">
+            <div className="flex items-center gap-1 overflow-x-auto">
+              {BOOKMARKS.slice(0, 5).map((bookmark) => (
+                <button
+                  key={`quick-${bookmark.url}`}
+                  type="button"
+                  onClick={() => handleQuickFill(bookmark.url)}
+                  className="rounded-md border border-transparent bg-black/40 p-1 transition hover:border-ub-orange hover:bg-black/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
+                  aria-label={`Fill address with ${bookmark.label}`}
+                >
+                  <img
+                    src={getFaviconUrl(bookmark.url)}
+                    alt=""
+                    className="h-4 w-4"
+                    loading="lazy"
+                  />
+                </button>
+              ))}
+            </div>
+            <kbd className="hidden rounded border border-white/10 bg-black/50 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-200 sm:block">
+              Ctrl/⌘ + L
+            </kbd>
           </div>
         </div>
         <button
           type="submit"
-          className="rounded bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-300"
+          className="h-10 rounded-md bg-ub-orange px-4 text-sm font-semibold text-black shadow transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
         >
           Go
         </button>
       </form>
-      <nav className="flex flex-wrap gap-1 border-b border-gray-800 bg-gray-900 px-3 py-2 text-xs">
-        {BOOKMARKS.map((bookmark) => (
-          <button
-            key={bookmark.url}
-            type="button"
-            onClick={() => updateAddress(bookmark.url)}
-            className="rounded bg-gray-800 px-3 py-1 font-medium text-gray-200 transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          >
-            {bookmark.label}
-          </button>
-        ))}
+      <nav className="border-b border-white/10 bg-black/30 px-2 py-2 text-xs sm:px-4" aria-label="Pinned sites">
+        <div className="flex gap-1 overflow-x-auto pb-1">
+          {BOOKMARKS.map((bookmark) => {
+            const normalizedBookmark = normaliseUrl(bookmark.url);
+            const isActive = address === normalizedBookmark;
+            return (
+              <button
+                key={bookmark.url}
+                type="button"
+                onClick={() => updateAddress(bookmark.url)}
+                className={`rounded-full px-3 py-1 font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange ${
+                  isActive
+                    ? 'bg-ub-orange text-black shadow-inner hover:brightness-110'
+                    : 'bg-black/40 text-gray-200 hover:bg-black/60'
+                }`}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                {bookmark.label}
+              </button>
+            );
+          })}
+        </div>
       </nav>
-      <div className="relative flex-1 bg-black">
+      <div className="relative flex-1 min-h-0 bg-black">
         {!simulation && (
-          <aside className="pointer-events-auto absolute left-3 top-3 z-10 max-w-sm rounded-lg border border-blue-500 bg-gray-900/95 p-4 text-xs text-gray-200 shadow-lg">
-            <h2 className="text-sm font-semibold text-white">Sandboxed live preview</h2>
+          <aside className="pointer-events-auto absolute left-3 top-3 z-10 max-w-sm rounded-lg border border-ub-orange border-opacity-60 bg-black/80 p-4 text-xs text-gray-200 shadow-xl backdrop-blur">
+            <h2 className="text-sm font-semibold text-ub-orange">Sandboxed live preview</h2>
             <p className="mt-2 text-gray-300">
               This window loads external sites inside a sandboxed iframe for safety. Some sites may block embedding. Use the
               quick links below to open them directly in a new tab.
@@ -209,7 +225,7 @@ const Firefox: React.FC = () => {
                   href={bookmark.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-2 rounded border border-gray-700 bg-gray-800 px-2 py-1 text-gray-200 transition hover:border-blue-400 hover:text-white"
+                  className="flex items-center gap-2 rounded border border-white/10 bg-black/60 px-2 py-1 text-gray-200 transition hover:border-ub-orange hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
                 >
                   <img src={getFaviconUrl(bookmark.url)} alt="" className="h-4 w-4" />
                   <span>{bookmark.label}</span>
