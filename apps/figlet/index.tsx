@@ -18,6 +18,27 @@ interface FontInfo {
   mono: boolean;
 }
 
+const textActionButtonBase =
+  "rounded border border-kali-border/60 px-3 py-1 text-sm font-semibold uppercase tracking-wide transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus";
+
+const iconActionButtonBase =
+  "rounded border border-kali-border/60 p-1 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus";
+
+const copyButtonClass =
+  `${textActionButtonBase} bg-kali-primary text-slate-900 hover:bg-kali-primary/90`;
+
+const txtExportButtonClass =
+  `${textActionButtonBase} bg-kali-muted text-white hover:bg-kali-muted/80`;
+
+const invertButtonClass =
+  `${textActionButtonBase} bg-kali-secondary text-white hover:bg-kali-secondary/80`;
+
+const pngButtonClass =
+  `${iconActionButtonBase} bg-kali-primary/90 text-slate-900 hover:bg-kali-primary`;
+
+const svgButtonClass =
+  `${iconActionButtonBase} bg-kali-muted text-white hover:bg-kali-muted/70`;
+
 const FigletApp: React.FC = () => {
   const [text, setText] = useState("");
   const [fonts, setFonts] = useState<FontInfo[]>([]);
@@ -400,14 +421,14 @@ const FigletApp: React.FC = () => {
             type="file"
             accept=".flf"
             onChange={handleUpload}
-            className="rounded border border-black/30 bg-gray-800 px-2 py-1 text-xs"
+            className="rounded border border-kali-border/60 bg-kali-surface px-2 py-1 text-xs"
             aria-label="Upload font"
           />
           {serverFontNames.length > 0 && (
             <select
               value=""
               onChange={(e) => setFont(e.target.value)}
-              className="rounded border border-black/40 bg-gray-800 px-2 py-1 text-xs"
+              className="rounded border border-kali-border/60 bg-kali-surface px-2 py-1 text-xs"
               aria-label="Select uploaded font"
             >
               <option value="" disabled>
@@ -428,7 +449,7 @@ const FigletApp: React.FC = () => {
             </span>
             <input
               type="text"
-              className="flex-1 rounded border border-black/40 bg-gray-800 px-2 py-1 text-white placeholder:text-gray-400"
+              className="flex-1 rounded border border-kali-border/60 bg-kali-surface px-2 py-1 text-white placeholder:text-gray-400"
               placeholder="Type here"
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -466,7 +487,7 @@ const FigletApp: React.FC = () => {
               max="200"
               value={width}
               onChange={(e) => setWidth(Number(e.target.value))}
-              className="w-20 rounded border border-black/40 bg-gray-800 px-2 py-1 text-white"
+              className="w-20 rounded border border-kali-border/60 bg-kali-surface px-2 py-1 text-white"
               aria-label="Width"
             />
           </label>
@@ -475,7 +496,7 @@ const FigletApp: React.FC = () => {
             <select
               value={layout}
               onChange={(e) => setLayout(e.target.value)}
-              className="rounded border border-black/40 bg-gray-800 px-2 py-1 text-white"
+              className="rounded border border-kali-border/60 bg-kali-surface px-2 py-1 text-white"
               aria-label="Layout"
             >
               <option value="default">Default</option>
@@ -517,14 +538,14 @@ const FigletApp: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={copyOutput}
-            className="rounded bg-blue-700 px-3 py-1 text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:bg-blue-600"
+            className={copyButtonClass}
             aria-label="Banner to clipboard"
           >
             Banner to Clipboard
           </button>
           <button
             onClick={exportPNG}
-            className="rounded bg-green-700 p-1 transition-colors hover:bg-green-600"
+            className={pngButtonClass}
             aria-label="Export PNG"
           >
             <img
@@ -535,7 +556,7 @@ const FigletApp: React.FC = () => {
           </button>
           <button
             onClick={exportSVG}
-            className="rounded bg-yellow-700 p-1 transition-colors hover:bg-yellow-600"
+            className={svgButtonClass}
             aria-label="Export SVG"
           >
             <img
@@ -546,14 +567,14 @@ const FigletApp: React.FC = () => {
           </button>
           <button
             onClick={exportText}
-            className="rounded bg-purple-700 px-3 py-1 text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:bg-purple-600"
+            className={txtExportButtonClass}
             aria-label="Export text file"
           >
             TXT
           </button>
           <button
             onClick={() => setInverted((i) => !i)}
-            className="rounded bg-gray-700 px-3 py-1 text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:bg-gray-600"
+            className={invertButtonClass}
             aria-label="Invert colors"
           >
             Invert
