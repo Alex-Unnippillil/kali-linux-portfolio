@@ -84,7 +84,7 @@ const buildModuleTree = (catalog: ModuleEntry[]) => {
 };
 
 const ModuleTree: React.FC<{ data: TreeNode; onSelect: (m: ModuleEntry) => void }> = ({ data, onSelect }) => (
-  <ul className="pl-4">
+  <ul className="pl-4 space-y-1 text-sm text-gray-100">
     {Object.entries(data).map(([name, node]) => (
       <ModuleNode key={name} name={name} node={node as any} onSelect={onSelect} />
     ))}
@@ -95,7 +95,10 @@ const ModuleNode: React.FC<{ name: string; node: any; onSelect: (m: ModuleEntry)
   if (node.module) {
     return (
       <li>
-        <button className="text-left hover:underline" onClick={() => onSelect(node.module)}>
+        <button
+          className="flex w-full items-center rounded-md px-2 py-1 text-left transition hover:bg-emerald-500/10 hover:text-emerald-300"
+          onClick={() => onSelect(node.module)}
+        >
           {name}
         </button>
       </li>
@@ -103,8 +106,8 @@ const ModuleNode: React.FC<{ name: string; node: any; onSelect: (m: ModuleEntry)
   }
   return (
     <li>
-      <details>
-        <summary className="cursor-pointer">{name}</summary>
+      <details className="rounded-lg border border-gray-700/60 bg-gray-800/50 p-2">
+        <summary className="cursor-pointer font-medium text-emerald-300">{name}</summary>
         <ModuleTree data={node.children} onSelect={onSelect} />
       </details>
     </li>
@@ -147,48 +150,57 @@ const EvidenceVault: React.FC = () => {
   };
 
   return (
-    <div className="mt-4">
-        <h3 className="font-semibold mb-2">Evidence Vault</h3>
-        <label htmlFor="metasploit-evidence-note" className="sr-only" id="metasploit-evidence-note-label">
-          Note
-        </label>
-        <textarea
-          id="metasploit-evidence-note"
-          className="w-full p-2 mb-2 text-black"
-          placeholder="Note"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          aria-labelledby="metasploit-evidence-note-label"
-        />
-        <label htmlFor="metasploit-evidence-file" className="sr-only" id="metasploit-evidence-file-label">
-          Attachment
-        </label>
-        <input
-          id="metasploit-evidence-file"
-          type="file"
-          className="mb-2"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
-          aria-labelledby="metasploit-evidence-file-label"
-        />
-        <label htmlFor="metasploit-evidence-tags" className="sr-only" id="metasploit-evidence-tags-label">
-          Tags
-        </label>
-        <input
-          id="metasploit-evidence-tags"
-          className="w-full p-2 mb-2 text-black"
-          placeholder="Tags (comma separated)"
-          value={tags}
-          onChange={(e) => setTags(e.target.value)}
-          aria-labelledby="metasploit-evidence-tags-label"
-        />
-      <button onClick={addItem} className="px-3 py-1 bg-blue-600 rounded">Add</button>
-      <ul className="mt-4 list-disc pl-6">
+    <div className="mt-6 rounded-lg border border-gray-700 bg-gray-800/70 p-4">
+      <h3 className="mb-3 text-lg font-semibold text-emerald-300">Evidence Vault</h3>
+      <label htmlFor="metasploit-evidence-note" className="sr-only" id="metasploit-evidence-note-label">
+        Note
+      </label>
+      <textarea
+        id="metasploit-evidence-note"
+        className="w-full rounded-md border border-gray-600 bg-gray-900/60 p-2 text-gray-100 placeholder:text-gray-500"
+        placeholder="Note"
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        aria-labelledby="metasploit-evidence-note-label"
+      />
+      <label htmlFor="metasploit-evidence-file" className="sr-only" id="metasploit-evidence-file-label">
+        Attachment
+      </label>
+      <input
+        id="metasploit-evidence-file"
+        type="file"
+        className="mb-3 text-sm text-gray-200 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-emerald-600 file:px-3 file:py-1 file:text-sm file:font-medium"
+        onChange={(e) => setFile(e.target.files?.[0] || null)}
+        aria-labelledby="metasploit-evidence-file-label"
+      />
+      <label htmlFor="metasploit-evidence-tags" className="sr-only" id="metasploit-evidence-tags-label">
+        Tags
+      </label>
+      <input
+        id="metasploit-evidence-tags"
+        className="w-full rounded-md border border-gray-600 bg-gray-900/60 p-2 text-gray-100 placeholder:text-gray-500"
+        placeholder="Tags (comma separated)"
+        value={tags}
+        onChange={(e) => setTags(e.target.value)}
+        aria-labelledby="metasploit-evidence-tags-label"
+      />
+      <button
+        onClick={addItem}
+        className="mt-1 inline-flex items-center rounded-md bg-emerald-600 px-3 py-1 text-sm font-semibold text-white transition hover:bg-emerald-500"
+      >
+        Add evidence
+      </button>
+      <ul className="mt-4 space-y-2">
         {items.map((i) => (
-          <li key={i.id} className="mb-2">
-            {i.fileName && <span className="font-mono mr-2">{i.fileName}</span>}
-            {i.note}
+          <li key={i.id} className="rounded-md border border-gray-700/70 bg-gray-900/60 p-3 text-sm">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              {i.fileName && <span className="font-mono text-emerald-300">{i.fileName}</span>}
+              <span>{i.note}</span>
+            </div>
             {i.tags.length > 0 && (
-              <span className="ml-2 text-sm text-gray-400">[{i.tags.join(', ')}]</span>
+              <span className="mt-2 block text-xs uppercase tracking-wide text-gray-400">
+                Tags: {i.tags.join(', ')}
+              </span>
             )}
           </li>
         ))}
@@ -377,27 +389,29 @@ const MetasploitPost: React.FC = () => {
   const hasMissingOptions = selectedMissingOptions.length > 0;
 
   return (
-    <div className="p-4 bg-gray-900 text-white min-h-screen">
-      <h1 className="text-xl mb-4">Metasploit Post Modules</h1>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-6 text-white">
+      <h1 className="text-2xl font-semibold text-emerald-300 mb-6">Metasploit Post Modules</h1>
       <div
-        className="mb-4 rounded border border-gray-700 bg-gray-800 p-3"
+        className="mb-6 rounded-xl border border-emerald-600/40 bg-slate-900/80 p-4 shadow-lg"
         data-testid="queue-summary-card"
       >
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Execution Queue</h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-emerald-200">Execution Queue</h2>
           {isQueueProcessing && (
-            <span className="text-xs uppercase text-blue-300">Processing</span>
+            <span className="rounded-full bg-emerald-600/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-200">
+              Processing
+            </span>
           )}
         </div>
         {queue.length === 0 ? (
-          <p className="mt-2 text-sm text-gray-300">No modules queued.</p>
+          <p className="mt-3 text-sm text-slate-300">No modules queued.</p>
         ) : (
-          <ul className="mt-2 space-y-2">
+          <ul className="mt-4 space-y-3">
             {queue.map((item) => (
-              <li key={item.module.path} className="flex items-center justify-between text-sm">
-                <span className="pr-2">{item.module.path}</span>
+              <li key={item.module.path} className="flex items-center justify-between rounded-lg border border-gray-700/60 bg-gray-900/60 px-3 py-2 text-sm">
+                <span className="pr-4 font-mono text-emerald-200">{item.module.path}</span>
                 <span
-                  className={`rounded-full px-2 py-0.5 text-xs uppercase tracking-wide ${queueStatusStyles[item.status]}`}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${queueStatusStyles[item.status]}`}
                 >
                   {queueStatusLabels[item.status]}
                 </span>
@@ -407,21 +421,25 @@ const MetasploitPost: React.FC = () => {
         )}
       </div>
       {statusMessage && (
-        <div className="mb-4 rounded border border-blue-500/40 bg-blue-900/30 p-3 text-sm" role="status">
+        <div className="mb-6 rounded-lg border-l-4 border-emerald-400 bg-emerald-500/10 p-4 text-sm text-emerald-100 shadow" role="status">
           {statusMessage}
         </div>
       )}
-      <div className="flex space-x-4 mb-4">
+      <div className="mb-6 flex flex-wrap gap-3">
         {tabs.map((t) => (
           <button
             key={t}
             onClick={() => setActiveTab(t)}
-            className={`px-3 py-1 rounded ${activeTab === t ? 'bg-gray-800' : 'bg-gray-700'}`}
+            className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition ${
+              activeTab === t
+                ? 'border-emerald-500 bg-emerald-500/20 text-emerald-200'
+                : 'border-gray-700/70 bg-slate-800 text-slate-200 hover:border-emerald-600/40 hover:text-emerald-200'
+            }`}
           >
             {t}
             <span
-              className={`ml-2 px-2 py-0.5 rounded text-xs ${
-                results[t].length ? 'bg-green-600' : 'bg-gray-600'
+              className={`ml-1 rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wide ${
+                results[t].length ? 'bg-emerald-500 text-emerald-950' : 'bg-slate-700 text-slate-200'
               }`}
             >
               {results[t].length ? 'done' : 'pending'}
@@ -429,43 +447,53 @@ const MetasploitPost: React.FC = () => {
           </button>
         ))}
       </div>
-      <div className="mb-4">
+      <div className="mb-8 space-y-3 rounded-xl border border-gray-800/70 bg-slate-950/70 p-4">
+        <h2 className="text-lg font-semibold text-emerald-200">{activeTab} Results</h2>
         {results[activeTab].map((r, i) => (
           <ResultCard key={i} title={r.title} output={r.output} />
         ))}
-        <button onClick={saveReport} className="mt-2 px-3 py-1 bg-blue-600 rounded">
-          Save report
+        <button
+          onClick={saveReport}
+          className="inline-flex items-center rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500"
+        >
+          Save combined report snapshot
         </button>
       </div>
-      <div className="flex">
-        <div className="w-1/3 overflow-auto border-r border-gray-700 pr-2">
+      <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+        <div className="max-h-[32rem] overflow-auto rounded-xl border border-gray-800/80 bg-slate-950/80 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-emerald-200">Module Catalog</h2>
+            <span className="text-xs uppercase tracking-wide text-slate-400">Tap to configure</span>
+          </div>
           <ModuleTree data={treeData} onSelect={select} />
         </div>
-        <div className="w-2/3 pl-4">
+        <div className="space-y-6">
           {selected ? (
-            <div>
-              <h2 className="font-semibold mb-2">{selected.path}</h2>
-              <p className="mb-2 text-sm text-gray-300">{selected.description}</p>
+            <div className="rounded-xl border border-gray-800/80 bg-slate-950/80 p-5 shadow-inner">
+              <h2 className="text-xl font-semibold text-emerald-200">{selected.path}</h2>
+              <p className="mt-2 text-sm text-slate-200">{selected.description}</p>
               {selected.options && selected.options.length > 0 ? (
-                <p className="mb-3 text-xs text-gray-400">
+                <p className="mt-3 text-xs uppercase tracking-wide text-slate-400">
                   Provide values for all required options before running. Defaults are pre-filled when
                   available.
                 </p>
               ) : (
-                <p className="mb-3 text-xs text-gray-400">This module has no required options.</p>
+                <p className="mt-3 text-xs uppercase tracking-wide text-slate-400">
+                  This module has no required options.
+                </p>
               )}
                   {selected.options?.map((o) => {
                     const inputId = `metasploit-post-option-${o.name}`;
                     const labelId = `${inputId}-label`;
                     return (
-                      <div key={o.name} className="mb-2">
-                        <label className="block" htmlFor={inputId} id={labelId}>
+                      <div key={o.name} className="mt-4">
+                        <label className="block text-sm font-medium text-emerald-200" htmlFor={inputId} id={labelId}>
                           {o.label}
                         </label>
                         <input
                           id={inputId}
                           type="text"
-                          className="w-full p-1 bg-gray-800 rounded mt-1"
+                          className="mt-1 w-full rounded-md border border-gray-700 bg-gray-900/70 px-3 py-2 text-sm text-gray-100 focus:border-emerald-500 focus:outline-none"
                           value={params[o.name] || ''}
                           onChange={(e) => handleParamChange(o.name, e.target.value)}
                           aria-labelledby={labelId}
@@ -474,30 +502,37 @@ const MetasploitPost: React.FC = () => {
                     );
                   })}
               {hasMissingOptions && (
-                <p className="text-xs text-amber-300">
+                <p className="mt-3 rounded-md border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
                   Missing options: {selectedMissingOptions.map((o) => o.label).join(', ')}
                 </p>
               )}
               <button
                 onClick={run}
-                className={`mt-2 px-3 py-1 rounded ${
-                  hasMissingOptions ? 'bg-green-600/40 cursor-not-allowed' : 'bg-green-600'
+                className={`mt-4 inline-flex items-center rounded-md px-4 py-2 text-sm font-semibold transition ${
+                  hasMissingOptions
+                    ? 'cursor-not-allowed bg-emerald-600/30 text-emerald-200'
+                    : 'bg-emerald-600 text-emerald-950 hover:bg-emerald-500'
                 }`}
                 disabled={hasMissingOptions}
               >
                 Run
               </button>
-              <button onClick={addToQueue} className="mt-2 ml-2 px-3 py-1 bg-purple-600 rounded">
+              <button
+                onClick={addToQueue}
+                className="mt-4 ml-3 inline-flex items-center rounded-md bg-purple-600/90 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-500"
+              >
                 Add to Queue
               </button>
             </div>
           ) : (
-            <p className="text-gray-400">Select a module to view details.</p>
+            <p className="rounded-xl border border-dashed border-emerald-600/50 bg-slate-950/60 p-6 text-sm text-slate-300">
+              Select a module from the catalog to review its simulated description and available options.
+            </p>
           )}
           {queue.length > 0 && (
-            <div className="mt-4">
-              <h3 className="font-semibold mb-2">Queued Modules</h3>
-              <ul className="list-disc pl-6">
+            <div className="rounded-xl border border-gray-800/70 bg-slate-950/80 p-5">
+              <h3 className="text-lg font-semibold text-emerald-200">Queued Modules</h3>
+              <ul className="mt-3 space-y-2 text-sm text-slate-200">
                 {queue.map((m) => (
                   <li key={m.module.path}>
                     {m.module.path}
@@ -505,11 +540,13 @@ const MetasploitPost: React.FC = () => {
                   </li>
                 ))}
               </ul>
-              <div className="flex items-center space-x-2 mt-2">
+              <div className="mt-4 flex flex-wrap items-center gap-3">
                   <button
                     onClick={runQueue}
-                    className={`px-3 py-1 rounded ${
-                      isQueueProcessing ? 'bg-green-600/40 cursor-not-allowed' : 'bg-green-600'
+                    className={`rounded-md px-4 py-2 text-sm font-semibold transition ${
+                      isQueueProcessing
+                        ? 'cursor-not-allowed bg-emerald-600/30 text-emerald-200'
+                        : 'bg-emerald-600 text-emerald-950 hover:bg-emerald-500'
                     }`}
                     disabled={isQueueProcessing}
                   >
@@ -520,7 +557,7 @@ const MetasploitPost: React.FC = () => {
                   </label>
                   <input
                     id="metasploit-post-set-name"
-                    className="p-1 text-black"
+                    className="rounded-md border border-gray-700 bg-gray-900/70 px-3 py-2 text-sm text-gray-100 focus:border-emerald-500 focus:outline-none"
                     placeholder="Set name"
                     value={setName}
                     onChange={(e) => setSetName(e.target.value)}
@@ -528,10 +565,10 @@ const MetasploitPost: React.FC = () => {
                   />
                 <button
                   onClick={saveSet}
-                  className={`px-3 py-1 rounded ${
+                  className={`rounded-md px-4 py-2 text-sm font-semibold transition ${
                     queue.length === 0 || !setName.trim()
-                      ? 'bg-blue-600/40 cursor-not-allowed'
-                      : 'bg-blue-600'
+                      ? 'cursor-not-allowed bg-purple-600/40 text-purple-200'
+                      : 'bg-purple-600 text-white hover:bg-purple-500'
                   }`}
                   disabled={queue.length === 0 || !setName.trim()}
                 >
@@ -541,20 +578,20 @@ const MetasploitPost: React.FC = () => {
             </div>
           )}
           {savedSets.length > 0 && (
-            <div className="mt-4">
-              <h3 className="font-semibold mb-2">Saved Sets</h3>
+            <div className="rounded-xl border border-gray-800/70 bg-slate-950/80 p-5">
+              <h3 className="text-lg font-semibold text-emerald-200">Saved Sets</h3>
               {savedSets.map((s, idx) => (
-                <div key={idx} className="flex items-center space-x-2 mb-1">
-                  <span className="flex-1">{s.name}</span>
+                <div key={idx} className="mt-3 flex items-center gap-2 text-sm text-slate-200">
+                  <span className="flex-1 font-medium text-emerald-100">{s.name}</span>
                   <button
                     onClick={() => runSavedSet(s.modules)}
-                    className="px-2 py-0.5 bg-green-600 rounded"
+                    className="rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-emerald-950 transition hover:bg-emerald-500"
                   >
                     Run
                   </button>
                   <button
                     onClick={() => deleteSet(idx)}
-                    className="px-2 py-0.5 bg-red-600 rounded"
+                    className="rounded-md bg-red-600/80 px-3 py-1 text-xs font-semibold text-white transition hover:bg-red-500"
                   >
                     Delete
                   </button>
@@ -562,7 +599,7 @@ const MetasploitPost: React.FC = () => {
               ))}
             </div>
           )}
-          <svg width="220" height={steps.length * 80} className="mt-4">
+          <svg width="220" height={steps.length * 80} className="mt-6">
             {steps.map((step, i) => (
               <g key={step.label} transform={`translate(20, ${i * 70 + 20})`}>
                 <circle cx="0" cy="0" r="20" fill={step.done ? '#22c55e' : '#6b7280'} />
@@ -578,17 +615,19 @@ const MetasploitPost: React.FC = () => {
               </g>
             ))}
           </svg>
-          <div className="mt-8">
-            <h3 className="font-semibold mb-2">Privilege Escalation Tree</h3>
-            <PrivTree node={privTree as PrivNode} />
+          <div className="mt-8 rounded-xl border border-gray-800/70 bg-slate-950/80 p-5">
+            <h3 className="text-lg font-semibold text-emerald-200">Privilege Escalation Tree</h3>
+            <div className="mt-3 border-l-2 border-emerald-600/40 pl-4 text-sm text-slate-200">
+              <PrivTree node={privTree as PrivNode} />
+            </div>
           </div>
           <RemediationTable />
           <EvidenceVault />
         </div>
       </div>
       {report.length > 0 && (
-        <div className="mt-8">
-          <h3 className="font-semibold mb-2">Saved Report</h3>
+        <div className="mt-10 rounded-xl border border-gray-800/80 bg-slate-950/80 p-6">
+          <h3 className="text-xl font-semibold text-emerald-200">Saved Report Archive</h3>
           {report.map((r, i) => (
             <ResultCard key={i} title={r.title} output={r.output} />
           ))}
