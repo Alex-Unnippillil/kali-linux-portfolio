@@ -128,7 +128,7 @@ All arcade-style and puzzle titles share the same readiness gap: implement canva
 | blackjack | Blackjack | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | breakout | Breakout | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | asteroids | Asteroids | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
-| sudoku | Sudoku | Core maintainers | **Needs polish** – align with shared game scaffolding | Puzzle engine |
+| sudoku | Sudoku | Core maintainers | **Ready** – shared HUD, best-times, and validation helpers | Puzzle engine |
 | space-invaders | Space Invaders | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | nonogram | Nonogram | Core maintainers | **Needs polish** – align with shared game scaffolding | Puzzle engine |
 | tetris | Tetris | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
