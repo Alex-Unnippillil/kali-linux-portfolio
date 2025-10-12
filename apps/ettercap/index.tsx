@@ -13,6 +13,30 @@ const MODE_DESCRIPTIONS: Record<(typeof MODES)[number], string> = {
   ARP: 'Simulate ARP poisoning to observe how host traffic can be intercepted.',
 };
 
+type TimelineStatus = 'done' | 'current' | 'pending';
+type TimelineTone = 'success' | 'warning' | 'error';
+
+const TIMELINE_STATUS_TONE: Record<TimelineStatus, TimelineTone> = {
+  done: 'success',
+  current: 'warning',
+  pending: 'error',
+};
+
+const TIMELINE_TONE_STYLES: Record<TimelineTone, { dot: string; card: string }> = {
+  success: {
+    dot: 'bg-[var(--kali-terminal-green)]',
+    card: 'border-[color:color-mix(in_srgb,var(--kali-terminal-green)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-terminal-green)_12%,transparent)]',
+  },
+  warning: {
+    dot: 'bg-[color:color-mix(in_srgb,#f59e0b_82%,var(--color-primary)_18%)] animate-pulse',
+    card: 'border-[color:color-mix(in_srgb,#f59e0b_45%,transparent)] bg-[color:color-mix(in_srgb,#f59e0b_12%,transparent)]',
+  },
+  error: {
+    dot: 'bg-[color:color-mix(in_srgb,#f87171_80%,var(--color-primary)_20%)]',
+    card: 'border-[color:color-mix(in_srgb,#f87171_45%,transparent)] bg-[color:color-mix(in_srgb,#f87171_12%,transparent)]',
+  },
+};
+
 export default function EttercapPage() {
   const [mode, setMode] = useState<(typeof MODES)[number]>('Unified');
   const [started, setStarted] = useState(false);
@@ -33,11 +57,11 @@ export default function EttercapPage() {
   const logMilestoneReached = logs.length >= 4;
 
   const timeline = useMemo(
-    () => [
+    (): Array<{ title: string; description: string; status: TimelineStatus }> => [
       {
         title: 'Select operation mode',
         description: MODE_DESCRIPTIONS[mode],
-        status: 'done' as const,
+        status: 'done',
       },
       {
         title: 'Initiate MITM workflow',
@@ -87,7 +111,7 @@ export default function EttercapPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold text-white">Ettercap Simulation Console</h1>
-            <p className="mt-1 text-sm text-blue-100/80">
+            <p className="mt-1 text-sm text-[color:color-mix(in_srgb,var(--color-text)_80%,var(--color-primary)_20%)]">
               Walk through a safe, local‑only reenactment of Ettercap workflows while keeping real infrastructure untouched.
             </p>
           </div>
@@ -100,8 +124,8 @@ export default function EttercapPage() {
                 title={MODE_DESCRIPTIONS[m]}
                 className={`px-3 py-1 rounded-full border text-xs font-semibold uppercase tracking-wide transition ${
                   mode === m
-                    ? 'border-blue-400 bg-blue-600 text-white shadow'
-                    : 'border-blue-900/60 bg-gray-900/80 text-blue-100 hover:border-blue-500'
+                    ? 'border-[color:color-mix(in_srgb,var(--color-primary)_70%,transparent)] bg-[var(--color-primary)] text-[var(--color-text)] shadow-[0_0_18px_color-mix(in_srgb,var(--color-primary)_45%,transparent)]'
+                    : 'border-[color:color-mix(in_srgb,var(--color-primary)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--color-secondary)_92%,transparent)] text-[color:color-mix(in_srgb,var(--color-primary)_70%,var(--color-text)_30%)] hover:border-[color:color-mix(in_srgb,var(--color-primary)_60%,transparent)]'
                 }`}
               >
                 {m}
@@ -109,8 +133,8 @@ export default function EttercapPage() {
             ))}
           </div>
         </div>
-        <div className="flex flex-col gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-100" role="note">
-          <p className="font-semibold uppercase tracking-wide text-amber-200">Simulation only</p>
+        <div className="flex flex-col gap-3 rounded-lg border border-[color:color-mix(in_srgb,var(--color-primary)_50%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary)_12%,transparent)] p-3 text-sm text-[color:color-mix(in_srgb,var(--color-text)_88%,var(--color-primary)_12%)]" role="note">
+          <p className="font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-primary)_70%,var(--color-text)_30%)]">Simulation only</p>
           <p>
             No live packets leave this sandbox. Use the controls below to rehearse attack paths and mitigation steps before
             applying them to lab networks.
@@ -120,7 +144,7 @@ export default function EttercapPage() {
           <div className="flex gap-2">
             <button
               type="button"
-              className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-70"
+              className="px-4 py-2 rounded bg-[var(--color-primary)] text-[var(--color-text)] shadow-[0_0_22px_color-mix(in_srgb,var(--color-primary)_38%,transparent)] transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-primary)_85%,var(--color-secondary)_15%)] disabled:cursor-not-allowed disabled:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--color-primary)_70%,var(--color-text)_30%)]"
               onClick={() => setStarted(true)}
               disabled={started}
             >
@@ -128,55 +152,45 @@ export default function EttercapPage() {
             </button>
             <button
               type="button"
-              className="px-4 py-2 rounded border border-red-500 text-red-200 hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-70"
+              className="px-4 py-2 rounded border border-[color:color-mix(in_srgb,#f87171_65%,var(--color-primary)_35%)] text-[color:color-mix(in_srgb,#fecaca_85%,var(--color-text)_15%)] transition-colors hover:bg-[color:color-mix(in_srgb,#f87171_18%,transparent)] disabled:cursor-not-allowed disabled:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,#f87171_55%,var(--color-primary)_45%)]"
               onClick={() => setStarted(false)}
               disabled={!started}
             >
               Stop demo
             </button>
           </div>
-          <span className="text-xs uppercase tracking-wide text-blue-200">Simulation controls</span>
+          <span className="text-xs uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-primary)_65%,var(--color-text)_35%)]">Simulation controls</span>
         </div>
       </header>
 
       <section aria-live="polite" className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-blue-200">Operational metrics</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-primary)_65%,var(--color-text)_35%)]">Operational metrics</h2>
         <div className="flex flex-wrap gap-2 text-xs">
           {metricBadges.map((badge) => (
             <span
               key={badge.label}
-              className="rounded-full bg-gray-900/80 px-3 py-1 font-semibold uppercase tracking-wide text-blue-200"
+              className="rounded-full bg-[color:color-mix(in_srgb,var(--color-secondary)_88%,transparent)] px-3 py-1 font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-primary)_65%,var(--color-text)_35%)]"
             >
               {badge.label}:{' '}
-              <span className="ml-1 capitalize text-white">{badge.value}</span>
+              <span className="ml-1 capitalize text-[var(--color-text)]">{badge.value}</span>
             </span>
           ))}
         </div>
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-blue-200">Attack workflow timeline</h2>
-        <ol className="space-y-4 border-l border-blue-500/30 pl-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-primary)_65%,var(--color-text)_35%)]">Attack workflow timeline</h2>
+        <ol className="space-y-4 border-l border-[color:color-mix(in_srgb,var(--color-primary)_35%,transparent)] pl-4">
           {timeline.map((step) => {
-            const baseDot =
-              step.status === 'done'
-                ? 'bg-green-400'
-                : step.status === 'current'
-                ? 'bg-blue-400 animate-pulse'
-                : 'bg-gray-600';
-            const baseCard =
-              step.status === 'done'
-                ? 'border-green-500/40 bg-green-500/5'
-                : step.status === 'current'
-                ? 'border-blue-500/50 bg-blue-500/10'
-                : 'border-gray-700 bg-gray-900/40';
+            const tone = TIMELINE_STATUS_TONE[step.status];
+            const { dot, card } = TIMELINE_TONE_STYLES[tone];
 
             return (
               <li key={step.title} className="relative">
-                <span className={`absolute -left-[22px] top-2 h-3 w-3 rounded-full ${baseDot}`} aria-hidden />
-                <div className={`rounded-lg border p-3 text-sm text-blue-100 ${baseCard}`}>
+                <span className={`absolute -left-[22px] top-2 h-3 w-3 rounded-full shadow-[0_0_12px_color-mix(in_srgb,var(--color-primary)_35%,transparent)] ${dot}`} aria-hidden />
+                <div className={`rounded-lg border p-3 text-sm text-[color:color-mix(in_srgb,var(--color-text)_90%,var(--color-primary)_10%)] ${card}`}>
                   <p className="font-semibold text-white">{step.title}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-blue-100/80">{step.description}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-[color:color-mix(in_srgb,var(--color-text)_78%,var(--color-primary)_22%)]">{step.description}</p>
                 </div>
               </li>
             );
@@ -188,13 +202,13 @@ export default function EttercapPage() {
       {started && <ArpDiagram />}
 
       <h1 className="text-xl font-bold">Ettercap Filter Editor</h1>
-      <div className="mb-4 rounded-lg border border-blue-500/30 bg-blue-500/10 p-4 text-sm text-blue-100">
-        <h2 className="text-base font-semibold text-blue-200">Need a refresher?</h2>
-        <p className="mt-2 text-blue-100">
+      <div className="mb-4 rounded-lg border border-[color:color-mix(in_srgb,var(--color-primary)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary)_10%,transparent)] p-4 text-sm text-[color:color-mix(in_srgb,var(--color-text)_88%,var(--color-primary)_12%)]">
+        <h2 className="text-base font-semibold text-[color:color-mix(in_srgb,var(--color-primary)_68%,var(--color-text)_32%)]">Need a refresher?</h2>
+        <p className="mt-2 text-[color:color-mix(in_srgb,var(--color-text)_88%,var(--color-primary)_12%)]">
           Ettercap filters let you drop or rewrite packets using simple commands like
-          <code className="mx-1 rounded bg-blue-500/20 px-1 py-0.5 text-xs text-blue-50">drop</code>
+          <code className="mx-1 rounded bg-[color:color-mix(in_srgb,var(--color-primary)_18%,transparent)] px-1 py-0.5 text-xs text-[color:color-mix(in_srgb,var(--color-text)_92%,var(--color-primary)_8%)]">drop</code>
           and
-          <code className="mx-1 rounded bg-blue-500/20 px-1 py-0.5 text-xs text-blue-50">replace</code>.
+          <code className="mx-1 rounded bg-[color:color-mix(in_srgb,var(--color-primary)_18%,transparent)] px-1 py-0.5 text-xs text-[color:color-mix(in_srgb,var(--color-text)_92%,var(--color-primary)_8%)]">replace</code>.
           Combine them with patterns to experiment safely in this simulation before
           deploying changes on a real lab network.
         </p>
@@ -202,7 +216,7 @@ export default function EttercapPage() {
           href="https://www.ettercap-project.org/documentation/etterfilter/"
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 inline-flex items-center text-blue-200 underline hover:text-blue-100"
+          className="mt-3 inline-flex items-center text-[color:color-mix(in_srgb,var(--color-primary)_65%,var(--color-text)_35%)] underline hover:text-[color:color-mix(in_srgb,var(--color-primary)_80%,var(--color-text)_20%)]"
         >
           Read the Etterfilter guide
         </a>
