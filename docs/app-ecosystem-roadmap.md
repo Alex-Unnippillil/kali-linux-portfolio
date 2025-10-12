@@ -121,7 +121,7 @@ All arcade-style and puzzle titles share the same readiness gap: implement canva
 | reversi | Reversi | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | simon | Simon | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | sokoban | Sokoban | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
-| solitaire/index | Solitaire | Core maintainers | **Needs polish** – align with shared game scaffolding | Enhanced TS solitaire module |
+| solitaire/index | Solitaire | Core maintainers | **QA ready** – shared controls, audio toggle, and persistence landed | Enhanced TS solitaire module |
 | tower-defense | Tower Defense | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | word-search | Word Search | Core maintainers | **In progress** – add timer, difficulty, found words list | Word lists, timer |
 | wordle | Wordle | Core maintainers | **Needs polish** – align with shared game scaffolding | Word list |
