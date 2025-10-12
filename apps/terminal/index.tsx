@@ -138,7 +138,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   const writeLine = useCallback(
     (text: string) => {
-      if (termRef.current) termRef.current.writeln(text);
+      const historyColor = '\x1b[38;2;206;214;227m';
+      const reset = '\x1b[0m';
+      const hasAnsi = /\x1b\[[0-9;]*m/.test(text);
+      const content =
+        text.length === 0 ? '' : hasAnsi ? text : `${historyColor}${text}${reset}`;
+      if (termRef.current) termRef.current.writeln(content);
       contentRef.current += `${text}\n`;
       if (opfsSupported && dirRef.current) {
         writeFile('history.txt', contentRef.current, dirRef.current);
@@ -152,10 +157,16 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   const prompt = useCallback(() => {
     if (!termRef.current) return;
+    const accent = '\x1b[38;2;125;196;255m';
+    const userColor = '\x1b[38;2;166;227;161m';
+    const hostColor = '\x1b[38;2;148;196;255m';
+    const pathColor = '\x1b[38;2;248;196;108m';
+    const symbolColor = '\x1b[38;2;234;241;252m';
+    const reset = '\x1b[0m';
     termRef.current.writeln(
-      '\x1b[1;34m┌──(\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m㉿\x1b[0m\x1b[1;36mkali\x1b[0m\x1b[1;34m)-[\x1b[0m\x1b[1;32m~\x1b[0m\x1b[1;34m]\x1b[0m',
+      `${accent}┌──(${reset}${userColor}kali${reset}${accent}㉿${reset}${hostColor}kali${reset}${accent})-[${reset}${pathColor}~${reset}${accent}]${reset}`,
     );
-    termRef.current.write('\x1b[1;34m└─\x1b[0m$ ');
+    termRef.current.write(`${accent}└─${reset} ${symbolColor}$${reset} `);
   }, []);
 
   const sessionManager = useMemo(
@@ -259,10 +270,31 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         cols: 80,
         rows: 24,
         fontFamily: '"Fira Code", monospace',
+        fontSize: 15,
+        letterSpacing: 0.75,
+        lineHeight: 1.38,
         theme: {
-          background: '#0f1317',
-          foreground: '#f5f5f5',
-          cursor: '#1793d1',
+          background: '#080d12',
+          foreground: '#e3eaf6',
+          cursor: '#5cc8ff',
+          cursorAccent: '#080d12',
+          selection: '#1c2a3b',
+          black: '#1a222c',
+          red: '#f66a6a',
+          green: '#6dd48c',
+          yellow: '#f4d67a',
+          blue: '#5ca6ff',
+          magenta: '#c79bff',
+          cyan: '#6cd6f7',
+          white: '#f3f4f6',
+          brightBlack: '#2f3b4a',
+          brightRed: '#ff7a7a',
+          brightGreen: '#7fe7a2',
+          brightYellow: '#ffe28c',
+          brightBlue: '#7bb8ff',
+          brightMagenta: '#d7adff',
+          brightCyan: '#7de6ff',
+          brightWhite: '#ffffff',
         },
       });
       const fit = new FitAddon();
@@ -280,11 +312,16 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         dirRef.current = await getDir('terminal');
         const existing = await readFile('history.txt', dirRef.current || undefined);
         if (existing) {
+          const historyColor = '\x1b[38;2;206;214;227m';
+          const reset = '\x1b[0m';
           existing
             .split('\n')
             .filter(Boolean)
             .forEach((l) => {
-              if (termRef.current) termRef.current.writeln(l);
+              if (termRef.current)
+                termRef.current.writeln(
+                  /\x1b\[[0-9;]*m/.test(l) ? l : `${historyColor}${l}${reset}`,
+                );
             });
           contentRef.current = existing.endsWith('\n')
             ? existing
@@ -437,14 +474,30 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         </div>
       )}
       <div className="flex h-full flex-col">
-        <div className="flex flex-wrap items-center gap-2 bg-gray-800 p-2">
-          <button onClick={handleCopy} aria-label="Copy">
+        <div
+          className="flex flex-wrap items-center gap-2 border-b border-slate-700/70 bg-slate-900/80 p-2 text-slate-100 shadow-inner backdrop-blur"
+          role="toolbar"
+          aria-label="Terminal controls"
+        >
+          <button
+            onClick={handleCopy}
+            aria-label="Copy"
+            className="inline-flex items-center rounded-md border border-slate-700/60 bg-slate-800/70 p-1 text-slate-200 transition hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+          >
             <CopyIcon />
           </button>
-          <button onClick={handlePaste} aria-label="Paste">
+          <button
+            onClick={handlePaste}
+            aria-label="Paste"
+            className="inline-flex items-center rounded-md border border-slate-700/60 bg-slate-800/70 p-1 text-slate-200 transition hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+          >
             <PasteIcon />
           </button>
-          <button onClick={() => setSettingsOpen(true)} aria-label="Settings">
+          <button
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Settings"
+            className="inline-flex items-center rounded-md border border-slate-700/60 bg-slate-800/70 p-1 text-slate-200 transition hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+          >
             <SettingsIcon />
           </button>
         </div>
@@ -458,10 +511,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             }}
           />
           {overflow.top && (
-            <div className="pointer-events-none absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-black" />
+            <div className="pointer-events-none absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-slate-950/80" />
           )}
           {overflow.bottom && (
-            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-black" />
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-slate-950/80" />
           )}
         </div>
       </div>

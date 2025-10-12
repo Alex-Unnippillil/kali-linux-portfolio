@@ -104,6 +104,8 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
     moves: 0,
     pushes: 0,
   });
+  const boardWrapperRef = useRef<HTMLDivElement>(null);
+  const [boardScale, setBoardScale] = useState(1);
   const initRef = useRef(false);
 
   const selectLevel = useCallback(
@@ -394,6 +396,48 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
     []
   );
 
+  useEffect(() => {
+    if (!boardWrapperRef.current) return;
+
+    const updateScale = () => {
+      const el = boardWrapperRef.current;
+      if (!el) return;
+      const baseWidth = state.width * CELL;
+      const baseHeight = state.height * CELL;
+      if (!baseWidth || !baseHeight) {
+        setBoardScale(1);
+        return;
+      }
+      const availableWidth = el.clientWidth;
+      let nextScale = availableWidth ? Math.min(1, availableWidth / baseWidth) : 1;
+      if (typeof window !== 'undefined') {
+        const rect = el.getBoundingClientRect();
+        const availableHeight = window.innerHeight - rect.top - 160;
+        if (availableHeight > 0) {
+          nextScale = Math.min(nextScale, availableHeight / baseHeight);
+        }
+      }
+      setBoardScale(nextScale > 0 && Number.isFinite(nextScale) ? nextScale : 1);
+    };
+
+    updateScale();
+    const Observer = typeof ResizeObserver !== 'undefined' ? ResizeObserver : null;
+    const observer = Observer ? new Observer(updateScale) : null;
+    if (observer && boardWrapperRef.current) {
+      observer.observe(boardWrapperRef.current);
+    }
+    const handleResize = () => updateScale();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', handleResize);
+    }
+    return () => {
+      observer?.disconnect();
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', handleResize);
+      }
+    };
+  }, [state.width, state.height]);
+
   const findPath = useCallback((target: Position): string[] => {
     const start = state.player;
     const q: Position[] = [start];
@@ -449,137 +493,220 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
     [findPath, reach, state]
   );
 
+  const baseBoardWidth = state.width * CELL;
+  const baseBoardHeight = state.height * CELL;
+  const scaledBoardWidth = Math.round(baseBoardWidth * boardScale);
+  const scaledBoardHeight = Math.round(baseBoardHeight * boardScale);
+
+  const packSelectId = React.useId();
+  const levelSelectId = React.useId();
+  const importInputId = React.useId();
+
   return (
-    <div className="p-4 space-y-2 select-none">
-      <div className="flex flex-wrap space-x-2 mb-2 items-center">
-        <select value={packIndex} onChange={(e) => selectPack(Number(e.target.value))}>
-          {packs.map((p, i) => (
-            <option key={p.name} value={i}>{`${p.name} (${p.difficulty})`}</option>
-          ))}
-        </select>
-        <select value={index} onChange={(e) => selectLevel(Number(e.target.value))}>
-          {currentPack.levels.map((_, i) => (
-            <option key={i} value={i}>{`Level ${i + 1}`}</option>
-          ))}
-        </select>
-        <input type="file" accept=".txt,.sas" onChange={handleFile} />
-        <button
-          type="button"
-          onClick={() => setShowLevels(true)}
-          className="px-2 py-1 bg-gray-300 rounded"
-        >
-          Levels
-        </button>
-        <button type="button" onClick={handleHint} className="px-2 py-1 bg-gray-300 rounded">
-          Hint
-        </button>
-        <button type="button" onClick={handlePreview} className="px-2 py-1 bg-gray-300 rounded">
-          Preview
-        </button>
-        <div className="ml-4">Moves: {state.moves}</div>
-        <div>Pushes: {state.pushes}</div>
-        <div>Best: {best ?? '-'}</div>
-        <div>Min: {minPushes ?? '-'}</div>
-        {hint && <div className="ml-4">Hint: {hint}</div>}
-        {status && <div className="ml-4 text-red-500">{status}</div>}
-      </div>
-      <div
-        className="relative bg-gray-700 shadow-lg"
-        style={{ width: state.width * CELL, height: state.height * CELL }}
-        onMouseLeave={() => setGhost(new Set())}
-      >
-        {Array.from({ length: state.height }).map((_, y) =>
-          Array.from({ length: state.width }).map((_, x) => {
-            const k = `${x},${y}`;
-            const isWall = state.walls.has(k);
-            const isTarget = state.targets.has(k);
-            const isReach = reach.has(k);
-            const inGhost = ghost.has(k);
-            const inSolution = solutionPath.has(k);
-            return (
-              <React.Fragment key={k}>
-                <div
-                  className={`absolute shadow-inner ${isWall ? 'bg-gray-800' : 'bg-gray-600'} ${
-                    isTarget ? 'ring-2 ring-yellow-400' : ''
-                  }`}
-                  style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
-                  onMouseEnter={() => handleHover(x, y)}
-                />
-                {isReach && !isWall && (
-                  <div
-                    className="absolute bg-green-400 opacity-30"
-                    style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
-                  />
-                )}
-                {inGhost && (
-                  <div
-                    className="absolute bg-blue-300 opacity-40"
-                    style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
-                  />
-                )}
-                {inSolution && (
-                  <div
-                    className="absolute bg-purple-300 opacity-40"
-                    style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
-                  />
-                )}
-              </React.Fragment>
-            );
-          })
-        )}
-        {Array.from(state.boxes).map((b) => {
-          const [x, y] = b.split(',').map(Number);
-          const dead = state.deadlocks.has(b);
-          return (
-            <div
-              key={b}
-              className={`absolute transition-transform duration-100 ${
-                dead ? 'bg-red-500' : 'bg-orange-400'
-              } shadow-md`}
-              style={{
-                ...cellStyle,
-                transform: `translate(${x * CELL}px, ${y * CELL}px) scale(${b === lastPush ? 1.1 : 1})`,
-              }}
+    <div className="p-4 space-y-4 select-none">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-wrap items-end gap-3">
+          <label htmlFor={packSelectId} className="flex flex-col text-xs text-gray-300">
+            <span className="font-semibold uppercase tracking-wide">Pack</span>
+            <select
+              id={packSelectId}
+              value={packIndex}
+              onChange={(e) => selectPack(Number(e.target.value))}
+              className="mt-1 rounded border border-gray-600 bg-gray-900 px-2 py-1 text-sm text-gray-100 shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            >
+              {packs.map((p, i) => (
+                <option key={p.name} value={i}>{`${p.name} (${p.difficulty})`}</option>
+              ))}
+            </select>
+          </label>
+          <label htmlFor={levelSelectId} className="flex flex-col text-xs text-gray-300">
+            <span className="font-semibold uppercase tracking-wide">Level</span>
+            <select
+              id={levelSelectId}
+              value={index}
+              onChange={(e) => selectLevel(Number(e.target.value))}
+              className="mt-1 rounded border border-gray-600 bg-gray-900 px-2 py-1 text-sm text-gray-100 shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            >
+              {currentPack.levels.map((_, i) => (
+                <option key={i} value={i}>{`Level ${i + 1}`}</option>
+              ))}
+            </select>
+          </label>
+          <label htmlFor={importInputId} className="flex flex-col text-xs text-gray-300">
+            <span className="font-semibold uppercase tracking-wide">Import</span>
+            <input
+              id={importInputId}
+              type="file"
+              accept=".txt,.sas"
+              onChange={handleFile}
+              aria-label="Import custom levels"
+              className="mt-1 cursor-pointer text-sm text-gray-100"
             />
-          );
-        })}
-        {puffs.map((p) => (
-          <div
-            key={p.id}
-            className="absolute pointer-events-none w-4 h-4 bg-gray-200 opacity-70 rounded-full animate-ping"
-            style={{ left: p.x * CELL + CELL / 2 - 8, top: p.y * CELL + CELL / 2 - 8 }}
-          />
-        ))}
-        <div
-          className="absolute bg-blue-400 transition-transform duration-100"
-          style={{
-            ...cellStyle,
-            transform: `translate(${state.player.x * CELL}px, ${state.player.y * CELL}px)`,
-          }}
-        />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setShowLevels(true)}
+              className="rounded bg-gray-200/80 px-3 py-1 text-sm font-medium text-gray-900 shadow hover:bg-white/80 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            >
+              Levels
+            </button>
+            <button
+              type="button"
+              onClick={handleHint}
+              className="rounded bg-amber-400/30 px-3 py-1 text-sm font-medium text-amber-100 shadow hover:bg-amber-400/40 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            >
+              Hint
+            </button>
+            <button
+              type="button"
+              onClick={handlePreview}
+              className="rounded bg-amber-400/30 px-3 py-1 text-sm font-medium text-amber-100 shadow hover:bg-amber-400/40 focus:outline-none focus:ring-2 focus:ring-amber-400"
+            >
+              Preview
+            </button>
+          </div>
+        </div>
+        <div className="flex flex-col items-start gap-2 text-sm text-gray-100">
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded bg-gray-900/60 px-3 py-1 shadow-sm">Moves: {state.moves}</span>
+            <span className="rounded bg-gray-900/60 px-3 py-1 shadow-sm">Pushes: {state.pushes}</span>
+            <span className="rounded bg-gray-900/60 px-3 py-1 shadow-sm">Best: {best ?? '-'}</span>
+            <span className="rounded bg-gray-900/60 px-3 py-1 shadow-sm">Min: {minPushes ?? '-'}</span>
+          </div>
+          {hint && <div className="text-xs text-amber-200">Hint: {hint}</div>}
+          {status && <div className="text-xs text-red-400">{status}</div>}
+        </div>
       </div>
-      <div className="flex justify-center space-x-4 mt-2">
+      <div ref={boardWrapperRef} className="w-full">
+        <div className="mx-auto flex justify-center">
+          <div className="relative" style={{ width: scaledBoardWidth, height: scaledBoardHeight }}>
+            <div
+              className="relative rounded-md bg-gray-800 shadow-lg"
+              style={{
+                width: baseBoardWidth,
+                height: baseBoardHeight,
+                transform: `scale(${boardScale})`,
+                transformOrigin: 'top left',
+              }}
+              onMouseLeave={() => setGhost(new Set())}
+            >
+              {Array.from({ length: state.height }).map((_, y) =>
+                Array.from({ length: state.width }).map((_, x) => {
+                  const k = `${x},${y}`;
+                  const isWall = state.walls.has(k);
+                  const isTarget = state.targets.has(k);
+                  const isBoxOnTarget = isTarget && state.boxes.has(k);
+                  const isReach = reach.has(k);
+                  const inGhost = ghost.has(k);
+                  const inSolution = solutionPath.has(k);
+                  const tileClasses = [
+                    'absolute shadow-inner transition-colors duration-150',
+                    isWall ? 'bg-gray-900' : 'bg-gray-700/90',
+                  ];
+                  if (isTarget) {
+                    tileClasses.push(
+                      isBoxOnTarget
+                        ? 'bg-emerald-400/25 ring-2 ring-emerald-300'
+                        : 'bg-amber-300/25 ring-2 ring-amber-300'
+                    );
+                  }
+                  return (
+                    <React.Fragment key={k}>
+                      <div
+                        className={tileClasses.join(' ')}
+                        style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
+                        onMouseEnter={() => handleHover(x, y)}
+                      />
+                      {isReach && !isWall && (
+                        <div
+                          className="absolute bg-sky-400/25"
+                          style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
+                        />
+                      )}
+                      {inGhost && (
+                        <div
+                          className="absolute bg-blue-300/40"
+                          style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
+                        />
+                      )}
+                      {inSolution && (
+                        <div
+                          className="absolute bg-purple-300/40"
+                          style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
+                        />
+                      )}
+                    </React.Fragment>
+                  );
+                })
+              )}
+              {Array.from(state.boxes).map((b) => {
+                const [x, y] = b.split(',').map(Number);
+                const dead = state.deadlocks.has(b);
+                const onTarget = state.targets.has(b);
+                return (
+                  <div
+                    key={b}
+                    className={`absolute transition-transform duration-100 ${
+                      dead
+                        ? 'bg-red-500'
+                        : onTarget
+                        ? 'bg-emerald-400 ring-2 ring-emerald-200'
+                        : 'bg-orange-400'
+                    } shadow-lg`}
+                    style={{
+                      ...cellStyle,
+                      transform: `translate(${x * CELL}px, ${y * CELL}px) scale(${b === lastPush ? 1.1 : 1})`,
+                    }}
+                  />
+                );
+              })}
+              {puffs.map((p) => (
+                <div
+                  key={p.id}
+                  className="absolute pointer-events-none w-4 h-4 rounded-full bg-gray-200 opacity-70 animate-ping"
+                  style={{ left: p.x * CELL + CELL / 2 - 8, top: p.y * CELL + CELL / 2 - 8 }}
+                />
+              ))}
+              <div
+                className="absolute bg-blue-400 transition-transform duration-100"
+                style={{
+                  ...cellStyle,
+                  transform: `translate(${state.player.x * CELL}px, ${state.player.y * CELL}px)`,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-wrap justify-center gap-3">
         <button
           type="button"
           onClick={handleUndo}
-          className="px-3 py-1 bg-gray-300 rounded shadow"
+          className="rounded bg-gray-200/80 px-3 py-1 text-sm font-medium text-gray-900 shadow hover:bg-white/80 focus:outline-none focus:ring-2 focus:ring-amber-400"
         >
           Undo
         </button>
         <button
           type="button"
           onClick={handleRedo}
-          className="px-3 py-1 bg-gray-300 rounded shadow"
+          className="rounded bg-gray-200/80 px-3 py-1 text-sm font-medium text-gray-900 shadow hover:bg-white/80 focus:outline-none focus:ring-2 focus:ring-amber-400"
         >
           Redo
         </button>
         <button
           type="button"
           onClick={handleReset}
-          className="px-3 py-1 bg-gray-300 rounded shadow"
+          className="rounded bg-gray-200/80 px-3 py-1 text-sm font-medium text-gray-900 shadow hover:bg-white/80 focus:outline-none focus:ring-2 focus:ring-amber-400"
         >
           Reset
         </button>
+      </div>
+      <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-gray-300">
+        <span>Arrow keys: Move</span>
+        <span>Z or U: Undo</span>
+        <span>Y: Redo</span>
+        <span>R: Reset</span>
       </div>
       {showStats && (
         <div
@@ -610,36 +737,60 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
           onClick={() => setShowLevels(false)}
         >
           <div
-            className="bg-white p-4 w-[600px] max-w-full flex space-x-4"
+            className="w-[640px] max-w-full space-y-4 rounded bg-white p-4 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-1/4 overflow-y-auto max-h-96">
-              {packs.map((p, i) => (
-                <div
-                  key={p.name}
-                  className={`p-2 cursor-pointer ${i === packIndex ? 'bg-blue-200' : ''}`}
-                  onClick={() => selectPack(i)}
-                >
-                  {p.name}
-                </div>
-              ))}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Choose a level</h2>
+              <div className="text-sm text-gray-500">
+                Pack: <span className="font-medium text-gray-700">{packs[packIndex].name}</span>
+              </div>
             </div>
-            <div className="flex-1 overflow-y-auto max-h-96">
-              <div className="grid grid-cols-3 gap-2">
-                {packs[packIndex].levels.map((lvl, i) => (
-                  <div
-                    key={i}
-                    className={`p-1 border cursor-pointer ${
-                      i === index ? 'border-blue-500' : 'border-transparent'
-                    }`}
-                    onClick={() => {
-                      selectLevel(i);
-                      setShowLevels(false);
-                    }}
-                  >
-                    <LevelThumb level={lvl} />
+            <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
+              <div className="sm:w-1/3">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Packs</h3>
+                <div className="max-h-80 overflow-y-auto rounded border border-gray-200">
+                  {packs.map((p, i) => (
+                    <button
+                      key={p.name}
+                      type="button"
+                      className={`flex w-full justify-between gap-2 px-3 py-2 text-left text-sm ${
+                        i === packIndex
+                          ? 'bg-amber-100 font-semibold text-gray-900'
+                          : 'bg-white text-gray-600 hover:bg-gray-100'
+                      }`}
+                      onClick={() => selectPack(i)}
+                    >
+                      <span>{p.name}</span>
+                      <span className="text-xs uppercase tracking-wide text-gray-400">{p.difficulty}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Levels in {packs[packIndex].name}
+                </h3>
+                <div className="max-h-80 overflow-y-auto">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {packs[packIndex].levels.map((lvl, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        className={`flex flex-col items-center gap-2 rounded border px-2 py-2 transition-colors ${
+                          i === index ? 'border-amber-500 bg-amber-50' : 'border-transparent bg-white hover:border-amber-200'
+                        }`}
+                        onClick={() => {
+                          selectLevel(i);
+                          setShowLevels(false);
+                        }}
+                      >
+                        <LevelThumb level={lvl} />
+                        <span className="text-xs font-medium text-gray-600">Level {i + 1}</span>
+                      </button>
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
             </div>
           </div>

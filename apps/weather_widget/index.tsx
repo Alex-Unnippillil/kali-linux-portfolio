@@ -508,11 +508,14 @@ export default function WeatherWidget() {
       </form>
       {message && (
         <div
-          className="weather-widget__status"
+          className="weather-widget__alert"
           role="status"
           aria-live="assertive"
         >
-          {message}
+          <span className="weather-widget__alert-badge" aria-hidden="true">
+            !
+          </span>
+          <span className="weather-widget__alert-text">{message}</span>
         </div>
       )}
       <div
@@ -528,28 +531,52 @@ export default function WeatherWidget() {
             </span>
           )}
         </div>
-        <div className="weather-widget__summary">
-          <WeatherIcon code={snapshot.conditionCode} className="weather-widget__icon" />
-          <div className="weather-widget__readings">
-            <div className="weather-widget__temperature" aria-live="polite">
-              {temperature}°{unitSymbol}
+        <div className="weather-widget__summary-grid">
+          <div className="weather-widget__summary">
+            <WeatherIcon
+              code={snapshot.conditionCode}
+              className="weather-widget__icon"
+            />
+            <div className="weather-widget__readings">
+              <div className="weather-widget__temperature" aria-live="polite">
+                {temperature}°{unitSymbol}
+              </div>
+              <div className="weather-widget__feels">
+                Feels like {feelsLike}°{unitSymbol}
+              </div>
+              <div className="weather-widget__condition">{snapshot.conditionText}</div>
             </div>
-            <div className="weather-widget__feels">
-              Feels like {feelsLike}°{unitSymbol}
-            </div>
-            <div className="weather-widget__condition">{snapshot.conditionText}</div>
           </div>
+          <dl
+            className="weather-widget__metrics"
+            aria-label="Sunrise and sunset times"
+          >
+            <div className="weather-widget__metric">
+              <dt>
+                <span
+                  className="weather-widget__metric-icon"
+                  aria-hidden="true"
+                >
+                  ↑
+                </span>
+                <span>Sunrise</span>
+              </dt>
+              <dd>{formatTime(snapshot.sunrise)}</dd>
+            </div>
+            <div className="weather-widget__metric">
+              <dt>
+                <span
+                  className="weather-widget__metric-icon weather-widget__metric-icon--sunset"
+                  aria-hidden="true"
+                >
+                  ↓
+                </span>
+                <span>Sunset</span>
+              </dt>
+              <dd>{formatTime(snapshot.sunset)}</dd>
+            </div>
+          </dl>
         </div>
-        <dl className="weather-widget__sun-times">
-          <div>
-            <dt>Sunrise</dt>
-            <dd>{formatTime(snapshot.sunrise)}</dd>
-          </div>
-          <div>
-            <dt>Sunset</dt>
-            <dd>{formatTime(snapshot.sunset)}</dd>
-          </div>
-        </dl>
       </div>
       {formattedForecast.length > 0 && (
         <div className="weather-widget__forecast" role="list" aria-label="5-day forecast">

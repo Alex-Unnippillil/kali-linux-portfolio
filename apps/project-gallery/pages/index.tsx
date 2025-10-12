@@ -8,7 +8,7 @@ import FilterChip from '../components/FilterChip';
 
 const TagIcon = () => (
   <svg
-    className="w-6 h-6"
+    className="h-4 w-4"
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
     viewBox="0 0 24 24"
@@ -27,7 +27,7 @@ const TagIcon = () => (
 
 const StackIcon = () => (
   <svg
-    className="w-6 h-6"
+    className="h-4 w-4"
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
     viewBox="0 0 24 24"
@@ -45,7 +45,7 @@ const StackIcon = () => (
 
 const CalendarIcon = () => (
   <svg
-    className="w-6 h-6"
+    className="h-4 w-4"
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
     viewBox="0 0 24 24"
@@ -63,7 +63,7 @@ const CalendarIcon = () => (
 
 const TypeIcon = () => (
   <svg
-    className="w-6 h-6"
+    className="h-4 w-4"
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
     viewBox="0 0 24 24"
@@ -81,7 +81,7 @@ const TypeIcon = () => (
 
 const PlayIcon = () => (
   <svg
-    className="w-6 h-6"
+    className="h-4 w-4"
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
     viewBox="0 0 24 24"
@@ -224,7 +224,7 @@ function ProjectCard({
   };
 
   return (
-    <div className="relative">
+    <div className="relative h-full">
       <div className="absolute inset-y-0 right-0 flex w-40 bg-blue-600 text-white sm:hidden">
         <button
           type="button"
@@ -249,35 +249,35 @@ function ProjectCard({
         </button>
       </div>
       <div
-        className="bg-white border rounded-lg shadow-sm overflow-hidden transition-transform duration-150 ease-out"
+        className="flex h-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-transform duration-150 ease-out"
         style={{ transform: `translateX(${offset}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
       >
-        <div className="flex flex-col gap-3 p-4 sm:flex-row">
-          <div className="sm:w-48 sm:flex-none">
-            <div className="aspect-video w-full overflow-hidden rounded-md bg-gray-100">
+        <div className="flex flex-col gap-4 p-5 sm:flex-row">
+          <div className="sm:w-52 sm:flex-none">
+            <div className="aspect-[4/3] w-full overflow-hidden rounded-lg bg-gray-100">
               <img src={project.thumbnail} alt={project.title} className="h-full w-full object-cover" />
             </div>
           </div>
-          <div className="flex-1 space-y-3">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">{project.title}</h3>
-                <p className="text-sm text-gray-600">{project.description}</p>
+          <div className="flex-1 space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="space-y-1">
+                <h3 className="text-lg font-semibold text-gray-900 sm:text-xl">{project.title}</h3>
+                <p className="text-sm text-gray-600 sm:text-base">{project.description}</p>
               </div>
               <button
                 type="button"
-                className="sm:hidden text-xs font-medium text-blue-600"
+                className="sm:hidden text-xs font-semibold text-blue-600"
                 onClick={handleToggleActions}
                 aria-expanded={isActive}
               >
                 Actions
               </button>
             </div>
-            <dl className="grid grid-cols-1 gap-2 text-sm text-gray-600 sm:grid-cols-2">
+            <dl className="grid grid-cols-1 gap-3 text-sm text-gray-600 sm:grid-cols-2">
               <div>
                 <dt className="font-semibold text-gray-800">Stack</dt>
                 <dd>{project.stack.join(', ')}</dd>
@@ -293,11 +293,11 @@ function ProjectCard({
               {project.tags.length > 0 && (
                 <div>
                   <dt className="font-semibold text-gray-800">Tags</dt>
-                  <dd className="flex flex-wrap gap-1">
+                  <dd className="flex flex-wrap gap-2">
                     {project.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-700"
+                        className="rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide text-gray-700"
                       >
                         {tag}
                       </span>
@@ -309,7 +309,7 @@ function ProjectCard({
             <div className="hidden gap-3 sm:flex">
               <button
                 type="button"
-                className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-700"
+                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
                 onClick={() => onOpen(project)}
               >
                 Open
@@ -317,7 +317,11 @@ function ProjectCard({
               <button
                 type="button"
                 data-testid={`compare-${project.id}`}
-                className="rounded-md border border-blue-600 px-3 py-1.5 text-sm font-semibold text-blue-600 hover:bg-blue-50"
+                className={`rounded-md border px-4 py-2 text-sm font-semibold transition ${
+                  isSelectedForCompare
+                    ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-inner'
+                    : 'border-blue-600 text-blue-600 hover:bg-blue-50'
+                }`}
                 onClick={() => onCompare(project)}
                 aria-pressed={isSelectedForCompare}
               >
@@ -496,32 +500,37 @@ export default function ProjectGalleryPage() {
 
   return (
     <div className="relative text-black">
-      <div className="space-y-4 p-4 pb-32">
-        <div className="sticky top-0 z-20 -mx-4 flex flex-col gap-2 border-b border-gray-200 bg-white/95 px-4 py-3 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 p-4 pb-32 sm:p-6 lg:p-8">
+        <div className="sticky top-0 z-20 -mx-4 flex flex-col gap-3 border-b border-gray-200 bg-white/95 px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-sm font-semibold text-gray-700">Active filters</span>
             {hasActiveFilters && (
               <button
                 type="button"
                 onClick={handleClearFilters}
-                className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                className="text-sm font-semibold text-blue-600 transition hover:text-blue-700"
               >
                 Clear all
               </button>
             )}
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2.5">
             {hasActiveFilters ? (
               filterSummary.map((item) => (
                 <button
                   key={`${item.type}-${item.label}`}
                   type="button"
                   onClick={() => handleRemoveFilter(item)}
-                  className="flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
-                  aria-label={`Remove ${item.label} ${item.type} filter`}
+                  className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
                 >
-                  <span className="capitalize">{item.label}</span>
-                  <CloseIcon />
+                  <span className="flex items-center gap-1.5 text-blue-600">
+                    {item.type === 'stack' && <StackIcon />}
+                    {item.type === 'tag' && <TagIcon />}
+                    {item.type === 'year' && <CalendarIcon />}
+                    {item.type === 'type' && <TypeIcon />}
+                    <span className="text-blue-800">{item.label}</span>
+                  </span>
+                  <span className="sr-only">Remove filter</span>
                 </button>
               ))
             ) : (
@@ -531,14 +540,14 @@ export default function ProjectGalleryPage() {
             )}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           <input
             type="text"
             placeholder="Search..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Search projects"
-            className="px-2 py-1 border rounded"
+            className="w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
           />
           <FilterChip
             label="Playable"
@@ -547,7 +556,7 @@ export default function ProjectGalleryPage() {
             icon={<PlayIcon />}
           />
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3">
           {tagList.map((t) => (
             <FilterChip
               key={t}
@@ -560,7 +569,7 @@ export default function ProjectGalleryPage() {
             />
           ))}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3">
           {stacks.map((s) => (
             <FilterChip
               key={s}
@@ -573,7 +582,7 @@ export default function ProjectGalleryPage() {
             />
           ))}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3">
           {years.map((y) => (
             <FilterChip
               key={y}
@@ -584,7 +593,7 @@ export default function ProjectGalleryPage() {
             />
           ))}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3">
           {types.map((t) => (
             <FilterChip
               key={t}
@@ -595,11 +604,11 @@ export default function ProjectGalleryPage() {
             />
           ))}
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {loading
             ? Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="space-y-3 rounded-lg border p-4">
-                  <div className="aspect-video w-full rounded-md bg-gray-200" />
+                <div key={i} className="space-y-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                  <div className="aspect-[4/3] w-full rounded-lg bg-gray-200" />
                   <div className="space-y-2">
                     <div className="h-4 w-3/4 rounded bg-gray-200" />
                     <div className="h-3 w-2/3 rounded bg-gray-200" />
@@ -621,9 +630,9 @@ export default function ProjectGalleryPage() {
               ))}
         </div>
         {!loading && filtered.length === 0 && (
-          <div className="rounded-lg border border-dashed bg-white/60 p-6 text-center text-sm text-gray-600">
-            <p className="font-medium text-gray-800">No projects match your filters.</p>
-            <p className="mt-1">
+          <div className="rounded-xl border border-dashed border-gray-300 bg-white/70 p-8 text-center text-sm text-gray-600 shadow-sm">
+            <p className="text-base font-semibold text-gray-800">No projects match your filters.</p>
+            <p className="mt-2 leading-relaxed">
               Use the filter chips above to add or remove stacks, tags, or years and rediscover the full catalog.
             </p>
           </div>
@@ -633,12 +642,12 @@ export default function ProjectGalleryPage() {
         <div
           role="region"
           aria-label="Comparison tray"
-          className="fixed bottom-4 left-4 right-4 z-30 rounded-lg border border-gray-200 bg-white shadow-lg sm:left-auto sm:right-4 sm:w-96"
+          className="fixed bottom-6 left-4 right-4 z-30 max-w-full rounded-xl border border-gray-200 bg-white/95 shadow-xl backdrop-blur sm:left-auto sm:right-6 sm:w-full sm:max-w-sm"
         >
-          <div className="flex items-start justify-between gap-3 px-4 py-3">
+          <div className="flex items-start justify-between gap-3 px-5 py-4">
             <div>
               <p className="text-sm font-semibold text-gray-900">Comparison tray</p>
-              <p className="text-xs text-gray-600">
+              <p className="mt-1 text-xs text-gray-600">
                 {compareSelection.length === 2
                   ? 'Ready to compare your selected projects.'
                   : 'Select one more project to enable comparison.'}
@@ -648,7 +657,7 @@ export default function ProjectGalleryPage() {
               type="button"
               onClick={handleResetComparison}
               aria-label="Dismiss comparison tray"
-              className="rounded-full border border-gray-200 p-1 text-gray-500 hover:text-gray-700"
+              className="rounded-full border border-gray-200 p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
             >
               <CloseIcon />
             </button>
@@ -657,24 +666,24 @@ export default function ProjectGalleryPage() {
             {compareSelection.map((project) => (
               <li
                 key={project.id}
-                className="flex items-center justify-between gap-2 px-4 py-2 text-sm text-gray-700"
+                className="flex items-center justify-between gap-2 px-5 py-2.5 text-sm text-gray-700"
               >
                 <span className="font-medium text-gray-800">{project.title}</span>
                 <button
                   type="button"
                   onClick={() => handleCompare(project)}
                   aria-label={`Remove ${project.title} from comparison`}
-                  className="rounded-full border border-transparent p-1 text-gray-400 transition hover:border-gray-200 hover:text-gray-600"
+                  className="rounded-full border border-transparent p-1.5 text-gray-400 transition hover:border-gray-200 hover:bg-gray-50 hover:text-gray-600"
                 >
                   <CloseIcon />
                 </button>
               </li>
             ))}
           </ul>
-          <div className="flex gap-2 border-t border-gray-200 px-4 py-3">
+          <div className="flex gap-3 border-t border-gray-200 px-5 py-4">
             <button
               type="button"
-              className="flex-1 rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+              className="flex-1 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
               onClick={handleStartCompare}
               disabled={compareSelection.length !== 2}
             >
@@ -682,7 +691,7 @@ export default function ProjectGalleryPage() {
             </button>
             <button
               type="button"
-              className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              className="flex-1 rounded-md border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
               onClick={handleResetComparison}
             >
               Reset

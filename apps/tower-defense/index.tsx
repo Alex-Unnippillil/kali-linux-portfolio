@@ -161,10 +161,23 @@ const TowerDefense = () => {
     });
   };
 
+  const getCanvasCell = (clientX: number, clientY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = Math.floor(((clientX - rect.left) * scaleX) / CELL_SIZE);
+    const y = Math.floor(((clientY - rect.top) * scaleY) / CELL_SIZE);
+    if (Number.isNaN(x) || Number.isNaN(y)) return null;
+    if (x < 0 || y < 0 || x >= GRID_SIZE || y >= GRID_SIZE) return null;
+    return { x, y };
+  };
+
   const handleCanvasClick = (e: React.MouseEvent) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
-    const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+    const coords = getCanvasCell(e.clientX, e.clientY);
+    if (!coords) return;
+    const { x, y } = coords;
     const key = `${x},${y}`;
     if (editing) {
       togglePath(x, y);
@@ -180,10 +193,12 @@ const TowerDefense = () => {
   };
 
   const handleCanvasMove = (e: React.MouseEvent) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
-    const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
-    const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
-    const idx = towers.findIndex((t) => t.x === x && t.y === y);
+    const coords = getCanvasCell(e.clientX, e.clientY);
+    if (!coords) {
+      setHovered(null);
+      return;
+    }
+    const idx = towers.findIndex((t) => t.x === coords.x && t.y === coords.y);
     setHovered(idx >= 0 ? idx : null);
   };
 
@@ -313,6 +328,7 @@ const TowerDefense = () => {
         running.current = true;
         spawnTimer.current = 0;
         enemiesSpawnedRef.current = 0;
+        forceRerender((n) => n + 1);
       }
     } else if (running.current) {
       spawnTimer.current += dt;
@@ -398,13 +414,16 @@ const TowerDefense = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-    const start = () => {
-      if (!path.length || !waveConfig.length) return;
-      setEditing(false);
-      waveRef.current = 1;
-      waveCountdownRef.current = 3;
-      forceRerender((n) => n + 1);
-    };
+  const start = () => {
+    if (!path.length || !waveConfig.length) return;
+    setEditing(false);
+    waveRef.current = 1;
+    waveCountdownRef.current = 3;
+    running.current = false;
+    enemiesSpawnedRef.current = 0;
+    enemiesRef.current = [];
+    forceRerender((n) => n + 1);
+  };
 
   const upgrade = (type: "range" | "damage") => {
     if (selected === null) return;
@@ -417,101 +436,166 @@ const TowerDefense = () => {
     });
   };
 
+  const currentWave = waveConfig[waveRef.current - 1] || [];
+  const enemiesRemaining = Math.max(
+    currentWave.length - enemiesSpawnedRef.current,
+    0,
+  ) + enemiesRef.current.length;
+  const modeLabel = editing
+    ? "Path Editing"
+    : running.current
+    ? "Defense Active"
+    : "Planning";
+  const waveStatus = waveCountdownRef.current !== null
+    ? `Next wave in ${Math.ceil(waveCountdownRef.current)}s`
+    : running.current
+    ? `${enemiesRemaining} enemies remaining`
+    : `${waveConfig.length} wave${waveConfig.length === 1 ? "" : "s"} queued`;
+  const selectedTower = selected !== null ? towers[selected] : null;
+
   return (
     <GameLayout gameId="tower-defense">
-      <div className="p-2 space-y-2">
-        {waveCountdownRef.current !== null && (
-          <div className="text-center bg-gray-700 text-white py-1 rounded">
-            Wave {waveRef.current} in {Math.ceil(waveCountdownRef.current)}
+      <div className="p-3 text-gray-100">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+          <div className="flex flex-1 flex-col items-center gap-3">
+            <div className="relative w-full max-w-[420px]">
+              <canvas
+                ref={canvasRef}
+                width={CANVAS_SIZE}
+                height={CANVAS_SIZE}
+                className="h-auto w-full rounded-lg border border-gray-700 bg-black shadow-inner"
+                aria-label="Tower defense map canvas"
+                style={{ imageRendering: "pixelated" }}
+                onClick={handleCanvasClick}
+                onMouseMove={handleCanvasMove}
+                onMouseLeave={handleCanvasLeave}
+              />
+              <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-2 text-[0.7rem] sm:text-xs">
+                <div className="flex justify-between gap-2">
+                  <div className="rounded-md bg-black/70 px-2 py-1 font-medium uppercase tracking-wide text-gray-100 shadow backdrop-blur">
+                    <p className="text-[0.65rem] sm:text-xs">Wave {waveRef.current}</p>
+                    <p className="font-normal normal-case text-gray-200">{waveStatus}</p>
+                  </div>
+                  <div className="rounded-md bg-black/70 px-2 py-1 text-right font-medium uppercase tracking-wide text-gray-100 shadow backdrop-blur">
+                    <p className="text-[0.65rem] sm:text-xs">Mode</p>
+                    <p className="font-normal normal-case text-gray-200">{modeLabel}</p>
+                  </div>
+                </div>
+                {selectedTower && (
+                  <div className="rounded-md bg-black/70 px-2 py-1 text-gray-200 shadow backdrop-blur">
+                    <p className="text-[0.65rem] font-semibold uppercase tracking-wide">Tower</p>
+                    <p className="text-[0.65rem] sm:text-xs">
+                      Range {selectedTower.range.toFixed(1)} · Damage {selectedTower.damage.toFixed(1)} · Lv {selectedTower.level}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex w-full max-w-[420px] flex-wrap items-center justify-center gap-2 text-xs sm:text-sm">
+              <button
+                className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 font-medium transition hover:bg-gray-700"
+                onClick={() => setEditing((e) => !e)}
+              >
+                {editing ? "Finish Editing" : "Edit Path"}
+              </button>
+              <button
+                className="rounded-md border border-gray-600 bg-emerald-700 px-3 py-1 font-semibold text-white transition enabled:hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40"
+                onClick={start}
+                disabled={running.current || waveCountdownRef.current !== null}
+              >
+                Launch Wave
+              </button>
+              <button
+                className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 font-medium transition hover:bg-gray-700"
+                onClick={exportWaves}
+              >
+                Export Waves
+              </button>
+              <button
+                className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 font-medium transition hover:bg-gray-700"
+                onClick={importWaves}
+              >
+                Import Waves
+              </button>
+            </div>
           </div>
-        )}
-        <div className="space-x-2 mb-2">
-          <button
-            className="px-2 py-1 bg-gray-700 rounded"
-            onClick={() => setEditing((e) => !e)}
-          >
-            {editing ? "Finish Editing" : "Edit Map"}
-          </button>
-          <button
-            className="px-2 py-1 bg-gray-700 rounded"
-            onClick={start}
-            disabled={running.current || waveCountdownRef.current !== null}
-          >
-            Start
-          </button>
-        </div>
-        <div className="space-y-1 mb-2 text-xs">
-          {waveConfig.map((wave, i) => (
-            <div key={i} className="flex items-center space-x-2">
-              <span>
-                Wave {i + 1}: {wave.join(", ") || "empty"}
-              </span>
-              {(
-                Object.keys(ENEMY_TYPES) as (keyof typeof ENEMY_TYPES)[]
-              ).map((t) => (
-                <button
-                  key={t}
-                  className="bg-gray-700 px-1 rounded"
-                  onClick={() => addEnemyToWave(i, t)}
+          <aside className="w-full rounded-lg border border-gray-700/60 bg-gray-900/60 p-3 shadow-lg backdrop-blur lg:max-w-xs">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-200">
+              Wave Designer
+            </h2>
+            <p className="mt-1 text-[0.7rem] text-gray-300">
+              Queue enemy types for each wave. Use the buttons to append foes and adjust difficulty without crowding the playfield.
+            </p>
+            <div className="mt-3 space-y-2 max-h-56 overflow-y-auto pr-1">
+              {waveConfig.map((wave, i) => (
+                <div
+                  key={i}
+                  className="rounded border border-gray-700/70 bg-black/40 p-2"
                 >
-                  +{t}
-                </button>
+                  <div className="flex items-center justify-between gap-2 text-[0.7rem] font-medium uppercase tracking-wide text-gray-200">
+                    <span>Wave {i + 1}</span>
+                    <span className="font-normal normal-case text-gray-300">
+                      {wave.length ? wave.join(", ") : "empty"}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1 text-[0.65rem]">
+                    {(Object.keys(ENEMY_TYPES) as (keyof typeof ENEMY_TYPES)[]).map((t) => (
+                      <button
+                        key={t}
+                        className="rounded bg-gray-700 px-2 py-1 font-semibold uppercase tracking-wide text-gray-100 transition hover:bg-gray-600"
+                        onClick={() => addEnemyToWave(i, t)}
+                      >
+                        +{t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
-          ))}
-          <button
-            className="bg-gray-700 text-xs px-2 py-1 rounded"
-            onClick={addWave}
-          >
-            Add Wave
-          </button>
-          <textarea
-            className="w-full bg-black text-white p-1 rounded h-24"
-            value={waveJson}
-            onChange={(e) => setWaveJson(e.target.value)}
-          />
-          <div className="space-x-2">
             <button
-              className="px-2 py-1 bg-gray-700 rounded"
-              onClick={importWaves}
+              className="mt-3 w-full rounded-md border border-dashed border-gray-600 bg-gray-800/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-200 transition hover:bg-gray-700/80"
+              onClick={addWave}
             >
-              Import
+              Add Wave
             </button>
-            <button
-              className="px-2 py-1 bg-gray-700 rounded"
-              onClick={exportWaves}
+            <label
+              className="mt-3 block text-xs font-semibold uppercase tracking-wide text-gray-300"
+              htmlFor="wave-json-editor"
             >
-              Export
-            </button>
-          </div>
-        </div>
-        <div className="flex">
-          <canvas
-            ref={canvasRef}
-            width={CANVAS_SIZE}
-            height={CANVAS_SIZE}
-            className="bg-black"
-            onClick={handleCanvasClick}
-            onMouseMove={handleCanvasMove}
-            onMouseLeave={handleCanvasLeave}
-          />
-          {selected !== null && (
-            <div className="ml-2 flex flex-col space-y-1 items-center">
-              <RangeUpgradeTree tower={towers[selected]} />
-              <button
-                className="bg-gray-700 text-xs px-2 py-1 rounded"
-                onClick={() => upgrade("range")}
-              >
-                +Range
-              </button>
-              <button
-                className="bg-gray-700 text-xs px-2 py-1 rounded"
-                onClick={() => upgrade("damage")}
-              >
-                +Damage
-              </button>
-            </div>
-          )}
+              Wave JSON
+            </label>
+            <textarea
+              id="wave-json-editor"
+              aria-label="Wave configuration JSON"
+              className="mt-2 h-28 w-full rounded-md border border-gray-700 bg-black/70 p-2 font-mono text-[0.65rem] text-gray-100 focus:border-emerald-500 focus:outline-none"
+              value={waveJson}
+              onChange={(e) => setWaveJson(e.target.value)}
+            />
+            {selectedTower && (
+              <div className="mt-4 rounded-lg border border-gray-700/60 bg-black/40 p-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-200">
+                  Tower Upgrades
+                </h3>
+                <div className="mt-2 flex flex-col items-center gap-2">
+                  <RangeUpgradeTree tower={selectedTower} />
+                  <div className="flex w-full flex-wrap justify-center gap-2 text-[0.65rem]">
+                    <button
+                      className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 font-medium transition hover:bg-gray-700"
+                      onClick={() => upgrade("range")}
+                    >
+                      Increase Range
+                    </button>
+                    <button
+                      className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 font-medium transition hover:bg-gray-700"
+                      onClick={() => upgrade("damage")}
+                    >
+                      Increase Damage
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </aside>
         </div>
         {!editing && <DpsCharts towers={towers} />}
       </div>

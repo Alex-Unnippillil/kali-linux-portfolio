@@ -70,6 +70,15 @@ const IconBadge = (props: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+const iconButtonClasses =
+  'inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--color-text)] transition-colors hover:bg-[var(--color-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]';
+
+const pillButtonClasses =
+  'inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]';
+
+const subtleButtonClasses =
+  'inline-flex items-center justify-center rounded-full px-3 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]';
+
 export default function XTimeline() {
   const { accent } = useSettings();
   const [profilePresets, setProfilePresets] = usePersistentState<string[]>(
@@ -332,7 +341,7 @@ export default function XTimeline() {
         </div>
       )}
       <div className="flex flex-col h-full">
-        <header className="flex items-center justify-between p-1.5 border-b gap-1.5">
+        <header className="flex items-center justify-between px-3 py-2 border-b gap-2">
           <button
             type="button"
             aria-label="Refresh timeline"
@@ -341,7 +350,7 @@ export default function XTimeline() {
                 void loadTimeline();
               }
             }}
-            className="p-1 rounded hover:bg-[var(--color-muted)]"
+            className={iconButtonClasses}
           >
             <IconRefresh className="w-6 h-6" />
           </button>
@@ -352,14 +361,24 @@ export default function XTimeline() {
             type="button"
             aria-label="Open on x.com"
             onClick={() => window.open(`https://x.com/${feed}`, '_blank')}
-            className="p-1 rounded hover:bg-[var(--color-muted)]"
+            className={iconButtonClasses}
           >
             <IconShare className="w-6 h-6" />
           </button>
         </header>
-        <div className="p-1.5 space-y-4 flex-1 overflow-auto">
-          <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-[var(--color-muted)]">
-            <span>Timeline theme</span>
+        <div className="flex-1 overflow-auto space-y-5 px-3 py-4">
+          <div
+            className="flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 text-xs uppercase tracking-wide text-[var(--color-muted)]"
+            style={{
+              borderColor:
+                'color-mix(in srgb, var(--color-muted) 35%, transparent)',
+              backgroundColor:
+                'color-mix(in srgb, var(--color-surface) 85%, transparent)',
+            }}
+          >
+            <span className="font-semibold text-[var(--color-text)]">
+              Timeline theme
+            </span>
             <button
               type="button"
               onClick={() => {
@@ -367,7 +386,7 @@ export default function XTimeline() {
                 toggleTheme();
               }}
               aria-pressed={theme === 'dark'}
-              className="px-2 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
+              className={pillButtonClasses}
               style={{
                 backgroundColor: accent,
                 color: 'var(--color-text)',
@@ -382,56 +401,80 @@ export default function XTimeline() {
                   setHasManualTheme(false);
                   setTheme(systemTheme);
                 }}
-                className="px-2 py-1 rounded border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
+                className={`${subtleButtonClasses} border`}
                 style={{
                   color: 'var(--color-text)',
-                  borderColor: 'var(--color-muted)',
+                  borderColor:
+                    'color-mix(in srgb, var(--color-muted) 40%, transparent)',
                 }}
               >
                 {`Use system (${systemTheme})`}
               </button>
             )}
           </div>
-          <form onSubmit={handleScheduleTweet} className="space-y-2">
+          <form
+            onSubmit={handleScheduleTweet}
+            className="space-y-3 rounded-xl border px-4 py-3"
+            style={{
+              borderColor:
+                'color-mix(in srgb, var(--color-muted) 35%, transparent)',
+              backgroundColor:
+                'color-mix(in srgb, var(--color-surface) 85%, transparent)',
+            }}
+          >
             <textarea
               value={tweetText}
               onChange={(e) => setTweetText(e.target.value)}
               placeholder="Tweet text"
-              className="w-full p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+              aria-label="Tweet text"
+              className="w-full rounded-xl border bg-transparent p-3 text-sm leading-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
             />
-            <div className="flex gap-2 items-center">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <input
                 type="datetime-local"
                 value={tweetTime}
                 onChange={(e) => setTweetTime(e.target.value)}
-                className="flex-1 p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                aria-label="Schedule time"
+                className="flex-1 rounded-xl border bg-transparent p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
               />
               <button
                 type="submit"
-                className="px-3 py-1 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-                style={{ backgroundColor: accent }}
+                className={pillButtonClasses}
+                style={{ backgroundColor: accent, color: 'var(--color-text)' }}
               >
                 Schedule
               </button>
             </div>
           </form>
           {scheduled.length > 0 && (
-            <ul className="space-y-2">
+            <ul
+              className="space-y-3 rounded-xl border px-4 py-3"
+              style={{
+                borderColor:
+                  'color-mix(in srgb, var(--color-muted) 35%, transparent)',
+                backgroundColor:
+                  'color-mix(in srgb, var(--color-surface) 85%, transparent)',
+              }}
+            >
               {scheduled.map((t) => (
                 <li key={t.id}>
                   <div
                     tabIndex={0}
                     data-scheduled-item
                     onKeyDown={(e) => handleScheduledKey(e, t.id)}
-                    className="flex justify-between items-center p-2 rounded border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                    className="flex items-start justify-between gap-3 rounded-xl border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                    style={{
+                      borderColor:
+                        'color-mix(in srgb, var(--color-muted) 40%, transparent)',
+                    }}
                   >
-                    <span>
+                    <span className="leading-6">
                       {t.text} - {new Date(t.time).toLocaleString()}
                     </span>
                     <button
                       type="button"
                       onClick={() => removeScheduled(t.id)}
-                      className="ml-2 px-2 py-1 rounded bg-[var(--color-muted)] text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                      className={`${subtleButtonClasses} ml-2 bg-[var(--color-muted)] text-[var(--color-text)]`}
                     >
                       ×
                     </button>
@@ -440,14 +483,22 @@ export default function XTimeline() {
               ))}
             </ul>
           )}
-        <div className="flex gap-2">
+        <div
+          className="flex flex-wrap gap-2 rounded-xl border px-4 py-3"
+          style={{
+            borderColor:
+              'color-mix(in srgb, var(--color-muted) 35%, transparent)',
+            backgroundColor:
+              'color-mix(in srgb, var(--color-surface) 85%, transparent)',
+          }}
+        >
           <button
             type="button"
             onClick={() => setTimelineType('profile')}
-            className={`px-2 py-1 rounded text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${
+            className={`${pillButtonClasses} ${
               timelineType === 'profile'
                 ? 'text-[var(--color-text)]'
-                : 'bg-[var(--color-muted)]'
+                : 'bg-[var(--color-muted)] text-[var(--color-text)]'
             }`}
             style={
               timelineType === 'profile' ? { backgroundColor: accent } : undefined
@@ -458,10 +509,10 @@ export default function XTimeline() {
           <button
             type="button"
             onClick={() => setTimelineType('list')}
-            className={`px-2 py-1 rounded text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${
+            className={`${pillButtonClasses} ${
               timelineType === 'list'
                 ? 'text-[var(--color-text)]'
-                : 'bg-[var(--color-muted)]'
+                : 'bg-[var(--color-muted)] text-[var(--color-text)]'
             }`}
             style={
               timelineType === 'list' ? { backgroundColor: accent } : undefined
@@ -470,7 +521,16 @@ export default function XTimeline() {
             List
           </button>
         </div>
-        <form onSubmit={handleAddPreset} className="flex gap-2">
+        <form
+          onSubmit={handleAddPreset}
+          className="flex flex-col gap-2 rounded-xl border px-4 py-3 sm:flex-row"
+          style={{
+            borderColor:
+              'color-mix(in srgb, var(--color-muted) 35%, transparent)',
+            backgroundColor:
+              'color-mix(in srgb, var(--color-surface) 85%, transparent)',
+          }}
+        >
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -479,18 +539,31 @@ export default function XTimeline() {
                 ? 'Add screen name'
                 : 'Add list (owner/slug or id)'
             }
-            className="flex-1 p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+            aria-label={
+              timelineType === 'profile'
+                ? 'Add screen name'
+                : 'Add list (owner and slug or id)'
+            }
+            className="flex-1 rounded-xl border bg-transparent p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
           />
           <button
             type="submit"
-            className="px-3 py-1 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-            style={{ backgroundColor: accent }}
+            className={pillButtonClasses}
+            style={{ backgroundColor: accent, color: 'var(--color-text)' }}
           >
             Save
           </button>
         </form>
         {presets.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div
+            className="flex flex-wrap gap-2 rounded-xl border px-4 py-3"
+            style={{
+              borderColor:
+                'color-mix(in srgb, var(--color-muted) 35%, transparent)',
+              backgroundColor:
+                'color-mix(in srgb, var(--color-surface) 85%, transparent)',
+            }}
+          >
             {presets.map((p) => (
               <button
                 key={p}
@@ -498,10 +571,10 @@ export default function XTimeline() {
                 onClick={() => {
                   setFeed(p);
                 }}
-                className={`px-2 py-1 rounded-full text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${
+                className={`${pillButtonClasses} ${
                   feed === p
                     ? 'text-[var(--color-text)]'
-                    : 'bg-[var(--color-muted)]'
+                    : 'bg-[var(--color-muted)] text-[var(--color-text)]'
                 }`}
                 style={feed === p ? { backgroundColor: accent } : undefined}
               >
@@ -517,30 +590,36 @@ export default function XTimeline() {
               setLoaded(true);
               void loadTimeline();
             }}
-            className="px-4 py-2 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-            style={{ backgroundColor: accent }}
+            className={`${pillButtonClasses} mx-auto`}
+            style={{ backgroundColor: accent, color: 'var(--color-text)' }}
           >
             Load timeline
           </button>
         ) : (
           <>
             {loading && !timelineLoaded && !scriptError && (
-              <ul className="tweet-feed space-y-1.5" aria-hidden="true">
+              <ul className="tweet-feed space-y-3" aria-hidden="true">
                 {Array.from({ length: 3 }).map((_, i) => (
                   <li
                     key={i}
-                    className="flex gap-1.5 p-1.5 rounded-md border"
+                    className="flex gap-3 rounded-2xl border px-4 py-3"
+                    style={{
+                      borderColor:
+                        'color-mix(in srgb, var(--color-muted) 40%, transparent)',
+                      backgroundColor:
+                        'color-mix(in srgb, var(--color-surface) 92%, transparent)',
+                    }}
                   >
                     <div className="relative">
-                      <div className="w-12 h-12 rounded-full bg-[var(--color-muted)] animate-pulse" />
-                      <IconBadge className="w-3 h-3 absolute bottom-0 right-0 text-[var(--color-muted)]" />
+                      <div className="h-12 w-12 rounded-full bg-[var(--color-muted)] animate-pulse sm:h-14 sm:w-14" />
+                      <IconBadge className="absolute -bottom-1 -right-1 h-4 w-4 text-[var(--color-muted)]" />
                     </div>
-                    <div className="flex-1 space-y-1.5">
-                      <div className="h-3 bg-[var(--color-muted)] rounded animate-pulse w-3/4" />
-                      <div className="h-3 bg-[var(--color-muted)] rounded animate-pulse w-1/2" />
-                      <div className="h-3 bg-[var(--color-muted)] rounded animate-pulse w-full" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 w-3/4 rounded bg-[var(--color-muted)] animate-pulse" />
+                      <div className="h-3 w-1/2 rounded bg-[var(--color-muted)] animate-pulse" />
+                      <div className="h-3 w-full rounded bg-[var(--color-muted)] animate-pulse" />
                     </div>
-                    <IconShare className="w-5 h-5 text-[var(--color-muted)]" />
+                    <IconShare className="h-5 w-5 text-[var(--color-muted)]" />
                   </li>
                 ))}
               </ul>
@@ -562,7 +641,7 @@ export default function XTimeline() {
                       }
                       void loadTimeline();
                     }}
-                    className="px-3 py-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]"
+                    className={pillButtonClasses}
                     style={{
                       backgroundColor: accent,
                       color: 'var(--color-text)',
@@ -594,6 +673,21 @@ export default function XTimeline() {
           max-inline-size: 60ch;
           margin-inline: auto;
           width: 100%;
+        }
+        .tweet-feed :global(.twitter-timeline) {
+          margin-block: 1.5rem;
+          border-radius: 1.25rem;
+          overflow: hidden;
+          border: 1px solid
+            color-mix(in srgb, var(--color-muted) 35%, transparent);
+          background-color: color-mix(
+            in srgb,
+            var(--color-surface) 92%,
+            transparent
+          );
+        }
+        .tweet-feed :global(iframe) {
+          border: 0;
         }
       `}</style>
     </>

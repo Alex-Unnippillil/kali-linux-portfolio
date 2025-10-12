@@ -978,7 +978,12 @@ export class Desktop extends Component {
     };
 
     getRunningAppSummaries = () => {
-        const { closed_windows = {}, minimized_windows = {}, focused_windows = {} } = this.state;
+        const {
+            closed_windows = {},
+            minimized_windows = {},
+            focused_windows = {},
+            overlayWindows = {},
+        } = this.state;
         const summaries = [];
         apps.forEach((app) => {
             if (closed_windows[app.id] === false) {
@@ -992,16 +997,25 @@ export class Desktop extends Component {
             }
         });
         OVERLAY_WINDOW_LIST.forEach((overlay) => {
-            if (closed_windows[overlay.id] === false) {
-                summaries.push({
-                    id: overlay.id,
-                    title: overlay.title,
-                    icon: overlay.icon,
-                    isFocused: Boolean(focused_windows[overlay.id]),
-                    isMinimized: Boolean(minimized_windows[overlay.id]),
-                    isOverlay: true,
-                });
+            const state = overlayWindows?.[overlay.id] || {};
+            const isOpen = state.open === true || closed_windows[overlay.id] === false;
+            if (!isOpen) {
+                return;
             }
+            const isMinimized = typeof state.minimized === 'boolean'
+                ? state.minimized
+                : Boolean(minimized_windows[overlay.id]);
+            const isFocused = typeof state.focused === 'boolean'
+                ? state.focused
+                : Boolean(focused_windows[overlay.id]);
+            summaries.push({
+                id: overlay.id,
+                title: overlay.title,
+                icon: overlay.icon,
+                isFocused,
+                isMinimized,
+                isOverlay: true,
+            });
         });
         return summaries;
     };

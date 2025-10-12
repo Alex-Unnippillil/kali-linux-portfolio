@@ -12,29 +12,34 @@ export default function HistoryList({ history, onRestore, onRestoreAll }: Props)
   if (history.length === 0) return null;
 
   return (
-    <div className="border-t border-black border-opacity-50 p-2 text-xs">
-      <div className="flex items-center justify-between mb-2">
-        <span className="font-bold">Recently Deleted</span>
+    <div className="border-t border-white/10 px-3 py-4 text-xs space-y-3 bg-black/10">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-bold uppercase tracking-wide text-[0.7rem] text-white/80">
+          Recently Deleted
+        </span>
         <button
           onClick={() => {
             if (window.confirm('Restore all windows?')) onRestoreAll();
           }}
-          className="border border-black bg-black bg-opacity-50 px-2 py-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange"
+          className="px-3 py-1.5 rounded-md border border-white/10 bg-white/10 text-[0.7rem] font-semibold uppercase tracking-wide hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-ub-orange"
         >
           Restore All
         </button>
       </div>
-      <ul className="max-h-32 overflow-auto">
+      <ul className="max-h-40 overflow-auto space-y-2">
         {history.map((item, idx) => (
-          <li key={item.closedAt} className="flex justify-between items-center h-9">
-            <span className="truncate mr-2 font-mono" title={item.title}>
+          <li
+            key={item.closedAt}
+            className="flex items-center justify-between gap-3 rounded-md bg-black/20 px-3 py-2 text-[0.7rem] transition-colors hover:bg-black/30"
+          >
+            <span className="truncate font-mono" title={item.title}>
               {item.title}
             </span>
             <button
               onClick={() => {
                 if (window.confirm(`Restore ${item.title}?`)) onRestore(idx);
               }}
-              className="text-ub-orange hover:underline"
+              className="px-2 py-1 rounded-md border border-ub-orange/40 text-ub-orange hover:bg-ub-orange/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-ub-orange"
             >
               Restore
             </button>

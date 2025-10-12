@@ -167,191 +167,274 @@ const NiktoPage: React.FC = () => {
   }, [rawLog]);
 
   return (
-    <div className="p-4 bg-gray-900 text-white min-h-screen space-y-4">
-      <h1 className="text-2xl mb-4">Nikto Scanner</h1>
-      <p className="text-sm text-yellow-300 mb-4">
-        Build a nikto command without running any scans. Data and reports are static and for learning only.
-      </p>
-      <form onSubmit={(e) => e.preventDefault()} className="grid gap-4 md:grid-cols-3">
-          <div>
+    <div className="min-h-screen bg-gray-950 text-white">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-semibold text-sky-100">Nikto Scanner</h1>
+          <p className="text-sm text-amber-200/80">
+            Build a nikto command without running any scans. Data and reports are static and for learning only.
+          </p>
+        </div>
+        <form
+          onSubmit={(e) => e.preventDefault()}
+          className="grid gap-4 rounded-2xl border border-gray-800 bg-gray-900/60 p-4 shadow-lg shadow-black/40 md:grid-cols-3"
+        >
+          <div className="space-y-2">
             <label
-              htmlFor="nikto-host"
-              className="block text-sm mb-1"
               id="nikto-host-label"
+              htmlFor="nikto-host"
+              className="block text-xs font-semibold uppercase tracking-wide text-gray-300"
             >
               Host
             </label>
             <input
               id="nikto-host"
-              className="w-full p-2 rounded text-black"
+              className="w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white shadow-inner shadow-black/40 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               value={host}
               onChange={(e) => setHost(e.target.value)}
               aria-labelledby="nikto-host-label"
             />
           </div>
-          <div>
+          <div className="space-y-2">
             <label
-              htmlFor="nikto-port"
-              className="block text-sm mb-1"
               id="nikto-port-label"
+              htmlFor="nikto-port"
+              className="block text-xs font-semibold uppercase tracking-wide text-gray-300"
             >
               Port
             </label>
             <input
               id="nikto-port"
               type="number"
-              className="w-full p-2 rounded text-black"
+              className="w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white shadow-inner shadow-black/40 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
               value={port}
               onChange={(e) => setPort(e.target.value)}
               aria-labelledby="nikto-port-label"
             />
           </div>
-          <div className="flex items-center mt-2">
+          <div className="flex items-center gap-2 rounded-lg border border-gray-800/80 bg-gray-950 px-3 py-2 text-sm">
             <input
               id="nikto-ssl"
               type="checkbox"
-              className="mr-2"
+              className="h-4 w-4 rounded border border-gray-700 bg-gray-900 text-sky-400 focus:ring-sky-500"
               checked={ssl}
               onChange={(e) => setSsl(e.target.checked)}
               aria-labelledby="nikto-ssl-label"
             />
-            <label htmlFor="nikto-ssl" className="text-sm" id="nikto-ssl-label">
+            <label htmlFor="nikto-ssl" className="text-xs font-semibold uppercase tracking-wide text-gray-300" id="nikto-ssl-label">
               SSL
             </label>
           </div>
-      </form>
-      <div className="bg-gray-800/70 border border-gray-700 rounded-lg shadow-lg shadow-black/40">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700/80">
-          <h2 className="text-lg font-semibold">Command Preview</h2>
-          <button
-            type="button"
-            onClick={copyCommand}
-            className="text-xs bg-blue-600 hover:bg-blue-500 transition-colors px-3 py-1 rounded"
-          >
-            {copiedCommand ? 'Copied!' : 'Copy'}
-          </button>
-        </div>
-        <pre className="bg-black/80 text-green-400 px-4 py-3 rounded-b-lg overflow-auto text-sm">{command}</pre>
-      </div>
-      <div className="relative bg-gray-800 p-4 rounded-xl shadow-lg shadow-black/50 space-y-4 border border-gray-700/60">
-        <div className="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-sky-500 via-blue-500 to-purple-600 text-white shadow-lg shadow-purple-900/40 border border-white/10">
-          Phase 3 • {findings.length} results
-        </div>
-        <div>
-          <h2 className="text-lg mb-2">Target</h2>
-          <p className="mb-2">
-            <span className="font-bold">URL:</span> {url}
-          </p>
-          {headers.length > 0 && (
-            <div className="mb-4">
-              <h3 className="text-md mb-1">Headers</h3>
-              <ul className="text-sm space-y-1 font-mono">
-                {headers.map((h) => (
-                  <li key={h.name}>
-                    <span className="font-bold">{h.name}:</span> {h.value}
-                  </li>
-                ))}
-              </ul>
+        </form>
+        <div className="overflow-hidden rounded-2xl border border-gray-800 bg-gray-900/70 shadow-lg shadow-black/50">
+          <div className="flex flex-col gap-2 border-b border-gray-800/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-white">Command Preview</h2>
+              <p className="text-xs text-gray-400">Copy the simulated command string for your notes.</p>
             </div>
-          )}
-        </div>
-        <div>
-          <h2 className="text-lg mb-2">Vulnerabilities</h2>
-          {severityMeta
-            .filter((sev) => grouped[sev.key]?.length)
-            .map((sev) => {
-              const list = grouped[sev.key];
-              const open = openSections[sev.key] ?? (sev.key === 'High');
-              const panelId = `nikto-severity-${sev.key.toLowerCase()}`;
-              return (
-                <section
-                  key={sev.key}
-                  className={`mb-3 rounded-xl border ${sev.accent} bg-gray-900/60 backdrop-blur-sm shadow-lg`}
-                >
-                  <div className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
-                    <div className="flex items-center gap-3">
-                      <span aria-hidden className="text-2xl">
-                        {sev.icon}
-                      </span>
-                      <div>
-                        <p className="text-lg font-semibold">{sev.key} Findings</p>
-                        <p className="text-xs text-gray-300">{sev.recommendation}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs px-3 py-1 rounded-full ${sev.badge}`}>
-                        {list.length} {list.length === 1 ? 'item' : 'items'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => copySection(list)}
-                        className="text-xs bg-blue-600 hover:bg-blue-500 transition-colors px-2 py-1 rounded"
-                      >
-                        Copy JSON
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => exportSection(list, sev.key)}
-                        className="text-xs bg-blue-600 hover:bg-blue-500 transition-colors px-2 py-1 rounded"
-                      >
-                        Export JSON
-                      </button>
-                      <button
-                        type="button"
-                        aria-expanded={open}
-                        aria-controls={panelId}
-                        onClick={() =>
-                          setOpenSections((s) => ({
-                            ...s,
-                            [sev.key]: !open,
-                          }))
-                        }
-                        className="text-xs bg-gray-700 hover:bg-gray-600 transition-colors px-2 py-1 rounded"
-                      >
-                        {open ? 'Hide' : 'Show'} details
-                      </button>
-                    </div>
-                  </div>
-                  {open && (
-                    <ul id={panelId} className="space-y-3 border-t border-gray-800/80 px-4 py-3">
-                      {list.map((f) => (
-                        <li
-                          key={`${f.path}-${f.finding}`}
-                          className="rounded-lg bg-gray-800/80 p-4 text-sm space-y-2 border border-gray-700/70"
-                        >
-                          <div className="font-mono text-green-300 break-all">{f.path}</div>
-                          <p className="font-semibold text-base">{f.finding}</p>
-                          {f.details && <p className="text-gray-200">{f.details}</p>}
-                          {f.references?.length ? (
-                            <p className="text-xs text-gray-400">
-                              References: {f.references.join(', ')}
-                            </p>
-                          ) : null}
-                          <p className="text-xs text-green-300">
-                            Recommended remediation: {deriveRemediation(f)}
-                          </p>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </section>
-              );
-            })}
-        </div>
-      </div>
-      {rawLog && (
-        <div>
-          <h2 className="text-lg mb-2">Summary</h2>
-          <div className="flex space-x-2 mb-4 text-sm">
-            <div className="bg-red-700 px-2 py-1 rounded">Critical: {summary.critical}</div>
-            <div className="bg-yellow-600 px-2 py-1 rounded">Warning: {summary.warning}</div>
-            <div className="bg-blue-600 px-2 py-1 rounded">Info: {summary.info}</div>
+            <button
+              type="button"
+              onClick={copyCommand}
+              className="inline-flex items-center justify-center rounded-full bg-sky-600 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-white transition-colors hover:bg-sky-500"
+            >
+              {copiedCommand ? 'Copied!' : 'Copy'}
+            </button>
           </div>
-          <h2 className="text-lg mb-2">Raw Log</h2>
-          <pre className="bg-black text-green-400 p-2 rounded overflow-auto">{rawLog}</pre>
+          <pre className="max-h-48 overflow-auto bg-black/80 px-5 py-4 text-sm text-emerald-300">{command}</pre>
         </div>
-      )}
-      <HeaderLab />
+        <section className="relative space-y-6 rounded-3xl border border-gray-800/80 bg-gray-900/60 p-6 shadow-xl shadow-black/40">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-white">Target Overview</h2>
+              <p className="text-sm text-gray-300">Snapshot of the simulated host and captured response headers.</p>
+            </div>
+            <span className="inline-flex items-center rounded-full border border-white/10 bg-gradient-to-r from-sky-500 via-blue-500 to-purple-600 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-white shadow-lg shadow-purple-900/40">
+              Phase 3 • {findings.length} results
+            </span>
+          </div>
+          <div className="grid gap-6 lg:grid-cols-[1.15fr_minmax(0,1fr)]">
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-gray-800 bg-gray-950/80 p-5">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-300">Target Summary</h3>
+                <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <dt className="text-xs uppercase tracking-wide text-gray-400">URL</dt>
+                    <dd className="font-mono text-base text-sky-200 break-all">{url}</dd>
+                  </div>
+                  <div className="space-y-1">
+                    <dt className="text-xs uppercase tracking-wide text-gray-400">Host</dt>
+                    <dd className="font-mono text-base text-sky-200 break-all">{host || 'Not specified'}</dd>
+                  </div>
+                  <div className="space-y-1">
+                    <dt className="text-xs uppercase tracking-wide text-gray-400">Port</dt>
+                    <dd className="font-mono text-base text-sky-200">{port || 'Default'}</dd>
+                  </div>
+                  <div className="space-y-1">
+                    <dt className="text-xs uppercase tracking-wide text-gray-400">Headers Parsed</dt>
+                    <dd className="font-mono text-base text-sky-200">{headers.length}</dd>
+                  </div>
+                </dl>
+              </div>
+              {headers.length > 0 && (
+                <div className="overflow-hidden rounded-2xl border border-gray-800 bg-gray-950/60">
+                  <header className="border-b border-gray-800/80 bg-gray-900/80 px-5 py-3">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-300">Captured Headers</h3>
+                  </header>
+                  <div className="max-h-60 overflow-auto">
+                    <table className="min-w-full divide-y divide-gray-800 text-sm">
+                      <thead className="bg-gray-900/60 text-xs uppercase tracking-wide text-gray-400">
+                        <tr>
+                          <th scope="col" className="px-4 py-2 text-left">Header</th>
+                          <th scope="col" className="px-4 py-2 text-left">Value</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-900/60 font-mono">
+                        {headers.map((h) => (
+                          <tr key={h.name} className="odd:bg-gray-900/40">
+                            <td className="px-4 py-2 text-sky-200">{h.name}</td>
+                            <td className="px-4 py-2 break-all text-gray-200">{h.value}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-300">Plugin Findings</h3>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-full border border-red-500/50 bg-red-500/10 px-3 py-1 text-red-200">High</span>
+                  <span className="rounded-full border border-amber-400/50 bg-amber-400/10 px-3 py-1 text-amber-100">Medium</span>
+                  <span className="rounded-full border border-sky-400/50 bg-sky-400/10 px-3 py-1 text-sky-100">Info</span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400">
+                Toggle severity panels to explore remediation context and export the JSON payload for offline analysis.
+              </p>
+              {severityMeta
+                .filter((sev) => grouped[sev.key]?.length)
+                .map((sev) => {
+                  const list = grouped[sev.key];
+                  const open = openSections[sev.key] ?? (sev.key === 'High');
+                  const panelId = `nikto-severity-${sev.key.toLowerCase()}`;
+                  return (
+                    <section
+                      key={sev.key}
+                      className={`space-y-3 rounded-2xl border ${sev.accent} bg-gray-950/70 p-4 shadow-lg backdrop-blur`}
+                    >
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex items-start gap-3">
+                          <span aria-hidden className="text-2xl">
+                            {sev.icon}
+                          </span>
+                          <div>
+                            <p className="text-lg font-semibold text-white">{sev.key} Findings</p>
+                            <p className="text-xs text-gray-300">{sev.recommendation}</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${sev.badge}`}>
+                            {list.length} {list.length === 1 ? 'item' : 'items'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => copySection(list)}
+                            className="rounded-full border border-sky-500/60 bg-sky-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sky-100 transition-colors hover:bg-sky-500/30"
+                          >
+                            Copy JSON
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => exportSection(list, sev.key)}
+                            className="rounded-full border border-sky-500/60 bg-sky-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sky-100 transition-colors hover:bg-sky-500/30"
+                          >
+                            Export JSON
+                          </button>
+                          <button
+                            type="button"
+                            aria-expanded={open}
+                            aria-controls={panelId}
+                            onClick={() =>
+                              setOpenSections((s) => ({
+                                ...s,
+                                [sev.key]: !open,
+                              }))
+                            }
+                            className="rounded-full border border-gray-700 bg-gray-800/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-200 transition-colors hover:bg-gray-700"
+                          >
+                            {open ? 'Hide' : 'Show'} details
+                          </button>
+                        </div>
+                      </div>
+                      {open && (
+                        <div id={panelId} className="space-y-3 rounded-2xl border border-gray-800/80 bg-gray-900/60 p-4">
+                          <header className="flex flex-col gap-1 border-b border-gray-800/80 pb-3 sm:flex-row sm:items-center sm:justify-between">
+                            <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-300">Detail View</h4>
+                            <p className="text-xs text-gray-400">Includes remediation hints tailored to each plugin.</p>
+                          </header>
+                          <ul className="space-y-3">
+                            {list.map((f) => (
+                              <li
+                                key={`${f.path}-${f.finding}`}
+                                className="space-y-3 rounded-2xl border border-gray-800 bg-gray-950/70 p-4 text-sm shadow-inner shadow-black/30"
+                              >
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Path</span>
+                                  <span className="font-mono text-sky-200 break-all">{f.path}</span>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-base font-semibold text-white">{f.finding}</p>
+                                  {f.details && <p className="leading-relaxed text-gray-200">{f.details}</p>}
+                                </div>
+                                {f.references?.length ? (
+                                  <div className="space-y-1">
+                                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">References</span>
+                                    <p className="text-xs text-gray-300">{f.references.join(', ')}</p>
+                                  </div>
+                                ) : null}
+                                <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-100">
+                                  <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-300">
+                                    Recommended remediation
+                                  </span>
+                                  <p className="mt-1 leading-relaxed text-emerald-100/90">{deriveRemediation(f)}</p>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </section>
+                  );
+                })}
+            </div>
+          </div>
+        </section>
+        {rawLog && (
+          <section className="space-y-4 rounded-3xl border border-gray-800/80 bg-gray-900/60 p-6 shadow-xl shadow-black/40">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-xl font-semibold text-white">Scan Summary</h2>
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className="rounded-full border border-red-500/50 bg-red-500/10 px-3 py-1 font-semibold text-red-200">
+                  Critical {summary.critical}
+                </span>
+                <span className="rounded-full border border-amber-400/50 bg-amber-400/10 px-3 py-1 font-semibold text-amber-100">
+                  Warning {summary.warning}
+                </span>
+                <span className="rounded-full border border-sky-400/50 bg-sky-400/10 px-3 py-1 font-semibold text-sky-100">
+                  Info {summary.info}
+                </span>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-300">Raw Log</h3>
+              <pre className="max-h-72 overflow-auto rounded-2xl border border-gray-800 bg-black/90 p-4 text-xs text-emerald-300">{rawLog}</pre>
+            </div>
+          </section>
+        )}
+        <HeaderLab />
+      </div>
     </div>
   );
 };

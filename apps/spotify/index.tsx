@@ -145,21 +145,24 @@ const SpotifyApp = () => {
 
   const currentTrack = queue[current];
 
+  const controlButtonClass =
+    "w-10 h-10 flex items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-500/10 text-emerald-100 shadow-sm shadow-emerald-500/30 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 hover:bg-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed";
+
   return (
     <div
-      className={`h-full w-full bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col ${
-        mini ? "p-2" : "p-4"
+      className={`h-full w-full bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col gap-4 ${
+        mini ? "p-2" : "p-5"
       }`}
       tabIndex={0}
       onKeyDown={handleKey}
     >
-      <div className="flex items-center justify-between mb-2">
-        <div className="space-x-1.5">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
           <button
             onClick={previous}
             title="Previous"
             disabled={!queue.length}
-            className="w-9 h-9 flex items-center justify-center"
+            className={controlButtonClass}
           >
             ⏮
           </button>
@@ -167,7 +170,7 @@ const SpotifyApp = () => {
             onClick={togglePlay}
             title="Play/Pause"
             disabled={!queue.length}
-            className="w-9 h-9 flex items-center justify-center"
+            className={`${controlButtonClass} text-lg`}
           >
             ⏯
           </button>
@@ -175,116 +178,176 @@ const SpotifyApp = () => {
             onClick={next}
             title="Next"
             disabled={!queue.length}
-            className="w-9 h-9 flex items-center justify-center"
+            className={controlButtonClass}
           >
             ⏭
           </button>
         </div>
-        <div className="space-x-4 text-sm flex items-center">
-          <label className="flex items-center space-x-1">
-            <span>Crossfade</span>
+        <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm">
+          <label className="flex items-center gap-2 rounded-full border border-slate-600/60 bg-slate-900/40 px-3 py-1.5">
+            <span className="font-medium uppercase tracking-wider text-[0.65rem] sm:text-xs text-slate-200/80">
+              Crossfade
+            </span>
             <input
               type="range"
               min={0}
               max={12}
               value={crossfade}
               onChange={(e) => setCrossfade(Number(e.target.value))}
+              className="accent-emerald-400"
+              aria-label="Crossfade duration"
             />
           </label>
-          <label className="flex items-center space-x-1">
+          <label className="flex items-center gap-2 rounded-full border border-slate-600/60 bg-slate-900/40 px-3 py-1.5">
             <input
               type="checkbox"
               checked={gapless}
               onChange={(e) => setGapless(e.target.checked)}
+              className="h-4 w-4 accent-emerald-400"
+              aria-label="Toggle gapless playback"
             />
-            <span>Gapless</span>
+            <span className="font-medium uppercase tracking-wider text-[0.65rem] sm:text-xs text-slate-200/80">
+              Gapless
+            </span>
           </label>
           <button
             onClick={() => setMini(!mini)}
-            className="border px-2 py-1 rounded"
+            className="rounded-full border border-slate-600/60 bg-slate-900/40 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-200/80 transition hover:border-emerald-400/70 hover:text-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/80"
           >
             {mini ? "Full" : "Mini"}
           </button>
         </div>
-      </div>
+      </header>
       {duration > 0 && (
-        <input
-          type="range"
-          min={0}
-          max={duration}
-          value={progress}
-          onChange={(e) => {
-            const t = Number(e.target.value);
-            playerRef.current?.seek(t);
-            setProgress(t);
-          }}
-          className="w-full h-1 mb-2"
-          disabled={!queue.length}
-        />
-      )}
-      {currentTrack && (
-        <div className="mt-2">
-          <div className="relative w-32 aspect-square mb-2 shadow-lg overflow-hidden">
-            {currentTrack.cover ? (
-              <img
-                src={currentTrack.cover}
-                alt={currentTrack.title}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full bg-[var(--color-muted)]" />
-            )}
-            <div className="absolute inset-0 bg-black/40" />
+        <div className="flex flex-col gap-1">
+          <input
+            type="range"
+            min={0}
+            max={duration}
+            value={progress}
+            onChange={(e) => {
+              const t = Number(e.target.value);
+              playerRef.current?.seek(t);
+              setProgress(t);
+            }}
+            className="w-full accent-emerald-400"
+            disabled={!queue.length}
+            aria-label="Track progress"
+          />
+          <div className="flex justify-between text-[0.65rem] uppercase tracking-widest text-slate-300/60">
+            <span>{Math.floor(progress)}s</span>
+            <span>{Math.floor(duration)}s</span>
           </div>
-          <p className="mb-2">{currentTrack.title}</p>
-          {analyser && <Visualizer analyser={analyser} />}
-          <Lyrics title={currentTrack.title} player={playerRef.current} />
         </div>
       )}
-      {!mini && (
-        <div className="flex-1 overflow-auto mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="hidden md:block">
-            <h2 className="mb-2 text-lg">Playlist JSON</h2>
-            <textarea
-              className="w-full h-40 text-black p-1"
-              value={playlistText}
-              onChange={(e) => setPlaylistText(e.target.value)}
-            />
-            <button
-              onClick={loadPlaylist}
-              className="mt-2 rounded bg-blue-600 px-2 py-1 text-sm"
-            >
-              Load Playlist
-            </button>
-            <h2 className="mt-4 mb-2 text-lg">Queue</h2>
-            <ul className="max-h-40 overflow-auto border border-gray-700 rounded">
-              {queue.map((t, i) => (
-                <li key={t.url} className={i === current ? "bg-gray-700" : ""}>
-                  <button
-                    className="w-full text-left px-2 py-1 hover:bg-gray-600 focus:outline-none"
-                    onClick={() => setCurrent(i)}
+      <div
+        className={`flex-1 flex flex-col gap-4 ${
+          mini ? "" : "lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-start"
+        }`}
+      >
+        {currentTrack && (
+          <section className="relative overflow-hidden rounded-3xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 via-slate-900/60 to-slate-900/20 p-4 shadow-lg shadow-emerald-500/10">
+            <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
+              <div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-2xl border border-emerald-400/40 shadow-inner shadow-emerald-500/20">
+                {currentTrack.cover ? (
+                  <img
+                    src={currentTrack.cover}
+                    alt={currentTrack.title}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-br from-slate-800 via-slate-900 to-black" />
+                )}
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-emerald-400/20 via-transparent to-slate-900/60" />
+              </div>
+              <div className="flex flex-1 flex-col gap-4">
+                <div>
+                  <span className="block text-[0.65rem] uppercase tracking-[0.3em] text-emerald-200/70">
+                    Now Playing
+                  </span>
+                  <p className="mt-1 text-2xl font-semibold text-slate-50">
+                    {currentTrack.title}
+                  </p>
+                </div>
+                {analyser && (
+                  <div className="rounded-2xl border border-emerald-500/40 bg-black/20 p-3">
+                    <Visualizer analyser={analyser} />
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="mt-4 rounded-2xl border border-slate-700/60 bg-black/30 p-3">
+              <Lyrics title={currentTrack.title} player={playerRef.current} />
+            </div>
+          </section>
+        )}
+        {!mini && (
+          <section className="flex flex-col gap-4">
+            <div className="grid gap-4 rounded-3xl border border-slate-700/60 bg-slate-900/40 p-4 shadow-inner shadow-black/30 md:grid-cols-2">
+              <div className="flex flex-col gap-3">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-200/80">
+                  Playlist JSON
+                </h2>
+                <textarea
+                  className="h-40 w-full rounded-xl border border-slate-700/60 bg-black/40 p-3 text-sm text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
+                  value={playlistText}
+                  onChange={(e) => setPlaylistText(e.target.value)}
+                  aria-label="Playlist JSON editor"
+                />
+                <button
+                  onClick={loadPlaylist}
+                  className="self-start rounded-full border border-emerald-400/50 bg-emerald-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-emerald-100 transition hover:bg-emerald-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/80"
+                >
+                  Load Playlist
+                </button>
+              </div>
+              <div className="flex flex-col gap-3">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-200/80">
+                  Queue
+                </h2>
+                <ul className="max-h-52 overflow-auto rounded-2xl border border-slate-700/60 bg-black/40 p-2">
+                  {queue.map((t, i) => (
+                    <li key={t.url}>
+                      <button
+                        className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/80 ${
+                          i === current
+                            ? "border border-emerald-400/60 bg-emerald-500/20 text-emerald-50 shadow shadow-emerald-500/20"
+                            : "border border-transparent bg-white/5 text-slate-100/80 hover:border-slate-600/60 hover:bg-slate-800/50"
+                        }`}
+                        onClick={() => setCurrent(i)}
+                      >
+                        <span
+                          className={`h-2 w-2 rounded-full transition ${
+                            i === current
+                              ? "bg-emerald-300 shadow shadow-emerald-400/50"
+                              : "bg-slate-500/60 group-hover:bg-emerald-300"
+                          }`}
+                        />
+                        <span className="truncate">{t.title || t.url}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            <div className="rounded-3xl border border-slate-700/60 bg-slate-900/40 p-4 shadow-inner shadow-black/30">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-200/80">
+                Recently Played
+              </h2>
+              <ul className="mt-3 max-h-60 space-y-2 overflow-auto">
+                {recent.map((t) => (
+                  <li
+                    key={t.url}
+                    className="rounded-2xl border border-transparent bg-white/5 px-3 py-2 text-sm text-slate-100/80 transition hover:border-emerald-500/40 hover:bg-emerald-500/10"
                   >
                     {t.title || t.url}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h2 className="mb-2 text-lg">Recently Played</h2>
-            <ul className="max-h-72 overflow-auto border border-gray-700 rounded">
-              {recent.map((t) => (
-                <li
-                  key={t.url}
-                  className="px-2 py-1 border-b border-gray-700 last:border-b-0"
-                >
-                  {t.title || t.url}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        )}
+      </div>
     </div>
   );
 };

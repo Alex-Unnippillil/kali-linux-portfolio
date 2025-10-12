@@ -12,6 +12,12 @@ const STACKBLITZ_EMBED_URL =
   'https://stackblitz.com/github/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md';
 export const STACKBLITZ_HANDSHAKE_TIMEOUT_MS = 12000;
 
+const EDITOR_TABS = [
+  { label: 'README.md', isActive: true },
+  { label: 'apps/vscode/index.tsx', isActive: false },
+  { label: 'package.json', isActive: false },
+];
+
 type EmbedStatus = 'loading' | 'ready' | 'error' | 'timeout';
 
 type StackBlitzPayload = {
@@ -182,29 +188,21 @@ export default function VsCode() {
       style={{ backgroundColor: kaliTheme.background, color: kaliTheme.text }}
     >
       <aside
-        className="flex flex-col items-center gap-2 p-1"
+        className="flex flex-col items-center gap-3 px-2 py-4 border-r border-black/20 bg-black/20"
         style={{ width: SIDEBAR_WIDTH, backgroundColor: kaliTheme.sidebar }}
       >
         <div
-          className="rounded"
-          style={{
-            width: ICON_SIZE,
-            height: ICON_SIZE,
-            backgroundColor: kaliTheme.accent,
-          }}
+          className="rounded-md bg-[color:var(--color-primary)] opacity-80 shadow-inner shadow-black/40 transition-opacity hover:opacity-100"
+          style={{ width: ICON_SIZE, height: ICON_SIZE }}
         />
         <div
-          className="rounded"
-          style={{
-            width: ICON_SIZE,
-            height: ICON_SIZE,
-            backgroundColor: kaliTheme.accent,
-          }}
+          className="rounded-md bg-[color:var(--color-primary)] opacity-80 shadow-inner shadow-black/40 transition-opacity hover:opacity-100"
+          style={{ width: ICON_SIZE, height: ICON_SIZE }}
         />
       </aside>
       <div className="flex-1 flex flex-col border border-black/20 rounded-md overflow-hidden">
         <div
-          className="flex items-center justify-end gap-2 px-2 py-1 border-b border-black/20"
+          className="flex items-center justify-end gap-2 px-3 py-2 border-b border-black/20"
           style={{ backgroundColor: kaliTheme.background }}
         >
           <button aria-label="Minimize">
@@ -217,6 +215,28 @@ export default function VsCode() {
             <CloseIcon />
           </button>
         </div>
+        <nav className="flex items-center gap-1 border-b border-black/20 bg-black/10 px-2 py-1">
+          {EDITOR_TABS.map(({ label, isActive }) => (
+            <button
+              key={label}
+              type="button"
+              aria-current={isActive ? 'page' : undefined}
+              className={`flex items-center gap-2 rounded-t-md px-3 py-2 text-xs font-medium tracking-tight transition-colors ${
+                isActive
+                  ? 'bg-black/60 text-white shadow-[inset_0_-1px_0_rgba(255,255,255,0.2)]'
+                  : 'text-white/70 hover:text-white/90 hover:bg-black/20'
+              }`}
+            >
+              <span
+                className={`inline-flex h-2 w-2 rounded-full ${
+                  isActive ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]' : 'bg-white/30'
+                }`}
+              />
+              {label}
+            </button>
+          ))}
+          <span className="ml-auto px-2 py-1 text-[11px] uppercase tracking-wide text-white/60">Spaces: 2</span>
+        </nav>
         <div className="relative flex-1" style={{ backgroundColor: kaliTheme.background }}>
           <ExternalFrame
             ref={frameRef}
@@ -257,10 +277,10 @@ export default function VsCode() {
           </div>
         </div>
         <div
-          className="flex items-center gap-2 px-2 py-1 border-t border-black/20"
+          className="flex items-center gap-3 px-3 py-2 border-t border-black/30 bg-black/60 text-white/80"
           style={{ backgroundColor: kaliTheme.sidebar }}
         >
-          <span className="flex items-center gap-1 text-[12px] uppercase bg-black/30 px-[6px] py-[2px] rounded-full">
+          <span className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[12px] uppercase text-white">
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -277,7 +297,7 @@ export default function VsCode() {
             </svg>
             MAIN
           </span>
-          <span className="flex items-center gap-1 text-[12px] uppercase bg-black/30 px-[6px] py-[2px] rounded-full">
+          <span className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[12px] uppercase text-white">
             <svg
               viewBox="0 0 24 24"
               fill="none"

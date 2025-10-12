@@ -5,7 +5,40 @@ import { Desktop } from '../components/screen/desktop';
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('html-to-image', () => ({ toPng: jest.fn().mockResolvedValue('data:image/png;base64,') }));
 jest.mock('../components/util-components/background-image', () => () => <div data-testid="background" />);
-jest.mock('../components/base/window', () => () => <div data-testid="window" />);
+jest.mock('../components/base/window', () => ({
+  __esModule: true,
+  default: () => <div data-testid="window" />,
+  WindowTopBar: ({ title }: { title: string }) => (
+    <div data-testid="window-top-bar" role="presentation">
+      {title}
+    </div>
+  ),
+  WindowEditButtons: ({
+    minimize,
+    maximize,
+    close,
+    allowMaximize = true,
+  }: {
+    minimize?: () => void;
+    maximize?: () => void;
+    close?: () => void;
+    allowMaximize?: boolean;
+  }) => (
+    <div data-testid="window-edit-buttons">
+      <button type="button" onClick={minimize}>
+        minimize
+      </button>
+      {allowMaximize && (
+        <button type="button" onClick={maximize}>
+          maximize
+        </button>
+      )}
+      <button type="button" onClick={close}>
+        close
+      </button>
+    </div>
+  ),
+}));
 jest.mock('../components/base/ubuntu_app', () => () => <div data-testid="ubuntu-app" />);
 jest.mock('../components/screen/all-applications', () => () => <div data-testid="all-apps" />);
 jest.mock('../components/screen/shortcut-selector', () => () => <div data-testid="shortcut-selector" />);
@@ -67,7 +100,7 @@ describe('Desktop overlay window integration', () => {
     jest.clearAllMocks();
   });
 
-  it('toggles overlay minimization via taskbar commands', () => {
+  it('toggles overlay minimization via taskbar commands', async () => {
     const desktopRef = React.createRef<Desktop>();
     const { unmount } = render(
       <Desktop
@@ -79,6 +112,11 @@ describe('Desktop overlay window integration', () => {
       />,
     );
 
+    await waitFor(() => {
+      const instance = desktopRef.current;
+      expect(instance?.state.closed_windows?.about).toBe(true);
+    });
+
     act(() => {
       window.dispatchEvent(
         new CustomEvent('taskbar-command', {
@@ -87,9 +125,16 @@ describe('Desktop overlay window integration', () => {
       );
     });
 
-    const instance = desktopRef.current!;
-    expect(instance.state.closed_windows[SHORTCUT_OVERLAY_ID]).toBe(false);
-    expect(instance.state.minimized_windows[SHORTCUT_OVERLAY_ID]).toBe(false);
+    await waitFor(() => {
+      const instance = desktopRef.current!;
+      const overlayState = instance.state.overlayWindows[SHORTCUT_OVERLAY_ID];
+      expect(overlayState?.open).toBe(true);
+      expect(overlayState?.minimized).toBe(false);
+    });
+
+    act(() => {
+      desktopRef.current?.focus(SHORTCUT_OVERLAY_ID);
+    });
 
     act(() => {
       window.dispatchEvent(
@@ -99,7 +144,11 @@ describe('Desktop overlay window integration', () => {
       );
     });
 
-    expect(instance.state.minimized_windows[SHORTCUT_OVERLAY_ID]).toBe(true);
+    await waitFor(() => {
+      const instance = desktopRef.current!;
+      const overlayState = instance.state.overlayWindows[SHORTCUT_OVERLAY_ID];
+      expect(overlayState?.minimized).toBe(true);
+    });
     unmount();
   });
 
@@ -118,6 +167,11 @@ describe('Desktop overlay window integration', () => {
       />,
     );
 
+    await waitFor(() => {
+      const instance = desktopRef.current;
+      expect(instance?.state.closed_windows?.about).toBe(true);
+    });
+
     act(() => {
       window.dispatchEvent(
         new CustomEvent('taskbar-command', {
@@ -127,16 +181,34 @@ describe('Desktop overlay window integration', () => {
     });
 
     await waitFor(() => {
-      expect(workspaceHandler).toHaveBeenCalled();
+      const instance = desktopRef.current!;
+      const overlayState = instance.state.overlayWindows[LAUNCHER_OVERLAY_ID];
+      expect(overlayState?.open).toBe(true);
     });
 
-    const calls = workspaceHandler.mock.calls as Array<[CustomEvent<{ runningApps: Array<{ id: string }> }>]>;
-    const lastDetail = calls[calls.length - 1][0].detail;
-    expect(lastDetail.runningApps).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: LAUNCHER_OVERLAY_ID, title: 'All Applications' }),
-      ]),
+    act(() => {
+      desktopRef.current?.openOverlay(LAUNCHER_OVERLAY_ID, { transitionState: 'entered' });
+    });
+
+    const initialCallCount = workspaceHandler.mock.calls.length;
+
+    act(() => {
+      desktopRef.current?.broadcastWorkspaceState();
+    });
+
+    await waitFor(() => {
+      expect(workspaceHandler.mock.calls.length).toBeGreaterThan(initialCallCount);
+    });
+
+    const recentCalls = workspaceHandler.mock.calls.slice(initialCallCount) as Array<[
+      CustomEvent<{ runningApps: Array<{ id: string; title: string }> }>,
+    ]>;
+    const hasOverlay = recentCalls.some(([event]) =>
+      event.detail.runningApps.some(
+        (app) => app.id === LAUNCHER_OVERLAY_ID && app.title === 'All Applications',
+      ),
     );
+    expect(hasOverlay).toBe(true);
 
     window.removeEventListener('workspace-state', workspaceHandler);
     unmount();

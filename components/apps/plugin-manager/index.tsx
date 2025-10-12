@@ -43,6 +43,9 @@ const formatTimestamp = (timestamp: string) => {
   }
 };
 
+type FilterOption = 'all' | 'installed' | 'available';
+type SortOption = 'alpha' | 'size';
+
 export default function PluginManager() {
   const [plugins, setPlugins] = useState<PluginInfo[]>([]);
   const [installed, setInstalled] = useState<Record<string, PluginManifest>>(
@@ -180,39 +183,125 @@ export default function PluginManager() {
     URL.revokeObjectURL(url);
   };
 
+  const [filter, setFilter] = useState<FilterOption>('all');
+  const [sortBy, setSortBy] = useState<SortOption>('alpha');
+
+  const filteredPlugins = plugins
+    .filter((plugin) => {
+      const isInstalled = installed[plugin.id] !== undefined;
+      if (filter === 'installed') return isInstalled;
+      if (filter === 'available') return !isInstalled;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'size') {
+        return a.size - b.size;
+      }
+      return a.id.localeCompare(b.id);
+    });
+
   return (
     <div className="p-4 text-white">
-      <h1 className="text-xl mb-4">Plugin Catalog</h1>
-      <ul>
-        {plugins.map((p) => (
-          <li
-            key={p.id}
-            className="flex items-center mb-3 gap-3 rounded border border-white/10 bg-black/40 p-3"
-            title={p.description || undefined}
-          >
-            <div className="flex flex-col flex-grow">
-              <span className="font-semibold">{p.id}</span>
-              <span className="text-xs text-ubt-grey">
-                Sandbox: {p.sandbox === 'worker' ? 'Worker' : 'Iframe'} · Size: {formatBytes(p.size)}
-              </span>
-            </div>
-            <button
-              className="bg-ub-orange px-2 py-1 rounded disabled:opacity-50"
-              onClick={() => install(p)}
-              disabled={installed[p.id] !== undefined}
+      <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="mb-1 text-2xl font-semibold">Plugin Catalog</h1>
+          <p className="text-sm text-ubt-grey">
+            Discover sandboxed utilities and keep installed plugins up to date.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-4" role="group" aria-label="Plugin filters">
+          <label className="flex flex-col text-xs uppercase tracking-wide text-ubt-grey">
+            Show
+            <select
+              className="mt-1 min-w-[10rem] rounded border border-white/20 bg-black/60 px-3 py-2 text-sm text-white shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
+              value={filter}
+              onChange={(event) => setFilter(event.target.value as FilterOption)}
             >
-              {installed[p.id] ? 'Installed' : 'Install'}
-            </button>
-            {installed[p.id] && (
-              <button
-                className="bg-ub-green text-black px-2 py-1 rounded ml-2"
-                onClick={() => run(p)}
+              <option value="all">All plugins</option>
+              <option value="installed">Installed only</option>
+              <option value="available">Available to install</option>
+            </select>
+          </label>
+          <label className="flex flex-col text-xs uppercase tracking-wide text-ubt-grey">
+            Sort by
+            <select
+              className="mt-1 min-w-[10rem] rounded border border-white/20 bg-black/60 px-3 py-2 text-sm text-white shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value as SortOption)}
+            >
+              <option value="alpha">Name (A–Z)</option>
+              <option value="size">Package size</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <ul className="grid gap-4" aria-live="polite">
+        {filteredPlugins.map((p) => {
+          const isInstalled = installed[p.id] !== undefined;
+          return (
+            <li key={p.id} className="list-none">
+              <article
+                className="flex flex-col gap-4 rounded-xl border border-white/10 bg-black/40 p-5 shadow-md transition hover:border-ub-orange/60 focus-within:border-ub-orange/60"
+                title={p.description || undefined}
               >
-                Run
-              </button>
-            )}
+                <header className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex-1">
+                    <h2 className="text-lg font-semibold leading-tight">{p.id}</h2>
+                    {p.description && (
+                      <p className="mt-1 text-sm text-ubt-grey">{p.description}</p>
+                    )}
+                  </div>
+                  <span
+                    className={`inline-flex items-center gap-1 self-start rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
+                      isInstalled
+                        ? 'border-ub-green/50 bg-ub-green/10 text-ub-green'
+                        : 'border-white/20 bg-white/5 text-ubt-grey'
+                    }`}
+                    aria-label={isInstalled ? 'Plugin installed' : 'Plugin not installed'}
+                  >
+                    {isInstalled ? 'Installed' : 'Not installed'}
+                  </span>
+                </header>
+                <dl className="grid grid-cols-1 gap-2 text-sm text-ubt-grey sm:grid-cols-2">
+                  <div className="flex flex-col">
+                    <dt className="text-xs uppercase tracking-wide text-ubt-grey/80">Sandbox</dt>
+                    <dd className="text-white">{p.sandbox === 'worker' ? 'Worker' : 'Iframe'}</dd>
+                  </div>
+                  <div className="flex flex-col">
+                    <dt className="text-xs uppercase tracking-wide text-ubt-grey/80">Package size</dt>
+                    <dd className="text-white">{formatBytes(p.size)}</dd>
+                  </div>
+                </dl>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    className={`rounded-full px-4 py-2 text-sm font-semibold text-black transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange ${
+                      isInstalled
+                        ? 'bg-ub-green hover:bg-ub-green/90'
+                        : 'bg-ub-orange hover:bg-ub-orange/90'
+                    }`}
+                    onClick={() => install(p)}
+                  >
+                    {isInstalled ? 'Update plugin' : 'Install plugin'}
+                  </button>
+                  <button
+                    className="rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white transition hover:border-ub-orange/60 hover:text-ub-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange disabled:cursor-not-allowed disabled:border-white/10 disabled:text-ubt-grey"
+                    onClick={() => run(p)}
+                    disabled={!isInstalled}
+                    aria-disabled={!isInstalled}
+                    aria-label={isInstalled ? `Run ${p.id}` : `Run ${p.id} (install required)`}
+                  >
+                    Run sandbox
+                  </button>
+                </div>
+              </article>
+            </li>
+          );
+        })}
+        {filteredPlugins.length === 0 && (
+          <li className="list-none rounded-xl border border-white/10 bg-black/40 p-6 text-center text-sm text-ubt-grey">
+            No plugins match the current filters.
           </li>
-        ))}
+        )}
       </ul>
       {lastRun && (
         <div className="mt-4 max-w-xl">

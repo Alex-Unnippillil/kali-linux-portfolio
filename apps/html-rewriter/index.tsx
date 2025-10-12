@@ -76,18 +76,18 @@ const HtmlRewriterApp: React.FC = () => {
   }, [ruleText, html]);
 
   return (
-    <div className="h-full w-full overflow-auto bg-gray-900 p-4 text-white space-y-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+    <div className="h-full w-full overflow-auto bg-gray-950 p-6 text-white space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
-          <h1 className="text-2xl">HTML Rewriter</h1>
-          <p className="text-sm text-gray-300">
+          <h1 className="text-3xl font-semibold">HTML Rewriter</h1>
+          <p className="text-sm text-gray-300 max-w-3xl">
             Transform markup with CSS selectors and simple rule actions. Edit the rule JSON and
             watch the rewritten output update instantly.
           </p>
         </div>
         <button
           type="button"
-          className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-700 bg-gray-800 text-xl text-blue-300 transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-700 bg-gray-900 text-xl text-blue-300 transition hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
           aria-label="Open rewrite help"
           title="Open rewrite help"
           onClick={() => {
@@ -98,53 +98,53 @@ const HtmlRewriterApp: React.FC = () => {
           <span aria-hidden="true">❓</span>
         </button>
       </div>
-      <section className="space-y-3 rounded border border-gray-800 bg-gray-800 p-4">
-        <h2 className="text-lg font-semibold">Quick start</h2>
-        <p className="text-sm text-gray-300">
+      <section className="space-y-4 rounded-lg border border-gray-800 bg-gray-900 p-6 shadow-lg">
+        <h2 className="text-lg font-semibold text-gray-100">Quick start</h2>
+        <p className="text-sm text-gray-300 max-w-3xl">
           Try the default rules below to remove inline scripts and overwrite headings before
           experimenting with your own selectors.
         </p>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-3">
           <div>
-            <h3 className="text-sm font-semibold text-gray-100">Rules</h3>
-            <pre className="mt-2 whitespace-pre-wrap rounded bg-gray-800 p-3 text-xs">{serialize(DEFAULT_RULES)}</pre>
+            <h3 className="text-sm font-semibold text-gray-200">Rules</h3>
+            <pre className="mt-2 whitespace-pre-wrap rounded-md border border-gray-800 bg-gray-950 p-3 text-xs shadow-inner">{serialize(DEFAULT_RULES)}</pre>
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-gray-100">Original HTML</h3>
-            <pre className="mt-2 whitespace-pre-wrap rounded bg-gray-800 p-3 text-xs">{DEFAULT_HTML}</pre>
+            <h3 className="text-sm font-semibold text-gray-200">Original HTML</h3>
+            <pre className="mt-2 whitespace-pre-wrap rounded-md border border-gray-800 bg-gray-950 p-3 text-xs shadow-inner">{DEFAULT_HTML}</pre>
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-gray-100">Rewritten HTML</h3>
-            <pre className="mt-2 whitespace-pre-wrap rounded bg-gray-800 p-3 text-xs">{quickStartOutput}</pre>
+            <h3 className="text-sm font-semibold text-gray-200">Rewritten HTML</h3>
+            <pre className="mt-2 whitespace-pre-wrap rounded-md border border-gray-800 bg-gray-950 p-3 text-xs shadow-inner">{quickStartOutput}</pre>
           </div>
         </div>
       </section>
-      <section className="space-y-2">
-        <details className="rounded border border-gray-800 bg-gray-800 p-4">
+      <section className="space-y-3">
+        <details className="rounded-lg border border-gray-800 bg-gray-900/80 p-4 shadow">
           <summary className="cursor-pointer text-sm font-semibold text-gray-100">
             Remove elements
           </summary>
           <div className="mt-2 space-y-2 text-sm text-gray-300">
             <p>
-              Use the <code className="bg-gray-800 px-1 py-0.5">remove</code> action to strip matching nodes
+              Use the <code className="rounded bg-gray-950 px-1 py-0.5 text-gray-100">remove</code> action to strip matching nodes
               from the document entirely.
             </p>
-            <pre className="whitespace-pre-wrap rounded bg-gray-800 p-3 text-xs">{`{
+            <pre className="whitespace-pre-wrap rounded-md border border-gray-800 bg-gray-950 p-3 text-xs shadow-inner">{`{
   "selector": "script",
   "action": "remove"
 }`}</pre>
           </div>
         </details>
-        <details className="rounded border border-gray-800 bg-gray-800 p-4">
+        <details className="rounded-lg border border-gray-800 bg-gray-900/80 p-4 shadow">
           <summary className="cursor-pointer text-sm font-semibold text-gray-100">
             Replace text content
           </summary>
           <div className="mt-2 space-y-2 text-sm text-gray-300">
             <p>
-              Swap the text content of the selected elements by providing a <code className="bg-gray-800 px-1 py-0.5">value</code>
-              alongside the <code className="bg-gray-800 px-1 py-0.5">replace</code> action.
+              Swap the text content of the selected elements by providing a <code className="rounded bg-gray-950 px-1 py-0.5 text-gray-100">value</code>
+              alongside the <code className="rounded bg-gray-950 px-1 py-0.5 text-gray-100">replace</code> action.
             </p>
-            <pre className="whitespace-pre-wrap rounded bg-gray-800 p-3 text-xs">{`{
+            <pre className="whitespace-pre-wrap rounded-md border border-gray-800 bg-gray-950 p-3 text-xs shadow-inner">{`{
   "selector": "h1",
   "action": "replace",
   "value": "Rewritten Title"
@@ -152,49 +152,55 @@ const HtmlRewriterApp: React.FC = () => {
           </div>
         </details>
       </section>
-      <div className="flex gap-4 flex-col md:flex-row">
-          <div className="flex-1 flex flex-col">
-            <label className="mb-1" htmlFor="html-rewriter-rules">
+      <div className="grid gap-6 md:grid-cols-2">
+          <div className="flex flex-col rounded-lg border border-gray-800 bg-gray-900/80 p-4 shadow-lg">
+            <label className="mb-2 text-sm font-semibold text-gray-200" htmlFor="html-rewriter-rules">
               Rewrite Rules (JSON)
             </label>
             <textarea
               id="html-rewriter-rules"
-              className="flex-1 p-2 rounded bg-gray-800 font-mono text-sm"
+              className="flex-1 resize-y rounded-md border border-gray-700 bg-gray-950 p-3 font-mono text-sm text-gray-100 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={ruleText}
               onChange={(e) => setRuleText(e.target.value)}
               aria-label="Rewrite rules in JSON"
             />
-            {error && <p className="text-red-400 mt-1">{error}</p>}
+            {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
           </div>
-          <div className="flex-1 flex flex-col">
-            <label className="mb-1" htmlFor="html-rewriter-sample">
+          <div className="flex flex-col rounded-lg border border-gray-800 bg-gray-900/80 p-4 shadow-lg">
+            <label className="mb-2 text-sm font-semibold text-gray-200" htmlFor="html-rewriter-sample">
               Sample HTML
             </label>
             <textarea
               id="html-rewriter-sample"
-              className="flex-1 p-2 rounded bg-gray-800 font-mono text-sm"
+              className="flex-1 resize-y rounded-md border border-gray-700 bg-gray-950 p-3 font-mono text-sm text-gray-100 shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={html}
               onChange={(e) => setHtml(e.target.value)}
               aria-label="Sample HTML"
             />
         </div>
       </div>
-      <div>
-        <h2 className="text-xl mb-2">Diff</h2>
-        <pre className="whitespace-pre-wrap bg-gray-800 p-2 rounded overflow-auto">
+      <div className="space-y-3 rounded-lg border border-gray-800 bg-gray-900/80 p-4 shadow-lg">
+        <h2 className="text-lg font-semibold text-gray-100">Diff</h2>
+        <pre className="whitespace-pre-wrap rounded-md border border-gray-800 bg-gray-950 p-3 text-sm leading-relaxed text-gray-100 shadow-inner overflow-auto">
           {diff.map((part: Change, i: number) => (
             <span
               key={i}
-              className={part.added ? 'bg-green-800' : part.removed ? 'bg-red-800 line-through' : ''}
+              className={
+                part.added
+                  ? 'rounded-sm bg-green-900/80 px-1 text-green-100'
+                  : part.removed
+                  ? 'rounded-sm bg-red-900/70 px-1 text-red-100 line-through'
+                  : 'text-gray-200'
+              }
             >
               {part.value}
             </span>
           ))}
         </pre>
       </div>
-      <div>
-        <h2 className="text-xl mb-2">Rewritten HTML</h2>
-        <pre className="whitespace-pre-wrap bg-gray-800 p-2 rounded overflow-auto">{rewritten}</pre>
+      <div className="space-y-3 rounded-lg border border-gray-800 bg-gray-900/80 p-4 shadow-lg">
+        <h2 className="text-lg font-semibold text-gray-100">Rewritten HTML</h2>
+        <pre className="whitespace-pre-wrap rounded-md border border-gray-800 bg-gray-950 p-3 text-sm text-gray-100 shadow-inner overflow-auto">{rewritten}</pre>
       </div>
       {showHelp && (
         <div
@@ -252,7 +258,7 @@ const HtmlRewriterApp: React.FC = () => {
                 );
               })}
             </div>
-            <div className="rounded border border-gray-800 bg-gray-800 p-4" role="tabpanel" id={`html-rewriter-help-panel-${activeHelpTab}`}
+            <div className="rounded-lg border border-gray-800 bg-gray-900/80 p-4 shadow-inner" role="tabpanel" id={`html-rewriter-help-panel-${activeHelpTab}`}
               aria-labelledby={`html-rewriter-help-tab-${activeHelpTab}`}>
               {activeHelpTab === 'selectors' && (
                 <div className="space-y-2 text-sm text-gray-300">
@@ -261,12 +267,12 @@ const HtmlRewriterApp: React.FC = () => {
                     to focus the rewrite.
                   </p>
                   <ul className="list-disc space-y-1 pl-5">
-                    <li><code className="bg-gray-800 px-1 py-0.5">p</code> selects every paragraph element.</li>
+                    <li><code className="rounded bg-gray-950 px-1 py-0.5 text-gray-100">p</code> selects every paragraph element.</li>
                     <li>
-                      <code className="bg-gray-800 px-1 py-0.5">main {'>'} h2</code> scopes to headings in the main area.
+                      <code className="rounded bg-gray-950 px-1 py-0.5 text-gray-100">main {'>'} h2</code> scopes to headings in the main area.
                     </li>
                     <li>
-                      <code className="bg-gray-800 px-1 py-0.5">[data-track="outbound"]</code> matches links tagged for tracking.
+                      <code className="rounded bg-gray-950 px-1 py-0.5 text-gray-100">[data-track=&quot;outbound&quot;]</code> matches links tagged for tracking.
                     </li>
                   </ul>
                 </div>
@@ -280,7 +286,7 @@ const HtmlRewriterApp: React.FC = () => {
                   <div>
                     <h3 className="text-base font-semibold text-gray-100">replace</h3>
                     <p>
-                      Swap the text content of the target. Provide a <code className="bg-gray-800 px-1 py-0.5">value</code> string
+                      Swap the text content of the target. Provide a <code className="rounded bg-gray-950 px-1 py-0.5 text-gray-100">value</code> string
                       to use as the replacement.
                     </p>
                   </div>
@@ -289,7 +295,7 @@ const HtmlRewriterApp: React.FC = () => {
               {activeHelpTab === 'payloads' && (
                 <div className="space-y-3 text-sm text-gray-300">
                   <p>Copy these starter rules to clean risky markup and annotate media placeholders.</p>
-                  <pre className="whitespace-pre-wrap rounded bg-gray-800 p-3 text-xs">{SAMPLE_PAYLOAD}</pre>
+                  <pre className="whitespace-pre-wrap rounded-md border border-gray-800 bg-gray-950 p-3 text-xs shadow-inner">{SAMPLE_PAYLOAD}</pre>
                   <p>
                     Paste the JSON into the rule editor and adjust selectors or values to match your source HTML.
                   </p>

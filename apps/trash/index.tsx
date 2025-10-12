@@ -136,30 +136,35 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     notifyChange();
   }, [restoreAllFromHistory]);
 
+  const baseActionButton =
+    'px-3 py-1.5 rounded-md text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ub-orange disabled:opacity-40 disabled:cursor-not-allowed';
+  const subtleActionButton =
+    'px-3 py-1.5 rounded-md border border-white/10 bg-white/10 text-sm font-semibold transition-colors hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-ub-orange disabled:opacity-40 disabled:cursor-not-allowed';
+
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white select-none">
-      <div className="flex items-center justify-between w-full bg-ub-warm-grey bg-opacity-40 text-sm">
-        <span className="font-bold ml-2">Trash</span>
-        <div className="flex items-center">
-          <div className="flex mr-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 w-full bg-ub-warm-grey/40 px-3 py-2 text-sm">
+        <span className="font-bold text-base">Trash</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={restore}
               disabled={selected === null}
-              className="px-3 py-1 my-1 rounded bg-blue-600 text-white hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
+              className={`${baseActionButton} bg-blue-600 text-white hover:bg-blue-500 disabled:hover:bg-blue-600`}
             >
               Restore
             </button>
             <button
               onClick={remove}
               disabled={selected === null}
-              className="px-3 py-1 my-1 ml-3 rounded bg-red-600 text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400 disabled:opacity-50"
+              className={`${baseActionButton} bg-red-600 text-white hover:bg-red-500 disabled:hover:bg-red-600`}
             >
               Delete
             </button>
             <button
               onClick={purge}
               disabled={selected === null}
-              className="px-3 py-1 my-1 ml-3 rounded bg-yellow-600 text-white hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50"
+              className={`${baseActionButton} bg-yellow-500 text-black hover:bg-yellow-400 disabled:hover:bg-yellow-500`}
             >
               Purge
             </button>
@@ -167,14 +172,14 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
           <button
             onClick={restoreAll}
             disabled={items.length === 0}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            className={`${subtleActionButton} whitespace-nowrap`}
           >
             Restore All
           </button>
           <button
             onClick={empty}
             disabled={items.length === 0 || emptyCountdown !== null}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            className={`${subtleActionButton} whitespace-nowrap`}
           >
             {emptyCountdown !== null ? `Emptying in ${emptyCountdown}` : 'Empty'}
           </button>
@@ -190,34 +195,42 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
           {items.length === 0 && <span>Trash is empty</span>}
         </div>
         {items.length > 0 && (
-          <ul className="p-2 space-y-1.5 mt-4">
-            {items.map((item, idx) => (
+          <ul className="mt-6 space-y-2 px-3" role="listbox" aria-label="Windows in trash">
+            {items.map((item, idx) => {
+              const remainingDays = daysLeft(item.closedAt);
+              return (
               <li
                 key={item.closedAt}
                 tabIndex={0}
                 onClick={() => setSelected(idx)}
-                className={`flex items-center h-9 px-1 cursor-pointer ${selected === idx ? 'bg-ub-drk-abrgn' : ''}`}
+                onFocus={() => setSelected(idx)}
+                role="option"
+                aria-selected={selected === idx}
+                className={`flex items-center gap-3 px-3 py-2 rounded-md border border-transparent transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ub-orange ${
+                  selected === idx
+                    ? 'bg-ub-drk-abrgn/80 border-ub-drk-abrgn'
+                    : 'bg-black/20 hover:bg-black/30'
+                }`}
               >
                 <img
                   src={item.icon || DEFAULT_ICON}
                   alt=""
-                  className="h-4 w-4 mr-2"
+                  className="h-6 w-6 shrink-0"
                 />
-                <span className="truncate font-mono" title={item.title}>
+                <span className="truncate font-mono text-sm" title={item.title}>
                   {item.title}
                 </span>
                 <span
-                  className="ml-auto text-xs opacity-70"
-                  aria-label={`Purges in ${daysLeft(item.closedAt)} day${
-                    daysLeft(item.closedAt) === 1 ? '' : 's'
+                  className="ml-auto text-xs font-medium text-ub-orange whitespace-nowrap"
+                  aria-label={`Purges in ${remainingDays} day${
+                    remainingDays === 1 ? '' : 's'
                   }`}
                 >
-                  {`${daysLeft(item.closedAt)} day${
-                    daysLeft(item.closedAt) === 1 ? '' : 's'
-                  } left`}
+                  {`${remainingDays} day${remainingDays === 1 ? '' : 's'} left`}
                 </span>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </div>
