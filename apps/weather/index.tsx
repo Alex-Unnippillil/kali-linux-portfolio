@@ -9,6 +9,7 @@ import useWeatherState, {
 } from './state';
 import Forecast from './components/Forecast';
 import CityDetail from './components/CityDetail';
+import WeatherIcon from './components/WeatherIcon';
 
 interface ReadingUpdate {
   temp: number;
@@ -17,15 +18,43 @@ interface ReadingUpdate {
 }
 
 function CityTile({ city }: { city: City }) {
+  const reading = city.lastReading;
+  const hasReading = Boolean(reading);
+  const tempLabel = hasReading
+    ? `${Math.round(reading!.temp)}°C`
+    : 'No data';
+
   return (
-    <div>
-      <div className="font-bold mb-1.5">{city.name}</div>
-      {city.lastReading ? (
-        <div className="mb-1.5">{Math.round(city.lastReading.temp)}°C</div>
-      ) : (
-        <div className="opacity-70 mb-1.5">No data</div>
-      )}
-      {city.forecast && <Forecast days={city.forecast.slice(0, 5)} />}
+    <div className="flex flex-col gap-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <div className="text-sm uppercase tracking-wide text-white/70">
+            Current
+          </div>
+          <div className="mt-1 text-xl font-semibold">{city.name}</div>
+          <div
+            className={`mt-2 text-4xl font-bold ${
+              hasReading ? 'text-white' : 'text-white/60'
+            }`}
+          >
+            {tempLabel}
+          </div>
+        </div>
+        <WeatherIcon
+          code={reading?.condition ?? 3}
+          className="w-16 h-16 sm:w-20 sm:h-20 text-white/80"
+        />
+      </div>
+      <div>
+        <div className="mb-2 text-xs uppercase tracking-wider text-white/60">
+          Next 5 days
+        </div>
+        {city.forecast ? (
+          <Forecast days={city.forecast.slice(0, 5)} />
+        ) : (
+          <div className="text-sm text-white/60">Forecast unavailable</div>
+        )}
+      </div>
     </div>
   );
 }
@@ -143,22 +172,28 @@ export default function WeatherApp() {
   };
 
   return (
-    <div className="p-4 text-white">
-      <div className="flex gap-2 mb-4">
+    <div className="p-4 text-white space-y-6">
+      <div className="flex flex-wrap gap-2">
         <input
-          className="text-black px-1"
+          className="text-black px-2 py-1 rounded"
           placeholder="Group"
           value={groupName}
+          aria-label="Group name"
           onChange={(e) => setGroupName(e.target.value)}
         />
-        <button className="bg-blue-600 px-2 rounded" onClick={saveGroup}>
+        <button
+          className="bg-blue-600 px-3 py-1 rounded text-sm font-medium"
+          onClick={saveGroup}
+        >
           Save Group
         </button>
         {groups.map((g) => (
           <button
             key={g.name}
-            className={`px-2 rounded ${
-              currentGroup === g.name ? 'bg-blue-800' : 'bg-white/20'
+            className={`px-3 py-1 rounded text-sm font-medium transition ${
+              currentGroup === g.name
+                ? 'bg-blue-800'
+                : 'bg-white/15 hover:bg-white/25'
             }`}
             onClick={() => switchGroup(g.name)}
           >
@@ -166,30 +201,36 @@ export default function WeatherApp() {
           </button>
         ))}
       </div>
-      <div className="flex gap-2 mb-4">
+      <div className="flex flex-wrap gap-2">
         <input
-          className="text-black px-1"
+          className="text-black px-2 py-1 rounded"
           placeholder="Name"
           value={name}
+          aria-label="City name"
           onChange={(e) => setName(e.target.value)}
         />
         <input
-          className="text-black px-1 w-20"
+          className="text-black px-2 py-1 rounded w-24"
           placeholder="Lat"
           value={lat}
+          aria-label="Latitude"
           onChange={(e) => setLat(e.target.value)}
         />
         <input
-          className="text-black px-1 w-20"
+          className="text-black px-2 py-1 rounded w-24"
           placeholder="Lon"
           value={lon}
+          aria-label="Longitude"
           onChange={(e) => setLon(e.target.value)}
         />
-        <button className="bg-blue-600 px-2 rounded" onClick={addCity}>
+        <button
+          className="bg-blue-600 px-3 py-1 rounded text-sm font-medium"
+          onClick={addCity}
+        >
           Add
         </button>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {cities.map((city, i) => (
           <div
             key={city.id}
@@ -198,7 +239,7 @@ export default function WeatherApp() {
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => onDrop(i)}
             onClick={() => setSelected(city)}
-            className="bg-white/10 p-4 rounded cursor-pointer"
+            className="bg-white/10 p-4 rounded cursor-pointer transition hover:bg-white/15 focus-within:bg-white/15"
           >
             <CityTile city={city} />
           </div>
