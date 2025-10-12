@@ -45,9 +45,13 @@ type ControlPanelProps = {
 
 const ControlPanel = ({ title, children, className }: ControlPanelProps) => (
   <section
-    className={`rounded border border-gray-700 bg-gray-800/60 p-3 font-mono ${className ?? ''}`}
+    className={`rounded border border-[color:var(--kali-border)] bg-[var(--kali-panel)] p-3 font-mono shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${
+      className ?? ''
+    }`}
   >
-    <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-300 mb-2">{title}</h2>
+    <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-kali-text opacity-70">
+      {title}
+    </h2>
     <div className="flex flex-col gap-2">{children}</div>
   </section>
 );
@@ -70,7 +74,7 @@ type ColorControlsProps = {
 
 const ColorControls = ({ fgColor, bgColor, onFgChange, onBgChange }: ColorControlsProps) => (
   <ControlRow>
-    <label className="flex items-center gap-1">
+    <label className="flex items-center gap-1 text-kali-text">
       FG
       <input
         type="color"
@@ -80,7 +84,7 @@ const ColorControls = ({ fgColor, bgColor, onFgChange, onBgChange }: ColorContro
         className="w-10 h-6 p-0 border-0 bg-transparent"
       />
     </label>
-    <label className="flex items-center gap-1">
+    <label className="flex items-center gap-1 text-kali-text">
       BG
       <input
         type="color"
@@ -99,13 +103,13 @@ type FontSizeSelectProps = {
 };
 
 const FontSizeSelect = ({ value, onChange }: FontSizeSelectProps) => (
-  <label className="flex flex-col gap-1 text-sm text-gray-200">
-    <span className="text-xs uppercase tracking-wide text-gray-400">Font size</span>
+  <label className="flex flex-col gap-1 text-sm text-kali-text">
+    <span className="text-xs uppercase tracking-wide text-kali-text opacity-60">Font size</span>
     <select
       aria-label="Font size"
       value={value}
       onChange={(e) => onChange(Number(e.target.value))}
-      className="rounded px-2 py-1 font-mono text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+      className="rounded border border-[color:var(--kali-border)] bg-[color:var(--color-text)] px-2 py-1 font-mono text-[color:var(--color-inverse)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
     >
       {fontSizes.map((s) => (
         <option key={s} value={s}>
@@ -318,18 +322,18 @@ const AsciiArtApp = () => {
   };
 
   const previewPaneClasses =
-    'min-h-[12rem] whitespace-pre overflow-auto rounded border border-gray-800 bg-black/80 p-[6px] font-mono leading-tight shadow-inner';
+    'min-h-[12rem] whitespace-pre overflow-auto rounded border border-[color:var(--kali-border)] bg-[color:var(--color-dark)] p-[6px] font-mono leading-tight shadow-inner shadow-black/40';
 
   return (
-    <div className="flex h-full flex-col gap-4 overflow-auto bg-gray-900 p-4 font-mono text-white">
+    <div className="flex h-full flex-col gap-4 overflow-auto bg-kali-background p-4 font-mono text-kali-text">
       <div className="flex gap-2">
         <button
           type="button"
           aria-pressed={tab === 'text'}
-          className={`rounded border px-3 py-1.5 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+          className={`rounded border px-3 py-1.5 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
             tab === 'text'
-              ? 'border-blue-500 bg-blue-700 text-white'
-              : 'border-gray-700 bg-gray-800 text-gray-200 hover:bg-gray-700'
+              ? 'border-[color:var(--color-primary)] bg-kali-primary text-kali-inverse shadow-[0_0_0_1px_rgba(15,148,210,0.35)]'
+              : 'border-[color:var(--kali-border)] bg-[var(--kali-panel)] text-[color:var(--color-text)] hover:bg-[var(--kali-panel-highlight)]'
           }`}
           onClick={() => setTab('text')}
         >
@@ -338,10 +342,10 @@ const AsciiArtApp = () => {
         <button
           type="button"
           aria-pressed={tab === 'image'}
-          className={`rounded border px-3 py-1.5 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+          className={`rounded border px-3 py-1.5 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
             tab === 'image'
-              ? 'border-blue-500 bg-blue-700 text-white'
-              : 'border-gray-700 bg-gray-800 text-gray-200 hover:bg-gray-700'
+              ? 'border-[color:var(--color-primary)] bg-kali-primary text-kali-inverse shadow-[0_0_0_1px_rgba(15,148,210,0.35)]'
+              : 'border-[color:var(--kali-border)] bg-[var(--kali-panel)] text-[color:var(--color-text)] hover:bg-[var(--kali-panel-highlight)]'
           }`}
           onClick={() => setTab('image')}
         >
@@ -355,20 +359,20 @@ const AsciiArtApp = () => {
               ref={textAreaRef}
               rows={1}
               aria-label="ASCII input editor"
-              className="resize-none overflow-hidden rounded px-2 py-1 font-mono leading-none text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+              className="resize-none overflow-hidden rounded border border-[color:var(--kali-border)] bg-[color:var(--color-text)] px-2 py-1 font-mono leading-none text-[color:var(--color-inverse)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               style={{ fontFamily: 'monospace', lineHeight: '1', fontSize: `${fontSize}px` }}
               placeholder="Enter text"
               value={text}
               onChange={(e) => setText(e.target.value)}
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <label className="flex flex-col gap-1 text-sm text-gray-200">
-                <span className="text-xs uppercase tracking-wide text-gray-400">Font</span>
+              <label className="flex flex-col gap-1 text-sm text-kali-text">
+                <span className="text-xs uppercase tracking-wide text-kali-text opacity-60">Font</span>
                 <select
                   aria-label="Font selection"
                   value={font}
                   onChange={(e) => setFont(e.target.value as figlet.Fonts)}
-                  className="rounded px-2 py-1 font-mono text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+                  className="rounded border border-[color:var(--kali-border)] bg-[color:var(--color-text)] px-2 py-1 font-mono text-[color:var(--color-inverse)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
                 >
                   {fontList.map((f) => (
                     <option key={f} value={f}>
@@ -391,7 +395,7 @@ const AsciiArtApp = () => {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              className="flex items-center gap-1 rounded border border-blue-500 bg-blue-700 px-2 py-1 text-sm transition-colors hover:bg-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+              className="flex items-center gap-1 rounded border border-[color:var(--color-primary)] bg-kali-primary px-2 py-1 text-sm font-medium text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               onClick={() => copy(output)}
             >
               <CopyIcon />
@@ -399,14 +403,14 @@ const AsciiArtApp = () => {
             </button>
             <button
               type="button"
-              className="rounded border border-green-500 bg-green-700 px-2 py-1 text-sm transition-colors hover:bg-green-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-400"
+              className="rounded border border-[color:var(--color-terminal)] bg-kali-terminal px-2 py-1 text-sm font-medium text-[color:var(--kali-terminal-text)] transition-colors hover:bg-kali-terminal/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               onClick={() => download(wrapAnsi(output, fgColor, bgColor), 'ascii-art.txt')}
             >
               Download Text
             </button>
             <button
               type="button"
-              className="rounded border border-purple-500 bg-purple-700 px-2 py-1 text-sm transition-colors hover:bg-purple-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
+              className="rounded border border-[color:var(--color-accent)] bg-kali-accent px-2 py-1 text-sm font-medium text-kali-inverse transition-colors hover:bg-kali-accent/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               onClick={() => saveCanvas('ascii-art.png')}
             >
               Save Image
@@ -429,7 +433,7 @@ const AsciiArtApp = () => {
               <pre
                 key={i}
                 onMouseEnter={() => copy(s)}
-                className="cursor-pointer whitespace-pre rounded border border-gray-800 bg-black p-2 font-mono leading-none transition-colors hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+                className="cursor-pointer whitespace-pre rounded border border-[color:var(--kali-border)] bg-[color:var(--color-dark)] p-2 font-mono leading-none transition-colors hover:bg-[var(--kali-panel-highlight)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
                 style={{ imageRendering: 'pixelated' }}
               >
                 {s}
@@ -448,8 +452,8 @@ const AsciiArtApp = () => {
               onChange={handleImage}
             />
             <ControlRow className="gap-4">
-              <label className="flex items-center gap-2 text-sm text-gray-200">
-                <span className="text-xs uppercase tracking-wide text-gray-400">Brightness</span>
+              <label className="flex items-center gap-2 text-sm text-kali-text">
+                <span className="text-xs uppercase tracking-wide text-kali-text opacity-60">Brightness</span>
                 <input
                   type="range"
                   min="-1"
@@ -460,8 +464,8 @@ const AsciiArtApp = () => {
                   onChange={(e) => setBrightness(Number(e.target.value))}
                 />
               </label>
-              <label className="flex items-center gap-2 text-sm text-gray-200">
-                <span className="text-xs uppercase tracking-wide text-gray-400">Contrast</span>
+              <label className="flex items-center gap-2 text-sm text-kali-text">
+                <span className="text-xs uppercase tracking-wide text-kali-text opacity-60">Contrast</span>
                 <input
                   type="range"
                   min="0"
@@ -488,7 +492,7 @@ const AsciiArtApp = () => {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              className="flex items-center gap-1 rounded border border-blue-500 bg-blue-700 px-2 py-1 text-sm transition-colors hover:bg-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+              className="flex items-center gap-1 rounded border border-[color:var(--color-primary)] bg-kali-primary px-2 py-1 text-sm font-medium text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               onClick={() => copy(imgOutput)}
             >
               <CopyIcon />
@@ -496,14 +500,14 @@ const AsciiArtApp = () => {
             </button>
             <button
               type="button"
-              className="rounded border border-green-500 bg-green-700 px-2 py-1 text-sm transition-colors hover:bg-green-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-400"
+              className="rounded border border-[color:var(--color-terminal)] bg-kali-terminal px-2 py-1 text-sm font-medium text-[color:var(--kali-terminal-text)] transition-colors hover:bg-kali-terminal/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               onClick={() => download(wrapAnsi(imgOutput, fgColor, bgColor), 'image-ascii.txt')}
             >
               Download Text
             </button>
             <button
               type="button"
-              className="rounded border border-purple-500 bg-purple-700 px-2 py-1 text-sm transition-colors hover:bg-purple-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
+              className="rounded border border-[color:var(--color-accent)] bg-kali-accent px-2 py-1 text-sm font-medium text-kali-inverse transition-colors hover:bg-kali-accent/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               onClick={() => saveCanvas('image-ascii.png')}
             >
               Save Image
