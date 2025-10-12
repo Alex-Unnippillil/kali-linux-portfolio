@@ -23,27 +23,50 @@ const CELL = 32;
 
 const LEVEL_THUMB_CELL = 8;
 
+const KALI_ACCENT_SOFT = 'color-mix(in srgb, var(--color-accent) 22%, transparent)';
+const KALI_ACCENT_MED = 'color-mix(in srgb, var(--color-accent) 38%, transparent)';
+const KALI_ACCENT_STRONG = 'color-mix(in srgb, var(--color-accent) 60%, transparent)';
+const KALI_ACCENT_GHOST = 'color-mix(in srgb, var(--color-accent) 32%, transparent)';
+const KALI_ACCENT_PATH = 'color-mix(in srgb, var(--color-accent) 52%, transparent)';
+const KALI_PANEL = 'color-mix(in srgb, var(--color-surface) 92%, black)';
+const KALI_PANEL_MUTED = 'color-mix(in srgb, var(--color-surface) 78%, transparent)';
+
 const LevelThumb: React.FC<{ level: string[] }> = ({ level }) => {
   const width = Math.max(...level.map((r) => r.length));
   const height = level.length;
   const tileStyle = { width: LEVEL_THUMB_CELL, height: LEVEL_THUMB_CELL } as React.CSSProperties;
   return (
     <div
-      className="relative bg-gray-700 shadow-md"
-      style={{ width: width * LEVEL_THUMB_CELL, height: height * LEVEL_THUMB_CELL }}
+      className="relative rounded-sm shadow-md"
+      style={{
+        width: width * LEVEL_THUMB_CELL,
+        height: height * LEVEL_THUMB_CELL,
+        background: KALI_PANEL_MUTED,
+      }}
     >
       {level.map((row, y) =>
         row.split('').map((cell, x) => {
           const k = `${x},${y}`;
           const isWall = cell === '#';
           const isTarget = cell === '.' || cell === '+' || cell === '*';
+          const baseTile: React.CSSProperties = {
+            ...tileStyle,
+            left: x * LEVEL_THUMB_CELL,
+            top: y * LEVEL_THUMB_CELL,
+            position: 'absolute',
+            background: isWall
+              ? 'color-mix(in srgb, var(--color-muted) 85%, black)'
+              : 'color-mix(in srgb, var(--color-surface) 70%, transparent)',
+          };
+          if (isTarget) {
+            baseTile.background = 'color-mix(in srgb, var(--color-accent) 28%, var(--color-surface))';
+            baseTile.boxShadow = 'inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 65%, transparent)';
+          }
           return (
             <div
               key={`t-${k}`}
-              className={`absolute ${isWall ? 'bg-gray-800' : 'bg-gray-600'} ${
-                isTarget ? 'ring-1 ring-yellow-400' : ''
-              } shadow-inner`}
-              style={{ ...tileStyle, left: x * LEVEL_THUMB_CELL, top: y * LEVEL_THUMB_CELL }}
+              className="shadow-inner"
+              style={baseTile}
             />
           );
         })
@@ -55,8 +78,17 @@ const LevelThumb: React.FC<{ level: string[] }> = ({ level }) => {
             return (
               <div
                 key={`b-${k}`}
-                className="absolute bg-orange-400"
-                style={{ ...tileStyle, left: x * LEVEL_THUMB_CELL, top: y * LEVEL_THUMB_CELL }}
+                className="absolute"
+                style={{
+                  ...tileStyle,
+                  left: x * LEVEL_THUMB_CELL,
+                  top: y * LEVEL_THUMB_CELL,
+                  background: cell === '*' ? KALI_ACCENT_STRONG : KALI_ACCENT_MED,
+                  boxShadow:
+                    cell === '*'
+                      ? '0 0 0 1px color-mix(in srgb, var(--color-accent) 75%, transparent)'
+                      : undefined,
+                }}
               />
             );
           }
@@ -64,8 +96,14 @@ const LevelThumb: React.FC<{ level: string[] }> = ({ level }) => {
             return (
               <div
                 key={`p-${k}`}
-                className="absolute bg-blue-400"
-                style={{ ...tileStyle, left: x * LEVEL_THUMB_CELL, top: y * LEVEL_THUMB_CELL }}
+                className="absolute"
+                style={{
+                  ...tileStyle,
+                  left: x * LEVEL_THUMB_CELL,
+                  top: y * LEVEL_THUMB_CELL,
+                  background: 'color-mix(in srgb, var(--color-accent) 72%, white 12%)',
+                  boxShadow: '0 0 6px rgba(15, 148, 210, 0.3)',
+                }}
               />
             );
           }
@@ -582,12 +620,14 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
         <div className="mx-auto flex justify-center">
           <div className="relative" style={{ width: scaledBoardWidth, height: scaledBoardHeight }}>
             <div
-              className="relative rounded-md bg-gray-800 shadow-lg"
+              className="relative rounded-md shadow-lg"
               style={{
                 width: baseBoardWidth,
                 height: baseBoardHeight,
                 transform: `scale(${boardScale})`,
                 transformOrigin: 'top left',
+                background: KALI_PANEL_MUTED,
+                boxShadow: '0 12px 32px rgba(0,0,0,0.45)',
               }}
               onMouseLeave={() => setGhost(new Set())}
             >
@@ -600,40 +640,67 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
                   const isReach = reach.has(k);
                   const inGhost = ghost.has(k);
                   const inSolution = solutionPath.has(k);
-                  const tileClasses = [
-                    'absolute shadow-inner transition-colors duration-150',
-                    isWall ? 'bg-gray-900' : 'bg-gray-700/90',
+                  const tileShadows = [
+                    isWall
+                      ? 'inset 0 0 0 1px rgba(0,0,0,0.55)'
+                      : 'inset 0 0 0 1px rgba(255,255,255,0.04)',
                   ];
+                  const tileBackground = isWall
+                    ? 'color-mix(in srgb, var(--color-muted) 88%, black)'
+                    : 'color-mix(in srgb, var(--color-surface) 74%, transparent)';
+                  const tileStyle = {
+                    ...cellStyle,
+                    left: x * CELL,
+                    top: y * CELL,
+                    background: tileBackground,
+                    borderRadius: 4,
+                  } as React.CSSProperties;
                   if (isTarget) {
-                    tileClasses.push(
-                      isBoxOnTarget
-                        ? 'bg-emerald-400/25 ring-2 ring-emerald-300'
-                        : 'bg-amber-300/25 ring-2 ring-amber-300'
-                    );
+                    tileStyle.background = isBoxOnTarget
+                      ? 'color-mix(in srgb, var(--color-accent) 46%, var(--color-surface))'
+                      : 'color-mix(in srgb, var(--color-accent) 26%, var(--color-surface))';
+                    tileShadows.push('inset 0 0 0 2px color-mix(in srgb, var(--color-accent) 65%, transparent)');
                   }
                   return (
                     <React.Fragment key={k}>
                       <div
-                        className={tileClasses.join(' ')}
-                        style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
+                        className="absolute rounded shadow-inner transition-colors duration-150"
+                        style={{ ...tileStyle, boxShadow: tileShadows.join(', ') }}
                         onMouseEnter={() => handleHover(x, y)}
                       />
                       {isReach && !isWall && (
                         <div
-                          className="absolute bg-sky-400/25"
-                          style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
+                          className="absolute rounded"
+                          style={{
+                            ...cellStyle,
+                            left: x * CELL,
+                            top: y * CELL,
+                            background: KALI_ACCENT_SOFT,
+                          }}
                         />
                       )}
                       {inGhost && (
                         <div
-                          className="absolute bg-blue-300/40"
-                          style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
+                          className="absolute rounded"
+                          style={{
+                            ...cellStyle,
+                            left: x * CELL,
+                            top: y * CELL,
+                            background: KALI_ACCENT_GHOST,
+                          }}
                         />
                       )}
                       {inSolution && (
                         <div
-                          className="absolute bg-purple-300/40"
-                          style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
+                          className="absolute rounded"
+                          style={{
+                            ...cellStyle,
+                            left: x * CELL,
+                            top: y * CELL,
+                            background: KALI_ACCENT_PATH,
+                            boxShadow:
+                              'inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 70%, transparent)',
+                          }}
                         />
                       )}
                     </React.Fragment>
@@ -644,35 +711,48 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
                 const [x, y] = b.split(',').map(Number);
                 const dead = state.deadlocks.has(b);
                 const onTarget = state.targets.has(b);
+                const boxStyle: React.CSSProperties = {
+                  ...cellStyle,
+                  transform: `translate(${x * CELL}px, ${y * CELL}px) scale(${b === lastPush ? 1.1 : 1})`,
+                  borderRadius: 6,
+                  background: dead
+                    ? 'color-mix(in srgb, #ef4444 82%, black)'
+                    : onTarget
+                    ? 'color-mix(in srgb, var(--color-accent) 68%, white 12%)'
+                    : 'color-mix(in srgb, var(--color-accent) 52%, var(--color-surface))',
+                  boxShadow: dead
+                    ? '0 0 0 2px rgba(239,68,68,0.6), 0 10px 18px rgba(0,0,0,0.5)'
+                    : onTarget
+                    ? '0 0 0 2px color-mix(in srgb, var(--color-accent) 70%, transparent), 0 10px 18px rgba(0,0,0,0.5)'
+                    : '0 10px 18px rgba(0,0,0,0.45)',
+                };
                 return (
                   <div
                     key={b}
-                    className={`absolute transition-transform duration-100 ${
-                      dead
-                        ? 'bg-red-500'
-                        : onTarget
-                        ? 'bg-emerald-400 ring-2 ring-emerald-200'
-                        : 'bg-orange-400'
-                    } shadow-lg`}
-                    style={{
-                      ...cellStyle,
-                      transform: `translate(${x * CELL}px, ${y * CELL}px) scale(${b === lastPush ? 1.1 : 1})`,
-                    }}
+                    className="absolute transition-transform duration-100"
+                    style={boxStyle}
                   />
                 );
               })}
               {puffs.map((p) => (
                 <div
                   key={p.id}
-                  className="absolute pointer-events-none w-4 h-4 rounded-full bg-gray-200 opacity-70 animate-ping"
-                  style={{ left: p.x * CELL + CELL / 2 - 8, top: p.y * CELL + CELL / 2 - 8 }}
+                  className="absolute pointer-events-none h-4 w-4 rounded-full opacity-60 animate-ping"
+                  style={{
+                    left: p.x * CELL + CELL / 2 - 8,
+                    top: p.y * CELL + CELL / 2 - 8,
+                    background: KALI_ACCENT_MED,
+                  }}
                 />
               ))}
               <div
-                className="absolute bg-blue-400 transition-transform duration-100"
+                className="absolute transition-transform duration-100"
                 style={{
                   ...cellStyle,
                   transform: `translate(${state.player.x * CELL}px, ${state.player.y * CELL}px)`,
+                  borderRadius: 6,
+                  background: 'color-mix(in srgb, var(--color-accent) 72%, white 18%)',
+                  boxShadow: '0 0 0 2px color-mix(in srgb, var(--color-accent) 65%, transparent), 0 12px 18px rgba(0,0,0,0.5)',
                 }}
               />
             </div>
@@ -710,21 +790,24 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       </div>
       {showStats && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex"
+          className="fixed inset-0 flex items-center justify-center bg-black/70 px-4"
           onClick={() => setShowStats(false)}
         >
           <div
-            className="bg-white p-4 space-y-2"
+            className="w-full max-w-sm space-y-3 rounded-lg border border-white/10 p-5 shadow-2xl"
+            style={{ background: KALI_PANEL, color: 'var(--color-text)' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="font-bold">Level Complete!</div>
-            <div>Moves: {stats.moves}</div>
-            <div>Pushes: {stats.pushes}</div>
-            {minPushes !== null && <div>Minimal pushes: {minPushes}</div>}
+            <div className="text-lg font-semibold">Level Complete!</div>
+            <div className="space-y-1 text-sm text-gray-100">
+              <div>Moves: {stats.moves}</div>
+              <div>Pushes: {stats.pushes}</div>
+              {minPushes !== null && <div>Minimal pushes: {minPushes}</div>}
+            </div>
             <button
               type="button"
               onClick={() => setShowStats(false)}
-              className="px-2 py-1 bg-gray-300 rounded"
+              className="rounded bg-white/10 px-3 py-1 text-sm font-medium text-white transition-colors hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]"
             >
               Close
             </button>
@@ -733,32 +816,42 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       )}
       {showLevels && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex"
+          className="fixed inset-0 flex items-center justify-center bg-black/70 px-4"
           onClick={() => setShowLevels(false)}
         >
           <div
-            className="w-[640px] max-w-full space-y-4 rounded bg-white p-4 shadow-xl"
+            className="w-[640px] max-w-full space-y-4 rounded-lg border border-white/10 p-5 shadow-2xl"
+            style={{ background: KALI_PANEL, color: 'var(--color-text)' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Choose a level</h2>
-              <div className="text-sm text-gray-500">
-                Pack: <span className="font-medium text-gray-700">{packs[packIndex].name}</span>
+              <h2 className="text-lg font-semibold text-gray-100">Choose a level</h2>
+              <div className="text-sm text-gray-300">
+                Pack: <span className="font-medium text-gray-100">{packs[packIndex].name}</span>
               </div>
             </div>
             <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
               <div className="sm:w-1/3">
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Packs</h3>
-                <div className="max-h-80 overflow-y-auto rounded border border-gray-200">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-300">Packs</h3>
+                <div className="max-h-80 overflow-y-auto rounded border border-white/10">
                   {packs.map((p, i) => (
                     <button
                       key={p.name}
                       type="button"
-                      className={`flex w-full justify-between gap-2 px-3 py-2 text-left text-sm ${
+                      className={`flex w-full justify-between gap-2 px-3 py-2 text-left text-sm transition-colors ${
                         i === packIndex
-                          ? 'bg-amber-100 font-semibold text-gray-900'
-                          : 'bg-white text-gray-600 hover:bg-gray-100'
+                          ? 'font-semibold text-white'
+                          : 'text-gray-300 hover:bg-white/10'
                       }`}
+                      style={
+                        i === packIndex
+                          ? {
+                              background: 'color-mix(in srgb, var(--color-accent) 25%, var(--color-surface))',
+                              boxShadow:
+                                'inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 65%, transparent)',
+                            }
+                          : undefined
+                      }
                       onClick={() => selectPack(i)}
                     >
                       <span>{p.name}</span>
@@ -768,7 +861,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
                 </div>
               </div>
               <div className="flex-1">
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-300">
                   Levels in {packs[packIndex].name}
                 </h3>
                 <div className="max-h-80 overflow-y-auto">
@@ -778,15 +871,26 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
                         key={i}
                         type="button"
                         className={`flex flex-col items-center gap-2 rounded border px-2 py-2 transition-colors ${
-                          i === index ? 'border-amber-500 bg-amber-50' : 'border-transparent bg-white hover:border-amber-200'
+                          i === index
+                            ? 'border-[color:var(--color-accent)] text-white'
+                            : 'border-transparent text-gray-300 hover:border-[color:var(--color-accent)] hover:bg-white/5'
                         }`}
+                        style={
+                          i === index
+                            ? {
+                                background: 'color-mix(in srgb, var(--color-accent) 22%, var(--color-surface))',
+                                boxShadow:
+                                  'inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 70%, transparent)',
+                              }
+                            : undefined
+                        }
                         onClick={() => {
                           selectLevel(i);
                           setShowLevels(false);
                         }}
                       >
                         <LevelThumb level={lvl} />
-                        <span className="text-xs font-medium text-gray-600">Level {i + 1}</span>
+                        <span className="text-xs font-medium">Level {i + 1}</span>
                       </button>
                     ))}
                   </div>
