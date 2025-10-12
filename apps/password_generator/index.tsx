@@ -32,6 +32,9 @@ const PRESETS = [
   },
 ];
 
+const MIN_LENGTH = 4;
+const MAX_LENGTH = 64;
+
 const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) => {
   void getDailySeed;
   const [length, setLength] = useState(12);
@@ -95,33 +98,83 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
   const entropy = poolSize ? length * Math.log2(poolSize) : 0;
 
   const strengthInfo = () => {
-    if (!entropy) return { label: 'None', color: 'bg-gray-500' };
-    if (entropy < 40) return { label: 'Weak', color: 'bg-red-500' };
-    if (entropy < 80) return { label: 'Medium', color: 'bg-yellow-500' };
-    return { label: 'Strong', color: 'bg-green-500' };
+    if (!entropy)
+      return {
+        label: 'None',
+        barClass: 'bg-gray-600',
+        badgeClass: 'bg-gray-900/80 text-gray-300 border border-gray-600',
+      };
+    if (entropy < 40)
+      return {
+        label: 'Weak',
+        barClass: 'bg-red-500',
+        badgeClass: 'bg-red-500/20 text-red-300 border border-red-400/60',
+      };
+    if (entropy < 80)
+      return {
+        label: 'Medium',
+        barClass: 'bg-yellow-400',
+        badgeClass: 'bg-yellow-500/20 text-yellow-200 border border-yellow-400/60',
+      };
+    return {
+      label: 'Strong',
+      barClass: 'bg-green-500',
+      badgeClass: 'bg-green-500/20 text-green-200 border border-green-400/60',
+    };
   };
 
-  const { label, color } = strengthInfo();
+  const { label, barClass, badgeClass } = strengthInfo();
   const width = `${entropy ? Math.min(entropy, 128) / 128 * 100 : 0}%`;
 
+  const handleLengthChange = (value: number) => {
+    const clamped = Math.min(MAX_LENGTH, Math.max(MIN_LENGTH, Number.isNaN(value) ? MIN_LENGTH : value));
+    setLength(clamped);
+    clearPresetSelection();
+  };
+
+  const toggleLabelClasses = (active: boolean) =>
+    `flex items-center gap-3 rounded-full border px-3 py-2 text-sm font-medium transition focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2 focus-within:ring-offset-gray-900 ${
+      active
+        ? 'bg-blue-600/20 border-blue-400/70 text-blue-100 shadow-lg shadow-blue-900/30'
+        : 'bg-gray-800/80 border-gray-700 text-gray-200 hover:bg-gray-700'
+    }`;
+
+  const lengthLabelId = 'password-length-label';
+
   return (
-    <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
-      <div>
-        <label htmlFor="length" className="mr-2">Length:</label>
+    <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-5">
+      <div className="space-y-3">
+        <div className="flex items-center justify-between text-xs uppercase tracking-wide text-gray-400">
+          <span id={lengthLabelId}>Password length</span>
+          <span className="font-mono text-lg text-white">{length}</span>
+        </div>
         <input
-          id="length"
-          type="number"
-          min={4}
-          max={64}
+          id="password-length-slider"
+          type="range"
+          min={MIN_LENGTH}
+          max={MAX_LENGTH}
           value={length}
-          onChange={(e) => {
-            clearPresetSelection();
-            setLength(parseInt(e.target.value, 10) || 0);
-          }}
-          className="text-black px-2"
+          onChange={(e) => handleLengthChange(parseInt(e.target.value, 10))}
+          className="w-full accent-blue-500"
+          aria-labelledby={lengthLabelId}
         />
+        <div className="flex items-center gap-3">
+          <label id="manual-length-label" htmlFor="length" className="text-sm text-gray-300">
+            Manual entry
+          </label>
+          <input
+            id="length"
+            type="number"
+            min={MIN_LENGTH}
+            max={MAX_LENGTH}
+            value={length}
+            onChange={(e) => handleLengthChange(parseInt(e.target.value, 10))}
+            className="w-20 rounded border border-gray-700 bg-gray-950 px-2 py-1 text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-labelledby="manual-length-label"
+          />
+        </div>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-3">
         {PRESETS.map((preset) => {
           const isActive = selectedPreset === preset.label;
           return (
@@ -129,8 +182,10 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
               key={preset.label}
               type="button"
               onClick={() => applyPreset(preset.label)}
-              className={`px-3 py-1 rounded-full border transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 ${
-                isActive ? 'bg-blue-600 border-blue-500' : 'bg-gray-800 border-gray-600 hover:bg-gray-700'
+              className={`px-4 py-2 rounded-full border transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 focus-visible:ring-offset-gray-900 text-sm font-semibold tracking-wide uppercase ${
+                isActive
+                  ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-900/40'
+                  : 'bg-gray-800 text-gray-200 border-gray-600 hover:bg-gray-700'
               }`}
             >
               {preset.label}
@@ -138,39 +193,98 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
           );
         })}
       </div>
-      <div className="flex flex-wrap gap-2">
-        <label className="flex items-center gap-1"><input type="checkbox" checked={useLower} onChange={(e) => { clearPresetSelection(); setUseLower(e.target.checked); }} /> Lowercase</label>
-        <label className="flex items-center gap-1"><input type="checkbox" checked={useUpper} onChange={(e) => { clearPresetSelection(); setUseUpper(e.target.checked); }} /> Uppercase</label>
-        <label className="flex items-center gap-1"><input type="checkbox" checked={useNumbers} onChange={(e) => { clearPresetSelection(); setUseNumbers(e.target.checked); }} /> Numbers</label>
-        <label className="flex items-center gap-1"><input type="checkbox" checked={useSymbols} onChange={(e) => { clearPresetSelection(); setUseSymbols(e.target.checked); }} /> Symbols</label>
+      <div className="flex flex-wrap gap-3">
+        <label className={toggleLabelClasses(useLower)} htmlFor="toggle-lowercase">
+          <input
+            id="toggle-lowercase"
+            type="checkbox"
+            checked={useLower}
+            onChange={(e) => {
+              clearPresetSelection();
+              setUseLower(e.target.checked);
+            }}
+            className="h-4 w-4 rounded border-gray-600 bg-gray-900 text-blue-500 focus:ring-blue-500"
+            aria-label="Include lowercase characters"
+          />
+          <span>Lowercase</span>
+        </label>
+        <label className={toggleLabelClasses(useUpper)} htmlFor="toggle-uppercase">
+          <input
+            id="toggle-uppercase"
+            type="checkbox"
+            checked={useUpper}
+            onChange={(e) => {
+              clearPresetSelection();
+              setUseUpper(e.target.checked);
+            }}
+            className="h-4 w-4 rounded border-gray-600 bg-gray-900 text-blue-500 focus:ring-blue-500"
+            aria-label="Include uppercase characters"
+          />
+          <span>Uppercase</span>
+        </label>
+        <label className={toggleLabelClasses(useNumbers)} htmlFor="toggle-numbers">
+          <input
+            id="toggle-numbers"
+            type="checkbox"
+            checked={useNumbers}
+            onChange={(e) => {
+              clearPresetSelection();
+              setUseNumbers(e.target.checked);
+            }}
+            className="h-4 w-4 rounded border-gray-600 bg-gray-900 text-blue-500 focus:ring-blue-500"
+            aria-label="Include numbers"
+          />
+          <span>Numbers</span>
+        </label>
+        <label className={toggleLabelClasses(useSymbols)} htmlFor="toggle-symbols">
+          <input
+            id="toggle-symbols"
+            type="checkbox"
+            checked={useSymbols}
+            onChange={(e) => {
+              clearPresetSelection();
+              setUseSymbols(e.target.checked);
+            }}
+            className="h-4 w-4 rounded border-gray-600 bg-gray-900 text-blue-500 focus:ring-blue-500"
+            aria-label="Include symbols"
+          />
+          <span>Symbols</span>
+        </label>
       </div>
-      <div className="flex space-x-2 items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <input
           data-testid="password-display"
           type="text"
           readOnly
           value={password}
-          className="flex-1 text-black px-2 py-1 font-mono leading-[1.2] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
+          className="flex-1 rounded border border-gray-700 bg-gray-950 px-3 py-2 font-mono text-lg leading-[1.2] text-green-100 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          aria-label="Generated password"
         />
         <button
           type="button"
           onClick={copyToClipboard}
-          className="px-3 py-1 bg-blue-600 rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
+          className="w-full rounded bg-blue-600 px-4 py-2 text-center text-sm font-semibold uppercase tracking-wide text-white shadow-lg shadow-blue-900/40 transition hover:bg-blue-500 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 focus-visible:ring-offset-gray-900 sm:w-auto"
         >
           Copy
         </button>
       </div>
-      {copied && <div className="text-sm text-green-400">Copied!</div>}
-      <div>
-        <div className="h-2 w-full bg-gray-700 rounded">
-          <div className={`h-full ${color} rounded`} style={{ width }} />
-        </div>
-        <div className="text-sm mt-1 flex items-center gap-2">
-          <span>
-            Entropy: {entropy.toFixed(1)} bits {label && `(${label})`}
+      {copied && <div className="text-sm font-medium text-green-400">Copied!</div>}
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-800">
+            <div className={`h-full ${barClass}`} style={{ width }} />
+          </div>
+          <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${badgeClass}`}>
+            {label}
           </span>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-300">
+          <span className="font-mono text-base text-white">
+            {entropy.toFixed(1)} bits
+          </span>
+          <span className="text-xs uppercase tracking-wide text-gray-400">Entropy</span>
           <span
-            className="text-xs text-blue-300 cursor-help"
+            className="text-xs text-blue-300"
             role="img"
             aria-label="Entropy information"
             title="Entropy measures password unpredictability. 0-40 bits is weak, 40-80 bits is medium, and 80+ bits is recommended for high-security usage."
@@ -183,7 +297,7 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
         <button
           type="button"
           onClick={generatePassword}
-          className="w-full px-4 py-2 bg-green-600 rounded"
+          className="w-full rounded bg-green-600 px-4 py-2 text-sm font-semibold uppercase tracking-wide text-white shadow-lg shadow-green-900/30 transition hover:bg-green-500 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-500 focus-visible:ring-offset-gray-900"
         >
           Generate
         </button>
