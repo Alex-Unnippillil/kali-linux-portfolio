@@ -14,7 +14,7 @@ const MODE_DESCRIPTIONS: Record<(typeof MODES)[number], string> = {
 };
 
 export default function EttercapPage() {
-  const [mode, setMode] = useState('Unified');
+  const [mode, setMode] = useState<(typeof MODES)[number]>('Unified');
   const [started, setStarted] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
