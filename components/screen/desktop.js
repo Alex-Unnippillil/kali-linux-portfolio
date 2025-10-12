@@ -318,6 +318,8 @@ export class Desktop extends Component {
         this.liveRegionTimeout = null;
 
         this.previousFocusElement = null;
+
+        this.recentlyClosedOverlays = new Set();
         this.allAppsTriggerKey = null;
         this.allAppsCloseTimeout = null;
         this.allAppsEnterRaf = null;
@@ -1597,6 +1599,7 @@ export class Desktop extends Component {
     openOverlay = (id, options = {}) => {
         if (!this.isOverlayId(id)) return;
         const { transitionState } = options;
+        this.recentlyClosedOverlays.delete(id);
         this.promoteWindowInStack(id);
         this.setState((prev) => {
             const overlayWindows = this.buildOverlayStateMap(prev.overlayWindows, id, {
@@ -1645,6 +1648,7 @@ export class Desktop extends Component {
 
     closeOverlay = (id, options = {}) => {
         if (!this.isOverlayId(id)) return;
+        this.recentlyClosedOverlays.add(id);
         const stack = this.getActiveStack();
         const index = stack.indexOf(id);
         if (index !== -1) {
@@ -1704,9 +1708,15 @@ export class Desktop extends Component {
         const entries = [];
         Object.keys(minimized).forEach((id) => {
             if (!minimized[id]) return;
-            if (closed[id]) return;
             if (!this.validAppIds.has(id)) return;
-            if (this.isOverlayId(id)) return;
+            if (this.isOverlayId(id)) {
+                const overlayState = this.state.overlayWindows?.[id];
+                if (!overlayState || overlayState.open === false) {
+                    return;
+                }
+            } else if (closed[id]) {
+                return;
+            }
             const entry = this.buildWindowShelfEntry(id);
             if (entry) {
                 entries.push(entry);
@@ -1742,7 +1752,7 @@ export class Desktop extends Component {
         Object.keys(closed).forEach((id) => {
             if (!closed[id]) return;
             if (!this.validAppIds.has(id)) return;
-            if (this.isOverlayId(id)) return;
+            if (this.isOverlayId(id) && !this.recentlyClosedOverlays.has(id)) return;
             const entry = this.buildWindowShelfEntry(id);
             if (entry) {
                 const closedAt = order.has(id) ? order.get(id) : 0;
@@ -2728,6 +2738,7 @@ export class Desktop extends Component {
     };
 
     openOverlay = (key, overrides = {}, callback) => {
+        this.recentlyClosedOverlays.delete(key);
         this.updateOverlayState(
             key,
             (current) => {
@@ -2750,6 +2761,7 @@ export class Desktop extends Component {
     };
 
     closeOverlay = (key, overrides = {}, callback) => {
+        this.recentlyClosedOverlays.add(key);
         this.updateOverlayState(
             key,
             (current) => {
@@ -4139,7 +4151,12 @@ export class Desktop extends Component {
             delete closed_windows[id];
             this.commitWorkspacePartial({ closed_windows }, prev.activeWorkspace);
             return { closed_windows };
-        }, this.saveSession);
+        }, () => {
+            if (this.isOverlayId(id)) {
+                this.recentlyClosedOverlays.delete(id);
+            }
+            this.saveSession();
+        });
     };
 
     checkAllMinimised = () => {
