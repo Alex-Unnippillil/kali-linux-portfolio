@@ -105,7 +105,7 @@ const MimikatzOffline = () => {
         window.
       </WarningBanner>
       <div className="p-4 flex flex-col gap-6 overflow-y-auto">
-        <header className="space-y-2 rounded-lg border border-gray-700/70 bg-black/30 p-4 shadow-inner">
+        <header className="space-y-2 rounded-lg border border-white/10 bg-kali-surface/80 p-4 shadow-inner">
           <h1 className="text-xl font-semibold">Mimikatz Offline Workbench</h1>
           <p className="text-sm text-gray-300">
             Explore canned LSASS dumps and tabletop injects without any network calls. Load a packaged scenario below or
@@ -115,13 +115,13 @@ const MimikatzOffline = () => {
 
         <section
           aria-labelledby="offline-datasets"
-          className="rounded-lg border border-gray-700/70 bg-black/40 p-4 shadow-inner"
+          className="rounded-lg border border-white/10 bg-kali-surface/80 p-4 shadow-inner"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 id="offline-datasets" className="text-lg font-semibold">
               Packaged datasets
             </h2>
-            <span className="rounded-full border border-purple-400/40 bg-purple-500/10 px-2 py-1 text-xs uppercase tracking-wide text-purple-200">
+            <span className="rounded-full border border-kali-accent/30 bg-kali-accent/10 px-2 py-1 text-xs uppercase tracking-wide text-kali-accent">
               Offline ready
             </span>
           </div>
@@ -138,8 +138,8 @@ const MimikatzOffline = () => {
                   key={dataset.id}
                   className={`flex h-full flex-col gap-3 rounded-lg border p-4 text-sm transition-all ${
                     isActive
-                      ? 'border-purple-400/80 bg-ub-dark shadow-[0_0_0_1px_rgba(192,132,252,0.25)]'
-                      : 'border-gray-700/80 bg-black/50 hover:border-purple-400/40'
+                      ? 'border-kali-accent/70 bg-kali-surface shadow-[0_0_0_1px_rgba(15,148,210,0.3)]'
+                      : 'border-white/10 bg-kali-surface/80 hover:border-kali-accent/40'
                   }`}
                 >
                   <div className="flex flex-col gap-2">
@@ -161,19 +161,19 @@ const MimikatzOffline = () => {
                       ))}
                     </dl>
                   ) : null}
-                  <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-gray-700/60 pt-3">
+                  <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-3">
                     <div className="flex flex-wrap gap-2 text-[0.7rem] font-semibold">
-                      <span className="rounded-full bg-purple-500/20 px-2 py-1 text-purple-200">
+                      <span className="rounded-full bg-kali-accent/15 px-2 py-1 text-kali-accent">
                         {artifactCount} {artifactCount === 1 ? 'artifact' : 'artifacts'}
                       </span>
-                      <span className="rounded-full bg-amber-500/20 px-2 py-1 text-amber-200">
+                      <span className="rounded-full bg-kali-accent/10 px-2 py-1 text-kali-accent">
                         Risk: {dataset.riskRating || 'Not rated'}
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => handleDatasetSelect(dataset.id)}
-                      className="inline-flex items-center justify-center rounded-md bg-purple-600 px-3 py-2 text-xs font-semibold uppercase tracking-wide shadow hover:bg-purple-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
+                      className="inline-flex items-center justify-center rounded-md bg-kali-accent px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-950 shadow transition-colors hover:bg-kali-accent/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-accent"
                     >
                       {isActive
                         ? `Reload dataset (Shortcut ${shortcutKey})`
@@ -189,7 +189,7 @@ const MimikatzOffline = () => {
         {selectedDataset ? (
           <section
             aria-labelledby="investigation-flow"
-            className="rounded-lg border border-gray-700/70 bg-black/40 p-4 text-sm shadow-inner"
+            className="rounded-lg border border-white/10 bg-kali-surface/80 p-4 text-sm shadow-inner"
           >
             <h2 id="investigation-flow" className="text-lg font-semibold">
               Investigation flow
@@ -204,7 +204,7 @@ const MimikatzOffline = () => {
 
         <section
           aria-labelledby="custom-import"
-          className="rounded-lg border border-gray-700/70 bg-black/40 p-4 shadow-inner"
+          className="rounded-lg border border-white/10 bg-kali-surface/80 p-4 shadow-inner"
         >
           <div className="space-y-2">
             <h2 id="custom-import" className="text-lg font-semibold">
@@ -223,7 +223,7 @@ const MimikatzOffline = () => {
               accept=".txt,.log,application/octet-stream"
               onChange={handleFile}
               aria-label="Upload sanitized dump"
-              className="block w-full rounded-md border border-gray-600 bg-black/60 p-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-purple-600 file:px-3 file:py-1 file:text-xs file:uppercase file:tracking-wide file:text-white hover:file:bg-purple-500"
+              className="block w-full rounded-md border border-white/10 bg-kali-surface/80 p-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-kali-accent file:px-3 file:py-1 file:text-xs file:uppercase file:tracking-wide file:text-slate-950 hover:file:bg-kali-accent/90"
             />
           </div>
         </section>
@@ -239,7 +239,7 @@ const MimikatzOffline = () => {
 
         <section
           aria-labelledby="parsed-credentials"
-          className="flex-1 rounded-lg border border-gray-700/70 bg-black/40 p-4 shadow-inner"
+          className="flex-1 rounded-lg border border-white/10 bg-kali-surface/80 p-4 shadow-inner"
         >
           <h2 id="parsed-credentials" className="text-lg font-semibold">
             Parsed credentials
@@ -247,10 +247,10 @@ const MimikatzOffline = () => {
           {credentials.length ? (
             <ul className="mt-3 space-y-2">
               {credentials.map((credential, index) => (
-                <li key={`${credential.user}-${index}`} className="rounded-lg border border-gray-700/80 bg-ub-dark p-3 text-sm">
+                <li key={`${credential.user}-${index}`} className="rounded-lg border border-white/10 bg-kali-surface p-3 text-sm">
                   <dl className="space-y-1">
                     <div className="flex justify-between gap-3">
-                      <dt className="font-semibold text-purple-200">User</dt>
+                      <dt className="font-semibold text-kali-accent">User</dt>
                       <dd
                         className="font-mono text-gray-200"
                         data-testid={`credential-user-${index}`}
@@ -259,7 +259,7 @@ const MimikatzOffline = () => {
                       </dd>
                     </div>
                     <div className="flex justify-between gap-3">
-                      <dt className="font-semibold text-purple-200">Password</dt>
+                      <dt className="font-semibold text-kali-accent">Password</dt>
                       <dd
                         className="break-all font-mono text-gray-200"
                         data-testid={`credential-password-${index}`}
@@ -272,7 +272,7 @@ const MimikatzOffline = () => {
               ))}
             </ul>
           ) : (
-            <p className="mt-3 rounded-md border border-dashed border-gray-700/70 bg-black/30 p-3 text-sm text-gray-300">
+            <p className="mt-3 rounded-md border border-dashed border-white/10 bg-kali-surface/80 p-3 text-sm text-gray-300">
               No credentials parsed yet.
             </p>
           )}
