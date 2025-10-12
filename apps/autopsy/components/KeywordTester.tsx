@@ -57,7 +57,7 @@ function KeywordTester() {
           type="file"
           accept=".txt"
           onChange={handleUpload}
-          className="bg-ub-grey text-white p-2 rounded"
+          className="rounded border border-kali-border/60 bg-kali-dark p-2 text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus/80"
         />
       </div>
       {keywords.length > 0 && (
@@ -69,13 +69,13 @@ function KeywordTester() {
           return (
             <div
               key={`${artifact.name}-${idx}`}
-              className="p-2 bg-ub-grey rounded text-sm"
+              className="rounded border border-kali-border/60 bg-kali-dark/80 p-2 text-sm text-kali-text"
             >
               <div
                 className="font-bold"
                 dangerouslySetInnerHTML={{ __html: highlight(artifact.name) }}
               />
-              <div className="text-gray-400">{artifact.type}</div>
+              <div className="text-kali-text/60">{artifact.type}</div>
               {'user' in artifact && (
                 <div
                   className="text-xs"
