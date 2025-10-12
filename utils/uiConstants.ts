@@ -1,5 +1,5 @@
 export const NAVBAR_HEIGHT = 56;
-export const NAVBAR_VERTICAL_PADDING = 10; // 0.375rem top + 0.25rem bottom
+export const NAVBAR_VERTICAL_PADDING = 0;
 export const WINDOW_TOP_MARGIN = 2;
 export const WINDOW_TOP_INSET = 8;
 export const DESKTOP_TOP_PADDING =

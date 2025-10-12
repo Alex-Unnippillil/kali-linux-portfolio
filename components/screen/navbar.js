@@ -304,11 +304,11 @@ export default class Navbar extends PureComponent {
                                         className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
                                 style={{
                                                 minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
-                                                paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
-                                                paddingBottom: '0.25rem',
+                                                paddingTop: 'var(--safe-area-top, 0px)',
+                                                paddingBottom: '0px',
                                                 paddingLeft: `calc(0.75rem + var(--safe-area-left, 0px))`,
                                                 paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
-                                                '--desktop-navbar-height': `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px) + 0.375rem + 0.25rem)`
+                                                '--desktop-navbar-height': `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`
                                         }}
                                 >
                                         <div className="flex items-center gap-2 text-xs md:text-sm">
