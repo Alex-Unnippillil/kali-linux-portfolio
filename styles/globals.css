@@ -9,6 +9,7 @@
   --color-primary: #0f94d2; /* kali blue accent */
   --color-secondary: #111b24; /* complementary dark */
   --color-accent: #0f94d2; /* accent matches primary */
+  --color-error: #ff4d6d; /* alert and error states */
   --kali-blue: var(--color-primary);
   /* Utility colors */
   --color-muted: #1a2533; /* muted surfaces */
@@ -41,6 +42,7 @@ html[data-theme='dark'] {
   --color-primary: #1e88e5;
   --color-secondary: #121212;
   --color-accent: #bb86fc;
+  --color-error: #ff6b6b;
   --color-muted: #1f1f1f;
   --color-surface: #121212;
   --color-inverse: #ffffff;
@@ -56,6 +58,7 @@ html[data-theme='neon'] {
   --color-primary: #39ff14;
   --color-secondary: #1a1a1a;
   --color-accent: #ff00ff;
+  --color-error: #ff5cf4;
   --color-muted: #222222;
   --color-surface: #111111;
   --color-inverse: #ffffff;
@@ -71,6 +74,7 @@ html[data-theme='matrix'] {
   --color-primary: #00ff00;
   --color-secondary: #001100;
   --color-accent: #00ff00;
+  --color-error: #ff4d4d;
   --color-muted: #003300;
   --color-surface: #001100;
   --color-inverse: #ffffff;
