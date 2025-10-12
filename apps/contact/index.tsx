@@ -140,11 +140,11 @@ const ContactApp: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4">
+    <div className="min-h-screen bg-kali-backdrop text-kali-text p-4">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
         <div>
           <h1 className="mb-2 text-2xl">Contact</h1>
-          <p className="text-sm text-gray-300">
+          <p className="text-sm text-[color:color-mix(in_srgb,var(--color-text)_78%,transparent)]">
             Let me know how I can help with your security project, workshop, or
             collaboration idea.
           </p>
@@ -152,9 +152,12 @@ const ContactApp: React.FC = () => {
         {successMessage && (
           <div
             role="alert"
-            className="flex items-start gap-3 rounded-lg border border-green-500/40 bg-green-900/40 px-5 py-4 text-sm text-green-100 shadow-lg shadow-green-900/25"
+            className="flex items-start gap-3 rounded-lg border border-[color:color-mix(in_srgb,var(--color-terminal)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--color-terminal)_18%,transparent)] px-5 py-4 text-sm text-[color:var(--color-terminal)] shadow-lg shadow-[0_18px_40px_color-mix(in_srgb,var(--color-terminal)_15%,transparent)]"
           >
-            <span aria-hidden="true" className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-green-500/20 text-green-200">
+            <span
+              aria-hidden="true"
+              className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--color-terminal)_28%,transparent)] text-[color:var(--color-terminal)]"
+            >
               <svg
                 className="h-4 w-4"
                 xmlns="http://www.w3.org/2000/svg"
@@ -169,7 +172,7 @@ const ContactApp: React.FC = () => {
               </svg>
             </span>
             <div>
-              <p className="font-semibold text-green-100">Message sent</p>
+              <p className="font-semibold text-[color:color-mix(in_srgb,var(--color-terminal)_85%,white_10%)]">Message sent</p>
               <p className="mt-1 leading-relaxed">{successMessage}</p>
             </div>
           </div>
@@ -177,27 +180,27 @@ const ContactApp: React.FC = () => {
         <div className="grid gap-8 lg:grid-cols-[1.6fr,1fr]">
           <form
             onSubmit={handleSubmit}
-            className="space-y-8 rounded-xl border border-gray-800 bg-gray-950/70 p-6 shadow-2xl shadow-black/30"
+            className="space-y-8 rounded-xl border border-[color:color-mix(in_srgb,var(--color-window-border)_80%,transparent)] bg-kali-surface/90 p-6 shadow-2xl shadow-black/30"
           >
-            <div className="flex flex-col gap-3 rounded-lg border border-gray-800/80 bg-gray-900/60 p-4 text-sm text-gray-300">
-              <p className="font-semibold text-gray-100">Prefer email?</p>
+            <div className="flex flex-col gap-3 rounded-lg border border-[color:color-mix(in_srgb,var(--color-window-border)_70%,transparent)] bg-kali-surface/80 p-4 text-sm text-[color:color-mix(in_srgb,var(--color-text)_75%,transparent)]">
+              <p className="font-semibold text-[color:var(--color-text)]">Prefer email?</p>
               <p className="leading-relaxed">
                 {"Reach me at "}
-                <span className="font-mono text-blue-300">{EMAIL}</span>. Copy
+                <span className="font-mono text-[color:var(--color-primary)]">{EMAIL}</span>. Copy
                 the address or open your default mail client.
               </p>
               <div className="mt-1 flex flex-wrap gap-3 text-sm">
                 <button
                   type="button"
                   onClick={() => copyToClipboard(EMAIL)}
-                  className="rounded-md border border-blue-500/60 px-3 py-1 font-medium text-blue-300 transition hover:bg-blue-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+                  className="rounded-md border border-[color:color-mix(in_srgb,var(--color-primary)_50%,transparent)] px-3 py-1 font-medium text-[color:var(--color-primary)] transition hover:bg-[color:color-mix(in_srgb,var(--color-primary)_16%,transparent)] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-kali-focus focus-visible:outline-offset-2"
                 >
                   Copy address
                 </button>
                 <button
                   type="button"
                   onClick={() => openMailto(EMAIL)}
-                  className="rounded-md border border-blue-500/60 px-3 py-1 font-medium text-blue-300 transition hover:bg-blue-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+                  className="rounded-md border border-[color:color-mix(in_srgb,var(--color-primary)_50%,transparent)] px-3 py-1 font-medium text-[color:var(--color-primary)] transition hover:bg-[color:color-mix(in_srgb,var(--color-primary)_16%,transparent)] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-kali-focus focus-visible:outline-offset-2"
                 >
                   Open email app
                 </button>
@@ -207,25 +210,25 @@ const ContactApp: React.FC = () => {
               <div className="space-y-2">
                 <label
                   htmlFor="contact-name"
-                  className="block text-sm font-medium text-gray-100"
+                  className="block text-sm font-medium text-[color:var(--color-text)]"
                   id="contact-name-label"
                 >
                   Name
                 </label>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
                   Introduce yourself so I know how to address you in the reply.
                 </p>
                 <div className="relative">
                   <input
                     id="contact-name"
-                    className="h-11 w-full rounded-lg border border-gray-700 bg-gray-900/60 pl-10 pr-3 text-white shadow-inner shadow-black/40 transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/70"
+                    className="h-11 w-full rounded-lg border border-[color:color-mix(in_srgb,var(--color-window-border)_85%,transparent)] bg-kali-surface/75 pl-10 pr-3 text-kali-text shadow-inner shadow-black/40 transition focus:border-[color:var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--color-primary)_55%,transparent)]"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
                     aria-labelledby="contact-name-label"
                   />
                   <svg
-                    className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-400"
+                    className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -243,19 +246,19 @@ const ContactApp: React.FC = () => {
               <div className="space-y-2">
                 <label
                   htmlFor="contact-email"
-                  className="block text-sm font-medium text-gray-100"
+                  className="block text-sm font-medium text-[color:var(--color-text)]"
                   id="contact-email-label"
                 >
                   Email
                 </label>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
                   I will use this address to send follow-ups or share resources.
                 </p>
                 <div className="relative">
                   <input
                     id="contact-email"
                     type="email"
-                    className="h-11 w-full rounded-lg border border-gray-700 bg-gray-900/60 pl-10 pr-3 text-white shadow-inner shadow-black/40 transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/70"
+                    className="h-11 w-full rounded-lg border border-[color:color-mix(in_srgb,var(--color-window-border)_85%,transparent)] bg-kali-surface/75 pl-10 pr-3 text-kali-text shadow-inner shadow-black/40 transition focus:border-[color:var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--color-primary)_55%,transparent)]"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -264,7 +267,7 @@ const ContactApp: React.FC = () => {
                     aria-labelledby="contact-email-label"
                   />
                   <svg
-                    className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-gray-400"
+                    className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -287,19 +290,19 @@ const ContactApp: React.FC = () => {
               <div className="space-y-2">
                 <label
                   htmlFor="contact-message"
-                  className="block text-sm font-medium text-gray-100"
+                  className="block text-sm font-medium text-[color:var(--color-text)]"
                   id="contact-message-label"
                 >
                   Message
                 </label>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
                   Share objectives, timelines, and any sensitive details using
                   secure channels if needed.
                 </p>
                 <div className="relative">
                   <textarea
                     id="contact-message"
-                    className="w-full rounded-lg border border-gray-700 bg-gray-900/60 p-3 pl-11 text-white shadow-inner shadow-black/40 transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/70"
+                    className="w-full rounded-lg border border-[color:color-mix(in_srgb,var(--color-window-border)_85%,transparent)] bg-kali-surface/75 p-3 pl-11 text-kali-text shadow-inner shadow-black/40 transition focus:border-[color:var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--color-primary)_55%,transparent)]"
                     rows={4}
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
@@ -309,7 +312,7 @@ const ContactApp: React.FC = () => {
                     aria-labelledby="contact-message-label"
                   />
                   <svg
-                    className="pointer-events-none absolute left-3 top-3 h-6 w-6 text-gray-400"
+                    className="pointer-events-none absolute left-3 top-3 h-6 w-6 text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -341,7 +344,7 @@ const ContactApp: React.FC = () => {
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex h-12 w-full items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold uppercase tracking-wide shadow-md shadow-blue-900/40 transition hover:bg-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex h-12 w-full items-center justify-center rounded-lg bg-kali-primary px-4 text-sm font-semibold uppercase tracking-wide text-kali-dark shadow-md shadow-[0_12px_30px_color-mix(in_srgb,var(--color-primary)_28%,transparent)] transition hover:bg-[color:color-mix(in_srgb,var(--color-primary)_88%,transparent)] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-kali-focus focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {submitting ? "Sending..." : "Send message"}
               </button>
@@ -349,34 +352,34 @@ const ContactApp: React.FC = () => {
                 <div
                   role="progressbar"
                   aria-label="Sending message"
-                  className="h-1 w-full overflow-hidden rounded bg-blue-900/50"
+                  className="h-1 w-full overflow-hidden rounded bg-[color:color-mix(in_srgb,var(--color-primary)_22%,transparent)]"
                 >
-                  <div className="h-full w-full origin-left animate-pulse bg-blue-400" />
+                  <div className="h-full w-full origin-left animate-pulse bg-[color:var(--color-primary)]" />
                 </div>
               )}
             </div>
           </form>
-          <aside className="flex flex-col gap-6 rounded-xl border border-gray-800 bg-gray-950/60 p-6 shadow-2xl shadow-black/30">
+          <aside className="flex flex-col gap-6 rounded-xl border border-[color:color-mix(in_srgb,var(--color-window-border)_80%,transparent)] bg-kali-surface/85 p-6 shadow-2xl shadow-black/30">
             <section>
-              <h2 className="text-lg font-semibold text-blue-200">Response time</h2>
-              <p className="mt-2 text-sm text-gray-300">
+              <h2 className="text-lg font-semibold text-[color:var(--color-primary)]">Response time</h2>
+              <p className="mt-2 text-sm text-[color:color-mix(in_srgb,var(--color-text)_78%,transparent)]">
                 I typically reply within <span className="font-medium">24 hours</span>
                 . Urgent inquiries are prioritized and receive a same-day
                 acknowledgement.
               </p>
             </section>
             <section>
-              <h2 className="text-lg font-semibold text-blue-200">FAQs</h2>
-              <ul className="mt-2 space-y-3 text-sm text-gray-300">
+              <h2 className="text-lg font-semibold text-[color:var(--color-primary)]">FAQs</h2>
+              <ul className="mt-2 space-y-3 text-sm text-[color:color-mix(in_srgb,var(--color-text)_78%,transparent)]">
                 <li>
-                  <span className="block font-medium text-gray-100">
+                  <span className="block font-medium text-[color:var(--color-text)]">
                     Do you accept collaboration proposals?
                   </span>
                   Absolutely—share your idea and any timelines so I can plan the
                   next steps.
                 </li>
                 <li>
-                  <span className="block font-medium text-gray-100">
+                  <span className="block font-medium text-[color:var(--color-text)]">
                     What should I include?
                   </span>
                   Provide context, goals, and any relevant documentation to
@@ -385,18 +388,18 @@ const ContactApp: React.FC = () => {
               </ul>
             </section>
             <section>
-              <h2 className="text-lg font-semibold text-blue-200">
+              <h2 className="text-lg font-semibold text-[color:var(--color-primary)]">
                 Threat model checklist
               </h2>
-              <ul className="mt-3 space-y-3 text-sm text-gray-300">
+              <ul className="mt-3 space-y-3 text-sm text-[color:color-mix(in_srgb,var(--color-text)_78%,transparent)]">
                 {threatChecklist.map((item) => (
                   <li
                     key={item.title}
-                    className="flex gap-3 rounded-lg border border-gray-800/70 bg-gray-900/60 p-3"
+                    className="flex gap-3 rounded-lg border border-[color:color-mix(in_srgb,var(--color-window-border)_70%,transparent)] bg-kali-surface/80 p-3"
                   >
                     <span
                       aria-hidden="true"
-                      className="mt-1 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-blue-200"
+                      className="mt-1 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--color-primary)_20%,transparent)] text-[color:var(--color-primary)]"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -412,23 +415,23 @@ const ContactApp: React.FC = () => {
                       </svg>
                     </span>
                     <div>
-                      <p className="font-medium text-gray-100">{item.title}</p>
-                      <p className="text-xs text-gray-400">{item.description}</p>
+                      <p className="font-medium text-[color:var(--color-text)]">{item.title}</p>
+                      <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">{item.description}</p>
                     </div>
                   </li>
                 ))}
               </ul>
             </section>
             <section>
-              <h2 className="text-lg font-semibold text-blue-200">Trust badges</h2>
-              <div className="mt-3 flex flex-wrap gap-3 text-xs font-semibold uppercase tracking-wide text-gray-200">
-                <span className="rounded border border-emerald-500/60 px-3 py-1 text-emerald-300">
+              <h2 className="text-lg font-semibold text-[color:var(--color-primary)]">Trust badges</h2>
+              <div className="mt-3 flex flex-wrap gap-3 text-xs font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_82%,transparent)]">
+                <span className="rounded border border-[color:color-mix(in_srgb,var(--color-primary)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary)_15%,transparent)] px-3 py-1 text-[color:var(--color-primary)]">
                   GDPR mindful
                 </span>
-                <span className="rounded border border-sky-500/60 px-3 py-1 text-sky-300">
+                <span className="rounded border border-[color:color-mix(in_srgb,var(--color-primary)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary)_15%,transparent)] px-3 py-1 text-[color:var(--color-primary)]">
                   Security focused
                 </span>
-                <span className="rounded border border-violet-500/60 px-3 py-1 text-violet-300">
+                <span className="rounded border border-[color:color-mix(in_srgb,var(--color-primary)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary)_15%,transparent)] px-3 py-1 text-[color:var(--color-primary)]">
                   Open source ally
                 </span>
               </div>
