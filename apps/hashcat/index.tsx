@@ -65,14 +65,23 @@ const Hashcat: React.FC = () => {
     {},
   );
   const [ruleSet, setRuleSet] = useState('none');
-  const ruleOptions = [
-    ...Object.keys(defaultRuleSets),
-    ...Object.keys(customRuleSets),
-  ];
+  const defaultRuleKeys = Object.keys(defaultRuleSets);
+  const customRuleKeys = Object.keys(customRuleSets);
   const combinedRuleSets = { ...defaultRuleSets, ...customRuleSets };
   const rulePreview = (combinedRuleSets[ruleSet] || [])
     .slice(0, 10)
     .join('\n');
+  const [rulePanel, setRulePanel] = useState<'defaults' | 'custom'>(
+    customRuleKeys.includes(ruleSet) ? 'custom' : 'defaults',
+  );
+
+  useEffect(() => {
+    if (customRuleKeys.includes(ruleSet)) {
+      setRulePanel('custom');
+    } else {
+      setRulePanel('defaults');
+    }
+  }, [ruleSet, customRuleKeys]);
 
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -168,181 +177,294 @@ const Hashcat: React.FC = () => {
 
   // progress and eta are displayed in a neutral banner
 
-  return (
-    <div className="p-4 bg-gray-900 text-white min-h-screen space-y-4">
-      <h1 className="text-2xl">Hashcat Simulator</h1>
+  const statusLabel = running
+    ? 'Running'
+    : progress >= 100
+    ? 'Complete'
+    : progress > 0
+    ? 'Paused'
+    : 'Idle';
+  const progressColor = running
+    ? 'bg-emerald-500'
+    : progress >= 100
+    ? 'bg-sky-500'
+    : 'bg-amber-500';
 
-      <div>
-        <label className="block mb-1">Attack Mode</label>
-        <div className="grid grid-cols-2 gap-2">
-          {attackModes.map((m) => (
-            <button
-              key={m.value}
-              type="button"
-              onClick={() => setAttackMode(m.value)}
-              className={`p-3 rounded-lg bg-gray-800 flex flex-col items-center gap-1 border ${
-                attackMode === m.value ? 'border-green-500' : 'border-transparent'
-              }`}
-            >
-              <span className="text-2xl">{m.icon}</span>
-              <span>{m.label}</span>
-            </button>
-          ))}
-        </div>
+  return (
+    <div className="p-6 bg-gray-950 text-slate-100 min-h-screen space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-3xl font-semibold tracking-tight">Hashcat Simulator</h1>
+        <p className="text-sm text-slate-400">
+          Configure attack strategies, stage wordlists, and preview rule effects before running the simulated crack.
+        </p>
       </div>
 
-        {showMask && (
+      <section className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-inner">
+          <header className="flex items-center justify-between gap-2">
+            <span className="text-sm uppercase tracking-wider text-slate-400">
+              Attack Mode Presets
+            </span>
+            <span className="text-xs text-slate-500">Select the baseline workflow</span>
+          </header>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {attackModes.map((m) => {
+              const active = attackMode === m.value;
+              return (
+                <button
+                  key={m.value}
+                  type="button"
+                  onClick={() => setAttackMode(m.value)}
+                  className={`group flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
+                    active
+                      ? 'border-emerald-400/80 bg-emerald-500/10 shadow-lg shadow-emerald-500/30'
+                      : 'border-slate-700/80 bg-slate-800/60 hover:border-slate-500'
+                  }`}
+                >
+                  <span className="text-2xl" aria-hidden>{m.icon}</span>
+                  <span className="text-sm font-medium text-slate-100 group-hover:text-white">
+                    {m.label}
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    {active ? 'Active preset' : 'Tap to activate'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-inner space-y-3">
           <div>
-            <label className="block mb-1" htmlFor="hashcat-mask-input">
-              Mask
+            <label className="block text-sm font-medium text-slate-300" htmlFor="hashcat-hash-input">
+              Hash Sample
             </label>
+            <div className="mt-1 flex gap-2">
+              <input
+                id="hashcat-hash-input"
+                type={showHash ? 'text' : 'password'}
+                value={hashInput}
+                onChange={(e) => setHashInput(e.target.value)}
+                className="flex-1 rounded-lg border border-slate-700 bg-slate-950/70 p-2 font-mono text-sm text-emerald-300 placeholder-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                placeholder="Paste hash here"
+                aria-label="Hash value"
+              />
+              <button
+                type="button"
+                onClick={() => setShowHash((s) => !s)}
+                className="rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm font-medium text-slate-200 transition hover:border-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+              >
+                {showHash ? 'Hide' : 'Show'}
+              </button>
+            </div>
+            <div className="mt-1 text-xs text-slate-400">Detected: {hashType}</div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300" htmlFor="hashcat-dictionary-input">
+              Dictionaries
+            </label>
+            <div className="mt-1 flex gap-2">
+              <input
+                id="hashcat-dictionary-input"
+                type="text"
+                value={dictInput}
+                onChange={(e) => setDictInput(e.target.value)}
+                className="flex-1 rounded-lg border border-slate-700 bg-slate-950/70 p-2 text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                placeholder="rockyou.txt"
+                aria-label="Dictionary path"
+              />
+              <button
+                type="button"
+                onClick={addDictionary}
+                className="rounded-lg border border-emerald-500/60 bg-emerald-500/20 px-3 text-sm font-semibold text-emerald-200 transition hover:border-emerald-400 hover:bg-emerald-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+              >
+                Add
+              </button>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {dictionaries.map((d) => (
+                <span
+                  key={d}
+                  className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/80 px-3 py-1 text-xs font-medium text-slate-200"
+                >
+                  {d}
+                  <button
+                    type="button"
+                    onClick={() => removeDictionary(d)}
+                    className="rounded-full bg-slate-900/80 px-2 text-slate-400 transition hover:text-emerald-300"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              {dictionaries.length === 0 && (
+                <span className="text-xs text-slate-500">No dictionaries staged</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {showMask && (
+        <section className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4 shadow-inner">
+            <header className="flex items-center justify-between">
+              <span className="text-sm font-semibold text-slate-300">Mask Builder</span>
+              <span className="text-xs text-slate-500">Click tokens to append</span>
+            </header>
             <input
               id="hashcat-mask-input"
               type="text"
               value={mask}
               onChange={(e) => setMask(e.target.value)}
-              className="text-black p-1 w-full font-mono mb-2"
+              className="mt-3 w-full rounded-xl border border-slate-700 bg-slate-100/90 p-2 font-mono text-sm text-slate-900 shadow focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
               aria-label="Mask pattern"
             />
-          <div className="space-x-2">
-            {['?l', '?u', '?d', '?s', '?a'].map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => appendMask(t)}
-                className="px-2 py-1 bg-blue-600 rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
-              >
-                {t}
-              </button>
-            ))}
+            <div className="mt-3 flex flex-wrap gap-2">
+              {['?l', '?u', '?d', '?s', '?a'].map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => appendMask(t)}
+                  className="rounded-full border border-slate-400/60 bg-white/80 px-3 py-1 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-400 hover:text-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
           </div>
+
           {mask && (
-            <div className="mt-2">
-              <p>Candidate space: {maskStats.count.toLocaleString()}</p>
-              <p className="text-sm">
-                Estimated @1M/s: {formatTime(maskStats.time)}
-              </p>
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-inner space-y-3">
+              <div>
+                <p className="text-sm font-medium text-slate-200">
+                  Candidate space: <span className="font-mono text-emerald-300">{maskStats.count.toLocaleString()}</span>
+                </p>
+                <p className="text-xs text-slate-400">
+                  Estimated @1M/s: {formatTime(maskStats.time)}
+                </p>
+              </div>
               <StatsChart count={maskStats.count} time={maskStats.time} />
             </div>
           )}
-        </div>
+        </section>
       )}
 
-        <div>
-          <label className="block mb-1" htmlFor="hashcat-hash-input">
-            Hash
-          </label>
-          <div className="flex space-x-2">
-            <input
-              id="hashcat-hash-input"
-              type={showHash ? 'text' : 'password'}
-              value={hashInput}
-              onChange={(e) => setHashInput(e.target.value)}
-              className="text-black p-1 w-full font-mono"
-              placeholder="Paste hash here"
-              aria-label="Hash value"
-            />
-          <button
-            type="button"
-            onClick={() => setShowHash((s) => !s)}
-            className="px-2 py-1 bg-gray-700 rounded"
-          >
-            {showHash ? 'Hide' : 'Show'}
-          </button>
-        </div>
-        <div className="mt-1 text-sm">Detected: {hashType}</div>
-      </div>
-
-        <div>
-          <label className="block mb-1" htmlFor="hashcat-dictionary-input">
-            Dictionaries
-          </label>
-          <div className="flex space-x-2 mb-2">
-            <input
-              id="hashcat-dictionary-input"
-              type="text"
-              value={dictInput}
-              onChange={(e) => setDictInput(e.target.value)}
-              className="text-black p-1 flex-1"
-              placeholder="rockyou.txt"
-              aria-label="Dictionary path"
-            />
-          <button
-            type="button"
-            onClick={addDictionary}
-            className="px-2 py-1 bg-blue-600 rounded"
-          >
-            Add
-          </button>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {dictionaries.map((d) => (
-            <span
-              key={d}
-              className="bg-gray-700 px-2 py-1 rounded-full text-sm flex items-center"
-            >
-              {d}
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-inner space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-semibold text-slate-100">Rule Sets</h2>
+            <div className="inline-flex rounded-full border border-slate-700 bg-slate-800/80 p-1 text-xs text-slate-400">
               <button
                 type="button"
-                onClick={() => removeDictionary(d)}
-                className="ml-1"
+                onClick={() => setRulePanel('defaults')}
+                className={`rounded-full px-3 py-1 transition ${
+                  rulePanel === 'defaults'
+                    ? 'bg-emerald-500/20 text-emerald-200'
+                    : 'hover:text-slate-200'
+                }`}
               >
-                ×
+                Presets
               </button>
-            </span>
-          ))}
+              <button
+                type="button"
+                onClick={() => setRulePanel('custom')}
+                className={`rounded-full px-3 py-1 transition ${
+                  rulePanel === 'custom'
+                    ? 'bg-emerald-500/20 text-emerald-200'
+                    : 'hover:text-slate-200'
+                }`}
+              >
+                Custom ({customRuleKeys.length})
+              </button>
+            </div>
+          </div>
+          <span className="text-xs text-slate-500">Tap a tab to switch libraries</span>
         </div>
-      </div>
 
-      <div>
-        <label className="block mb-1">Rule Set</label>
-        <select
-          value={ruleSet}
-          onChange={(e) => setRuleSet(e.target.value)}
-          className="text-black p-1 rounded"
-        >
-          {ruleOptions.map((r) => (
-            <option key={r} value={r}>
+        <div className="flex flex-wrap gap-2">
+          {(rulePanel === 'defaults' ? defaultRuleKeys : customRuleKeys).map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => setRuleSet(r)}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
+                ruleSet === r
+                  ? 'border-emerald-400 bg-emerald-500/20 text-emerald-200'
+                  : 'border-slate-700 bg-slate-800/80 text-slate-200 hover:border-slate-500'
+              }`}
+            >
               {r === 'none' ? 'None' : r}
-            </option>
+            </button>
           ))}
-        </select>
-        <pre className="bg-black text-green-400 p-2 mt-2 rounded overflow-auto h-32 font-mono leading-[1.2]">
+          {(rulePanel === 'custom' && customRuleKeys.length === 0) && (
+            <span className="text-xs text-slate-500">Saved rule sets appear here.</span>
+          )}
+        </div>
+
+        <pre className="bg-slate-950 text-emerald-200/90 p-3 rounded-xl overflow-auto h-36 font-mono text-xs leading-[1.35] border border-slate-800">
           {rulePreview || '(no rules)'}
         </pre>
-      </div>
 
-      <RulesSandbox
-        savedSets={customRuleSets}
-        onChange={setCustomRuleSets}
-        setRuleSet={setRuleSet}
-      />
+        <RulesSandbox
+          savedSets={customRuleSets}
+          onChange={setCustomRuleSets}
+          setRuleSet={setRuleSet}
+        />
+      </section>
 
-      <div>
-        <button
-          type="button"
-          onClick={running ? stop : start}
-          className="px-4 py-2 bg-green-600 rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-500"
-        >
-          {running ? 'Stop' : 'Start'}
-        </button>
-      </div>
-
-      <div className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 p-2 rounded">
-        <div className="w-full bg-gray-400 dark:bg-gray-600 rounded h-2">
-          <div
-            className="h-2 bg-green-500 rounded"
-            style={{ width: `${progress}%` }}
-          />
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-inner space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm text-slate-400">Simulation Control</p>
+              <h3 className="text-lg font-semibold text-slate-100">Status: {statusLabel}</h3>
+            </div>
+            <button
+              type="button"
+              onClick={running ? stop : start}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
+                running
+                  ? 'border border-rose-500/70 bg-rose-500/20 text-rose-200 hover:bg-rose-500/30'
+                  : 'border border-emerald-500/70 bg-emerald-500/20 text-emerald-200 hover:bg-emerald-500/30'
+              }`}
+            >
+              {running ? 'Pause simulation' : progress > 0 && progress < 100 ? 'Resume simulation' : 'Start simulation'}
+            </button>
+          </div>
+          <div className="space-y-2">
+            <div className="h-3 w-full rounded-full bg-slate-800">
+              <div
+                className={`h-3 rounded-full transition-all duration-300 ease-out ${progressColor}`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <div className="flex items-center justify-between text-xs text-slate-400">
+              <span>ETA: {eta}</span>
+              <span>Recovered: {recovered}/{total}</span>
+            </div>
+          </div>
         </div>
-        <div className="text-xs text-center mt-1">ETA: {eta}</div>
+
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4 shadow-inner">
+          <h3 className="text-sm font-semibold text-slate-200">Engine Log</h3>
+          <div className="mt-2 h-40 overflow-auto rounded-xl border border-slate-800 bg-black/80 p-3 font-mono text-[11px] text-emerald-200">
+            {logs.map((l, i) => (
+              <div key={i} className="whitespace-pre">{l}</div>
+            ))}
+            {logs.length === 0 && (
+              <div className="text-slate-500">Simulation idle…</div>
+            )}
+          </div>
+        </div>
+      </section>
+    
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-xs text-slate-400">
+        <p>
+          Timers continue to advance while the simulation is running. Pausing preserves progress for inspection before resuming.
+        </p>
       </div>
-      <div className="bg-black text-green-400 p-2 h-32 overflow-auto font-mono text-xs">
-        {logs.map((l, i) => (
-          <div key={i}>{l}</div>
-        ))}
-      </div>
-      <div className="text-sm">Recovered: {recovered}/{total}</div>
     </div>
   );
 };
