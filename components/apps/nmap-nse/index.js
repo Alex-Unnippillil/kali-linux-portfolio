@@ -67,11 +67,14 @@ const portPresets = [
   { label: 'Full', flag: '-p-' }
 ];
 
-const cvssColor = (score) => {
-  if (score >= 9) return 'bg-red-700';
-  if (score >= 7) return 'bg-orange-700';
-  if (score >= 4) return 'bg-yellow-700';
-  return 'bg-green-700';
+const cvssBadgeClass = (score) => {
+  if (score >= 9)
+    return 'bg-kali-danger-surface text-kali-status-on-dark border border-kali-danger-border';
+  if (score >= 7)
+    return 'bg-kali-warning-surface text-kali-status-on-dark border border-kali-warning-border';
+  if (score >= 4)
+    return 'bg-kali-info-surface text-kali-status-on-dark border border-kali-info-border';
+  return 'bg-kali-success-surface text-kali-status-on-dark border border-kali-success-border';
 };
 
 const NmapNSEApp = () => {
@@ -180,7 +183,7 @@ const NmapNSEApp = () => {
     return text.split('\n').map((line, idx) => {
       const highlight = /open|allowed|Potential/i.test(line);
       return (
-        <span key={idx} className={highlight ? 'text-yellow-300' : undefined}>
+        <span key={idx} className={highlight ? 'text-kali-warning' : undefined}>
           {line}
           {'\n'}
         </span>
@@ -189,49 +192,62 @@ const NmapNSEApp = () => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-full w-full text-white">
-      <div className="md:w-1/2 p-4 bg-ub-dark overflow-y-auto">
-        <h1 className="text-lg mb-4">Nmap NSE Demo</h1>
-        <div className="mb-4 p-2 bg-yellow-900 text-yellow-200 border-l-4 border-yellow-500 rounded">
+    <div className="flex h-full w-full flex-col text-kali-status-on-dark md:flex-row">
+      <div className="md:w-1/2 overflow-y-auto bg-kali-surface p-4">
+        <h1 className="mb-4 text-lg">Nmap NSE Demo</h1>
+        <div className="mb-4 rounded border-l-4 border-kali-warning-border bg-kali-warning-surface p-3 text-sm text-kali-status-on-dark shadow-[0_0_0_1px_rgba(255,255,255,0.04)]">
           <p className="text-sm font-bold">
             Educational use only. Do not scan systems without permission.
           </p>
         </div>
         <div className="mb-4">
-          <label className="block text-sm mb-1" htmlFor="target">Target</label>
+          <label className="mb-1 block text-sm font-medium" htmlFor="target">
+            Target
+          </label>
           <input
             id="target"
+            type="text"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
-            className="w-full p-2 text-black"
+            aria-label="Target"
+            className="w-full rounded border border-white/10 bg-white/10 p-2 text-kali-status-on-dark placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-kali-info focus:ring-offset-2 focus:ring-offset-[color:var(--color-surface)]"
           />
         </div>
         <div className="mb-4">
-          <label className="block text-sm mb-1" htmlFor="scripts">
+          <label className="mb-1 block text-sm font-medium" htmlFor="scripts">
             Scripts
           </label>
           <input
             id="scripts"
+            type="text"
             value={scriptQuery}
             onChange={(e) => setScriptQuery(e.target.value)}
             placeholder="Search scripts"
-            className="w-full p-2 text-black mb-2"
+            aria-label="Search scripts"
+            className="mb-2 w-full rounded border border-white/10 bg-white/10 p-2 text-kali-status-on-dark placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-kali-info focus:ring-offset-2 focus:ring-offset-[color:var(--color-surface)]"
           />
-          <div className="max-h-64 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid max-h-64 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
             {filteredScripts.map((s) => (
-              <div key={s.name} className="bg-white text-black p-2 rounded">
-                <label className="flex items-center space-x-2">
+              <div
+                key={s.name}
+                className="rounded border border-white/10 bg-white/5 p-3 text-sm shadow-sm shadow-black/20"
+              >
+                <label className="flex items-center gap-2 text-kali-status-on-dark">
                   <input
                     type="checkbox"
+                    aria-label={`Toggle ${s.name}`}
                     checked={selectedScripts.includes(s.name)}
                     onChange={() => toggleScript(s.name)}
                   />
                   <span className="font-mono">{s.name}</span>
                 </label>
-                <p className="text-xs mb-1">{s.description}</p>
-                <div className="flex flex-wrap gap-1 mb-1">
+                <p className="mb-1 text-xs text-white/70">{s.description}</p>
+                <div className="mb-1 flex flex-wrap gap-1">
                   {s.tags.map((t) => (
-                    <span key={t} className="px-1 text-xs bg-gray-200 rounded">
+                    <span
+                      key={t}
+                      className="rounded border border-kali-info-border bg-kali-info-surface px-1.5 py-0.5 text-xs text-kali-status-on-dark"
+                    >
                       {t}
                     </span>
                   ))}
@@ -247,26 +263,30 @@ const NmapNSEApp = () => {
                       }))
                     }
                     placeholder="arg=value"
-                    className="w-full p-1 border rounded text-black"
+                    aria-label={`${s.name} script arguments`}
+                    className="w-full rounded border border-white/10 bg-white/10 p-1 text-kali-status-on-dark placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-kali-info focus:ring-offset-2 focus:ring-offset-[color:var(--color-surface)]"
                   />
                 )}
               </div>
             ))}
             {filteredScripts.length === 0 && (
-              <p className="text-sm">No scripts found.</p>
+              <p className="text-sm text-white/70">No scripts found.</p>
             )}
           </div>
         </div>
         <div className="mb-4">
-          <p className="block text-sm mb-1">Port presets</p>
-          <div className="flex gap-2">
+          <p className="mb-1 text-sm font-medium">Port presets</p>
+          <div className="flex flex-wrap gap-2">
             {portPresets.map((p) => (
               <button
                 key={p.label}
                 type="button"
                 onClick={() => setPortFlag(p.flag)}
-                className={`px-2 py-1 rounded text-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow ${
-                  portFlag === p.flag ? 'bg-ub-yellow' : 'bg-ub-grey'
+                aria-pressed={portFlag === p.flag}
+                className={`rounded border px-2 py-1 text-sm transition focus:outline-none focus:ring-2 focus:ring-kali-info focus:ring-offset-2 focus:ring-offset-[color:var(--color-surface)] ${
+                  portFlag === p.flag
+                    ? 'border-kali-info-border bg-kali-info-surface text-kali-status-on-dark'
+                    : 'border-white/10 bg-white/5 text-kali-status-on-dark hover:bg-white/10'
                 }`}
               >
                 {p.label}
@@ -274,36 +294,36 @@ const NmapNSEApp = () => {
             ))}
           </div>
         </div>
-        <div className="flex items-center mb-4">
-          <pre className="flex-1 bg-black text-green-400 p-2 rounded overflow-auto">
+        <div className="mb-4 flex items-start gap-2">
+          <pre className="flex-1 overflow-auto rounded border border-white/10 bg-kali-dark p-2 font-mono text-[color:var(--color-terminal)]">
             {command}
           </pre>
           <button
             type="button"
             onClick={copyCommand}
-            className="ml-2 px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+            className="rounded border border-white/10 bg-white/10 px-2 py-1 text-sm text-kali-status-on-dark transition hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-kali-info focus:ring-offset-2 focus:ring-offset-[color:var(--color-surface)]"
           >
             Copy Command
           </button>
         </div>
       </div>
-      <div className="md:w-1/2 p-4 bg-black overflow-y-auto">
-        <h2 className="text-lg mb-2">Script phases</h2>
+      <div className="md:w-1/2 overflow-y-auto bg-kali-dark p-4">
+        <h2 className="mb-2 text-lg font-semibold">Script phases</h2>
         {activeScript ? (
           <>
-            <p className="text-sm mb-1">
+            <p className="mb-1 text-sm text-white/80">
               Phases for <span className="font-mono">{activeScript}</span>
             </p>
-            <div className="flex space-x-2 mb-2">
+            <div className="mb-2 flex gap-2">
               {phases.map((p) => (
                 <div
                   key={p}
-                  className={`flex-1 p-2 text-center rounded ${
+                  className={`flex-1 rounded border px-2 py-2 text-center text-xs font-medium uppercase tracking-wide ${
                     scriptPhases[activeScript]?.includes(p)
                       ? phaseStep >= scriptPhases[activeScript].indexOf(p)
-                        ? 'bg-blue-600'
-                        : 'bg-gray-700'
-                      : 'bg-gray-800'
+                        ? 'border-kali-info-border bg-kali-info-surface text-kali-status-on-dark'
+                        : 'border-white/10 bg-white/10 text-white/70'
+                      : 'border-white/5 bg-white/5 text-white/50'
                   }`}
                 >
                   {p}
@@ -311,14 +331,14 @@ const NmapNSEApp = () => {
               ))}
             </div>
             {scriptPhases[activeScript] && (
-              <p className="text-sm mb-2">
+              <p className="mb-2 text-sm text-white/75">
                 {phaseInfo[scriptPhases[activeScript][phaseStep]]?.description}{' '}
-                <span className="text-gray-400">
+                <span className="text-white/60">
                   Example: {phaseInfo[scriptPhases[activeScript][phaseStep]]?.example}
                 </span>
               </p>
             )}
-            <div className="flex gap-2 mb-4">
+            <div className="mb-4 flex gap-2">
               <button
                 type="button"
                 onClick={() =>
@@ -329,21 +349,21 @@ const NmapNSEApp = () => {
                     )
                   )
                 }
-                className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+                className="rounded border border-white/10 bg-white/10 px-2 py-1 text-sm text-kali-status-on-dark transition hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-kali-info focus:ring-offset-2 focus:ring-offset-[color:var(--color-dark)]"
               >
                 Step
               </button>
               <button
                 type="button"
                 onClick={() => setPhaseStep(0)}
-                className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+                className="rounded border border-white/10 bg-white/10 px-2 py-1 text-sm text-kali-status-on-dark transition hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-kali-info focus:ring-offset-2 focus:ring-offset-[color:var(--color-dark)]"
               >
                 Reset
               </button>
             </div>
           </>
         ) : (
-          <p className="text-sm mb-4">Select a script to view phases.</p>
+          <p className="mb-4 text-sm text-white/70">Select a script to view phases.</p>
         )}
         <h2 className="text-lg mb-2">Topology</h2>
         <DiscoveryMap hosts={results.hosts} />
@@ -351,7 +371,7 @@ const NmapNSEApp = () => {
         <ul className="mb-4 space-y-2">
           {results.hosts.map((host) => (
             <li key={host.ip}>
-              <div className="text-blue-400 font-mono">{host.ip}</div>
+              <div className="font-mono text-kali-info">{host.ip}</div>
               <ul className="ml-4 space-y-1">
                 {host.ports.map((p) => (
                   <li key={p.port}>
@@ -360,7 +380,7 @@ const NmapNSEApp = () => {
                         {p.port}/tcp {p.service}
                       </span>
                       <span
-                        className={`px-1.5 py-0.5 rounded text-xs ${cvssColor(p.cvss)}`}
+                        className={`rounded px-1.5 py-0.5 text-xs font-semibold ${cvssBadgeClass(p.cvss)}`}
                         aria-label={`CVSS score ${p.cvss}`}
                       >
                         CVSS {p.cvss}
@@ -379,7 +399,7 @@ const NmapNSEApp = () => {
                                     {meta.tags.map((t) => (
                                       <span
                                         key={t}
-                                        className="px-1.5 py-0.5 rounded text-xs bg-gray-700"
+                                        className="rounded border border-kali-info-border bg-kali-info-surface px-1.5 py-0.5 text-xs text-kali-status-on-dark"
                                       >
                                         {t}
                                       </span>
@@ -388,7 +408,7 @@ const NmapNSEApp = () => {
                                 )}
                               </div>
                               {sc.output && (
-                                <pre className="ml-4 text-green-400 whitespace-pre-wrap">
+                                <pre className="ml-4 whitespace-pre-wrap text-[color:var(--color-terminal)]">
                                   {sc.output}
                                 </pre>
                               )}
@@ -408,12 +428,12 @@ const NmapNSEApp = () => {
           ref={outputRef}
           tabIndex={0}
           onKeyDown={handleOutputKey}
-          className="whitespace-pre-wrap text-green-400"
+          className="whitespace-pre-wrap text-[color:var(--color-terminal)]"
         >
           {selectedScripts.length === 0 && 'Select scripts to view sample output.'}
           {selectedScripts.map((s) => (
             <div key={s} className="mb-4">
-              <h3 className="text-blue-400 font-mono">{s}</h3>
+              <h3 className="font-mono text-kali-info">{s}</h3>
               <pre>{renderOutput(examples[s])}</pre>
             </div>
           ))}
@@ -422,14 +442,14 @@ const NmapNSEApp = () => {
           <button
             type="button"
             onClick={copyOutput}
-            className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+            className="rounded border border-white/10 bg-white/10 px-2 py-1 text-sm text-kali-status-on-dark transition hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-kali-info focus:ring-offset-2 focus:ring-offset-[color:var(--color-dark)]"
           >
             Copy Output
           </button>
           <button
             type="button"
             onClick={selectOutput}
-            className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+            className="rounded border border-white/10 bg-white/10 px-2 py-1 text-sm text-kali-status-on-dark transition hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-kali-info focus:ring-offset-2 focus:ring-offset-[color:var(--color-dark)]"
           >
             Select All
           </button>
