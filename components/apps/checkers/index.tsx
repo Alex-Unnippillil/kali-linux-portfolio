@@ -422,7 +422,7 @@ const Checkers = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-kali-surface text-kali-text p-4">
       <div aria-live="polite" className="sr-only">
         {ariaMessage}
       </div>
@@ -458,30 +458,34 @@ const Checkers = () => {
                 {...pointerHandlers(() =>
                   selected ? tryMove(r, c) : selectPiece(r, c)
                 )}
-                className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-white ${
-                  isDark ? 'bg-gray-700' : 'bg-gray-400'
+                className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-control focus-visible:ring-offset-2 ${
+                  isDark
+                    ? 'bg-kali-panel-dark ring-offset-kali-panel-dark'
+                    : 'bg-kali-panel-light ring-offset-kali-panel-light'
                 } ${
                   showMove
-                    ? 'ring-4 ring-amber-400 ring-offset-2 ring-offset-black drop-shadow-[0_0_8px_#fbbf24] motion-safe:animate-glow'
+                    ? 'ring-4 ring-amber-400 ring-offset-2 drop-shadow-[0_0_8px_#fbbf24] motion-safe:animate-glow'
                     : ''
                 } ${
                   isHint || isHintDest
-                    ? 'ring-2 ring-blue-400 motion-safe:animate-pulse'
+                    ? 'ring-2 ring-kali-control motion-safe:animate-pulse'
                     : ''
-                } ${isSelected ? 'ring-2 ring-green-400' : ''} ${
-                  isLast ? 'ring-2 ring-red-400' : ''
+                } ${isSelected ? 'ring-2 ring-emerald-400' : ''} ${
+                  isLast ? 'ring-2 ring-kali-error' : ''
                 } ${isCursor ? 'ring-2 ring-yellow-300' : ''}`}
               >
                 {cell && (
                   <div
                     className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center ${
-                      cell.color === 'red' ? 'bg-red-500' : 'bg-black'
+                      cell.color === 'red'
+                        ? 'bg-kali-error text-white'
+                        : 'bg-kali-accent text-slate-900'
                     } ${cell.king ? 'border-4 border-yellow-300' : ''} ${
                       isCrowned ? 'motion-safe:animate-flourish' : ''
                     }`}
                   >
                     {cell.king && (
-                      <span className="text-yellow-300 text-sm font-bold">K</span>
+                      <span className="text-kali-text text-sm font-bold">K</span>
                     )}
                   </div>
                 )}
@@ -493,18 +497,18 @@ const Checkers = () => {
       <div className="mt-4 space-x-2">
         {winner || draw ? (
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-4 py-2 rounded-md border border-kali-border/50 bg-kali-error text-white transition-colors hover:bg-kali-error/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             onClick={reset}
           >
             Reset
           </button>
         ) : (
           <>
-            <span className="mr-2">Turn: {turn}</span>
+            <span className="mr-2 font-medium">Turn: {turn}</span>
             <label>
               Rules:
               <select
-                className="ml-1 bg-gray-700 px-1"
+                className="ml-1 rounded-md border border-kali-border/40 bg-kali-panel-dark px-2 py-1 text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-control focus-visible:ring-offset-2 focus-visible:ring-offset-kali-panel-dark"
                 value={rule}
                 onChange={(e) => setRule(e.target.value as 'forced' | 'relaxed')}
               >
@@ -513,25 +517,29 @@ const Checkers = () => {
               </select>
             </label>
             <button
-              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              className="px-2 py-1 rounded-md border border-kali-border/40 bg-kali-accent text-slate-900 transition-colors hover:bg-kali-accent/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               onClick={undo}
             >
               Undo
             </button>
             <button
-              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              className="px-2 py-1 rounded-md border border-kali-border/40 bg-kali-accent text-slate-900 transition-colors hover:bg-kali-accent/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               onClick={redo}
             >
               Redo
             </button>
             <button
-              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              className="px-2 py-1 rounded-md border border-kali-border/40 bg-kali-accent text-slate-900 transition-colors hover:bg-kali-accent/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               onClick={hintMove}
             >
               Hint
             </button>
             <button
-              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              className={`px-2 py-1 rounded-md border border-kali-border/40 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
+                showLegal
+                  ? 'bg-kali-error text-white hover:bg-kali-error/90'
+                  : 'bg-kali-accent text-slate-900 hover:bg-kali-accent/90'
+              }`}
               onClick={toggleShowLegal}
               aria-pressed={showLegal}
             >
@@ -540,7 +548,7 @@ const Checkers = () => {
           </>
         )}
         <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 rounded-md border border-kali-border/40 bg-kali-accent text-slate-900 transition-colors hover:bg-kali-accent/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
           onClick={exportMoves}
         >
           Export Moves
