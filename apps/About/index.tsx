@@ -31,47 +31,47 @@ function LinkedInIcon({ className }: { className?: string }) {
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen w-full bg-[var(--kali-bg)] text-sm">
-      <div className="max-w-screen-md mx-auto my-4 sm:my-8 p-4 sm:p-6">
-        <header className="mb-10 rounded-xl border border-white/10 bg-white/5 p-4 sm:p-6 shadow-sm shadow-black/20">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-            <div className="flex items-center justify-center">
+    <div className="min-h-screen w-full bg-[var(--kali-bg)]">
+      <div className="mx-auto flex min-h-screen max-w-screen-md flex-col px-4 py-6 sm:px-6 sm:py-10">
+        <header className="mb-10 rounded-xl border border-white/10 bg-white/5 p-5 shadow-sm shadow-black/20 sm:p-7">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">
+            <div className="flex justify-center sm:flex-shrink-0">
               <Image
                 src="/images/logos/bitmoji.png"
                 alt="Alex Unnippillil"
                 width={128}
                 height={128}
-                className="h-32 w-32 rounded-full border border-white/20"
+                className="h-32 w-32 rounded-full border border-white/20 bg-black/20 shadow-inner"
                 priority
               />
             </div>
-            <div className="flex-1 space-y-3 text-center sm:text-left">
-              <div>
-                <h1 className="text-2xl font-semibold text-white">Alex Unnippillil</h1>
-                <p className="text-gray-200">Cybersecurity Specialist</p>
+            <div className="flex-1 space-y-4 text-center sm:text-left">
+              <div className="space-y-1.5">
+                <h1 className="text-3xl font-semibold text-white sm:text-4xl">Alex Unnippillil</h1>
+                <p className="text-base font-medium text-gray-200 sm:text-lg">Cybersecurity Specialist</p>
               </div>
-              <p className="text-gray-300">
+              <p className="mx-auto max-w-xl text-base leading-relaxed text-gray-200/90 sm:mx-0">
                 Building secure-by-default experiences with a Kali-inspired interface that keeps tooling approachable and
                 transparent.
               </p>
-              <nav className="flex justify-center gap-4 sm:justify-start" aria-label="Social profiles">
+              <nav className="flex justify-center gap-3 sm:justify-start" aria-label="Social profiles">
                 <a
                   href="https://github.com/unnippillil"
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="GitHub"
-                  className="text-white transition hover:text-kali-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-control"
+                  className="group inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-kali-control hover:bg-kali-control/10 hover:text-kali-control"
                 >
-                  <GitHubIcon className="h-6 w-6" />
+                  <GitHubIcon className="h-5 w-5 transition-transform duration-150 group-hover:scale-110" />
                 </a>
                 <a
                   href="https://www.linkedin.com/in/alex-unnippillil"
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="LinkedIn"
-                  className="text-white transition hover:text-kali-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-control"
+                  className="group inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-kali-control hover:bg-kali-control/10 hover:text-kali-control"
                 >
-                  <LinkedInIcon className="h-6 w-6" />
+                  <LinkedInIcon className="h-5 w-5 transition-transform duration-150 group-hover:scale-110" />
                 </a>
               </nav>
             </div>
@@ -79,56 +79,68 @@ export default function AboutPage() {
         </header>
 
         <section aria-labelledby="about-highlights" className="mb-10">
-          <div className="mb-6 space-y-1">
-            <h2 id="about-highlights" className="text-lg font-semibold text-white">
+          <div className="mb-6 space-y-2 sm:space-y-3">
+            <h2 id="about-highlights" className="text-xl font-semibold text-white sm:text-2xl">
               Profile highlights
             </h2>
-            <p className="text-gray-300">
+            <p className="max-w-2xl text-base leading-relaxed text-gray-300">
               A quick snapshot of the capabilities and recent impact driving Kali Linux Portfolio forward.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <article className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-sm shadow-black/10" aria-labelledby="highlight-skills">
-              <h3 id="highlight-skills" className="text-base font-semibold text-white">
+            <article
+              tabIndex={0}
+              className="rounded-xl border border-white/10 bg-white/5 p-5 shadow-sm shadow-black/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-kali-control/60 hover:bg-white/10 hover:shadow-black/30"
+              aria-labelledby="highlight-skills"
+            >
+              <h3 id="highlight-skills" className="text-lg font-semibold text-white">
                 Core skills
               </h3>
-              <p className="mt-2 text-gray-300">
+              <p className="mt-2 text-base text-gray-300">
                 End-to-end security reviews, secure coding mentorship, and blue team readiness exercises.
               </p>
-              <ul className="mt-3 list-disc space-y-1 pl-4 text-gray-300">
+              <ul className="mt-4 list-disc space-y-1.5 pl-5 text-sm text-gray-300">
                 <li>Threat modeling &amp; mitigation playbooks</li>
                 <li>Cloud hardening for AWS &amp; Vercel</li>
                 <li>Automation with Python &amp; TypeScript</li>
               </ul>
             </article>
-            <article className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-sm shadow-black/10" aria-labelledby="highlight-experience">
-              <h3 id="highlight-experience" className="text-base font-semibold text-white">
+            <article
+              tabIndex={0}
+              className="rounded-xl border border-white/10 bg-white/5 p-5 shadow-sm shadow-black/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-kali-control/60 hover:bg-white/10 hover:shadow-black/30"
+              aria-labelledby="highlight-experience"
+            >
+              <h3 id="highlight-experience" className="text-lg font-semibold text-white">
                 Recent experience
               </h3>
-              <p className="mt-2 text-gray-300">
+              <p className="mt-2 text-base text-gray-300">
                 Scaling a security operations desk that supports offensive and defensive simulations for modern stacks.
               </p>
-              <ul className="mt-3 list-disc space-y-1 pl-4 text-gray-300">
+              <ul className="mt-4 list-disc space-y-1.5 pl-5 text-sm text-gray-300">
                 <li>Built tabletop drills for product teams</li>
                 <li>Delivered SOC automation runbooks</li>
                 <li>Partnered with dev teams on threat hunts</li>
               </ul>
             </article>
-            <article className="rounded-xl border border-white/10 bg-white/5 p-4 shadow-sm shadow-black/10" aria-labelledby="highlight-contact">
-              <h3 id="highlight-contact" className="text-base font-semibold text-white">
+            <article
+              tabIndex={0}
+              className="rounded-xl border border-white/10 bg-white/5 p-5 shadow-sm shadow-black/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-kali-control/60 hover:bg-white/10 hover:shadow-black/30"
+              aria-labelledby="highlight-contact"
+            >
+              <h3 id="highlight-contact" className="text-lg font-semibold text-white">
                 Connect with Alex
               </h3>
-              <p className="mt-2 text-gray-300">
+              <p className="mt-2 text-base text-gray-300">
                 Open to collaborations, conference talks, and proactive security reviews across the builder ecosystem.
               </p>
-              <div className="mt-3 space-y-2 text-gray-200">
+              <div className="mt-4 space-y-3 text-gray-200">
                 <a
                   href="mailto:alex@unnippillil.com"
-                  className="inline-flex items-center text-kali-control transition hover:text-kali-control/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-control"
+                  className="inline-flex items-center text-base font-medium text-kali-control transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:text-kali-control/80"
                 >
                   alex@unnippillil.com
                 </a>
-                <p className="text-gray-300">
+                <p className="text-sm text-gray-300">
                   Based in Chicago • Available for remote-first engagements.
                 </p>
               </div>
