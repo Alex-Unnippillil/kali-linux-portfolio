@@ -18,7 +18,7 @@ import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
-import { Ubuntu } from 'next/font/google';
+import { Rajdhani } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
 
 type PeriodicSyncPermissionDescriptor = PermissionDescriptor & {
@@ -43,9 +43,9 @@ type AnalyticsEventWithMetadata = BeforeSendEvent & {
   metadata?: (Record<string, unknown> & { email?: unknown }) | undefined;
 };
 
-const ubuntu = Ubuntu({
+const kaliSans = Rajdhani({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '700'],
+  weight: ['300', '400', '500', '600', '700'],
 });
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
@@ -163,7 +163,7 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
 
   return (
     <ErrorBoundary>
-      <div className={ubuntu.className}>
+      <div className={kaliSans.className}>
         <a
           href="#app-grid"
           className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"

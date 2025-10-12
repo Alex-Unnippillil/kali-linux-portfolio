@@ -1,43 +1,43 @@
 /* Design tokens */
 
 :root {
-  /* Theme colors */
-  --color-ub-grey: #0f1317;
-  --color-ub-warm-grey: #7d7f83;
-  --color-ub-cool-grey: #1a1f26;
-  --color-ub-orange: #1793d1;
-  --color-ub-lite-abrgn: #22262c;
-  --color-ub-med-abrgn: #1b1f24;
-  --color-ub-drk-abrgn: #13171b;
-  --color-ub-window-title: #0c0f12;
-  --color-ub-gedit-dark: #021B33;
-  --color-ub-gedit-light: #003B70;
-  --color-ub-gedit-darker: #010D1A;
-  --color-ubt-grey: #F6F6F5;
-  --color-ubt-warm-grey: #AEA79F;
-  --color-ubt-cool-grey: #333333;
-  --color-ubt-blue: #62A0EA;
-  --color-ubt-green: #73D216;
-  --color-ubt-gedit-orange: #F39A21;
-  --color-ubt-gedit-blue: #50B6C6;
-  --color-ubt-gedit-dark: #003B70;
-  --color-ub-border-orange: #1793d1;
-  --color-ub-dark-grey: #2a2e36;
-  --color-bg: #0f1317;
-  --color-text: #F5F5F5;
-  --kali-bg: rgba(15, 19, 23, 0.85);
-  --kali-blue: #1793d1;
+  /* Theme colors tuned for Kali Linux aesthetic */
+  --color-ub-grey: #0b121a;
+  --color-ub-warm-grey: #16212d;
+  --color-ub-cool-grey: #111b24;
+  --color-ub-orange: #0f94d2;
+  --color-ub-lite-abrgn: #0d1520;
+  --color-ub-med-abrgn: #0a1118;
+  --color-ub-drk-abrgn: #05080c;
+  --color-ub-window-title: #0a1824;
+  --color-ub-gedit-dark: #061b2c;
+  --color-ub-gedit-light: #0d3149;
+  --color-ub-gedit-darker: #04101a;
+  --color-ubt-grey: #dce7f0;
+  --color-ubt-warm-grey: #94a3b8;
+  --color-ubt-cool-grey: #1e293b;
+  --color-ubt-blue: #38bdf8;
+  --color-ubt-green: #10b981;
+  --color-ubt-gedit-orange: #0ea5e9;
+  --color-ubt-gedit-blue: #38bdf8;
+  --color-ubt-gedit-dark: #0f172a;
+  --color-ub-border-orange: #0f94d2;
+  --color-ub-dark-grey: #1a2533;
+  --color-bg: #0b121a;
+  --color-text: #f5faff;
+  --kali-bg: rgba(9, 15, 23, 0.9);
+  --kali-blue: #0f94d2;
 
   /* Kali theme tokens */
-  --kali-blue: #1793d1;
-  --kali-blue-dark: #0f6fa1;
-  --kali-blue-glow: rgba(23, 147, 209, 0.35);
-  --kali-bg-solid: #0f1317;
-  --kali-panel: rgba(26, 31, 38, 0.9);
-  --kali-panel-border: rgba(255, 255, 255, 0.08);
-  --kali-panel-highlight: rgba(255, 255, 255, 0.05);
-  --kali-terminal-green: #00ff00;
-  --kali-terminal-text: #f5f5f5;
+  --kali-blue-dark: #0a6fa6;
+  --kali-blue-glow: rgba(15, 148, 210, 0.35);
+  --kali-bg-solid: #0b121a;
+  --kali-panel: rgba(17, 27, 36, 0.92);
+  --kali-panel-border: rgba(15, 148, 210, 0.18);
+  --kali-panel-highlight: rgba(15, 148, 210, 0.06);
+  --kali-terminal-green: #45ff9a;
+  --kali-terminal-text: #f8fafc;
+  --kali-border: rgba(15, 148, 210, 0.18);
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
@@ -71,7 +71,7 @@
   --shadow-2: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
 
   /* Window chrome */
-  --color-window-border: #0d1a2a;
+  --color-window-border: #12344a;
   --color-window-accent: var(--color-primary);
 
   /* Motion durations */
@@ -80,12 +80,12 @@
   --motion-slow: 500ms;
 
   /* Fonts */
-  --font-family-base: 'Ubuntu', sans-serif;
+  --font-family-base: 'Rajdhani', 'Segoe UI', sans-serif;
   --font-multiplier: 1;
   /* Minimum interactive target size */
   --hit-area: 32px;
   /* Focus outline */
-  --focus-outline-color: var(--color-ubt-blue);
+  --focus-outline-color: var(--kali-blue);
   --focus-outline-width: 2px;
 }
 

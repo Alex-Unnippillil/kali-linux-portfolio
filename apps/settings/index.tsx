@@ -265,7 +265,7 @@ export default function Settings() {
                   onChange={(e) =>
                     changeBackground(wallpapers[parseInt(e.target.value, 10)])
                   }
-                  className="ubuntu-slider flex-1"
+                  className="kali-slider flex-1"
                   aria-label="Wallpaper"
                 />
               </SettingRow>
@@ -340,7 +340,7 @@ export default function Settings() {
                   step="0.05"
                   value={fontScale}
                   onChange={(e) => setFontScale(parseFloat(e.target.value))}
-                  className="ubuntu-slider flex-1"
+                  className="kali-slider flex-1"
                   aria-label="Icon size"
                 />
               </SettingRow>
