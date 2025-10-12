@@ -54,10 +54,11 @@ function KeywordTester() {
     <div className="space-y-4">
       <div>
         <input
+          aria-label="Upload keyword list"
           type="file"
           accept=".txt"
           onChange={handleUpload}
-          className="bg-ub-grey text-white p-2 rounded"
+          className="block w-full rounded border border-white/10 bg-kali-surface/80 px-3 py-2 text-sm text-white/90 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
         />
       </div>
       {keywords.length > 0 && (
@@ -69,23 +70,25 @@ function KeywordTester() {
           return (
             <div
               key={`${artifact.name}-${idx}`}
-              className="p-2 bg-ub-grey rounded text-sm"
+              className="rounded-lg border border-white/10 bg-kali-surface/90 p-3 text-sm shadow-sm transition hover:border-kali-primary/40"
             >
               <div
                 className="font-bold"
                 dangerouslySetInnerHTML={{ __html: highlight(artifact.name) }}
               />
-              <div className="text-gray-400">{artifact.type}</div>
+              <div className="text-xs uppercase tracking-wide text-kali-primary/80">
+                {artifact.type}
+              </div>
               {'user' in artifact && (
                 <div
-                  className="text-xs"
+                  className="text-xs text-white/70"
                   dangerouslySetInnerHTML={{
                     __html: `User: ${highlight(artifact.user)}`,
                   }}
                 />
               )}
               <div
-                className="text-xs"
+                className="text-xs text-white/80"
                 dangerouslySetInnerHTML={{ __html: highlight(artifact.description) }}
               />
             </div>

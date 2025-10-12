@@ -54,13 +54,13 @@ const ReportExport: React.FC<ReportExportProps> = ({ caseName = 'case', artifact
     <div className="flex gap-2">
       <button
         onClick={copyReport}
-        className="bg-ub-gray px-3 py-1 rounded text-sm text-black"
+        className="rounded border border-white/10 bg-kali-surface/80 px-3 py-1 text-sm text-white/90 transition hover:border-kali-primary/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
       >
         Copy HTML Report
       </button>
       <button
         onClick={exportReport}
-        className="bg-ub-orange px-3 py-1 rounded text-sm text-black"
+        className="rounded bg-kali-primary px-3 py-1 text-sm font-semibold text-slate-900 shadow-md transition hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
       >
         Download HTML Report
       </button>
