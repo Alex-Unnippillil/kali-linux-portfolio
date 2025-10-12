@@ -1,7 +1,30 @@
+:root {
+  color-scheme: dark;
+  --color-surface: var(--kali-panel, rgba(17, 27, 36, 0.92));
+  --color-surface-alt: var(--kali-bg-solid, #0b121a);
+  --interactive-hover-outline: rgba(15, 148, 210, 0.55);
+  --interactive-hover-shadow: rgba(15, 148, 210, 0.25);
+  --interactive-focus-ring: rgba(15, 148, 210, 0.75);
+}
+
+@supports (color: color-mix(in srgb, AccentColor 45%, transparent)) {
+  :root {
+    --interactive-hover-outline: color-mix(in srgb, AccentColor 55%, transparent);
+    --interactive-hover-shadow: color-mix(
+      in srgb,
+      AccentColor 35%,
+      rgba(8, 19, 31, 0.65)
+    );
+    --interactive-focus-ring: color-mix(in srgb, AccentColor 70%, transparent);
+  }
+}
+
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-family-base, Arial, Helvetica, sans-serif);
   padding: 2rem;
-  background: #f4f4f4;
+  margin: 0;
+  background: var(--color-surface-alt);
+  color: var(--color-text, #f8fafc);
 }
 h1 {
   margin-bottom: 1rem;
@@ -9,14 +32,22 @@ h1 {
 #color-input {
   width: 80px;
   height: 80px;
-  border: none;
-  border-radius: 4px;
+  border: 1px solid var(--kali-panel-border, rgba(15, 148, 210, 0.18));
+  border-radius: var(--radius-6, 12px);
+  background: var(--color-surface);
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s ease;
+  box-shadow: 0 12px 28px rgba(5, 12, 20, 0.55);
+  transition: transform var(--motion-fast, 0.2s) ease, box-shadow var(--motion-fast, 0.2s) ease;
 }
 #color-input:hover {
   transform: scale(1.05);
+  box-shadow: 0 0 0 1px var(--interactive-hover-outline),
+    0 16px 30px var(--interactive-hover-shadow);
+}
+#color-input:focus-visible {
+  outline: var(--focus-outline-width, 2px) solid var(--interactive-focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 1px rgba(3, 7, 12, 0.8), 0 0 0 4px var(--interactive-focus-ring);
 }
 #swatches {
   margin-top: 1.5rem;
@@ -27,12 +58,21 @@ h1 {
 .swatch {
   width: 40px;
   height: 40px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  border: 1px solid var(--kali-panel-border, rgba(15, 148, 210, 0.18));
+  border-radius: var(--radius-6, 12px);
+  background: var(--color-surface);
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform var(--motion-fast, 0.2s) ease, box-shadow var(--motion-fast, 0.2s) ease;
+  box-shadow: 0 6px 18px rgba(3, 9, 15, 0.5);
 }
 .swatch:hover {
-  transform: scale(1.1);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transform: scale(1.08);
+  box-shadow: 0 0 0 2px var(--interactive-hover-outline),
+    0 18px 34px var(--interactive-hover-shadow);
+}
+.swatch:focus-visible,
+.swatch:active {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(3, 7, 12, 0.9), 0 0 0 4px var(--interactive-focus-ring);
+  transform: scale(1.04);
 }
