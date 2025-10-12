@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import copyToClipboard from "../../utils/clipboard";
 
 type Rates = Record<string, number>;
@@ -39,7 +39,7 @@ function CopyButton({ value, label = "Copy value" }: { value: string; label?: st
     <div className="relative group">
       <button
         onClick={() => value && copyToClipboard(value)}
-        className="w-6 h-6 flex items-center justify-center bg-gray-700 rounded"
+        className="flex h-7 w-7 items-center justify-center rounded-md bg-gray-700 text-sm transition hover:bg-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
         aria-label={label}
         title={label}
       >
@@ -68,6 +68,16 @@ export default function Converter() {
     { fromValue: string; fromUnit: string; toValue: string; toUnit: string }[]
   >([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const tabRefs = useRef<Record<Domain, HTMLButtonElement | null>>({
+    currency: null,
+    length: null,
+    weight: null,
+  });
+
+  const cardClass =
+    "rounded-xl border border-gray-700/70 bg-gray-900/40 shadow-sm backdrop-blur-sm";
+  const sectionTitleClass =
+    "text-xs font-semibold uppercase tracking-wide text-gray-300";
 
   useEffect(() => {
     const saved = localStorage.getItem(HISTORY_KEY);
@@ -159,28 +169,72 @@ export default function Converter() {
 
   const units = Object.keys(rates[active as Domain] || {});
 
+  const focusTabByIndex = (index: number) => {
+    const boundedIndex = (index + categories.length) % categories.length;
+    const key = categories[boundedIndex];
+    const ref = tabRefs.current[key];
+    if (ref) {
+      ref.focus();
+    }
+  };
+
   return (
-    <div className="p-4 bg-ub-cool-grey text-white h-full overflow-y-auto">
-      <h2 className="text-xl mb-4">Converter</h2>
-      <div className="mb-4 inline-flex rounded-md overflow-hidden border border-gray-600">
-        {categories.map((c) => (
-          <button
-            key={c}
-            onClick={() => setActive(c)}
-            className={`px-3 py-1 flex items-center gap-1 text-sm ${
-              c === active ? "bg-white text-black" : "bg-gray-700"
-            }`}
-          >
-            <span className="text-2xl">{icons[c]}</span>
-            {c}
-          </button>
-        ))}
-      </div>
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-6">
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="text-xs uppercase tracking-wide text-gray-300">Notation</span>
+    <div className="flex h-full flex-col overflow-y-auto bg-ub-cool-grey p-4 text-white">
+      <h2 className="mb-4 text-xl font-semibold">Converter</h2>
+      <section className={`${cardClass} mb-4 p-2`}>
+        <div
+          role="tablist"
+          aria-label="Conversion categories"
+          className="grid gap-2 sm:grid-cols-3"
+        >
+          {categories.map((c, index) => {
+            const isActive = c === active;
+            return (
+              <button
+                key={c}
+                ref={(node) => {
+                  tabRefs.current[c] = node;
+                }}
+                role="tab"
+                aria-selected={isActive}
+                tabIndex={isActive ? 0 : -1}
+                onClick={() => setActive(c)}
+                onKeyDown={(event) => {
+                  if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+                    event.preventDefault();
+                    focusTabByIndex(index + 1);
+                  }
+                  if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+                    event.preventDefault();
+                    focusTabByIndex(index - 1);
+                  }
+                }}
+                className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 ${
+                  isActive
+                    ? "bg-white text-black shadow"
+                    : "bg-white/5 text-gray-200 hover:bg-white/10"
+                }`}
+              >
+                <span className="text-xl" aria-hidden>
+                  {icons[c]}
+                </span>
+                <span className="capitalize">{c}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+      <section
+        className={`${cardClass} mb-4 p-4 space-y-4 sm:flex sm:items-start sm:gap-6 sm:space-y-0`}
+        aria-labelledby="converter-formatting"
+      >
+        <label className="flex flex-1 flex-col gap-2 text-sm" htmlFor="converter-notation">
+          <span id="converter-formatting" className={sectionTitleClass}>
+            Notation
+          </span>
           <select
-            className="text-black p-1 rounded"
+            id="converter-notation"
+            className="rounded-md border border-gray-600 bg-white/90 px-2 py-1 text-black focus:border-white focus:outline-none focus:ring-2 focus:ring-white/70"
             value={notation}
             onChange={(e) => setNotation(e.target.value as Notation)}
           >
@@ -188,115 +242,142 @@ export default function Converter() {
             <option value="engineering">Engineering</option>
             <option value="scientific">Scientific</option>
           </select>
-          <small className="text-[11px] text-gray-400">
+          <small className="text-[11px] leading-relaxed text-gray-300">
             Controls how formatted previews display large or small numbers.
           </small>
         </label>
-        <div className="flex flex-col gap-1 text-sm">
-          <label htmlFor="converter-trailing-zeros" className="flex items-center gap-2">
+        <div className="flex flex-1 flex-col gap-2 text-sm">
+          <span className={sectionTitleClass}>Trailing zeros</span>
+          <label
+            htmlFor="converter-trailing-zeros"
+            className="flex items-center gap-2 rounded-md border border-transparent bg-white/5 px-3 py-2 transition hover:bg-white/10 focus-within:border-white/60"
+          >
             <input
               id="converter-trailing-zeros"
               type="checkbox"
               checked={trailingZeros}
               onChange={(e) => setTrailingZeros(e.target.checked)}
               aria-label="Include trailing zeros"
+              className="h-4 w-4 rounded border-gray-500 bg-transparent text-blue-400 focus:ring-white/70"
             />
-            Trailing zeros
+            <span>Include up to ten decimal places</span>
           </label>
-          <small className="text-[11px] text-gray-400">
-            Pads previews with zeros up to ten decimal places for consistent length.
+          <small className="text-[11px] leading-relaxed text-gray-300">
+            Pads previews with zeros for consistent length when comparing results.
           </small>
         </div>
-      </div>
+      </section>
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row items-center gap-[6px]">
-          <div className="flex flex-col sm:flex-row gap-[6px] flex-1">
-            <div className="flex flex-col flex-1">
-              <input
-                type="number"
-                className={`text-black p-1 rounded flex-1 font-mono ${
-                  focused === "from" ? "text-2xl" : "text-base"
-                }`}
-                value={fromValue}
-                onFocus={() => setFocused("from")}
-                onBlur={() => setFocused(null)}
-                onChange={(e) => convertFrom(e.target.value)}
-                aria-label="from value"
-              />
-              <span className="h-4 text-xs text-gray-400 font-mono">
+        <section className={`${cardClass} p-4`} aria-labelledby="converter-inputs">
+          <h3
+            id="converter-inputs"
+            className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-300"
+          >
+            Conversion inputs
+          </h3>
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:items-start">
+            <div className="space-y-3">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs uppercase tracking-wide text-gray-300">
+                  From value
+                </label>
+                <input
+                  type="number"
+                  className={`w-full rounded-md border border-gray-600 bg-white/95 px-3 py-2 font-mono text-base text-black shadow-inner focus:border-white focus:outline-none focus:ring-2 focus:ring-white/70 ${
+                    focused === "from" ? "text-2xl" : "text-base"
+                  }`}
+                  value={fromValue}
+                  onFocus={() => setFocused("from")}
+                  onBlur={() => setFocused(null)}
+                  onChange={(e) => convertFrom(e.target.value)}
+                  aria-label="from value"
+                />
+              </div>
+              <span className="block min-h-[1.25rem] text-sm font-mono text-gray-200">
                 {formatNumber(fromValue, notation, trailingZeros)}
               </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  className="min-w-[7rem] flex-1 rounded-md border border-gray-600 bg-white/90 px-2 py-1 text-black focus:border-white focus:outline-none focus:ring-2 focus:ring-white/70"
+                  value={fromUnit}
+                  onChange={(e) => {
+                    setFromUnit(e.target.value);
+                    if (fromValue) convertFrom(fromValue);
+                  }}
+                >
+                  {units.map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </select>
+                <CopyButton
+                  value={
+                    formatNumber(fromValue, notation, trailingZeros) || fromValue
+                  }
+                  label="Copy value"
+                />
+              </div>
             </div>
-            <select
-              className="text-black p-1 rounded"
-              value={fromUnit}
-              onChange={(e) => {
-                setFromUnit(e.target.value);
-                if (fromValue) convertFrom(fromValue);
-              }}
-            >
-              {units.map((u) => (
-                <option key={u} value={u}>
-                  {u}
-                </option>
-              ))}
-            </select>
-            <CopyButton
-              value={
-                formatNumber(fromValue, notation, trailingZeros) || fromValue
-              }
-              label="Copy value"
-            />
-          </div>
-          <button
-            className="p-2 bg-gray-700 rounded-full"
-            onClick={swap}
-            aria-label="swap units"
-          >
-            ↔
-          </button>
-          <div className="flex flex-col sm:flex-row gap-[6px] flex-1">
-            <div className="flex flex-col flex-1">
-              <input
-                type="number"
-                className={`text-black p-1 rounded flex-1 font-mono ${
-                  focused === "to" ? "text-2xl" : "text-base"
-                }`}
-                value={toValue}
-                onFocus={() => setFocused("to")}
-                onBlur={() => setFocused(null)}
-                onChange={(e) => convertTo(e.target.value)}
-                aria-label="to value"
-              />
-              <span className="h-4 text-xs text-gray-400 font-mono">
+            <div className="flex items-center justify-center">
+              <button
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-lg transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                onClick={swap}
+                aria-label="swap units"
+              >
+                ↔
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs uppercase tracking-wide text-gray-300">
+                  To value
+                </label>
+                <input
+                  type="number"
+                  className={`w-full rounded-md border border-gray-600 bg-white/95 px-3 py-2 font-mono text-base text-black shadow-inner focus:border-white focus:outline-none focus:ring-2 focus:ring-white/70 ${
+                    focused === "to" ? "text-2xl" : "text-base"
+                  }`}
+                  value={toValue}
+                  onFocus={() => setFocused("to")}
+                  onBlur={() => setFocused(null)}
+                  onChange={(e) => convertTo(e.target.value)}
+                  aria-label="to value"
+                />
+              </div>
+              <span className="block min-h-[1.25rem] text-sm font-mono text-gray-200">
                 {formatNumber(toValue, notation, trailingZeros)}
               </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  className="min-w-[7rem] flex-1 rounded-md border border-gray-600 bg-white/90 px-2 py-1 text-black focus:border-white focus:outline-none focus:ring-2 focus:ring-white/70"
+                  value={toUnit}
+                  onChange={(e) => {
+                    setToUnit(e.target.value);
+                    if (toValue) convertTo(toValue);
+                  }}
+                >
+                  {units.map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </select>
+                <CopyButton
+                  value={
+                    formatNumber(toValue, notation, trailingZeros) || toValue
+                  }
+                  label="Copy value"
+                />
+              </div>
             </div>
-            <select
-              className="text-black p-1 rounded"
-              value={toUnit}
-              onChange={(e) => {
-                setToUnit(e.target.value);
-                if (toValue) convertTo(toValue);
-              }}
-            >
-              {units.map((u) => (
-                <option key={u} value={u}>
-                  {u}
-                </option>
-              ))}
-            </select>
-            <CopyButton
-              value={formatNumber(toValue, notation, trailingZeros) || toValue}
-              label="Copy value"
-            />
           </div>
-        </div>
+        </section>
         {history.length > 0 && (
-          <div className="bg-gray-900/60 rounded border border-gray-700">
+          <section className={`${cardClass} overflow-hidden`}>
             <button
               type="button"
-              className="flex w-full items-center justify-between px-3 py-2 text-sm uppercase tracking-wide"
+              className="flex w-full items-center justify-between px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-200 transition hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
               onClick={() => setHistoryOpen((open) => !open)}
               aria-expanded={historyOpen}
               aria-controls="converter-history-panel"
@@ -305,29 +386,33 @@ export default function Converter() {
                 {historyOpen ? "Hide history" : "Show history"} (
                 {Math.min(history.length, HISTORY_PREVIEW_COUNT)})
               </span>
-              <span className="text-lg" aria-hidden>{historyOpen ? "▾" : "▸"}</span>
+              <span className="text-lg" aria-hidden>
+                {historyOpen ? "▾" : "▸"}
+              </span>
             </button>
             {historyOpen && (
               <div
                 id="converter-history-panel"
-                className="max-h-48 overflow-y-auto space-y-1 px-3 pb-3"
+                className="max-h-48 space-y-2 overflow-y-auto px-4 pb-4"
               >
                 {history.slice(0, HISTORY_PREVIEW_COUNT).map((h, i) => {
                   const formatted = `${formatNumber(h.fromValue, notation, trailingZeros)} ${h.fromUnit} = ${formatNumber(h.toValue, notation, trailingZeros)} ${h.toUnit}`;
                   return (
                     <div
                       key={`${h.fromUnit}-${h.toUnit}-${i}`}
-                      className="flex items-center justify-between gap-2 rounded bg-gray-800 px-2 py-1 text-xs"
+                      className="flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2 text-xs text-gray-100"
                       data-testid="converter-history-entry"
                     >
-                      <span className="font-mono leading-tight">{formatted}</span>
+                      <span className="font-mono leading-tight">
+                        {formatted}
+                      </span>
                       <CopyButton value={formatted} label="Copy result" />
                     </div>
                   );
                 })}
               </div>
             )}
-          </div>
+          </section>
         )}
       </div>
     </div>
