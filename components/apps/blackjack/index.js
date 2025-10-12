@@ -34,7 +34,7 @@ const Card = ({ card, faceDown, peeking }) => {
 
   return (
     <div
-      className={`h-16 w-12 card ${flipped ? 'flipped' : ''} ${
+      className={`h-16 w-12 sm:h-24 sm:w-16 card ${flipped ? 'flipped' : ''} ${
         peeking || (faceDown && hovered) ? 'peek' : ''
       } animate-deal`}
       aria-label={faceDown ? 'Hidden card' : `${card.value}${card.suit}`}
@@ -309,7 +309,7 @@ const Blackjack = () => {
 
   const renderHand = (hand, hideFirst, showProb, peeking = false, overlay = null) => (
     <div
-      className="relative flex space-x-2"
+      className="relative flex flex-wrap items-center gap-2 sm:gap-3"
       title={showProb ? `Bust chance: ${(bustProbability(hand) * 100).toFixed(1)}%` : undefined}
     >
       {hand.cards.map((card, idx) => (
@@ -320,9 +320,11 @@ const Blackjack = () => {
           peeking={peeking && idx === 1}
         />
       ))}
-      <div className="ml-2 self-center">{handValue(hand.cards)}</div>
+      <div className="min-w-[2rem] rounded bg-black/40 px-2 py-1 text-center text-sm sm:text-base">
+        {handValue(hand.cards)}
+      </div>
       {overlay && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-black bg-opacity-75 px-1 text-xs rounded">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded bg-black bg-opacity-75 px-2 text-xs">
           {overlay.toUpperCase()}
         </div>
       )}
@@ -331,31 +333,56 @@ const Blackjack = () => {
 
   const rec = showHints ? recommended() : '';
 
+  const actionState = (hand) => ({
+    hit: !hand.finished,
+    stand: !hand.finished,
+    double:
+      hand.cards.length === 2 &&
+      !hand.finished &&
+      !hand.doubled &&
+      gameRef.current.bankroll >= hand.bet,
+    split:
+      hand.cards.length === 2 &&
+      !hand.finished &&
+      cardValue(hand.cards[0]) === cardValue(hand.cards[1]) &&
+      gameRef.current.bankroll >= hand.bet,
+    surrender: hand.cards.length === 2 && !hand.finished && !hand.surrendered,
+  });
+
   if (practice) {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
+      <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-ub-cool-grey p-4 text-white select-none">
         {practiceCard && (
-          <div className="text-4xl mb-4">{`${practiceCard.value}${practiceCard.suit}`}</div>
+          <div className="text-4xl">{`${practiceCard.value}${practiceCard.suit}`}</div>
         )}
         <input
           type="number"
           value={practiceGuess}
           onChange={(e) => setPracticeGuess(e.target.value)}
-          className="text-black mb-2 px-2 py-1"
+          className="w-24 rounded px-2 py-1 text-center text-black"
+          aria-label="Enter running count guess"
         />
-        <div className="flex space-x-2">
-          <button className="px-3 py-1 bg-gray-700" onClick={submitPractice}>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            className="rounded bg-gray-700 px-3 py-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-400"
+            onClick={submitPractice}
+          >
             Submit
           </button>
-          <button className="px-3 py-1 bg-gray-700" onClick={endPractice}>
+          <button
+            type="button"
+            className="rounded bg-gray-700 px-3 py-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-400"
+            onClick={endPractice}
+          >
             Exit
           </button>
         </div>
-        {practiceFeedback && <div className="mt-2">{practiceFeedback}</div>}
-        <div className="mt-4">Streak: {streak}</div>
-        <div className="mt-1">Best: {bestStreak}</div>
-        <div className="mt-1">RC: {practiceShoe.current.runningCount}</div>
-        <div className="mt-1 text-xs">
+        {practiceFeedback && <div className="text-center text-sm">{practiceFeedback}</div>}
+        <div className="text-sm sm:text-base">Streak: {streak}</div>
+        <div className="text-sm sm:text-base">Best: {bestStreak}</div>
+        <div className="text-sm sm:text-base">RC: {practiceShoe.current.runningCount}</div>
+        <div className="text-center text-xs sm:text-sm">
           {Object.entries(practiceShoe.current.composition)
             .map(([v, c]) => `${v}:${c}`)
             .join(' ')}
@@ -365,64 +392,87 @@ const Blackjack = () => {
   }
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
-      <div className="mb-2 flex items-center space-x-4">
-        <div>Bankroll: {availableBankroll}</div>
-        <div className={`h-8 w-6 bg-gray-700 ${shuffling ? 'shuffle' : ''}`}></div>
-        {showCount && <div>RC: {runningCount}</div>}
+    <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-ub-cool-grey p-4 text-white select-none">
+      <div className="flex flex-wrap items-center justify-center gap-3 text-sm sm:text-base">
+        <div className="rounded bg-black/40 px-3 py-1">Bankroll: {availableBankroll}</div>
+        <div className={`h-8 w-6 rounded bg-gray-700 ${shuffling ? 'shuffle' : ''}`} aria-hidden="true"></div>
+        {showCount && <div className="rounded bg-black/40 px-3 py-1">RC: {runningCount}</div>}
       </div>
-        <div className="mb-2 flex items-center space-x-2">
-          <button className="px-2 py-1 bg-gray-700" onClick={() => setShowHints(!showHints)}>
-            {showHints ? 'Hide Hints' : 'Show Hints'}
-          </button>
-          <button className="px-2 py-1 bg-gray-700" onClick={() => setShowCount(!showCount)}>
-            {showCount ? 'Hide Count' : 'Show Count'}
-          </button>
-          <button className="px-2 py-1 bg-gray-700" onClick={startPractice}>
-            Practice Count
-          </button>
-          <label className="flex items-center space-x-1">
-            <span className="text-sm">Pen</span>
-            <input
-              type="range"
-              step="0.05"
-              min="0.5"
-              max="0.95"
-              value={penetration}
-              onChange={(e) => {
-                const val = parseFloat(e.target.value);
-                if (!Number.isNaN(val)) setPenetration(val);
-              }}
-              className="w-24"
-            />
-            <span className="text-sm">{(penetration * 100).toFixed(0)}%</span>
-          </label>
-        </div>
+      <div className="flex flex-wrap items-center justify-center gap-2 text-sm sm:text-base">
+        <button
+          type="button"
+          className="rounded bg-gray-700 px-2 py-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-400"
+          onClick={() => setShowHints(!showHints)}
+        >
+          {showHints ? 'Hide Hints' : 'Show Hints'}
+        </button>
+        <button
+          type="button"
+          className="rounded bg-gray-700 px-2 py-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-400"
+          onClick={() => setShowCount(!showCount)}
+        >
+          {showCount ? 'Hide Count' : 'Show Count'}
+        </button>
+        <button
+          type="button"
+          className="rounded bg-gray-700 px-2 py-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-400"
+          onClick={startPractice}
+        >
+          Practice Count
+        </button>
+        <label htmlFor="penetration-slider" className="flex items-center gap-2 rounded bg-black/30 px-2 py-1 text-xs sm:text-sm">
+          <span className="uppercase tracking-wide">Pen</span>
+          <input
+            id="penetration-slider"
+            type="range"
+            step="0.05"
+            min="0.5"
+            max="0.95"
+            value={penetration}
+            onChange={(e) => {
+              const val = parseFloat(e.target.value);
+              if (!Number.isNaN(val)) setPenetration(val);
+            }}
+            className="h-1 w-24 accent-yellow-400"
+            aria-label="Penetration"
+          />
+          <span>{(penetration * 100).toFixed(0)}%</span>
+        </label>
+      </div>
       {playerHands.length === 0 ? (
-        <div className="mb-4">
-          <div className="mb-2 flex items-center space-x-2" aria-live="polite" role="status">
-            <span>Bet: {bet} x {handCount}</span>
+        <div className="flex w-full max-w-xl flex-col items-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-3" aria-live="polite" role="status">
+            <span>
+              Bet: {bet} x {handCount}
+            </span>
             <BetChips amount={bet} />
           </div>
-          <div className="flex space-x-2 mb-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             {CHIP_VALUES.map((v) => (
               <button
                 key={v}
-                className={`chip ${CHIP_COLORS[v]} ${
-                  bet + v > bankroll / handCount ? 'opacity-50 cursor-not-allowed' : ''
+                type="button"
+                className={`chip transition ${CHIP_COLORS[v]} ${
+                  bet + v > bankroll / handCount ? 'cursor-not-allowed opacity-40' : 'hover:scale-105'
                 }`}
                 onClick={() => bet + v <= bankroll / handCount && setBet(bet + v)}
                 aria-label={`Add ${v} chip`}
+                disabled={bet + v > bankroll / handCount}
               >
                 {v}
               </button>
             ))}
-            <button className="px-2 py-1 bg-gray-700" onClick={() => setBet(0)}>
+            <button
+              type="button"
+              className="rounded bg-gray-700 px-2 py-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-400"
+              onClick={() => setBet(0)}
+            >
               Clear
             </button>
-            <label className="flex items-center space-x-1">
+            <label htmlFor="hand-count" className="flex items-center gap-2 rounded bg-black/30 px-2 py-1 text-xs sm:text-sm">
               <span className="text-sm">Hands</span>
               <input
+                id="hand-count"
                 type="number"
                 min="1"
                 max="4"
@@ -431,17 +481,23 @@ const Blackjack = () => {
                   const val = parseInt(e.target.value, 10);
                   if (!Number.isNaN(val)) setHandCount(val);
                 }}
-                className="w-12 text-black px-1"
+                className="w-12 rounded px-1 text-black"
+                aria-label="Hand count"
               />
             </label>
-            <button className="px-2 py-1 bg-gray-700" onClick={start} disabled={bet === 0}>
+            <button
+              type="button"
+              className="rounded bg-gray-700 px-2 py-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-400 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={start}
+              disabled={bet === 0}
+            >
               Deal
             </button>
           </div>
         </div>
       ) : (
-        <div className="mb-4">
-          <div className="mb-2">Dealer</div>
+        <div className="flex w-full max-w-xl flex-col items-center gap-2 text-center">
+          <div className="text-sm uppercase tracking-wide text-yellow-300">Dealer</div>
           {renderHand(
             { cards: dealerHand },
             !message.includes('complete') && current < playerHands.length,
@@ -451,32 +507,62 @@ const Blackjack = () => {
         </div>
       )}
       {playerHands.map((hand, idx) => (
-        <div key={idx} className="mb-2">
-          <div className="mb-1">{`Player${playerHands.length > 1 ? ` ${idx + 1}` : ''}`}</div>
-          <div className="flex items-center space-x-2">
+        <div key={idx} className="flex w-full max-w-xl flex-col items-center gap-2">
+          <div className="text-sm uppercase tracking-wide text-yellow-300">
+            {`Player${playerHands.length > 1 ? ` ${idx + 1}` : ''}`}
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2">
             <BetChips amount={hand.bet} />
             {renderHand(hand, false, true, false, idx === current && showHints ? rec : null)}
           </div>
           {idx === current && playerHands.length > 0 && (
-            <div className="mt-2 flex flex-col items-start">
-              <div className="flex space-x-2">
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'hit' ? 'border-2 border-yellow-400 text-yellow-300' : ''}`} onClick={() => act('hit')}>Hit</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'stand' ? 'border-2 border-yellow-400 text-yellow-300' : ''}`} onClick={() => act('stand')}>Stand</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'double' ? 'border-2 border-yellow-400 text-yellow-300' : ''}`} onClick={() => act('double')}>Double</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'split' ? 'border-2 border-yellow-400 text-yellow-300' : ''}`} onClick={() => act('split')}>Split</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'surrender' ? 'border-2 border-yellow-400 text-yellow-300' : ''}`} onClick={() => act('surrender')}>Surrender</button>
-              </div>
+            <div className="flex w-full flex-wrap items-center justify-center gap-2">
+              {['hit', 'stand', 'double', 'split', 'surrender'].map((type) => {
+                const isRecommended = rec === type;
+                const available = actionState(hand)[type];
+                const labels = {
+                  hit: { text: 'Hit', shortcut: 'H' },
+                  stand: { text: 'Stand', shortcut: 'S' },
+                  double: { text: 'Double', shortcut: 'D' },
+                  split: { text: 'Split', shortcut: 'P' },
+                  surrender: { text: 'Surrender', shortcut: 'R' },
+                };
+                const { text, shortcut } = labels[type];
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    className={`rounded px-3 py-1 text-sm sm:text-base transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-400 disabled:cursor-not-allowed disabled:opacity-50 ${isRecommended ? 'border-2 border-yellow-400 text-yellow-300' : 'bg-gray-700'}`}
+                    onClick={() => act(type)}
+                    disabled={!available}
+                    aria-keyshortcuts={shortcut}
+                    title={`Press ${shortcut.toUpperCase()} to ${text}`}
+                  >
+                    {text}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
       ))}
       {showInsurance && (
-        <button className="px-3 py-1 bg-gray-700 mb-2" onClick={takeInsurance}>
+        <button
+          type="button"
+          className="rounded bg-gray-700 px-3 py-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-400"
+          onClick={takeInsurance}
+        >
           Take Insurance
         </button>
       )}
-      <div className="mt-4" aria-live="polite" role="status">{message}</div>
-      <div className="mt-4 text-sm">Wins: {stats.wins} Losses: {stats.losses} Pushes: {stats.pushes}</div>
+      <div className="mt-2 text-center text-base sm:text-lg" aria-live="polite" role="status">
+        {message}
+      </div>
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 rounded bg-black/30 px-4 py-2 text-sm sm:text-base">
+        <span>Wins: {stats.wins}</span>
+        <span>Losses: {stats.losses}</span>
+        <span>Pushes: {stats.pushes}</span>
+      </div>
     </div>
   );
 };
