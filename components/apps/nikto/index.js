@@ -7,6 +7,25 @@ const suggestions = {
   '/': 'Disable or standardize ETag headers to avoid disclosing inodes.',
 };
 
+const severityTone = {
+  info: 'text-slate-200',
+  low: 'text-emerald-300',
+  medium: 'text-amber-300',
+  high: 'text-orange-300',
+  critical: 'text-red-300',
+};
+
+const severityChipClass = (severity) => {
+  const tone = severityTone[severity?.toLowerCase()] || 'text-kali-text';
+  return `inline-flex items-center rounded-full border border-[var(--kali-panel-border)] bg-kali-muted px-2 py-0.5 text-[0.7rem] font-semibold uppercase tracking-wide ${tone}`;
+};
+
+const primaryButtonClasses =
+  'inline-flex items-center rounded-md border border-transparent bg-kali-primary px-3 py-1.5 text-sm font-semibold text-kali-inverse shadow transition-colors hover:bg-[var(--kali-blue-dark)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus';
+
+const secondaryButtonClasses =
+  'inline-flex items-center rounded-md border border-[var(--kali-panel-border)] bg-kali-secondary px-3 py-1.5 text-sm font-semibold text-kali-text transition-colors hover:bg-kali-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus';
+
 const NiktoApp = () => {
   const [host, setHost] = useState('');
   const [port, setPort] = useState('');
@@ -163,7 +182,7 @@ const NiktoApp = () => {
   };
 
   return (
-    <div className="p-4 bg-gray-900 text-white min-h-screen space-y-4">
+    <div className="min-h-screen space-y-4 bg-kali-background p-4 text-kali-text">
       <h1 className="text-2xl mb-4">Nikto Scanner</h1>
       <p className="text-sm text-yellow-300 mb-4">
         Build a nikto command without running any scans. Data and reports are
@@ -176,6 +195,7 @@ const NiktoApp = () => {
           </label>
           <input
             id="nikto-host"
+            aria-label="Host"
             className="w-full p-2 rounded text-black"
             value={host}
             onChange={(e) => setHost(e.target.value)}
@@ -188,6 +208,7 @@ const NiktoApp = () => {
           <input
             id="nikto-port"
             type="number"
+            aria-label="Port"
             className="w-full p-2 rounded text-black"
             value={port}
             onChange={(e) => setPort(e.target.value)}
@@ -198,6 +219,7 @@ const NiktoApp = () => {
             id="nikto-ssl"
             type="checkbox"
             className="mr-2"
+            aria-label="Toggle SSL"
             checked={ssl}
             onChange={(e) => setSsl(e.target.checked)}
           />
@@ -208,61 +230,74 @@ const NiktoApp = () => {
       </form>
       <div>
         <h2 className="text-lg mb-2">Command Preview</h2>
-        <pre className="bg-black text-green-400 p-2 rounded overflow-auto">
+        <pre className="overflow-auto rounded bg-kali-dark p-2 text-kali-terminal">
           {command}
         </pre>
       </div>
       <div>
         <h2 className="text-lg mb-2">Findings</h2>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-700">
-              <th className="p-2 text-left">Path</th>
-              <th className="p-2 text-left">Finding</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(grouped).map(([sev, list]) => (
-              <React.Fragment key={sev}>
-                <tr className="bg-gray-800">
-                  <td colSpan={2} className="p-2 font-bold">
-                    {sev}
-                  </td>
-                </tr>
-                {list.map((f) => (
-                  <tr
-                    key={f.path}
-                    className="odd:bg-gray-900 cursor-pointer hover:bg-gray-700"
-                    onClick={() => setSelected(f)}
-                  >
-                    <td className="p-2">{f.path}</td>
-                    <td className="p-2">{f.finding}</td>
+        <div className="overflow-hidden rounded-lg border border-[var(--kali-panel-border)] bg-kali-secondary">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-kali-muted text-left text-xs font-semibold uppercase tracking-wide text-slate-200">
+                <th className="p-2">Path</th>
+                <th className="p-2">Finding</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(grouped).map(([sev, list]) => (
+                <React.Fragment key={sev}>
+                  <tr aria-hidden="true" className="bg-kali-surface">
+                    <td colSpan={2} className="p-2">
+                      <span className={severityChipClass(sev)}>{sev}</span>
+                    </td>
                   </tr>
-                ))}
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
+                  {list.map((f, index) => {
+                    const rowBackground = index % 2 === 0 ? 'bg-kali-muted' : 'bg-kali-secondary';
+                    return (
+                      <tr key={f.path} className="border-t border-[var(--kali-panel-border)]">
+                        <td colSpan={2} className="p-0">
+                          <button
+                            type="button"
+                            onClick={() => setSelected(f)}
+                            className={`${rowBackground} grid w-full grid-cols-[minmax(0,0.4fr)_minmax(0,1fr)] gap-3 p-2 text-left transition-colors hover:bg-[var(--kali-panel-highlight)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus`}
+                            aria-label={`View finding details for ${f.path}`}
+                          >
+                            <span className="font-mono text-xs text-slate-200/80">{f.path}</span>
+                            <span>{f.finding}</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
       {selected && (
-        <div className="fixed top-0 right-0 w-80 h-full bg-gray-800 p-4 overflow-auto shadow-lg">
+        <div className="fixed top-0 right-0 h-full w-80 overflow-auto border border-[var(--kali-panel-border)] bg-kali-surface p-4 shadow-kali-panel">
           <button
             type="button"
             onClick={() => setSelected(null)}
-            className="mb-2 bg-red-600 px-2 py-1 rounded text-sm"
+            className={`${secondaryButtonClasses} mb-3 justify-center`}
           >
             Close
           </button>
           <h3 className="text-xl mb-2">{selected.path}</h3>
           <p className="mb-2">{selected.finding}</p>
           <p className="mb-2">
-            <span className="font-bold">Severity:</span> {selected.severity}
+            <span className="font-bold">Severity:</span>{' '}
+            <span className={severityChipClass(selected.severity)}>
+              {selected.severity}
+            </span>
           </p>
           <p className="mb-2">
             <span className="font-bold">References:</span> {selected.references.join(', ')}
           </p>
           <p className="mb-4">{selected.details}</p>
-          <p className="text-sm text-green-300">
+          <p className="text-sm text-kali-primary">
             {suggestions[selected.path] || 'No suggestion available.'}
           </p>
         </div>
@@ -273,14 +308,14 @@ const NiktoApp = () => {
           <button
             type="button"
             onClick={copyReport}
-            className="px-2 py-1 bg-blue-600 rounded text-sm"
+            className={primaryButtonClasses}
           >
             Copy HTML
           </button>
           <button
             type="button"
             onClick={exportReport}
-            className="px-2 py-1 bg-blue-600 rounded text-sm"
+            className={secondaryButtonClasses}
           >
             Export HTML
           </button>
@@ -297,7 +332,7 @@ const NiktoApp = () => {
           data-testid="drop-zone"
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
-          className="border-2 border-dashed border-gray-600 p-4 text-center mb-4"
+          className="mb-4 border-2 border-dashed border-[var(--kali-panel-border)] bg-[var(--kali-panel-highlight)] p-4 text-center"
         >
           Drop Nikto text or XML report here
         </div>
@@ -310,12 +345,14 @@ const NiktoApp = () => {
                 value={filterHost}
                 onChange={(e) => setFilterHost(e.target.value)}
                 className="p-1 rounded text-black flex-1"
+                aria-label="Filter host"
               />
               <input
                 placeholder="Filter path"
                 value={filterPath}
                 onChange={(e) => setFilterPath(e.target.value)}
                 className="p-1 rounded text-black flex-1"
+                aria-label="Filter path"
               />
               <select
                 aria-label="Filter severity"
@@ -334,29 +371,33 @@ const NiktoApp = () => {
               <button
                 type="button"
                 onClick={exportCsv}
-                className="px-2 py-1 bg-blue-600 rounded text-sm"
+                className={primaryButtonClasses}
               >
                 Export CSV
               </button>
             </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-700">
-                  <th className="p-2 text-left">Host</th>
-                  <th className="p-2 text-left">Path</th>
-                  <th className="p-2 text-left">Severity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r, i) => (
-                  <tr key={i} className="odd:bg-gray-900">
-                    <td className="p-2">{r.host}</td>
-                    <td className="p-2">{r.path}</td>
-                    <td className="p-2">{r.severity}</td>
+            <div className="overflow-hidden rounded-lg border border-[var(--kali-panel-border)] bg-kali-secondary">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-kali-muted text-left text-xs font-semibold uppercase tracking-wide text-slate-200">
+                    <th className="p-2">Host</th>
+                    <th className="p-2">Path</th>
+                    <th className="p-2">Severity</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filtered.map((r, i) => (
+                    <tr key={i} className="odd:bg-kali-muted even:bg-kali-secondary">
+                      <td className="p-2">{r.host}</td>
+                      <td className="p-2">{r.path}</td>
+                      <td className="p-2">
+                        <span className={severityChipClass(r.severity)}>{r.severity}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
