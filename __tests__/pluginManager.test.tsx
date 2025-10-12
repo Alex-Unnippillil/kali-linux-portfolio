@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import PluginManager from '../components/apps/plugin-manager';
 
 describe('PluginManager', () => {
@@ -51,29 +51,43 @@ describe('PluginManager', () => {
 
   test('installs plugin from catalog and shows metadata', async () => {
     render(<PluginManager />);
-    expect(await screen.findByText(/Sandbox: Worker/i)).toBeInTheDocument();
-    expect(screen.getByText(/128 B/)).toBeInTheDocument();
-    const listItem = screen.getByText('demo').closest('li');
-    expect(listItem).toHaveAttribute(
+    const pluginHeading = await screen.findByRole('heading', { name: 'demo' });
+    const pluginCard = pluginHeading.closest('article');
+    expect(pluginCard).toHaveAttribute(
       'title',
       'Demo plugin that echoes content.'
     );
-    const button = await screen.findByText('Install');
+    expect(
+      within(pluginCard as HTMLElement).getByText('Sandbox', { selector: 'dt' })
+    ).toBeInTheDocument();
+    expect(
+      within(pluginCard as HTMLElement).getByText('Worker')
+    ).toBeInTheDocument();
+    expect(
+      within(pluginCard as HTMLElement).getByText('128 B')
+    ).toBeInTheDocument();
+    const button = within(pluginCard as HTMLElement).getByRole('button', {
+      name: /install plugin/i,
+    });
     fireEvent.click(button);
     await waitFor(() =>
-      expect(localStorage.getItem('installedPlugins')).toContain('sandbox')
+      expect(localStorage.getItem('installedPlugins')).toContain('demo')
     );
-    expect(button.textContent).toBe('Installed');
+    expect(button).toHaveTextContent('Update plugin');
   });
 
   test('persists last plugin run and exports CSV', async () => {
     const { unmount } = render(<PluginManager />);
-    const installBtn = await screen.findByText('Install');
+    const installBtn = await screen.findByRole('button', {
+      name: /install plugin/i,
+    });
     fireEvent.click(installBtn);
     await waitFor(() =>
       expect(localStorage.getItem('installedPlugins')).toContain('demo')
     );
-    const runBtn = await screen.findByText('Run');
+    const runBtn = await screen.findByRole('button', {
+      name: /run demo/i,
+    });
     fireEvent.click(runBtn);
     await waitFor(() =>
       expect(localStorage.getItem('lastPluginRun')).toContain('content')
