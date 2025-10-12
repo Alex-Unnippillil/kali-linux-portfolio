@@ -13,6 +13,9 @@
   /* Utility colors */
   --color-muted: #1a2533; /* muted surfaces */
   --color-surface: #111b24; /* panel surfaces */
+  --color-surface-subtle: color-mix(in srgb, var(--color-surface) 78%, transparent);
+  --color-surface-raised: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  --color-surface-strong: color-mix(in srgb, var(--color-surface) 88%, #05080c 12%);
   --color-inverse: #000000; /* inverse of text */
   --color-border: var(--kali-border); /* subtle borders */
   --color-terminal: var(--kali-terminal-green); /* terminal green */
@@ -20,6 +23,18 @@
   --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
+  --color-info: #38bdf8;
+  --color-info-border: color-mix(in srgb, var(--color-info) 52%, transparent);
+  --color-info-surface: color-mix(in srgb, var(--color-info) 18%, var(--color-surface));
+  --color-info-glow: color-mix(in srgb, var(--color-info) 32%, transparent);
+  --color-warn: #f59e0b;
+  --color-warn-border: color-mix(in srgb, var(--color-warn) 58%, transparent);
+  --color-warn-surface: color-mix(in srgb, var(--color-warn) 16%, var(--color-surface));
+  --color-warn-glow: color-mix(in srgb, var(--color-warn) 30%, transparent);
+  --color-error: #f87171;
+  --color-error-border: color-mix(in srgb, var(--color-error) 62%, transparent);
+  --color-error-surface: color-mix(in srgb, var(--color-error) 16%, var(--color-surface));
+  --color-error-glow: color-mix(in srgb, var(--color-error) 35%, transparent);
   --kali-text: #f5f5f5;
   accent-color: var(--color-control-accent);
 }
@@ -38,10 +53,25 @@ html[data-theme='dark'] {
   --color-accent: #bb86fc;
   --color-muted: #1f1f1f;
   --color-surface: #121212;
+  --color-surface-subtle: color-mix(in srgb, var(--color-surface) 82%, transparent);
+  --color-surface-raised: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  --color-surface-strong: color-mix(in srgb, var(--color-surface) 88%, black 12%);
   --color-inverse: #ffffff;
   --color-border: #333333;
   --color-terminal: #00ff00;
   --color-dark: #0a0a0a;
+  --color-info: #81d4fa;
+  --color-info-border: color-mix(in srgb, var(--color-info) 50%, transparent);
+  --color-info-surface: color-mix(in srgb, var(--color-info) 22%, var(--color-surface));
+  --color-info-glow: color-mix(in srgb, var(--color-info) 28%, transparent);
+  --color-warn: #ffb74d;
+  --color-warn-border: color-mix(in srgb, var(--color-warn) 52%, transparent);
+  --color-warn-surface: color-mix(in srgb, var(--color-warn) 18%, var(--color-surface));
+  --color-warn-glow: color-mix(in srgb, var(--color-warn) 26%, transparent);
+  --color-error: #ef9a9a;
+  --color-error-border: color-mix(in srgb, var(--color-error) 58%, transparent);
+  --color-error-surface: color-mix(in srgb, var(--color-error) 18%, var(--color-surface));
+  --color-error-glow: color-mix(in srgb, var(--color-error) 30%, transparent);
 }
 
 /* Neon theme */
@@ -53,10 +83,25 @@ html[data-theme='neon'] {
   --color-accent: #ff00ff;
   --color-muted: #222222;
   --color-surface: #111111;
+  --color-surface-subtle: color-mix(in srgb, var(--color-surface) 82%, transparent);
+  --color-surface-raised: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  --color-surface-strong: color-mix(in srgb, var(--color-surface) 88%, black 12%);
   --color-inverse: #ffffff;
   --color-border: #333333;
   --color-terminal: #39ff14;
   --color-dark: #000000;
+  --color-info: #7df9ff;
+  --color-info-border: color-mix(in srgb, var(--color-info) 52%, transparent);
+  --color-info-surface: color-mix(in srgb, var(--color-info) 24%, var(--color-surface));
+  --color-info-glow: color-mix(in srgb, var(--color-info) 32%, transparent);
+  --color-warn: #ffea00;
+  --color-warn-border: color-mix(in srgb, var(--color-warn) 48%, transparent);
+  --color-warn-surface: color-mix(in srgb, var(--color-warn) 22%, var(--color-surface));
+  --color-warn-glow: color-mix(in srgb, var(--color-warn) 30%, transparent);
+  --color-error: #ff4d6d;
+  --color-error-border: color-mix(in srgb, var(--color-error) 58%, transparent);
+  --color-error-surface: color-mix(in srgb, var(--color-error) 22%, var(--color-surface));
+  --color-error-glow: color-mix(in srgb, var(--color-error) 34%, transparent);
 }
 
 /* Matrix theme */
@@ -68,10 +113,25 @@ html[data-theme='matrix'] {
   --color-accent: #00ff00;
   --color-muted: #003300;
   --color-surface: #001100;
+  --color-surface-subtle: color-mix(in srgb, var(--color-surface) 82%, transparent);
+  --color-surface-raised: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  --color-surface-strong: color-mix(in srgb, var(--color-surface) 88%, black 12%);
   --color-inverse: #ffffff;
   --color-border: #003300;
   --color-terminal: #00ff00;
   --color-dark: #000000;
+  --color-info: #33ff99;
+  --color-info-border: color-mix(in srgb, var(--color-info) 56%, transparent);
+  --color-info-surface: color-mix(in srgb, var(--color-info) 24%, var(--color-surface));
+  --color-info-glow: color-mix(in srgb, var(--color-info) 30%, transparent);
+  --color-warn: #a7f432;
+  --color-warn-border: color-mix(in srgb, var(--color-warn) 52%, transparent);
+  --color-warn-surface: color-mix(in srgb, var(--color-warn) 22%, var(--color-surface));
+  --color-warn-glow: color-mix(in srgb, var(--color-warn) 30%, transparent);
+  --color-error: #ff5f5f;
+  --color-error-border: color-mix(in srgb, var(--color-error) 56%, transparent);
+  --color-error-surface: color-mix(in srgb, var(--color-error) 22%, var(--color-surface));
+  --color-error-glow: color-mix(in srgb, var(--color-error) 34%, transparent);
 
 }
 
@@ -81,7 +141,7 @@ html[data-theme='matrix'] {
 }
 
 *:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
+  outline: var(--focus-outline-width) solid var(--focus-outline-color);
   outline-offset: 2px;
 }
 

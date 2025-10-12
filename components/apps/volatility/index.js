@@ -23,17 +23,29 @@ const yarascan = Array.isArray(memoryFixture.yarascan)
   : [];
 const memoryDemo = memoryFixture;
 
-const heuristicColors = {
-  informational: 'border border-sky-500/50 bg-sky-950/60 text-sky-100',
-  suspicious: 'border border-amber-500/60 bg-amber-950/60 text-amber-100 shadow shadow-amber-900/20',
-  malicious: 'border border-rose-500/70 bg-rose-950/70 text-rose-100 shadow-lg shadow-rose-900/30',
+const severityStyles = {
+  informational: {
+    badge:
+      'border border-[color:var(--color-info-border)] bg-[color:var(--color-info-surface)] text-[color:var(--color-info)] shadow-[0_0_14px_var(--color-info-glow)]',
+    row: '',
+  },
+  suspicious: {
+    badge:
+      'border border-[color:var(--color-warn-border)] bg-[color:var(--color-warn-surface)] text-[color:var(--color-warn)] shadow-[0_0_16px_var(--color-warn-glow)]',
+    row: 'border-l-4 border-[color:var(--color-warn-border)] bg-[color:var(--color-warn-surface)] shadow-[inset_0_0_20px_var(--color-warn-glow)]',
+  },
+  malicious: {
+    badge:
+      'border border-[color:var(--color-error-border)] bg-[color:var(--color-error-surface)] text-[color:var(--color-error)] shadow-[0_0_18px_var(--color-error-glow)]',
+    row: 'border-l-4 border-[color:var(--color-error-border)] bg-[color:var(--color-error-surface)] shadow-[inset_0_0_22px_var(--color-error-glow)]',
+  },
 };
 
-const rowSeverityAccent = {
-  informational: '',
-  suspicious: 'border-l-4 border-amber-500/60 bg-amber-950/40',
-  malicious: 'border-l-4 border-rose-500/70 bg-rose-950/50',
-};
+const getSeverityBadgeClass = (severity) =>
+  severityStyles[severity]?.badge ||
+  'border border-[color:var(--color-border)] bg-kali-surface-subtle text-[color:var(--color-text)]';
+
+const getSeverityRowClass = (severity) => severityStyles[severity]?.row || '';
 
 const glossary = {
   pstree: {
@@ -89,40 +101,64 @@ const SortableTable = ({ columns, data, onRowClick, rowClassName }) => {
   };
 
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-800">
-      <table className="min-w-full table-auto text-xs text-gray-200">
-        <thead className="bg-gray-900/80 text-[10px] uppercase tracking-wide text-gray-400">
+    <div className="overflow-hidden rounded-lg border border-[color:var(--color-border)] bg-kali-surface-raised shadow-[inset_0_1px_0_color-mix(in_srgb,_var(--color-border)_45%,_transparent)]">
+      <table className="min-w-full table-auto text-xs text-[color:var(--color-text)]">
+        <thead className="bg-kali-surface-strong text-[10px] uppercase tracking-wide text-[color:color-mix(in_srgb,_var(--color-text)_62%,_transparent)]">
           <tr>
-            {columns.map((col) => (
-              <th
-                key={col.key}
-                onClick={() => toggleSort(col.key)}
-                className="cursor-pointer px-3 py-2 text-left transition hover:bg-gray-900"
-              >
-                {col.label}
-                {sort.key === col.key && (
-                  <span className="ml-1 text-[9px]">{sort.dir === 'asc' ? '▲' : '▼'}</span>
-                )}
-              </th>
-            ))}
+            {columns.map((col) => {
+              const isSorted = sort.key === col.key;
+              const sortDirection = isSorted ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none';
+              return (
+                <th key={col.key} scope="col" aria-sort={sortDirection} className="px-0">
+                  <button
+                    type="button"
+                    onClick={() => toggleSort(col.key)}
+                    className="flex w-full items-center justify-start gap-1 rounded-md px-3 py-2 text-left transition hover:bg-kali-surface-subtle focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-outline-color)]"
+                  >
+                    {col.label}
+                    {isSorted && (
+                      <span className="text-[9px]" aria-hidden="true">
+                        {sort.dir === 'asc' ? '▲' : '▼'}
+                      </span>
+                    )}
+                  </button>
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
-          {sorted.map((row, i) => (
-            <tr
-              key={i}
-              className={`border-b border-gray-900/60 ${
-                rowClassName ? rowClassName(row) : ''
-              } ${onRowClick ? 'cursor-pointer hover:bg-gray-900/80' : ''}`}
-              onClick={() => onRowClick && onRowClick(row)}
-            >
-              {columns.map((col) => (
-                <td key={col.key} className="px-3 py-2 whitespace-nowrap text-[11px]">
-                  {col.render ? col.render(row) : row[col.key]}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {sorted.map((row, i) => {
+            const interactive = Boolean(onRowClick);
+            return (
+              <tr
+                key={i}
+                className={`border-b border-[color:color-mix(in_srgb,_var(--color-border)_60%,_transparent)] ${
+                  rowClassName ? rowClassName(row) : ''
+                } ${
+                  interactive
+                    ? 'cursor-pointer hover:bg-kali-surface-subtle focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-outline-color)]'
+                    : ''
+                }`}
+                onClick={() => onRowClick && onRowClick(row)}
+                role={interactive ? 'button' : undefined}
+                tabIndex={interactive ? 0 : undefined}
+                onKeyDown={(event) => {
+                  if (!interactive) return;
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onRowClick(row);
+                  }
+                }}
+              >
+                {columns.map((col) => (
+                  <td key={col.key} className="whitespace-nowrap px-3 py-2 text-[11px]">
+                    {col.render ? col.render(row) : row[col.key]}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -164,7 +200,7 @@ const VolatilityApp = () => {
     <li>
       <button
         type="button"
-        className="text-left text-[11px] text-amber-200 transition hover:text-white"
+        className="text-left text-[11px] text-[color:var(--color-info)] transition hover:text-[color:var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-outline-color)]"
         onClick={() => {
           setSelectedPid(node.pid);
           setFinding(glossary.pstree);
@@ -173,7 +209,7 @@ const VolatilityApp = () => {
         {node.name} ({node.pid})
       </button>
       {node.children && node.children.length > 0 && (
-        <ul className="ml-4 space-y-1 border-l border-gray-700 pl-3">
+        <ul className="ml-4 space-y-1 border-l border-[color:var(--color-border)] pl-3">
           {node.children.map((child) => (
             <TreeNode key={child.pid} node={child} />
           ))}
@@ -193,24 +229,24 @@ const VolatilityApp = () => {
   ];
 
   return (
-    <div className="flex h-full w-full flex-col gap-4 rounded-2xl border border-gray-800 bg-gray-950/80 text-white shadow-xl shadow-black/40">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-800 bg-black/40 px-4 py-3">
+    <div className="flex h-full w-full flex-col gap-4 rounded-2xl border border-[color:var(--color-border)] bg-kali-surface-strong text-[color:var(--color-text)] shadow-xl shadow-black/40">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--color-border)] bg-kali-surface-raised px-4 py-3">
         <div>
-          <h1 className="text-lg font-semibold uppercase tracking-wide text-gray-100">
+          <h1 className="text-lg font-semibold uppercase tracking-wide text-[color:var(--color-text)]">
             Volatility analyzer
           </h1>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-[color:color-mix(in_srgb,_var(--color-text)_68%,_transparent)]">
             Review simulated plugin output to triage suspicious activity.
           </p>
         </div>
         <button
           onClick={analyze}
           disabled={loading}
-          className="inline-flex items-center gap-2 rounded-full border border-emerald-500/60 bg-emerald-900/60 px-4 py-2 text-sm font-semibold text-emerald-100 transition hover:border-emerald-400 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-full border border-[color:var(--color-info-border)] bg-[color:var(--color-info-surface)] px-4 py-2 text-sm font-semibold text-[color:var(--color-info)] shadow-[0_0_18px_var(--color-info-glow)] transition hover:border-[color:var(--color-info)] hover:text-[color:var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-outline-color)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? (
             <>
-              <span className="h-2 w-2 animate-ping rounded-full bg-emerald-200" aria-hidden="true" />
+              <span className="h-2 w-2 animate-ping rounded-full bg-[color:var(--color-info)]" aria-hidden="true" />
               Analyzing...
             </>
           ) : (
@@ -226,36 +262,36 @@ const VolatilityApp = () => {
       </div>
       <div className="flex flex-1 flex-col gap-4 px-4 pb-4">
         <div className="flex flex-col gap-4 lg:flex-row">
-          <div className="flex-1 overflow-hidden rounded-xl border border-gray-800 bg-black/40">
-            <div className="flex flex-wrap items-center gap-2 border-b border-gray-800 bg-gray-900/60 px-3 py-2 text-[11px] uppercase tracking-wide text-gray-300">
+          <div className="flex-1 overflow-hidden rounded-xl border border-[color:var(--color-border)] bg-kali-surface-raised">
+            <div className="flex flex-wrap items-center gap-2 border-b border-[color:var(--color-border)] bg-kali-surface-strong px-3 py-2 text-[11px] uppercase tracking-wide text-[color:color-mix(in_srgb,_var(--color-text)_60%,_transparent)]">
               {tabs.map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`rounded-full px-3 py-1 transition ${
+                  className={`rounded-full px-3 py-1 text-[11px] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-outline-color)] ${
                     activeTab === tab
-                      ? 'bg-amber-500/20 text-amber-200 ring-1 ring-amber-400/70'
-                      : 'bg-gray-900 text-gray-400 hover:text-gray-200'
+                      ? 'bg-[color:var(--color-info-surface)] text-[color:var(--color-info)] ring-1 ring-[color:var(--color-info-border)] shadow-[0_0_12px_var(--color-info-glow)]'
+                      : 'bg-kali-surface-subtle text-[color:color-mix(in_srgb,_var(--color-text)_60%,_transparent)] hover:text-[color:var(--color-text)]'
                   }`}
                 >
                   {tab}
                 </button>
               ))}
             </div>
-            <div className="flex-1 overflow-auto p-3 text-xs text-gray-200">
+            <div className="flex-1 overflow-auto p-3 text-xs text-[color:var(--color-text)]">
               {activeTab === 'pstree' && (
                 <div className="space-y-3">
-                  <p className="text-[11px] text-gray-400">{glossary.pstree.description}</p>
+                  <p className="text-[11px] text-[color:color-mix(in_srgb,_var(--color-text)_62%,_transparent)]">{glossary.pstree.description}</p>
                   <div className="flex flex-col gap-4 xl:flex-row">
-                    <ul className="space-y-2 rounded-lg border border-gray-800 bg-gray-900/60 p-3 text-xs">
+                    <ul className="space-y-2 rounded-lg border border-[color:var(--color-border)] bg-kali-surface-subtle p-3 text-xs">
                       {pstree.map((node) => (
                         <TreeNode key={node.pid} node={node} />
                       ))}
                     </ul>
                     <div className="flex-1">
                       {selectedPid ? (
-                        <div className="space-y-2 rounded-lg border border-gray-800 bg-gray-900/60 p-3">
-                          <h3 className="text-sm font-semibold text-white">
+                        <div className="space-y-2 rounded-lg border border-[color:var(--color-border)] bg-kali-surface-subtle p-3">
+                          <h3 className="text-sm font-semibold text-[color:var(--color-text)]">
                             Modules for PID {selectedPid}
                           </h3>
                           <SortableTable
@@ -268,7 +304,7 @@ const VolatilityApp = () => {
                           />
                         </div>
                       ) : (
-                        <p className="rounded-lg border border-dashed border-gray-700 bg-gray-900/40 p-4 text-[11px] text-gray-400">
+                        <p className="rounded-lg border border-dashed border-[color:var(--color-border)] bg-kali-surface-subtle p-4 text-[11px] text-[color:color-mix(in_srgb,_var(--color-text)_62%,_transparent)]">
                           Select a process to view modules.
                         </p>
                       )}
@@ -278,7 +314,7 @@ const VolatilityApp = () => {
               )}
               {activeTab === 'pslist' && (
                 <div className="space-y-3">
-                  <p className="text-[11px] text-gray-400">{glossary.pslist.description}</p>
+                  <p className="text-[11px] text-[color:color-mix(in_srgb,_var(--color-text)_62%,_transparent)]">{glossary.pslist.description}</p>
                   <SortableTable
                     columns={pslistColumns}
                     data={pslist}
@@ -288,22 +324,22 @@ const VolatilityApp = () => {
               )}
               {activeTab === 'netscan' && (
                 <div className="space-y-3">
-                  <p className="text-[11px] text-gray-400">{glossary.netscan.description}</p>
+                  <p className="text-[11px] text-[color:color-mix(in_srgb,_var(--color-text)_62%,_transparent)]">{glossary.netscan.description}</p>
                   <SortableTable
                     columns={netscanColumns}
                     data={netscan}
                     onRowClick={() => setFinding(glossary.netscan)}
                     rowClassName={(row) =>
-                      rowSeverityAccent[
+                      getSeverityRowClass(
                         row.state === 'ESTABLISHED' ? 'suspicious' : 'informational'
-                      ]
+                      )
                     }
                   />
                 </div>
               )}
               {activeTab === 'malfind' && (
                 <div className="space-y-3">
-                  <p className="text-[11px] text-gray-400">{glossary.malfind.description}</p>
+                  <p className="text-[11px] text-[color:color-mix(in_srgb,_var(--color-text)_62%,_transparent)]">{glossary.malfind.description}</p>
                   <SortableTable
                     columns={[
                       { key: 'pid', label: 'PID' },
@@ -318,14 +354,14 @@ const VolatilityApp = () => {
                       const severity = description.includes('inject')
                         ? 'malicious'
                         : 'suspicious';
-                      return rowSeverityAccent[severity];
+                      return getSeverityRowClass(severity);
                     }}
                   />
                 </div>
               )}
               {activeTab === 'yarascan' && (
                 <div className="space-y-3">
-                  <p className="text-[11px] text-gray-400">{glossary.yara.description}</p>
+                  <p className="text-[11px] text-[color:color-mix(in_srgb,_var(--color-text)_62%,_transparent)]">{glossary.yara.description}</p>
                   <SortableTable
                     columns={[
                       { key: 'pid', label: 'PID' },
@@ -336,8 +372,8 @@ const VolatilityApp = () => {
                         label: 'Heuristic',
                         render: (row) => (
                           <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${
-                              heuristicColors[row.heuristic] || 'bg-gray-800 text-gray-200'
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize shadow transition ${
+                              getSeverityBadgeClass(row.heuristic)
                             }`}
                           >
                             {row.heuristic}
@@ -347,7 +383,7 @@ const VolatilityApp = () => {
                     ]}
                     data={yarascan}
                     onRowClick={() => setFinding(glossary.yara)}
-                    rowClassName={(row) => rowSeverityAccent[row.heuristic]}
+                    rowClassName={(row) => getSeverityRowClass(row.heuristic)}
                   />
                 </div>
               )}
@@ -356,20 +392,20 @@ const VolatilityApp = () => {
             </div>
           </div>
           {finding && (
-            <aside className="w-full rounded-xl border border-gray-800 bg-gray-900/80 p-4 text-xs shadow-inner lg:w-72">
-              <h3 className="text-sm font-semibold text-white">Explain this finding</h3>
-              <p className="mt-2 text-[11px] text-gray-300">{finding.description}</p>
+            <aside className="w-full rounded-xl border border-[color:var(--color-border)] bg-kali-surface-raised p-4 text-xs shadow-inner lg:w-72">
+              <h3 className="text-sm font-semibold text-[color:var(--color-text)]">Explain this finding</h3>
+              <p className="mt-2 text-[11px] text-[color:color-mix(in_srgb,_var(--color-text)_70%,_transparent)]">{finding.description}</p>
               <a
                 href={finding.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 inline-flex items-center gap-1 text-[11px] text-amber-300 underline decoration-dotted underline-offset-2"
+                className="mt-3 inline-flex items-center gap-1 text-[11px] text-[color:var(--color-info)] underline decoration-dotted underline-offset-2 transition hover:text-[color:var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-outline-color)]"
               >
                 Learn more <span aria-hidden="true">↗</span>
               </a>
               <button
                 onClick={() => setFinding(null)}
-                className="mt-4 inline-flex items-center gap-1 text-[11px] text-rose-300 hover:text-rose-200"
+                className="mt-4 inline-flex items-center gap-1 text-[11px] text-[color:var(--color-error)] transition hover:text-[color:var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-outline-color)]"
               >
                 <span aria-hidden="true">✕</span>
                 Close
@@ -379,11 +415,11 @@ const VolatilityApp = () => {
         </div>
       </div>
       {output && (
-        <div className="mx-4 mb-4 overflow-auto rounded-xl border border-gray-800 bg-black/70 text-xs font-mono text-gray-200 shadow-inner">
+        <div className="mx-4 mb-4 overflow-auto rounded-xl border border-[color:var(--color-border)] bg-kali-surface-raised text-xs font-mono text-[color:var(--color-text)] shadow-inner">
           {output.split('\n').map((line, i) => (
             <div
               key={i}
-              className={`px-3 py-1 ${i % 2 ? 'bg-gray-900/80' : 'bg-gray-900/40'}`}
+              className={`px-3 py-1 ${i % 2 ? 'bg-kali-surface-strong' : 'bg-kali-surface-subtle'}`}
             >
               {line || '\u00A0'}
             </div>
