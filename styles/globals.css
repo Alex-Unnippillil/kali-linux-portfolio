@@ -17,6 +17,10 @@
   --color-inverse: #000000; /* inverse of text */
   --color-border: var(--kali-border); /* subtle borders */
   --color-terminal: var(--kali-terminal-green); /* terminal green */
+  --color-success: var(--kali-terminal-green); /* success status */
+  --color-info: var(--color-primary); /* informational status */
+  --color-warning: #f59e0b; /* warning status */
+  --color-danger: #ef4444; /* critical status */
   --color-dark: #09121c; /* card back */
   --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
