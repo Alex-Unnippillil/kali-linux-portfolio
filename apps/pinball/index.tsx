@@ -365,17 +365,18 @@ export default function Pinball() {
 
   return (
     <div className="flex flex-col items-center space-y-4">
-      <div className="w-full max-w-xl rounded-lg border border-slate-700/60 bg-slate-900/60 p-4 text-xs text-slate-200 shadow-inner">
+      <div className="w-full max-w-3xl rounded-lg border border-slate-700/60 bg-slate-900/60 p-4 text-xs text-slate-200 shadow-inner">
         <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-2">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
               Flippers
             </h3>
-            <label className="flex flex-col gap-2">
+            <label className="flex flex-col gap-2" htmlFor="pinball-flipper-strength">
               <span className="text-[11px] uppercase tracking-wide text-slate-400">
                 Strength
               </span>
               <input
+                id="pinball-flipper-strength"
                 type="range"
                 min="0.5"
                 max="2"
@@ -385,6 +386,7 @@ export default function Pinball() {
                   setFlipperPower(parseFloat(event.target.value))
                 }
                 className="w-full accent-amber-400"
+                aria-label="Flipper strength"
               />
             </label>
           </div>
@@ -392,11 +394,12 @@ export default function Pinball() {
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
               Bounce
             </h3>
-            <label className="flex flex-col gap-2">
+            <label className="flex flex-col gap-2" htmlFor="pinball-bounce">
               <span className="text-[11px] uppercase tracking-wide text-slate-400">
                 Elasticity
               </span>
               <input
+                id="pinball-bounce"
                 type="range"
                 min="0"
                 max="1"
@@ -404,6 +407,7 @@ export default function Pinball() {
                 value={bounce}
                 onChange={(event) => setBounce(parseFloat(event.target.value))}
                 className="w-full accent-sky-400"
+                aria-label="Table elasticity"
               />
             </label>
           </div>
@@ -411,11 +415,12 @@ export default function Pinball() {
             <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
               Launch
             </h3>
-            <label className="flex flex-col gap-2">
+            <label className="flex flex-col gap-2" htmlFor="pinball-launch-power">
               <span className="text-[11px] uppercase tracking-wide text-slate-400">
                 Power
               </span>
               <input
+                id="pinball-launch-power"
                 type="range"
                 min="0.4"
                 max="1.4"
@@ -425,19 +430,21 @@ export default function Pinball() {
                   setLaunchPower(parseFloat(event.target.value))
                 }
                 className="w-full accent-emerald-400"
+                aria-label="Launch power"
               />
             </label>
           </div>
         </div>
         <div className="mt-4 flex flex-col gap-3 text-xs text-slate-300 sm:flex-row sm:items-center sm:justify-between">
-          <label className="flex items-center gap-2">
-            <span className="text-[11px] uppercase tracking-wide text-slate-400">
-              Theme
-            </span>
-            <select
-              value={theme}
-              onChange={(event) =>
-                setTheme(event.target.value as keyof typeof themes)
+            <label className="flex items-center gap-2" htmlFor="pinball-theme">
+              <span className="text-[11px] uppercase tracking-wide text-slate-400">
+                Theme
+              </span>
+              <select
+                id="pinball-theme"
+                value={theme}
+                onChange={(event) =>
+                  setTheme(event.target.value as keyof typeof themes)
               }
               className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs capitalize text-slate-100 shadow"
             >
@@ -453,53 +460,70 @@ export default function Pinball() {
           </span>
         </div>
       </div>
-      <div className="relative">
+      <div className="w-full max-w-3xl rounded-lg border border-slate-700/60 bg-slate-950/80 px-4 py-4 text-slate-100 shadow-lg">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-wrap items-center gap-x-8 gap-y-3 font-mono">
+            <div className="flex items-baseline gap-2">
+              <span className="text-[11px] uppercase tracking-wide text-slate-400">Score</span>
+              <span className="text-2xl sm:text-3xl">{formatScore(score)}</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-[11px] uppercase tracking-wide text-slate-400">High</span>
+              <span className="text-lg sm:text-xl">{formatScore(highScore)}</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-[11px] uppercase tracking-wide text-slate-400">Balls</span>
+              <span className="text-base sm:text-lg">{ballsRemaining}</span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <div className="game-overlay-anchor">{overlay}</div>
+            <button
+              type="button"
+              onClick={handleLaunch}
+              disabled={!ballLocked || ballsRemaining <= 0 || paused || tilt || gameOver}
+              className="rounded-full bg-emerald-500/90 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-950 shadow transition hover:bg-emerald-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-200 disabled:cursor-not-allowed disabled:bg-slate-700/70 disabled:text-slate-300"
+            >
+              Launch Ball
+            </button>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-wide text-slate-300">
+          <span className="font-semibold text-slate-200">Controls:</span>
+          <span className="rounded-full bg-slate-800/80 px-3 py-1 text-slate-100">Arrow keys: flippers</span>
+          <span className="rounded-full bg-slate-800/80 px-3 py-1 text-slate-100">Space: launch</span>
+          <span className="rounded-full bg-slate-800/80 px-3 py-1 text-slate-100">N key / RB: nudge</span>
+        </div>
+      </div>
+      <div className="relative w-full max-w-3xl overflow-hidden rounded-xl border border-slate-700/70 bg-slate-950/90 shadow-xl">
         <canvas
           ref={canvasRef}
           width={constants.WIDTH}
           height={constants.HEIGHT}
-          className="border"
+          className="block h-auto w-full max-w-full"
+          aria-label="Pinball playfield"
         />
-        <div className="absolute top-3 left-3 text-white text-xs font-mono bg-black/40 px-2 py-1 rounded">
-          Balls: {ballsRemaining}
-        </div>
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 text-white font-mono text-2xl">
-          {formatScore(score)}
-        </div>
-        <div className="absolute top-12 left-1/2 -translate-x-1/2 text-white font-mono text-xs tracking-widest">
-          HI {formatScore(highScore)}
-        </div>
-        <div className="absolute top-3 right-3 flex flex-col items-end space-y-2">
-          <div>{overlay}</div>
-          <button
-            type="button"
-            onClick={handleLaunch}
-            disabled={!ballLocked || ballsRemaining <= 0 || paused || tilt || gameOver}
-            className="rounded bg-black/70 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white transition disabled:opacity-40 hover:bg-black/80"
-          >
-            Launch Ball
-          </button>
-        </div>
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center text-center text-white">
-          <div className="rounded bg-black/70 px-3 py-2 text-sm shadow-lg">
-            {statusMessage}
-          </div>
-          {!gameOver && !tilt && (
-            <div className="mt-2 rounded bg-black/40 px-2 py-1 text-xs uppercase tracking-wide">
-              Space to launch • N / RB to nudge
-            </div>
-          )}
-        </div>
         {tilt && (
           <div className="absolute inset-0 flex items-center justify-center bg-red-700/80">
-            <div className="text-white font-bold text-4xl px-6 py-3 border-4 border-white rounded">
+            <div className="rounded border-4 border-white px-6 py-3 text-4xl font-bold text-white">
               TILT
             </div>
           </div>
         )}
       </div>
+      <div className="w-full max-w-3xl space-y-2 text-center">
+        <div className="rounded-lg border border-slate-700/60 bg-slate-900/80 px-4 py-3 text-sm text-slate-100 shadow">
+          {statusMessage}
+        </div>
+        {!gameOver && !tilt && (
+          <div className="flex flex-wrap items-center justify-center gap-2 text-[11px] uppercase tracking-wide text-slate-300">
+            <span className="rounded-full bg-slate-800/80 px-3 py-1 text-slate-100">Press Space to launch</span>
+            <span className="rounded-full bg-slate-800/80 px-3 py-1 text-slate-100">Tap N key or RB to nudge</span>
+          </div>
+        )}
+      </div>
       <div
-        className={`w-full max-w-xl rounded-lg border px-4 py-3 transition-colors ${bannerStatus.toneClass}`}
+        className={`w-full max-w-3xl rounded-lg border px-4 py-3 transition-colors ${bannerStatus.toneClass}`}
         data-testid="pinball-status-banner"
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
