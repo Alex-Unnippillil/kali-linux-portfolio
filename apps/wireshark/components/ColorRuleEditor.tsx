@@ -72,20 +72,21 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
   const triggerImport = () => fileRef.current?.click();
 
   return (
-    <div className="flex flex-col space-y-1">
+    <div className="flex flex-col space-y-1 text-[11px] text-kali-terminal">
       {rules.map((rule, i) => (
         <div key={i} className="flex space-x-1">
           <input
             value={rule.expression}
             onChange={(e) => handleRuleChange(i, 'expression', e.target.value)}
             placeholder="Filter expression"
-            className="px-1 py-0.5 bg-gray-800 rounded text-white text-xs"
+            aria-label="Filter expression"
+            className="w-32 rounded border border-kali-border/40 bg-kali-surface/90 px-2 py-1 text-[11px] text-kali-terminal placeholder:text-kali-terminal/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-primary/70"
           />
           <select
             value={rule.color}
             onChange={(e) => handleRuleChange(i, 'color', e.target.value)}
             aria-label="Color"
-            className="px-1 py-0.5 bg-gray-800 rounded text-white text-xs"
+            className="rounded border border-kali-border/40 bg-kali-surface/90 px-2 py-1 text-[11px] text-kali-terminal focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-primary/70"
           >
             <option value="">Select color</option>
             {colorDefinitions.map((c) => (
@@ -97,7 +98,7 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
           <button
             onClick={() => handleRemove(i)}
             aria-label="Remove rule"
-            className="px-1 py-0.5 bg-gray-700 rounded text-xs"
+            className="rounded border border-kali-border/40 bg-rose-500/10 px-2 py-1 text-[11px] text-rose-200 transition hover:bg-rose-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400/60"
             type="button"
           >
             ✕
@@ -108,21 +109,21 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
         <button
           onClick={handleAdd}
           type="button"
-          className="px-1 py-0.5 bg-gray-700 rounded text-xs"
+          className="rounded border border-kali-border/40 bg-kali-primary/20 px-2 py-1 text-[11px] font-semibold text-kali-terminal transition hover:bg-kali-primary/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-primary/70"
         >
           Add rule
         </button>
         <button
           onClick={triggerImport}
           type="button"
-          className="px-1 py-0.5 bg-gray-700 rounded text-xs"
+          className="rounded border border-kali-border/40 bg-kali-primary/20 px-2 py-1 text-[11px] font-semibold text-kali-terminal transition hover:bg-kali-primary/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-primary/70"
         >
           Import JSON
         </button>
         <button
           onClick={handleExport}
           type="button"
-          className="px-1 py-0.5 bg-gray-700 rounded text-xs"
+          className="rounded border border-kali-border/40 bg-kali-primary/20 px-2 py-1 text-[11px] font-semibold text-kali-terminal transition hover:bg-kali-primary/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-primary/70"
         >
           Export JSON
         </button>
