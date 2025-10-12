@@ -167,17 +167,35 @@ export const generateWordlist = (pattern) => {
   return results;
 };
 
-const Gauge = ({ value }) => (
-  <div className="w-48">
-    <div className="text-sm mb-1">GPU Usage: {value}%</div>
-    <div className="w-full h-4 bg-gray-700 rounded">
-      <div
-        className="h-4 bg-green-500 rounded"
-        style={{ width: `${value}%` }}
-      />
+const Gauge = ({ value }) => {
+  const usageState = value >= 90 ? 'danger' : value >= 70 ? 'warning' : 'info';
+  const usageColor =
+    {
+      danger: 'bg-kali-danger',
+      warning: 'bg-kali-warning',
+      info: 'bg-kali-info',
+    }[usageState] || 'bg-kali-info';
+
+  return (
+    <div
+      className="w-48"
+      role="meter"
+      aria-label="GPU utilization"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={value}
+      aria-valuetext={`${value}%`}
+    >
+      <div className="text-sm mb-1">GPU Usage: {value}%</div>
+      <div className="w-full h-4 rounded bg-kali-surface/80 border border-kali-border/40 overflow-hidden">
+        <div
+          className={`h-full ${usageColor} transition-[width] duration-500 ease-out`}
+          style={{ width: `${Math.min(Math.max(value, 0), 100)}%` }}
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const ProgressGauge = ({ progress, info, reduceMotion }) => {
   const hashRates = Array.isArray(info.hashRate)
@@ -188,6 +206,19 @@ const ProgressGauge = ({ progress, info, reduceMotion }) => {
     ? info.recovered
     : [info.recovered];
   const [index, setIndex] = useState(0);
+  const targetProgressValue = Number(info?.progress);
+  const targetProgress =
+    Number.isFinite(targetProgressValue) && targetProgressValue > 0
+      ? targetProgressValue
+      : 100;
+  const normalizedProgress = Math.min(
+    100,
+    Math.round((Math.max(progress, 0) / targetProgress) * 100)
+  );
+  const progressState = normalizedProgress >= 100 ? 'success' : 'info';
+  const progressColor =
+    progressState === 'success' ? 'bg-kali-success' : 'bg-kali-info';
+  const statusLabel = progressState === 'success' ? 'Completed' : 'Running';
 
   useEffect(() => {
     if (reduceMotion || hashRates.length === 1) {
@@ -209,17 +240,22 @@ const ProgressGauge = ({ progress, info, reduceMotion }) => {
       aria-label="Hash cracking progress"
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-valuenow={progress}
-      aria-valuetext={`${progress}%`}
+      aria-valuenow={normalizedProgress}
+      aria-valuetext={`${normalizedProgress}%`}
     >
-      <div className="text-sm mb-1">Progress: {progress}%</div>
-      <div className="w-full h-4 bg-gray-700 rounded">
+      <div className="text-sm mb-1">Progress: {normalizedProgress}%</div>
+      <div className="w-full h-4 rounded bg-kali-surface/80 border border-kali-border/40 overflow-hidden">
         <div
-          className="h-4 bg-blue-600 rounded"
-          style={{ width: `${progress}%` }}
+          className={`h-full ${progressColor} transition-[width] duration-500 ease-out`}
+          style={{ width: `${normalizedProgress}%` }}
         />
       </div>
-      <div role="status" aria-live="polite" className="text-sm mt-2">
+      <div
+        role="status"
+        aria-live="polite"
+        className="text-sm mt-2 rounded bg-kali-surface/80 border border-kali-border/40 p-2"
+      >
+        <div>Status: {statusLabel}</div>
         <div>Attempts/sec: {hashRates[index]}</div>
         <div>ETA: {etas[index]}</div>
         <div>Recovered: {recovered[index]}</div>
@@ -512,7 +548,7 @@ function HashcatApp() {
           <option value="best64">best64</option>
           <option value="quick">quick</option>
         </select>
-        <pre className="bg-black p-2 text-xs mt-2 overflow-auto h-24">
+        <pre className="bg-kali-surface border border-kali-border p-2 text-xs mt-2 overflow-auto h-24 rounded font-mono text-kali-terminal">
           {rulePreview || '(no rules)'}
         </pre>
       </div>
@@ -590,7 +626,7 @@ function HashcatApp() {
         <div className="text-sm">Demo Command:</div>
         <div className="flex items-center">
           <code
-            className="bg-black px-2 py-1 text-xs"
+            className="bg-kali-surface border border-kali-border px-2 py-1 text-xs rounded font-mono text-kali-terminal"
             data-testid="demo-command"
           >
             {`hashcat -m ${hashType} -a ${attackMode} ${
@@ -620,7 +656,7 @@ function HashcatApp() {
       </div>
       <div className="mt-4 w-full max-w-md">
         <div className="text-sm">Sample Output:</div>
-        <pre className="bg-black p-2 text-xs overflow-auto">
+        <pre className="bg-kali-surface border border-kali-border p-2 text-xs overflow-auto rounded font-mono text-kali-terminal">
           hashcat (demo) starting
 
           5f4dcc3b5aa765d61d8327deb882cf99:password
@@ -645,7 +681,7 @@ function HashcatApp() {
         reduceMotion={prefersReducedMotion}
       />
       {result && <div>Result: {result}</div>}
-      <pre className="bg-black text-green-400 p-2 rounded text-xs w-full max-w-md overflow-x-auto mt-4">
+      <pre className="bg-kali-surface border border-kali-border text-kali-terminal p-2 rounded text-xs w-full max-w-md overflow-x-auto mt-4 font-mono">
         {sampleOutput}
       </pre>
       <div className="text-xs mt-4">
