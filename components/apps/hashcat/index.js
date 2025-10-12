@@ -170,9 +170,9 @@ export const generateWordlist = (pattern) => {
 const Gauge = ({ value }) => (
   <div className="w-48">
     <div className="text-sm mb-1">GPU Usage: {value}%</div>
-    <div className="w-full h-4 bg-gray-700 rounded">
+    <div className="w-full h-4 rounded border border-kali-border bg-kali-dark">
       <div
-        className="h-4 bg-green-500 rounded"
+        className="h-4 rounded bg-kali-success"
         style={{ width: `${value}%` }}
       />
     </div>
@@ -213,9 +213,9 @@ const ProgressGauge = ({ progress, info, reduceMotion }) => {
       aria-valuetext={`${progress}%`}
     >
       <div className="text-sm mb-1">Progress: {progress}%</div>
-      <div className="w-full h-4 bg-gray-700 rounded">
+      <div className="w-full h-4 rounded border border-kali-border bg-kali-dark">
         <div
-          className="h-4 bg-blue-600 rounded"
+          className="h-4 rounded bg-kali-info"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -512,7 +512,7 @@ function HashcatApp() {
           <option value="best64">best64</option>
           <option value="quick">quick</option>
         </select>
-        <pre className="bg-black p-2 text-xs mt-2 overflow-auto h-24">
+        <pre className="bg-kali-surface p-2 text-xs mt-2 overflow-auto h-24 rounded border border-kali-border font-mono text-white">
           {rulePreview || '(no rules)'}
         </pre>
       </div>
@@ -543,8 +543,13 @@ function HashcatApp() {
         </select>
         <div className="text-xs mt-1">
           Wordlist selection is simulated. Common files live under{' '}
-          <code>/usr/share/wordlists/</code> e.g.{' '}
-          <code>/usr/share/wordlists/rockyou.txt</code>. Learn more at{' '}
+          <code className="inline-flex items-center rounded border border-kali-border bg-kali-dark px-1.5 py-0.5 font-mono text-xs text-white">
+            /usr/share/wordlists/
+          </code>{' '}e.g.{' '}
+          <code className="inline-flex items-center rounded border border-kali-border bg-kali-dark px-1.5 py-0.5 font-mono text-xs text-white">
+            /usr/share/wordlists/rockyou.txt
+          </code>
+          . Learn more at{' '}
           <a
             className="underline"
             href="https://hashcat.net/wiki/doku.php?id=wordlists"
@@ -556,8 +561,18 @@ function HashcatApp() {
           .
         </div>
         <div className="text-xs mt-1">
-          Sample entries: <code>password123</code>, <code>qwerty</code>,{' '}
-          <code>letmein</code>
+          Sample entries:{' '}
+          <code className="inline-flex items-center rounded border border-kali-border bg-kali-dark px-1.5 py-0.5 font-mono text-xs text-white">
+            password123
+          </code>
+          ,{' '}
+          <code className="inline-flex items-center rounded border border-kali-border bg-kali-dark px-1.5 py-0.5 font-mono text-xs text-white">
+            qwerty
+          </code>
+          ,{' '}
+          <code className="inline-flex items-center rounded border border-kali-border bg-kali-dark px-1.5 py-0.5 font-mono text-xs text-white">
+            letmein
+          </code>
         </div>
       </div>
       <div>
@@ -590,7 +605,7 @@ function HashcatApp() {
         <div className="text-sm">Demo Command:</div>
         <div className="flex items-center">
           <code
-            className="bg-black px-2 py-1 text-xs"
+            className="rounded border border-kali-border bg-kali-surface px-2 py-1 text-xs text-white font-mono"
             data-testid="demo-command"
           >
             {`hashcat -m ${hashType} -a ${attackMode} ${
@@ -620,7 +635,7 @@ function HashcatApp() {
       </div>
       <div className="mt-4 w-full max-w-md">
         <div className="text-sm">Sample Output:</div>
-        <pre className="bg-black p-2 text-xs overflow-auto">
+        <pre className="bg-kali-surface p-2 text-xs overflow-auto rounded border border-kali-border text-white font-mono">
           hashcat (demo) starting
 
           5f4dcc3b5aa765d61d8327deb882cf99:password
@@ -645,7 +660,7 @@ function HashcatApp() {
         reduceMotion={prefersReducedMotion}
       />
       {result && <div>Result: {result}</div>}
-      <pre className="bg-black text-green-400 p-2 rounded text-xs w-full max-w-md overflow-x-auto mt-4">
+      <pre className="bg-kali-dark text-kali-terminal p-2 rounded text-xs w-full max-w-md overflow-x-auto mt-4 border border-kali-border font-mono">
         {sampleOutput}
       </pre>
       <div className="text-xs mt-4">
