@@ -38,6 +38,8 @@
   --kali-terminal-green: #45ff9a;
   --kali-terminal-text: #f8fafc;
   --kali-border: rgba(15, 148, 210, 0.18);
+  --kali-success: var(--kali-terminal-green);
+  --kali-error: #ff5d6c;
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
@@ -104,6 +106,8 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --kali-success: #00ff00;
+  --kali-error: #ff0033;
 }
 
 /* Dyslexia-friendly fonts */
