@@ -101,25 +101,32 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
     if (!entropy)
       return {
         label: 'None',
-        barClass: 'bg-gray-600',
-        badgeClass: 'bg-gray-900/80 text-gray-300 border border-gray-600',
+        barClass: 'bg-[color-mix(in_srgb,var(--color-surface)_75%,transparent)]',
+        badgeClass:
+          'border border-white/10 bg-[color-mix(in_srgb,var(--color-surface)_85%,transparent)] text-white/60',
       };
     if (entropy < 40)
       return {
         label: 'Weak',
-        barClass: 'bg-red-500',
-        badgeClass: 'bg-red-500/20 text-red-300 border border-red-400/60',
+        barClass:
+          'bg-[var(--color-warning)] shadow-[0_0_14px_color-mix(in_srgb,var(--color-warning)_45%,transparent)]',
+        badgeClass:
+          'border border-[color-mix(in_srgb,var(--color-warning)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-warning)_12%,var(--color-surface))] text-[var(--color-warning)]',
       };
     if (entropy < 80)
       return {
-        label: 'Medium',
-        barClass: 'bg-yellow-400',
-        badgeClass: 'bg-yellow-500/20 text-yellow-200 border border-yellow-400/60',
+        label: 'Guarded',
+        barClass:
+          'bg-[color-mix(in_srgb,var(--color-warning)_35%,var(--color-success))] shadow-[0_0_16px_color-mix(in_srgb,var(--color-success)_35%,transparent)]',
+        badgeClass:
+          'border border-[color-mix(in_srgb,var(--color-success)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-success)_15%,var(--color-surface))] text-[color-mix(in_srgb,var(--color-success)_80%,var(--color-warning)_20%)]',
       };
     return {
       label: 'Strong',
-      barClass: 'bg-green-500',
-      badgeClass: 'bg-green-500/20 text-green-200 border border-green-400/60',
+      barClass:
+        'bg-[var(--color-success)] shadow-[0_0_18px_color-mix(in_srgb,var(--color-success)_55%,transparent)]',
+      badgeClass:
+        'border border-[color-mix(in_srgb,var(--color-success)_65%,transparent)] bg-[color-mix(in_srgb,var(--color-success)_18%,var(--color-surface))] text-[var(--color-success)]',
     };
   };
 
@@ -133,18 +140,18 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
   };
 
   const toggleLabelClasses = (active: boolean) =>
-    `flex items-center gap-3 rounded-full border px-3 py-2 text-sm font-medium transition focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2 focus-within:ring-offset-gray-900 ${
+    `flex items-center gap-3 rounded-full border px-3 py-2 text-sm font-medium transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-kali-focus ${
       active
-        ? 'bg-blue-600/20 border-blue-400/70 text-blue-100 shadow-lg shadow-blue-900/30'
-        : 'bg-gray-800/80 border-gray-700 text-gray-200 hover:bg-gray-700'
+        ? 'border-[color-mix(in_srgb,var(--color-control-accent)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-control-accent)_18%,var(--color-surface))] text-white shadow-[0_0_18px_color-mix(in_srgb,var(--color-control-accent)_35%,transparent)]'
+        : 'border-white/10 bg-[color-mix(in_srgb,var(--color-surface)_80%,transparent)] text-white/85 hover:border-[color-mix(in_srgb,var(--color-control-accent)_45%,transparent)] hover:text-white'
     }`;
 
   const lengthLabelId = 'password-length-label';
 
   return (
-    <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-5">
+    <div className="h-full w-full bg-[var(--color-surface)] text-kali-text p-4 flex flex-col space-y-5">
       <div className="space-y-3">
-        <div className="flex items-center justify-between text-xs uppercase tracking-wide text-gray-400">
+        <div className="flex items-center justify-between text-xs uppercase tracking-wide text-white/60">
           <span id={lengthLabelId}>Password length</span>
           <span className="font-mono text-lg text-white">{length}</span>
         </div>
@@ -155,11 +162,11 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
           max={MAX_LENGTH}
           value={length}
           onChange={(e) => handleLengthChange(parseInt(e.target.value, 10))}
-          className="w-full accent-blue-500"
+          className="kali-slider w-full accent-[var(--color-control-accent)]"
           aria-labelledby={lengthLabelId}
         />
         <div className="flex items-center gap-3">
-          <label id="manual-length-label" htmlFor="length" className="text-sm text-gray-300">
+          <label id="manual-length-label" htmlFor="length" className="text-sm text-white/70">
             Manual entry
           </label>
           <input
@@ -169,7 +176,7 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
             max={MAX_LENGTH}
             value={length}
             onChange={(e) => handleLengthChange(parseInt(e.target.value, 10))}
-            className="w-20 rounded border border-gray-700 bg-gray-950 px-2 py-1 text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-20 rounded-lg border border-white/10 bg-[color-mix(in_srgb,var(--color-dark)_85%,transparent)] px-2 py-1 text-right text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             aria-labelledby="manual-length-label"
           />
         </div>
@@ -182,10 +189,10 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
               key={preset.label}
               type="button"
               onClick={() => applyPreset(preset.label)}
-              className={`px-4 py-2 rounded-full border transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 focus-visible:ring-offset-gray-900 text-sm font-semibold tracking-wide uppercase ${
+              className={`px-4 py-2 rounded-full border transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus text-sm font-semibold tracking-wide uppercase ${
                 isActive
-                  ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-900/40'
-                  : 'bg-gray-800 text-gray-200 border-gray-600 hover:bg-gray-700'
+                  ? 'border-[color-mix(in_srgb,var(--color-control-accent)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-control-accent)_18%,var(--color-surface))] text-white shadow-[0_0_18px_color-mix(in_srgb,var(--color-control-accent)_35%,transparent)]'
+                  : 'border-white/10 bg-[color-mix(in_srgb,var(--color-surface)_80%,transparent)] text-white/85 hover:border-[color-mix(in_srgb,var(--color-control-accent)_45%,transparent)] hover:text-white'
               }`}
             >
               {preset.label}
@@ -203,7 +210,7 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
               clearPresetSelection();
               setUseLower(e.target.checked);
             }}
-            className="h-4 w-4 rounded border-gray-600 bg-gray-900 text-blue-500 focus:ring-blue-500"
+            className="h-4 w-4 rounded border border-white/15 bg-[color-mix(in_srgb,var(--color-dark)_78%,transparent)] text-[var(--color-control-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             aria-label="Include lowercase characters"
           />
           <span>Lowercase</span>
@@ -217,7 +224,7 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
               clearPresetSelection();
               setUseUpper(e.target.checked);
             }}
-            className="h-4 w-4 rounded border-gray-600 bg-gray-900 text-blue-500 focus:ring-blue-500"
+            className="h-4 w-4 rounded border border-white/15 bg-[color-mix(in_srgb,var(--color-dark)_78%,transparent)] text-[var(--color-control-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             aria-label="Include uppercase characters"
           />
           <span>Uppercase</span>
@@ -231,7 +238,7 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
               clearPresetSelection();
               setUseNumbers(e.target.checked);
             }}
-            className="h-4 w-4 rounded border-gray-600 bg-gray-900 text-blue-500 focus:ring-blue-500"
+            className="h-4 w-4 rounded border border-white/15 bg-[color-mix(in_srgb,var(--color-dark)_78%,transparent)] text-[var(--color-control-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             aria-label="Include numbers"
           />
           <span>Numbers</span>
@@ -245,7 +252,7 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
               clearPresetSelection();
               setUseSymbols(e.target.checked);
             }}
-            className="h-4 w-4 rounded border-gray-600 bg-gray-900 text-blue-500 focus:ring-blue-500"
+            className="h-4 w-4 rounded border border-white/15 bg-[color-mix(in_srgb,var(--color-dark)_78%,transparent)] text-[var(--color-control-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             aria-label="Include symbols"
           />
           <span>Symbols</span>
@@ -257,34 +264,36 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
           type="text"
           readOnly
           value={password}
-          className="flex-1 rounded border border-gray-700 bg-gray-950 px-3 py-2 font-mono text-lg leading-[1.2] text-green-100 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 rounded-lg border border-white/10 bg-[color-mix(in_srgb,var(--color-dark)_82%,transparent)] px-3 py-2 font-mono text-lg leading-[1.2] text-[var(--color-success)] placeholder:text-white/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
           aria-label="Generated password"
         />
         <button
           type="button"
           onClick={copyToClipboard}
-          className="w-full rounded bg-blue-600 px-4 py-2 text-center text-sm font-semibold uppercase tracking-wide text-white shadow-lg shadow-blue-900/40 transition hover:bg-blue-500 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 focus-visible:ring-offset-gray-900 sm:w-auto"
+          className="w-full rounded-lg border border-white/10 bg-[color-mix(in_srgb,var(--color-surface)_88%,transparent)] px-4 py-2 text-center text-sm font-semibold uppercase tracking-wide text-white/90 shadow-kali-panel transition hover:border-[color-mix(in_srgb,var(--color-control-accent)_45%,transparent)] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus sm:w-auto"
         >
           Copy
         </button>
       </div>
-      {copied && <div className="text-sm font-medium text-green-400">Copied!</div>}
+      {copied && (
+        <div className="text-sm font-medium text-[var(--color-success)]">Copied!</div>
+      )}
       <div className="space-y-2">
         <div className="flex items-center gap-3">
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-800">
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--color-surface)_75%,transparent)]">
             <div className={`h-full ${barClass}`} style={{ width }} />
           </div>
           <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${badgeClass}`}>
             {label}
           </span>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-300">
+        <div className="flex items-center gap-2 text-sm text-white/70">
           <span className="font-mono text-base text-white">
             {entropy.toFixed(1)} bits
           </span>
-          <span className="text-xs uppercase tracking-wide text-gray-400">Entropy</span>
+          <span className="text-xs uppercase tracking-wide text-white/50">Entropy</span>
           <span
-            className="text-xs text-blue-300"
+            className="text-xs text-[var(--color-control-accent)]"
             role="img"
             aria-label="Entropy information"
             title="Entropy measures password unpredictability. 0-40 bits is weak, 40-80 bits is medium, and 80+ bits is recommended for high-security usage."
@@ -297,7 +306,7 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
         <button
           type="button"
           onClick={generatePassword}
-          className="w-full rounded bg-green-600 px-4 py-2 text-sm font-semibold uppercase tracking-wide text-white shadow-lg shadow-green-900/30 transition hover:bg-green-500 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-500 focus-visible:ring-offset-gray-900"
+          className="w-full rounded-lg border border-[color-mix(in_srgb,var(--color-success)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-success)_18%,var(--color-surface))] px-4 py-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-success)] shadow-[0_0_22px_color-mix(in_srgb,var(--color-success)_35%,transparent)] transition hover:bg-[color-mix(in_srgb,var(--color-success)_26%,var(--color-surface))] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
         >
           Generate
         </button>
