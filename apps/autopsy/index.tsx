@@ -90,9 +90,9 @@ const AutopsyPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div
-        className="flex flex-wrap gap-2"
+        className="flex flex-wrap gap-3"
         role="tablist"
         aria-label="Autopsy simulator modes"
       >
@@ -112,14 +112,18 @@ const AutopsyPage: React.FC = () => {
               tabIndex={isSelected ? 0 : -1}
               onClick={() => setView(tab.id)}
               onKeyDown={(event) => handleKeyDown(event, index)}
-              className={`flex min-w-[10rem] flex-col rounded border px-3 py-2 text-left shadow-sm transition focus:outline-none focus:ring-2 focus:ring-ub-orange ${
+              className={`flex min-w-[12rem] flex-1 flex-col gap-1 rounded-md border px-4 py-3 text-left shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ubt-blue focus-visible:ring-offset-2 focus-visible:ring-offset-ub-cool-grey ${
                 isSelected
-                  ? 'border-ub-orange bg-ub-grey text-white'
-                  : 'border-ub-grey-70 bg-ub-orange/20 text-white hover:bg-ub-orange/40'
+                  ? 'border-ub-border-orange bg-ub-cool-grey text-white shadow-md'
+                  : 'border-transparent bg-ub-lite-abrgn/50 text-ubt-grey hover:bg-ub-lite-abrgn/70'
               }`}
             >
-              <span className="font-semibold">{tab.label}</span>
-              <span className="text-xs text-ub-grey-10">{tab.description}</span>
+              <span className="text-sm font-semibold uppercase tracking-wide">
+                {tab.label}
+              </span>
+              <span className="text-sm leading-snug text-ubt-grey">
+                {tab.description}
+              </span>
             </button>
           );
         })}
@@ -128,24 +132,34 @@ const AutopsyPage: React.FC = () => {
         id="mode-description"
         role="note"
         aria-live="polite"
-        className="rounded-md border border-ub-grey-70 bg-ub-grey-90 p-3 text-sm text-white"
+        className="space-y-1 rounded-lg border border-ub-border-orange/40 bg-ub-cool-grey/70 p-4 text-sm text-ubt-grey shadow-inner"
       >
-        <p className="font-semibold">{currentTab.label} mode</p>
-        <p>{currentTab.callout}</p>
+        <p className="text-base font-semibold text-white">
+          {currentTab.label} mode
+        </p>
+        <p className="leading-relaxed">{currentTab.callout}</p>
       </div>
-      {tabs.map((tab) => (
-        <div
-          key={tab.id}
-          role="tabpanel"
-          id={`panel-${tab.id}`}
-          aria-labelledby={`tab-${tab.id}`}
-          aria-describedby="mode-description"
-          hidden={view !== tab.id}
-        >
-          {view === 'autopsy' && tab.id === 'autopsy' && <AutopsyAppComponent />}
-          {view === 'keywords' && tab.id === 'keywords' && <KeywordTester />}
-        </div>
-      ))}
+      <div className="space-y-4">
+        {tabs.map((tab) => {
+          const isActive = view === tab.id;
+          return (
+            <div
+              key={tab.id}
+              role="tabpanel"
+              id={`panel-${tab.id}`}
+              aria-labelledby={`tab-${tab.id}`}
+              aria-describedby="mode-description"
+              hidden={!isActive}
+              className={`min-h-[22rem] rounded-lg border border-ub-border-orange/30 bg-ub-cool-grey/80 p-4 shadow-sm transition-all duration-200 ${
+                isActive ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              {view === 'autopsy' && tab.id === 'autopsy' && <AutopsyAppComponent />}
+              {view === 'keywords' && tab.id === 'keywords' && <KeywordTester />}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };
