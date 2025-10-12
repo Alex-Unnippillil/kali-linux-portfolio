@@ -44,7 +44,11 @@ module.exports = {
           accent: 'var(--color-accent)',
           error: 'var(--color-error)',
           muted: 'var(--color-muted)',
-          surface: 'var(--color-surface)',
+          surface: {
+            DEFAULT: 'var(--color-surface)',
+            muted: 'var(--color-surface-muted)',
+            raised: 'var(--color-surface-raised)',
+          },
           inverse: 'var(--color-inverse)',
           border: 'var(--color-border)',
           terminal: 'var(--color-terminal)',
@@ -53,6 +57,15 @@ module.exports = {
           selection: 'var(--color-selection)',
           control: 'var(--color-control-accent)',
           backdrop: 'var(--kali-bg)',
+          overlay: 'var(--color-overlay-strong)',
+          'overlay-soft': 'var(--color-overlay-soft)',
+          info: 'var(--color-info)',
+          severity: {
+            low: 'var(--color-severity-low)',
+            medium: 'var(--color-severity-medium)',
+            high: 'var(--color-severity-high)',
+            critical: 'var(--color-severity-critical)',
+          },
         },
       },
       boxShadow: {
