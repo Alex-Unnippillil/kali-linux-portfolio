@@ -480,7 +480,7 @@ export default function CheckersPage() {
                 row.map((cell, c) => {
                   const isDark = (r + c) % 2 === 1;
                   const isMove = moves.some((m) => m.to[0] === r && m.to[1] === c);
-                  const isSelected = selected && selected[0] === r && selected[1] === c;
+                  const isSelected = selected ? selected[0] === r && selected[1] === c : false;
                   const isCrowned = crowned && crowned[0] === r && crowned[1] === c;
                   const isHint = hint && hint.from[0] === r && hint.from[1] === c;
                   const isHintDest = hint && hint.to[0] === r && hint.to[1] === c;
