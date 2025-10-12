@@ -201,19 +201,19 @@ export default function PluginManager() {
     });
 
   return (
-    <div className="p-4 text-white">
+    <div className="p-4 text-kali-text">
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="mb-1 text-2xl font-semibold">Plugin Catalog</h1>
-          <p className="text-sm text-ubt-grey">
+          <p className="text-sm text-kali-muted">
             Discover sandboxed utilities and keep installed plugins up to date.
           </p>
         </div>
         <div className="flex flex-wrap gap-4" role="group" aria-label="Plugin filters">
-          <label className="flex flex-col text-xs uppercase tracking-wide text-ubt-grey">
+          <label className="flex flex-col text-xs uppercase tracking-wide text-kali-muted">
             Show
             <select
-              className="mt-1 min-w-[10rem] rounded border border-white/20 bg-black/60 px-3 py-2 text-sm text-white shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
+              className="mt-1 min-w-[10rem] rounded border border-[color:color-mix(in_srgb,_var(--color-border)_65%,_transparent)] bg-[color:color-mix(in_srgb,_var(--color-surface)_92%,_transparent)] px-3 py-2 text-sm text-kali-text shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               value={filter}
               onChange={(event) => setFilter(event.target.value as FilterOption)}
             >
@@ -222,10 +222,10 @@ export default function PluginManager() {
               <option value="available">Available to install</option>
             </select>
           </label>
-          <label className="flex flex-col text-xs uppercase tracking-wide text-ubt-grey">
+          <label className="flex flex-col text-xs uppercase tracking-wide text-kali-muted">
             Sort by
             <select
-              className="mt-1 min-w-[10rem] rounded border border-white/20 bg-black/60 px-3 py-2 text-sm text-white shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
+              className="mt-1 min-w-[10rem] rounded border border-[color:color-mix(in_srgb,_var(--color-border)_65%,_transparent)] bg-[color:color-mix(in_srgb,_var(--color-surface)_92%,_transparent)] px-3 py-2 text-sm text-kali-text shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               value={sortBy}
               onChange={(event) => setSortBy(event.target.value as SortOption)}
             >
@@ -241,50 +241,50 @@ export default function PluginManager() {
           return (
             <li key={p.id} className="list-none">
               <article
-                className="flex flex-col gap-4 rounded-xl border border-white/10 bg-black/40 p-5 shadow-md transition hover:border-ub-orange/60 focus-within:border-ub-orange/60"
+                className="flex flex-col gap-4 rounded-xl border border-[color:color-mix(in_srgb,_var(--color-border)_75%,_transparent)] bg-[color:color-mix(in_srgb,_var(--color-surface)_88%,_transparent)] p-5 shadow-md transition hover:border-[color:color-mix(in_srgb,_var(--color-primary)_65%,_transparent)] focus-within:border-[color:color-mix(in_srgb,_var(--color-primary)_65%,_transparent)]"
                 title={p.description || undefined}
               >
                 <header className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1">
                     <h2 className="text-lg font-semibold leading-tight">{p.id}</h2>
                     {p.description && (
-                      <p className="mt-1 text-sm text-ubt-grey">{p.description}</p>
+                      <p className="mt-1 text-sm text-kali-muted">{p.description}</p>
                     )}
                   </div>
                   <span
                     className={`inline-flex items-center gap-1 self-start rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
                       isInstalled
-                        ? 'border-ub-green/50 bg-ub-green/10 text-ub-green'
-                        : 'border-white/20 bg-white/5 text-ubt-grey'
+                        ? 'border-[color:color-mix(in_srgb,_var(--color-terminal)_55%,_transparent)] bg-[color:color-mix(in_srgb,_var(--color-terminal)_18%,_transparent)] text-[color:var(--color-terminal)]'
+                        : 'border-[color:color-mix(in_srgb,_var(--color-border)_65%,_transparent)] bg-[color:color-mix(in_srgb,_var(--color-surface)_70%,_transparent)] text-kali-muted'
                     }`}
                     aria-label={isInstalled ? 'Plugin installed' : 'Plugin not installed'}
                   >
                     {isInstalled ? 'Installed' : 'Not installed'}
                   </span>
                 </header>
-                <dl className="grid grid-cols-1 gap-2 text-sm text-ubt-grey sm:grid-cols-2">
+                <dl className="grid grid-cols-1 gap-2 text-sm text-kali-muted sm:grid-cols-2">
                   <div className="flex flex-col">
-                    <dt className="text-xs uppercase tracking-wide text-ubt-grey/80">Sandbox</dt>
-                    <dd className="text-white">{p.sandbox === 'worker' ? 'Worker' : 'Iframe'}</dd>
+                    <dt className="text-xs uppercase tracking-wide text-[color:color-mix(in_srgb,_var(--color-muted)_70%,_transparent)]">Sandbox</dt>
+                    <dd className="text-kali-text">{p.sandbox === 'worker' ? 'Worker' : 'Iframe'}</dd>
                   </div>
                   <div className="flex flex-col">
-                    <dt className="text-xs uppercase tracking-wide text-ubt-grey/80">Package size</dt>
-                    <dd className="text-white">{formatBytes(p.size)}</dd>
+                    <dt className="text-xs uppercase tracking-wide text-[color:color-mix(in_srgb,_var(--color-muted)_70%,_transparent)]">Package size</dt>
+                    <dd className="text-kali-text">{formatBytes(p.size)}</dd>
                   </div>
                 </dl>
                 <div className="flex flex-wrap items-center gap-3">
                   <button
-                    className={`rounded-full px-4 py-2 text-sm font-semibold text-black transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange ${
+                    className={`rounded-full px-4 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
                       isInstalled
-                        ? 'bg-ub-green hover:bg-ub-green/90'
-                        : 'bg-ub-orange hover:bg-ub-orange/90'
+                        ? 'bg-[color:color-mix(in_srgb,_var(--color-terminal)_88%,_transparent)] text-kali-inverse hover:bg-[color:color-mix(in_srgb,_var(--color-terminal)_94%,_transparent)]'
+                        : 'bg-kali-primary text-kali-inverse hover:bg-[color:color-mix(in_srgb,_var(--color-primary)_92%,_transparent)]'
                     }`}
                     onClick={() => install(p)}
                   >
                     {isInstalled ? 'Update plugin' : 'Install plugin'}
                   </button>
                   <button
-                    className="rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white transition hover:border-ub-orange/60 hover:text-ub-orange focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange disabled:cursor-not-allowed disabled:border-white/10 disabled:text-ubt-grey"
+                    className="rounded-full border border-[color:color-mix(in_srgb,_var(--color-border)_70%,_transparent)] px-4 py-2 text-sm font-semibold text-kali-text transition hover:border-[color:color-mix(in_srgb,_var(--color-primary)_65%,_transparent)] hover:text-kali-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus disabled:cursor-not-allowed disabled:border-[color:color-mix(in_srgb,_var(--color-border)_45%,_transparent)] disabled:text-[color:color-mix(in_srgb,_var(--color-muted)_60%,_transparent)]"
                     onClick={() => run(p)}
                     disabled={!isInstalled}
                     aria-disabled={!isInstalled}
@@ -298,34 +298,34 @@ export default function PluginManager() {
           );
         })}
         {filteredPlugins.length === 0 && (
-          <li className="list-none rounded-xl border border-white/10 bg-black/40 p-6 text-center text-sm text-ubt-grey">
+          <li className="list-none rounded-xl border border-[color:color-mix(in_srgb,_var(--color-border)_70%,_transparent)] bg-[color:color-mix(in_srgb,_var(--color-surface)_82%,_transparent)] p-6 text-center text-sm text-kali-muted">
             No plugins match the current filters.
           </li>
         )}
       </ul>
       {lastRun && (
         <div className="mt-4 max-w-xl">
-          <div className="rounded-lg border border-white/10 bg-black/50 p-4 shadow-lg">
+          <div className="rounded-lg border border-[color:color-mix(in_srgb,_var(--color-border)_70%,_transparent)] bg-[color:color-mix(in_srgb,_var(--color-surface)_88%,_transparent)] p-4 shadow-lg">
             <div className="mb-2 flex items-baseline justify-between gap-3">
               <h2 className="text-lg font-semibold">Last Run: {lastRun.id}</h2>
-              <time className="text-xs text-ubt-grey">
+              <time className="text-xs text-kali-muted">
                 {formatTimestamp(lastRun.timestamp)}
               </time>
             </div>
             {lastRun.error && (
               <div
-                className="mb-3 rounded border border-red-500/60 bg-red-900/60 px-3 py-2 text-sm text-red-100"
+                className="mb-3 rounded border border-[color:color-mix(in_srgb,_var(--color-primary)_50%,_transparent)] bg-[color:color-mix(in_srgb,_var(--color-primary)_18%,_var(--color-dark)_82%)] px-3 py-2 text-sm text-kali-text"
                 role="alert"
               >
                 The last run reported an error. Review the output below for details.
               </div>
             )}
-            <pre className="mb-3 max-h-48 overflow-auto rounded bg-black/70 p-3 text-xs">
+            <pre className="mb-3 max-h-48 overflow-auto rounded bg-[color:color-mix(in_srgb,_var(--color-dark)_92%,_transparent)] p-3 text-xs">
               {lastRun.output.join('\n')}
             </pre>
             <button
               onClick={exportCsv}
-              className="bg-ub-green text-black px-3 py-1 rounded"
+              className="rounded bg-kali-control px-3 py-1 text-sm font-semibold text-kali-inverse transition hover:bg-[color:color-mix(in_srgb,_var(--color-control-accent)_92%,_transparent)]"
             >
               Export CSV
             </button>
