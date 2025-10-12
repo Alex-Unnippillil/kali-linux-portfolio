@@ -346,34 +346,34 @@ const KismetApp = ({ onNetworkDiscovered }) => {
   );
 
   return (
-    <div className="p-4 text-white space-y-4">
+    <div className="space-y-6 p-4 text-white lg:space-y-8">
       <div
-        className="rounded border border-yellow-700 bg-yellow-900/60 p-3 text-sm"
+        className="rounded-xl border border-yellow-700/70 bg-yellow-950/60 p-4 text-sm shadow"
         role="status"
       >
-        <div className="flex flex-wrap items-center gap-2 justify-between">
-          <div>
-            <p className="font-semibold">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-1">
+            <p className="text-base font-semibold uppercase tracking-wide text-yellow-100">
               Lab Mode {labMode ? 'enabled' : 'off'}
             </p>
-            <p className="text-xs text-yellow-200">
+            <p className="text-xs text-yellow-200/90">
               {labMode
                 ? 'All datasets stay local. Upload captures for guided review.'
                 : 'Enable Lab Mode to explore the full simulator. Offline summary remains available.'}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={labMode ? disableLabMode : enableLabMode}
-              className="rounded bg-ub-yellow px-3 py-1 text-xs font-semibold text-black"
+              className="rounded-lg bg-ub-yellow px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-black shadow-sm transition hover:brightness-110"
             >
               {labMode ? 'Disable Lab Mode' : 'Enable Lab Mode'}
             </button>
             <button
               type="button"
               onClick={resetToFixtures}
-              className="rounded border border-yellow-500 px-3 py-1 text-xs"
+              className="rounded-lg border border-yellow-500/80 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-yellow-100 transition hover:bg-yellow-500/10"
             >
               Reload fixtures
             </button>
@@ -382,9 +382,11 @@ const KismetApp = ({ onNetworkDiscovered }) => {
       </div>
 
       {!labMode && (
-        <div className="rounded border border-blue-800 bg-blue-900/60 p-3 text-xs">
-          <p className="font-semibold">Offline summary</p>
-          <ul className="mt-2 list-disc space-y-1 pl-5">
+        <div className="rounded-xl border border-blue-800/70 bg-blue-950/60 p-4 text-xs shadow">
+          <p className="text-sm font-semibold uppercase tracking-wide text-blue-100">
+            Offline summary
+          </p>
+          <ul className="mt-3 list-disc space-y-1 pl-5 text-blue-100/90">
             <li>Access points discovered: {fixtureSummary.totalNetworks}</li>
             <li>Total beacon frames observed: {fixtureSummary.totalFrames}</li>
             <li>
@@ -399,13 +401,15 @@ const KismetApp = ({ onNetworkDiscovered }) => {
 
       {labMode && (
         <>
-          <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-wrap items-end gap-4 rounded-xl border border-white/10 bg-white/5 p-4">
             <label className="text-xs" htmlFor="channel-filter">
-              <span className="mb-1 block font-semibold">Channel filter</span>
+              <span className="mb-1 block text-[0.7rem] font-semibold uppercase tracking-wide">
+                Channel filter
+              </span>
               <select
                 id="channel-filter"
                 aria-label="Channel filter"
-                className="w-32 rounded border border-white/20 bg-black/40 p-1 text-xs"
+                className="w-36 rounded-lg border border-white/20 bg-black/60 p-1.5 text-xs shadow-sm focus:border-sky-400 focus:outline-none"
                 value={channelFilter}
                 onChange={(e) => setChannelFilter(e.target.value)}
               >
@@ -423,11 +427,13 @@ const KismetApp = ({ onNetworkDiscovered }) => {
 
             {clients.length > 0 && (
               <label className="text-xs" htmlFor="device-filter">
-                <span className="mb-1 block font-semibold">Device vendor</span>
+                <span className="mb-1 block text-[0.7rem] font-semibold uppercase tracking-wide">
+                  Device vendor
+                </span>
                 <select
                   id="device-filter"
                   aria-label="Device vendor filter"
-                  className="w-40 rounded border border-white/20 bg-black/40 p-1 text-xs"
+                  className="w-44 rounded-lg border border-white/20 bg-black/60 p-1.5 text-xs shadow-sm focus:border-sky-400 focus:outline-none"
                   value={deviceFilter}
                   onChange={(e) => setDeviceFilter(e.target.value)}
                 >
@@ -442,101 +448,126 @@ const KismetApp = ({ onNetworkDiscovered }) => {
             )}
 
             <label className="text-xs" htmlFor="pcap-upload">
-              <span className="mb-1 block font-semibold">Upload capture</span>
+              <span className="mb-1 block text-[0.7rem] font-semibold uppercase tracking-wide">
+                Upload capture
+              </span>
               <input
                 id="pcap-upload"
                 type="file"
                 accept=".pcap"
                 onChange={handleFile}
                 aria-label="pcap file"
-                className="block text-xs"
+                className="block max-w-[14rem] text-xs"
               />
             </label>
 
-            <div className="text-[10px] text-white/60">
+            <div className="text-[10px] uppercase tracking-wide text-white/60">
               Dataset source: {networkSource === 'fixtures' ? 'Demo fixtures' : 'Upload'}
             </div>
           </div>
 
           {error && (
-            <div className="rounded border border-red-700 bg-red-900/60 p-2 text-xs">
+            <div
+              className="rounded-lg border border-red-500/80 bg-red-900/70 p-3 text-xs font-semibold uppercase tracking-wide text-red-100 shadow ring-1 ring-red-400/60"
+              role="alert"
+              aria-live="assertive"
+            >
               {error}
             </div>
           )}
 
-          {filteredNetworks.length > 0 ? (
-            <table className="text-sm w-full" aria-label="Networks">
-              <thead>
-                <tr className="text-left">
-                  <th className="pr-2">SSID</th>
-                  <th className="pr-2">BSSID</th>
-                  <th className="pr-2">Channel</th>
-                  <th className="pr-2">Vendor</th>
-                  <th>Frames</th>
-                </tr>
-              </thead>
-              <tbody>
-              {filteredNetworks.map((n) => (
-                <tr key={n.bssid} className="odd:bg-gray-800">
-                  <td className="pr-2">{n.ssid || '(hidden)'}</td>
-                  <td className="pr-2">{n.bssid}</td>
-                  <td className="pr-2">{n.channel ?? '-'}</td>
-                  <td className="pr-2">{n.vendor}</td>
-                  <td>{n.frames}</td>
-                </tr>
-              ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="rounded border border-white/20 p-3 text-xs text-white/70">
-              No networks match the selected filters.
-            </div>
-          )}
+          <div className="grid gap-6 xl:grid-cols-12">
+            <section className="space-y-4 xl:col-span-7">
+              {filteredNetworks.length > 0 ? (
+                <div className="overflow-hidden rounded-xl border border-white/10 bg-slate-950/50 shadow">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm" aria-label="Networks">
+                      <thead className="bg-white/5 text-xs uppercase tracking-wide text-white/70">
+                        <tr className="text-left">
+                          <th className="px-4 py-3">SSID</th>
+                          <th className="px-4 py-3">BSSID</th>
+                          <th className="px-4 py-3">Channel</th>
+                          <th className="px-4 py-3">Vendor</th>
+                          <th className="px-4 py-3">Frames</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredNetworks.map((n) => (
+                          <tr key={n.bssid} className="odd:bg-white/5">
+                            <td className="px-4 py-2">{n.ssid || '(hidden)'}</td>
+                            <td className="px-4 py-2 font-mono text-xs">{n.bssid}</td>
+                            <td className="px-4 py-2">{n.channel ?? '-'}</td>
+                            <td className="px-4 py-2">{n.vendor}</td>
+                            <td className="px-4 py-2">{n.frames}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-white/20 bg-slate-950/40 p-4 text-xs text-white/70">
+                  No networks match the selected filters.
+                </div>
+              )}
 
-          <div>
-            <h3 className="font-bold mb-1">Channels</h3>
-            <ChannelChart data={channels} />
+              {clients.length > 0 && (
+                <div className="overflow-hidden rounded-xl border border-white/10 bg-slate-950/50 shadow">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs" aria-label="Client devices">
+                      <thead className="bg-white/5 uppercase tracking-wide text-white/70">
+                        <tr className="text-left">
+                          <th className="px-4 py-3">MAC</th>
+                          <th className="px-4 py-3">Vendor</th>
+                          <th className="px-4 py-3">Known networks</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredClients.map((client) => (
+                          <tr key={client.mac} className="odd:bg-white/5">
+                            <td className="px-4 py-2 font-mono text-[0.7rem]">{client.mac}</td>
+                            <td className="px-4 py-2">{client.vendor}</td>
+                            <td className="px-4 py-2">
+                              <ul className="list-disc space-y-1 pl-4 text-[0.75rem]">
+                                {client.history.map((entry, idx) => (
+                                  <li key={`${client.mac}-${idx}`}>
+                                    {entry.ssid || '(hidden)'} – {entry.bssid}
+                                    {entry.channel != null && (
+                                      <span className="text-white/60"> (ch {entry.channel})</span>
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </section>
+
+            <aside className="space-y-4 xl:col-span-5">
+              <div className="rounded-xl border border-white/10 bg-slate-950/50 p-4 shadow">
+                <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-sky-200">
+                  Channel utilization
+                </h3>
+                <div className="overflow-x-auto pb-2">
+                  <ChannelChart data={channels} />
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-white/10 bg-slate-950/50 p-4 shadow">
+                <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-sky-200">
+                  Frames over time
+                </h3>
+                <div className="overflow-x-auto pb-2">
+                  <TimeChart data={times} />
+                </div>
+              </div>
+            </aside>
           </div>
-
-          <div>
-            <h3 className="font-bold mb-1">Frames Over Time</h3>
-            <TimeChart data={times} />
-          </div>
-
-          {clients.length > 0 && (
-            <div>
-              <h3 className="font-bold mb-1">Client devices</h3>
-              <table className="w-full text-xs" aria-label="Client devices">
-                <thead>
-                  <tr className="text-left">
-                    <th className="pr-2">MAC</th>
-                    <th className="pr-2">Vendor</th>
-                    <th>Known networks</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredClients.map((client) => (
-                    <tr key={client.mac} className="odd:bg-gray-800">
-                      <td className="pr-2">{client.mac}</td>
-                      <td className="pr-2">{client.vendor}</td>
-                      <td>
-                        <ul className="list-disc space-y-1 pl-4">
-                          {client.history.map((entry, idx) => (
-                            <li key={`${client.mac}-${idx}`}>
-                              {entry.ssid || '(hidden)'} – {entry.bssid}
-                              {entry.channel != null && (
-                                <span className="text-white/60"> (ch {entry.channel})</span>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </>
       )}
     </div>
