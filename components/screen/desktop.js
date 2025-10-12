@@ -4257,8 +4257,6 @@ export class Desktop extends Component {
             }
             return;
         } else {
-            let closed_windows = this.state.closed_windows;
-            let favourite_apps = this.state.favourite_apps;
             let frequentApps = [];
             try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
             var currentApp = frequentApps.find(app => app.id === objId);
@@ -4289,12 +4287,13 @@ export class Desktop extends Component {
             this.closeAllAppsOverlay();
 
             setTimeout(() => {
-                favourite_apps[objId] = true; // adds opened app to sideBar
-                closed_windows[objId] = false; // openes app's window
-                this.setWorkspaceState({ closed_windows, favourite_apps }, () => {
-                    const nextState = { closed_windows, favourite_apps };
+                const closed_windows = { ...this.state.closed_windows, [objId]: false }; // openes app's window
+                const favourite_apps = { ...this.state.favourite_apps, [objId]: true }; // adds opened app to sideBar
+                const minimized_windows = { ...this.state.minimized_windows, [objId]: false };
+                this.setWorkspaceState({ closed_windows, minimized_windows }, () => {
+                    const nextState = { closed_windows, favourite_apps, minimized_windows };
                     if (context) {
-                        nextState.window_context = contextState;
+                        nextState.window_context = { ...this.state.window_context, [objId]: context };
                     }
                     this.setState(nextState, () => {
                         this.focus(objId);
@@ -4354,17 +4353,36 @@ export class Desktop extends Component {
         this.giveFocusToLastApp();
 
         // close window
-        let closed_windows = this.state.closed_windows;
-        let favourite_apps = this.state.favourite_apps;
+        this.setWorkspaceState((prevState) => {
+            const closed_windows = { ...prevState.closed_windows, [objId]: true };
+            const minimized_windows = { ...prevState.minimized_windows, [objId]: false };
+            const partial = { closed_windows, minimized_windows };
+            if (prevState.focused_windows?.[objId]) {
+                partial.focused_windows = { ...prevState.focused_windows, [objId]: false };
+            }
+            return partial;
+        }, this.saveSession);
 
-        if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
-        closed_windows[objId] = true; // closes the app's window
-
-        this.setWorkspaceState({ closed_windows, favourite_apps }, this.saveSession);
-
-        const window_context = { ...this.state.window_context };
-        delete window_context[objId];
-        this.setState({ closed_windows, favourite_apps, window_context }, this.saveSession);
+        this.setState((prevState) => {
+            const closed_windows = { ...prevState.closed_windows, [objId]: true };
+            const favourite_apps = { ...prevState.favourite_apps };
+            if (this.initFavourite[objId] === false) {
+                favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
+            }
+            const minimized_windows = { ...prevState.minimized_windows, [objId]: false };
+            const window_context = { ...prevState.window_context };
+            delete window_context[objId];
+            const nextState = {
+                closed_windows,
+                favourite_apps,
+                minimized_windows,
+                window_context,
+            };
+            if (prevState.focused_windows?.[objId]) {
+                nextState.focused_windows = { ...prevState.focused_windows, [objId]: false };
+            }
+            return nextState;
+        }, this.saveSession);
     }
 
     pinApp = (id) => {
