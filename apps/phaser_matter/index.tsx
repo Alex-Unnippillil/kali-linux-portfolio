@@ -66,6 +66,8 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
   const [waiting, setWaiting] = useState<
     null | { device: 'key' | 'pad'; action: Action }
   >(null);
+  const [showRemap, setShowRemap] = useState(false);
+  const [showBuffer, setShowBuffer] = useState(false);
 
   useEffect(() => {
     // ensure container receives keyboard focus
@@ -410,86 +412,158 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
         };
 
   return (
-    <div ref={containerRef} className="relative" tabIndex={0}>
-      <button className="absolute left-4 bottom-4" {...bind('left')}>
-        ◀
-      </button>
-      <button className="absolute left-20 bottom-4" {...bind('right')}>
-        ▶
-      </button>
-      <button className="absolute right-4 bottom-4" {...bind('jump')}>
-        ⇧
-      </button>
-      <div className="absolute top-4 left-4 bg-white bg-opacity-80 p-2 rounded text-xs space-y-1">
-        {waiting && <div>Press a {waiting.device === 'key' ? 'key' : 'button'}...</div>}
-        <div>Keyboard</div>
-        <div>
-          Left:
-          <button
-            onClick={() => setWaiting({ device: 'key', action: 'left' })}
-            className="ml-1 border px-1"
-          >
-            {keyMap.left}
-          </button>
+    <div className="flex flex-col gap-4">
+      <div
+        ref={containerRef}
+        className="relative w-full overflow-hidden rounded-lg bg-black/60 outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+        tabIndex={0}
+      />
+      <div className="rounded-xl bg-slate-900/60 p-4 text-xs text-slate-100 shadow-lg backdrop-blur">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-slate-300">
+              Movement
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2 text-base">
+              <button
+                className="flex h-10 w-16 items-center justify-center rounded-md bg-slate-800/80 font-semibold hover:bg-slate-700/80"
+                aria-label="Move left"
+                {...bind('left')}
+              >
+                ◀
+              </button>
+              <button
+                className="flex h-10 w-16 items-center justify-center rounded-md bg-slate-800/80 font-semibold hover:bg-slate-700/80"
+                aria-label="Move right"
+                {...bind('right')}
+              >
+                ▶
+              </button>
+              <button
+                className="flex h-10 w-16 items-center justify-center rounded-md bg-slate-800/80 font-semibold hover:bg-slate-700/80"
+                aria-label="Jump"
+                {...bind('jump')}
+              >
+                ⇧
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="rounded-md border border-slate-600 px-3 py-2 font-medium text-slate-200 transition hover:border-cyan-400 hover:text-white"
+              onClick={() => setShowRemap((prev) => !prev)}
+            >
+              {showRemap ? 'Hide remap options' : 'Show remap options'}
+            </button>
+            <button
+              className="rounded-md border border-slate-600 px-3 py-2 font-medium text-slate-200 transition hover:border-cyan-400 hover:text-white"
+              onClick={() => setShowBuffer((prev) => !prev)}
+            >
+              {showBuffer ? 'Hide jump buffer' : 'Adjust jump buffer'}
+            </button>
+          </div>
         </div>
-        <div>
-          Right:
-          <button
-            onClick={() => setWaiting({ device: 'key', action: 'right' })}
-            className="ml-1 border px-1"
-          >
-            {keyMap.right}
-          </button>
-        </div>
-        <div>
-          Jump:
-          <button
-            onClick={() => setWaiting({ device: 'key', action: 'jump' })}
-            className="ml-1 border px-1"
-          >
-            {keyMap.jump}
-          </button>
-        </div>
-        <div className="pt-2">Gamepad</div>
-        <div>
-          Left:
-          <button
-            onClick={() => setWaiting({ device: 'pad', action: 'left' })}
-            className="ml-1 border px-1"
-          >
-            {padMap.left}
-          </button>
-        </div>
-        <div>
-          Right:
-          <button
-            onClick={() => setWaiting({ device: 'pad', action: 'right' })}
-            className="ml-1 border px-1"
-          >
-            {padMap.right}
-          </button>
-        </div>
-        <div>
-          Jump:
-          <button
-            onClick={() => setWaiting({ device: 'pad', action: 'jump' })}
-            className="ml-1 border px-1"
-          >
-            {padMap.jump}
-          </button>
-        </div>
-        <div className="pt-2">
-          Buffer:
-          <input
-            type="range"
-            min={0}
-            max={300}
-            value={bufferWindow}
-            onChange={(e) => setBufferWindow(Number(e.target.value))}
-            className="mx-1"
-          />
-          {bufferWindow}ms
-        </div>
+        {waiting && !showRemap && (
+          <div className="mt-3 rounded border border-cyan-500/50 bg-cyan-500/10 px-3 py-2 text-[0.7rem] text-cyan-100">
+            Press a {waiting.device === 'key' ? 'key' : 'button'}...
+          </div>
+        )}
+        {showRemap && (
+          <div className="mt-4 grid gap-3 text-[0.7rem] sm:grid-cols-2">
+            <div className="space-y-2">
+              <p className="font-semibold uppercase tracking-wide text-slate-300">Keyboard</p>
+              {waiting && waiting.device === 'key' && (
+                <div className="rounded bg-cyan-500/20 px-2 py-1 text-cyan-200">
+                  Press a key...
+                </div>
+              )}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between rounded border border-slate-700/60 px-2 py-1">
+                  <span>Left</span>
+                  <button
+                    onClick={() => setWaiting({ device: 'key', action: 'left' })}
+                    className="rounded bg-slate-800/80 px-2 py-1 font-mono"
+                  >
+                    {keyMap.left}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between rounded border border-slate-700/60 px-2 py-1">
+                  <span>Right</span>
+                  <button
+                    onClick={() => setWaiting({ device: 'key', action: 'right' })}
+                    className="rounded bg-slate-800/80 px-2 py-1 font-mono"
+                  >
+                    {keyMap.right}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between rounded border border-slate-700/60 px-2 py-1">
+                  <span>Jump</span>
+                  <button
+                    onClick={() => setWaiting({ device: 'key', action: 'jump' })}
+                    className="rounded bg-slate-800/80 px-2 py-1 font-mono"
+                  >
+                    {keyMap.jump}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="font-semibold uppercase tracking-wide text-slate-300">Gamepad</p>
+              {waiting && waiting.device === 'pad' && (
+                <div className="rounded bg-cyan-500/20 px-2 py-1 text-cyan-200">
+                  Press a button...
+                </div>
+              )}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between rounded border border-slate-700/60 px-2 py-1">
+                  <span>Left</span>
+                  <button
+                    onClick={() => setWaiting({ device: 'pad', action: 'left' })}
+                    className="rounded bg-slate-800/80 px-2 py-1 font-mono"
+                  >
+                    {padMap.left}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between rounded border border-slate-700/60 px-2 py-1">
+                  <span>Right</span>
+                  <button
+                    onClick={() => setWaiting({ device: 'pad', action: 'right' })}
+                    className="rounded bg-slate-800/80 px-2 py-1 font-mono"
+                  >
+                    {padMap.right}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between rounded border border-slate-700/60 px-2 py-1">
+                  <span>Jump</span>
+                  <button
+                    onClick={() => setWaiting({ device: 'pad', action: 'jump' })}
+                    className="rounded bg-slate-800/80 px-2 py-1 font-mono"
+                  >
+                    {padMap.jump}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {showBuffer && (
+          <div className="mt-4 space-y-2">
+            <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-slate-300">
+              Jump buffer window
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+              <input
+                type="range"
+                min={0}
+                max={300}
+                value={bufferWindow}
+                onChange={(e) => setBufferWindow(Number(e.target.value))}
+                className="w-full sm:w-64"
+              />
+              <span className="font-mono text-sm text-white">{bufferWindow}ms</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
