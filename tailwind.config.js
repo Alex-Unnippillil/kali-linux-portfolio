@@ -47,6 +47,8 @@ module.exports = {
           inverse: 'var(--color-inverse)',
           border: 'var(--color-border)',
           terminal: 'var(--color-terminal)',
+          success: 'var(--color-success)',
+          error: 'var(--color-error)',
           dark: 'var(--color-dark)',
           focus: 'var(--color-focus-ring)',
           selection: 'var(--color-selection)',

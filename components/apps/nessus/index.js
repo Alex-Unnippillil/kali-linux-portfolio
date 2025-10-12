@@ -180,7 +180,7 @@ const Nessus = () => {
 
   if (!token) {
     return (
-      <div className="h-full w-full bg-gray-900 text-white flex items-center justify-center">
+      <div className="h-full w-full bg-kali-surface text-white flex items-center justify-center">
         <form onSubmit={login} className="space-y-2 p-4 w-64">
           <label htmlFor="nessus-url" className="block text-sm">
             Nessus URL
@@ -188,6 +188,7 @@ const Nessus = () => {
           <input
             id="nessus-url"
             className="w-full p-2 rounded text-black"
+            aria-label="Nessus URL"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             aria-invalid={error ? 'true' : undefined}
@@ -200,6 +201,7 @@ const Nessus = () => {
           <input
             id="nessus-username"
             className="w-full p-2 rounded text-black"
+            aria-label="Nessus username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             aria-invalid={error ? 'true' : undefined}
@@ -212,12 +214,13 @@ const Nessus = () => {
             id="nessus-password"
             type="password"
             className="w-full p-2 rounded text-black"
+            aria-label="Nessus password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             aria-invalid={error ? 'true' : undefined}
             aria-describedby={error ? 'nessus-error' : undefined}
           />
-          <button type="submit" className="w-full bg-blue-600 py-2 rounded">
+          <button type="submit" className="w-full bg-kali-primary py-2 rounded">
             Login
           </button>
           {error && <FormError id="nessus-error">{error}</FormError>}
@@ -227,10 +230,10 @@ const Nessus = () => {
   }
 
   return (
-    <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
+    <div className="h-full w-full p-4 bg-kali-surface text-white overflow-auto">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl">Scans</h2>
-        <button onClick={logout} className="bg-red-600 px-2 py-1 rounded">
+        <button onClick={logout} className="bg-kali-error px-2 py-1 rounded">
           Logout
         </button>
       </div>
@@ -243,6 +246,7 @@ const Nessus = () => {
           type="file"
           accept=".nessus,.xml"
           onChange={handleFile}
+          aria-label="Upload Nessus XML"
           className="text-black mb-2"
         />
         {parseError && <FormError>{parseError}</FormError>}
@@ -250,11 +254,11 @@ const Nessus = () => {
           <div className="mt-2">
             <button
               onClick={exportCSV}
-              className="bg-green-600 px-2 py-1 rounded mb-2"
+              className="bg-kali-success px-2 py-1 rounded mb-2 text-slate-900"
             >
               Export CSV
             </button>
-            <div className="overflow-auto max-h-64 border border-gray-700">
+            <div className="overflow-auto max-h-64 border border-[color:var(--kali-panel-border)]">
               <table className="w-full text-sm">
                 <thead>
                   <tr>
@@ -269,7 +273,7 @@ const Nessus = () => {
                   {findings.map((f, i) => (
                     <tr
                       key={i}
-                      className="border-t border-gray-700 cursor-pointer"
+                      className="border-t border-[color:var(--kali-panel-border)] cursor-pointer"
                       onClick={() => setSelected(f)}
                     >
                       <td className="p-1">{f.host}</td>
@@ -283,6 +287,7 @@ const Nessus = () => {
                           <form onSubmit={submitFeedback} className="space-y-1">
                             <input
                               className="w-full p-1 rounded text-black"
+                              aria-label="False positive reason"
                               value={feedbackText}
                               onChange={(e) => setFeedbackText(e.target.value)}
                               placeholder="Reason"
@@ -290,13 +295,13 @@ const Nessus = () => {
                             <div className="flex space-x-2">
                               <button
                                 type="submit"
-                                className="bg-green-600 px-2 py-1 rounded text-xs"
+                                className="bg-kali-success px-2 py-1 rounded text-xs text-slate-900"
                               >
                                 Submit
                               </button>
                               <button
                                 type="button"
-                                className="bg-gray-600 px-2 py-1 rounded text-xs"
+                                className="bg-white/10 px-2 py-1 rounded text-xs text-white/80"
                                 onClick={() => setFeedbackId(null)}
                               >
                                 Cancel
@@ -329,16 +334,18 @@ const Nessus = () => {
         <input
           className="p-1 rounded text-black"
           placeholder="Scan ID"
+          aria-label="Scheduled scan identifier"
           value={newJob.scanId}
           onChange={(e) => setNewJob({ ...newJob, scanId: e.target.value })}
         />
         <input
           className="p-1 rounded text-black"
           placeholder="Schedule"
+          aria-label="Scheduled job cadence"
           value={newJob.schedule}
           onChange={(e) => setNewJob({ ...newJob, schedule: e.target.value })}
         />
-        <button type="submit" className="bg-blue-600 px-2 py-1 rounded">
+        <button type="submit" className="bg-kali-primary px-2 py-1 rounded">
           Add Job
         </button>
       </form>
@@ -356,7 +363,7 @@ const Nessus = () => {
       )}
       <ul className="space-y-1">
         {scans.map((scan) => (
-          <li key={scan.id} className="border-b border-gray-700 pb-1">
+          <li key={scan.id} className="border-b border-[color:var(--kali-panel-border)] pb-1">
             <div className="flex justify-between items-center">
               <span>
                 {scan.name} - {scan.status}
@@ -372,6 +379,7 @@ const Nessus = () => {
               <form onSubmit={submitFeedback} className="mt-2 space-y-1">
                 <input
                   className="w-full p-1 rounded text-black"
+                  aria-label="False positive reason"
                   value={feedbackText}
                   onChange={(e) => setFeedbackText(e.target.value)}
                   placeholder="Reason"
@@ -379,13 +387,13 @@ const Nessus = () => {
                 <div className="flex space-x-2">
                   <button
                     type="submit"
-                    className="bg-green-600 px-2 py-1 rounded text-xs"
+                    className="bg-kali-success px-2 py-1 rounded text-xs text-slate-900"
                   >
                     Submit
                   </button>
                   <button
                     type="button"
-                    className="bg-gray-600 px-2 py-1 rounded text-xs"
+                    className="bg-white/10 px-2 py-1 rounded text-xs text-white/80"
                     onClick={() => setFeedbackId(null)}
                   >
                     Cancel
@@ -397,11 +405,11 @@ const Nessus = () => {
         ))}
       </ul>
       {selected && (
-        <div className="fixed top-0 right-0 w-80 h-full bg-gray-800 p-4 overflow-auto shadow-lg">
+        <div className="fixed top-0 right-0 w-80 h-full bg-[color:var(--kali-panel)] p-4 overflow-auto border border-[color:var(--kali-panel-border)] shadow-kali-panel backdrop-blur">
           <button
             type="button"
             onClick={() => setSelected(null)}
-            className="mb-2 bg-red-600 px-2 py-1 rounded text-sm"
+            className="mb-2 bg-kali-error px-2 py-1 rounded text-sm"
           >
             Close
           </button>
