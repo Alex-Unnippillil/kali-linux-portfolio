@@ -113,16 +113,32 @@ const QRScanner: React.FC = () => {
     setFacing((f) => (f === 'environment' ? 'user' : 'environment'));
   };
 
+  const hasError = Boolean(error);
+
   return (
-    <div className="p-4 space-y-4 text-white bg-ub-cool-grey h-full flex flex-col items-center">
+    <div className="flex h-full flex-col items-center space-y-4 bg-[color:color-mix(in_srgb,var(--color-surface)_92%,transparent)] p-4 text-kali-text">
       <div className="relative w-full max-w-sm">
-        <video ref={videoRef} className="w-full rounded-md border-2 border-white bg-black" />
-        <div className="absolute top-2 right-2 flex gap-2">
+        <video
+          ref={videoRef}
+          aria-label="QR scanner preview"
+          className="w-full rounded-xl border border-[color:color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-kali-secondary shadow-kali-panel"
+        />
+        <div
+          className={`absolute top-2 right-2 flex gap-2 rounded-xl border p-1.5 shadow-lg backdrop-blur-sm transition ${
+            hasError
+              ? 'border-[color:rgba(255,59,48,0.4)] bg-[color:color-mix(in_srgb,#ff3b30_12%,transparent)]'
+              : 'border-[color:color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_82%,transparent)]'
+          }`}
+        >
           <button
             type="button"
             onClick={toggleTorch}
             aria-label="Toggle flashlight"
-            className="p-1 bg-black/50 rounded"
+            className={`rounded-lg p-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] ${
+              hasError
+                ? 'border border-[color:rgba(255,59,48,0.45)] bg-[color:color-mix(in_srgb,#ff3b30_18%,transparent)] text-red-300 focus-visible:ring-red-400/70'
+                : 'border border-[color:color-mix(in_srgb,var(--color-primary)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary)_16%,transparent)] text-kali-primary focus-visible:ring-kali-focus'
+            }`}
           >
             <FlashIcon className="w-6 h-6" />
           </button>
@@ -130,30 +146,38 @@ const QRScanner: React.FC = () => {
             type="button"
             onClick={switchCamera}
             aria-label="Switch camera"
-            className="p-1 bg-black/50 rounded"
+            className={`rounded-lg p-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] ${
+              hasError
+                ? 'border border-[color:rgba(255,59,48,0.45)] bg-[color:color-mix(in_srgb,#ff3b30_18%,transparent)] text-red-300 focus-visible:ring-red-400/70'
+                : 'border border-[color:color-mix(in_srgb,var(--color-primary)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary)_16%,transparent)] text-kali-primary focus-visible:ring-kali-focus'
+            }`}
           >
             <SwitchCameraIcon className="w-6 h-6" />
           </button>
         </div>
       </div>
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && (
+        <p className="rounded-lg border border-red-500/60 bg-[color:color-mix(in_srgb,#ff3b30_12%,transparent)] px-3 py-2 text-sm text-red-300 shadow-[0_0_0_1px_rgba(255,59,48,0.15)]">
+          {error}
+        </p>
+      )}
       {result && (
-        <div className="flex items-center gap-2 p-2 bg-white text-black rounded-md w-full max-w-sm">
+        <div className="flex w-full max-w-sm items-center gap-3 rounded-xl border border-[color:color-mix(in_srgb,var(--color-primary)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary)_12%,var(--color-surface))] p-3 text-kali-text shadow-[0_12px_35px_rgba(15,148,210,0.16)]">
           {preview && (
             <img
               src={preview}
               alt="QR preview"
-              className="w-32 h-32 rounded-md border"
+              className="h-32 w-32 rounded-lg border border-[color:color-mix(in_srgb,var(--color-border)_70%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_82%,transparent)] p-1"
             />
           )}
           <div className="flex-1 min-w-0">
-            <p className="break-all text-sm">{result}</p>
+            <p className="break-all text-sm text-[color:color-mix(in_srgb,var(--color-text)_90%,transparent)]">{result}</p>
           </div>
           <button
             type="button"
             onClick={copyResult}
             aria-label="Copy result"
-            className="p-1"
+            className="rounded-lg border border-transparent p-1.5 text-kali-primary transition hover:border-[color:color-mix(in_srgb,var(--color-primary)_45%,transparent)] hover:bg-[color:color-mix(in_srgb,var(--color-primary)_16%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
           >
             <CopyIcon className="w-6 h-6" />
           </button>
