@@ -17,6 +17,9 @@
   --color-inverse: #000000; /* inverse of text */
   --color-border: var(--kali-border); /* subtle borders */
   --color-terminal: var(--kali-terminal-green); /* terminal green */
+  --color-success: var(--color-terminal);
+  --color-warning: #f5b74d;
+  --color-danger: #f87272;
   --color-dark: #09121c; /* card back */
   --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
