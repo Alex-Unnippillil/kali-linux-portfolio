@@ -10,16 +10,32 @@ if (isBrowser) {
   const list = document.getElementById('history');
   const clearBtn = document.getElementById('clear');
 
+  async function copyToClipboard(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+    }
+  }
+
   function render() {
     list.innerHTML = '';
     history.forEach((item) => {
       const li = document.createElement('li');
       li.textContent = item;
-      li.addEventListener('click', async () => {
-        try {
-          await navigator.clipboard.writeText(item);
-        } catch (err) {
-          console.error('Failed to copy text:', err);
+      li.className = 'clipboard-item';
+      li.tabIndex = 0;
+      li.setAttribute('role', 'button');
+      li.setAttribute('aria-label', `Copy ${item}`);
+
+      li.addEventListener('click', () => {
+        void copyToClipboard(item);
+      });
+
+      li.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          void copyToClipboard(item);
         }
       });
       list.appendChild(li);
