@@ -28,9 +28,11 @@ export default function Calculator() {
   const baseBtnCls =
     'btn flex items-center justify-center font-semibold transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f212a]';
   const keypadBtnCls =
-    `${baseBtnCls} h-14 rounded-xl border border-white/5 bg-[#2a2d35] text-lg text-slate-100 shadow-sm hover:-translate-y-0.5 hover:bg-[#343842]`;
+    `${baseBtnCls} h-14 rounded-xl border border-white/5 bg-[#282b33] px-0 text-lg text-slate-100 shadow-sm hover:-translate-y-0.5 hover:bg-[#343842]`;
+  const operatorBtnCls =
+    'border-[#f97316]/60 bg-[#f97316]/10 text-[#fbbf77] hover:bg-[#f97316]/20 hover:text-[#fbd4a1] focus-visible:ring-[#f97316]';
   const pillUtilityBtnCls =
-    `${baseBtnCls} h-10 rounded-full border border-white/10 bg-white/5 px-4 text-sm uppercase tracking-wide text-slate-200 shadow-none hover:bg-white/10`;
+    `${baseBtnCls} h-11 rounded-full border border-white/10 bg-white/5 px-5 text-sm uppercase tracking-wide text-slate-200 shadow-none hover:bg-white/10`;
 
   const keypadRows: Array<
     Array<{
@@ -49,6 +51,7 @@ export default function Calculator() {
         label: <span className="text-xs font-medium uppercase tracking-[0.3em]">mod</span>,
         value: 'mod(',
         ariaLabel: 'modulus',
+        extraClassName: operatorBtnCls,
       },
       { label: 'π', value: 'pi', keyBinding: 'p', ariaLabel: 'pi constant' },
     ],
@@ -56,25 +59,49 @@ export default function Calculator() {
       { label: '7', value: '7', keyBinding: '7', ariaLabel: 'seven' },
       { label: '8', value: '8', keyBinding: '8', ariaLabel: 'eight' },
       { label: '9', value: '9', keyBinding: '9', ariaLabel: 'nine' },
-      { label: '÷', value: '/', keyBinding: '/', ariaLabel: 'divide' },
+      {
+        label: '÷',
+        value: '/',
+        keyBinding: '/',
+        ariaLabel: 'divide',
+        extraClassName: operatorBtnCls,
+      },
     ],
     [
       { label: '4', value: '4', keyBinding: '4', ariaLabel: 'four' },
       { label: '5', value: '5', keyBinding: '5', ariaLabel: 'five' },
       { label: '6', value: '6', keyBinding: '6', ariaLabel: 'six' },
-      { label: '×', value: '*', keyBinding: '*', ariaLabel: 'multiply' },
+      {
+        label: '×',
+        value: '*',
+        keyBinding: '*',
+        ariaLabel: 'multiply',
+        extraClassName: operatorBtnCls,
+      },
     ],
     [
       { label: '1', value: '1', keyBinding: '1', ariaLabel: 'one' },
       { label: '2', value: '2', keyBinding: '2', ariaLabel: 'two' },
       { label: '3', value: '3', keyBinding: '3', ariaLabel: 'three' },
-      { label: '−', value: '-', keyBinding: '-', ariaLabel: 'subtract' },
+      {
+        label: '−',
+        value: '-',
+        keyBinding: '-',
+        ariaLabel: 'subtract',
+        extraClassName: operatorBtnCls,
+      },
     ],
     [
       { label: '0', value: '0', keyBinding: '0', ariaLabel: 'zero' },
       { label: '.', value: '.', keyBinding: '.', ariaLabel: 'decimal point' },
       { label: '%', value: '%', keyBinding: '%', ariaLabel: 'percent' },
-      { label: '+', value: '+', keyBinding: '+', ariaLabel: 'add' },
+      {
+        label: '+',
+        value: '+',
+        keyBinding: '+',
+        ariaLabel: 'add',
+        extraClassName: operatorBtnCls,
+      },
     ],
   ];
 
@@ -405,7 +432,7 @@ export default function Calculator() {
         </label>
         <input
           id="display"
-          className="display w-full bg-transparent text-right text-3xl font-semibold tracking-wide text-white placeholder:text-slate-600 focus:outline-none"
+          className="display w-full rounded-2xl border border-white/5 bg-[#10121a] px-4 py-4 text-right text-3xl font-semibold tracking-tight text-white shadow-inner placeholder:text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#15171d]"
           placeholder="0"
           aria-labelledby="calculator-display-label"
         />
@@ -457,7 +484,7 @@ export default function Calculator() {
             Back
           </button>
         </div>
-        <div className="grid flex-1 grid-cols-4 gap-3" aria-label="calculator keypad">
+        <div className="grid flex-1 grid-cols-4 gap-2 sm:gap-3" aria-label="calculator keypad">
           {keypadRows.map((row, rowIndex) =>
             row.map((btn, columnIndex) => (
               <button
