@@ -40,30 +40,43 @@ export default function CityDetail({ city, onClose }: Props) {
     .join(' ');
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4">
-      <div className="bg-neutral-900 p-4 rounded w-full max-w-md text-white">
-        <div className="flex justify-between mb-4">
-          <div className="font-bold">{city.name}</div>
-          <button onClick={onClose} className="px-1.5">Close</button>
-        </div>
-        <div className="flex gap-1.5 mb-4">
+    <div className="fixed inset-0 flex items-center justify-center bg-black/70 p-4">
+      <div className="w-full max-w-md rounded-xl border border-kali-primary/25 bg-kali-surface/95 p-4 text-white shadow-kali-panel">
+        <div className="mb-4 flex justify-between">
+          <div className="font-bold text-lg text-kali-primary">{city.name}</div>
           <button
-            className={`px-1.5 rounded ${unit === 'C' ? 'bg-blue-600' : 'bg-white/20'}`}
+            onClick={onClose}
+            className="rounded px-2 py-1 text-sm font-medium text-kali-primary transition hover:text-kali-primary/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+          >
+            Close
+          </button>
+        </div>
+        <div className="mb-4 flex gap-1.5">
+          <button
+            className={`rounded border px-2 py-1 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
+              unit === 'C'
+                ? 'border-kali-primary/60 bg-kali-primary text-kali-secondary shadow-[0_4px_12px_rgba(15,148,210,0.3)]'
+                : 'border-kali-primary/30 bg-kali-surface/80 text-white/80 hover:bg-kali-surface/95'
+            }`}
             onClick={() => setUnit('C')}
           >
             °C
           </button>
           <button
-            className={`px-1.5 rounded ${unit === 'F' ? 'bg-blue-600' : 'bg-white/20'}`}
+            className={`rounded border px-2 py-1 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
+              unit === 'F'
+                ? 'border-kali-primary/60 bg-kali-primary text-kali-secondary shadow-[0_4px_12px_rgba(15,148,210,0.3)]'
+                : 'border-kali-primary/30 bg-kali-surface/80 text-white/80 hover:bg-kali-surface/95'
+            }`}
             onClick={() => setUnit('F')}
           >
             °F
           </button>
         </div>
-        <div className="h-24 relative">
+        <div className="relative h-24">
           <svg
             viewBox={`0 0 ${step * (slice.length - 1)} ${height}`}
-            className="absolute inset-0 w-full h-full"
+            className="absolute inset-0 h-full w-full text-kali-primary"
           >
             <polyline
               points={points}
@@ -77,7 +90,7 @@ export default function CityDetail({ city, onClose }: Props) {
                 cx={i * step}
                 cy={height - ((t - min) / range) * height}
                 r="2"
-                className="fill-blue-400"
+                className="fill-kali-primary"
               />
             ))}
           </svg>
