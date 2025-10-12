@@ -1,5 +1,3 @@
-/* eslint-disable no-top-level-window/no-top-level-window-or-document */
-
 if (isBrowser) {
   const colorInput = document.getElementById('color-input');
   const swatches = document.getElementById('swatches');
@@ -20,6 +18,7 @@ function initializeColorPicker(colorInput, swatches, hexOutput) {
 
   const colors = [];
   const copyFeedback = ensureFeedback(hexOutput);
+  let feedbackTimeoutId = null;
 
   const initialColor = normalizeHex(colorInput.value);
   if (initialColor) {
@@ -40,9 +39,18 @@ function initializeColorPicker(colorInput, swatches, hexOutput) {
 
     feedback = document.createElement('div');
     feedback.id = 'copy-feedback';
-    feedback.className = 'copy-feedback';
+    feedback.className = 'copy-feedback copy-feedback--status';
     feedback.setAttribute('role', 'status');
     feedback.setAttribute('aria-live', 'polite');
+    feedback.style.display = 'block';
+    feedback.style.marginTop = '0.75rem';
+    feedback.style.minHeight = '1.5rem';
+    feedback.style.fontSize = '0.95rem';
+    feedback.style.lineHeight = '1.4';
+    feedback.style.color = 'var(--copy-feedback-color, #f9fafb)';
+    feedback.style.transition = 'opacity 150ms ease-in-out';
+    feedback.style.opacity = '0';
+    feedback.style.letterSpacing = '0.01em';
     referenceNode.insertAdjacentElement('afterend', feedback);
     return feedback;
   }
@@ -99,19 +107,41 @@ function initializeColorPicker(colorInput, swatches, hexOutput) {
     colors.forEach((color) => {
       const rgbText = hexToRgbString(color);
       const swatch = document.createElement('button');
+      const swatchTooltip = rgbText ? `${color} (${rgbText})` : color;
+      const focusRingStyle =
+        '0 0 0 3px rgba(15, 23, 42, 0.8), 0 0 0 5px rgba(59, 130, 246, 0.75)';
       swatch.type = 'button';
-      swatch.className = 'swatch';
+      swatch.className = 'swatch swatch--copyable';
       swatch.style.backgroundColor = color;
-      swatch.title = rgbText ? `${color} / ${rgbText}` : color;
-      swatch.setAttribute(
-        'aria-label',
-        rgbText ? `Copy ${color} (${rgbText})` : `Copy ${color}`,
-      );
+      swatch.style.borderRadius = '0.75rem';
+      swatch.style.border = '1px solid rgba(255, 255, 255, 0.2)';
+      swatch.style.margin = '0.25rem';
+      swatch.style.width = '3rem';
+      swatch.style.height = '3rem';
+      swatch.style.display = 'inline-flex';
+      swatch.style.alignItems = 'center';
+      swatch.style.justifyContent = 'center';
+      swatch.style.cursor = 'pointer';
+      swatch.style.transition = 'transform 120ms ease, box-shadow 120ms ease';
+      swatch.style.outline = 'none';
+      swatch.title = `Copy ${swatchTooltip} to clipboard`;
+      swatch.setAttribute('aria-label', `Copy ${swatchTooltip} to clipboard`);
+      swatch.setAttribute('data-color', color);
 
       const handleSelection = () => {
         updateCurrentColor(color);
         copyColor(color, rgbText);
       };
+
+      swatch.addEventListener('focus', () => {
+        swatch.style.boxShadow = focusRingStyle;
+        swatch.style.transform = 'scale(1.03)';
+      });
+
+      swatch.addEventListener('blur', () => {
+        swatch.style.boxShadow = '';
+        swatch.style.transform = '';
+      });
 
       swatch.addEventListener('click', handleSelection);
       swatch.addEventListener('keydown', (event) => {
@@ -131,7 +161,9 @@ function initializeColorPicker(colorInput, swatches, hexOutput) {
   }
 
   function copyColor(color, rgbText) {
-    const message = rgbText ? `Copied ${color} (${rgbText})` : `Copied ${color}`;
+    const message = rgbText
+      ? `${color} (${rgbText}) copied to your clipboard.`
+      : `${color} copied to your clipboard.`;
     const writeText = navigator?.clipboard?.writeText;
 
     if (typeof writeText === 'function') {
@@ -150,6 +182,15 @@ function initializeColorPicker(colorInput, swatches, hexOutput) {
   function showFeedback(message) {
     if (!copyFeedback) return;
     copyFeedback.textContent = message;
+    copyFeedback.style.opacity = '1';
+    copyFeedback.setAttribute('data-visible', 'true');
+    if (feedbackTimeoutId) {
+      clearTimeout(feedbackTimeoutId);
+    }
+    feedbackTimeoutId = setTimeout(() => {
+      copyFeedback.style.opacity = '0.7';
+      copyFeedback.removeAttribute('data-visible');
+    }, 2400);
   }
 
 }
