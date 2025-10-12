@@ -371,6 +371,7 @@ CSP whitelists hosts such as `*.twitter.com`, `embed.x.com`, `cdn.jsdelivr.net`,
 
 | Symptom | Fix |
 | --- | --- |
+| `Usage Error: Couldn't find the node_modules state file` when running a Yarn script | Install dependencies first with `yarn install`. Yarn 4 uses a node_modules state file to track installs, so commands fail until the workspace has been bootstrapped. |
 | Blank app grid after static export | Ensure `NEXT_PUBLIC_STATIC_EXPORT=true` and that apps depending on `/api/*` are behind feature flags or demo data fallbacks. |
 | Service worker ignores new assets | Clear site data or bump the cache version in the PWA config. |
 | Gamepad input not detected | Confirm the browser supports `navigator.getGamepads()` and update bindings in `components/apps/Games/common/input-remap`. |
@@ -385,7 +386,7 @@ Distributed under the [MIT License](./LICENSE).
 
 ---
 
-_Last updated: 2025-10-09_
+_Last updated: 2025-10-12_
 
 ---
 
