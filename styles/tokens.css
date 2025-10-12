@@ -38,6 +38,51 @@
   --kali-terminal-green: #45ff9a;
   --kali-terminal-text: #f8fafc;
   --kali-border: rgba(15, 148, 210, 0.18);
+  --color-status-danger: #fb7185;
+  --color-status-warning: #fbbf24;
+  --color-status-info: #38bdf8;
+  --color-status-success: #34d399;
+  --color-status-on-dark: #f5faff;
+  --color-status-danger-surface: color-mix(
+    in srgb,
+    var(--color-status-danger) 36%,
+    rgba(9, 15, 23, 0.95)
+  );
+  --color-status-warning-surface: color-mix(
+    in srgb,
+    var(--color-status-warning) 30%,
+    rgba(9, 15, 23, 0.95)
+  );
+  --color-status-info-surface: color-mix(
+    in srgb,
+    var(--color-status-info) 30%,
+    rgba(9, 15, 23, 0.95)
+  );
+  --color-status-success-surface: color-mix(
+    in srgb,
+    var(--color-status-success) 32%,
+    rgba(9, 15, 23, 0.95)
+  );
+  --color-status-danger-border: color-mix(
+    in srgb,
+    var(--color-status-danger) 55%,
+    transparent
+  );
+  --color-status-warning-border: color-mix(
+    in srgb,
+    var(--color-status-warning) 55%,
+    transparent
+  );
+  --color-status-info-border: color-mix(
+    in srgb,
+    var(--color-status-info) 55%,
+    transparent
+  );
+  --color-status-success-border: color-mix(
+    in srgb,
+    var(--color-status-success) 55%,
+    transparent
+  );
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
