@@ -21,6 +21,11 @@
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
   --kali-text: #f5f5f5;
+  --kali-surface: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  --kali-overlay: color-mix(in srgb, var(--color-surface) 82%, rgba(255, 255, 255, 0.08));
+  --kali-control: var(--color-control-accent);
+  --kali-control-surface: color-mix(in srgb, var(--kali-control) 18%, var(--kali-surface));
+  --kali-control-overlay: color-mix(in srgb, var(--kali-control) 24%, var(--kali-overlay));
   accent-color: var(--color-control-accent);
 }
 
