@@ -216,61 +216,92 @@ const ClipboardManager: React.FC = () => {
   }, [clipboardSupported, readPermission, writePermission]);
 
   return (
-    <div className="p-4 space-y-3 text-white bg-ub-cool-grey h-full overflow-auto">
-      <div className="rounded-md border border-gray-700 bg-gray-800 p-3 space-y-2" data-testid="clipboard-status">
-        <div className="flex items-center justify-between">
+    <div className="h-full overflow-auto bg-ub-cool-grey p-4 text-white space-y-4 sm:p-6">
+      <div
+        className="space-y-3 rounded-lg border border-gray-700 bg-gray-800/90 p-4 shadow-inner"
+        data-testid="clipboard-status"
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-300">Clipboard status</h2>
-          <span className={`text-sm font-medium ${summaryColor}`}>{statusSummary}</span>
+          <span
+            className={`inline-flex items-center rounded-full border border-gray-700 px-3 py-1 text-xs font-semibold tracking-wide ${summaryColor}`}
+          >
+            {statusSummary}
+          </span>
         </div>
-        <dl className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
-          <div>
+        <dl className="grid grid-cols-2 gap-3 text-xs sm:gap-4 sm:text-sm">
+          <div className="space-y-1">
             <dt className="text-gray-400">Read</dt>
-            <dd className="font-medium" data-testid="clipboard-read-status">{formatPermissionState(readPermission)}</dd>
+            <dd
+              className="inline-flex items-center rounded-full border border-gray-600 bg-gray-700 px-2.5 py-1 text-[0.7rem] font-semibold uppercase tracking-wide text-gray-100 shadow-sm"
+              data-testid="clipboard-read-status"
+            >
+              {formatPermissionState(readPermission)}
+            </dd>
           </div>
-          <div>
+          <div className="space-y-1">
             <dt className="text-gray-400">Write</dt>
-            <dd className="font-medium" data-testid="clipboard-write-status">{formatPermissionState(writePermission)}</dd>
+            <dd
+              className="inline-flex items-center rounded-full border border-gray-600 bg-gray-700 px-2.5 py-1 text-[0.7rem] font-semibold uppercase tracking-wide text-gray-100 shadow-sm"
+              data-testid="clipboard-write-status"
+            >
+              {formatPermissionState(writePermission)}
+            </dd>
           </div>
         </dl>
-        {statusMessage && <p className="text-sm text-blue-300">{statusMessage}</p>}
+        {statusMessage && (
+          <p className="rounded-md border border-blue-500/40 bg-blue-900/40 px-3 py-2 text-sm text-blue-200">
+            {statusMessage}
+          </p>
+        )}
         {readPermission === 'denied' && (
-          <p className="text-sm text-red-300">
+          <p className="rounded-md border border-red-500/40 bg-red-900/40 px-3 py-2 text-sm text-red-200">
             Clipboard read access is blocked. Allow clipboard permissions in your browser settings, then choose retry.
           </p>
         )}
         {writePermission === 'denied' && (
-          <p className="text-sm text-red-300">
+          <p className="rounded-md border border-red-500/40 bg-red-900/40 px-3 py-2 text-sm text-red-200">
             Clipboard write access is blocked. Update browser permissions and retry before using history items.
           </p>
         )}
         {!clipboardSupported && (
-          <p className="text-sm text-yellow-300">
+          <p className="rounded-md border border-yellow-500/40 bg-yellow-900/40 px-3 py-2 text-sm text-yellow-200">
             This browser does not expose the asynchronous Clipboard API. Use manual copy/paste shortcuts instead.
           </p>
         )}
         <button
-          className="px-2 py-1 text-sm font-medium text-white bg-gray-700 hover:bg-gray-600"
+          className="inline-flex items-center rounded-md border border-gray-600 bg-gray-700 px-3 py-1.5 text-sm font-medium text-gray-100 shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-900"
           onClick={evaluatePermissions}
         >
           Retry permission check
         </button>
       </div>
-      <button
-        className="px-2 py-1 bg-gray-700 hover:bg-gray-600"
-        onClick={clearHistory}
-      >
-        Clear History
-      </button>
-      <ul className="space-y-1">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-300">History</h3>
+        <button
+          className="inline-flex items-center rounded-md border border-gray-600 bg-gray-700 px-3 py-1.5 text-sm font-medium text-gray-100 shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-900"
+          onClick={clearHistory}
+        >
+          Clear history
+        </button>
+      </div>
+      <ul className="space-y-3">
         {items.map((item) => (
-          <li
-            key={item.id}
-            className="cursor-pointer hover:underline"
-            onClick={() => writeToClipboard(item.text)}
-          >
-            {item.text}
+          <li key={item.id}>
+            <button
+              type="button"
+              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-left text-sm leading-relaxed text-gray-100 shadow-sm transition hover:border-blue-400 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-900"
+              onClick={() => writeToClipboard(item.text)}
+            >
+              {item.text}
+            </button>
           </li>
         ))}
+        {items.length === 0 && (
+          <li className="rounded-lg border border-dashed border-gray-700/80 bg-gray-800/40 px-4 py-6 text-center text-sm text-gray-300">
+            Clipboard history is empty. Copy something to store it here.
+          </li>
+        )}
       </ul>
     </div>
   );
