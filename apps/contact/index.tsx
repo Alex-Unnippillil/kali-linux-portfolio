@@ -12,6 +12,21 @@ import { trackEvent } from "@/lib/analytics-client";
 const DRAFT_KEY = "contact-draft";
 const EMAIL = "alex.unnippillil@hotmail.com";
 
+const threatChecklist = [
+  {
+    title: "Define your scope",
+    description: "Outline assets, teams, and timelines that need protection.",
+  },
+  {
+    title: "Map threat actors",
+    description: "List the realistic attack paths and who might pursue them.",
+  },
+  {
+    title: "Document controls",
+    description: "Share mitigations already in place or planned for launch.",
+  },
+];
+
 const getRecaptchaToken = (siteKey: string): Promise<string> =>
   new Promise((resolve) => {
     const g: any = (window as any).grecaptcha;
@@ -137,51 +152,73 @@ const ContactApp: React.FC = () => {
         {successMessage && (
           <div
             role="alert"
-            className="rounded border border-green-500/40 bg-green-900/30 px-4 py-3 text-sm text-green-100 shadow-lg shadow-green-900/20"
+            className="flex items-start gap-3 rounded-lg border border-green-500/40 bg-green-900/40 px-5 py-4 text-sm text-green-100 shadow-lg shadow-green-900/25"
           >
-            <p className="font-semibold text-green-200">Message sent</p>
-            <p className="mt-1">{successMessage}</p>
+            <span aria-hidden="true" className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-green-500/20 text-green-200">
+              <svg
+                className="h-4 w-4"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M16.704 5.29a1 1 0 0 1 .006 1.414l-6.25 6.375a1 1 0 0 1-1.438.012l-3.25-3.125a1 1 0 1 1 1.386-1.44l2.53 2.436 5.553-5.665a1 1 0 0 1 1.463-.007Z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </span>
+            <div>
+              <p className="font-semibold text-green-100">Message sent</p>
+              <p className="mt-1 leading-relaxed">{successMessage}</p>
+            </div>
           </div>
         )}
         <div className="grid gap-8 lg:grid-cols-[1.6fr,1fr]">
-          <form onSubmit={handleSubmit} className="space-y-6 rounded border border-gray-800 bg-gray-900/70 p-6 shadow-lg">
-            <div className="flex flex-col gap-2 rounded border border-gray-800/60 bg-gray-900/80 p-4 text-sm text-gray-300">
-              <p className="font-medium text-gray-100">Prefer email?</p>
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-8 rounded-xl border border-gray-800 bg-gray-950/70 p-6 shadow-2xl shadow-black/30"
+          >
+            <div className="flex flex-col gap-3 rounded-lg border border-gray-800/80 bg-gray-900/60 p-4 text-sm text-gray-300">
+              <p className="font-semibold text-gray-100">Prefer email?</p>
               <p className="leading-relaxed">
                 {"Reach me at "}
                 <span className="font-mono text-blue-300">{EMAIL}</span>. Copy
                 the address or open your default mail client.
               </p>
-              <div className="mt-2 flex flex-wrap gap-3 text-sm">
+              <div className="mt-1 flex flex-wrap gap-3 text-sm">
                 <button
                   type="button"
                   onClick={() => copyToClipboard(EMAIL)}
-                  className="rounded border border-blue-500/60 px-3 py-1 font-medium text-blue-300 transition hover:bg-blue-500/10"
+                  className="rounded-md border border-blue-500/60 px-3 py-1 font-medium text-blue-300 transition hover:bg-blue-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
                 >
                   Copy address
                 </button>
                 <button
                   type="button"
                   onClick={() => openMailto(EMAIL)}
-                  className="rounded border border-blue-500/60 px-3 py-1 font-medium text-blue-300 transition hover:bg-blue-500/10"
+                  className="rounded-md border border-blue-500/60 px-3 py-1 font-medium text-blue-300 transition hover:bg-blue-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
                 >
                   Open email app
                 </button>
               </div>
             </div>
-            <div className="space-y-4">
-              <div>
+            <div className="space-y-6">
+              <div className="space-y-2">
                 <label
                   htmlFor="contact-name"
-                  className="mb-[6px] block text-sm"
+                  className="block text-sm font-medium text-gray-100"
                   id="contact-name-label"
                 >
                   Name
                 </label>
+                <p className="text-xs text-gray-400">
+                  Introduce yourself so I know how to address you in the reply.
+                </p>
                 <div className="relative">
                   <input
                     id="contact-name"
-                    className="h-11 w-full rounded border border-gray-700 bg-gray-800 pl-10 pr-3 text-white"
+                    className="h-11 w-full rounded-lg border border-gray-700 bg-gray-900/60 pl-10 pr-3 text-white shadow-inner shadow-black/40 transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/70"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
@@ -203,19 +240,22 @@ const ContactApp: React.FC = () => {
                   </svg>
                 </div>
               </div>
-              <div>
+              <div className="space-y-2">
                 <label
                   htmlFor="contact-email"
-                  className="mb-[6px] block text-sm"
+                  className="block text-sm font-medium text-gray-100"
                   id="contact-email-label"
                 >
                   Email
                 </label>
+                <p className="text-xs text-gray-400">
+                  I will use this address to send follow-ups or share resources.
+                </p>
                 <div className="relative">
                   <input
                     id="contact-email"
                     type="email"
-                    className="h-11 w-full rounded border border-gray-700 bg-gray-800 pl-10 pr-3 text-white"
+                    className="h-11 w-full rounded-lg border border-gray-700 bg-gray-900/60 pl-10 pr-3 text-white shadow-inner shadow-black/40 transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/70"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -244,18 +284,22 @@ const ContactApp: React.FC = () => {
                   </FormError>
                 )}
               </div>
-              <div>
+              <div className="space-y-2">
                 <label
                   htmlFor="contact-message"
-                  className="mb-[6px] block text-sm"
+                  className="block text-sm font-medium text-gray-100"
                   id="contact-message-label"
                 >
                   Message
                 </label>
+                <p className="text-xs text-gray-400">
+                  Share objectives, timelines, and any sensitive details using
+                  secure channels if needed.
+                </p>
                 <div className="relative">
                   <textarea
                     id="contact-message"
-                    className="w-full rounded border border-gray-700 bg-gray-800 p-2 pl-10 text-white"
+                    className="w-full rounded-lg border border-gray-700 bg-gray-900/60 p-3 pl-11 text-white shadow-inner shadow-black/40 transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-400/70"
                     rows={4}
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
@@ -297,7 +341,7 @@ const ContactApp: React.FC = () => {
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex h-12 w-full items-center justify-center rounded bg-blue-600 px-4 text-sm font-semibold uppercase tracking-wide shadow-sm transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-900 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex h-12 w-full items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold uppercase tracking-wide shadow-md shadow-blue-900/40 transition hover:bg-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {submitting ? "Sending..." : "Send message"}
               </button>
@@ -312,7 +356,7 @@ const ContactApp: React.FC = () => {
               )}
             </div>
           </form>
-          <aside className="flex flex-col gap-6 rounded border border-gray-800 bg-gray-900/70 p-6 shadow-lg">
+          <aside className="flex flex-col gap-6 rounded-xl border border-gray-800 bg-gray-950/60 p-6 shadow-2xl shadow-black/30">
             <section>
               <h2 className="text-lg font-semibold text-blue-200">Response time</h2>
               <p className="mt-2 text-sm text-gray-300">
@@ -338,6 +382,41 @@ const ContactApp: React.FC = () => {
                   Provide context, goals, and any relevant documentation to
                   speed up the conversation.
                 </li>
+              </ul>
+            </section>
+            <section>
+              <h2 className="text-lg font-semibold text-blue-200">
+                Threat model checklist
+              </h2>
+              <ul className="mt-3 space-y-3 text-sm text-gray-300">
+                {threatChecklist.map((item) => (
+                  <li
+                    key={item.title}
+                    className="flex gap-3 rounded-lg border border-gray-800/70 bg-gray-900/60 p-3"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="mt-1 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-blue-200"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        className="h-4 w-4"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 1.25a.75.75 0 0 1 .66.39l1.58 2.846 3.181.53a.75.75 0 0 1 .398 1.27l-2.32 2.34.525 3.264a.75.75 0 0 1-1.086.78L10 11.958l-2.938 1.758a.75.75 0 0 1-1.086-.78l.525-3.263-2.32-2.34a.75.75 0 0 1 .398-1.27l3.18-.53 1.582-2.847A.75.75 0 0 1 10 1.25Z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                    <div>
+                      <p className="font-medium text-gray-100">{item.title}</p>
+                      <p className="text-xs text-gray-400">{item.description}</p>
+                    </div>
+                  </li>
+                ))}
               </ul>
             </section>
             <section>
