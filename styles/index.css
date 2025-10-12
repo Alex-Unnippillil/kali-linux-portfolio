@@ -711,6 +711,13 @@ textarea:focus-visible {
     backdrop-filter: blur(6px);
 }
 
+.game-overlay-anchor .game-overlay {
+    position: static;
+    inset: auto;
+    width: auto;
+    margin: 0;
+}
+
 .game-overlay button {
     border: 1px solid rgba(248, 250, 252, 0.35);
     background: rgba(15, 23, 42, 0.6);
