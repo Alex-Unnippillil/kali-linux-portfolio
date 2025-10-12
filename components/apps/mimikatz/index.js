@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import WarningBanner from "../../WarningBanner";
+import React, { useMemo, useState } from "react";
 
 // Demo output for each tab
 const demoOutput = {
@@ -31,18 +30,97 @@ const maskSensitive = (line, show) => {
   );
   if (!match) return line;
   const [, label, value] = match;
+
   return (
     <>
-      {label}: <span className="p-[6px]">{show ? value : "********"}</span>
+      {label}:{" "}
+      <span
+        className="rounded border border-kali-primary/30 bg-kali-primary/10 px-1.5 py-0.5 font-semibold text-[0.85em] text-kali-primary"
+      >
+        {show ? value : "********"}
+      </span>
     </>
   );
 };
 
+const alertPalettes = {
+  warning: {
+    icon: "⚠️",
+    accent: "color-mix(in srgb, #ff5c7a 78%, var(--kali-blue) 22%)",
+  },
+  success: {
+    icon: "✅",
+    accent: "var(--kali-terminal-green)",
+  },
+  info: {
+    icon: "ℹ️",
+    accent: "var(--kali-blue)",
+  },
+};
+
+const KaliAlert = ({ tone = "info", children }) => {
+  const palette = alertPalettes[tone] ?? alertPalettes.info;
+
+  return (
+    <div
+      role="alert"
+      className="mb-2 flex items-center gap-3 rounded-xl border px-3 py-2 text-sm font-medium shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur"
+      style={{
+        background: "color-mix(in srgb, var(--kali-panel) 88%, rgba(15,148,210,0.08) 12%)",
+        borderColor: "color-mix(in srgb, var(--kali-blue) 25%, transparent)",
+        color: "var(--kali-terminal-text)",
+        boxShadow: `0 12px 28px -12px color-mix(in srgb, ${palette.accent} 45%, transparent)`,
+      }}
+    >
+      <span
+        aria-hidden="true"
+        className="text-lg"
+        style={{
+          textShadow: `0 0 12px color-mix(in srgb, ${palette.accent} 40%, transparent)`,
+          color: palette.accent,
+        }}
+      >
+        {palette.icon}
+      </span>
+      <span className="leading-snug">{children}</span>
+    </div>
+  );
+};
+
 const MimikatzApp = () => {
+  const consoleId = "mimikatz-console";
+  const showSensitiveId = "mimikatz-show-sensitive";
+  const showSensitiveLabelId = "mimikatz-show-sensitive-label";
   const [active, setActive] = useState("dump");
   const [showSensitive, setShowSensitive] = useState(false);
 
   const output = demoOutput[active];
+
+  const toneStyles = useMemo(
+    () => ({
+      success: {
+        color: "var(--kali-terminal-green)",
+        textShadow:
+          "0 0 8px color-mix(in srgb, var(--kali-terminal-green) 55%, transparent)",
+      },
+      error: {
+        color: "color-mix(in srgb, #ff5c7a 82%, var(--kali-blue) 18%)",
+        textShadow: "0 0 8px color-mix(in srgb, #ff5c7a 45%, transparent)",
+      },
+      info: {
+        color: "var(--kali-terminal-text)",
+        textShadow:
+          "0 0 6px color-mix(in srgb, var(--kali-terminal-text) 28%, transparent)",
+      },
+    }),
+    [],
+  );
+
+  const resolveTone = (line) => {
+    if (/^\s*\[\+\]/.test(line)) return "success";
+    if (/^\s*\[(?:-|!)\]/.test(line) || /error/i.test(line)) return "error";
+    return "info";
+  };
 
   const copyLine = async (line) => {
     try {
@@ -61,56 +139,96 @@ const MimikatzApp = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white">
-      <WarningBanner>
-        Demo only. No real credentials are used.
-      </WarningBanner>
-      <div className="flex border-b border-gray-700">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            className={`flex items-center gap-1 px-4 py-2 ${
-              active === t.id ? "bg-purple-700" : "bg-purple-600"
-            }`}
-            onClick={() => setActive(t.id)}
-          >
-            <span>{t.icon}</span>
-            <span>{t.label}</span>
-          </button>
-        ))}
+    <div className="flex h-full w-full flex-col bg-kali-surface/95 text-kali-text">
+      <div className="border-b border-white/5 bg-[var(--kali-panel)] px-3 pt-3">
+        <KaliAlert tone="warning">Demo only. No real credentials are used.</KaliAlert>
+        <div
+          role="tablist"
+          aria-label="Mimikatz modules"
+          className="flex gap-2 rounded-xl border border-white/5 bg-white/5 p-1 shadow-inner shadow-black/30 backdrop-blur"
+        >
+          {tabs.map((t) => {
+            const isActive = active === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                aria-controls={consoleId}
+                className={`flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] ${
+                  isActive
+                    ? "bg-kali-primary/90 text-slate-900 shadow-[0_12px_20px_-12px_rgba(15,148,210,0.85)]"
+                    : "border border-transparent text-white/70 hover:border-white/10 hover:bg-white/10 hover:text-white"
+                }`}
+                onClick={() => setActive(t.id)}
+              >
+                <span aria-hidden="true">{t.icon}</span>
+                <span>{t.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
-      <div className="p-2 flex-1 overflow-auto">
-        <div className="flex justify-between items-center mb-2 text-xs">
-          <label className="flex items-center gap-1">
+      <div className="flex-1 overflow-auto px-3 py-4">
+        <div className="mb-3 flex items-center justify-between text-xs uppercase tracking-wide text-white/60">
+          <div className="flex items-center gap-2 font-semibold">
             <input
               type="checkbox"
               checked={showSensitive}
               onChange={(e) => setShowSensitive(e.target.checked)}
+              className="h-4 w-4 rounded border border-white/20 bg-transparent accent-kali-control"
+              id={showSensitiveId}
+              aria-labelledby={showSensitiveLabelId}
             />
-            Show tokens
-          </label>
+            <label
+              htmlFor={showSensitiveId}
+              className="cursor-pointer"
+              id={showSensitiveLabelId}
+            >
+              Show tokens
+            </label>
+          </div>
           <button
-            className="bg-gray-700 px-2 py-1 rounded"
+            type="button"
+            className="rounded-md border border-white/10 bg-white/5 px-3 py-1 font-semibold text-white/80 transition-colors duration-200 hover:border-kali-primary/40 hover:bg-kali-primary/15 hover:text-white"
             onClick={exportOutput}
           >
             Export
           </button>
         </div>
-        <div className="bg-black text-green-400 font-mono text-sm p-2 rounded">
-          {output.map((line, idx) => (
-            <div key={idx} className="flex items-start">
-              <span className="flex-1 whitespace-pre-wrap">
-                {maskSensitive(line, showSensitive)}
-              </span>
-              <button
-                className="ml-2 text-gray-400 hover:text-white"
-                onClick={() => copyLine(line)}
-                aria-label="copy line"
+        <div
+          id={consoleId}
+          className="space-y-2 rounded-2xl border border-white/5 bg-[color-mix(in_srgb,var(--kali-bg-solid)_85%,rgba(10,15,25,0.9)_15%)] p-3 font-mono text-sm shadow-inner shadow-[0_0_24px_rgba(0,0,0,0.5)] transition-all duration-200"
+          style={{
+            color: "var(--kali-terminal-text)",
+          }}
+        >
+          {output.map((line, idx) => {
+            const tone = resolveTone(line);
+            const style = toneStyles[tone];
+            return (
+              <div
+                key={`${active}-${idx}`}
+                className="flex items-start gap-2 rounded-lg px-2 py-1 transition-colors duration-200 hover:bg-white/10"
               >
-                📋
-              </button>
-            </div>
-          ))}
+                <span
+                  id={`${active}-line-${idx}`}
+                  className="flex-1 whitespace-pre-wrap"
+                  style={style}
+                >
+                  {maskSensitive(line, showSensitive)}
+                </span>
+                <button
+                  className="mt-0.5 text-base text-white/40 transition-colors duration-200 hover:text-kali-primary"
+                  onClick={() => copyLine(line)}
+                  aria-label="Copy line"
+                >
+                  📋
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
