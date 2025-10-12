@@ -18,7 +18,7 @@ const ReaverStepper = () => {
   return (
     <div
       id="reaver-stepper"
-      className="p-4 bg-ub-cool-grey text-white h-full overflow-y-auto"
+      className="p-4 bg-kali-surface text-white h-full overflow-y-auto"
     >
       <h1 className="text-2xl mb-4">EAPOL Handshake Explorer</h1>
 
@@ -73,7 +73,7 @@ const ReaverStepper = () => {
         </div>
       )}
 
-      <div className="mt-4 bg-black text-green-400 font-mono text-xs p-2 h-32 overflow-y-auto">
+      <div className="mt-4 bg-kali-dark text-kali-terminal font-mono text-xs p-2 h-32 overflow-y-auto">
         {logMessages.map((m) => (
           <div key={m.step}>
             [{m.step}] {m.from} ➜ {m.to}
@@ -92,14 +92,14 @@ const ReaverStepper = () => {
         {isSummary ? (
           <button
             onClick={restart}
-            className="px-4 py-2 bg-ub-green text-black rounded"
+            className="px-4 py-2 bg-kali-accent text-black rounded"
           >
             Restart
           </button>
         ) : (
           <button
             onClick={next}
-            className="px-4 py-2 bg-ub-green text-black rounded"
+            className="px-4 py-2 bg-kali-accent text-black rounded"
           >
             Next
           </button>
