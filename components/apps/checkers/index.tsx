@@ -422,7 +422,7 @@ const Checkers = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-kali-background text-kali-text p-4">
       <div aria-live="polite" className="sr-only">
         {ariaMessage}
       </div>
@@ -458,24 +458,26 @@ const Checkers = () => {
                 {...pointerHandlers(() =>
                   selected ? tryMove(r, c) : selectPiece(r, c)
                 )}
-                className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-white ${
-                  isDark ? 'bg-gray-700' : 'bg-gray-400'
+                className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-kali-focus ${
+                  isDark ? 'bg-kali-panel-dark' : 'bg-kali-panel-light'
                 } ${
                   showMove
-                    ? 'ring-4 ring-amber-400 ring-offset-2 ring-offset-black drop-shadow-[0_0_8px_#fbbf24] motion-safe:animate-glow'
+                    ? 'ring-4 ring-amber-400 ring-offset-2 ring-offset-kali-dark drop-shadow-[0_0_8px_#fbbf24] motion-safe:animate-glow'
                     : ''
                 } ${
                   isHint || isHintDest
-                    ? 'ring-2 ring-blue-400 motion-safe:animate-pulse'
+                    ? 'ring-2 ring-kali-accent motion-safe:animate-pulse'
                     : ''
-                } ${isSelected ? 'ring-2 ring-green-400' : ''} ${
-                  isLast ? 'ring-2 ring-red-400' : ''
+                } ${isSelected ? 'ring-2 ring-kali-control' : ''} ${
+                  isLast ? 'ring-2 ring-kali-error' : ''
                 } ${isCursor ? 'ring-2 ring-yellow-300' : ''}`}
               >
                 {cell && (
                   <div
                     className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center ${
-                      cell.color === 'red' ? 'bg-red-500' : 'bg-black'
+                      cell.color === 'red'
+                        ? 'bg-kali-error text-white'
+                        : 'bg-kali-accent text-kali-dark'
                     } ${cell.king ? 'border-4 border-yellow-300' : ''} ${
                       isCrowned ? 'motion-safe:animate-flourish' : ''
                     }`}
@@ -490,21 +492,21 @@ const Checkers = () => {
           })
         )}
       </div>
-      <div className="mt-4 space-x-2">
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
         {winner || draw ? (
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="rounded border border-kali-border/60 bg-kali-error px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-kali-error/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             onClick={reset}
           >
             Reset
           </button>
         ) : (
           <>
-            <span className="mr-2">Turn: {turn}</span>
-            <label>
+            <span className="mr-2 font-semibold text-kali-control">Turn: {turn}</span>
+            <label className="flex items-center gap-1 font-medium">
               Rules:
               <select
-                className="ml-1 bg-gray-700 px-1"
+                className="ml-1 rounded border border-kali-border/60 bg-kali-panel-dark px-2 py-1 text-sm text-kali-text focus:outline-none focus:ring-2 focus:ring-kali-focus focus:ring-offset-2 focus:ring-offset-kali-dark"
                 value={rule}
                 onChange={(e) => setRule(e.target.value as 'forced' | 'relaxed')}
               >
@@ -513,25 +515,25 @@ const Checkers = () => {
               </select>
             </label>
             <button
-              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              className="rounded border border-kali-border/60 bg-kali-accent/90 px-2 py-1 font-medium text-kali-dark transition-colors hover:bg-kali-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               onClick={undo}
             >
               Undo
             </button>
             <button
-              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              className="rounded border border-kali-border/60 bg-kali-accent/90 px-2 py-1 font-medium text-kali-dark transition-colors hover:bg-kali-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               onClick={redo}
             >
               Redo
             </button>
             <button
-              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              className="rounded border border-kali-border/60 bg-kali-accent/90 px-2 py-1 font-medium text-kali-dark transition-colors hover:bg-kali-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               onClick={hintMove}
             >
               Hint
             </button>
             <button
-              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              className="rounded border border-kali-border/60 bg-kali-accent/90 px-2 py-1 font-medium text-kali-dark transition-colors hover:bg-kali-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               onClick={toggleShowLegal}
               aria-pressed={showLegal}
             >
@@ -540,7 +542,7 @@ const Checkers = () => {
           </>
         )}
         <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="rounded border border-kali-border/60 bg-kali-accent/90 px-2 py-1 font-medium text-kali-dark transition-colors hover:bg-kali-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
           onClick={exportMoves}
         >
           Export Moves
