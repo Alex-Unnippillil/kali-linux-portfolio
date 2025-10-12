@@ -38,6 +38,11 @@
   --kali-terminal-green: #45ff9a;
   --kali-terminal-text: #f8fafc;
   --kali-border: rgba(15, 148, 210, 0.18);
+  --kali-status-critical: #ff5f73;
+  --kali-status-high: #ffb347;
+  --kali-status-medium: #ffd166;
+  --kali-status-low: var(--kali-terminal-green);
+  --kali-highlight-veil: rgba(15, 148, 210, 0.12);
 
   /* Game palette tokens */
   --game-color-secondary: #1d4ed8;
@@ -104,6 +109,11 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --kali-status-critical: #ff4d4d;
+  --kali-status-high: #ffd400;
+  --kali-status-medium: #ffff66;
+  --kali-status-low: #00ffbf;
+  --kali-highlight-veil: rgba(255, 255, 255, 0.35);
 }
 
 /* Dyslexia-friendly fonts */
@@ -143,5 +153,10 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+    --kali-status-critical: #ff4d4d;
+    --kali-status-high: #ffd400;
+    --kali-status-medium: #ffff66;
+    --kali-status-low: #00ffbf;
+    --kali-highlight-veil: rgba(255, 255, 255, 0.35);
   }
 }
