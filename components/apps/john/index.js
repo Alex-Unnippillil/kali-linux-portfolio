@@ -37,6 +37,11 @@ const JohnApp = () => {
   const statsWorkerRef = useRef(null);
   const controllerRef = useRef(null);
 
+  const fieldClasses =
+    'rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-control-surface)] text-[color:var(--color-text)] placeholder:text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-surface)] transition-colors';
+  const fileInputClasses =
+    'text-sm text-[color:var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-surface)] file:mr-3 file:rounded-md file:border-0 file:bg-[color:var(--kali-control)] file:px-3 file:py-1 file:text-sm file:font-semibold file:text-black file:transition-colors hover:file:bg-[color:color-mix(in_srgb,var(--kali-control)_85%,black)]';
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -295,12 +300,16 @@ const JohnApp = () => {
   );
 
   return (
-    <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white">
-      <p className="text-xs text-yellow-300 p-2">
+    <div className="flex h-full w-full flex-col bg-[var(--kali-surface)] text-[color:var(--color-text)]">
+      <p className="p-2 text-xs text-yellow-300">
         {johnPlaceholders.banners.desktop}
       </p>
-      <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-2">
-        <label htmlFor="john-hashes" className="text-sm">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3 p-4 text-sm">
+        <label
+          id="john-hashes-label"
+          htmlFor="john-hashes"
+          className="font-medium"
+        >
           Hashes (one per line)
         </label>
         <textarea
@@ -308,18 +317,23 @@ const JohnApp = () => {
           value={hashes}
           onChange={handleHashesChange}
           placeholder="Enter hashes"
-          className="flex-1 px-2 py-1 bg-gray-800 text-white rounded h-24"
+          className={`${fieldClasses} h-24 min-h-[6rem] px-3 py-2`}
           aria-invalid={error ? 'true' : undefined}
           aria-describedby={error ? 'john-error' : undefined}
+          aria-labelledby="john-hashes-label"
         />
         {hashTypes.length > 0 && (
-          <ul className="text-xs text-gray-300">
+          <ul className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
             {hashTypes.map((t, i) => (
               <li key={i}>{`Hash ${i + 1}: ${t}`}</li>
             ))}
           </ul>
         )}
-        <label htmlFor="john-rule-text" className="text-sm">
+        <label
+          id="john-rule-text-label"
+          htmlFor="john-rule-text"
+          className="font-medium"
+        >
           Rules
         </label>
         <textarea
@@ -327,9 +341,14 @@ const JohnApp = () => {
           value={ruleText}
           onChange={handleRuleTextChange}
           placeholder="Enter rules"
-          className="flex-1 px-2 py-1 bg-gray-800 text-white rounded h-24"
+          className={`${fieldClasses} h-24 min-h-[6rem] px-3 py-2`}
+          aria-labelledby="john-rule-text-label"
         />
-        <label htmlFor="john-rule" className="text-sm">
+        <label
+          id="john-rule-label"
+          htmlFor="john-rule"
+          className="font-medium"
+        >
           Rule file
         </label>
         <input
@@ -337,23 +356,33 @@ const JohnApp = () => {
           type="file"
           accept=".rule,.rules,.txt"
           onChange={handleRuleUpload}
-          className="text-sm"
+          className={fileInputClasses}
+          aria-labelledby="john-rule-label"
         />
-        <label htmlFor="john-mode" className="text-sm">
+        <label
+          id="john-mode-label"
+          htmlFor="john-mode"
+          className="font-medium"
+        >
           Mode
         </label>
         <select
           id="john-mode"
           value={mode}
           onChange={handleModeChange}
-          className="px-2 py-1 bg-gray-800 text-white rounded"
+          className={`${fieldClasses} px-3 py-2`}
+          aria-labelledby="john-mode-label"
         >
           <option value="wordlist">Wordlist</option>
           <option value="incremental">Incremental</option>
         </select>
         {mode === 'wordlist' && (
           <>
-            <label htmlFor="john-wordlist-text" className="text-sm">
+            <label
+              id="john-wordlist-text-label"
+              htmlFor="john-wordlist-text"
+              className="font-medium"
+            >
               Wordlist
             </label>
             <textarea
@@ -361,9 +390,14 @@ const JohnApp = () => {
               value={wordlistText}
               onChange={handleWordlistTextChange}
               placeholder="Enter wordlist (one per line)"
-              className="flex-1 px-2 py-1 bg-gray-800 text-white rounded h-24"
+              className={`${fieldClasses} h-24 min-h-[6rem] px-3 py-2`}
+              aria-labelledby="john-wordlist-text-label"
             />
-            <label htmlFor="john-wordlist" className="text-sm">
+            <label
+              id="john-wordlist-label"
+              htmlFor="john-wordlist"
+              className="font-medium"
+            >
               Wordlist file
             </label>
             <input
@@ -371,15 +405,21 @@ const JohnApp = () => {
               type="file"
               accept=".txt"
               onChange={handleWordlistUpload}
-              className="text-sm"
+              className={fileInputClasses}
+              aria-labelledby="john-wordlist-label"
             />
-            <label htmlFor="john-sample-wordlist" className="text-sm">
+            <label
+              id="john-sample-wordlist-label"
+              htmlFor="john-sample-wordlist"
+              className="font-medium"
+            >
               Sample wordlist
             </label>
             <select
               id="john-sample-wordlist"
               onChange={handleSampleWordlist}
-              className="px-2 py-1 bg-gray-800 text-white rounded text-sm"
+              className={`${fieldClasses} px-3 py-2 text-sm`}
+              aria-labelledby="john-sample-wordlist-label"
             >
               <option value="">Select sample</option>
               {sampleWordlists.map((s) => (
@@ -391,23 +431,27 @@ const JohnApp = () => {
           </>
         )}
         {stats && (
-          <div className="text-xs bg-gray-900 p-2 rounded">
+          <div className="rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] p-3 text-xs text-[color:color-mix(in_srgb,var(--color-text)_90%,transparent)] shadow-sm shadow-black/40">
             {candidates.length > 0 && (
               <>
-                <p className="mb-1">Candidate preview:</p>
-                <ul className="max-h-24 overflow-auto">
+                <p className="mb-1 text-[color:var(--color-text)]">Candidate preview:</p>
+                <ul className="max-h-24 overflow-auto text-[color:color-mix(in_srgb,var(--color-text)_75%,transparent)]">
                   {candidates.map((c, i) => (
                     <li key={i}>{c}</li>
                   ))}
                 </ul>
               </>
             )}
-            <p className="mt-2">{`Total: ${stats.count.toLocaleString()}`}</p>
-            <p>{`Estimated @1M/s: ${formatTime(stats.time)}`}</p>
+            <p className="mt-2 text-[color:var(--color-text)]">{`Total: ${stats.count.toLocaleString()}`}</p>
+            <p className="text-[color:color-mix(in_srgb,var(--color-text)_80%,transparent)]">{`Estimated @1M/s: ${formatTime(stats.time)}`}</p>
             <StatsChart count={stats.count} time={stats.time} />
           </div>
         )}
-        <label htmlFor="john-endpoints" className="text-sm">
+        <label
+          id="john-endpoints-label"
+          htmlFor="john-endpoints"
+          className="font-medium"
+        >
           Endpoints (comma separated)
         </label>
         <input
@@ -416,12 +460,13 @@ const JohnApp = () => {
           value={endpoints}
           onChange={(e) => setEndpoints(e.target.value)}
           placeholder="endpoint1, endpoint2"
-          className="px-2 py-1 bg-gray-800 text-white rounded"
+          className={`${fieldClasses} px-3 py-2`}
+          aria-labelledby="john-endpoints-label"
         />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 pt-1">
           <button
             type="submit"
-            className="px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded self-start"
+            className="inline-flex items-center justify-center rounded-md bg-[color:var(--kali-control)] px-4 py-2 text-sm font-semibold text-black shadow-sm transition hover:bg-[color:color-mix(in_srgb,var(--kali-control)_85%,black)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-surface)] disabled:cursor-not-allowed disabled:opacity-70"
             disabled={loading}
           >
             {loading ? 'Running...' : 'Crack'}
@@ -430,7 +475,7 @@ const JohnApp = () => {
             <button
               type="button"
               onClick={handleCancel}
-              className="px-4 py-1 bg-red-700 hover:bg-red-600 rounded"
+              className="inline-flex items-center justify-center rounded-md bg-[color:var(--game-color-danger)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[color:color-mix(in_srgb,var(--game-color-danger)_85%,black)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--game-color-danger)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-surface)]"
             >
               Cancel
             </button>
@@ -438,18 +483,24 @@ const JohnApp = () => {
         </div>
         {loading && (
           <>
-            <div className="w-full bg-gray-700 rounded h-4 overflow-hidden mt-2 relative">
+            <div className="relative mt-2 h-4 w-full overflow-hidden rounded-full border border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,var(--kali-surface)_82%,transparent)] shadow-inner">
               <div
                 className="h-full"
                 style={{
                   width: `${progress}%`,
                   backgroundImage:
                     phase === 'wordlist'
-                      ? 'repeating-linear-gradient(45deg,#065f46,#065f46 10px,#1e3a8a 10px,#1e3a8a 20px)'
-                      : 'repeating-linear-gradient(45deg,#1e3a8a,#1e3a8a 10px,#065f46 10px,#065f46 20px)',
-                  backgroundSize: '20px 20px',
-                  backgroundPosition: `${phase === 'wordlist' ? animOffset : -animOffset}px 0`,
+                      ? 'repeating-linear-gradient(90deg,color-mix(in srgb,var(--kali-control) 92%, transparent) 0px,color-mix(in srgb,var(--kali-control) 92%, transparent) 12px,color-mix(in srgb,var(--kali-control) 70%, black) 12px,color-mix(in srgb,var(--kali-control) 70%, black) 24px)'
+                      : 'repeating-linear-gradient(90deg,color-mix(in srgb,var(--kali-control) 75%, transparent) 0px,color-mix(in srgb,var(--kali-control) 75%, transparent) 12px,color-mix(in srgb,var(--game-color-danger) 55%, var(--kali-control)) 12px,color-mix(in srgb,var(--game-color-danger) 55%, var(--kali-control)) 24px)',
+                  backgroundSize: '200% 100%',
+                  backgroundPosition: prefersReducedMotion
+                    ? '0% 0%'
+                    : `${phase === 'wordlist' ? animOffset : -animOffset}% 0%`,
                   transition: prefersReducedMotion ? 'none' : 'width 0.2s ease-out',
+                  boxShadow:
+                    phase === 'wordlist'
+                      ? '0 0 18px var(--kali-blue-glow)'
+                      : '0 0 18px color-mix(in srgb,var(--game-color-danger) 55%, transparent)',
                 }}
                 role="progressbar"
                 aria-valuenow={Math.round(progress)}
@@ -458,37 +509,53 @@ const JohnApp = () => {
               >
                 <span className="sr-only">{`Progress ${Math.round(progress)} percent`}</span>
               </div>
-              <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
+              <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-[color:var(--kali-text)]">
                 {`${Math.round(progress)}%`}
               </span>
             </div>
-            <p className="text-xs mt-1 text-white" aria-live="polite">
+            <p className="mt-2 text-xs text-[color:color-mix(in_srgb,var(--color-text)_80%,transparent)]" aria-live="polite">
               {`Keyspace ${Math.round(progress)}% - ${phase}`}
             </p>
           </>
         )}
         {error && <FormError id="john-error">{error}</FormError>}
       </form>
-      <pre className="flex-1 overflow-auto p-4 whitespace-pre-wrap">{output}</pre>
-      <div className="p-4 flex flex-col gap-2 border-t border-gray-700">
-        <label htmlFor="john-potfile" className="text-sm">Potfile</label>
+      <pre className="flex-1 overflow-auto border-t border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] p-4 text-[color:var(--kali-terminal-text)] whitespace-pre-wrap">{output}</pre>
+      <div className="flex flex-col gap-3 border-t border-[color:var(--kali-border)] bg-[color:var(--kali-surface)]/95 p-4 text-sm">
+        <label
+          id="john-potfile-label"
+          htmlFor="john-potfile"
+          className="font-medium"
+        >
+          Potfile
+        </label>
         <input
           id="john-potfile"
           type="file"
           accept=".pot,.txt"
           onChange={handlePotfileUpload}
-          className="text-sm"
+          className={fileInputClasses}
+          aria-labelledby="john-potfile-label"
         />
         {potfileEntries.length > 0 && (
           <>
+            <label
+              id="john-pot-filter-label"
+              htmlFor="john-pot-filter"
+              className="sr-only"
+            >
+              Filter potfile entries
+            </label>
             <input
               type="text"
               value={potFilter}
               onChange={(e) => setPotFilter(e.target.value)}
               placeholder="Filter"
-              className="px-2 py-1 bg-gray-800 text-white rounded text-sm"
+              id="john-pot-filter"
+              className={`${fieldClasses} px-3 py-2 text-sm`}
+              aria-labelledby="john-pot-filter-label"
             />
-            <div className="max-h-40 overflow-auto bg-gray-900 p-2 rounded text-xs">
+            <div className="max-h-40 overflow-auto rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] p-2 text-xs text-[color:color-mix(in_srgb,var(--color-text)_80%,transparent)] shadow-inner">
               {filteredPotfile.map((p, i) => (
                 <div key={i}>{`${p.hash}:${p.password}`}</div>
               ))}
@@ -496,7 +563,7 @@ const JohnApp = () => {
             <button
               type="button"
               onClick={handleExport}
-              className="self-start px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm"
+              className="inline-flex items-center justify-center self-start rounded-md bg-[color:var(--kali-control)] px-3 py-1.5 text-sm font-semibold text-black shadow-sm transition hover:bg-[color:color-mix(in_srgb,var(--kali-control)_85%,black)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-surface)]"
             >
               Export
             </button>
