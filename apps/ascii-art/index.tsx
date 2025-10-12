@@ -44,7 +44,9 @@ type ControlPanelProps = {
 };
 
 const ControlPanel = ({ title, children, className }: ControlPanelProps) => (
-  <section className={`bg-gray-800/60 border border-gray-700 rounded p-3 ${className ?? ''}`}>
+  <section
+    className={`rounded border border-gray-700 bg-gray-800/60 p-3 font-mono ${className ?? ''}`}
+  >
     <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-300 mb-2">{title}</h2>
     <div className="flex flex-col gap-2">{children}</div>
   </section>
@@ -74,6 +76,7 @@ const ColorControls = ({ fgColor, bgColor, onFgChange, onBgChange }: ColorContro
         type="color"
         value={fgColor}
         onChange={(e) => onFgChange(e.target.value)}
+        aria-label="Foreground color"
         className="w-10 h-6 p-0 border-0 bg-transparent"
       />
     </label>
@@ -83,6 +86,7 @@ const ColorControls = ({ fgColor, bgColor, onFgChange, onBgChange }: ColorContro
         type="color"
         value={bgColor}
         onChange={(e) => onBgChange(e.target.value)}
+        aria-label="Background color"
         className="w-10 h-6 p-0 border-0 bg-transparent"
       />
     </label>
@@ -101,7 +105,7 @@ const FontSizeSelect = ({ value, onChange }: FontSizeSelectProps) => (
       aria-label="Font size"
       value={value}
       onChange={(e) => onChange(Number(e.target.value))}
-      className="px-2 py-1 text-black rounded"
+      className="rounded px-2 py-1 font-mono text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
     >
       {fontSizes.map((s) => (
         <option key={s} value={s}>
@@ -140,6 +144,15 @@ function wrapAnsi(text: string, fgHex: string, bgHex: string) {
 }
 
 const AsciiArtApp = () => {
+  /**
+   * UI pain points worth tracking while iterating on the tool:
+   * - Input editor: the auto-resizing textarea currently grows without a ceiling, so long payloads
+   *   can push the preview pane below the fold and cause layout shift.
+   * - Preview panel: the ASCII preview inherits its height from content, collapsing between runs
+   *   and producing large jumps when the output length changes dramatically.
+   * - Preset controls: the sample snippets act on hover only, leaving keyboard users without a
+   *   clear affordance or feedback loop when tabbing through the grid.
+   */
   const router = useRouter();
   const [tab, setTab] = useState<'text' | 'image'>('text');
   const [text, setText] = useState('');
@@ -304,17 +317,32 @@ const AsciiArtApp = () => {
     link.click();
   };
 
+  const previewPaneClasses =
+    'min-h-[12rem] whitespace-pre overflow-auto rounded border border-gray-800 bg-black/80 p-[6px] font-mono leading-tight shadow-inner';
+
   return (
-    <div className="p-4 bg-gray-900 text-white h-full overflow-auto font-mono">
-      <div className="mb-4 flex gap-2">
+    <div className="flex h-full flex-col gap-4 overflow-auto bg-gray-900 p-4 font-mono text-white">
+      <div className="flex gap-2">
         <button
-          className={`px-2 py-1 rounded ${tab === 'text' ? 'bg-blue-700' : 'bg-gray-700'}`}
+          type="button"
+          aria-pressed={tab === 'text'}
+          className={`rounded border px-3 py-1.5 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+            tab === 'text'
+              ? 'border-blue-500 bg-blue-700 text-white'
+              : 'border-gray-700 bg-gray-800 text-gray-200 hover:bg-gray-700'
+          }`}
           onClick={() => setTab('text')}
         >
           Text
         </button>
         <button
-          className={`px-2 py-1 rounded ${tab === 'image' ? 'bg-blue-700' : 'bg-gray-700'}`}
+          type="button"
+          aria-pressed={tab === 'image'}
+          className={`rounded border px-3 py-1.5 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+            tab === 'image'
+              ? 'border-blue-500 bg-blue-700 text-white'
+              : 'border-gray-700 bg-gray-800 text-gray-200 hover:bg-gray-700'
+          }`}
           onClick={() => setTab('image')}
         >
           Image
@@ -326,7 +354,8 @@ const AsciiArtApp = () => {
             <textarea
               ref={textAreaRef}
               rows={1}
-              className="px-2 py-1 text-black rounded resize-none overflow-hidden font-mono leading-none"
+              aria-label="ASCII input editor"
+              className="resize-none overflow-hidden rounded px-2 py-1 font-mono leading-none text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
               style={{ fontFamily: 'monospace', lineHeight: '1', fontSize: `${fontSize}px` }}
               placeholder="Enter text"
               value={text}
@@ -339,7 +368,7 @@ const AsciiArtApp = () => {
                   aria-label="Font selection"
                   value={font}
                   onChange={(e) => setFont(e.target.value as figlet.Fonts)}
-                  className="px-2 py-1 text-black rounded"
+                  className="rounded px-2 py-1 font-mono text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
                 >
                   {fontList.map((f) => (
                     <option key={f} value={f}>
@@ -359,44 +388,48 @@ const AsciiArtApp = () => {
               onBgChange={setBgColor}
             />
           </ControlPanel>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
-              className="px-2 py-1 bg-blue-700 rounded flex items-center gap-1"
+              type="button"
+              className="flex items-center gap-1 rounded border border-blue-500 bg-blue-700 px-2 py-1 text-sm transition-colors hover:bg-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
               onClick={() => copy(output)}
             >
               <CopyIcon />
               <span>Copy ASCII</span>
             </button>
             <button
-              className="px-2 py-1 bg-green-700 rounded"
+              type="button"
+              className="rounded border border-green-500 bg-green-700 px-2 py-1 text-sm transition-colors hover:bg-green-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-400"
               onClick={() => download(wrapAnsi(output, fgColor, bgColor), 'ascii-art.txt')}
             >
               Download Text
             </button>
             <button
-              className="px-2 py-1 bg-purple-700 rounded"
+              type="button"
+              className="rounded border border-purple-500 bg-purple-700 px-2 py-1 text-sm transition-colors hover:bg-purple-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
               onClick={() => saveCanvas('ascii-art.png')}
             >
               Save Image
             </button>
           </div>
           <pre
-            className="p-[6px] whitespace-pre overflow-auto font-mono leading-none"
+            className={previewPaneClasses}
             style={{ imageRendering: 'pixelated', fontSize: `${fontSize}px`, color: fgColor, backgroundColor: bgColor }}
           >
             {output}
           </pre>
           <canvas
             ref={displayCanvasRef}
+            aria-hidden="true"
             className="mt-2"
             style={{ imageRendering: 'pixelated' }}
           />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
             {samples.map((s, i) => (
               <pre
                 key={i}
                 onMouseEnter={() => copy(s)}
-                className="p-2 whitespace-pre cursor-pointer bg-black hover:bg-gray-800 font-mono leading-none"
+                className="cursor-pointer whitespace-pre rounded border border-gray-800 bg-black p-2 font-mono leading-none transition-colors hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
                 style={{ imageRendering: 'pixelated' }}
               >
                 {s}
@@ -408,7 +441,12 @@ const AsciiArtApp = () => {
       {tab === 'image' && (
         <div className="flex flex-col gap-3">
           <ControlPanel title="Image">
-            <input type="file" accept="image/*" onChange={handleImage} />
+            <input
+              type="file"
+              accept="image/*"
+              aria-label="Upload image for ASCII conversion"
+              onChange={handleImage}
+            />
             <ControlRow className="gap-4">
               <label className="flex items-center gap-2 text-sm text-gray-200">
                 <span className="text-xs uppercase tracking-wide text-gray-400">Brightness</span>
@@ -447,36 +485,40 @@ const AsciiArtApp = () => {
           <ControlPanel title="Text styling">
             <FontSizeSelect value={fontSize} onChange={setFontSize} />
           </ControlPanel>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
-              className="px-2 py-1 bg-blue-700 rounded flex items-center gap-1"
+              type="button"
+              className="flex items-center gap-1 rounded border border-blue-500 bg-blue-700 px-2 py-1 text-sm transition-colors hover:bg-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
               onClick={() => copy(imgOutput)}
             >
               <CopyIcon />
               <span>Copy ASCII</span>
             </button>
             <button
-              className="px-2 py-1 bg-green-700 rounded"
+              type="button"
+              className="rounded border border-green-500 bg-green-700 px-2 py-1 text-sm transition-colors hover:bg-green-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-400"
               onClick={() => download(wrapAnsi(imgOutput, fgColor, bgColor), 'image-ascii.txt')}
             >
               Download Text
             </button>
             <button
-              className="px-2 py-1 bg-purple-700 rounded"
+              type="button"
+              className="rounded border border-purple-500 bg-purple-700 px-2 py-1 text-sm transition-colors hover:bg-purple-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
               onClick={() => saveCanvas('image-ascii.png')}
             >
               Save Image
             </button>
           </div>
-          <canvas ref={canvasRef} className="hidden" />
+          <canvas ref={canvasRef} aria-hidden="true" className="hidden" />
           <pre
-            className="p-[6px] whitespace-pre overflow-auto font-mono leading-none"
+            className={previewPaneClasses}
             style={{ imageRendering: 'pixelated', fontSize: `${fontSize}px`, color: fgColor, backgroundColor: bgColor }}
           >
             {imgOutput}
           </pre>
           <canvas
             ref={displayCanvasRef}
+            aria-hidden="true"
             className="mt-2"
             style={{ imageRendering: 'pixelated' }}
           />
