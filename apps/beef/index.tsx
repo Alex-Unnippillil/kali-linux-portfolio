@@ -19,27 +19,39 @@ const severityStyles: Record<Severity, { icon: string; chipClass: string; label:
   Low: {
     icon: '🟢',
     chipClass:
-      'border-emerald-400/40 bg-emerald-700/30 text-emerald-200 shadow-[0_0_8px_rgba(52,211,153,0.25)]',
+      'border-emerald-400/50 bg-emerald-900/40 text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.3)] ring-1 ring-emerald-500/20',
     label: 'Informational',
   },
   Medium: {
     icon: '🟡',
     chipClass:
-      'border-amber-400/50 bg-amber-600/30 text-amber-100 shadow-[0_0_10px_rgba(251,191,36,0.25)]',
+      'border-amber-400/60 bg-amber-900/40 text-amber-100 shadow-[0_0_14px_rgba(251,191,36,0.35)] ring-1 ring-amber-400/25',
     label: 'Warning',
   },
   High: {
     icon: '🔴',
     chipClass:
-      'border-red-400/60 bg-red-700/40 text-red-100 shadow-[0_0_14px_rgba(248,113,113,0.45)]',
+      'border-red-400/70 bg-red-900/40 text-red-100 shadow-[0_0_16px_rgba(248,113,113,0.45)] ring-1 ring-red-500/30',
     label: 'Critical',
   },
+};
+
+const severityLabelClasses: Record<Severity, string> = {
+  Low: 'text-emerald-200',
+  Medium: 'text-amber-100',
+  High: 'text-red-100',
 };
 
 const timelineBadgeClasses: Record<TimelineState, string> = {
   complete: 'border-emerald-400/60 bg-emerald-700/30 text-emerald-100',
   active: 'border-cyan-400/70 bg-cyan-600/30 text-cyan-100 animate-pulse',
   pending: 'border-gray-600 bg-gray-800 text-gray-300',
+};
+
+const timelineStateLabel: Record<TimelineState, string> = {
+  complete: 'Phase completed',
+  active: 'Phase in progress',
+  pending: 'Phase queued',
 };
 
 const timelineStateIcon: Record<TimelineState, string> = {
@@ -79,6 +91,9 @@ const formatSince = (seconds: number) => {
 };
 
 type WindowState = 'normal' | 'minimized' | 'maximized' | 'closed';
+
+const statCardClass =
+  'rounded-xl border border-gray-800/60 bg-black/35 px-4 py-4 shadow-[0_12px_28px_rgba(6,182,212,0.12)] backdrop-blur flex flex-col gap-2';
 
 const BeefPage: React.FC = () => {
   const [windowState, setWindowState] = useState<WindowState>('normal');
@@ -151,7 +166,7 @@ const BeefPage: React.FC = () => {
             </div>
           </div>
           <div className="grid w-full grid-cols-1 gap-3 text-sm sm:grid-cols-3 lg:w-auto">
-            <div className="rounded-lg border border-gray-700/70 bg-black/40 px-4 py-3 shadow-inner">
+            <div className={statCardClass}>
               <p className="text-xs uppercase tracking-wide text-gray-400">Active hooks</p>
               <div className="mt-1 flex items-baseline gap-2">
                 <span className="text-2xl font-semibold text-white">3</span>
@@ -159,7 +174,7 @@ const BeefPage: React.FC = () => {
               </div>
               <p className="mt-1 text-xs text-emerald-300">+1 new hook this session</p>
             </div>
-            <div className="rounded-lg border border-gray-700/70 bg-black/40 px-4 py-3 shadow-inner">
+            <div className={statCardClass}>
               <p className="text-xs uppercase tracking-wide text-gray-400">Campaign status</p>
               <div className="mt-1 flex items-center gap-2">
                 <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-700/30 px-2 py-0.5 text-xs font-semibold text-emerald-200">
@@ -170,7 +185,7 @@ const BeefPage: React.FC = () => {
               </div>
               <p className="mt-1 text-xs text-gray-300">Operator guidance active</p>
             </div>
-            <div className="rounded-lg border border-gray-700/70 bg-black/40 px-4 py-3 shadow-inner">
+            <div className={statCardClass}>
               <p className="text-xs uppercase tracking-wide text-gray-400">Last check-in</p>
               <div className="mt-1 text-lg font-semibold text-white">{lastCheckIn}</div>
               <p className="mt-1 text-xs text-gray-300">Hooked client telemetry received</p>
@@ -206,15 +221,23 @@ const BeefPage: React.FC = () => {
 
       <div className="px-4 pt-3">
         <nav aria-label="BeEF campaign timeline">
-          <ol className="flex flex-wrap gap-2">
+          <ol className="grid gap-3 sm:grid-cols-3">
             {timelineSteps.map((step) => (
               <li key={step.label}>
-                <span
-                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${timelineBadgeClasses[step.state]}`}
-                >
-                  <span aria-hidden>{timelineStateIcon[step.state]}</span>
-                  {step.label}
-                </span>
+                <div className="flex items-center gap-3 rounded-xl border border-gray-800/60 bg-black/45 px-3 py-3 shadow-inner shadow-cyan-900/10">
+                  <span
+                    aria-hidden
+                    className={`flex h-9 w-9 items-center justify-center rounded-full border text-base font-semibold ${timelineBadgeClasses[step.state]}`}
+                  >
+                    {timelineStateIcon[step.state]}
+                  </span>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-gray-100">{step.label}</span>
+                    <span className="text-[11px] uppercase tracking-wide text-gray-400">
+                      {timelineStateLabel[step.state]}
+                    </span>
+                  </div>
+                </div>
               </li>
             ))}
           </ol>
@@ -283,15 +306,28 @@ const BeefPage: React.FC = () => {
         </header>
         <ul role="list" className="divide-y divide-gray-800/70">
           {logs.map((log, idx) => (
-            <li key={idx} className="flex items-center gap-3 px-4 py-2">
-              <span
-                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${severityStyles[log.severity].chipClass}`}
-              >
-                <span aria-hidden>{severityStyles[log.severity].icon}</span>
-                <span>{severityStyles[log.severity].label}</span>
-              </span>
-              <span className="w-16 text-gray-400">{formatRelativeTime(log.offsetSeconds)}</span>
-              <span className="flex-1 text-gray-100">{log.message}</span>
+            <li key={idx} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-start sm:gap-4">
+              <div className="flex items-center gap-3 sm:w-48">
+                <span
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-lg shadow-lg backdrop-blur ${severityStyles[log.severity].chipClass}`}
+                >
+                  <span aria-hidden>{severityStyles[log.severity].icon}</span>
+                </span>
+                <span
+                  className={clsx(
+                    'text-[11px] font-semibold uppercase tracking-[0.2em]',
+                    severityLabelClasses[log.severity],
+                  )}
+                >
+                  {severityStyles[log.severity].label}
+                </span>
+              </div>
+              <div className="flex flex-1 flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                <p className="text-sm leading-snug text-gray-100">{log.message}</p>
+                <span className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">
+                  {formatRelativeTime(log.offsetSeconds)}
+                </span>
+              </div>
             </li>
           ))}
         </ul>
