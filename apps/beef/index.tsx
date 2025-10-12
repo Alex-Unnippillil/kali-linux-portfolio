@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 import Image from 'next/image';
 import clsx from 'clsx';
 import BeefApp from '../../components/apps/beef';
+import windowStyles from '../../components/base/window.module.css';
 
 type Severity = 'Low' | 'Medium' | 'High';
 
@@ -19,33 +20,34 @@ const severityStyles: Record<Severity, { icon: string; chipClass: string; label:
   Low: {
     icon: '🟢',
     chipClass:
-      'border-emerald-400/50 bg-emerald-900/40 text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.3)] ring-1 ring-emerald-500/20',
+      'border-kali-primary/55 bg-kali-primary/15 text-kali-primary shadow-[0_0_14px_rgba(15,148,210,0.32)] ring-1 ring-kali-primary/35',
     label: 'Informational',
   },
   Medium: {
     icon: '🟡',
     chipClass:
-      'border-amber-400/60 bg-amber-900/40 text-amber-100 shadow-[0_0_14px_rgba(251,191,36,0.35)] ring-1 ring-amber-400/25',
+      'border-kali-accent/60 bg-kali-accent/18 text-kali-accent shadow-[0_0_16px_rgba(15,148,210,0.36)] ring-1 ring-kali-accent/40',
     label: 'Warning',
   },
   High: {
     icon: '🔴',
     chipClass:
-      'border-red-400/70 bg-red-900/40 text-red-100 shadow-[0_0_16px_rgba(248,113,113,0.45)] ring-1 ring-red-500/30',
+      'border-kali-error/65 bg-kali-error/15 text-kali-error shadow-[0_0_18px_rgba(255,77,109,0.38)] ring-1 ring-kali-error/45',
     label: 'Critical',
   },
 };
 
 const severityLabelClasses: Record<Severity, string> = {
-  Low: 'text-emerald-200',
-  Medium: 'text-amber-100',
-  High: 'text-red-100',
+  Low: 'text-kali-primary',
+  Medium: 'text-kali-accent',
+  High: 'text-kali-error',
 };
 
 const timelineBadgeClasses: Record<TimelineState, string> = {
-  complete: 'border-emerald-400/60 bg-emerald-700/30 text-emerald-100',
-  active: 'border-cyan-400/70 bg-cyan-600/30 text-cyan-100 animate-pulse',
-  pending: 'border-gray-600 bg-gray-800 text-gray-300',
+  complete: 'border-kali-primary/60 bg-kali-primary/18 text-kali-primary',
+  active:
+    'border-kali-accent/60 bg-kali-accent/20 text-white shadow-[0_0_18px_rgba(15,148,210,0.28)] animate-pulse',
+  pending: 'border-white/10 bg-white/5 text-gray-300',
 };
 
 const timelineStateLabel: Record<TimelineState, string> = {
@@ -93,7 +95,7 @@ const formatSince = (seconds: number) => {
 type WindowState = 'normal' | 'minimized' | 'maximized' | 'closed';
 
 const statCardClass =
-  'rounded-xl border border-gray-800/60 bg-black/35 px-4 py-4 shadow-[0_12px_28px_rgba(6,182,212,0.12)] backdrop-blur flex flex-col gap-2';
+  'rounded-xl border border-kali-border/60 bg-black/35 px-4 py-4 shadow-[0_18px_42px_rgba(15,148,210,0.14)] backdrop-blur flex flex-col gap-2';
 
 const BeefPage: React.FC = () => {
   const [windowState, setWindowState] = useState<WindowState>('normal');
@@ -138,14 +140,23 @@ const BeefPage: React.FC = () => {
   const frameClasses = useMemo(
     () =>
       clsx(
-        'relative mx-auto flex h-[32rem] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-gray-800/70 bg-black/40 shadow-2xl shadow-cyan-900/20 backdrop-blur transition-all duration-300 ease-in-out',
+        'relative mx-auto flex h-[32rem] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-kali-border/70 bg-black/40 shadow-[0_24px_64px_rgba(15,148,210,0.16)] backdrop-blur transition-all duration-300 ease-in-out',
         {
-          'h-[calc(100vh-4rem)] max-h-[calc(100vh-2rem)] w-full max-w-none rounded-none border-cyan-500/70 shadow-[0_0_60px_rgba(6,182,212,0.35)]':
+          'h-[calc(100vh-4rem)] max-h-[calc(100vh-2rem)] w-full max-w-none rounded-none border-kali-accent/70 shadow-[0_0_60px_rgba(15,148,210,0.32)]':
             isMaximized,
           'scale-[0.98] opacity-70 pointer-events-none': isMinimized,
         },
       ),
     [isMaximized, isMinimized],
+  );
+
+  const controlButtonClass = clsx(
+    windowStyles.windowControlButton,
+    'mx-1 flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-white transition-colors hover:bg-white/15 focus-visible:outline-none',
+  );
+  const closeButtonClass = clsx(
+    windowStyles.windowControlButton,
+    'mx-1 flex h-7 w-7 items-center justify-center rounded-full bg-kali-error text-white transition-colors hover:bg-kali-error/90 focus-visible:outline-none',
   );
 
   if (isClosed) {
@@ -172,12 +183,12 @@ const BeefPage: React.FC = () => {
                 <span className="text-2xl font-semibold text-white">3</span>
                 <span className="text-xs text-gray-400">of 5 targets</span>
               </div>
-              <p className="mt-1 text-xs text-emerald-300">+1 new hook this session</p>
+              <p className="mt-1 text-xs text-kali-primary">+1 new hook this session</p>
             </div>
             <div className={statCardClass}>
               <p className="text-xs uppercase tracking-wide text-gray-400">Campaign status</p>
               <div className="mt-1 flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-700/30 px-2 py-0.5 text-xs font-semibold text-emerald-200">
+                <span className="inline-flex items-center gap-1 rounded-full border border-kali-primary/45 bg-kali-primary/18 px-2 py-0.5 text-xs font-semibold text-kali-primary">
                   <span aria-hidden className="text-base leading-none">●</span>
                   Live
                 </span>
@@ -212,7 +223,7 @@ const BeefPage: React.FC = () => {
           <button
             type="button"
             onClick={restoreWindow}
-            className="rounded-md bg-kali-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-kali-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-ub-cool-grey"
+            className="rounded-md bg-kali-primary px-4 py-2 text-sm font-medium text-white shadow hover:bg-kali-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-ub-cool-grey"
           >
             Reopen window
           </button>
@@ -224,7 +235,7 @@ const BeefPage: React.FC = () => {
           <ol className="grid gap-3 sm:grid-cols-3">
             {timelineSteps.map((step) => (
               <li key={step.label}>
-                <div className="flex items-center gap-3 rounded-xl border border-gray-800/60 bg-black/45 px-3 py-3 shadow-inner shadow-cyan-900/10">
+                <div className="flex items-center gap-3 rounded-xl border border-kali-border/60 bg-black/45 px-3 py-3 shadow-inner shadow-[0_0_24px_rgba(15,148,210,0.08)]">
                   <span
                     aria-hidden
                     className={`flex h-9 w-9 items-center justify-center rounded-full border text-base font-semibold ${timelineBadgeClasses[step.state]}`}
@@ -254,44 +265,82 @@ const BeefPage: React.FC = () => {
         data-window-state={windowState}
         data-testid="beef-window-frame"
       >
-        <header className="flex items-center justify-between bg-ub-window-title px-4 py-3 text-sm font-medium">
+        <header
+          className={clsx(
+            windowStyles.windowTitlebar,
+            'relative flex items-center justify-between bg-ub-window-title px-3 text-sm font-medium text-white',
+          )}
+        >
           <div className="flex items-center gap-3">
             <Image
               src="/themes/Yaru/apps/beef.svg"
               alt="BeEF badge"
-              width={32}
-              height={32}
+              width={24}
+              height={24}
               className="drop-shadow"
               priority
             />
-            <h1 className="text-lg font-semibold">BeEF Demo</h1>
-            {isMaximized && <span className="rounded bg-black/30 px-2 py-0.5 text-xs uppercase tracking-wide">Maximized</span>}
-            {isMinimized && <span className="rounded bg-black/30 px-2 py-0.5 text-xs uppercase tracking-wide">Minimized</span>}
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-semibold">BeEF Demo</h1>
+              {isMaximized && (
+                <span className="rounded-full border border-kali-accent/50 bg-kali-accent/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white">
+                  Maximized
+                </span>
+              )}
+              {isMinimized && (
+                <span className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white/80">
+                  Minimized
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center">
             <button
               type="button"
               aria-label={isMinimized ? 'Restore window' : 'Minimize window'}
               onClick={isMinimized ? restoreFromMinimize : handleMinimize}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-lg font-semibold text-white transition hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+              className={controlButtonClass}
             >
-              {isMinimized ? '▢' : '–'}
+              <Image
+                src={
+                  isMinimized
+                    ? '/themes/Yaru/window/window-restore-symbolic.svg'
+                    : '/themes/Yaru/window/window-minimize-symbolic.svg'
+                }
+                alt={isMinimized ? 'Restore window' : 'Minimize window'}
+                width={16}
+                height={16}
+              />
             </button>
             <button
               type="button"
               aria-label={isMaximized ? 'Restore window size' : 'Maximize window'}
               onClick={handleMaximize}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-base font-semibold text-white transition hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+              className={controlButtonClass}
             >
-              {isMaximized ? '❐' : '▢'}
+              <Image
+                src={
+                  isMaximized
+                    ? '/themes/Yaru/window/window-restore-symbolic.svg'
+                    : '/themes/Yaru/window/window-maximize-symbolic.svg'
+                }
+                alt={isMaximized ? 'Restore window size' : 'Maximize window'}
+                width={16}
+                height={16}
+              />
             </button>
             <button
               type="button"
               aria-label="Close window"
               onClick={handleClose}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-base font-semibold text-white transition hover:bg-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+              className={closeButtonClass}
             >
-              ×
+              <Image
+                src="/themes/Yaru/window/window-close-symbolic.svg"
+                alt="Close window"
+                width={16}
+                height={16}
+              />
             </button>
           </div>
         </header>
