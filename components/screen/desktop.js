@@ -1596,31 +1596,105 @@ export class Desktop extends Component {
         this.closeCommandPalette();
     };
 
-    openOverlay = (id, options = {}) => {
+    syncOverlayWindowFlags = (id, flags, callback) => {
+        if (!id) {
+            if (typeof callback === 'function') {
+                callback();
+            }
+            return;
+        }
+
+        const { closed, minimized, focused } = flags || {};
+        let didUpdate = false;
+
+        this.setState((prev) => {
+            const partial = {};
+
+            if (typeof closed === 'boolean') {
+                const previousClosed = prev.closed_windows || {};
+                if (!Object.prototype.hasOwnProperty.call(previousClosed, id) || previousClosed[id] !== closed) {
+                    partial.closed_windows = { ...previousClosed, [id]: closed };
+                }
+            }
+
+            if (typeof minimized === 'boolean') {
+                const previousMinimized = prev.minimized_windows || {};
+                if (!Object.prototype.hasOwnProperty.call(previousMinimized, id) || previousMinimized[id] !== minimized) {
+                    partial.minimized_windows = { ...previousMinimized, [id]: minimized };
+                }
+            }
+
+            if (typeof focused === 'boolean') {
+                const previousFocused = prev.focused_windows || {};
+                if (!Object.prototype.hasOwnProperty.call(previousFocused, id) || previousFocused[id] !== focused) {
+                    partial.focused_windows = { ...previousFocused, [id]: focused };
+                }
+            }
+
+            if (!Object.keys(partial).length) {
+                return null;
+            }
+
+            didUpdate = true;
+
+            const workspacePartial = {
+                closed_windows: partial.closed_windows || prev.closed_windows,
+                minimized_windows: partial.minimized_windows || prev.minimized_windows,
+                focused_windows: partial.focused_windows || prev.focused_windows,
+            };
+
+            this.commitWorkspacePartial(workspacePartial, prev.activeWorkspace);
+            return partial;
+        }, () => {
+            if (typeof callback === 'function') {
+                callback();
+            }
+        });
+
+        if (!didUpdate && typeof callback === 'function') {
+            callback();
+        }
+    };
+
+    openOverlay = (id, overrides = {}, callback) => {
         if (!this.isOverlayId(id)) return;
-        const { transitionState } = options;
         this.recentlyClosedOverlays.delete(id);
         this.promoteWindowInStack(id);
-        this.setState((prev) => {
-            const overlayWindows = this.buildOverlayStateMap(prev.overlayWindows, id, {
+
+        const applyOverrides = (current = {}) => {
+            const resolved = typeof overrides === 'function' ? overrides({ ...current }) : overrides;
+            const baseState = {
+                ...current,
                 open: true,
                 minimized: false,
                 focused: true,
-            });
-            if (id === LAUNCHER_OVERLAY_ID) {
-                const current = overlayWindows[id] || {};
-                const nextTransition = transitionState
-                    || (current.transitionState === 'entered' ? 'entered' : 'entering');
-                overlayWindows[id] = { ...current, transitionState: nextTransition };
-            }
-            return {
-                overlayWindows,
-                closed_windows: { ...prev.closed_windows, [id]: false },
-                minimized_windows: { ...prev.minimized_windows, [id]: false },
             };
-        }, () => {
-            this.focus(id);
-        });
+
+            if (id === LAUNCHER_OVERLAY_ID) {
+                const previousTransition = current.transitionState;
+                baseState.transitionState = resolved?.transitionState
+                    || (previousTransition === 'entered' ? 'entered' : 'entering');
+            }
+
+            if (resolved && typeof resolved === 'object') {
+                return { ...baseState, ...resolved };
+            }
+
+            return baseState;
+        };
+
+        this.updateOverlayState(id, applyOverrides);
+
+        this.syncOverlayWindowFlags(
+            id,
+            { closed: false, minimized: false, focused: true },
+            () => {
+                this.focus(id);
+                if (typeof callback === 'function') {
+                    callback();
+                }
+            },
+        );
     };
 
     toggleOverlayMinimize = (id) => {
@@ -1634,53 +1708,77 @@ export class Desktop extends Component {
 
     minimizeOverlay = (id) => {
         if (!this.isOverlayId(id)) return;
-        this.setState((prev) => ({
-            overlayWindows: this.buildOverlayStateMap(prev.overlayWindows, id, {
-                minimized: true,
-                focused: false,
-            }),
-            minimized_windows: { ...prev.minimized_windows, [id]: true },
-            focused_windows: { ...prev.focused_windows, [id]: false },
-        }), () => {
-            this.giveFocusToLastApp();
-        });
+
+        this.updateOverlayState(id, (current = {}) => ({
+            ...current,
+            open: true,
+            minimized: true,
+            maximized: false,
+            focused: false,
+        }));
+
+        this.syncOverlayWindowFlags(
+            id,
+            { closed: false, minimized: true, focused: false },
+            () => {
+                this.giveFocusToLastApp();
+            },
+        );
     };
 
-    closeOverlay = (id, options = {}) => {
+    restoreOverlay = (id, overrides = {}, callback) => {
+        this.openOverlay(id, overrides, callback);
+    };
+
+    closeOverlay = (id, overrides = {}, callback) => {
         if (!this.isOverlayId(id)) return;
         this.recentlyClosedOverlays.add(id);
+
         const stack = this.getActiveStack();
         const index = stack.indexOf(id);
         if (index !== -1) {
             stack.splice(index, 1);
         }
+
         if (this.windowPreviewCache?.has(id)) {
             this.windowPreviewCache.delete(id);
         }
-        const { transitionState } = options;
-        this.setState((prev) => {
-            const overlayWindows = this.buildOverlayStateMap(prev.overlayWindows, id, {
+
+        const applyOverrides = (current = {}) => {
+            const resolved = typeof overrides === 'function' ? overrides({ ...current }) : overrides;
+            const baseState = {
+                ...current,
                 open: false,
                 minimized: false,
                 maximized: false,
                 focused: false,
-            });
-            if (id === LAUNCHER_OVERLAY_ID) {
-                const current = overlayWindows[id] || {};
-                overlayWindows[id] = {
-                    ...current,
-                    transitionState: transitionState || 'exiting',
-                };
-            }
-            return {
-                overlayWindows,
-                closed_windows: { ...prev.closed_windows, [id]: true },
-                minimized_windows: { ...prev.minimized_windows, [id]: false },
-                focused_windows: { ...prev.focused_windows, [id]: false },
             };
-        }, () => {
-            this.giveFocusToLastApp();
-        });
+
+            if (id === LAUNCHER_OVERLAY_ID) {
+                const transitionOverride = resolved && typeof resolved === 'object' && resolved.transitionState;
+                baseState.transitionState = transitionOverride || 'exiting';
+            }
+
+            if (resolved && typeof resolved === 'object') {
+                return { ...baseState, ...resolved };
+            }
+
+            return baseState;
+        };
+
+        this.updateOverlayState(id, applyOverrides);
+
+        this.syncOverlayWindowFlags(
+            id,
+            { closed: true, minimized: false, focused: false },
+            () => {
+                this.giveFocusToLastApp();
+                this.saveSession();
+                if (typeof callback === 'function') {
+                    callback();
+                }
+            },
+        );
     };
 
     getAppById = (id) => {
@@ -2737,100 +2835,6 @@ export class Desktop extends Component {
         }, callback);
     };
 
-    openOverlay = (key, overrides = {}, callback) => {
-        this.recentlyClosedOverlays.delete(key);
-        this.updateOverlayState(
-            key,
-            (current) => {
-                const resolvedOverrides = typeof overrides === 'function' ? overrides({ ...current }) : overrides;
-                const base = {
-                    ...current,
-                    open: true,
-                    minimized: false,
-                };
-                if (typeof base.maximized !== 'boolean') {
-                    base.maximized = false;
-                }
-                if (resolvedOverrides && typeof resolvedOverrides === 'object') {
-                    return { ...base, ...resolvedOverrides };
-                }
-                return base;
-            },
-            callback,
-        );
-    };
-
-    closeOverlay = (key, overrides = {}, callback) => {
-        this.recentlyClosedOverlays.add(key);
-        this.updateOverlayState(
-            key,
-            (current) => {
-                const resolvedOverrides = typeof overrides === 'function' ? overrides({ ...current }) : overrides;
-                const base = {
-                    ...current,
-                    open: false,
-                    minimized: false,
-                    maximized: false,
-                };
-                if (resolvedOverrides && typeof resolvedOverrides === 'object') {
-                    return { ...base, ...resolvedOverrides };
-                }
-                return base;
-            },
-            callback,
-        );
-    };
-
-    restoreOverlay = (key, overrides = {}, callback) => {
-        this.updateOverlayState(
-            key,
-            (current) => {
-                const resolvedOverrides = typeof overrides === 'function' ? overrides({ ...current }) : overrides;
-                const base = {
-                    ...current,
-                    open: true,
-                    minimized: false,
-                };
-                if (resolvedOverrides && typeof resolvedOverrides === 'object') {
-                    return { ...base, ...resolvedOverrides };
-                }
-                return base;
-            },
-            callback,
-        );
-    };
-
-    toggleOverlayMinimize = (key) => {
-        this.updateOverlayState(key, (current) => {
-            const next = { ...current };
-            if (!next.open) {
-                next.open = true;
-                next.minimized = false;
-                next.maximized = false;
-                return next;
-            }
-            next.minimized = !next.minimized;
-            if (next.minimized) {
-                next.maximized = false;
-            }
-            return next;
-        });
-    };
-
-    toggleOverlayMaximize = (key) => {
-        this.updateOverlayState(key, (current) => {
-            const shouldMaximize = !current.maximized;
-            const next = {
-                ...current,
-                maximized: shouldMaximize,
-            };
-            if (shouldMaximize) {
-                next.open = true;
-                next.minimized = false;
-            }
-            return next;
-        });
-    };
 
     componentDidMount() {
         // google analytics

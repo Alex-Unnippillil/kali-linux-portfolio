@@ -816,6 +816,14 @@ export class Window extends Component {
 
         const snapGrid = this.getSnapGrid();
 
+        const windowState = this.props.minimized
+            ? 'minimized'
+            : (this.state.maximized
+                ? 'maximized'
+                : (this.state.snapped
+                    ? `snapped-${this.state.snapped}`
+                    : 'active'));
+
         return (
             <>
                 {this.state.snapPreview && (
@@ -874,6 +882,8 @@ export class Window extends Component {
                         ].filter(Boolean).join(' ')}
                         id={this.id}
                         role="dialog"
+                        data-window-state={windowState}
+                        aria-hidden={this.props.minimized ? true : false}
                         aria-label={this.props.title}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
