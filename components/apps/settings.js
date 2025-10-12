@@ -70,8 +70,9 @@ export function Settings() {
                 )}
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Theme:</label>
+                <label htmlFor="theme-select" className="mr-2 text-ubt-grey">Theme:</label>
                 <select
+                    id="theme-select"
                     value={theme}
                     onChange={(e) => setTheme(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
@@ -89,6 +90,7 @@ export function Settings() {
                         checked={useKaliWallpaper}
                         onChange={(e) => setUseKaliWallpaper(e.target.checked)}
                         className="mr-2"
+                        aria-label="Enable Kali gradient wallpaper"
                     />
                     Kali Gradient Wallpaper
                 </label>
@@ -99,8 +101,8 @@ export function Settings() {
                 </p>
             )}
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Accent:</label>
-                <div aria-label="Accent color picker" role="radiogroup" className="flex gap-2">
+                <label className="mr-2 text-ubt-grey" id="accent-picker-label">Accent:</label>
+                <div aria-labelledby="accent-picker-label" role="radiogroup" className="flex gap-2">
                     {ACCENT_OPTIONS.map((c) => (
                         <button
                             key={c}
@@ -115,8 +117,9 @@ export function Settings() {
                 </div>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Density:</label>
+                <label htmlFor="density-select" className="mr-2 text-ubt-grey">Density:</label>
                 <select
+                    id="density-select"
                     value={density}
                     onChange={(e) => setDensity(e.target.value)}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
@@ -126,15 +129,17 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Font Size:</label>
+                <label htmlFor="font-scale-slider" className="mr-2 text-ubt-grey">Font Size:</label>
                 <input
+                    id="font-scale-slider"
                     type="range"
                     min="0.75"
                     max="1.5"
                     step="0.05"
                     value={fontScale}
                     onChange={(e) => setFontScale(parseFloat(e.target.value))}
-                    className="ubuntu-slider"
+                    className="kali-slider"
+                    aria-label="Adjust font scale"
                 />
             </div>
             <div className="flex justify-center my-4">
@@ -144,6 +149,7 @@ export function Settings() {
                         checked={reducedMotion}
                         onChange={(e) => setReducedMotion(e.target.checked)}
                         className="mr-2"
+                        aria-label="Enable reduced motion"
                     />
                     Reduced Motion
                 </label>
@@ -155,6 +161,7 @@ export function Settings() {
                         checked={largeHitAreas}
                         onChange={(e) => setLargeHitAreas(e.target.checked)}
                         className="mr-2"
+                        aria-label="Enable large hit areas"
                     />
                     Large Hit Areas
                 </label>
@@ -166,6 +173,7 @@ export function Settings() {
                         checked={highContrast}
                         onChange={(e) => setHighContrast(e.target.checked)}
                         className="mr-2"
+                        aria-label="Enable high contrast mode"
                     />
                     High Contrast
                 </label>
@@ -177,6 +185,7 @@ export function Settings() {
                         checked={allowNetwork}
                         onChange={(e) => setAllowNetwork(e.target.checked)}
                         className="mr-2"
+                        aria-label="Allow simulated network requests"
                     />
                     Allow Network Requests
                 </label>
@@ -188,6 +197,7 @@ export function Settings() {
                         checked={haptics}
                         onChange={(e) => setHaptics(e.target.checked)}
                         className="mr-2"
+                        aria-label="Enable haptics"
                     />
                     Haptics
                 </label>
@@ -199,6 +209,7 @@ export function Settings() {
                         checked={pongSpin}
                         onChange={(e) => setPongSpin(e.target.checked)}
                         className="mr-2"
+                        aria-label="Enable pong spin"
                     />
                     Pong Spin
                 </label>
@@ -316,6 +327,7 @@ export function Settings() {
                     e.target.value = '';
                 }}
                 className="hidden"
+                aria-label="Import settings JSON file"
             />
         </div>
     )

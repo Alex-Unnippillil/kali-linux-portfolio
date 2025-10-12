@@ -6,6 +6,55 @@ import ToggleSwitch from "../ToggleSwitch";
 
 const PANEL_PREFIX = "xfce.panel.";
 
+const isCoarsePointer = (): boolean => {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return false;
+  }
+  try {
+    return window.matchMedia("(pointer: coarse)").matches;
+  } catch {
+    return false;
+  }
+};
+
+const resolveNumberSetting = (
+  key: string,
+  touchDefault: number,
+  desktopDefault: number,
+): number => {
+  if (typeof window === "undefined") return desktopDefault;
+  const stored = localStorage.getItem(`${PANEL_PREFIX}${key}`);
+  if (stored !== null) {
+    const parsed = parseInt(stored, 10);
+    return Number.isNaN(parsed) ? desktopDefault : parsed;
+  }
+  return isCoarsePointer() ? touchDefault : desktopDefault;
+};
+
+const resolveBooleanSetting = (
+  key: string,
+  touchDefault: boolean,
+  desktopDefault: boolean,
+): boolean => {
+  if (typeof window === "undefined") return desktopDefault;
+  const stored = localStorage.getItem(`${PANEL_PREFIX}${key}`);
+  if (stored !== null) {
+    return stored === "true";
+  }
+  return isCoarsePointer() ? touchDefault : desktopDefault;
+};
+
+const resolveOrientationSetting = (): "horizontal" | "vertical" => {
+  if (typeof window === "undefined") {
+    return isCoarsePointer() ? "horizontal" : "horizontal";
+  }
+  const stored = localStorage.getItem(`${PANEL_PREFIX}orientation`);
+  if (stored === "horizontal" || stored === "vertical") {
+    return stored;
+  }
+  return isCoarsePointer() ? "horizontal" : "horizontal";
+};
+
 export default function Preferences() {
   type TabId = "display" | "measurements" | "appearance" | "opacity" | "items";
   const TABS: readonly { id: TabId; label: string }[] = [
@@ -17,47 +66,6 @@ export default function Preferences() {
   ];
 
   const [active, setActive] = useState<TabId>("display");
-
-  const isCoarsePointer = () => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-      return false;
-    }
-    try {
-      return window.matchMedia("(pointer: coarse)").matches;
-    } catch {
-      return false;
-    }
-  };
-
-  const resolveNumberSetting = (key: string, touchDefault: number, desktopDefault: number) => {
-    if (typeof window === "undefined") return desktopDefault;
-    const stored = localStorage.getItem(`${PANEL_PREFIX}${key}`);
-    if (stored !== null) {
-      const parsed = parseInt(stored, 10);
-      return Number.isNaN(parsed) ? desktopDefault : parsed;
-    }
-    return isCoarsePointer() ? touchDefault : desktopDefault;
-  };
-
-  const resolveBooleanSetting = (key: string, touchDefault: boolean, desktopDefault: boolean) => {
-    if (typeof window === "undefined") return desktopDefault;
-    const stored = localStorage.getItem(`${PANEL_PREFIX}${key}`);
-    if (stored !== null) {
-      return stored === "true";
-    }
-    return isCoarsePointer() ? touchDefault : desktopDefault;
-  };
-
-  const resolveOrientationSetting = () => {
-    if (typeof window === "undefined") {
-      return isCoarsePointer() ? "horizontal" : "horizontal";
-    }
-    const stored = localStorage.getItem(`${PANEL_PREFIX}orientation`);
-    if (stored === "horizontal" || stored === "vertical") {
-      return stored;
-    }
-    return isCoarsePointer() ? "horizontal" : "horizontal";
-  };
 
   const [size, setSize] = useState(() => resolveNumberSetting("size", 40, 24));
   const [length, setLength] = useState(() => resolveNumberSetting("length", 100, 100));
@@ -159,7 +167,7 @@ export default function Preferences() {
                 max="128"
                 value={size}
                 onChange={(e) => setSize(parseInt(e.target.value, 10))}
-                className="ubuntu-slider"
+                className="kali-slider"
                 aria-label="Panel size"
               />
             </div>
@@ -174,7 +182,7 @@ export default function Preferences() {
                 max="100"
                 value={length}
                 onChange={(e) => setLength(parseInt(e.target.value, 10))}
-                className="ubuntu-slider"
+                className="kali-slider"
                 aria-label="Panel length"
               />
             </div>
