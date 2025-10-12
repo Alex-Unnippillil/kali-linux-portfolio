@@ -42,6 +42,7 @@ module.exports = {
           primary: 'var(--color-primary)',
           secondary: 'var(--color-secondary)',
           accent: 'var(--color-accent)',
+          error: 'var(--color-error)',
           muted: 'var(--color-muted)',
           surface: 'var(--color-surface)',
           inverse: 'var(--color-inverse)',

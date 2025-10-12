@@ -16,6 +16,7 @@
   --color-inverse: #000000; /* inverse of text */
   --color-border: var(--kali-border); /* subtle borders */
   --color-terminal: var(--kali-terminal-green); /* terminal green */
+  --color-error: #f97373; /* error tone */
   --color-dark: #09121c; /* card back */
   --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
@@ -41,6 +42,7 @@ html[data-theme='dark'] {
   --color-inverse: #ffffff;
   --color-border: #333333;
   --color-terminal: #00ff00;
+  --color-error: #ff6b6b;
   --color-dark: #0a0a0a;
 }
 
@@ -56,6 +58,7 @@ html[data-theme='neon'] {
   --color-inverse: #ffffff;
   --color-border: #333333;
   --color-terminal: #39ff14;
+  --color-error: #ff4d6d;
   --color-dark: #000000;
 }
 
@@ -71,6 +74,7 @@ html[data-theme='matrix'] {
   --color-inverse: #ffffff;
   --color-border: #003300;
   --color-terminal: #00ff00;
+  --color-error: #39ff14;
   --color-dark: #000000;
 
 }
