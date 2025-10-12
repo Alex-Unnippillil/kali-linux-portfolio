@@ -322,6 +322,55 @@ describe('Desktop overlay window controls', () => {
   });
 });
 
+describe('Desktop window state transitions', () => {
+  it('reopens a closed minimized window in a visible state', async () => {
+    jest.useFakeTimers();
+    try {
+      const desktopRef = React.createRef<Desktop>();
+      render(
+        <Desktop
+          ref={desktopRef}
+          clearSession={() => {}}
+          changeBackgroundImage={() => {}}
+          bg_image_name="aurora"
+          snapEnabled
+        />
+      );
+
+      const instance = desktopRef.current!;
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      expect(instance.state.closed_windows.about).toBe(false);
+
+      act(() => {
+        instance.hasMinimised('about');
+      });
+      expect(instance.state.minimized_windows.about).toBe(true);
+
+      await act(async () => {
+        await instance.closeApp('about');
+      });
+
+      expect(instance.state.closed_windows.about).toBe(true);
+      expect(instance.state.minimized_windows.about).toBe(false);
+
+      act(() => {
+        instance.openApp('about');
+      });
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      expect(instance.state.closed_windows.about).toBe(false);
+      expect(instance.state.minimized_windows.about).toBe(false);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});
+
 describe('Desktop gesture handlers', () => {
   it('releases pointer and touch references after interactions', () => {
     const desktop = new Desktop({});
