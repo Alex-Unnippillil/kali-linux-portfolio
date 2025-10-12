@@ -176,13 +176,19 @@ const ResourceMonitor = () => {
   return (
     <div
       ref={containerRef}
-      className="relative h-full w-full flex flex-col bg-ub-cool-grey text-white font-ubuntu overflow-hidden"
+      className="relative h-full w-full flex flex-col bg-[var(--kali-panel)] text-white font-ubuntu overflow-hidden"
     >
       <div className="p-2 flex gap-2 items-center">
-        <button onClick={togglePause} className="px-2 py-1 bg-ub-dark-grey rounded">
+        <button
+          onClick={togglePause}
+          className="px-3 py-1.5 rounded border border-[var(--kali-panel-border)] bg-kali-control text-black font-semibold transition-colors hover:bg-kali-control/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+        >
           {paused ? 'Resume' : 'Pause'}
         </button>
-        <button onClick={toggleStress} className="px-2 py-1 bg-ub-dark-grey rounded">
+        <button
+          onClick={toggleStress}
+          className="px-3 py-1.5 rounded border border-[var(--kali-panel-border)] bg-kali-control text-black font-semibold transition-colors hover:bg-kali-control/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+        >
           {stress ? 'Stop Stress' : 'Stress Test'}
         </button>
         <span className="ml-auto text-sm">FPS: {fps.toFixed(1)}</span>
@@ -194,7 +200,7 @@ const ResourceMonitor = () => {
           height={100}
           role="img"
           aria-label="CPU usage chart"
-          className="bg-ub-dark-grey"
+          className="rounded border border-[var(--kali-panel-border)] bg-[var(--kali-panel-highlight)]"
         />
         <canvas
           ref={memCanvas}
@@ -202,7 +208,7 @@ const ResourceMonitor = () => {
           height={100}
           role="img"
           aria-label="Memory usage chart"
-          className="bg-ub-dark-grey"
+          className="rounded border border-[var(--kali-panel-border)] bg-[var(--kali-panel-highlight)]"
         />
         <canvas
           ref={fpsCanvas}
@@ -210,7 +216,7 @@ const ResourceMonitor = () => {
           height={100}
           role="img"
           aria-label="FPS chart"
-          className="bg-ub-dark-grey"
+          className="rounded border border-[var(--kali-panel-border)] bg-[var(--kali-panel-highlight)]"
         />
         <canvas
           ref={netCanvas}
@@ -218,7 +224,7 @@ const ResourceMonitor = () => {
           height={100}
           role="img"
           aria-label="Network speed chart"
-          className="bg-ub-dark-grey"
+          className="rounded border border-[var(--kali-panel-border)] bg-[var(--kali-panel-highlight)]"
         />
       </div>
       {stressWindows.current.map((_, i) => (
