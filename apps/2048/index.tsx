@@ -116,18 +116,18 @@ const addRandomTile = (b: number[][], rand: () => number): [number, number] | nu
 };
 
 const tileColors: Record<number, string> = {
-  2: 'bg-slate-200 text-slate-900',
-  4: 'bg-slate-300 text-slate-900',
-  8: 'bg-amber-400 text-gray-900',
-  16: 'bg-amber-500 text-white',
-  32: 'bg-orange-500 text-white',
-  64: 'bg-orange-600 text-white',
-  128: 'bg-rose-500 text-white',
-  256: 'bg-rose-600 text-white',
-  512: 'bg-rose-700 text-white',
-  1024: 'bg-emerald-500 text-white',
-  2048: 'bg-emerald-600 text-white',
-  4096: 'bg-emerald-700 text-white',
+  2: 'bg-[color:color-mix(in_srgb,var(--color-surface)_70%,var(--color-control-accent)_30%)] text-kali-text',
+  4: 'bg-[color:color-mix(in_srgb,var(--color-surface)_55%,var(--color-control-accent)_45%)] text-kali-text',
+  8: 'bg-[color:color-mix(in_srgb,var(--color-control-accent)_60%,transparent)] text-kali-text',
+  16: 'bg-[color:color-mix(in_srgb,var(--color-control-accent)_72%,transparent)] text-kali-text',
+  32: 'bg-[color:color-mix(in_srgb,var(--color-control-accent)_85%,transparent)] text-kali-inverse',
+  64: 'bg-[color:color-mix(in_srgb,var(--color-primary)_82%,transparent)] text-kali-inverse',
+  128: 'bg-[color:color-mix(in_srgb,var(--color-primary)_92%,transparent)] text-kali-inverse',
+  256: 'bg-[color:color-mix(in_srgb,var(--color-terminal)_55%,var(--color-primary)_45%)] text-kali-inverse',
+  512: 'bg-[color:color-mix(in_srgb,var(--color-terminal)_65%,var(--color-primary)_35%)] text-kali-inverse',
+  1024: 'bg-[color:color-mix(in_srgb,var(--color-terminal)_75%,transparent)] text-kali-inverse',
+  2048: 'bg-[color:color-mix(in_srgb,var(--color-terminal)_85%,transparent)] text-kali-inverse',
+  4096: 'bg-[color:color-mix(in_srgb,var(--color-terminal)_95%,transparent)] text-kali-inverse',
 };
 
 const DB_NAME = '2048';
@@ -355,9 +355,9 @@ const Page2048 = () => {
     const isMerged = mergeHighlights.includes(key);
     const isSpawned = spawnHighlight === key;
     const emphasisBase = isMerged
-      ? 'ring-2 ring-amber-300 ring-offset-2 ring-offset-gray-900'
+      ? 'ring-2 ring-[color:color-mix(in_srgb,var(--color-control-accent)_70%,transparent)] ring-offset-2 ring-offset-[var(--kali-bg)]'
       : isSpawned
-        ? 'ring-2 ring-emerald-300 ring-offset-2 ring-offset-gray-900'
+        ? 'ring-2 ring-[color:color-mix(in_srgb,var(--color-terminal)_60%,transparent)] ring-offset-2 ring-offset-[var(--kali-bg)]'
         : '';
     const motionStyles = prefersReducedMotion
       ? ''
@@ -371,7 +371,7 @@ const Page2048 = () => {
       prefersReducedMotion ? '' : 'transition-transform duration-200 ease-out',
       emphasisBase,
       motionStyles,
-      hasValue ? '' : 'text-gray-500',
+      hasValue ? '' : 'text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]',
     ]
       .filter(Boolean)
       .join(' ');
@@ -398,55 +398,63 @@ const Page2048 = () => {
   }, [won, lost, moves, boardType, hard, highest]);
 
   return (
-    <div className="h-full w-full overflow-auto bg-gray-900 text-white">
+    <div className="h-full w-full overflow-auto bg-kali-backdrop text-kali-text">
       <main className="mx-auto flex h-full max-w-3xl flex-col gap-6 p-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-1">
-            <h1 className="text-3xl font-semibold tracking-tight text-white">2048</h1>
-            <p className="text-sm text-gray-300">
+            <h1 className="text-3xl font-semibold tracking-tight text-kali-text">2048</h1>
+            <p className="text-sm text-[color:color-mix(in_srgb,var(--color-text)_80%,transparent)]">
               Merge tiles to hit 2048. Hard mode adds a countdown after each move.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <div className="rounded-lg bg-gray-800/80 px-3 py-2 text-right">
-              <div className="text-[0.65rem] uppercase tracking-[0.2em] text-gray-400">Best Tile</div>
-              <div className="text-lg font-semibold text-white">{highest || 0}</div>
+            <div className="rounded-lg border border-[var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--color-surface)_85%,transparent)] px-3 py-2 text-right shadow-[0_8px_20px_rgba(0,0,0,0.35)]">
+              <div className="text-[0.65rem] uppercase tracking-[0.2em] text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
+                Best Tile
+              </div>
+              <div className="text-lg font-semibold text-kali-text">{highest || 0}</div>
             </div>
-            <div className="rounded-lg bg-gray-800/80 px-3 py-2 text-right">
-              <div className="text-[0.65rem] uppercase tracking-[0.2em] text-gray-400">Score</div>
-              <div className="text-lg font-semibold text-white">{currentScore}</div>
+            <div className="rounded-lg border border-[var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--color-surface)_85%,transparent)] px-3 py-2 text-right shadow-[0_8px_20px_rgba(0,0,0,0.35)]">
+              <div className="text-[0.65rem] uppercase tracking-[0.2em] text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
+                Score
+              </div>
+              <div className="text-lg font-semibold text-kali-text">{currentScore}</div>
             </div>
-            <div className="rounded-lg bg-gray-800/80 px-3 py-2 text-right">
-              <div className="text-[0.65rem] uppercase tracking-[0.2em] text-gray-400">Moves</div>
-              <div className="text-lg font-semibold text-white">{moves.length}</div>
+            <div className="rounded-lg border border-[var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--color-surface)_85%,transparent)] px-3 py-2 text-right shadow-[0_8px_20px_rgba(0,0,0,0.35)]">
+              <div className="text-[0.65rem] uppercase tracking-[0.2em] text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
+                Moves
+              </div>
+              <div className="text-lg font-semibold text-kali-text">{moves.length}</div>
             </div>
             {hard && (
-              <div className="rounded-lg bg-amber-500/20 px-3 py-2 text-right">
-                <div className="text-[0.65rem] uppercase tracking-[0.2em] text-amber-200">Countdown</div>
-                <div className="text-lg font-semibold text-amber-100">{timer}</div>
+              <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--color-control-accent)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--color-control-accent)_18%,transparent)] px-3 py-2 text-right shadow-[0_8px_20px_rgba(0,0,0,0.35)]">
+                <div className="text-[0.65rem] uppercase tracking-[0.2em] text-[color:color-mix(in_srgb,var(--color-control-accent)_75%,transparent)]">
+                  Countdown
+                </div>
+                <div className="text-lg font-semibold text-kali-text">{timer}</div>
               </div>
             )}
           </div>
         </header>
         <section aria-label="Game controls" className="flex flex-wrap gap-2">
           <button
-            className="rounded-md bg-gray-700 px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+            className="rounded-md border border-[color:color-mix(in_srgb,var(--color-control-accent)_20%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_88%,transparent)] px-4 py-2 text-sm font-medium text-kali-text transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_18%,var(--color-surface)_82%)]"
             onClick={restart}
           >
             Restart
           </button>
           <button
-            className="rounded-md bg-gray-700 px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+            className="rounded-md border border-[color:color-mix(in_srgb,var(--color-control-accent)_20%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_88%,transparent)] px-4 py-2 text-sm font-medium text-kali-text transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_18%,var(--color-surface)_82%)]"
             onClick={handleUndo}
           >
             Undo
           </button>
-          <div className="flex items-center gap-2 rounded-md bg-gray-800/70 px-3 py-2 text-sm">
+          <div className="flex items-center gap-2 rounded-md border border-[var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--color-surface)_92%,transparent)] px-3 py-2 text-sm text-kali-text">
             <input
               type="checkbox"
               checked={hard}
               onChange={(e) => setHard(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-600 bg-gray-900 text-emerald-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+              className="h-4 w-4 rounded border-[color:color-mix(in_srgb,var(--color-control-accent)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--color-secondary)_90%,transparent)] text-[var(--color-control-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               id="hard-mode-toggle"
               aria-label="Enable hard mode"
             />
@@ -455,7 +463,7 @@ const Page2048 = () => {
             </label>
           </div>
           <select
-            className="rounded-md bg-white/90 px-3 py-2 text-sm font-medium text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+            className="rounded-md border border-[color:color-mix(in_srgb,var(--color-control-accent)_20%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_94%,transparent)] px-3 py-2 text-sm font-medium text-kali-inverse focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             value={boardType}
             onChange={(e) => setBoardType(e.target.value as any)}
             aria-label="Tile notation"
@@ -464,7 +472,7 @@ const Page2048 = () => {
             <option value="hex">Hex 2048</option>
           </select>
           <button
-            className="rounded-md bg-gray-700 px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
+            className="rounded-md border border-[color:color-mix(in_srgb,var(--color-control-accent)_20%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_88%,transparent)] px-4 py-2 text-sm font-medium text-kali-text transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_18%,var(--color-surface)_82%)]"
             onClick={close}
           >
             Close
@@ -472,7 +480,7 @@ const Page2048 = () => {
         </section>
         <section
           aria-label="2048 board"
-          className="mx-auto w-full max-w-lg rounded-2xl bg-gray-800/50 p-3 shadow-inner"
+          className="mx-auto w-full max-w-lg rounded-2xl border border-[var(--kali-panel-border)] bg-[var(--kali-panel)] p-3 shadow-kali-panel"
         >
           <div className="grid grid-cols-4 gap-3">
             {board.map((row, rIdx) =>
@@ -482,13 +490,15 @@ const Page2048 = () => {
                 return (
                   <div
                     key={key}
-                    className={`aspect-square w-full rounded-xl bg-gray-900/60 p-1 ${
+                    className={`aspect-square w-full rounded-xl bg-[color:color-mix(in_srgb,var(--color-secondary)_90%,transparent)] p-1 ${
                       prefersReducedMotion ? '' : 'transition-colors'
                     }`}
                   >
                     <div
                       className={`${tileClassName} ${
-                        cell ? tileColors[cell] || 'bg-gray-700 text-white' : 'bg-gray-900/40'
+                        cell
+                          ? tileColors[cell] || 'bg-[var(--color-surface)] text-kali-text'
+                          : 'bg-[color:color-mix(in_srgb,var(--color-secondary)_88%,transparent)]'
                       }`}
                     >
                       {displayCell(cell)}
@@ -503,8 +513,8 @@ const Page2048 = () => {
           <div
             className={`rounded-xl border px-4 py-3 text-base font-semibold shadow-lg ${
               won
-                ? 'border-emerald-400/60 bg-emerald-500/15 text-emerald-100'
-                : 'border-rose-400/60 bg-rose-500/15 text-rose-100'
+                ? 'border-[color:color-mix(in_srgb,var(--color-terminal)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--color-terminal)_18%,transparent)] text-kali-text'
+                : 'border-[color:color-mix(in_srgb,var(--color-control-accent)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--color-control-accent)_15%,transparent)] text-kali-text'
             }`}
             role="status"
             aria-live="polite"
