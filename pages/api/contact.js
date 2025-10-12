@@ -1,5 +1,6 @@
 import { randomBytes } from 'crypto';
 import { contactSchema } from '../../utils/contactSchema';
+import { formatCookie } from '../../utils/cookies';
 import { validateServerEnv } from '../../lib/validate';
 import { getServiceSupabase } from '../../lib/supabase';
 
@@ -23,9 +24,20 @@ export default async function handler(req, res) {
   }
   if (req.method === 'GET') {
     const token = randomBytes(32).toString('hex');
+    const forwardedProto = req.headers['x-forwarded-proto'];
+    const isHttps =
+      typeof forwardedProto === 'string' &&
+      forwardedProto.split(',')[0].trim().toLowerCase() === 'https';
+    const secureCookie = isHttps || process.env.NODE_ENV === 'production';
+
     res.setHeader(
       'Set-Cookie',
-      `csrfToken=${token}; HttpOnly; Path=/; SameSite=Strict`
+      formatCookie('csrfToken', token, {
+        httpOnly: true,
+        path: '/',
+        sameSite: 'Strict',
+        secure: secureCookie,
+      })
     );
     res.status(200).json({ ok: true, csrfToken: token });
     return;
