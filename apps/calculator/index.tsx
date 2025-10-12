@@ -26,11 +26,11 @@ export default function Calculator() {
   const [programmerActive, setProgrammerActive] = useState(false);
 
   const baseBtnCls =
-    'btn flex items-center justify-center font-semibold transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f212a]';
+    'btn flex items-center justify-center font-semibold transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-dark';
   const keypadBtnCls =
-    `${baseBtnCls} h-14 rounded-xl border border-white/5 bg-[#282b33] px-0 text-lg text-slate-100 shadow-sm hover:-translate-y-0.5 hover:bg-[#343842]`;
+    `${baseBtnCls} h-14 rounded-xl border border-kali-border/60 bg-kali-surface px-0 text-lg text-kali-text shadow-sm hover:-translate-y-0.5 hover:bg-kali-surface/80`;
   const operatorBtnCls =
-    'border-[#f97316]/60 bg-[#f97316]/10 text-[#fbbf77] hover:bg-[#f97316]/20 hover:text-[#fbd4a1] focus-visible:ring-[#f97316]';
+    'border-kali-accent/60 bg-kali-accent/10 text-kali-accent/90 hover:bg-kali-accent/20 hover:text-kali-accent focus-visible:ring-kali-focus';
   const pillUtilityBtnCls =
     `${baseBtnCls} h-11 rounded-full border border-white/10 bg-white/5 px-5 text-sm uppercase tracking-wide text-slate-200 shadow-none hover:bg-white/10`;
 
@@ -334,7 +334,7 @@ export default function Calculator() {
   );
 
   return (
-    <div className="calculator mx-auto flex w-full max-w-lg flex-col gap-6 rounded-3xl bg-[#1f212a] p-6 text-slate-100 shadow-[0_35px_80px_-30px_rgba(15,15,20,0.9)]">
+    <div className="calculator mx-auto flex w-full max-w-lg flex-col gap-6 rounded-3xl bg-kali-muted p-6 text-kali-text shadow-[0_35px_80px_-30px_rgba(15,15,20,0.9)]">
       <header className="flex items-center justify-between text-sm text-slate-300">
         <button
           type="button"
@@ -342,7 +342,7 @@ export default function Calculator() {
             const display = document.getElementById('display') as HTMLInputElement | null;
             if (display) display.value = display.value.slice(0, -1);
           }}
-          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f212a]"
+          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-kali-text/80 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-dark"
         >
           <svg
             className="h-4 w-4"
@@ -367,7 +367,7 @@ export default function Calculator() {
           <div className="flex items-center gap-2 text-slate-500">
             <button
               id="toggle-history"
-              className="inline-flex items-center gap-2 rounded-full border border-transparent px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400 transition hover:border-white/10 hover:text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f212a]"
+              className="inline-flex items-center gap-2 rounded-full border border-transparent px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400 transition hover:border-white/10 hover:text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-dark"
               aria-pressed="false"
               aria-label="toggle history"
               aria-describedby="calculator-history-toggle-desc"
@@ -394,7 +394,7 @@ export default function Calculator() {
             </button>
             <button
               id="toggle-formulas"
-              className="inline-flex items-center gap-2 rounded-full border border-transparent px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400 transition hover:border-white/10 hover:text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f212a]"
+              className="inline-flex items-center gap-2 rounded-full border border-transparent px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400 transition hover:border-white/10 hover:text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-dark"
               aria-pressed="false"
               aria-label="toggle formulas"
               aria-describedby="calculator-formulas-toggle-desc"
@@ -422,7 +422,7 @@ export default function Calculator() {
         </div>
       </header>
 
-      <div className="space-y-3 rounded-2xl border border-white/5 bg-[#15171d] p-4 shadow-inner">
+      <div className="space-y-3 rounded-2xl border border-white/5 bg-kali-dark p-4 shadow-inner">
         <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-500">
           <span>Expression</span>
           <span>Result</span>
@@ -432,7 +432,7 @@ export default function Calculator() {
         </label>
         <input
           id="display"
-          className="display w-full rounded-2xl border border-white/5 bg-[#10121a] px-4 py-4 text-right text-3xl font-semibold tracking-tight text-white shadow-inner placeholder:text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#15171d]"
+          className="display w-full rounded-2xl border border-white/5 bg-kali-dark/90 px-4 py-4 text-right text-3xl font-semibold tracking-tight text-kali-text shadow-inner placeholder:text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-dark"
           placeholder="0"
           aria-labelledby="calculator-display-label"
         />
@@ -441,7 +441,7 @@ export default function Calculator() {
       <div className="flex flex-wrap gap-2 text-xs font-medium uppercase tracking-wide text-slate-300">
         <button
           id="toggle-precise"
-          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f212a]"
+          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-dark"
           aria-pressed="false"
           aria-label="toggle precise mode"
         >
@@ -449,7 +449,7 @@ export default function Calculator() {
         </button>
         <button
           id="toggle-scientific"
-          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f212a]"
+          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-dark"
           aria-pressed="false"
           aria-label="toggle scientific mode"
         >
@@ -457,7 +457,7 @@ export default function Calculator() {
         </button>
         <button
           id="toggle-programmer"
-          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f97316] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f212a]"
+          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-dark"
           aria-pressed="false"
           aria-label="toggle programmer mode"
         >
@@ -501,7 +501,7 @@ export default function Calculator() {
           )}
         </div>
         <button
-          className={`${baseBtnCls} h-full min-h-[7.5rem] rounded-2xl bg-[#f97316] text-3xl font-bold text-slate-950 shadow-lg shadow-[#f97316]/40 transition hover:brightness-110`}
+          className={`${baseBtnCls} h-full min-h-[7.5rem] rounded-2xl bg-kali-accent text-3xl font-bold text-kali-inverse shadow-lg shadow-[0_12px_30px_color-mix(in_srgb,_var(--color-accent),_transparent_55%)] transition hover:brightness-110`}
           data-action="equals"
           data-key="= Enter"
           aria-label="equals"
@@ -511,7 +511,7 @@ export default function Calculator() {
       </div>
 
       <div
-        className="rounded-2xl border border-white/5 bg-[#15171d] p-4 text-xs text-slate-300 shadow-inner"
+        className="rounded-2xl border border-white/5 bg-kali-dark p-4 text-xs text-slate-300 shadow-inner"
         role="status"
         aria-live="polite"
         data-testid="calc-status-summary"
@@ -539,7 +539,7 @@ export default function Calculator() {
                   </span>
                 )}
                 <span className="font-mono text-slate-200">
-                  {entry.expr} = <span className="text-[#f97316]">{entry.result}</span>
+                  {entry.expr} = <span className="text-kali-accent">{entry.result}</span>
                 </span>
               </Fragment>
             ))
@@ -575,7 +575,7 @@ export default function Calculator() {
         <select
           id="base-select"
           defaultValue="10"
-          className="h-11 rounded-xl border border-white/10 bg-[#12151b] px-3 text-sm font-medium text-slate-100 focus:border-[#f97316] focus:outline-none focus:ring-2 focus:ring-[#f97316]"
+          className="h-11 rounded-xl border border-white/10 bg-kali-dark px-3 text-sm font-medium text-kali-text focus:border-kali-focus focus:outline-none focus:ring-2 focus:ring-kali-focus"
         >
           <option value="2">Binary</option>
           <option value="8">Octal</option>
@@ -624,7 +624,7 @@ export default function Calculator() {
             {history.map(({ expr, result }, i) => (
               <div key={i} className="history-entry flex items-center justify-between gap-2 rounded-xl bg-black/20 px-3 py-2">
                 <span className="font-mono text-sm text-slate-100">{expr}</span>
-                <span className="font-semibold text-[#f97316]">{result}</span>
+                <span className="font-semibold text-kali-accent">{result}</span>
               </div>
             ))}
           </div>
