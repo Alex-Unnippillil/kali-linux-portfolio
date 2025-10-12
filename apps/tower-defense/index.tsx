@@ -118,10 +118,19 @@ const TowerDefense = () => {
     (keyof typeof ENEMY_TYPES)[][]
   >([Array(5).fill("fast") as (keyof typeof ENEMY_TYPES)[]]);
   const [waveJson, setWaveJson] = useState("");
+  const [waveAlert, setWaveAlert] = useState<
+    { type: "info" | "warning"; message: string } | null
+  >(null);
+  const [waveJsonStatus, setWaveJsonStatus] = useState<
+    { type: "info" | "warning"; message: string } | null
+  >(null);
   useEffect(() => {
     setWaveJson(JSON.stringify(waveConfig, null, 2));
   }, [waveConfig]);
-  const addWave = () => setWaveConfig((w) => [...w, []]);
+  const addWave = () => {
+    setWaveConfig((w) => [...w, []]);
+    setWaveJsonStatus(null);
+  };
   const addEnemyToWave = (
     index: number,
     type: keyof typeof ENEMY_TYPES,
@@ -131,13 +140,23 @@ const TowerDefense = () => {
       copy[index].push(type);
       return copy;
     });
+    setWaveJsonStatus(null);
   };
   const importWaves = () => {
     try {
       const data = JSON.parse(waveJson) as (keyof typeof ENEMY_TYPES)[][];
-      if (Array.isArray(data)) setWaveConfig(data);
+      if (Array.isArray(data)) {
+        setWaveConfig(data);
+        setWaveJsonStatus({
+          type: "info",
+          message: "Wave JSON imported successfully.",
+        });
+      }
     } catch {
-      alert("Invalid wave JSON");
+      setWaveJsonStatus({
+        type: "warning",
+        message: "Invalid wave JSON. Check formatting before importing.",
+      });
     }
   };
   const exportWaves = () => {
@@ -146,6 +165,10 @@ const TowerDefense = () => {
     navigator.clipboard
       ?.writeText(json)
       .catch(() => {});
+    setWaveJsonStatus({
+      type: "info",
+      message: "Wave JSON copied to clipboard.",
+    });
   };
 
   const togglePath = (x: number, y: number) => {
@@ -329,6 +352,10 @@ const TowerDefense = () => {
         spawnTimer.current = 0;
         enemiesSpawnedRef.current = 0;
         forceRerender((n) => n + 1);
+        setWaveAlert({
+          type: "info",
+          message: `Wave ${waveRef.current} deployed.`,
+        });
       }
     } else if (running.current) {
       spawnTimer.current += dt;
@@ -392,17 +419,27 @@ const TowerDefense = () => {
         t.life -= dt * 2;
       });
       damageTicksRef.current = damageTicksRef.current.filter((t) => t.life > 0);
-        if (
-          enemiesSpawnedRef.current >= currentWave.length &&
-          enemiesRef.current.length === 0
-        ) {
-          running.current = false;
-          if (waveRef.current < waveConfig.length) {
-            waveRef.current += 1;
-            waveCountdownRef.current = 5;
-          }
-          forceRerender((n) => n + 1);
+      if (
+        enemiesSpawnedRef.current >= currentWave.length &&
+        enemiesRef.current.length === 0
+      ) {
+        running.current = false;
+        if (waveRef.current < waveConfig.length) {
+          waveRef.current += 1;
+          waveCountdownRef.current = 5;
+          setWaveAlert({
+            type: "info",
+            message: `Wave ${waveRef.current} incoming in 5 seconds.`,
+          });
+        } else {
+          setWaveAlert({
+            type: "info",
+            message:
+              "All configured waves cleared. Add more waves to continue the defense.",
+          });
         }
+        forceRerender((n) => n + 1);
+      }
       }
       draw();
       requestAnimationFrame(update);
@@ -415,7 +452,20 @@ const TowerDefense = () => {
   }, []);
 
   const start = () => {
-    if (!path.length || !waveConfig.length) return;
+    if (!path.length) {
+      setWaveAlert({
+        type: "warning",
+        message: "Define a full enemy path before launching.",
+      });
+      return;
+    }
+    if (!waveConfig.length) {
+      setWaveAlert({
+        type: "warning",
+        message: "Add at least one wave to begin the countdown.",
+      });
+      return;
+    }
     setEditing(false);
     waveRef.current = 1;
     waveCountdownRef.current = 3;
@@ -423,6 +473,10 @@ const TowerDefense = () => {
     enemiesSpawnedRef.current = 0;
     enemiesRef.current = [];
     forceRerender((n) => n + 1);
+    setWaveAlert({
+      type: "info",
+      message: "Wave launch initiated. Countdown started.",
+    });
   };
 
   const upgrade = (type: "range" | "damage") => {
@@ -451,6 +505,20 @@ const TowerDefense = () => {
     : running.current
     ? `${enemiesRemaining} enemies remaining`
     : `${waveConfig.length} wave${waveConfig.length === 1 ? "" : "s"} queued`;
+  const waveStatusTone = waveCountdownRef.current !== null
+    ? "info"
+    : running.current
+    ? "warning"
+    : "info";
+  const waveStatusClass =
+    waveStatusTone === "warning"
+      ? "text-[color:var(--game-color-warning)]"
+      : "text-kali-accent";
+  const modeTone = running.current ? "warning" : "info";
+  const modeStatusClass =
+    modeTone === "warning"
+      ? "text-[color:var(--game-color-warning)]"
+      : "text-kali-accent";
   const selectedTower = selected !== null ? towers[selected] : null;
 
   return (
@@ -472,17 +540,17 @@ const TowerDefense = () => {
               />
               <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-2 text-[0.7rem] sm:text-xs">
                 <div className="flex justify-between gap-2">
-                  <div className="rounded-md bg-black/70 px-2 py-1 font-medium uppercase tracking-wide text-gray-100 shadow backdrop-blur">
+                  <div className="rounded-md bg-kali-surface/80 px-2 py-1 font-medium uppercase tracking-wide text-white shadow backdrop-blur">
                     <p className="text-[0.65rem] sm:text-xs">Wave {waveRef.current}</p>
-                    <p className="font-normal normal-case text-gray-200">{waveStatus}</p>
+                    <p className={`font-normal normal-case ${waveStatusClass}`}>{waveStatus}</p>
                   </div>
-                  <div className="rounded-md bg-black/70 px-2 py-1 text-right font-medium uppercase tracking-wide text-gray-100 shadow backdrop-blur">
+                  <div className="rounded-md bg-kali-surface/80 px-2 py-1 text-right font-medium uppercase tracking-wide text-white shadow backdrop-blur">
                     <p className="text-[0.65rem] sm:text-xs">Mode</p>
-                    <p className="font-normal normal-case text-gray-200">{modeLabel}</p>
+                    <p className={`font-normal normal-case ${modeStatusClass}`}>{modeLabel}</p>
                   </div>
                 </div>
                 {selectedTower && (
-                  <div className="rounded-md bg-black/70 px-2 py-1 text-gray-200 shadow backdrop-blur">
+                  <div className="rounded-md bg-kali-surface/80 px-2 py-1 text-gray-200 shadow backdrop-blur">
                     <p className="text-[0.65rem] font-semibold uppercase tracking-wide">Tower</p>
                     <p className="text-[0.65rem] sm:text-xs">
                       Range {selectedTower.range.toFixed(1)} · Damage {selectedTower.damage.toFixed(1)} · Lv {selectedTower.level}
@@ -493,48 +561,59 @@ const TowerDefense = () => {
             </div>
             <div className="flex w-full max-w-[420px] flex-wrap items-center justify-center gap-2 text-xs sm:text-sm">
               <button
-                className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 font-medium transition hover:bg-gray-700"
+                className="rounded-md border border-kali-border/60 bg-kali-surface/80 px-3 py-1 font-medium text-white transition hover:border-kali-border hover:bg-kali-surface/70"
                 onClick={() => setEditing((e) => !e)}
               >
                 {editing ? "Finish Editing" : "Edit Path"}
               </button>
               <button
-                className="rounded-md border border-gray-600 bg-emerald-700 px-3 py-1 font-semibold text-white transition enabled:hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-md border border-kali-border/60 bg-kali-accent px-3 py-1 font-semibold text-slate-900 transition enabled:hover:bg-kali-accent/80 disabled:cursor-not-allowed disabled:opacity-40"
                 onClick={start}
                 disabled={running.current || waveCountdownRef.current !== null}
               >
                 Launch Wave
               </button>
               <button
-                className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 font-medium transition hover:bg-gray-700"
+                className="rounded-md border border-kali-border/60 bg-kali-surface/80 px-3 py-1 font-medium text-white transition hover:border-kali-border hover:bg-kali-surface/70"
                 onClick={exportWaves}
               >
                 Export Waves
               </button>
               <button
-                className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 font-medium transition hover:bg-gray-700"
+                className="rounded-md border border-kali-border/60 bg-kali-surface/80 px-3 py-1 font-medium text-white transition hover:border-kali-border hover:bg-kali-surface/70"
                 onClick={importWaves}
               >
                 Import Waves
               </button>
             </div>
+            {waveAlert && (
+              <p
+                className={`mt-1 text-center text-[0.65rem] font-medium ${
+                  waveAlert.type === "warning"
+                    ? "text-[color:var(--game-color-warning)]"
+                    : "text-kali-accent"
+                }`}
+              >
+                {waveAlert.message}
+              </p>
+            )}
           </div>
-          <aside className="w-full rounded-lg border border-gray-700/60 bg-gray-900/60 p-3 shadow-lg backdrop-blur lg:max-w-xs">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-200">
+          <aside className="w-full rounded-lg border border-kali-border/60 bg-kali-surface/90 p-3 shadow-lg backdrop-blur lg:max-w-xs">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-white">
               Wave Designer
             </h2>
-            <p className="mt-1 text-[0.7rem] text-gray-300">
+            <p className="mt-1 text-[0.7rem] text-kali-muted">
               Queue enemy types for each wave. Use the buttons to append foes and adjust difficulty without crowding the playfield.
             </p>
             <div className="mt-3 space-y-2 max-h-56 overflow-y-auto pr-1">
               {waveConfig.map((wave, i) => (
                 <div
                   key={i}
-                  className="rounded border border-gray-700/70 bg-black/40 p-2"
+                  className="rounded border border-kali-border/50 bg-kali-surface/80 p-2"
                 >
                   <div className="flex items-center justify-between gap-2 text-[0.7rem] font-medium uppercase tracking-wide text-gray-200">
                     <span>Wave {i + 1}</span>
-                    <span className="font-normal normal-case text-gray-300">
+                    <span className="font-normal normal-case text-kali-muted">
                       {wave.length ? wave.join(", ") : "empty"}
                     </span>
                   </div>
@@ -542,7 +621,7 @@ const TowerDefense = () => {
                     {(Object.keys(ENEMY_TYPES) as (keyof typeof ENEMY_TYPES)[]).map((t) => (
                       <button
                         key={t}
-                        className="rounded bg-gray-700 px-2 py-1 font-semibold uppercase tracking-wide text-gray-100 transition hover:bg-gray-600"
+                        className="rounded border border-kali-border/40 bg-kali-surface/70 px-2 py-1 font-semibold uppercase tracking-wide text-white transition hover:border-kali-border hover:bg-kali-surface/60"
                         onClick={() => addEnemyToWave(i, t)}
                       >
                         +{t}
@@ -553,13 +632,13 @@ const TowerDefense = () => {
               ))}
             </div>
             <button
-              className="mt-3 w-full rounded-md border border-dashed border-gray-600 bg-gray-800/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-200 transition hover:bg-gray-700/80"
+              className="mt-3 w-full rounded-md border border-dashed border-kali-border/60 bg-kali-surface/80 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:border-kali-border hover:bg-kali-surface/70"
               onClick={addWave}
             >
               Add Wave
             </button>
             <label
-              className="mt-3 block text-xs font-semibold uppercase tracking-wide text-gray-300"
+              className="mt-3 block text-xs font-semibold uppercase tracking-wide text-kali-muted"
               htmlFor="wave-json-editor"
             >
               Wave JSON
@@ -567,12 +646,26 @@ const TowerDefense = () => {
             <textarea
               id="wave-json-editor"
               aria-label="Wave configuration JSON"
-              className="mt-2 h-28 w-full rounded-md border border-gray-700 bg-black/70 p-2 font-mono text-[0.65rem] text-gray-100 focus:border-emerald-500 focus:outline-none"
+              className="mt-2 h-28 w-full rounded-md border border-kali-border/60 bg-kali-surface/80 p-2 font-mono text-[0.65rem] text-kali-accent focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/70"
               value={waveJson}
-              onChange={(e) => setWaveJson(e.target.value)}
+              onChange={(e) => {
+                setWaveJson(e.target.value);
+                setWaveJsonStatus(null);
+              }}
             />
+            {waveJsonStatus && (
+              <p
+                className={`mt-2 text-[0.65rem] ${
+                  waveJsonStatus.type === "warning"
+                    ? "text-[color:var(--game-color-warning)]"
+                    : "text-kali-accent"
+                }`}
+              >
+                {waveJsonStatus.message}
+              </p>
+            )}
             {selectedTower && (
-              <div className="mt-4 rounded-lg border border-gray-700/60 bg-black/40 p-3">
+              <div className="mt-4 rounded-lg border border-kali-border/60 bg-kali-surface/80 p-3">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-200">
                   Tower Upgrades
                 </h3>
@@ -580,13 +673,13 @@ const TowerDefense = () => {
                   <RangeUpgradeTree tower={selectedTower} />
                   <div className="flex w-full flex-wrap justify-center gap-2 text-[0.65rem]">
                     <button
-                      className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 font-medium transition hover:bg-gray-700"
+                      className="rounded-md border border-kali-border/60 bg-kali-surface/80 px-3 py-1 font-medium text-white transition hover:border-kali-border hover:bg-kali-surface/70"
                       onClick={() => upgrade("range")}
                     >
                       Increase Range
                     </button>
                     <button
-                      className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 font-medium transition hover:bg-gray-700"
+                      className="rounded-md border border-kali-border/60 bg-kali-surface/80 px-3 py-1 font-medium text-white transition hover:border-kali-border hover:bg-kali-surface/70"
                       onClick={() => upgrade("damage")}
                     >
                       Increase Damage
