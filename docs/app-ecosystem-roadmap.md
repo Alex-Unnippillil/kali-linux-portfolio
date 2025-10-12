@@ -125,7 +125,7 @@ All arcade-style and puzzle titles share the same readiness gap: implement canva
 | tower-defense | Tower Defense | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | word-search | Word Search | Core maintainers | **In progress** – add timer, difficulty, found words list | Word lists, timer |
 | wordle | Wordle | Core maintainers | **Needs polish** – align with shared game scaffolding | Word list |
-| blackjack | Blackjack | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
+| blackjack | Blackjack | Core maintainers | **Ready** – shared loop, audio, and persistence with test coverage | Game engine |
 | breakout | Breakout | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | asteroids | Asteroids | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | sudoku | Sudoku | Core maintainers | **Needs polish** – align with shared game scaffolding | Puzzle engine |
