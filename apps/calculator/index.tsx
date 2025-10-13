@@ -26,13 +26,13 @@ export default function Calculator() {
   const [programmerActive, setProgrammerActive] = useState(false);
 
   const baseBtnCls =
-    'btn flex items-center justify-center font-semibold transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-dark';
+    'btn flex items-center justify-center font-semibold transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-bg)]';
   const keypadBtnCls =
-    `${baseBtnCls} h-14 rounded-xl border border-kali-border/60 bg-kali-surface px-0 text-lg text-kali-text shadow-sm hover:-translate-y-0.5 hover:bg-kali-surface/80`;
+    `${baseBtnCls} h-14 rounded-xl border border-[color:var(--kali-border)] bg-[var(--kali-panel)] px-0 text-lg text-[color:var(--kali-text)] shadow-sm hover:-translate-y-0.5 hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,rgba(255,255,255,0.08))]`;
   const operatorBtnCls =
-    'border-kali-accent/60 bg-kali-accent/10 text-kali-accent/90 hover:bg-kali-accent/20 hover:text-kali-accent focus-visible:ring-kali-focus';
+    'border-[color:color-mix(in_srgb,var(--color-accent)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--color-accent)_16%,transparent)] text-[color:color-mix(in_srgb,var(--color-accent)_92%,white)] hover:bg-[color:color-mix(in_srgb,var(--color-accent)_24%,transparent)] hover:text-[color:var(--color-accent)]';
   const pillUtilityBtnCls =
-    `${baseBtnCls} h-11 rounded-full border border-white/10 bg-white/5 px-5 text-sm uppercase tracking-wide text-slate-200 shadow-none hover:bg-white/10`;
+    `${baseBtnCls} h-11 rounded-full border border-[color:color-mix(in_srgb,var(--kali-border)_65%,transparent)] bg-[var(--kali-overlay)] px-5 text-sm uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_85%,rgba(148,163,184,0.35))] shadow-none hover:bg-[color:color-mix(in_srgb,var(--kali-overlay)_82%,transparent)] hover:text-[color:var(--kali-text)]`;
 
   const keypadRows: Array<
     Array<{
@@ -334,15 +334,15 @@ export default function Calculator() {
   );
 
   return (
-    <div className="calculator mx-auto flex w-full max-w-lg flex-col gap-6 rounded-3xl bg-kali-muted p-6 text-kali-text shadow-[0_35px_80px_-30px_rgba(15,15,20,0.9)]">
-      <header className="flex items-center justify-between text-sm text-slate-300">
+    <div className="calculator mx-auto flex w-full max-w-lg flex-col gap-6 rounded-3xl border border-[color:color-mix(in_srgb,var(--kali-border)_55%,transparent)] bg-[var(--kali-panel)] p-6 text-[color:var(--kali-text)] shadow-[0_35px_80px_-30px_rgba(15,15,20,0.9)]">
+      <header className="flex items-center justify-between text-sm text-[color:color-mix(in_srgb,var(--kali-text)_82%,rgba(148,163,184,0.35))]">
         <button
           type="button"
           onClick={() => {
             const display = document.getElementById('display') as HTMLInputElement | null;
             if (display) display.value = display.value.slice(0, -1);
           }}
-          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-kali-text/80 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-dark"
+          className="inline-flex items-center gap-2 rounded-full border border-[color:color-mix(in_srgb,var(--kali-border)_60%,transparent)] bg-[var(--kali-overlay)] px-4 py-2 text-sm font-medium text-[color:color-mix(in_srgb,var(--kali-text)_88%,rgba(148,163,184,0.35))] transition hover:bg-[color:color-mix(in_srgb,var(--kali-overlay)_78%,transparent)] hover:text-[color:var(--kali-text)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-bg)]"
         >
           <svg
             className="h-4 w-4"
@@ -364,10 +364,10 @@ export default function Calculator() {
         </button>
         <div className="flex items-center gap-3">
           <ModeSwitcher onChange={(nextMode) => setMode(nextMode)} />
-          <div className="flex items-center gap-2 text-slate-500">
+          <div className="flex items-center gap-2 text-[color:color-mix(in_srgb,var(--kali-text)_65%,rgba(148,163,184,0.55))]">
             <button
               id="toggle-history"
-              className="inline-flex items-center gap-2 rounded-full border border-transparent px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400 transition hover:border-white/10 hover:text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-dark"
+              className="inline-flex items-center gap-2 rounded-full border border-[color:color-mix(in_srgb,var(--kali-border)_45%,transparent)] bg-[var(--kali-overlay)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_72%,rgba(148,163,184,0.4))] transition hover:border-[color:color-mix(in_srgb,var(--kali-border)_65%,transparent)] hover:bg-[color:color-mix(in_srgb,var(--kali-overlay)_78%,transparent)] hover:text-[color:var(--kali-text)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-bg)]"
               aria-pressed="false"
               aria-label="toggle history"
               aria-describedby="calculator-history-toggle-desc"
@@ -394,7 +394,7 @@ export default function Calculator() {
             </button>
             <button
               id="toggle-formulas"
-              className="inline-flex items-center gap-2 rounded-full border border-transparent px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400 transition hover:border-white/10 hover:text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-dark"
+              className="inline-flex items-center gap-2 rounded-full border border-[color:color-mix(in_srgb,var(--kali-border)_45%,transparent)] bg-[var(--kali-overlay)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_72%,rgba(148,163,184,0.4))] transition hover:border-[color:color-mix(in_srgb,var(--kali-border)_65%,transparent)] hover:bg-[color:color-mix(in_srgb,var(--kali-overlay)_78%,transparent)] hover:text-[color:var(--kali-text)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-bg)]"
               aria-pressed="false"
               aria-label="toggle formulas"
               aria-describedby="calculator-formulas-toggle-desc"
@@ -422,8 +422,8 @@ export default function Calculator() {
         </div>
       </header>
 
-      <div className="space-y-3 rounded-2xl border border-white/5 bg-kali-dark p-4 shadow-inner">
-        <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-slate-500">
+      <div className="space-y-3 rounded-2xl border border-[color:var(--kali-border)] bg-[color:var(--color-dark)] p-4 shadow-inner">
+        <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-[color:color-mix(in_srgb,var(--kali-text)_55%,rgba(148,163,184,0.65))]">
           <span>Expression</span>
           <span>Result</span>
         </div>
@@ -432,16 +432,16 @@ export default function Calculator() {
         </label>
         <input
           id="display"
-          className="display w-full rounded-2xl border border-white/5 bg-kali-dark/90 px-4 py-4 text-right text-3xl font-semibold tracking-tight text-kali-text shadow-inner placeholder:text-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-dark"
+          className="display w-full rounded-2xl border border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,var(--color-dark)_92%,transparent)] px-4 py-4 text-right text-3xl font-semibold tracking-tight text-[color:var(--kali-text)] shadow-inner placeholder:text-[color:color-mix(in_srgb,var(--kali-text)_48%,rgba(148,163,184,0.75))] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-bg)]"
           placeholder="0"
           aria-labelledby="calculator-display-label"
         />
       </div>
 
-      <div className="flex flex-wrap gap-2 text-xs font-medium uppercase tracking-wide text-slate-300">
+      <div className="flex flex-wrap gap-2 text-xs font-medium uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_78%,rgba(148,163,184,0.4))]">
         <button
           id="toggle-precise"
-          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-dark"
+          className="inline-flex items-center gap-2 rounded-full border border-[color:color-mix(in_srgb,var(--kali-border)_60%,transparent)] bg-[var(--kali-overlay)] px-3 py-1.5 transition hover:bg-[color:color-mix(in_srgb,var(--kali-overlay)_80%,transparent)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-bg)]"
           aria-pressed="false"
           aria-label="toggle precise mode"
         >
@@ -449,7 +449,7 @@ export default function Calculator() {
         </button>
         <button
           id="toggle-scientific"
-          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-dark"
+          className="inline-flex items-center gap-2 rounded-full border border-[color:color-mix(in_srgb,var(--kali-border)_60%,transparent)] bg-[var(--kali-overlay)] px-3 py-1.5 transition hover:bg-[color:color-mix(in_srgb,var(--kali-overlay)_80%,transparent)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-bg)]"
           aria-pressed="false"
           aria-label="toggle scientific mode"
         >
@@ -457,7 +457,7 @@ export default function Calculator() {
         </button>
         <button
           id="toggle-programmer"
-          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-dark"
+          className="inline-flex items-center gap-2 rounded-full border border-[color:color-mix(in_srgb,var(--kali-border)_60%,transparent)] bg-[var(--kali-overlay)] px-3 py-1.5 transition hover:bg-[color:color-mix(in_srgb,var(--kali-overlay)_80%,transparent)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-bg)]"
           aria-pressed="false"
           aria-label="toggle programmer mode"
         >
@@ -511,34 +511,34 @@ export default function Calculator() {
       </div>
 
       <div
-        className="rounded-2xl border border-white/5 bg-kali-dark p-4 text-xs text-slate-300 shadow-inner"
+        className="rounded-2xl border border-[color:var(--kali-border)] bg-[color:var(--color-dark)] p-4 text-xs text-[color:color-mix(in_srgb,var(--kali-text)_78%,rgba(148,163,184,0.42))] shadow-inner"
         role="status"
         aria-live="polite"
         data-testid="calc-status-summary"
       >
         <div className="flex flex-wrap items-center gap-2">
-          <span className="uppercase tracking-[0.3em] text-slate-500">Mode</span>
-          <span className="font-semibold capitalize text-slate-100" data-testid="calc-mode-summary">
+          <span className="uppercase tracking-[0.3em] text-[color:color-mix(in_srgb,var(--kali-text)_55%,rgba(148,163,184,0.65))]">Mode</span>
+          <span className="font-semibold capitalize text-[color:color-mix(in_srgb,var(--kali-text)_92%,rgba(148,163,184,0.15))]" data-testid="calc-mode-summary">
             {mode}
           </span>
-          <span className="uppercase tracking-[0.3em] text-slate-500">Panels</span>
-          <span className="font-semibold text-slate-100" data-testid="calc-active-panels">
+          <span className="uppercase tracking-[0.3em] text-[color:color-mix(in_srgb,var(--kali-text)_55%,rgba(148,163,184,0.65))]">Panels</span>
+          <span className="font-semibold text-[color:color-mix(in_srgb,var(--kali-text)_92%,rgba(148,163,184,0.15))]" data-testid="calc-active-panels">
             {activePanels.length > 0 ? activePanels.join(' · ') : 'None'}
           </span>
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-2" data-testid="calc-summary-history">
-          <span className="uppercase tracking-[0.3em] text-slate-500">Recent</span>
+          <span className="uppercase tracking-[0.3em] text-[color:color-mix(in_srgb,var(--kali-text)_55%,rgba(148,163,184,0.65))]">Recent</span>
           {recentHistory.length === 0 ? (
-            <span className="text-slate-500">No tape entries yet</span>
+            <span className="text-[color:color-mix(in_srgb,var(--kali-text)_55%,rgba(148,163,184,0.65))]">No tape entries yet</span>
           ) : (
             recentHistory.map((entry, index) => (
               <Fragment key={`${entry.expr}-${entry.result}-${index}`}>
                 {index > 0 && (
-                  <span aria-hidden="true" className="text-slate-600">
+                  <span aria-hidden="true" className="text-[color:color-mix(in_srgb,var(--kali-text)_48%,rgba(148,163,184,0.75))]">
                     •
                   </span>
                 )}
-                <span className="font-mono text-slate-200">
+                <span className="font-mono text-[color:color-mix(in_srgb,var(--kali-text)_90%,rgba(148,163,184,0.2))]">
                   {entry.expr} = <span className="text-kali-accent">{entry.result}</span>
                 </span>
               </Fragment>
@@ -547,7 +547,7 @@ export default function Calculator() {
         </div>
       </div>
 
-      <div id="scientific" className="scientific hidden grid grid-cols-3 gap-2 rounded-2xl border border-white/5 bg-white/5 p-4 text-sm uppercase tracking-wide text-slate-200" aria-label="scientific functions">
+      <div id="scientific" className="scientific hidden grid grid-cols-3 gap-2 rounded-2xl border border-[color:var(--kali-border)] bg-[var(--kali-overlay)] p-4 text-sm uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_88%,rgba(148,163,184,0.2))]" aria-label="scientific functions">
         <button className={keypadBtnCls} data-value="sin(" aria-label="sine">
           sin
         </button>
@@ -568,14 +568,14 @@ export default function Calculator() {
         </button>
       </div>
 
-      <div id="programmer" className="programmer hidden grid gap-2 rounded-2xl border border-white/5 bg-white/5 p-4 text-sm uppercase tracking-wide text-slate-200" aria-label="programmer functions">
-        <label className="text-xs font-semibold text-slate-400" htmlFor="base-select">
+      <div id="programmer" className="programmer hidden grid gap-2 rounded-2xl border border-[color:var(--kali-border)] bg-[var(--kali-overlay)] p-4 text-sm uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_88%,rgba(148,163,184,0.2))]" aria-label="programmer functions">
+        <label className="text-xs font-semibold text-[color:color-mix(in_srgb,var(--kali-text)_72%,rgba(148,163,184,0.35))]" htmlFor="base-select">
           Number base
         </label>
         <select
           id="base-select"
           defaultValue="10"
-          className="h-11 rounded-xl border border-white/10 bg-kali-dark px-3 text-sm font-medium text-kali-text focus:border-kali-focus focus:outline-none focus:ring-2 focus:ring-kali-focus"
+          className="h-11 rounded-xl border border-[color:color-mix(in_srgb,var(--kali-border)_60%,transparent)] bg-[color:var(--color-dark)] px-3 text-sm font-medium text-[color:var(--kali-text)] focus:border-[color:var(--color-focus-ring)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-focus-ring)]"
         >
           <option value="2">Binary</option>
           <option value="8">Octal</option>
@@ -610,20 +610,20 @@ export default function Calculator() {
             Print
           </button>
         </div>
-        <div id="paren-indicator" className="mt-2 h-1 rounded-full bg-white/10" />
+        <div id="paren-indicator" className="mt-2 h-1 rounded-full bg-[color:color-mix(in_srgb,var(--kali-border)_65%,transparent)]" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-4">
-          <div id="history" className="history hidden space-y-2 rounded-2xl border border-white/5 bg-white/5 p-4 text-sm text-slate-200" aria-live="polite">
+          <div id="history" className="history hidden space-y-2 rounded-2xl border border-[color:var(--kali-border)] bg-[var(--kali-overlay)] p-4 text-sm text-[color:color-mix(in_srgb,var(--kali-text)_90%,rgba(148,163,184,0.18))]" aria-live="polite">
             {history.length === 0 && (
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
+              <p className="text-xs uppercase tracking-[0.3em] text-[color:color-mix(in_srgb,var(--kali-text)_55%,rgba(148,163,184,0.65))]">
                 No history yet
               </p>
             )}
             {history.map(({ expr, result }, i) => (
-              <div key={i} className="history-entry flex items-center justify-between gap-2 rounded-xl bg-black/20 px-3 py-2">
-                <span className="font-mono text-sm text-slate-100">{expr}</span>
+              <div key={i} className="history-entry flex items-center justify-between gap-2 rounded-xl bg-[color:color-mix(in_srgb,var(--kali-bg)_35%,transparent)] px-3 py-2">
+                <span className="font-mono text-sm text-[color:color-mix(in_srgb,var(--kali-text)_92%,rgba(148,163,184,0.15))]">{expr}</span>
                 <span className="font-semibold text-kali-accent">{result}</span>
               </div>
             ))}
