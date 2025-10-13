@@ -12,6 +12,9 @@ import {
     measureSafeAreaInset,
     measureSnapBottomInset,
     measureWindowTopOffset,
+    buildWindowSnapshotUrl,
+    readWindowNodePosition,
+    sanitizeWindowSnapshot,
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET } from '../../utils/uiConstants';
@@ -133,6 +136,129 @@ export class Window extends Component {
         if (typeof this.props.onSizeChange === 'function') {
             const { width, height } = this.state;
             this.props.onSizeChange(width, height);
+        }
+    }
+
+    getSerializedState = () => {
+        const id = typeof this.props.id === 'string' ? this.props.id : null;
+        if (!id) return null;
+
+        const node = this.getWindowNode();
+        const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const fallbackPosition = {
+            x: typeof this.startX === 'number' ? this.startX : 0,
+            y: clampWindowTopPosition(typeof this.startY === 'number' ? this.startY : topInset, topInset),
+        };
+        const position = readWindowNodePosition(node) || fallbackPosition;
+
+        const width = Number(this.state.width);
+        const height = Number(this.state.height);
+        const hasSize = Number.isFinite(width) && Number.isFinite(height);
+
+        return sanitizeWindowSnapshot({
+            id,
+            position,
+            size: hasSize ? { width, height } : undefined,
+            context: this.props.context,
+        });
+    }
+
+    applySerializedState = (snapshot) => {
+        if (!snapshot) return false;
+        const normalized = sanitizeWindowSnapshot({
+            ...snapshot,
+            id: typeof this.props.id === 'string' ? this.props.id : snapshot.id,
+        });
+        if (!normalized || normalized.id !== this.props.id) {
+            return false;
+        }
+
+        let applied = false;
+        const node = this.getWindowNode();
+        const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+
+        if (normalized.size && typeof normalized.size.width === 'number' && typeof normalized.size.height === 'number') {
+            const { width, height } = normalized.size;
+            this.setState((prev) => {
+                if (prev.width === width && prev.height === height && !prev.maximized && !prev.snapped) {
+                    return null;
+                }
+                return {
+                    width,
+                    height,
+                    maximized: false,
+                    snapped: null,
+                    preMaximizeSize: null,
+                };
+            }, () => {
+                this.resizeBoundries();
+                this.notifySizeChange();
+            });
+            applied = true;
+        }
+
+        if (node && normalized.position && typeof normalized.position.x === 'number' && typeof normalized.position.y === 'number') {
+            const x = Math.max(0, normalized.position.x);
+            const y = clampWindowTopPosition(normalized.position.y, topInset);
+            node.style.transform = `translate(${x}px, ${y}px)`;
+            if (typeof node.style.setProperty === 'function') {
+                node.style.setProperty('--window-transform-x', `${x}px`);
+                node.style.setProperty('--window-transform-y', `${y}px`);
+            } else {
+                node.style['--window-transform-x'] = `${x}px`;
+                node.style['--window-transform-y'] = `${y}px`;
+            }
+            this.startX = x;
+            this.startY = y;
+            if (typeof this.props.onPositionChange === 'function') {
+                this.props.onPositionChange(x, y);
+            }
+            applied = true;
+        }
+
+        return applied;
+    }
+
+    copyWindowStateLink = async () => {
+        if (typeof window === 'undefined') return;
+        const snapshot = this.getSerializedState();
+        if (!snapshot) {
+            console.warn('Unable to serialize window state for sharing');
+            return;
+        }
+
+        const url = buildWindowSnapshotUrl(snapshot);
+        if (!url) {
+            console.warn('Failed to build window state URL');
+            return;
+        }
+
+        try {
+            if (navigator?.clipboard?.writeText) {
+                await navigator.clipboard.writeText(url);
+                return;
+            }
+        } catch (error) {
+            console.error('Clipboard write failed, falling back to legacy copy', error);
+        }
+
+        try {
+            const textarea = document.createElement('textarea');
+            textarea.value = url;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'absolute';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+        } catch (error) {
+            console.error('Unable to copy window link', error);
+            try {
+                window.prompt('Copy this window link', url);
+            } catch (promptError) {
+                console.error('Prompt copy fallback failed', promptError);
+            }
         }
     }
 
@@ -908,6 +1034,7 @@ export class Window extends Component {
                             id={this.id}
                             allowMaximize={this.props.allowMaximize !== false}
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
+                            copyState={this.copyWindowStateLink}
                         />
                         {(this.id === "settings"
                             ? <Settings />
@@ -989,7 +1116,7 @@ export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
     return (
-        <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[8.25rem]`}>
+        <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[9.75rem]`}>
             {pipSupported && props.pip && (
                 <button
                     type="button"
@@ -1000,6 +1127,23 @@ export function WindowEditButtons(props) {
                     <NextImage
                         src="/themes/Yaru/window/window-pin-symbolic.svg"
                         alt="Kali window pin"
+                        className="h-4 w-4 inline"
+                        width={16}
+                        height={16}
+                        sizes="16px"
+                    />
+                </button>
+            )}
+            {typeof props.copyState === 'function' && (
+                <button
+                    type="button"
+                    aria-label="Copy link to this window"
+                    className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
+                    onClick={props.copyState}
+                >
+                    <NextImage
+                        src="/themes/Yaru/window/window-link-symbolic.svg"
+                        alt="Copy window link"
                         className="h-4 w-4 inline"
                         width={16}
                         height={16}
