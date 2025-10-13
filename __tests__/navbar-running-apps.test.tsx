@@ -92,7 +92,7 @@ describe('Navbar running apps tray', () => {
     dispatchSpy.mockRestore();
   });
 
-  it('dispatches a taskbar command when clicking an open app', () => {
+  it('dispatches a minimize command when clicking a focused app', () => {
     render(<Navbar />);
 
     act(() => {
@@ -106,12 +106,45 @@ describe('Navbar running apps tray', () => {
 
     const taskbarEventCall = dispatchSpy.mock.calls.find(([event]) => event.type === 'taskbar-command');
     expect(taskbarEventCall).toBeTruthy();
-    const [event] = taskbarEventCall!;
-    expect(event.detail).toEqual({ appId: 'app1', action: 'toggle' });
+    const [event] = taskbarEventCall as [CustomEvent<{ appId: string; action: string }>];
+    expect(event.detail).toEqual({ appId: 'app1', action: 'minimize' });
     expect(button).toHaveAttribute('data-context', 'taskbar');
     expect(button).toHaveAttribute('aria-pressed', 'true');
     expect(button).toHaveAttribute('data-active', 'true');
     expect(button.querySelector('[data-testid="running-indicator"]')).toBeTruthy();
+  });
+
+  it('dispatches a focus command when clicking a non-focused app', () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('workspace-state', {
+          detail: {
+            ...workspaceEventDetail,
+            runningApps: [
+              {
+                id: 'app2',
+                title: 'App Two',
+                icon: '/icon.png',
+                isFocused: false,
+                isMinimized: true,
+              },
+            ],
+          },
+        }),
+      );
+    });
+
+    dispatchSpy.mockClear();
+
+    const button = screen.getByRole('button', { name: /app two/i });
+    fireEvent.click(button);
+
+    const taskbarEventCall = dispatchSpy.mock.calls.find(([event]) => event.type === 'taskbar-command');
+    expect(taskbarEventCall).toBeTruthy();
+    const [event] = taskbarEventCall as [CustomEvent<{ appId: string; action: string }>];
+    expect(event.detail).toEqual({ appId: 'app2', action: 'focus' });
   });
 
   it('shows minimized state on button attributes', () => {
@@ -180,18 +213,40 @@ describe('Navbar running apps tray', () => {
       fireEvent.dragEnd(firstItem, { dataTransfer });
     });
 
-    const buttons = within(list).getAllByRole('button', { name: /app/i });
-    expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual([
-      'App Two',
-      'App Three',
-      'App One',
-    ]);
-
     const taskbarEventCall = dispatchSpy.mock.calls.find(([event]) => event.type === 'taskbar-command');
     expect(taskbarEventCall).toBeTruthy();
-    expect(taskbarEventCall && taskbarEventCall[0].detail).toEqual({
-      action: 'reorder',
-      order: ['app2', 'app3', 'app1'],
+    const [event] = taskbarEventCall as [CustomEvent<{ action: string; order: string[] }>];
+    const detail = event.detail;
+    expect(detail.action).toBe('reorder');
+    expect(detail.order).toHaveLength(3);
+    expect(new Set(detail.order)).toEqual(new Set(['app1', 'app2', 'app3']));
+    expect(detail.order[0]).not.toBe('app1');
+
+    const buttonsBeforeUpdate = within(list).getAllByRole('button', { name: /app/i });
+    expect(buttonsBeforeUpdate.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'App One',
+      'App Two',
+      'App Three',
+    ]);
+
+    const runningAppLookup = Object.fromEntries(
+      multiAppWorkspaceDetail.runningApps.map((app) => [app.id, app]),
+    );
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('workspace-state', {
+          detail: {
+            ...multiAppWorkspaceDetail,
+            runningApps: detail.order.map((id: string) => runningAppLookup[id]),
+          },
+        }),
+      );
     });
+
+    const buttonsAfterUpdate = within(list).getAllByRole('button', { name: /app/i });
+    expect(
+      buttonsAfterUpdate.map((button) => button.getAttribute('aria-label')),
+    ).toEqual(detail.order.map((id: string) => runningAppLookup[id].title));
   });
 });

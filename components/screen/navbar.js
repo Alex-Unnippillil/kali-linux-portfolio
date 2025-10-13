@@ -50,7 +50,6 @@ export default class Navbar extends PureComponent {
                 };
                 this.taskbarListRef = React.createRef();
                 this.draggingAppId = null;
-                this.pendingReorder = null;
         }
 
         componentDidMount() {
@@ -96,7 +95,12 @@ export default class Navbar extends PureComponent {
         };
 
         handleAppButtonClick = (app) => {
-                const detail = { appId: app.id, action: 'toggle' };
+                if (!app || !app.id) return;
+                const shouldMinimize = app.isFocused && !app.isMinimized;
+                const detail = {
+                        appId: app.id,
+                        action: shouldMinimize ? 'minimize' : 'focus'
+                };
                 this.dispatchTaskbarCommand(detail);
         };
 
@@ -231,21 +235,14 @@ export default class Navbar extends PureComponent {
 
         reorderRunningApps = (sourceId, targetId, insertAfter = false) => {
                 if (!sourceId) return;
-                this.pendingReorder = null;
-                this.setState((prevState) => {
-                        const updated = this.computeReorderedApps(prevState.runningApps, sourceId, targetId, insertAfter);
-                        if (!updated) return null;
-                        this.pendingReorder = updated.map((item) => item.id);
-                        return { runningApps: updated };
-                }, () => {
-                        if (this.pendingReorder) {
-                                this.dispatchTaskbarCommand({ action: 'reorder', order: this.pendingReorder });
-                                this.pendingReorder = null;
-                        }
-                });
+                const { runningApps } = this.state;
+                const nextOrder = this.computeReorderedOrder(runningApps, sourceId, targetId, insertAfter);
+                if (nextOrder) {
+                        this.dispatchTaskbarCommand({ action: 'reorder', order: nextOrder });
+                }
         };
 
-        computeReorderedApps = (apps, sourceId, targetId, insertAfter) => {
+        computeReorderedOrder = (apps, sourceId, targetId, insertAfter) => {
                 if (!Array.isArray(apps) || apps.length === 0) return null;
                 if (sourceId === targetId) return null;
 
@@ -272,10 +269,12 @@ export default class Navbar extends PureComponent {
 
                 list.splice(insertIndex, 0, moved);
 
-                const unchanged = apps.length === list.length && apps.every((item, index) => item.id === list[index].id);
+                const unchanged =
+                        apps.length === list.length &&
+                        apps.every((item, index) => item.id === list[index]?.id);
                 if (unchanged) return null;
 
-                return list;
+                return list.map((item) => item.id);
         };
 
         handleWorkspaceSelect = (workspaceId) => {
