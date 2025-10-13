@@ -19,25 +19,25 @@ interface FontInfo {
 }
 
 const textActionButtonBase =
-  "rounded border border-kali-border/60 px-3 py-1 text-sm font-semibold uppercase tracking-wide transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus";
+  "rounded border border-[color:var(--kali-border)] px-3 py-1 text-sm font-semibold uppercase tracking-wide transition-colors duration-[var(--motion-fast)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus";
 
 const iconActionButtonBase =
-  "rounded border border-kali-border/60 p-1 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus";
+  "rounded border border-[color:var(--kali-border)] p-1 transition-colors duration-[var(--motion-fast)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus";
 
 const copyButtonClass =
-  `${textActionButtonBase} bg-kali-primary text-slate-900 hover:bg-kali-primary/90`;
+  `${textActionButtonBase} bg-[color:var(--color-primary)] text-[color:var(--color-inverse)] hover:bg-[color:color-mix(in_srgb,var(--color-primary)_85%,var(--kali-panel))]`;
 
 const txtExportButtonClass =
-  `${textActionButtonBase} bg-kali-muted text-white hover:bg-kali-muted/80`;
+  `${textActionButtonBase} bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,var(--kali-panel-highlight))] text-[color:var(--kali-text)] hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_68%,rgba(15,148,210,0.22))]`;
 
 const invertButtonClass =
-  `${textActionButtonBase} bg-kali-secondary text-white hover:bg-kali-secondary/80`;
+  `${textActionButtonBase} bg-[color:color-mix(in_srgb,var(--kali-panel)_78%,rgba(15,148,210,0.24))] text-[color:var(--kali-text)] hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_65%,rgba(15,148,210,0.28))]`;
 
 const pngButtonClass =
-  `${iconActionButtonBase} bg-kali-primary/90 text-slate-900 hover:bg-kali-primary`;
+  `${iconActionButtonBase} bg-[color:color-mix(in_srgb,var(--color-primary)_88%,var(--kali-panel))] text-[color:var(--color-inverse)] hover:bg-[color:var(--color-primary)]`;
 
 const svgButtonClass =
-  `${iconActionButtonBase} bg-kali-muted text-white hover:bg-kali-muted/70`;
+  `${iconActionButtonBase} bg-[color:color-mix(in_srgb,var(--kali-panel)_80%,rgba(15,148,210,0.26))] text-[color:var(--kali-text)] hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_66%,rgba(15,148,210,0.32))]`;
 
 const FigletApp: React.FC = () => {
   const [text, setText] = useState("");
@@ -404,10 +404,10 @@ const FigletApp: React.FC = () => {
   }, [fontSize, gradient, inverted, kerning, lineHeight]);
 
   return (
-    <div className="flex h-full w-full flex-col bg-ub-cool-grey text-white font-mono">
-      <div className="flex flex-col gap-3 border-b border-black/40 bg-ub-gedit-dark p-3">
+    <div className="flex h-full w-full flex-col bg-[var(--kali-panel)] font-mono text-[color:var(--kali-text)]">
+      <div className="flex flex-col gap-3 border-b border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,rgba(15,148,210,0.08))] p-3">
         <div className="flex flex-wrap items-center gap-2">
-          <label className="flex items-center gap-2 rounded border border-transparent bg-black/30 px-2 py-1 text-xs uppercase tracking-wide">
+          <label className="flex items-center gap-2 rounded border border-[color:color-mix(in_srgb,var(--kali-border)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,var(--kali-panel-highlight))] px-2 py-1 text-xs uppercase tracking-wide">
             <input
               type="checkbox"
               checked={monoOnly}
@@ -421,14 +421,14 @@ const FigletApp: React.FC = () => {
             type="file"
             accept=".flf"
             onChange={handleUpload}
-            className="rounded border border-kali-border/60 bg-kali-surface px-2 py-1 text-xs"
+            className="rounded border border-[color:var(--kali-border)] bg-[var(--kali-panel)] px-2 py-1 text-xs text-[color:var(--kali-text)] transition-colors duration-[var(--motion-fast)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             aria-label="Upload font"
           />
           {serverFontNames.length > 0 && (
             <select
               value=""
               onChange={(e) => setFont(e.target.value)}
-              className="rounded border border-kali-border/60 bg-kali-surface px-2 py-1 text-xs"
+              className="rounded border border-[color:var(--kali-border)] bg-[var(--kali-panel)] px-2 py-1 text-xs text-[color:var(--kali-text)] transition-colors duration-[var(--motion-fast)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               aria-label="Select uploaded font"
             >
               <option value="" disabled>
@@ -444,12 +444,12 @@ const FigletApp: React.FC = () => {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <label className="flex flex-1 min-w-[16rem] items-center gap-2 text-sm">
-            <span className="whitespace-nowrap text-xs uppercase tracking-wide text-gray-200">
+            <span className="whitespace-nowrap text-xs uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_76%,transparent)]">
               Sample Text
             </span>
             <input
               type="text"
-              className="flex-1 rounded border border-kali-border/60 bg-kali-surface px-2 py-1 text-white placeholder:text-gray-400"
+              className="flex-1 rounded border border-[color:var(--kali-border)] bg-[var(--kali-panel)] px-2 py-1 text-[color:var(--kali-text)] placeholder:text-[color:color-mix(in_srgb,var(--kali-text)_45%,transparent)] transition-colors duration-[var(--motion-fast)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               placeholder="Type here"
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -487,7 +487,7 @@ const FigletApp: React.FC = () => {
               max="200"
               value={width}
               onChange={(e) => setWidth(Number(e.target.value))}
-              className="w-20 rounded border border-kali-border/60 bg-kali-surface px-2 py-1 text-white"
+              className="w-20 rounded border border-[color:var(--kali-border)] bg-[var(--kali-panel)] px-2 py-1 text-[color:var(--kali-text)] transition-colors duration-[var(--motion-fast)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               aria-label="Width"
             />
           </label>
@@ -496,7 +496,7 @@ const FigletApp: React.FC = () => {
             <select
               value={layout}
               onChange={(e) => setLayout(e.target.value)}
-              className="rounded border border-kali-border/60 bg-kali-surface px-2 py-1 text-white"
+              className="rounded border border-[color:var(--kali-border)] bg-[var(--kali-panel)] px-2 py-1 text-[color:var(--kali-text)] transition-colors duration-[var(--motion-fast)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               aria-label="Layout"
             >
               <option value="default">Default</option>
@@ -583,8 +583,10 @@ const FigletApp: React.FC = () => {
       </div>
       <div className="flex-1 min-h-[18rem] overflow-hidden">
         <div
-          className={`h-full overflow-auto border-b border-black/30 ${
-            inverted ? "bg-white" : "bg-black"
+          className={`h-full overflow-auto border-b border-[color:var(--kali-border)] ${
+            inverted
+              ? "bg-[color:var(--color-text)]"
+              : "bg-[var(--kali-panel)]"
           }`}
         >
           <pre
@@ -596,7 +598,7 @@ const FigletApp: React.FC = () => {
           </pre>
         </div>
       </div>
-      <div className="p-2 text-xs text-right">
+      <div className="p-2 text-right text-xs text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)]">
         About this feature{" "}
         <a
           href="http://www.figlet.org/"
