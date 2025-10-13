@@ -4,6 +4,7 @@ import {
   SNAP_BOTTOM_INSET,
   WINDOW_TOP_INSET,
   WINDOW_TOP_MARGIN,
+  DESKTOP_TOP_PADDING,
 } from './uiConstants';
 
 const NAVBAR_SELECTOR = '.main-navbar-vp';
@@ -256,5 +257,60 @@ export const clampWindowPositionWithinViewport = (
       minY,
       maxY,
     },
+  };
+};
+
+export const getSnapBounds = (viewport = {}, snap) => {
+  if (typeof snap !== 'string') {
+    return null;
+  }
+
+  const viewportWidth = getViewportDimension(viewport.width, 'innerWidth');
+  const viewportHeight = getViewportDimension(viewport.height, 'innerHeight');
+  if (viewportWidth <= 0 || viewportHeight <= 0) {
+    return null;
+  }
+
+  const topInset = typeof viewport.topInset === 'number'
+    ? viewport.topInset
+    : measureWindowTopOffset();
+  const snapBottomInset = typeof viewport.bottomInset === 'number'
+    ? Math.max(viewport.bottomInset, 0)
+    : measureSnapBottomInset();
+  const safeAreaBottom = typeof viewport.safeAreaBottom === 'number'
+    ? Math.max(viewport.safeAreaBottom, 0)
+    : measureSafeAreaInset('bottom');
+
+  const normalizedTop = Math.max(topInset, DESKTOP_TOP_PADDING);
+  const availableHeight = Math.max(
+    0,
+    viewportHeight - normalizedTop - snapBottomInset - safeAreaBottom,
+  );
+
+  const halfWidth = Math.max(viewportWidth / 2, 0);
+  const halfHeight = Math.max(availableHeight / 2, 0);
+  const rightStart = Math.max(viewportWidth - halfWidth, 0);
+  const bottomStart = normalizedTop + halfHeight;
+
+  const regions = {
+    left: { x: 0, y: normalizedTop, width: halfWidth, height: availableHeight },
+    right: { x: rightStart, y: normalizedTop, width: halfWidth, height: availableHeight },
+    top: { x: 0, y: normalizedTop, width: viewportWidth, height: availableHeight },
+    'top-left': { x: 0, y: normalizedTop, width: halfWidth, height: halfHeight },
+    'top-right': { x: rightStart, y: normalizedTop, width: halfWidth, height: halfHeight },
+    'bottom-left': { x: 0, y: bottomStart, width: halfWidth, height: halfHeight },
+    'bottom-right': { x: rightStart, y: bottomStart, width: halfWidth, height: halfHeight },
+  };
+
+  const region = regions[snap];
+  if (!region) {
+    return null;
+  }
+
+  return {
+    x: region.x,
+    y: region.y,
+    width: region.width,
+    height: region.height,
   };
 };
