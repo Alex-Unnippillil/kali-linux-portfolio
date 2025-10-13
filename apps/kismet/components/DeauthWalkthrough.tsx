@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { buildDocsLatestPath } from '../../../lib/docs/urls';
 import capture from '../../../components/apps/kismet/sampleCapture.json';
 
 interface Frame {
@@ -52,11 +53,8 @@ const DeauthWalkthrough: React.FC = () => {
       </p>
       <p className="mt-2">
         For defensive guidance, review the{' '}
-        <a
-          href="/docs/deauth-mitigation.md"
-          className="text-blue-400 underline"
-        >
-          mitigation notes
+        <a href={buildDocsLatestPath('deauth-mitigation')} className="text-blue-400 underline">
+          mitigation notes (latest docs)
         </a>
         .
       </p>
