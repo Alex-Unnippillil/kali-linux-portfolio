@@ -3,6 +3,9 @@
 // Update README (section "CSP External Domains") when editing domains below.
 
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+const fs = require('fs');
+const path = require('path');
+const { ExpirationPlugin } = require('workbox-expiration');
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -88,6 +91,60 @@ const {
   runtimeCaching: defaultRuntimeCaching,
 } = require('@ducanh2912/next-pwa');
 
+function collectGameAssetManifestEntries() {
+  const publicDir = path.join(__dirname, 'public');
+  const assetExtensions = new Set(['.json', '.wasm']);
+  const candidateDirectories = ['apps', 'games']
+    .map((dirName) => path.join(publicDir, dirName))
+    .filter((dirPath) => fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory());
+  const standaloneAssets = ['pacman-levels.json']
+    .map((relativePath) => path.join(publicDir, relativePath))
+    .filter((filePath) => fs.existsSync(filePath) && fs.statSync(filePath).isFile());
+  const seen = new Set();
+  const entries = [];
+
+  const addFile = (filePath) => {
+    const extension = path.extname(filePath).toLowerCase();
+    if (!assetExtensions.has(extension)) return;
+
+    const relativePath = path.relative(publicDir, filePath).split(path.sep).join('/');
+    if (!relativePath) return;
+
+    const url = `/${relativePath}`;
+    if (seen.has(url)) return;
+    seen.add(url);
+    entries.push({ url, revision: null });
+  };
+
+  const walkDirectory = (directory) => {
+    for (const entry of fs.readdirSync(directory)) {
+      const entryPath = path.join(directory, entry);
+      const stats = fs.statSync(entryPath);
+      if (stats.isDirectory()) {
+        walkDirectory(entryPath);
+      } else if (stats.isFile()) {
+        addFile(entryPath);
+      }
+    }
+  };
+
+  candidateDirectories.forEach(walkDirectory);
+  standaloneAssets.forEach(addFile);
+
+  return entries.sort((a, b) => a.url.localeCompare(b.url));
+}
+
+function dedupeManifestEntries(entries) {
+  const seen = new Set();
+  return entries.filter(({ url }) => {
+    if (seen.has(url)) return false;
+    seen.add(url);
+    return true;
+  });
+}
+
+const gameAssetManifestEntries = collectGameAssetManifestEntries();
+
 function buildAwareCacheName(name) {
   if (!name) return name;
   return resolvedBuildId ? `${name}-${resolvedBuildId}` : name;
@@ -99,6 +156,13 @@ const normalizedBasePath = (() => {
   const prefixed = rawBasePath.startsWith('/') ? rawBasePath : `/${rawBasePath}`;
   return prefixed.endsWith('/') && prefixed !== '/' ? prefixed.slice(0, -1) : prefixed;
 })();
+
+const stripBasePath = (pathname) => {
+  if (!pathname) return pathname;
+  if (normalizedBasePath === '/' || !pathname.startsWith(normalizedBasePath)) return pathname;
+  const stripped = pathname.slice(normalizedBasePath.length) || '/';
+  return stripped.startsWith('/') ? stripped : `/${stripped}`;
+};
 
 const startUrlRuntimeCaching = {
   urlPattern: ({ sameOrigin, url }) => {
@@ -124,8 +188,36 @@ const startUrlRuntimeCaching = {
   },
 };
 
+const gameAssetRuntimeCaching = {
+  urlPattern: ({ sameOrigin, url }) => {
+    if (!sameOrigin) return false;
+    const pathname = stripBasePath(url.pathname || '/');
+    if (!pathname) return false;
+    return [
+      /^\/apps\/.*\.(?:json|wasm)$/i,
+      /^\/games\/.*\.(?:json|wasm)$/i,
+      /^\/pacman-levels\.json$/i,
+    ].some((regex) => regex.test(pathname));
+  },
+  handler: 'CacheFirst',
+  options: {
+    cacheName: buildAwareCacheName('game-assets'),
+    expiration: {
+      maxEntries: 128,
+      maxAgeSeconds: 60 * 60 * 24 * 30,
+    },
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 128,
+        maxAgeSeconds: 60 * 60 * 24 * 30,
+      }),
+    ],
+  },
+};
+
 const runtimeCaching = [
   startUrlRuntimeCaching,
+  gameAssetRuntimeCaching,
   ...defaultRuntimeCaching.map((entry) => ({
     ...entry,
     ...(entry.options
@@ -148,7 +240,7 @@ const withPWA = withPWAInit({
   buildExcludes: [/dynamic-css-manifest\.json$/],
   workboxOptions: {
     navigateFallback: '/offline.html',
-    additionalManifestEntries: [
+    additionalManifestEntries: dedupeManifestEntries([
       { url: '/', revision: null },
       { url: '/feeds', revision: null },
       { url: '/about', revision: null },
@@ -160,7 +252,8 @@ const withPWA = withPWAInit({
       { url: '/apps/checkers', revision: null },
       { url: '/offline.html', revision: null },
       { url: '/manifest.webmanifest', revision: null },
-    ],
+      ...gameAssetManifestEntries,
+    ]),
     runtimeCaching,
     ...(workboxCacheId && { cacheId: workboxCacheId }),
   },
