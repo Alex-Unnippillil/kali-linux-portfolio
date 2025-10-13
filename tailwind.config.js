@@ -58,6 +58,10 @@ module.exports = {
           selection: 'var(--color-selection)',
           control: 'var(--color-control-accent)',
           backdrop: 'var(--kali-bg)',
+          'panel-dark': 'var(--kali-panel)',
+          'panel-light':
+            'color-mix(in srgb, var(--kali-panel) 55%, rgba(255,255,255,0.18))',
+          error: 'var(--game-color-danger)',
           overlay: 'var(--color-overlay-strong)',
           'overlay-soft': 'var(--color-overlay-soft)',
           info: 'var(--color-info)',
