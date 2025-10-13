@@ -159,7 +159,7 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose, contai
             className="flex h-full w-full flex-col focus:outline-none text-white"
             role="presentation"
         >
-            <div className="flex flex-col gap-4 rounded-xl border border-white/10 bg-ub-grey/80 p-6 shadow-2xl">
+            <div className="flex flex-col gap-4 rounded-xl border border-white/10 bg-ub-grey/80 p-6 shadow-[var(--shadow-elevation-overlay)]">
                 <div className="flex items-center justify-between gap-4">
                     <h2 className="text-lg font-semibold tracking-wide">Switch windows</h2>
                     <div className="flex items-center gap-2 text-sm">

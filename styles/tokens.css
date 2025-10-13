@@ -69,8 +69,33 @@
   --radius-6: 12px;
   --radius-round: 9999px;
 
-  /* Elevation */
-  --shadow-2: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
+  /* Elevation
+     Usage:
+     - var(--shadow-elevation-0)  → flat surfaces on the desktop grid.
+     - var(--shadow-elevation-1)  → interactive controls hovering above panels.
+     - var(--shadow-elevation-2)  → primary app windows and floating palettes.
+     - var(--shadow-elevation-3)  → modal surfaces and command palettes.
+     Pair shadows with the matching z-index token so stacked surfaces remain
+     predictable and focus rings from styles/animation.css sit above the surface.
+  */
+  --shadow-elevation-0: none;
+  --shadow-elevation-1:
+    0 1px 2px color-mix(in srgb, var(--color-inverse) 45%, transparent 88%),
+    0 6px 12px color-mix(in srgb, var(--color-inverse) 30%, transparent 90%);
+  --shadow-elevation-2:
+    0 4px 10px color-mix(in srgb, var(--color-inverse) 55%, transparent 82%),
+    0 16px 30px color-mix(in srgb, var(--color-inverse) 40%, transparent 88%);
+  --shadow-elevation-3:
+    0 10px 22px color-mix(in srgb, var(--color-inverse) 55%, transparent 78%),
+    0 28px 48px color-mix(in srgb, var(--color-inverse) 35%, transparent 85%);
+  --shadow-elevation-overlay:
+    0 14px 32px color-mix(in srgb, var(--color-inverse) 58%, transparent 74%),
+    0 36px 64px color-mix(in srgb, var(--color-inverse) 40%, transparent 82%);
+  --z-elevation-0: 0;
+  --z-elevation-1: 5;
+  --z-elevation-2: 10;
+  --z-elevation-3: 30;
+  --z-elevation-overlay: 80;
 
   /* Window chrome */
   --color-window-border: #12344a;

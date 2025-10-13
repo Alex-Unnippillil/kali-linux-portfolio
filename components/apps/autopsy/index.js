@@ -281,15 +281,13 @@ function Timeline({ events, onSelect }) {
             className="w-full"
             aria-label="Timeline scrub bar"
           />
-          <datalist id="timeline-day-markers">
-            {dayMarkers.map((m) => (
-              <option
-                key={m.day}
-                value={m.idx}
-                label={new Date(m.day).toLocaleDateString()}
-              />
-            ))}
-          </datalist>
+            <datalist id="timeline-day-markers">
+              {dayMarkers.map((m) => (
+                <option key={m.day} value={m.idx}>
+                  {new Date(m.day).toLocaleDateString()}
+                </option>
+              ))}
+            </datalist>
           {hoverIndex !== null && sorted[hoverIndex] && (
             <div
               className="absolute -top-10 rounded border border-kali-border/70 bg-kali-dark/95 px-2 py-1 text-xs text-kali-text shadow-lg"
@@ -592,14 +590,15 @@ function Autopsy({ initialArtifacts = null }) {
         className="sr-only"
         dangerouslySetInnerHTML={{ __html: announcement }}
       />
-      <div className="flex space-x-2">
-        <input
-          type="text"
-          value={caseName}
-          onChange={(e) => setCaseName(e.target.value)}
-          placeholder="Case name"
-          className="flex-grow rounded border border-kali-border/60 bg-kali-dark px-2 py-1 text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus/80"
-        />
+        <div className="flex space-x-2">
+          <input
+            type="text"
+            value={caseName}
+            onChange={(e) => setCaseName(e.target.value)}
+            placeholder="Case name"
+            aria-label="Case name"
+            className="flex-grow rounded border border-kali-border/60 bg-kali-dark px-2 py-1 text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus/80"
+          />
         <button
           onClick={createCase}
           className="rounded border border-kali-accent/80 bg-kali-accent px-3 py-1 font-semibold text-kali-text shadow-sm transition hover:bg-kali-accent/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus"
@@ -640,13 +639,14 @@ function Autopsy({ initialArtifacts = null }) {
           </div>
         </div>
       )}
-      {analysis && (
-        <textarea
-          readOnly
-          value={analysis}
-          className="resize-none rounded border border-kali-border/60 bg-kali-dark p-2 text-xs text-kali-text"
-        />
-      )}
+        {analysis && (
+          <textarea
+            readOnly
+            value={analysis}
+            aria-label="Analysis output"
+            className="resize-none rounded border border-kali-border/60 bg-kali-dark p-2 text-xs text-kali-text"
+          />
+        )}
       {artifacts.length > 0 && (
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2">
@@ -787,7 +787,7 @@ function Autopsy({ initialArtifacts = null }) {
         </div>
       )}
       {selectedArtifact && (
-        <div className="fixed right-0 top-0 h-full w-64 overflow-y-auto bg-kali-dark/95 p-4 text-kali-text shadow-2xl">
+        <div className="fixed right-0 top-0 h-full w-64 overflow-y-auto bg-kali-dark/95 p-4 text-kali-text shadow-[var(--shadow-elevation-overlay)]">
           <button
             onClick={() => setSelectedArtifact(null)}
             className="mb-2 text-right w-full"

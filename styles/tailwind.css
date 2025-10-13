@@ -11,7 +11,7 @@
   }
   .glass {
     background-color: color-mix(in srgb, var(--color-bg), transparent 55%);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    box-shadow: var(--shadow-elevation-overlay);
     -webkit-backdrop-filter: blur(18px);
     backdrop-filter: blur(18px);
   }

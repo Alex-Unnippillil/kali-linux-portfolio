@@ -156,7 +156,9 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 
 input[type=range].kali-slider:focus-visible::-webkit-slider-thumb,
 input[type=range].ubuntu-slider:focus-visible::-webkit-slider-thumb {
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-focus-ring) 45%, transparent);
+    --focus-ring-base-shadow-floating: inset 0 1px 0 color-mix(in srgb, var(--color-inverse), transparent 80%);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-inverse), transparent 80%), var(--focus-ring-shadow-floating);
+    animation: var(--focus-ring-animation-floating);
 }
 
 .notFocused {
@@ -171,9 +173,9 @@ input[type=range].ubuntu-slider:focus-visible::-webkit-slider-thumb {
 }
 
 .window-shadow {
-    box-shadow: var(--shadow-2);
-    -webkit-box-shadow: var(--shadow-2);
-    -moz-box-shadow: var(--shadow-2);
+    box-shadow: var(--shadow-elevation-2);
+    -webkit-box-shadow: var(--shadow-elevation-2);
+    -moz-box-shadow: var(--shadow-elevation-2);
 }
 
 .closed-window {
