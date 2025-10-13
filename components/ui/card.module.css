@@ -1,0 +1,66 @@
+.card {
+  position: relative;
+  display: grid;
+  gap: var(--space-3, 0.75rem);
+  padding: var(--space-4, 1rem);
+  border-radius: var(--radius-4, 0.75rem);
+  border: 1px solid color-mix(in srgb, var(--color-window-border, #1f2937) 65%, transparent);
+  background: color-mix(in srgb, var(--color-window) 92%, rgba(15, 23, 42, 0.35));
+  color: var(--color-text, #e2e8f0);
+  box-shadow: var(--shadow-1, 0 12px 32px rgba(15, 23, 42, 0.35));
+  container-type: inline-size;
+  container-name: card;
+}
+
+.card[data-variant='surface'] {
+  background: var(--color-surface, rgba(15, 23, 42, 0.55));
+}
+
+.header,
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 0.5rem);
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.description {
+  font-size: 0.875rem;
+  color: color-mix(in srgb, currentColor 75%, transparent);
+  line-height: 1.5;
+}
+
+.content {
+  display: grid;
+  gap: var(--space-2, 0.5rem);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 0.5rem);
+  justify-content: flex-start;
+}
+
+@container card (min-width: 28rem) {
+  .header {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .footer {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .actions {
+    justify-content: flex-end;
+  }
+}
