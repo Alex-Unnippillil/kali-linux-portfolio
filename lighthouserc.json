@@ -1,0 +1,120 @@
+{
+  "ci": {
+    "collect": {
+      "url": ["http://localhost:3000"],
+      "numberOfRuns": 3,
+      "settings": {
+        "chromeFlags": "--headless=new"
+      }
+    },
+    "assert": {
+      "assertMatrix": [
+        {
+          "collect": {
+            "settings": {
+              "preset": "mobile",
+              "budgets": [
+                {
+                  "path": "/",
+                  "timings": [
+                    {
+                      "metric": "largest-contentful-paint",
+                      "budget": 2800
+                    },
+                    {
+                      "metric": "interaction-to-next-paint",
+                      "budget": 200
+                    },
+                    {
+                      "metric": "cumulative-layout-shift",
+                      "budget": 0.1
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "assert": {
+            "assertions": {
+              "largest-contentful-paint": [
+                "warn",
+                {
+                  "maxNumericValue": 2800,
+                  "aggregationMethod": "median"
+                }
+              ],
+              "interaction-to-next-paint": [
+                "warn",
+                {
+                  "maxNumericValue": 200,
+                  "aggregationMethod": "median"
+                }
+              ],
+              "cumulative-layout-shift": [
+                "warn",
+                {
+                  "maxNumericValue": 0.1,
+                  "aggregationMethod": "p75"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "collect": {
+            "settings": {
+              "preset": "desktop",
+              "budgets": [
+                {
+                  "path": "/",
+                  "timings": [
+                    {
+                      "metric": "largest-contentful-paint",
+                      "budget": 2200
+                    },
+                    {
+                      "metric": "interaction-to-next-paint",
+                      "budget": 200
+                    },
+                    {
+                      "metric": "cumulative-layout-shift",
+                      "budget": 0.07
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "assert": {
+            "assertions": {
+              "largest-contentful-paint": [
+                "warn",
+                {
+                  "maxNumericValue": 2200,
+                  "aggregationMethod": "median"
+                }
+              ],
+              "interaction-to-next-paint": [
+                "warn",
+                {
+                  "maxNumericValue": 200,
+                  "aggregationMethod": "median"
+                }
+              ],
+              "cumulative-layout-shift": [
+                "warn",
+                {
+                  "maxNumericValue": 0.07,
+                  "aggregationMethod": "p75"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    }
+  }
+}
