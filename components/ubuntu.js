@@ -8,6 +8,10 @@ import Navbar from './screen/navbar';
 import Layout from './desktop/Layout';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
+import {
+        runTransitionUpdate,
+        runUserBlockingUpdate,
+} from '../utils/perf/interactionPriority';
 
 export default class Ubuntu extends Component {
         constructor() {
@@ -50,9 +54,11 @@ export default class Ubuntu extends Component {
                 }
         };
 
-	hideBootScreen = () => {
-		this.setState({ booting_screen: false });
-	};
+        hideBootScreen = () => {
+                runTransitionUpdate('ubuntu:hide-boot', () => {
+                        this.setState({ booting_screen: false });
+                });
+        };
 
         waitForBootSequence = () => {
                 if (typeof window === 'undefined' || typeof document === 'undefined') return;
@@ -150,19 +156,21 @@ export default class Ubuntu extends Component {
 		}
 	};
 
-	lockScreen = () => {
-		// google analytics
-		ReactGA.send({ hitType: "pageview", page: "/lock-screen", title: "Lock Screen" });
-		ReactGA.event({
-			category: `Screen Change`,
-			action: `Set Screen to Locked`
-		});
+        lockScreen = () => {
+                // google analytics
+                ReactGA.send({ hitType: "pageview", page: "/lock-screen", title: "Lock Screen" });
+                ReactGA.event({
+                        category: `Screen Change`,
+                        action: `Set Screen to Locked`
+                });
 
                 const statusBar = document.getElementById('status-bar');
                 // Consider using a React ref if the status bar element lives within this component tree
                 statusBar?.blur();
-        const finalizeLock = () => {
-                        this.setState({ screen_locked: true });
+                const finalizeLock = () => {
+                        runUserBlockingUpdate('ubuntu:lock-screen', () => {
+                                this.setState({ screen_locked: true });
+                        });
                 };
                 if (typeof jest !== 'undefined') {
                         finalizeLock();
@@ -172,20 +180,24 @@ export default class Ubuntu extends Component {
                 safeLocalStorage?.setItem('screen-locked', true);
 	};
 
-	unLockScreen = () => {
-		ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+        unLockScreen = () => {
+                ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
-		window.removeEventListener('click', this.unLockScreen);
-		window.removeEventListener('keypress', this.unLockScreen);
+                window.removeEventListener('click', this.unLockScreen);
+                window.removeEventListener('keypress', this.unLockScreen);
 
-		this.setState({ screen_locked: false });
+                runUserBlockingUpdate('ubuntu:unlock-screen', () => {
+                        this.setState({ screen_locked: false });
+                });
                 safeLocalStorage?.setItem('screen-locked', false);
-	};
+        };
 
-	changeBackgroundImage = (img_name) => {
-		this.setState({ bg_image_name: img_name });
-                safeLocalStorage?.setItem('bg-image', img_name);
-	};
+        changeBackgroundImage = (img_name) => {
+                runTransitionUpdate('ubuntu:change-background', () => {
+                        this.setState({ bg_image_name: img_name });
+                        safeLocalStorage?.setItem('bg-image', img_name);
+                });
+        };
 
 	shutDown = () => {
 		ReactGA.send({ hitType: "pageview", page: "/switch-off", title: "Custom Title" });
@@ -198,16 +210,20 @@ export default class Ubuntu extends Component {
                 const statusBar = document.getElementById('status-bar');
                 // Consider using a React ref if the status bar element lives within this component tree
                 statusBar?.blur();
-		this.setState({ shutDownScreen: true });
+                runUserBlockingUpdate('ubuntu:shutdown', () => {
+                        this.setState({ shutDownScreen: true });
+                });
                 safeLocalStorage?.setItem('shut-down', true);
-	};
+        };
 
-	turnOn = () => {
-		ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+        turnOn = () => {
+                ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
-		this.setState({ shutDownScreen: false, booting_screen: true }, this.waitForBootSequence);
-                safeLocalStorage?.setItem('shut-down', false);
-	};
+                runTransitionUpdate('ubuntu:restart', () => {
+                        this.setState({ shutDownScreen: false, booting_screen: true }, this.waitForBootSequence);
+                        safeLocalStorage?.setItem('shut-down', false);
+                });
+        };
 
 	render() {
         return (
