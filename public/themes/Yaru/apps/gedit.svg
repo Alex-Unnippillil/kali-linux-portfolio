@@ -1,0 +1,15 @@
+<svg role="img" aria-labelledby="icon-gedit-title" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <title id="icon-gedit-title">Gedit</title>
+  <defs>
+    <linearGradient id="pad-bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#fff6e5" />
+      <stop offset="100%" stop-color="#f4d6a0" />
+    </linearGradient>
+  </defs>
+  <rect x="10" y="8" width="44" height="48" rx="6" fill="url(#pad-bg)" stroke="#c97d3c" stroke-width="2" />
+  <line x1="16" y1="20" x2="48" y2="20" stroke="#c97d3c" stroke-width="2" stroke-linecap="round" />
+  <line x1="16" y1="28" x2="48" y2="28" stroke="#c97d3c" stroke-width="2" stroke-linecap="round" />
+  <line x1="16" y1="36" x2="40" y2="36" stroke="#c97d3c" stroke-width="2" stroke-linecap="round" />
+  <path d="M40 44l10-10 4 4-10 10-6 2z" fill="#f05a28" />
+  <path d="M54 38l-4-4 2-2a2 2 0 0 1 2.8 0l1.2 1.2a2 2 0 0 1 0 2.8z" fill="#f7931e" />
+</svg>

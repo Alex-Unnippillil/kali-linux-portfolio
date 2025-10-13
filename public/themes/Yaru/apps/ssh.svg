@@ -1,4 +1,6 @@
-<svg width="512" height="512" version="1.1" viewBox="0 0 384 384" xmlns="http://www.w3.org/2000/svg">
+<svg role="img" aria-labelledby="icon-sshsvg-title" width="512" height="512" version="1.1" viewBox="0 0 384 384" xmlns="http://www.w3.org/2000/svg">
+  <title id="icon-sshsvg-title">SSH</title>
+
   <defs>
     <filter id="a" x="-.14211" y="-.068693" width="1.2842" height="1.1374" color-interpolation-filters="sRGB">
       <feGaussianBlur stdDeviation="3.0262184" />

@@ -1,4 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 70">
+<svg role="img" aria-labelledby="icon-youtubesvg-title" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 70">
+  <title id="icon-youtubesvg-title">Youtube</title>
+
   <rect width="100" height="70" rx="10" fill="#FF0000"/>
   <polygon points="40,20 70,35 40,50" fill="#FFFFFF"/>
 </svg>
