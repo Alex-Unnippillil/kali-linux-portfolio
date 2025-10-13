@@ -55,9 +55,12 @@ function BootingScreen(props) {
             }}
             className={`${visibilityClass} absolute inset-0 select-none overflow-hidden transition-opacity duration-700`}
         >
-            <div className={`${visibilityClass} relative flex h-full w-full flex-col items-center justify-center gap-12 bg-[#030712] text-slate-100`}>
+            <div className={`${visibilityClass} relative flex h-full w-full flex-col items-center justify-center gap-12 bg-[color:var(--desktop-boot-bg)] text-slate-100`}>
                 <div className="pointer-events-none absolute inset-0">
-                    <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-[#030712] to-black" />
+                    <div
+                        className="absolute inset-0"
+                        style={{ background: 'var(--desktop-boot-overlay)' }}
+                    />
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.22),_transparent_58%)]" />
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,_rgba(15,118,110,0.18),_transparent_60%)]" />
                 </div>

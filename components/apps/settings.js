@@ -291,7 +291,7 @@ export function Settings() {
                         setPongSpin(defaults.pongSpin);
                         setAllowNetwork(defaults.allowNetwork);
                         setHaptics(defaults.haptics);
-                        setTheme('default');
+                        setTheme(defaults.theme);
                     }}
                     className="px-4 py-2 rounded-md bg-kali-primary text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
                 >
