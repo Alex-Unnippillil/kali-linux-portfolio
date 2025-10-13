@@ -114,6 +114,13 @@ playwright/           # Playwright helpers for end-to-end testing
 .github/workflows/    # GitHub Actions (static export pipeline, lint/test gates)
 ```
 
+### Icon Sprite Pipeline
+
+- Source SVGs live in [`public/icons`](./public/icons). Filenames map to sprite symbols (e.g. `terminal.svg` → `icon-terminal`).
+- High-contrast variants append `-hc` before the extension (e.g. `terminal-hc.svg`) and activate automatically when the **High Contrast** accessibility toggle is enabled.
+- Run `yarn icons:build` to regenerate `public/icons/sprite.svg` and `public/icons/sprite-manifest.json`. The script runs automatically ahead of `yarn dev`, `yarn build`, and `yarn export` so CI and local builds stay aligned.
+- The manifest exposes view boxes and variant metadata so the runtime icon component can pick the right asset without bundling raw SVG markup.
+
 **Windowing model.** `components/screen/desktop.js` maintains the global window registry, handles z-index ordering, and orchestrates dock shortcuts, favorites, and analytics events.
 
 **Dynamic app registry.** [`apps.config.js`](./apps.config.js) registers desktop apps with `createDynamicApp`, wrapping heavy apps in dynamic imports to reduce the initial bundle. Each app exports a `prefetch()` helper so tiles can warm bundles on hover or keyboard focus.

@@ -49,3 +49,7 @@ package-lock.json
 utils/gamepad.js
 tsconfig.gamepad.tsbuildinfo
 tsconfig.tsbuildinfo
+
+# generated icon sprite assets
+public/icons/sprite.svg
+public/icons/sprite-manifest.json
