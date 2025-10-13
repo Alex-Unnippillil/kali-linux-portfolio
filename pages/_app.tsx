@@ -215,7 +215,13 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
         <SettingsProvider>
           <NotificationCenter>
             <PipPortalProvider>
-              <div aria-live="polite" id="live-region" />
+              <div
+                aria-live="polite"
+                role="status"
+                aria-atomic="true"
+                id="live-region"
+                className="sr-only"
+              />
               <Component {...pageProps} />
               <ShortcutOverlay />
               <Analytics

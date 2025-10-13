@@ -3,6 +3,7 @@
 // Update README (section "CSP External Domains") when editing domains below.
 
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+const localesConfig = require('./locales.config.json');
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -141,6 +142,17 @@ const runtimeCaching = [
   })),
 ];
 
+const supportedLocaleCodes = Array.isArray(localesConfig?.locales)
+  ? localesConfig.locales
+      .map((entry) => (typeof entry === 'string' ? entry : entry?.code))
+      .filter((code) => typeof code === 'string')
+  : [];
+
+const resolvedDefaultLocale =
+  typeof localesConfig?.defaultLocale === 'string'
+    ? localesConfig.defaultLocale
+    : supportedLocaleCodes[0] ?? 'en';
+
 const withPWA = withPWAInit({
   dest: 'public',
   sw: 'sw.js',
@@ -207,6 +219,11 @@ module.exports = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
     webpack: configureWebpack,
+    i18n: {
+      locales: supportedLocaleCodes.length > 0 ? supportedLocaleCodes : ['en'],
+      defaultLocale: resolvedDefaultLocale,
+      localeDetection: true,
+    },
 
     // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
     eslint: {
