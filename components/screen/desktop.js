@@ -28,6 +28,7 @@ import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
 import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
+import useSession from '../../hooks/useSession';
 import {
     clampWindowPositionWithinViewport,
     clampWindowTopPosition,
@@ -229,6 +230,7 @@ export class Desktop extends Component {
 
         const initialWindowSizes = this.loadWindowSizes();
         const storedFolderContents = loadStoredFolderContents();
+        const initialTaskbarOrder = this.loadTaskbarOrder();
 
         this.state = {
             focused_windows: { ...initialOverlayFocused },
@@ -268,6 +270,7 @@ export class Desktop extends Component {
             overlayWindows: createOverlayStateMap(),
             minimizedShelfOpen: false,
             closedShelfOpen: false,
+            taskbarOrder: initialTaskbarOrder,
         };
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -382,7 +385,8 @@ export class Desktop extends Component {
     loadTaskbarOrder = () => {
         if (!safeLocalStorage) return [];
         try {
-            const stored = safeLocalStorage.getItem(this.getTaskbarOrderStorageKey());
+            const key = this.getTaskbarOrderStorageKey();
+            const stored = safeLocalStorage.getItem(key);
             if (!stored) return [];
             const parsed = JSON.parse(stored);
             if (Array.isArray(parsed)) {
@@ -980,11 +984,12 @@ export class Desktop extends Component {
             minimized_windows = {},
             focused_windows = {},
             overlayWindows = {},
+            taskbarOrder = [],
         } = this.state;
-        const summaries = [];
+        const appSummaries = new Map();
         apps.forEach((app) => {
             if (closed_windows[app.id] === false) {
-                summaries.push({
+                appSummaries.set(app.id, {
                     id: app.id,
                     title: app.title,
                     icon: app.icon.replace('./', '/'),
@@ -993,6 +998,12 @@ export class Desktop extends Component {
                 });
             }
         });
+
+        const runningIds = Array.from(appSummaries.keys());
+        const orderedIds = this.getNormalizedTaskbarOrder(runningIds, taskbarOrder);
+        const summaries = orderedIds
+            .map((id) => appSummaries.get(id))
+            .filter(Boolean);
         OVERLAY_WINDOW_LIST.forEach((overlay) => {
             const state = overlayWindows?.[overlay.id] || {};
             const isOpen = state.open === true || closed_windows[overlay.id] === false;
@@ -2833,6 +2844,118 @@ export class Desktop extends Component {
     };
 
 
+    restoreSessionWindows = (entries) => {
+        if (!Array.isArray(entries) || entries.length === 0) {
+            return false;
+        }
+
+        const workspaceCount = Array.isArray(this.state.workspaces)
+            ? this.state.workspaces.length
+            : this.workspaceCount;
+        const groups = Array.from({ length: workspaceCount }, () => []);
+        const seen = new Set();
+        const safeTopOffset = measureWindowTopOffset();
+
+        entries.forEach((entry) => {
+            if (!entry || typeof entry !== 'object') return;
+            const { id } = entry;
+            if (typeof id !== 'string' || !this.validAppIds.has(id) || this.isOverlayId(id) || seen.has(id)) {
+                return;
+            }
+
+            const workspaceValue = Number.isFinite(entry.workspace) ? entry.workspace : 0;
+            const workspaceIndex = Math.min(
+                Math.max(Math.floor(workspaceValue), 0),
+                workspaceCount - 1,
+            );
+
+            const zValue = Number.isFinite(entry.z) ? entry.z : groups[workspaceIndex].length;
+            const bounds = entry.bounds && typeof entry.bounds === 'object' ? entry.bounds : {};
+            const x = Number.isFinite(bounds.x) ? bounds.x : 60;
+            const rawY = Number.isFinite(bounds.y) ? bounds.y : safeTopOffset;
+            const y = clampWindowTopPosition(rawY, safeTopOffset);
+            const width = Number.isFinite(bounds.width) ? Math.max(0, Math.round(bounds.width)) : null;
+            const height = Number.isFinite(bounds.height) ? Math.max(0, Math.round(bounds.height)) : null;
+
+            const normalizedBounds = { x, y };
+            if (width !== null && height !== null) {
+                normalizedBounds.width = width;
+                normalizedBounds.height = height;
+            }
+
+            groups[workspaceIndex].push({
+                id,
+                z: Math.max(0, Math.floor(zValue)),
+                bounds: normalizedBounds,
+            });
+            seen.add(id);
+        });
+
+        const total = groups.reduce((sum, list) => sum + list.length, 0);
+        if (!total) {
+            return false;
+        }
+
+        let activeWorkspace = this.state.activeWorkspace || 0;
+        let highestZ = -Infinity;
+
+        groups.forEach((items, index) => {
+            if (!items.length) {
+                this.workspaceStacks[index] = [];
+                return;
+            }
+
+            items.sort((a, b) => a.z - b.z);
+            const topEntry = items[items.length - 1];
+            if (topEntry && topEntry.z >= highestZ) {
+                highestZ = topEntry.z;
+                activeWorkspace = index;
+            }
+
+            const baseSnapshot = this.workspaceSnapshots[index] || this.createEmptyWorkspaceState();
+            const snapshot = this.cloneWorkspaceState(baseSnapshot);
+
+            items.forEach((item) => {
+                snapshot.closed_windows[item.id] = false;
+                snapshot.minimized_windows[item.id] = false;
+                snapshot.focused_windows[item.id] = topEntry && item.id === topEntry.id;
+                snapshot.window_positions[item.id] = { x: item.bounds.x, y: item.bounds.y };
+                if (typeof item.bounds.width === 'number' && typeof item.bounds.height === 'number') {
+                    snapshot.window_sizes[item.id] = {
+                        width: item.bounds.width,
+                        height: item.bounds.height,
+                    };
+                }
+            });
+
+            this.workspaceSnapshots[index] = snapshot;
+            this.workspaceStacks[index] = items
+                .slice()
+                .sort((a, b) => b.z - a.z)
+                .map((item) => item.id);
+        });
+
+        const activeSnapshot = this.workspaceSnapshots[activeWorkspace] || this.createEmptyWorkspaceState();
+
+        this.setState(
+            {
+                activeWorkspace,
+                focused_windows: { ...activeSnapshot.focused_windows },
+                closed_windows: { ...activeSnapshot.closed_windows },
+                minimized_windows: { ...activeSnapshot.minimized_windows },
+                window_positions: { ...activeSnapshot.window_positions },
+                window_sizes: { ...activeSnapshot.window_sizes },
+            },
+            () => {
+                this.broadcastWorkspaceState();
+                this.giveFocusToLastApp();
+            },
+        );
+
+        return true;
+    };
+
+
     componentDidMount() {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
@@ -2849,19 +2972,9 @@ export class Desktop extends Component {
         this.initializeDefaultFolders(() => {
             this.fetchAppsData(() => {
                 const session = this.props.session || {};
-                const positions = {};
-                if (session.windows && session.windows.length) {
-                    const safeTopOffset = measureWindowTopOffset();
-                    session.windows.forEach(({ id, x, y }) => {
-                        positions[id] = {
-                            x,
-                            y: clampWindowTopPosition(y, safeTopOffset),
-                        };
-                    });
-                    this.setWorkspaceState({ window_positions: positions }, () => {
-                        session.windows.forEach(({ id }) => this.openApp(id));
-                    });
-                } else {
+                const windows = Array.isArray(session.windows) ? session.windows : [];
+                const restored = this.restoreSessionWindows(windows);
+                if (!restored) {
                     this.openApp('about');
                 }
             });
@@ -2881,6 +2994,17 @@ export class Desktop extends Component {
     }
 
     componentDidUpdate(prevProps, prevState) {
+        if (prevState.closed_windows !== this.state.closed_windows) {
+            const runningIds = this.getCurrentRunningAppIds();
+            const preferredOrder = (this.state.taskbarOrder && this.state.taskbarOrder.length)
+                ? this.state.taskbarOrder
+                : this.loadTaskbarOrder();
+            const normalizedOrder = this.getNormalizedTaskbarOrder(runningIds, preferredOrder);
+            if (normalizedOrder.length) {
+                this.setTaskbarOrder(normalizedOrder);
+            }
+        }
+
         if (
             prevProps?.density !== this.props.density ||
             prevProps?.fontScale !== this.props.fontScale ||
@@ -3981,6 +4105,7 @@ export class Desktop extends Component {
         const commandPaletteState = overlays[COMMAND_PALETTE_OVERLAY_ID];
         if (commandPaletteState) {
             const paletteActive = commandPaletteState.open && !commandPaletteState.minimized;
+            const shouldRenderPalette = paletteActive || Boolean(commandPaletteState.open);
             elements.push(
                 <SystemOverlayWindow
                     key={COMMAND_PALETTE_OVERLAY_ID}
@@ -3996,14 +4121,16 @@ export class Desktop extends Component {
                     frameClassName="w-full max-w-3xl"
                     bodyClassName="bg-transparent p-0"
                 >
-                    <CommandPalette
-                        open={paletteActive}
-                        apps={this.getCommandPaletteAppItems()}
-                        recentWindows={this.getCommandPaletteRecentWindows()}
-                        settingsActions={this.getCommandPaletteSettingsActions()}
-                        onSelect={this.handleCommandPaletteSelect}
-                        onClose={this.closeCommandPalette}
-                    />
+                    {typeof CommandPalette === 'function' && shouldRenderPalette ? (
+                        <CommandPalette
+                            open={paletteActive}
+                            apps={this.getCommandPaletteAppItems()}
+                            recentWindows={this.getCommandPaletteRecentWindows()}
+                            settingsActions={this.getCommandPaletteSettingsActions()}
+                            onSelect={this.handleCommandPaletteSelect}
+                            onClose={this.closeCommandPalette}
+                        />
+                    ) : null}
                 </SystemOverlayWindow>
             );
         }
@@ -4064,18 +4191,109 @@ export class Desktop extends Component {
 
     saveSession = () => {
         if (!this.props.setSession) return;
-        const openWindows = Object.keys(this.state.closed_windows).filter((id) => (
-            this.state.closed_windows[id] === false && !this.isOverlayId(id)
-        ));
-        const safeTopOffset = measureWindowTopOffset();
-        const windows = openWindows.map(id => {
-            const position = this.state.window_positions[id] || {};
-            const nextX = typeof position.x === 'number' ? position.x : 60;
-            const nextY = clampWindowTopPosition(position.y, safeTopOffset);
-            return { id, x: nextX, y: nextY };
-        });
 
-        const nextSession = { ...this.props.session, windows };
+        const workspaceCount = Array.isArray(this.state.workspaces)
+            ? this.state.workspaces.length
+            : this.workspaceCount;
+        const safeTopOffset = measureWindowTopOffset();
+        const descriptors = [];
+
+        for (let workspaceIndex = 0; workspaceIndex < workspaceCount; workspaceIndex += 1) {
+            const snapshot = this.workspaceSnapshots[workspaceIndex] || this.createEmptyWorkspaceState();
+            const closed = snapshot.closed_windows || {};
+            const openIds = Object.keys(closed).filter(
+                (id) => closed[id] === false && !this.isOverlayId(id),
+            );
+            if (!openIds.length) {
+                this.workspaceStacks[workspaceIndex] = [];
+                continue;
+            }
+
+            const stack = Array.isArray(this.workspaceStacks?.[workspaceIndex])
+                ? this.workspaceStacks[workspaceIndex]
+                : [];
+            const orderedIds = [];
+            const seen = new Set();
+            stack.slice().reverse().forEach((id) => {
+                if (openIds.includes(id) && !seen.has(id)) {
+                    orderedIds.push(id);
+                    seen.add(id);
+                }
+            });
+            openIds.forEach((id) => {
+                if (!seen.has(id)) {
+                    orderedIds.push(id);
+                    seen.add(id);
+                }
+            });
+
+            const positionSource = workspaceIndex === this.state.activeWorkspace
+                ? this.state.window_positions || {}
+                : snapshot.window_positions || {};
+            const sizeSource = workspaceIndex === this.state.activeWorkspace
+                ? this.state.window_sizes || {}
+                : snapshot.window_sizes || {};
+
+            orderedIds.forEach((id, orderIndex) => {
+                const position = positionSource[id] || {};
+                const x = typeof position.x === 'number' && Number.isFinite(position.x) ? position.x : 60;
+                const rawY = typeof position.y === 'number' && Number.isFinite(position.y)
+                    ? position.y
+                    : safeTopOffset;
+                const y = clampWindowTopPosition(rawY, safeTopOffset);
+                const bounds = { x, y };
+                const size = sizeSource[id];
+                if (
+                    size &&
+                    typeof size.width === 'number' && Number.isFinite(size.width) &&
+                    typeof size.height === 'number' && Number.isFinite(size.height)
+                ) {
+                    bounds.width = Math.max(0, Math.round(size.width));
+                    bounds.height = Math.max(0, Math.round(size.height));
+                }
+                descriptors.push({
+                    id,
+                    workspace: workspaceIndex,
+                    z: orderIndex,
+                    bounds,
+                });
+            });
+        }
+
+        const previousWindows = Array.isArray(this.props.session?.windows)
+            ? this.props.session.windows
+            : [];
+        let changed = descriptors.length !== previousWindows.length;
+
+        if (!changed) {
+            for (let index = 0; index < descriptors.length; index += 1) {
+                const next = descriptors[index];
+                const prev = previousWindows[index];
+                if (!prev || prev.id !== next.id || prev.workspace !== next.workspace || prev.z !== next.z) {
+                    changed = true;
+                    break;
+                }
+                const prevBounds = prev.bounds || {};
+                if (
+                    prevBounds.x !== next.bounds.x ||
+                    prevBounds.y !== next.bounds.y ||
+                    prevBounds.width !== next.bounds.width ||
+                    prevBounds.height !== next.bounds.height
+                ) {
+                    changed = true;
+                    break;
+                }
+            }
+        }
+
+        if (!changed) {
+            return;
+        }
+
+        const nextSession = {
+            ...(this.props.session && typeof this.props.session === 'object' ? this.props.session : {}),
+            windows: descriptors,
+        };
         if ('dock' in nextSession) {
             delete nextSession.dock;
         }
@@ -4726,15 +4944,27 @@ export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
     const [snapGrid] = useSnapGridSetting();
     const { density, fontScale, largeHitAreas, desktopTheme } = useSettings();
+    const { session, setSession, resetSession } = useSession();
+
+    const {
+        session: sessionProp,
+        setSession: setSessionProp,
+        clearSession: clearSessionProp,
+        ...rest
+    } = props || {};
+
     return (
         <Desktop
-            {...props}
+            {...rest}
             snapEnabled={snapEnabled}
             snapGrid={snapGrid}
             density={density}
             fontScale={fontScale}
             largeHitAreas={largeHitAreas}
             desktopTheme={desktopTheme}
+            session={sessionProp ?? session}
+            setSession={setSessionProp ?? setSession}
+            clearSession={clearSessionProp ?? resetSession}
         />
     );
 }
