@@ -1005,3 +1005,88 @@ describe('Window overlay inert behaviour', () => {
     document.body.removeChild(opener);
   });
 });
+
+describe('Window shell shortcuts', () => {
+  it('opens the window menu when Alt+Space is pressed on a focused window', () => {
+    const onWindowMenuRequest = jest.fn();
+
+    render(
+      <Window
+        id="shortcut-menu"
+        title="Shortcut Menu"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        isFocused
+        onWindowMenuRequest={onWindowMenuRequest}
+      />,
+    );
+
+    fireEvent.keyDown(document, { altKey: true, key: ' ', code: 'Space' });
+
+    expect(onWindowMenuRequest).toHaveBeenCalledTimes(1);
+    expect(onWindowMenuRequest.mock.calls[0][0]).toMatchObject({
+      left: expect.any(Number),
+      top: expect.any(Number),
+      width: expect.any(Number),
+      height: expect.any(Number),
+    });
+  });
+
+  it('adjusts window bounds by ±10px for Alt+Shift arrow keys', () => {
+    const onBoundsCommit = jest.fn();
+
+    render(
+      <Window
+        id="shortcut-resize"
+        title="Shortcut Resize"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        isFocused
+        onBoundsCommit={onBoundsCommit}
+      />,
+    );
+
+    act(() => {
+      fireEvent.keyDown(document, { altKey: true, shiftKey: true, key: 'ArrowRight' });
+    });
+
+    expect(onBoundsCommit).toHaveBeenCalledTimes(1);
+    expect(onBoundsCommit).toHaveBeenCalledWith({ width: 874, height: 765 });
+  });
+
+  it('ignores Alt+Shift resize shortcuts when maximized', () => {
+    const onBoundsCommit = jest.fn();
+    const ref = React.createRef<any>();
+
+    render(
+      <Window
+        id="shortcut-max"
+        title="Shortcut Max"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        isFocused
+        onBoundsCommit={onBoundsCommit}
+        ref={ref}
+      />,
+    );
+
+    act(() => {
+      ref.current?.setState({ maximized: true });
+    });
+
+    act(() => {
+      fireEvent.keyDown(document, { altKey: true, shiftKey: true, key: 'ArrowLeft' });
+    });
+
+    expect(onBoundsCommit).not.toHaveBeenCalled();
+  });
+});
