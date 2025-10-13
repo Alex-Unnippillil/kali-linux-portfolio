@@ -20,6 +20,98 @@ const DEFAULT_FONT_SIZE = 16;
 
 export const DEFAULT_SNAP_BOTTOM_INSET = SNAP_BOTTOM_INSET;
 
+const layoutCache = {
+  safeAreaInsets: null,
+  windowTopOffset: null,
+  snapBottomInset: null,
+  viewport: null,
+};
+
+const layoutSubscribers = new Set();
+
+let resizeObserver = null;
+let windowResizeListenerAttached = false;
+let visualViewportListenersAttached = false;
+let orientationListenerAttached = false;
+
+const notifyLayoutSubscribers = () => {
+  layoutSubscribers.forEach((callback) => {
+    try {
+      callback();
+    } catch (error) {
+      if (typeof console !== 'undefined' && process.env.NODE_ENV !== 'production') {
+        console.error('windowLayout subscriber failed', error);
+      }
+    }
+  });
+};
+
+const invalidateLayoutCache = () => {
+  layoutCache.safeAreaInsets = null;
+  layoutCache.windowTopOffset = null;
+  layoutCache.snapBottomInset = null;
+  layoutCache.viewport = null;
+  notifyLayoutSubscribers();
+};
+
+const attachResizeObserver = () => {
+  if (resizeObserver || typeof ResizeObserver !== 'function') {
+    return;
+  }
+  if (typeof document === 'undefined') {
+    return;
+  }
+  const target = document.documentElement || document.body;
+  if (!target) {
+    return;
+  }
+  resizeObserver = new ResizeObserver(() => {
+    invalidateLayoutCache();
+  });
+  resizeObserver.observe(target);
+};
+
+const attachWindowListeners = () => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (!windowResizeListenerAttached) {
+    window.addEventListener('resize', invalidateLayoutCache, { passive: true });
+    windowResizeListenerAttached = true;
+  }
+
+  if (!orientationListenerAttached) {
+    window.addEventListener('orientationchange', invalidateLayoutCache, {
+      passive: true,
+    });
+    orientationListenerAttached = true;
+  }
+
+  if (!visualViewportListenersAttached && window.visualViewport) {
+    const viewport = window.visualViewport;
+    viewport.addEventListener('resize', invalidateLayoutCache);
+    viewport.addEventListener('scroll', invalidateLayoutCache);
+    visualViewportListenersAttached = true;
+  }
+};
+
+const ensureLayoutObservers = () => {
+  attachResizeObserver();
+  attachWindowListeners();
+};
+
+export const subscribeToLayoutChanges = (callback) => {
+  if (typeof callback !== 'function') {
+    return () => {};
+  }
+  ensureLayoutObservers();
+  layoutSubscribers.add(callback);
+  return () => {
+    layoutSubscribers.delete(callback);
+  };
+};
+
 const parseFontSize = (value) => {
   if (typeof value !== 'string') return DEFAULT_FONT_SIZE;
   const parsed = parseFloat(value);
@@ -82,13 +174,19 @@ export const getSafeAreaInsets = () => {
     return { top: 0, right: 0, bottom: 0, left: 0 };
   }
 
-  const computed = window.getComputedStyle(document.documentElement);
-  return {
-    top: readSafeAreaInset(computed, SAFE_AREA_PROPERTIES.top),
-    right: readSafeAreaInset(computed, SAFE_AREA_PROPERTIES.right),
-    bottom: readSafeAreaInset(computed, SAFE_AREA_PROPERTIES.bottom),
-    left: readSafeAreaInset(computed, SAFE_AREA_PROPERTIES.left),
-  };
+  ensureLayoutObservers();
+
+  if (!layoutCache.safeAreaInsets) {
+    const computed = window.getComputedStyle(document.documentElement);
+    layoutCache.safeAreaInsets = {
+      top: readSafeAreaInset(computed, SAFE_AREA_PROPERTIES.top),
+      right: readSafeAreaInset(computed, SAFE_AREA_PROPERTIES.right),
+      bottom: readSafeAreaInset(computed, SAFE_AREA_PROPERTIES.bottom),
+      left: readSafeAreaInset(computed, SAFE_AREA_PROPERTIES.left),
+    };
+  }
+
+  return { ...layoutCache.safeAreaInsets };
 };
 
 export const measureSafeAreaInset = (side) => {
@@ -106,17 +204,25 @@ export const measureWindowTopOffset = () => {
     return DEFAULT_WINDOW_TOP_OFFSET;
   }
 
+  ensureLayoutObservers();
+
+  if (typeof layoutCache.windowTopOffset === 'number') {
+    return layoutCache.windowTopOffset;
+  }
+
   const navbar = document.querySelector(NAVBAR_SELECTOR);
   if (!navbar) {
-    return DEFAULT_WINDOW_TOP_OFFSET;
+    layoutCache.windowTopOffset = DEFAULT_WINDOW_TOP_OFFSET;
+    return layoutCache.windowTopOffset;
   }
 
   const { height } = navbar.getBoundingClientRect();
   const measured = Number.isFinite(height) ? Math.ceil(height) : DEFAULT_NAVBAR_HEIGHT;
-  return Math.max(
+  layoutCache.windowTopOffset = Math.max(
     measured + WINDOW_TOP_MARGIN + WINDOW_TOP_INSET,
     DEFAULT_WINDOW_TOP_OFFSET,
   );
+  return layoutCache.windowTopOffset;
 };
 
 const readTaskbarHeightFromElement = (element) => {
@@ -154,11 +260,19 @@ export const measureTaskbarHeight = () => {
 };
 
 export const measureSnapBottomInset = () => {
+  ensureLayoutObservers();
+
+  if (typeof layoutCache.snapBottomInset === 'number') {
+    return layoutCache.snapBottomInset;
+  }
+
   const measured = measureTaskbarHeight();
   if (typeof measured === 'number' && Number.isFinite(measured)) {
-    return Math.max(measured, DEFAULT_SNAP_BOTTOM_INSET);
+    layoutCache.snapBottomInset = Math.max(measured, DEFAULT_SNAP_BOTTOM_INSET);
+    return layoutCache.snapBottomInset;
   }
-  return DEFAULT_SNAP_BOTTOM_INSET;
+  layoutCache.snapBottomInset = DEFAULT_SNAP_BOTTOM_INSET;
+  return layoutCache.snapBottomInset;
 };
 
 export const clampWindowTopPosition = (value, topOffset) => {
@@ -174,14 +288,39 @@ const parseDimension = (value) => {
   return Number.isFinite(value) ? Math.max(value, 0) : 0;
 };
 
-const getViewportDimension = (dimension, fallback) => {
-  if (typeof dimension === 'number' && Number.isFinite(dimension)) {
-    return dimension;
+const computeViewportRect = () => {
+  if (typeof window === 'undefined') {
+    return { width: 0, height: 0 };
   }
-  if (typeof window !== 'undefined' && typeof window[fallback] === 'number') {
-    return window[fallback];
+  const visualViewport = window.visualViewport || null;
+  const width = typeof visualViewport?.width === 'number'
+    ? visualViewport.width
+    : (typeof window.innerWidth === 'number' ? window.innerWidth : 0);
+  const height = typeof visualViewport?.height === 'number'
+    ? visualViewport.height
+    : (typeof window.innerHeight === 'number' ? window.innerHeight : 0);
+  return {
+    width: Number.isFinite(width) ? width : 0,
+    height: Number.isFinite(height) ? height : 0,
+  };
+};
+
+const getMemoizedViewportRect = () => {
+  ensureLayoutObservers();
+  if (!layoutCache.viewport) {
+    layoutCache.viewport = computeViewportRect();
   }
-  return 0;
+  return layoutCache.viewport;
+};
+
+export const getViewportSize = () => ({ ...getMemoizedViewportRect() });
+
+const resolveViewportDimension = (explicit, key) => {
+  if (typeof explicit === 'number' && Number.isFinite(explicit)) {
+    return explicit;
+  }
+  const viewport = getMemoizedViewportRect();
+  return viewport[key];
 };
 
 const parsePositionCoordinate = (value, fallback) => {
@@ -200,8 +339,8 @@ export const clampWindowPositionWithinViewport = (
     return null;
   }
 
-  const viewportWidth = getViewportDimension(options.viewportWidth, 'innerWidth');
-  const viewportHeight = getViewportDimension(options.viewportHeight, 'innerHeight');
+  const viewportWidth = resolveViewportDimension(options.viewportWidth, 'width');
+  const viewportHeight = resolveViewportDimension(options.viewportHeight, 'height');
   const topOffset = typeof options.topOffset === 'number'
     ? options.topOffset
     : measureWindowTopOffset();
@@ -257,4 +396,9 @@ export const clampWindowPositionWithinViewport = (
       maxY,
     },
   };
+};
+
+export const __testing__ = {
+  invalidateLayoutCache,
+  getLayoutCache: () => ({ ...layoutCache }),
 };

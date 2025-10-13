@@ -12,6 +12,8 @@ import {
     measureSafeAreaInset,
     measureSnapBottomInset,
     measureWindowTopOffset,
+    getViewportSize,
+    subscribeToLayoutChanges,
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET } from '../../utils/uiConstants';
@@ -127,6 +129,10 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._layoutUnsubscribe = null;
+        this._windowSizeObserver = null;
+        this._resizeFrame = null;
+        this._isMounted = false;
     }
 
     notifySizeChange = () => {
@@ -137,14 +143,21 @@ export class Window extends Component {
     }
 
     componentDidMount() {
+        this._isMounted = true;
         this.id = this.props.id;
         this.setDefaultWindowDimenstion();
 
         // google analytics
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
 
-        // on window resize, resize boundary
-        window.addEventListener('resize', this.resizeBoundries);
+        this._layoutUnsubscribe = subscribeToLayoutChanges(this.resizeBoundries);
+
+        if (typeof ResizeObserver === 'function' && this.windowRef.current) {
+            this._windowSizeObserver = new ResizeObserver(() => {
+                this.resizeBoundries();
+            });
+            this._windowSizeObserver.observe(this.windowRef.current);
+        }
         // Listen for context menu events to toggle inert background
         window.addEventListener('context-menu-open', this.setInertBackground);
         window.addEventListener('context-menu-close', this.removeInertBackground);
@@ -161,7 +174,6 @@ export class Window extends Component {
     componentWillUnmount() {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
-        window.removeEventListener('resize', this.resizeBoundries);
         window.removeEventListener('context-menu-open', this.setInertBackground);
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = this.getWindowNode();
@@ -169,6 +181,66 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        if (this._layoutUnsubscribe) {
+            this._layoutUnsubscribe();
+            this._layoutUnsubscribe = null;
+        }
+        if (this._windowSizeObserver) {
+            this._windowSizeObserver.disconnect();
+            this._windowSizeObserver = null;
+        }
+        if (this._resizeFrame) {
+            this.cancelFrame(this._resizeFrame);
+            this._resizeFrame = null;
+        }
+        this._isMounted = false;
+    }
+
+    requestFrame = (callback) => {
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            const id = window.requestAnimationFrame(callback);
+            return { id, type: 'raf' };
+        }
+        const timeout = setTimeout(callback, 16);
+        return { id: timeout, type: 'timeout' };
+    }
+
+    cancelFrame = (handle) => {
+        if (!handle) return;
+        if (handle.type === 'raf') {
+            if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+                window.cancelAnimationFrame(handle.id);
+            }
+            return;
+        }
+        clearTimeout(handle.id);
+    }
+
+    computeResizeMetrics = (widthPercent, heightPercent) => {
+        if (typeof window === 'undefined') {
+            return {
+                parentSize: { height: 0, width: 0 },
+                safeAreaTop: DEFAULT_WINDOW_TOP_OFFSET,
+            };
+        }
+
+        const { width: viewportWidth, height: viewportHeight } = getViewportSize();
+        const topInset = measureWindowTopOffset();
+        const safeAreaBottom = Math.max(0, measureSafeAreaInset('bottom'));
+        const snapBottomInset = measureSnapBottomInset();
+        const windowHeightPx = viewportHeight * (heightPercent / 100.0);
+        const windowWidthPx = viewportWidth * (widthPercent / 100.0);
+        const availableVertical = Math.max(viewportHeight - topInset - snapBottomInset - safeAreaBottom, 0);
+        const availableHorizontal = Math.max(viewportWidth - windowWidthPx, 0);
+        const maxTop = Math.max(availableVertical - windowHeightPx, 0);
+
+        return {
+            parentSize: {
+                height: maxTop,
+                width: availableHorizontal,
+            },
+            safeAreaTop: topInset,
+        };
     }
 
     setDefaultWindowDimenstion = () => {
@@ -204,36 +276,29 @@ export class Window extends Component {
     }
 
     resizeBoundries = () => {
-        const hasWindow = typeof window !== 'undefined';
-        const visualViewport = hasWindow && window.visualViewport ? window.visualViewport : null;
-        const viewportHeight = hasWindow
-            ? (visualViewport?.height ?? window.innerHeight)
-            : 0;
-        const viewportWidth = hasWindow
-            ? (visualViewport?.width ?? window.innerWidth)
-            : 0;
-        const topInset = hasWindow
-            ? measureWindowTopOffset()
-            : DEFAULT_WINDOW_TOP_OFFSET;
-        const windowHeightPx = viewportHeight * (this.state.height / 100.0);
-        const windowWidthPx = viewportWidth * (this.state.width / 100.0);
-        const safeAreaBottom = Math.max(0, measureSafeAreaInset('bottom'));
-        const snapBottomInset = measureSnapBottomInset();
-        const availableVertical = Math.max(viewportHeight - topInset - snapBottomInset - safeAreaBottom, 0);
-        const availableHorizontal = Math.max(viewportWidth - windowWidthPx, 0);
-        const maxTop = Math.max(availableVertical - windowHeightPx, 0);
+        if (typeof window === 'undefined') {
+            return;
+        }
 
-        this.setState({
-            parentSize: {
-                height: maxTop,
-                width: availableHorizontal,
-            },
-            safeAreaTop: topInset,
+        const { width, height } = this.state;
+        const metrics = this.computeResizeMetrics(width, height);
 
-        }, () => {
-            if (this._uiExperiments) {
-                this.scheduleUsageCheck();
-            }
+        if (this._resizeFrame) {
+            this.cancelFrame(this._resizeFrame);
+        }
+
+        this._resizeFrame = this.requestFrame(() => {
+            this._resizeFrame = null;
+            if (!this._isMounted) return;
+            this.setState({
+                parentSize: metrics.parentSize,
+                safeAreaTop: metrics.safeAreaTop,
+
+            }, () => {
+                if (this._uiExperiments) {
+                    this.scheduleUsageCheck();
+                }
+            });
         });
     }
 
