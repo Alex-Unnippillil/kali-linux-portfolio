@@ -17,6 +17,11 @@
   transition-delay: 0s, 0s, 0s, 0s, 0s;
 }
 
+.windowFrameInteracting {
+  transition: none !important;
+  will-change: transform;
+}
+
 .windowFrame::before {
   content: '';
   position: absolute;
