@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import FormError from '../ui/FormError';
 
 interface USBEndpoint {
@@ -28,6 +28,7 @@ interface USBDevice {
   transferOut(endpointNumber: number, data: BufferSource): Promise<void>;
   transferIn(endpointNumber: number, length: number): Promise<{ data?: DataView }>;
   addEventListener(type: 'disconnect', listener: () => void): void;
+  removeEventListener(type: 'disconnect', listener: () => void): void;
 }
 
 interface USB {
@@ -46,6 +47,7 @@ const WebUSBApp: React.FC = () => {
   const [message, setMessage] = useState('');
   const [log, setLog] = useState<string[]>([]);
   const [error, setError] = useState('');
+  const disconnectListenerRef = useRef<(() => void) | null>(null);
 
   const handleConnect = async () => {
     if (useMock || !supported) {
@@ -65,11 +67,13 @@ const WebUSBApp: React.FC = () => {
       const epOut = alt?.endpoints.find((e) => e.direction === 'out');
       setInEndpoint(epIn?.endpointNumber ?? null);
       setOutEndpoint(epOut?.endpointNumber ?? null);
-      d.addEventListener('disconnect', () => {
+      const handleDeviceDisconnect = () => {
         setConnected(false);
         setDevice(null);
         setLog((l) => [...l, 'Device disconnected']);
-      });
+      };
+      disconnectListenerRef.current = handleDeviceDisconnect;
+      d.addEventListener('disconnect', handleDeviceDisconnect);
       setDevice(d);
       setConnected(true);
       setError('');
@@ -129,7 +133,29 @@ const WebUSBApp: React.FC = () => {
     setLog([]);
     setError('');
     setConnected(false);
+    setDevice(null);
+    disconnectListenerRef.current = null;
   };
+
+  useEffect(() => {
+    if (!device || disconnectListenerRef.current === null) {
+      return undefined;
+    }
+
+    const handler = disconnectListenerRef.current;
+
+    return () => {
+      try {
+        device.removeEventListener('disconnect', handler);
+      } catch {
+        // Ignore cleanup errors; device may already be closed.
+      }
+
+      if (disconnectListenerRef.current === handler) {
+        disconnectListenerRef.current = null;
+      }
+    };
+  }, [device]);
 
   return (
     <div className="relative h-full w-full bg-black p-4 text-white">
