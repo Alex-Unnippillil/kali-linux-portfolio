@@ -130,13 +130,15 @@ export default function QR() {
   }, [payload]);
 
   return (
-    <div className="flex h-full flex-col gap-6 overflow-auto bg-ub-cool-grey p-4 text-white">
+    <div className="flex h-full flex-col gap-6 overflow-auto bg-[color:var(--kali-bg)] p-4 text-kali-text">
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={() => setMode('generate')}
-          className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
-            mode === 'generate' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+          className={`rounded border px-3 py-1 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] ${
+            mode === 'generate'
+              ? 'border-transparent bg-kali-primary text-kali-inverse shadow-[0_0_0_1px_rgba(15,148,210,0.35)] hover:bg-kali-primary/90'
+              : 'border-kali-border/60 bg-[var(--kali-panel)] text-kali-text/80 hover:border-kali-border hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,var(--kali-blue)_12%)] hover:text-kali-text'
           }`}
           aria-pressed={mode === 'generate'}
         >
@@ -145,8 +147,10 @@ export default function QR() {
         <button
           type="button"
           onClick={() => setMode('scan')}
-          className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
-            mode === 'scan' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-200 hover:bg-gray-600'
+          className={`rounded border px-3 py-1 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] ${
+            mode === 'scan'
+              ? 'border-transparent bg-kali-primary text-kali-inverse shadow-[0_0_0_1px_rgba(15,148,210,0.35)] hover:bg-kali-primary/90'
+              : 'border-kali-border/60 bg-[var(--kali-panel)] text-kali-text/80 hover:border-kali-border hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,var(--kali-blue)_12%)] hover:text-kali-text'
           }`}
           aria-pressed={mode === 'scan'}
         >
@@ -155,7 +159,7 @@ export default function QR() {
       </div>
 
       <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] lg:items-start">
-        <section className="flex flex-col gap-4 rounded-lg border border-gray-700 bg-gray-800/70 p-4 shadow-inner">
+        <section className="flex flex-col gap-4 rounded-lg border border-kali-border/60 bg-[var(--kali-panel)] p-4 shadow-inner">
           <div className="flex flex-col items-center gap-4">
             <div className="aspect-square w-full max-w-xs rounded bg-white p-2">
               {mode === 'generate' ? (
@@ -173,7 +177,7 @@ export default function QR() {
                 <>
                   <div className="space-y-1">
                     <p className="text-sm font-semibold">Preview & actions</p>
-                    <p className="text-xs text-gray-300">
+                    <p className="text-xs text-kali-text/70">
                       Use these controls to download, share, or test your QR code directly from this window.
                     </p>
                   </div>
@@ -181,7 +185,7 @@ export default function QR() {
                     <button
                       type="button"
                       onClick={downloadPng}
-                      className="flex items-center gap-2 rounded bg-blue-600 px-3 py-1 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:bg-blue-900 disabled:opacity-70"
+                      className="flex items-center gap-2 rounded bg-kali-primary px-3 py-1 text-sm font-medium text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:cursor-not-allowed disabled:bg-kali-primary/40 disabled:text-kali-inverse/70"
                       aria-label="Download PNG"
                       disabled={!payload}
                     >
@@ -201,7 +205,7 @@ export default function QR() {
                     <button
                       type="button"
                       onClick={downloadSvg}
-                      className="flex items-center gap-2 rounded bg-blue-600 px-3 py-1 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:bg-blue-900 disabled:opacity-70"
+                      className="flex items-center gap-2 rounded bg-kali-primary px-3 py-1 text-sm font-medium text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:cursor-not-allowed disabled:bg-kali-primary/40 disabled:text-kali-inverse/70"
                       aria-label="Download SVG"
                       disabled={!payload}
                     >
@@ -221,7 +225,7 @@ export default function QR() {
                     <button
                       type="button"
                       onClick={shareQr}
-                      className="flex items-center gap-2 rounded bg-gray-700 px-3 py-1 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:bg-gray-800 disabled:opacity-70"
+                      className="flex items-center gap-2 rounded border border-kali-border/60 bg-[var(--kali-panel)] px-3 py-1 text-sm font-medium text-kali-text transition-colors hover:border-kali-border hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,var(--kali-blue)_12%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:cursor-not-allowed disabled:border-transparent disabled:bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,transparent)] disabled:text-kali-text/50"
                       aria-label="Share QR code"
                       disabled={!payload}
                     >
@@ -243,7 +247,7 @@ export default function QR() {
               ) : (
                 <div className="space-y-1">
                   <p className="text-sm font-semibold">Scanning tips</p>
-                  <p className="text-xs text-gray-300">
+                  <p className="text-xs text-kali-text/70">
                     Allow camera access and keep the QR code centered in the live preview to decode it instantly.
                   </p>
                 </div>
@@ -255,130 +259,130 @@ export default function QR() {
         {mode === 'generate' && (
           <form
             onSubmit={(event: FormEvent<HTMLFormElement>) => event.preventDefault()}
-            className="w-full space-y-6 rounded-lg border border-gray-700 bg-gray-800/40 p-4 shadow"
+            className="w-full space-y-6 rounded-lg border border-kali-border/60 bg-[var(--kali-panel)] p-4 shadow"
           >
             <div className="space-y-3">
               <div>
                 <h2 className="text-lg font-semibold">Payload</h2>
-              <p className="mt-1 text-xs text-gray-300">
-                Use the presets to structure text, URLs, or Wi-Fi credentials before generating the QR code.
-              </p>
-            </div>
-            <Presets
-              key={formResetKey}
-              canvasRef={canvasRef}
-              onPayloadChange={setPayload}
-              size={size}
-              margin={margin}
-              ecc={ecc}
-              logo={logo}
-            />
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-3">
-              <div>
-                <h3 className="text-base font-semibold">Rendering options</h3>
-                <p className="mt-1 text-xs text-gray-300">
-                  Adjust the output size, margin, and error correction level to match your use case.
+                <p className="mt-1 text-xs text-kali-text/70">
+                  Use the presets to structure text, URLs, or Wi-Fi credentials before generating the QR code.
                 </p>
               </div>
-              <div className="space-y-3 text-sm">
-                <label htmlFor="qr-size" className="flex flex-col gap-1">
-                  <span className="font-medium">Size</span>
-                  <select
-                    id="qr-size"
-                    value={size}
-                    onChange={(e) => setSize(parseInt(e.target.value, 10))}
-                    className="rounded p-1 text-black"
-                  >
-                    <option value={128}>128 px</option>
-                    <option value={256}>256 px</option>
-                    <option value={512}>512 px</option>
-                  </select>
-                </label>
-                <label htmlFor="qr-margin" className="flex flex-col gap-1">
-                  <span className="font-medium">Margin</span>
-                  <select
-                    id="qr-margin"
-                    value={margin}
-                    onChange={(e) => setMargin(parseInt(e.target.value, 10))}
-                    className="rounded p-1 text-black"
-                  >
-                    <option value={0}>0 modules</option>
-                    <option value={1}>1 module</option>
-                    <option value={2}>2 modules</option>
-                    <option value={4}>4 modules</option>
-                  </select>
-                </label>
-                <label htmlFor="qr-ecc" className="flex flex-col gap-1">
-                  <span className="font-medium">Error correction</span>
-                  <select
-                    id="qr-ecc"
-                    value={ecc}
-                    onChange={(e) => setEcc(e.target.value as typeof ecc)}
-                    className="rounded p-1 text-black"
-                  >
-                    <option value="L">L (7%)</option>
-                    <option value="M">M (15%)</option>
-                    <option value="Q">Q (25%)</option>
-                    <option value="H">H (30%)</option>
-                  </select>
-                </label>
-              </div>
+              <Presets
+                key={formResetKey}
+                canvasRef={canvasRef}
+                onPayloadChange={setPayload}
+                size={size}
+                margin={margin}
+                ecc={ecc}
+                logo={logo}
+              />
             </div>
 
-            <div className="space-y-3">
-              <div>
-                <h3 className="text-base font-semibold">Branding</h3>
-                <p className="mt-1 text-xs text-gray-300">
-                  Add a center logo (about 20% of the canvas) to personalize your QR code.
-                </p>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-3">
+                <div>
+                  <h3 className="text-base font-semibold">Rendering options</h3>
+                  <p className="mt-1 text-xs text-kali-text/70">
+                    Adjust the output size, margin, and error correction level to match your use case.
+                  </p>
+                </div>
+                <div className="space-y-3 text-sm">
+                  <label htmlFor="qr-size" className="flex flex-col gap-1">
+                    <span className="font-medium">Size</span>
+                    <select
+                      id="qr-size"
+                      value={size}
+                      onChange={(e) => setSize(parseInt(e.target.value, 10))}
+                      className="rounded p-1 text-black"
+                    >
+                      <option value={128}>128 px</option>
+                      <option value={256}>256 px</option>
+                      <option value={512}>512 px</option>
+                    </select>
+                  </label>
+                  <label htmlFor="qr-margin" className="flex flex-col gap-1">
+                    <span className="font-medium">Margin</span>
+                    <select
+                      id="qr-margin"
+                      value={margin}
+                      onChange={(e) => setMargin(parseInt(e.target.value, 10))}
+                      className="rounded p-1 text-black"
+                    >
+                      <option value={0}>0 modules</option>
+                      <option value={1}>1 module</option>
+                      <option value={2}>2 modules</option>
+                      <option value={4}>4 modules</option>
+                    </select>
+                  </label>
+                  <label htmlFor="qr-ecc" className="flex flex-col gap-1">
+                    <span className="font-medium">Error correction</span>
+                    <select
+                      id="qr-ecc"
+                      value={ecc}
+                      onChange={(e) => setEcc(e.target.value as typeof ecc)}
+                      className="rounded p-1 text-black"
+                    >
+                      <option value="L">L (7%)</option>
+                      <option value="M">M (15%)</option>
+                      <option value="Q">Q (25%)</option>
+                      <option value="H">H (30%)</option>
+                    </select>
+                  </label>
+                </div>
               </div>
-              <div className="space-y-3 text-sm">
-                <label htmlFor="qr-logo" className="flex flex-col gap-1">
-                  <span className="font-medium">Logo</span>
-                  <input
-                    id="qr-logo"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogo}
-                    aria-label="Upload logo image"
-                    className="rounded bg-white p-1 text-black"
-                  />
-                </label>
-                {logo && (
-                  <button
-                    type="button"
-                    onClick={() => setLogo(null)}
-                    className="w-fit rounded bg-gray-600 px-3 py-1 text-sm"
-                  >
-                    Clear logo
-                  </button>
-                )}
+
+              <div className="space-y-3">
+                <div>
+                  <h3 className="text-base font-semibold">Branding</h3>
+                  <p className="mt-1 text-xs text-kali-text/70">
+                    Add a center logo (about 20% of the canvas) to personalize your QR code.
+                  </p>
+                </div>
+                <div className="space-y-3 text-sm">
+                  <label htmlFor="qr-logo" className="flex flex-col gap-1">
+                    <span className="font-medium">Logo</span>
+                    <input
+                      id="qr-logo"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogo}
+                      aria-label="Upload logo image"
+                      className="rounded bg-white p-1 text-black"
+                    />
+                  </label>
+                  {logo && (
+                    <button
+                      type="button"
+                      onClick={() => setLogo(null)}
+                      className="w-fit rounded bg-kali-muted px-3 py-1 text-sm text-kali-text transition-colors hover:bg-kali-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+                    >
+                      Clear logo
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={resetForm}
-                className="rounded bg-gray-600 px-3 py-1 text-sm"
+                className="rounded bg-kali-muted px-3 py-1 text-sm text-kali-text transition-colors hover:bg-kali-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
               >
                 Reset
               </button>
               <button
                 type="button"
                 onClick={copyPayload}
-                className="rounded bg-blue-600 px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded bg-kali-primary px-3 py-1 text-sm font-medium text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:cursor-not-allowed disabled:bg-kali-primary/40 disabled:text-kali-inverse/70"
                 disabled={!payload}
               >
                 Copy payload
               </button>
             </div>
-            <p className="flex-1 text-xs text-gray-300 md:text-right">
+            <p className="flex-1 text-xs text-kali-text/70 md:text-right">
               {payload ? (
                 <span className="break-all">Current payload: {payload}</span>
               ) : (
@@ -393,12 +397,12 @@ export default function QR() {
 
       {lastScan && (
         <div className="space-y-2">
-          <p className="text-xs text-gray-300">Last scan</p>
+          <p className="text-xs text-kali-text/70">Last scan</p>
           <p className="break-all text-sm">{lastScan}</p>
           <button
             type="button"
             onClick={() => navigator.clipboard?.writeText(lastScan)}
-            className="px-2 py-1 bg-blue-600 rounded"
+            className="rounded bg-kali-primary px-2 py-1 text-sm font-medium text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
           >
             Copy
           </button>
@@ -407,12 +411,12 @@ export default function QR() {
 
       {lastGen && (
         <div className="space-y-2">
-          <p className="text-xs text-gray-300">Last generation</p>
+          <p className="text-xs text-kali-text/70">Last generation</p>
           <p className="break-all text-sm">{lastGen}</p>
           <button
             type="button"
             onClick={() => navigator.clipboard?.writeText(lastGen)}
-            className="px-2 py-1 bg-blue-600 rounded"
+            className="rounded bg-kali-primary px-2 py-1 text-sm font-medium text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
           >
             Copy
           </button>
