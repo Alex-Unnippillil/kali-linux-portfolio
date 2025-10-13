@@ -3769,6 +3769,8 @@ export class Desktop extends Component {
                 prefetch: app.screen?.prefetch,
                 style: this.desktopIconVariables,
                 accentVariables: this.desktopAccentVariables,
+                imagePriority: index === 0,
+                imageFetchPriority: index < 6 ? 'high' : undefined,
             };
 
             const position = (keyboardMoveState && keyboardMoveState.id === appId && keyboardMoveState.position)
