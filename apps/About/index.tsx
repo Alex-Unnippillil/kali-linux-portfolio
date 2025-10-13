@@ -48,9 +48,9 @@ export default function AboutPage() {
             <div className="flex-1 space-y-4 text-center sm:text-left">
               <div className="space-y-1.5">
                 <h1 className="text-3xl font-semibold text-white sm:text-4xl">Alex Unnippillil</h1>
-                <p className="text-base font-medium text-gray-200 sm:text-lg">Cybersecurity Specialist</p>
+                <p className="text-base font-medium text-kali-text/90 sm:text-lg">Cybersecurity Specialist</p>
               </div>
-              <p className="mx-auto max-w-xl text-base leading-relaxed text-gray-200/90 sm:mx-0">
+              <p className="mx-auto max-w-xl text-base leading-relaxed text-kali-text/80 sm:mx-0">
                 Building secure-by-default experiences with a Kali-inspired interface that keeps tooling approachable and
                 transparent.
               </p>
@@ -60,7 +60,7 @@ export default function AboutPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="GitHub"
-                  className="group inline-flex h-11 w-11 items-center justify-center rounded-full border border-[color:var(--kali-border)] bg-[var(--kali-overlay)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-[color:color-mix(in_srgb,var(--kali-control)_65%,var(--kali-border))] hover:bg-[color-mix(in_srgb,var(--kali-control)_20%,var(--kali-overlay))] hover:text-[color:var(--kali-control)]"
+                  className="group inline-flex h-11 w-11 items-center justify-center rounded-full border border-[color:var(--kali-border)] bg-[var(--kali-overlay)] text-white transition focus-visible:border-[color:var(--kali-control)] focus-visible:bg-[color:var(--kali-control-overlay)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-[color:var(--kali-control)] hover:bg-[color:var(--kali-control-overlay)] hover:text-[color:var(--kali-control)]"
                 >
                   <GitHubIcon className="h-5 w-5 transition-transform duration-150 group-hover:scale-110" />
                 </a>
@@ -69,7 +69,7 @@ export default function AboutPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="LinkedIn"
-                  className="group inline-flex h-11 w-11 items-center justify-center rounded-full border border-[color:var(--kali-border)] bg-[var(--kali-overlay)] text-white transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-[color:color-mix(in_srgb,var(--kali-control)_65%,var(--kali-border))] hover:bg-[color-mix(in_srgb,var(--kali-control)_20%,var(--kali-overlay))] hover:text-[color:var(--kali-control)]"
+                  className="group inline-flex h-11 w-11 items-center justify-center rounded-full border border-[color:var(--kali-border)] bg-[var(--kali-overlay)] text-white transition focus-visible:border-[color:var(--kali-control)] focus-visible:bg-[color:var(--kali-control-overlay)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-[color:var(--kali-control)] hover:bg-[color:var(--kali-control-overlay)] hover:text-[color:var(--kali-control)]"
                 >
                   <LinkedInIcon className="h-5 w-5 transition-transform duration-150 group-hover:scale-110" />
                 </a>
@@ -83,7 +83,7 @@ export default function AboutPage() {
             <h2 id="about-highlights" className="text-xl font-semibold text-white sm:text-2xl">
               Profile highlights
             </h2>
-            <p className="max-w-2xl text-base leading-relaxed text-gray-300">
+            <p className="max-w-2xl text-base leading-relaxed text-kali-text/80">
               A quick snapshot of the capabilities and recent impact driving Kali Linux Portfolio forward.
             </p>
           </div>
@@ -96,10 +96,10 @@ export default function AboutPage() {
               <h3 id="highlight-skills" className="text-lg font-semibold text-white">
                 Core skills
               </h3>
-              <p className="mt-2 text-base text-gray-300">
+              <p className="mt-2 text-base text-kali-text/80">
                 End-to-end security reviews, secure coding mentorship, and blue team readiness exercises.
               </p>
-              <ul className="mt-4 list-disc space-y-1.5 pl-5 text-sm text-gray-300">
+              <ul className="mt-4 list-disc space-y-1.5 pl-5 text-sm text-kali-text/70">
                 <li>Threat modeling &amp; mitigation playbooks</li>
                 <li>Cloud hardening for AWS &amp; Vercel</li>
                 <li>Automation with Python &amp; TypeScript</li>
@@ -113,10 +113,10 @@ export default function AboutPage() {
               <h3 id="highlight-experience" className="text-lg font-semibold text-white">
                 Recent experience
               </h3>
-              <p className="mt-2 text-base text-gray-300">
+              <p className="mt-2 text-base text-kali-text/80">
                 Scaling a security operations desk that supports offensive and defensive simulations for modern stacks.
               </p>
-              <ul className="mt-4 list-disc space-y-1.5 pl-5 text-sm text-gray-300">
+              <ul className="mt-4 list-disc space-y-1.5 pl-5 text-sm text-kali-text/70">
                 <li>Built tabletop drills for product teams</li>
                 <li>Delivered SOC automation runbooks</li>
                 <li>Partnered with dev teams on threat hunts</li>
@@ -130,17 +130,17 @@ export default function AboutPage() {
               <h3 id="highlight-contact" className="text-lg font-semibold text-white">
                 Connect with Alex
               </h3>
-              <p className="mt-2 text-base text-gray-300">
+              <p className="mt-2 text-base text-kali-text/80">
                 Open to collaborations, conference talks, and proactive security reviews across the builder ecosystem.
               </p>
-              <div className="mt-4 space-y-3 text-gray-200">
+              <div className="mt-4 space-y-3 text-kali-text/80">
                 <a
                   href="mailto:alex@unnippillil.com"
                   className="inline-flex items-center text-base font-medium text-[color:var(--kali-control)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:text-[color:color-mix(in_srgb,var(--kali-control)_85%,var(--kali-text))]"
                 >
                   alex@unnippillil.com
                 </a>
-                <p className="text-sm text-gray-300">
+                <p className="text-sm text-kali-text/70">
                   Based in Chicago • Available for remote-first engagements.
                 </p>
               </div>
