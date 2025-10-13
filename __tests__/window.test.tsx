@@ -9,6 +9,10 @@ import {
   measureSnapBottomInset,
   measureWindowTopOffset,
 } from '../utils/windowLayout';
+import { SettingsContext } from '../hooks/useSettings';
+import { defaults } from '../utils/settingsStore';
+import { resolveDesktopTheme } from '../utils/theme';
+import { UI_HAPTIC_EVENTS, UI_HAPTIC_PATTERNS } from '../utils/uiHaptics';
 
 jest.mock('../utils/windowLayout', () => {
   const actual = jest.requireActual('../utils/windowLayout');
@@ -65,6 +69,58 @@ const setVisualViewport = (width?: number, height?: number) => {
   delete (window as any).visualViewport;
 };
 
+type SettingsValue = React.ContextType<typeof SettingsContext>;
+
+const defaultDesktopTheme = resolveDesktopTheme({
+  theme: 'default',
+  accent: defaults.accent,
+  wallpaperName: defaults.wallpaper,
+  bgImageName: defaults.wallpaper,
+  useKaliWallpaper: defaults.useKaliWallpaper,
+});
+
+const createSettingsValue = (overrides: Partial<SettingsValue> = {}): SettingsValue => ({
+  accent: defaults.accent,
+  wallpaper: defaults.wallpaper,
+  bgImageName: defaults.wallpaper,
+  useKaliWallpaper: defaults.useKaliWallpaper,
+  density: defaults.density as SettingsValue['density'],
+  reducedMotion: defaults.reducedMotion,
+  fontScale: defaults.fontScale,
+  highContrast: defaults.highContrast,
+  largeHitAreas: defaults.largeHitAreas,
+  pongSpin: defaults.pongSpin,
+  allowNetwork: defaults.allowNetwork,
+  haptics: defaults.haptics,
+  theme: 'default',
+  desktopTheme: defaultDesktopTheme,
+  setAccent: jest.fn(),
+  setWallpaper: jest.fn(),
+  setUseKaliWallpaper: jest.fn(),
+  setDensity: jest.fn(),
+  setReducedMotion: jest.fn(),
+  setFontScale: jest.fn(),
+  setHighContrast: jest.fn(),
+  setLargeHitAreas: jest.fn(),
+  setPongSpin: jest.fn(),
+  setAllowNetwork: jest.fn(),
+  setHaptics: jest.fn(),
+  setTheme: jest.fn(),
+  ...overrides,
+});
+
+const originalNavigatorVibrate = navigator.vibrate;
+
+const setNavigatorVibrate = (
+  value: Navigator['vibrate'] | ((pattern: number | number[]) => void) | undefined,
+) => {
+  Object.defineProperty(navigator, 'vibrate', {
+    configurable: true,
+    writable: true,
+    value,
+  });
+};
+
 beforeEach(() => {
   setViewport(1440, 900);
   measureSafeAreaInsetMock.mockReturnValue(0);
@@ -74,6 +130,7 @@ beforeEach(() => {
 
 afterEach(() => {
   setVisualViewport();
+  setNavigatorVibrate(originalNavigatorVibrate);
 });
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
@@ -920,6 +977,94 @@ describe('Window viewport constraints', () => {
     expect(state.parentSize.width).toBeCloseTo(expectedWidth);
     expect(state.parentSize.height).toBeCloseTo(expectedHeight);
     expect(state.safeAreaTop).toBe(DESKTOP_TOP_PADDING);
+  });
+});
+
+describe('Window haptics', () => {
+  const renderWithSettings = (
+    settingsOverrides: Partial<SettingsValue> = {},
+    props: Partial<React.ComponentProps<typeof Window>> = {},
+  ) => {
+    const ref = React.createRef<any>();
+    const baseProps: React.ComponentProps<typeof Window> = {
+      id: 'haptic-window',
+      title: 'Haptic test',
+      screen: () => <div>content</div>,
+      focus: () => {},
+      hasMinimised: () => {},
+      closed: () => {},
+      openApp: () => {},
+      ...props,
+    };
+    const result = render(
+      <SettingsContext.Provider value={createSettingsValue(settingsOverrides)}>
+        <Window ref={ref} {...baseProps} />
+      </SettingsContext.Provider>,
+    );
+    return { ref, ...result };
+  };
+
+  it('vibrates on minimize when haptics are enabled', () => {
+    const vibrateMock = jest.fn();
+    setNavigatorVibrate(vibrateMock);
+
+    const { ref, unmount } = renderWithSettings();
+
+    act(() => {
+      ref.current!.minimizeWindow();
+    });
+
+    expect(vibrateMock).toHaveBeenCalledWith(
+      UI_HAPTIC_PATTERNS[UI_HAPTIC_EVENTS.WINDOW_MINIMIZE],
+    );
+
+    unmount();
+  });
+
+  it('skips vibration when reduced motion is active', () => {
+    const vibrateMock = jest.fn();
+    setNavigatorVibrate(vibrateMock);
+
+    const { ref, unmount } = renderWithSettings({ reducedMotion: true });
+
+    act(() => {
+      ref.current!.minimizeWindow();
+    });
+
+    expect(vibrateMock).not.toHaveBeenCalled();
+
+    unmount();
+  });
+
+  it('vibrates when snapping the window into place', () => {
+    const vibrateMock = jest.fn();
+    setNavigatorVibrate(vibrateMock);
+
+    const { ref, unmount } = renderWithSettings();
+
+    act(() => {
+      ref.current!.snapWindow('left');
+    });
+
+    expect(vibrateMock).toHaveBeenCalledWith(
+      UI_HAPTIC_PATTERNS[UI_HAPTIC_EVENTS.WINDOW_SNAP],
+    );
+
+    unmount();
+  });
+
+  it('gracefully handles environments without vibration support', () => {
+    setNavigatorVibrate(undefined);
+
+    const { ref, unmount } = renderWithSettings();
+
+    expect(() => {
+      act(() => {
+        ref.current!.minimizeWindow();
+      });
+    }).not.toThrow();
+
+    unmount();
   });
 });
 
