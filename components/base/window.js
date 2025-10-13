@@ -20,9 +20,37 @@ const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
 const EDGE_THRESHOLD_RATIO = 0.05;
 
+const DEFAULT_DRAG_OPTIONS = {
+    snapStrength: {
+        edge: {
+            ratio: EDGE_THRESHOLD_RATIO,
+            min: EDGE_THRESHOLD_MIN,
+            max: EDGE_THRESHOLD_MAX,
+        },
+        windowNeighbor: 48,
+    },
+    edgeResistance: {
+        distance: 36,
+        factor: 0.35,
+    },
+    inertia: {
+        enabled: true,
+        minVelocity: 900,
+        friction: 0.92,
+        stopVelocity: 48,
+        maxDuration: 600,
+    },
+    noiseThreshold: 1,
+};
+
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
-const computeEdgeThreshold = (size) => clamp(size * EDGE_THRESHOLD_RATIO, EDGE_THRESHOLD_MIN, EDGE_THRESHOLD_MAX);
+const computeEdgeThreshold = (size, edgeOptions) => {
+    const ratio = Number.isFinite(edgeOptions?.ratio) ? edgeOptions.ratio : EDGE_THRESHOLD_RATIO;
+    const min = Number.isFinite(edgeOptions?.min) ? edgeOptions.min : EDGE_THRESHOLD_MIN;
+    const max = Number.isFinite(edgeOptions?.max) ? edgeOptions.max : EDGE_THRESHOLD_MAX;
+    return clamp(size * ratio, min, max);
+};
 
 const percentOf = (value, total) => {
     if (!total) return 0;
@@ -90,6 +118,7 @@ const computeSnapRegions = (
 export class Window extends Component {
     static defaultProps = {
         snapGrid: [8, 8],
+        dragOptions: null,
     };
 
     constructor(props) {
@@ -127,6 +156,13 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._dragState = {
+            lastTimestamp: null,
+            velocity: { x: 0, y: 0 },
+            position: { x: this.startX, y: this.startY },
+        };
+        this._inertiaFrame = null;
+        this._inertiaStart = null;
     }
 
     notifySizeChange = () => {
@@ -169,6 +205,7 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.cancelInertiaMotion();
     }
 
     setDefaultWindowDimenstion = () => {
@@ -352,6 +389,9 @@ export class Window extends Component {
         if (this.state.snapped) {
             this.unsnapWindow();
         }
+        this.cancelInertiaMotion();
+        this._dragState.lastTimestamp = null;
+        this._dragState.velocity = { x: 0, y: 0 };
         this.setState({ cursorType: "cursor-move", grabbed: true })
     }
 
@@ -376,6 +416,46 @@ export class Window extends Component {
         const normalizedX = normalize(gridX, fallback[0]);
         const normalizedY = normalize(gridY, fallback[1]);
         return [normalizedX, normalizedY];
+    }
+
+    getDragOptions = () => {
+        if (!this.props.dragOptions || typeof this.props.dragOptions !== 'object') {
+            return DEFAULT_DRAG_OPTIONS;
+        }
+
+        const { dragOptions } = this.props;
+        const mergeEdge = { ...DEFAULT_DRAG_OPTIONS.snapStrength.edge, ...(dragOptions?.snapStrength?.edge || {}) };
+        const snapStrength = {
+            ...DEFAULT_DRAG_OPTIONS.snapStrength,
+            ...(dragOptions.snapStrength || {}),
+            edge: mergeEdge,
+        };
+        const edgeResistance = {
+            ...DEFAULT_DRAG_OPTIONS.edgeResistance,
+            ...(dragOptions.edgeResistance || {}),
+        };
+        const inertia = {
+            ...DEFAULT_DRAG_OPTIONS.inertia,
+            ...(dragOptions.inertia || {}),
+        };
+        const noiseThreshold = Number.isFinite(dragOptions.noiseThreshold)
+            ? Math.max(0, dragOptions.noiseThreshold)
+            : DEFAULT_DRAG_OPTIONS.noiseThreshold;
+
+        return {
+            snapStrength,
+            edgeResistance,
+            inertia,
+            noiseThreshold,
+        };
+    }
+
+    cancelInertiaMotion = () => {
+        if (this._inertiaFrame && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+            window.cancelAnimationFrame(this._inertiaFrame);
+        }
+        this._inertiaFrame = null;
+        this._inertiaStart = null;
     }
 
     snapToGrid = (value, axis = 'x') => {
@@ -408,23 +488,32 @@ export class Window extends Component {
         });
     }
 
-    setWinowsPosition = () => {
-        const node = this.getWindowNode();
-        if (!node) return;
-        const rect = node.getBoundingClientRect();
+    commitWindowPositionFromPoint = (x, y) => {
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
-        const snappedX = this.snapToGrid(rect.x, 'x');
-        const relativeY = rect.y - topInset;
+        const snappedX = this.snapToGrid(x, 'x');
+        const relativeY = y - topInset;
         const snappedRelativeY = this.snapToGrid(relativeY, 'y');
         const absoluteY = clampWindowTopPosition(snappedRelativeY + topInset, topInset);
-        node.style.setProperty('--window-transform-x', `${snappedX.toFixed(1)}px`);
-        node.style.setProperty('--window-transform-y', `${absoluteY.toFixed(1)}px`);
+        const node = this.getWindowNode();
+        if (node) {
+            node.style.transform = `translate(${snappedX}px, ${absoluteY}px)`;
+            node.style.setProperty('--window-transform-x', `${snappedX.toFixed(1)}px`);
+            node.style.setProperty('--window-transform-y', `${absoluteY.toFixed(1)}px`);
+        }
+        this._dragState.position = { x: snappedX, y: absoluteY };
 
         if (this.props.onPositionChange) {
             this.props.onPositionChange(snappedX, absoluteY);
         }
 
         this.notifySizeChange();
+    }
+
+    setWinowsPosition = () => {
+        const node = this.getWindowNode();
+        if (!node) return;
+        const rect = node.getBoundingClientRect();
+        this.commitWindowPositionFromPoint(rect.x, rect.y);
     }
 
     unsnapWindow = () => {
@@ -488,6 +577,8 @@ export class Window extends Component {
             this.resizeBoundries();
             this.notifySizeChange();
         });
+        this._dragState.velocity = { x: 0, y: 0 };
+        this._dragState.position = { x: region.left, y: region.top };
     }
 
     setInertBackground = () => {
@@ -512,8 +603,11 @@ export class Window extends Component {
         const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
         if (!viewportWidth || !viewportHeight) return;
 
-        const horizontalThreshold = computeEdgeThreshold(viewportWidth);
-        const verticalThreshold = computeEdgeThreshold(viewportHeight);
+        const { snapStrength } = this.getDragOptions();
+        const edgeConfig = snapStrength?.edge;
+
+        const horizontalThreshold = computeEdgeThreshold(viewportWidth, edgeConfig);
+        const verticalThreshold = computeEdgeThreshold(viewportHeight, edgeConfig);
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         const snapBottomInset = measureSnapBottomInset();
         const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset, snapBottomInset);
@@ -560,41 +654,292 @@ export class Window extends Component {
 
     applyEdgeResistance = (node, data) => {
         if (!node || !data) return;
-        const threshold = 30;
-        const resistance = 0.35; // how much to slow near edges
+        const { edgeResistance } = this.getDragOptions();
+        const threshold = Number.isFinite(edgeResistance?.distance) ? Math.max(edgeResistance.distance, 0) : 0;
+        const resistance = Number.isFinite(edgeResistance?.factor) ? clamp(edgeResistance.factor, 0, 1) : 0;
         let { x, y } = data;
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+            return;
+        }
+
         const topBound = this.state.safeAreaTop ?? 0;
         const maxX = this.state.parentSize.width;
         const maxY = topBound + this.state.parentSize.height;
 
         const resist = (pos, min, max) => {
             if (pos < min) return min;
-            if (pos < min + threshold) return min + (pos - min) * resistance;
+            if (threshold > 0 && resistance > 0 && pos < min + threshold) {
+                return min + (pos - min) * resistance;
+            }
             if (pos > max) return max;
-            if (pos > max - threshold) return max - (max - pos) * resistance;
+            if (threshold > 0 && resistance > 0 && pos > max - threshold) {
+                return max - (max - pos) * resistance;
+            }
             return pos;
-        }
+        };
 
-        x = resist(x, 0, maxX);
-        y = resist(y, topBound, maxY);
-        node.style.transform = `translate(${x}px, ${y}px)`;
+        const adjustedX = clamp(resist(x, 0, maxX), 0, maxX);
+        const adjustedY = clamp(resist(y, topBound, maxY), topBound, maxY);
+        node.style.transform = `translate(${adjustedX}px, ${adjustedY}px)`;
+        this._dragState.position = { x: adjustedX, y: adjustedY };
     }
 
-    handleDrag = (e, data) => {
+    applyWindowMagnetism = (node) => {
+        if (typeof document === 'undefined') return false;
+        const { snapStrength } = this.getDragOptions();
+        const threshold = Number.isFinite(snapStrength?.windowNeighbor)
+            ? Math.max(snapStrength.windowNeighbor, 0)
+            : 0;
+        if (threshold <= 0) return false;
+
+        const currentRect = node?.getBoundingClientRect();
+        if (!currentRect) return false;
+
+        const otherWindows = Array.from(document.querySelectorAll('.opened-window'))
+            .filter((el) => el !== node && typeof el.getBoundingClientRect === 'function');
+        if (!otherWindows.length) return false;
+
+        const horizontalCandidates = [];
+        const verticalCandidates = [];
+
+        otherWindows.forEach((el) => {
+            const rect = el.getBoundingClientRect();
+            if (!rect || rect.width === 0 || rect.height === 0) return;
+            const width = currentRect.width;
+            const height = currentRect.height;
+
+            const leftDiff = Math.abs(currentRect.left - rect.left);
+            if (leftDiff <= threshold) {
+                horizontalCandidates.push({ value: rect.left, diff: leftDiff });
+            }
+            const rightDiff = Math.abs(currentRect.right - rect.right);
+            if (rightDiff <= threshold) {
+                horizontalCandidates.push({ value: rect.right - width, diff: rightDiff });
+            }
+            const leftToRight = Math.abs(currentRect.left - rect.right);
+            if (leftToRight <= threshold) {
+                horizontalCandidates.push({ value: rect.right, diff: leftToRight });
+            }
+            const rightToLeft = Math.abs(currentRect.right - rect.left);
+            if (rightToLeft <= threshold) {
+                horizontalCandidates.push({ value: rect.left - width, diff: rightToLeft });
+            }
+
+            const topDiff = Math.abs(currentRect.top - rect.top);
+            if (topDiff <= threshold) {
+                verticalCandidates.push({ value: rect.top, diff: topDiff });
+            }
+            const bottomDiff = Math.abs(currentRect.bottom - rect.bottom);
+            if (bottomDiff <= threshold) {
+                verticalCandidates.push({ value: rect.bottom - height, diff: bottomDiff });
+            }
+            const topToBottom = Math.abs(currentRect.top - rect.bottom);
+            if (topToBottom <= threshold) {
+                verticalCandidates.push({ value: rect.bottom, diff: topToBottom });
+            }
+            const bottomToTop = Math.abs(currentRect.bottom - rect.top);
+            if (bottomToTop <= threshold) {
+                verticalCandidates.push({ value: rect.top - height, diff: bottomToTop });
+            }
+        });
+
+        const selectBest = (candidates) => {
+            if (!candidates.length) return null;
+            return candidates.reduce(
+                (best, candidate) => (best === null || candidate.diff < best.diff ? candidate : best),
+                null,
+            );
+        };
+
+        const bestHorizontal = selectBest(horizontalCandidates);
+        const bestVertical = selectBest(verticalCandidates);
+        if (!bestHorizontal && !bestVertical) return false;
+
+        const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const bounds = {
+            minX: 0,
+            maxX: this.state.parentSize.width,
+            minY: topInset,
+            maxY: topInset + this.state.parentSize.height,
+        };
+
+        const targetX = bestHorizontal ? clamp(bestHorizontal.value, bounds.minX, bounds.maxX) : currentRect.left;
+        const targetY = bestVertical ? clamp(bestVertical.value, bounds.minY, bounds.maxY) : currentRect.top;
+
+        this.commitWindowPositionFromPoint(targetX, targetY);
+        this._dragState.velocity = { x: 0, y: 0 };
+        return true;
+    }
+
+    applyInertiaMotion = (node) => {
+        const { inertia } = this.getDragOptions();
+        if (!inertia?.enabled) return false;
+        if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+            return false;
+        }
+
+        const velocity = this._dragState.velocity || { x: 0, y: 0 };
+        const speed = Math.hypot(velocity.x, velocity.y);
+        if (!Number.isFinite(speed) || speed < Math.max(0, inertia.minVelocity || 0)) {
+            return false;
+        }
+
+        const currentRect = node?.getBoundingClientRect();
+        if (!currentRect) return false;
+
+        const friction = clamp(Number.isFinite(inertia.friction) ? inertia.friction : DEFAULT_DRAG_OPTIONS.inertia.friction, 0, 0.999);
+        const stopVelocity = Math.max(0, Number.isFinite(inertia.stopVelocity) ? inertia.stopVelocity : DEFAULT_DRAG_OPTIONS.inertia.stopVelocity);
+        const maxDuration = Math.max(0, Number.isFinite(inertia.maxDuration) ? inertia.maxDuration : DEFAULT_DRAG_OPTIONS.inertia.maxDuration);
+
+        const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const bounds = {
+            minX: 0,
+            maxX: this.state.parentSize.width,
+            minY: topInset,
+            maxY: topInset + this.state.parentSize.height,
+        };
+
+        let currentX = Number.isFinite(this._dragState.position?.x) ? this._dragState.position.x : currentRect.left;
+        let currentY = Number.isFinite(this._dragState.position?.y) ? this._dragState.position.y : currentRect.top;
+        let vx = velocity.x;
+        let vy = velocity.y;
+
+        const now = typeof performance !== 'undefined' && typeof performance.now === 'function'
+            ? performance.now()
+            : Date.now();
+
+        this.cancelInertiaMotion();
+        this._inertiaStart = now;
+        let lastTimestamp = now;
+
+        const step = (timestamp) => {
+            const frameTime = Number.isFinite(timestamp)
+                ? timestamp
+                : (typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now());
+            const dtSeconds = Math.max((frameTime - lastTimestamp) / 1000, 0);
+            lastTimestamp = frameTime;
+
+            currentX += vx * dtSeconds;
+            currentY += vy * dtSeconds;
+
+            if (currentX < bounds.minX) {
+                currentX = bounds.minX;
+                vx = 0;
+            } else if (currentX > bounds.maxX) {
+                currentX = bounds.maxX;
+                vx = 0;
+            }
+            if (currentY < bounds.minY) {
+                currentY = bounds.minY;
+                vy = 0;
+            } else if (currentY > bounds.maxY) {
+                currentY = bounds.maxY;
+                vy = 0;
+            }
+
+            node.style.transform = `translate(${currentX}px, ${currentY}px)`;
+            this._dragState.position = { x: currentX, y: currentY };
+
+            const dampingFactor = Math.pow(friction, Math.max(dtSeconds * 60, 1));
+            vx *= dampingFactor;
+            vy *= dampingFactor;
+
+            const currentSpeed = Math.hypot(vx, vy);
+            const elapsed = frameTime - this._inertiaStart;
+            if (currentSpeed <= stopVelocity || elapsed >= maxDuration) {
+                this.commitWindowPositionFromPoint(currentX, currentY);
+                this.cancelInertiaMotion();
+                this._dragState.velocity = { x: 0, y: 0 };
+                return;
+            }
+
+            this._inertiaFrame = window.requestAnimationFrame(step);
+        };
+
+        this._inertiaFrame = window.requestAnimationFrame(step);
+        return true;
+    }
+
+    handleDrag = (event, data) => {
+        if (!data) {
+            const now = typeof performance !== 'undefined' && typeof performance.now === 'function'
+                ? performance.now()
+                : Date.now();
+            this._dragState.lastTimestamp = now;
+            this.checkSnapPreview();
+            return;
+        }
+
+        const dragOptions = this.getDragOptions();
+        const pointerType = event?.pointerType || (event?.type && event.type.startsWith('touch') ? 'touch' : null);
+        const noiseMultiplier = pointerType === 'touch' ? 2 : (pointerType === 'pen' ? 1.5 : 1);
+        const noiseThreshold = dragOptions.noiseThreshold * noiseMultiplier;
+
+        const deltaX = Number.isFinite(data?.deltaX) ? data.deltaX : 0;
+        const deltaY = Number.isFinite(data?.deltaY) ? data.deltaY : 0;
+        const ignoreMovement = Math.abs(deltaX) <= noiseThreshold && Math.abs(deltaY) <= noiseThreshold;
+
         if (data && data.node) {
             this.applyEdgeResistance(data.node, data);
+        } else if (Number.isFinite(data?.x) && Number.isFinite(data?.y)) {
+            this._dragState.position = { x: data.x, y: data.y };
         }
-        this.checkSnapPreview();
+
+        const now = typeof performance !== 'undefined' && typeof performance.now === 'function'
+            ? performance.now()
+            : Date.now();
+
+        if (!ignoreMovement && Number.isFinite(deltaX) && Number.isFinite(deltaY)) {
+            const lastTime = this._dragState.lastTimestamp;
+            if (lastTime !== null && now > lastTime) {
+                const dt = (now - lastTime) / 1000;
+                if (dt > 0) {
+                    this._dragState.velocity = {
+                        x: deltaX / dt,
+                        y: deltaY / dt,
+                    };
+                }
+            }
+        }
+
+        this._dragState.lastTimestamp = now;
+
+        if (!ignoreMovement) {
+            this.checkSnapPreview();
+        }
     }
 
     handleStop = () => {
         this.changeCursorToDefault();
+        const node = this.getWindowNode();
+        if (!node) {
+            this._dragState.lastTimestamp = null;
+            return;
+        }
         const snapPos = this.state.snapPosition;
         if (snapPos) {
             this.snapWindow(snapPos);
-        } else {
-            this.setState({ snapPreview: null, snapPosition: null });
+            this._dragState.lastTimestamp = null;
+            return;
         }
+        this.setState({ snapPreview: null, snapPosition: null });
+
+        if (this.applyWindowMagnetism(node)) {
+            this._dragState.lastTimestamp = null;
+            return;
+        }
+
+        if (this.applyInertiaMotion(node)) {
+            this._dragState.lastTimestamp = null;
+            return;
+        }
+
+        const fallbackRect = node.getBoundingClientRect();
+        const finalX = Number.isFinite(this._dragState.position?.x) ? this._dragState.position.x : fallbackRect.left;
+        const finalY = Number.isFinite(this._dragState.position?.y) ? this._dragState.position.y : fallbackRect.top;
+        this.commitWindowPositionFromPoint(finalX, finalY);
+        this._dragState.velocity = { x: 0, y: 0 };
+        this._dragState.lastTimestamp = null;
     }
 
     focusWindow = () => {
@@ -731,7 +1076,7 @@ export class Window extends Component {
                     y += dy;
                     node.style.transform = `translate(${x}px, ${y}px)`;
                     this.checkSnapPreview();
-                    this.setWinowsPosition();
+                    this.commitWindowPositionFromPoint(x, y);
                 }
             }
         }

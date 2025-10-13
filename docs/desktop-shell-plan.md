@@ -13,6 +13,7 @@
 - Hosts the draggable, resizable window primitive, normalizing top insets, safe areas, and snap grid defaults while tracking open/maximized/minimized/focus state on behalf of the shell.【F:components/base/window.js†L69-L138】
 - Calculates snap regions and labels for halves and quarters of the viewport, accounting for safe area insets and taskbar offsets to keep snapping consistent across device orientations.【F:components/base/window.js†L31-L67】
 - Responds to viewport changes by recomputing drag boundaries, safe-area padding, and accessible focus handling, and listens for shell-level events such as `super-arrow` to trigger snapping gestures programmatically.【F:components/base/window.js†L118-L210】
+- Implements configurable drag physics—noise filtering across pointer types, magnetic snaps to workspace edges or sibling windows, and inertia easing that respects desktop bounds—to keep flicks and slow drags predictable on mouse, touch, and pen input.【F:components/base/window.js†L312-L494】【F:__tests__/window.test.tsx†L742-L940】
 
 ### `components/desktop/Layout.tsx`
 - Wraps the desktop surface with shared CSS variables, touch-action rules, and responsive taskbar/desktop icon metrics that downstream shell components rely on for sizing and hit targets.【F:components/desktop/Layout.tsx†L6-L135】
