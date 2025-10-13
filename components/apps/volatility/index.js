@@ -23,17 +23,34 @@ const yarascan = Array.isArray(memoryFixture.yarascan)
   : [];
 const memoryDemo = memoryFixture;
 
-const heuristicColors = {
-  informational: 'border border-sky-500/50 bg-sky-950/60 text-sky-100',
-  suspicious: 'border border-amber-500/60 bg-amber-950/60 text-amber-100 shadow shadow-amber-900/20',
-  malicious: 'border border-rose-500/70 bg-rose-950/70 text-rose-100 shadow-lg shadow-rose-900/30',
+const severityPalette = {
+  informational: {
+    chip:
+      'border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel-highlight)] text-[color:var(--kali-terminal-text)]',
+    row:
+      'border-l border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_96%,transparent)]',
+  },
+  suspicious: {
+    chip:
+      'border border-[color:color-mix(in_srgb,var(--kali-blue)_65%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_86%,rgba(15,148,210,0.25))] text-[color:var(--kali-terminal-text)] shadow-[0_0_10px_color-mix(in_srgb,var(--kali-blue)_32%,transparent)]',
+    row:
+      'border-l-4 border-[color:color-mix(in_srgb,var(--kali-blue)_65%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,rgba(15,148,210,0.22))]',
+  },
+  malicious: {
+    chip:
+      'border border-[color:color-mix(in_srgb,var(--color-error)_70%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,rgba(255,77,109,0.32))] text-[color:var(--kali-terminal-text)] shadow-[0_0_12px_color-mix(in_srgb,var(--color-error)_34%,transparent)]',
+    row:
+      'border-l-4 border-[color:color-mix(in_srgb,var(--color-error)_72%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_84%,rgba(255,77,109,0.3))]',
+  },
 };
 
-const rowSeverityAccent = {
-  informational: '',
-  suspicious: 'border-l-4 border-amber-500/60 bg-amber-950/40',
-  malicious: 'border-l-4 border-rose-500/70 bg-rose-950/50',
-};
+const heuristicColors = Object.fromEntries(
+  Object.entries(severityPalette).map(([key, value]) => [key, value.chip])
+);
+
+const rowSeverityAccent = Object.fromEntries(
+  Object.entries(severityPalette).map(([key, value]) => [key, value.row])
+);
 
 const glossary = {
   pstree: {
@@ -89,15 +106,15 @@ const SortableTable = ({ columns, data, onRowClick, rowClassName }) => {
   };
 
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-800">
-      <table className="min-w-full table-auto text-xs text-gray-200">
-        <thead className="bg-gray-900/80 text-[10px] uppercase tracking-wide text-gray-400">
+    <div className="overflow-hidden rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <table className="min-w-full table-auto text-xs text-[color:var(--color-text)]">
+        <thead className="bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,rgba(15,148,210,0.18))] text-[10px] uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-terminal-text)_70%,rgba(148,210,255,0.32))]">
           <tr>
             {columns.map((col) => (
               <th
                 key={col.key}
                 onClick={() => toggleSort(col.key)}
-                className="cursor-pointer px-3 py-2 text-left transition hover:bg-gray-900"
+                className="cursor-pointer px-3 py-2 text-left transition hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,rgba(15,148,210,0.2))]"
               >
                 {col.label}
                 {sort.key === col.key && (
@@ -111,13 +128,20 @@ const SortableTable = ({ columns, data, onRowClick, rowClassName }) => {
           {sorted.map((row, i) => (
             <tr
               key={i}
-              className={`border-b border-gray-900/60 ${
+              className={`border-b border-[color:color-mix(in_srgb,var(--kali-panel-border)_55%,transparent)] ${
                 rowClassName ? rowClassName(row) : ''
-              } ${onRowClick ? 'cursor-pointer hover:bg-gray-900/80' : ''}`}
+              } ${
+                onRowClick
+                  ? 'cursor-pointer hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_86%,rgba(15,148,210,0.2))]'
+                  : ''
+              }`}
               onClick={() => onRowClick && onRowClick(row)}
             >
               {columns.map((col) => (
-                <td key={col.key} className="px-3 py-2 whitespace-nowrap text-[11px]">
+                <td
+                  key={col.key}
+                  className="px-3 py-2 whitespace-nowrap text-[11px] text-[color:color-mix(in_srgb,var(--kali-terminal-text)_82%,rgba(148,210,255,0.18))]"
+                >
                   {col.render ? col.render(row) : row[col.key]}
                 </td>
               ))}
@@ -193,8 +217,8 @@ const VolatilityApp = () => {
   ];
 
   return (
-    <div className="flex h-full w-full flex-col gap-4 rounded-2xl border border-gray-800 bg-gray-950/80 text-white shadow-xl shadow-black/40">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-800 bg-black/40 px-4 py-3">
+    <div className="flex h-full w-full flex-col gap-4 rounded-2xl border border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_96%,rgba(4,12,20,0.35))] text-white shadow-xl shadow-black/40">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,rgba(4,24,36,0.35))] px-4 py-3">
         <div>
           <h1 className="text-lg font-semibold uppercase tracking-wide text-gray-100">
             Volatility analyzer
@@ -224,10 +248,10 @@ const VolatilityApp = () => {
       <div className="px-4 pt-2">
         <MemoryHeatmap data={heatmapData} />
       </div>
-      <div className="flex flex-1 flex-col gap-4 px-4 pb-4">
+      <div className="flex flex-1 flex-col gap-4 px-4 pb-4 text-[color:var(--kali-terminal-text)]">
         <div className="flex flex-col gap-4 lg:flex-row">
-          <div className="flex-1 overflow-hidden rounded-xl border border-gray-800 bg-black/40">
-            <div className="flex flex-wrap items-center gap-2 border-b border-gray-800 bg-gray-900/60 px-3 py-2 text-[11px] uppercase tracking-wide text-gray-300">
+          <div className="flex-1 overflow-hidden rounded-xl border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] shadow-[0_20px_40px_rgba(5,12,20,0.45)]">
+            <div className="flex flex-wrap items-center gap-2 border-b border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,rgba(15,148,210,0.16))] px-3 py-2 text-[11px] uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-terminal-text)_70%,rgba(148,210,255,0.28))]">
               {tabs.map((tab) => (
                 <button
                   key={tab}
@@ -242,19 +266,19 @@ const VolatilityApp = () => {
                 </button>
               ))}
             </div>
-            <div className="flex-1 overflow-auto p-3 text-xs text-gray-200">
+            <div className="flex-1 overflow-auto p-3 text-xs text-[color:var(--color-text)]">
               {activeTab === 'pstree' && (
                 <div className="space-y-3">
                   <p className="text-[11px] text-gray-400">{glossary.pstree.description}</p>
                   <div className="flex flex-col gap-4 xl:flex-row">
-                    <ul className="space-y-2 rounded-lg border border-gray-800 bg-gray-900/60 p-3 text-xs">
+                    <ul className="space-y-2 rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] p-3 text-xs">
                       {pstree.map((node) => (
                         <TreeNode key={node.pid} node={node} />
                       ))}
                     </ul>
                     <div className="flex-1">
                       {selectedPid ? (
-                        <div className="space-y-2 rounded-lg border border-gray-800 bg-gray-900/60 p-3">
+                        <div className="space-y-2 rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] p-3">
                           <h3 className="text-sm font-semibold text-white">
                             Modules for PID {selectedPid}
                           </h3>
@@ -268,7 +292,7 @@ const VolatilityApp = () => {
                           />
                         </div>
                       ) : (
-                        <p className="rounded-lg border border-dashed border-gray-700 bg-gray-900/40 p-4 text-[11px] text-gray-400">
+                        <p className="rounded-lg border border-dashed border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_94%,transparent)] p-4 text-[11px] text-gray-400">
                           Select a process to view modules.
                         </p>
                       )}
@@ -335,10 +359,10 @@ const VolatilityApp = () => {
                         key: 'heuristic',
                         label: 'Heuristic',
                         render: (row) => (
-                          <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${
-                              heuristicColors[row.heuristic] || 'bg-gray-800 text-gray-200'
-                            }`}
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${
+                                heuristicColors[row.heuristic] ?? severityPalette.informational.chip
+                              }`}
                           >
                             {row.heuristic}
                           </span>
@@ -356,7 +380,7 @@ const VolatilityApp = () => {
             </div>
           </div>
           {finding && (
-            <aside className="w-full rounded-xl border border-gray-800 bg-gray-900/80 p-4 text-xs shadow-inner lg:w-72">
+            <aside className="w-full rounded-xl border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] p-4 text-xs shadow-inner lg:w-72">
               <h3 className="text-sm font-semibold text-white">Explain this finding</h3>
               <p className="mt-2 text-[11px] text-gray-300">{finding.description}</p>
               <a
@@ -379,11 +403,15 @@ const VolatilityApp = () => {
         </div>
       </div>
       {output && (
-        <div className="mx-4 mb-4 overflow-auto rounded-xl border border-gray-800 bg-black/70 text-xs font-mono text-gray-200 shadow-inner">
+        <div className="mx-4 mb-4 overflow-auto rounded-xl border border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,rgba(2,20,14,0.35))] text-xs font-mono text-[color:var(--kali-terminal-text)] shadow-inner shadow-[0_0_18px_color-mix(in_srgb,var(--kali-terminal-green)_20%,transparent)]">
           {output.split('\n').map((line, i) => (
             <div
               key={i}
-              className={`px-3 py-1 ${i % 2 ? 'bg-gray-900/80' : 'bg-gray-900/40'}`}
+              className={`px-3 py-1 text-[color:var(--kali-terminal-green)] ${
+                i % 2
+                  ? 'bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,rgba(4,32,24,0.45))]'
+                  : 'bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,rgba(2,24,16,0.35))]'
+              }`}
             >
               {line || '\u00A0'}
             </div>
