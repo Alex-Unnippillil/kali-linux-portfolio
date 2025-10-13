@@ -48,7 +48,9 @@
   --game-color-danger: #b91c1c;
 
   /* Spacing scale */
+  --space-0-5: 0.125rem;
   --space-1: 0.25rem;
+  --space-1-5: 0.375rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
   --space-4: 1rem;
@@ -61,6 +63,15 @@
   --space-mobile-4: 1.25rem;
   --space-mobile-5: 1.5rem;
   --space-mobile-6: 2rem;
+  /* Stack spacing tokens */
+  --stack-space-0-5: var(--space-0-5);
+  --stack-space-1: var(--space-1);
+  --stack-space-1-5: var(--space-1-5);
+  --stack-space-2: var(--space-2);
+  --stack-space-3: var(--space-3);
+  --stack-space-4: var(--space-4);
+  --stack-space-6: var(--space-5);
+  --stack-space-8: var(--space-6);
 
   /* Radius */
   --radius-sm: 2px;
@@ -70,7 +81,8 @@
   --radius-round: 9999px;
 
   /* Elevation */
-  --shadow-2: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
+  --shadow-window: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
+  --shadow-panel: 0 6px 20px rgba(0, 0, 0, 0.35);
 
   /* Window chrome */
   --color-window-border: #12344a;
@@ -131,6 +143,19 @@
     --motion-fast: 0ms;
     --motion-medium: 0ms;
     --motion-slow: 0ms;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --stack-space-0-5: calc(var(--space-mobile-1) / 2);
+    --stack-space-1: calc(var(--space-mobile-1) * 0.75);
+    --stack-space-1-5: calc(var(--space-mobile-1) * 1.25);
+    --stack-space-2: var(--space-mobile-1);
+    --stack-space-3: var(--space-mobile-2);
+    --stack-space-4: var(--space-mobile-3);
+    --stack-space-6: var(--space-mobile-4);
+    --stack-space-8: var(--space-mobile-5);
   }
 }
 
