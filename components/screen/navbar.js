@@ -51,6 +51,8 @@ export default class Navbar extends PureComponent {
                 this.taskbarListRef = React.createRef();
                 this.draggingAppId = null;
                 this.pendingReorder = null;
+                this.pendingFocusAppId = null;
+                this.taskbarInstructionsId = 'taskbar-reorder-instructions';
         }
 
         componentDidMount() {
@@ -101,9 +103,17 @@ export default class Navbar extends PureComponent {
         };
 
         handleAppButtonKeyDown = (event, app) => {
-                if (event.key === 'Enter' || event.key === ' ') {
+                const { key, altKey } = event;
+                if (key === 'Enter' || key === ' ') {
                         event.preventDefault();
                         this.handleAppButtonClick(app);
+                        return;
+                }
+
+                if (altKey && (key === 'ArrowLeft' || key === 'ArrowRight')) {
+                        event.preventDefault();
+                        const direction = key === 'ArrowLeft' ? -1 : 1;
+                        this.moveRunningApp(app.id, direction);
                 }
         };
 
@@ -112,23 +122,29 @@ export default class Navbar extends PureComponent {
                 if (!runningApps.length) return null;
 
                 return (
-                        <ul
-                                ref={this.taskbarListRef}
-                                className="flex max-w-[40vw] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
-                                role="list"
-                                aria-label="Open applications"
-                                onDragOver={this.handleTaskbarDragOver}
-                                onDrop={this.handleTaskbarDrop}
-                        >
-                                {runningApps.map((app) => this.renderRunningAppItem(app))}
-                        </ul>
+                        <>
+                                <span id={this.taskbarInstructionsId} className="sr-only">
+                                        Focus an open application and press Alt plus the left or right arrow keys to move it. You can also use the move buttons on each item to reorder without a mouse.
+                                </span>
+                                <ul
+                                        ref={this.taskbarListRef}
+                                        className="flex max-w-[40vw] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
+                                        role="list"
+                                        aria-label="Open applications"
+                                        aria-describedby={this.taskbarInstructionsId}
+                                        onDragOver={this.handleTaskbarDragOver}
+                                        onDrop={this.handleTaskbarDrop}
+                                >
+                                        {runningApps.map((app) => this.renderRunningAppItem(app))}
+                                </ul>
+                        </>
                 );
         };
 
         renderRunningAppItem = (app) => (
                 <li
                         key={app.id}
-                        className="flex"
+                        className="group flex items-center"
                         draggable
                         data-app-id={app.id}
                         role="listitem"
@@ -138,6 +154,26 @@ export default class Navbar extends PureComponent {
                         onDragEnd={this.handleAppDragEnd}
                 >
                         {this.renderRunningAppButton(app)}
+                        <div className="ml-1 flex items-center gap-1 opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100">
+                                <button
+                                        type="button"
+                                        className="rounded border border-white/10 px-1 text-[10px] leading-tight text-white/70 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]"
+                                        onClick={(event) => this.handleMoveButtonClick(event, app.id, -1)}
+                                        aria-label={`Move ${app.title} left`}
+                                        title="Move left"
+                                >
+                                        ←
+                                </button>
+                                <button
+                                        type="button"
+                                        className="rounded border border-white/10 px-1 text-[10px] leading-tight text-white/70 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]"
+                                        onClick={(event) => this.handleMoveButtonClick(event, app.id, 1)}
+                                        aria-label={`Move ${app.title} right`}
+                                        title="Move right"
+                                >
+                                        →
+                                </button>
+                        </div>
                 </li>
         );
 
@@ -150,6 +186,7 @@ export default class Navbar extends PureComponent {
                                 type="button"
                                 aria-label={app.title}
                                 aria-pressed={isActive}
+                                aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
                                 data-context="taskbar"
                                 data-app-id={app.id}
                                 data-active={isActive ? 'true' : 'false'}
@@ -220,6 +257,12 @@ export default class Navbar extends PureComponent {
                 this.draggingAppId = null;
         };
 
+        handleMoveButtonClick = (event, appId, direction) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.moveRunningApp(appId, direction);
+        };
+
         getDragSourceId = (event) => {
                 const transfer = event.dataTransfer;
                 if (transfer) {
@@ -241,6 +284,10 @@ export default class Navbar extends PureComponent {
                         if (this.pendingReorder) {
                                 this.dispatchTaskbarCommand({ action: 'reorder', order: this.pendingReorder });
                                 this.pendingReorder = null;
+                        }
+                        if (this.pendingFocusAppId) {
+                                this.focusAppButton(this.pendingFocusAppId);
+                                this.pendingFocusAppId = null;
                         }
                 });
         };
@@ -276,6 +323,38 @@ export default class Navbar extends PureComponent {
                 if (unchanged) return null;
 
                 return list;
+        };
+
+        moveRunningApp = (appId, offset) => {
+                if (!offset) return;
+                const { runningApps } = this.state;
+                const currentIndex = runningApps.findIndex((item) => item.id === appId);
+                if (currentIndex === -1) return;
+
+                let newIndex = currentIndex + offset;
+                if (newIndex < 0) newIndex = 0;
+                if (newIndex > runningApps.length - 1) newIndex = runningApps.length - 1;
+                if (newIndex === currentIndex) return;
+
+                const targetApp = runningApps[newIndex];
+                const insertAfter = newIndex > currentIndex;
+
+                this.pendingFocusAppId = appId;
+
+                if (!targetApp || targetApp.id === appId) {
+                        this.reorderRunningApps(appId, null, insertAfter);
+                        return;
+                }
+
+                this.reorderRunningApps(appId, targetApp.id, insertAfter);
+        };
+
+        focusAppButton = (appId) => {
+                if (!this.taskbarListRef.current) return;
+                const button = this.taskbarListRef.current.querySelector(`button[data-app-id="${appId}"]`);
+                if (button && typeof button.focus === 'function') {
+                        button.focus();
+                }
         };
 
         handleWorkspaceSelect = (workspaceId) => {

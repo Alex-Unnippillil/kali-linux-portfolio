@@ -2,13 +2,37 @@ import React from 'react';
 import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import Navbar from '../components/screen/navbar';
 
-jest.mock('../components/util-components/clock', () => () => <div data-testid="clock" />);
-jest.mock('../components/util-components/status', () => () => <div data-testid="status" />);
-jest.mock('../components/ui/QuickSettings', () => ({ open }: { open: boolean }) => (
-  <div data-testid="quick-settings">{open ? 'open' : 'closed'}</div>
-));
-jest.mock('../components/menu/WhiskerMenu', () => () => <button type="button">Menu</button>);
-jest.mock('../components/ui/PerformanceGraph', () => () => <div data-testid="performance" />);
+jest.mock('../components/util-components/clock', () => {
+  const MockClock = () => <div data-testid="clock" />;
+  MockClock.displayName = 'MockClock';
+  return MockClock;
+});
+
+jest.mock('../components/util-components/status', () => {
+  const MockStatus = () => <div data-testid="status" />;
+  MockStatus.displayName = 'MockStatus';
+  return MockStatus;
+});
+
+jest.mock('../components/ui/QuickSettings', () => {
+  const MockQuickSettings = ({ open }: { open: boolean }) => (
+    <div data-testid="quick-settings">{open ? 'open' : 'closed'}</div>
+  );
+  MockQuickSettings.displayName = 'MockQuickSettings';
+  return MockQuickSettings;
+});
+
+jest.mock('../components/menu/WhiskerMenu', () => {
+  const MockWhiskerMenu = () => <button type="button">Menu</button>;
+  MockWhiskerMenu.displayName = 'MockWhiskerMenu';
+  return MockWhiskerMenu;
+});
+
+jest.mock('../components/ui/PerformanceGraph', () => {
+  const MockPerformanceGraph = () => <div data-testid="performance" />;
+  MockPerformanceGraph.displayName = 'MockPerformanceGraph';
+  return MockPerformanceGraph;
+});
 
 const workspaceEventDetail = {
   workspaces: [
@@ -101,7 +125,9 @@ describe('Navbar running apps tray', () => {
 
     dispatchSpy.mockClear();
 
-    const button = screen.getByRole('button', { name: /app one/i });
+    const button = screen
+      .getAllByRole('button', { name: /app one/i })
+      .find((element) => element.hasAttribute('aria-pressed'))!;
     fireEvent.click(button);
 
     const taskbarEventCall = dispatchSpy.mock.calls.find(([event]) => event.type === 'taskbar-command');
@@ -136,7 +162,9 @@ describe('Navbar running apps tray', () => {
       );
     });
 
-    const button = screen.getByRole('button', { name: /app two/i });
+    const button = screen
+      .getAllByRole('button', { name: /app two/i })
+      .find((element) => element.hasAttribute('aria-pressed'))!;
     expect(button).toHaveAttribute('aria-pressed', 'false');
     expect(button).toHaveAttribute('data-active', 'false');
     expect(button.querySelector('[data-testid="running-indicator"]')).toBeFalsy();
@@ -180,8 +208,11 @@ describe('Navbar running apps tray', () => {
       fireEvent.dragEnd(firstItem, { dataTransfer });
     });
 
-    const buttons = within(list).getAllByRole('button', { name: /app/i });
-    expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual([
+    const appButtons = within(list)
+      .getAllByRole('button')
+      .filter((button) => button.hasAttribute('aria-pressed'));
+
+    expect(appButtons.map((button) => button.getAttribute('aria-label'))).toEqual([
       'App Two',
       'App Three',
       'App One',
@@ -193,5 +224,59 @@ describe('Navbar running apps tray', () => {
       action: 'reorder',
       order: ['app2', 'app3', 'app1'],
     });
+  });
+
+  it('reorders running apps with keyboard shortcuts and move buttons', () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('workspace-state', { detail: multiAppWorkspaceDetail }));
+    });
+
+    const list = screen.getByRole('list', { name: /open applications/i });
+
+    const getAppButtons = () =>
+      within(list)
+        .getAllByRole('button')
+        .filter((button) => button.getAttribute('aria-label') && button.hasAttribute('aria-pressed'))
+        .map((button) => button.getAttribute('aria-label'));
+
+    const focusAppButton = (label: string) => {
+      const target = within(list)
+        .getAllByRole('button')
+        .find((button) => button.getAttribute('aria-label') === label && button.hasAttribute('aria-pressed'));
+      expect(target).toBeDefined();
+      target!.focus();
+      return target!;
+    };
+
+    const appOneButton = focusAppButton('App One');
+    expect(appOneButton).toHaveAttribute('aria-keyshortcuts', 'Alt+ArrowLeft Alt+ArrowRight');
+
+    act(() => {
+      fireEvent.keyDown(appOneButton, { key: 'ArrowRight', altKey: true });
+    });
+
+    expect(getAppButtons()).toEqual(['App Two', 'App One', 'App Three']);
+
+    const updatedAppOneButton = within(list)
+      .getAllByRole('button')
+      .find((button) => button.getAttribute('aria-label') === 'App One' && button.hasAttribute('aria-pressed'));
+    expect(updatedAppOneButton).toBeDefined();
+    expect(document.activeElement).toBe(updatedAppOneButton);
+
+    const moveRightButton = within(list).getByRole('button', { name: /move app one right/i });
+
+    act(() => {
+      fireEvent.click(moveRightButton);
+    });
+
+    expect(getAppButtons()).toEqual(['App Two', 'App Three', 'App One']);
+
+    const finalAppOneButton = within(list)
+      .getAllByRole('button')
+      .find((button) => button.getAttribute('aria-label') === 'App One' && button.hasAttribute('aria-pressed'));
+    expect(finalAppOneButton).toBeDefined();
+    expect(document.activeElement).toBe(finalAppOneButton);
   });
 });
