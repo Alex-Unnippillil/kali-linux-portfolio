@@ -94,26 +94,82 @@
 }
 
 .windowTitlebar {
-  height: 28px;
+  min-height: var(--window-titlebar-height);
   border-top-left-radius: calc(var(--radius-6) - 1px);
   border-top-right-radius: calc(var(--radius-6) - 1px);
   position: relative;
   z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--window-control-padding-inline);
+  padding-block: var(--window-control-padding-block);
 }
 
 .windowControls {
-  height: 28px;
+  position: absolute;
+  top: 0;
+  right: var(--window-control-padding-inline);
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--window-control-gap);
+  padding-inline: var(--window-control-padding-inline);
+  padding-block: var(--window-control-padding-block);
+  min-height: var(--window-titlebar-height);
+  min-width: calc((var(--window-control-size) * 3) + (var(--window-control-gap) * 2));
+  user-select: none;
+  z-index: 2;
 }
 
 .windowControlButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--window-control-size);
+  height: var(--window-control-size);
+  min-width: var(--window-control-size);
+  min-height: var(--window-control-size);
+  border-radius: var(--radius-round);
+  border: 1px solid transparent;
+  background-color: var(--color-window-control-bg);
+  color: inherit;
   outline: none;
   box-shadow: none;
-  transition: box-shadow var(--motion-fast) ease;
+  transition:
+    background-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
+    transform var(--motion-fast) ease;
+  touch-action: manipulation;
+}
+
+.windowControlButton:hover {
+  background-color: var(--color-window-control-hover);
+}
+
+.windowControlButton:active {
+  background-color: var(--color-window-control-active);
+  transform: scale(0.98);
 }
 
 .windowControlButton:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--color-window-accent);
+  outline: var(--focus-outline-width) solid var(--color-window-control-focus);
+  outline-offset: 2px;
+  background-color: var(--color-window-control-hover);
+}
+
+.windowControlButtonClose {
+  background-color: var(--color-window-control-danger-bg);
+  color: var(--color-text);
+}
+
+.windowControlButtonClose:hover {
+  background-color: var(--color-window-control-danger-hover);
+}
+
+.windowControlButtonClose:active {
+  background-color: var(--color-window-control-danger-active);
 }
 
 .windowYBorder {

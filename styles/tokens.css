@@ -85,7 +85,20 @@
   --font-family-base: 'Rajdhani', 'Segoe UI', sans-serif;
   --font-multiplier: 1;
   /* Minimum interactive target size */
-  --hit-area: 32px;
+  --hit-area: 44px;
+  --window-titlebar-height: var(--hit-area);
+  --window-control-size: var(--hit-area);
+  --window-control-gap: var(--space-1);
+  --window-control-padding-inline: var(--space-2);
+  --window-control-padding-block: calc((var(--window-titlebar-height) - var(--window-control-size)) / 2);
+  /* Window control colors */
+  --color-window-control-bg: rgba(255, 255, 255, 0.08);
+  --color-window-control-hover: rgba(255, 255, 255, 0.18);
+  --color-window-control-active: rgba(255, 255, 255, 0.28);
+  --color-window-control-danger-bg: color-mix(in srgb, var(--color-ub-cool-grey) 92%, transparent 8%);
+  --color-window-control-danger-hover: color-mix(in srgb, var(--color-ub-cool-grey) 92%, rgba(255, 255, 255, 0.16));
+  --color-window-control-danger-active: color-mix(in srgb, var(--color-ub-cool-grey) 92%, rgba(255, 255, 255, 0.28));
+  --color-window-control-focus: var(--kali-blue);
   /* Focus outline */
   --focus-outline-color: var(--kali-blue);
   --focus-outline-width: 2px;
@@ -116,7 +129,7 @@
 
 /* Larger hit areas */
 .large-hit-area {
-  --hit-area: 48px;
+  --hit-area: 56px;
 }
 
 /* Reduced motion */
