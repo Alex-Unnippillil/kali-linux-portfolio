@@ -1,4 +1,7 @@
-const CACHE_NAME = 'periodic-cache-v1';
+const CACHE_PREFIX = 'periodic-cache';
+const BUILD_ID_ENDPOINT = '/_next/static/BUILD_ID';
+const FALLBACK_BUILD_ID = 'fallback';
+
 const ASSETS = [
   '/apps/weather.js',
   '/feeds',
@@ -13,8 +16,44 @@ const ASSETS = [
   '/manifest.webmanifest',
 ];
 
+let cacheNamePromise;
+
+function sanitizeBuildId(raw) {
+  if (typeof raw !== 'string') return undefined;
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  return trimmed.replace(/[^a-zA-Z0-9_-]/g, '-');
+}
+
+async function resolveCacheName() {
+  if (!cacheNamePromise) {
+    cacheNamePromise = (async () => {
+      try {
+        const response = await fetch(BUILD_ID_ENDPOINT, { cache: 'no-store' });
+        if (response.ok) {
+          const text = sanitizeBuildId(await response.text());
+          if (text) {
+            return `${CACHE_PREFIX}-${text}`;
+          }
+        }
+      } catch (err) {
+        // Ignore build ID resolution failures and fall back to a static name.
+      }
+
+      return `${CACHE_PREFIX}-${FALLBACK_BUILD_ID}`;
+    })();
+  }
+
+  return cacheNamePromise;
+}
+
+async function openScopedCache() {
+  const cacheName = await resolveCacheName();
+  return caches.open(cacheName);
+}
+
 async function prefetchAssets() {
-  const cache = await caches.open(CACHE_NAME);
+  const cache = await openScopedCache();
   await Promise.all(
     ASSETS.map(async (url) => {
       try {
@@ -30,7 +69,29 @@ async function prefetchAssets() {
 }
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(prefetchAssets());
+  event.waitUntil(
+    prefetchAssets().then(() => self.skipWaiting && self.skipWaiting()),
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    (async () => {
+      const currentCacheName = await resolveCacheName();
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter(
+            (name) => name.startsWith(`${CACHE_PREFIX}-`) && name !== currentCacheName,
+          )
+          .map((name) => caches.delete(name)),
+      );
+
+      if (self.clients && self.clients.claim) {
+        await self.clients.claim();
+      }
+    })(),
+  );
 });
 
 self.addEventListener('periodicsync', (event) => {
@@ -51,7 +112,7 @@ self.addEventListener('fetch', (event) => {
 
   if (url.pathname.startsWith('/apps/')) {
     event.respondWith(
-      caches.open(CACHE_NAME).then(async (cache) => {
+      openScopedCache().then(async (cache) => {
         try {
           const response = await fetch(request);
           if (response.ok) {
@@ -59,7 +120,11 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         } catch (err) {
-          return cache.match(request);
+          const cached = await cache.match(request);
+          if (cached) {
+            return cached;
+          }
+          return caches.match(request);
         }
       }),
     );
