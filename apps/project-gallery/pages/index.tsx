@@ -225,7 +225,7 @@ function ProjectCard({
 
   return (
     <div className="relative h-full">
-      <div className="absolute inset-y-0 right-0 flex w-40 bg-[var(--color-accent)] text-slate-900 shadow-[inset_1px_0_0_rgba(255,255,255,0.18)] sm:hidden">
+      <div className="absolute inset-y-0 right-0 flex w-40 bg-kali-control text-black shadow-[inset_1px_0_0_rgba(255,255,255,0.18)] sm:hidden">
         <button
           type="button"
           className="w-1/2 border-r border-black/10 px-3 text-sm font-medium transition hover:bg-black/10"
@@ -258,7 +258,7 @@ function ProjectCard({
       >
         <div className="flex flex-col gap-4 p-5 sm:flex-row">
           <div className="sm:w-52 sm:flex-none">
-            <div className="aspect-[4/3] w-full overflow-hidden rounded-lg bg-white/10">
+            <div className="aspect-[4/3] w-full overflow-hidden rounded-lg bg-kali-surface/60">
               <img src={project.thumbnail} alt={project.title} className="h-full w-full object-cover" />
             </div>
           </div>
@@ -297,7 +297,7 @@ function ProjectCard({
                     {project.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide text-white/80"
+                        className="rounded-full border border-kali-control/30 bg-kali-control/10 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide text-kali-control"
                       >
                         {tag}
                       </span>
@@ -309,7 +309,7 @@ function ProjectCard({
             <div className="hidden gap-3 sm:flex">
               <button
                 type="button"
-                className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-slate-900 shadow-[0_10px_30px_rgba(15,148,210,0.25)] transition hover:bg-[color-mix(in_srgb,var(--color-accent)_85%,#000000)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+                className="rounded-md bg-kali-control px-4 py-2 text-sm font-semibold text-black shadow-[0_10px_30px_rgba(15,148,210,0.25)] transition hover:bg-kali-control/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
                 onClick={() => onOpen(project)}
               >
                 Open
@@ -319,8 +319,8 @@ function ProjectCard({
                 data-testid={`compare-${project.id}`}
                 className={`rounded-md border px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] ${
                   isSelectedForCompare
-                    ? 'border-kali-control bg-[color-mix(in_srgb,var(--color-control-accent)_15%,transparent)] text-kali-control shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]'
-                    : 'border-kali-control text-kali-control hover:bg-[color-mix(in_srgb,var(--color-control-accent)_15%,transparent)]'
+                    ? 'border-kali-control bg-kali-control/20 text-kali-control shadow-[inset_0_0_0_1px_rgba(15,148,210,0.35)]'
+                    : 'border-kali-control text-kali-control hover:bg-kali-control/10'
                 }`}
                 onClick={() => onCompare(project)}
                 aria-pressed={isSelectedForCompare}
@@ -547,7 +547,7 @@ export default function ProjectGalleryPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Search projects"
-            className="w-full max-w-xs rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white shadow-sm transition placeholder:text-white/40 focus:border-kali-control focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-control-accent)_35%,transparent)]"
+            className="w-full max-w-xs rounded-lg border border-white/15 bg-kali-surface/70 px-3 py-2 text-sm text-white shadow-sm transition placeholder:text-white/50 focus:border-kali-control focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--color-control-accent)_35%,transparent)]"
           />
           <FilterChip
             label="Playable"
@@ -608,11 +608,11 @@ export default function ProjectGalleryPage() {
           {loading
             ? Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="space-y-4 rounded-xl border border-white/10 bg-[var(--kali-panel)] p-5 shadow-kali-panel">
-                  <div className="aspect-[4/3] w-full rounded-lg bg-white/10" />
+                  <div className="aspect-[4/3] w-full rounded-lg bg-kali-surface/70" />
                   <div className="space-y-2">
-                    <div className="h-4 w-3/4 rounded bg-white/10" />
-                    <div className="h-3 w-2/3 rounded bg-white/10" />
-                    <div className="h-3 w-1/2 rounded bg-white/10" />
+                    <div className="h-4 w-3/4 rounded bg-kali-surface/70" />
+                    <div className="h-3 w-2/3 rounded bg-kali-surface/70" />
+                    <div className="h-3 w-1/2 rounded bg-kali-surface/70" />
                   </div>
                 </div>
               ))
@@ -630,7 +630,7 @@ export default function ProjectGalleryPage() {
               ))}
         </div>
         {!loading && filtered.length === 0 && (
-          <div className="rounded-xl border border-dashed border-white/15 bg-white/5 p-8 text-center text-sm text-white/70 shadow-kali-panel">
+          <div className="rounded-xl border border-dashed border-white/15 bg-kali-surface/80 p-8 text-center text-sm text-white/70 shadow-kali-panel">
             <p className="text-base font-semibold text-white">No projects match your filters.</p>
             <p className="mt-2 leading-relaxed">
               Use the filter chips above to add or remove stacks, tags, or years and rediscover the full catalog.
@@ -657,7 +657,7 @@ export default function ProjectGalleryPage() {
               type="button"
               onClick={handleResetComparison}
               aria-label="Dismiss comparison tray"
-              className="rounded-full border border-white/10 p-1.5 text-white/70 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+              className="rounded-full border border-white/10 p-1.5 text-white/70 transition hover:bg-kali-control/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
             >
               <CloseIcon />
             </button>
@@ -673,7 +673,7 @@ export default function ProjectGalleryPage() {
                   type="button"
                   onClick={() => handleCompare(project)}
                   aria-label={`Remove ${project.title} from comparison`}
-                  className="rounded-full border border-transparent p-1.5 text-white/60 transition hover:border-white/10 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+                  className="rounded-full border border-transparent p-1.5 text-white/60 transition hover:border-kali-control/40 hover:bg-kali-control/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
                 >
                   <CloseIcon />
                 </button>
@@ -683,7 +683,7 @@ export default function ProjectGalleryPage() {
           <div className="flex gap-3 border-t border-white/10 px-5 py-4">
             <button
               type="button"
-              className="flex-1 rounded-md bg-[var(--color-accent)] px-4 py-2.5 text-sm font-semibold text-slate-900 shadow-[0_10px_30px_rgba(15,148,210,0.25)] transition hover:bg-[color-mix(in_srgb,var(--color-accent)_85%,#000000)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/50"
+              className="flex-1 rounded-md bg-kali-control px-4 py-2.5 text-sm font-semibold text-black shadow-[0_10px_30px_rgba(15,148,210,0.25)] transition hover:bg-kali-control/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:cursor-not-allowed disabled:bg-kali-control/30 disabled:text-white/60"
               onClick={handleStartCompare}
               disabled={compareSelection.length !== 2}
             >
@@ -691,7 +691,7 @@ export default function ProjectGalleryPage() {
             </button>
             <button
               type="button"
-              className="flex-1 rounded-md border border-white/15 px-4 py-2.5 text-sm font-semibold text-white/80 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+              className="flex-1 rounded-md border border-white/15 px-4 py-2.5 text-sm font-semibold text-white/80 transition hover:bg-kali-surface/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
               onClick={handleResetComparison}
             >
               Reset

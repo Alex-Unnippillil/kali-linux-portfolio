@@ -15,15 +15,15 @@ export default function FilterChip({ label, active, onClick, icon }: FilterChipP
       aria-pressed={active}
       className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] ${
         active
-          ? 'border-kali-control bg-kali-control text-slate-900 shadow-[0_0_18px_rgba(15,148,210,0.35)]'
-          : 'border-white/15 bg-white/5 text-white/80 hover:border-kali-control hover:bg-white/10 hover:text-white'
+          ? 'border-kali-control bg-kali-control text-black shadow-[0_0_18px_rgba(15,148,210,0.35)] hover:bg-kali-control/90'
+          : 'border-white/12 bg-kali-surface/70 text-white/75 hover:border-kali-control hover:bg-kali-control/20 hover:text-white'
       }`}
     >
       <span
         className={`flex h-6 w-6 items-center justify-center rounded-full border text-xs ${
           active
-            ? 'border-black/10 bg-black/10 text-slate-900'
-            : 'border-white/15 bg-white/10 text-white/70'
+            ? 'border-black/20 bg-black/10 text-black'
+            : 'border-kali-control/40 bg-kali-control/10 text-kali-control'
         }`}
         aria-hidden="true"
       >
