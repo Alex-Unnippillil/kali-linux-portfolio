@@ -14,6 +14,7 @@ import {
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
+import SnapPreview from './SnapPreview';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET } from '../../utils/uiConstants';
 
 const EDGE_THRESHOLD_MIN = 48;
@@ -27,21 +28,6 @@ const computeEdgeThreshold = (size) => clamp(size * EDGE_THRESHOLD_RATIO, EDGE_T
 const percentOf = (value, total) => {
     if (!total) return 0;
     return (value / total) * 100;
-};
-
-const SNAP_LABELS = {
-    left: 'Snap left half',
-    right: 'Snap right half',
-    top: 'Snap full screen',
-    'top-left': 'Snap top-left quarter',
-    'top-right': 'Snap top-right quarter',
-    'bottom-left': 'Snap bottom-left quarter',
-    'bottom-right': 'Snap bottom-right quarter',
-};
-
-const getSnapLabel = (position) => {
-    if (!position) return 'Snap window';
-    return SNAP_LABELS[position] || 'Snap window';
 };
 
 const normalizeRightCornerSnap = (candidate, regions) => {
@@ -119,6 +105,7 @@ export class Window extends Component {
             safeAreaTop: initialTopInset,
             snapPreview: null,
             snapPosition: null,
+            snapViewport: null,
             snapped: null,
             lastSize: null,
             grabbed: false,
@@ -479,6 +466,7 @@ export class Window extends Component {
         this.setState({
             snapPreview: null,
             snapPosition: null,
+            snapViewport: null,
             snapped: resolvedPosition,
             lastSize: { width, height },
             width: percentOf(region.width, viewportWidth),
@@ -551,10 +539,14 @@ export class Window extends Component {
                 this.state.snapPreview.width === preview.width &&
                 this.state.snapPreview.height === preview.height;
             if (!samePosition || !samePreview) {
-                this.setState({ snapPreview: preview, snapPosition: position });
+                this.setState({
+                    snapPreview: preview,
+                    snapPosition: position,
+                    snapViewport: { width: viewportWidth, height: viewportHeight },
+                });
             }
         } else if (this.state.snapPreview) {
-            this.setState({ snapPreview: null, snapPosition: null });
+            this.setState({ snapPreview: null, snapPosition: null, snapViewport: null });
         }
     }
 
@@ -593,7 +585,7 @@ export class Window extends Component {
         if (snapPos) {
             this.snapWindow(snapPos);
         } else {
-            this.setState({ snapPreview: null, snapPosition: null });
+            this.setState({ snapPreview: null, snapPosition: null, snapViewport: null });
         }
     }
 
@@ -826,28 +818,11 @@ export class Window extends Component {
 
         return (
             <>
-                {this.state.snapPreview && (
-                    <div
-                        data-testid="snap-preview"
-                        className={`fixed pointer-events-none z-40 transition-opacity ${styles.snapPreview} ${styles.snapPreviewGlass}`}
-                        style={{
-                            left: `${this.state.snapPreview.left}px`,
-                            top: `${this.state.snapPreview.top}px`,
-                            width: `${this.state.snapPreview.width}px`,
-                            height: `${this.state.snapPreview.height}px`,
-                            backdropFilter: 'brightness(1.1) saturate(1.2)',
-                            WebkitBackdropFilter: 'brightness(1.1) saturate(1.2)'
-
-                        }}
-                        aria-live="polite"
-                        aria-label={getSnapLabel(this.state.snapPosition)}
-                        role="status"
-                    >
-                        <span className={styles.snapPreviewLabel} aria-hidden="true">
-                            {getSnapLabel(this.state.snapPosition)}
-                        </span>
-                    </div>
-                )}
+                <SnapPreview
+                    snap={this.state.snapPreview}
+                    viewport={this.state.snapViewport}
+                    position={this.state.snapPosition}
+                />
                 <Draggable
                     nodeRef={this.windowRef}
                     axis="both"
