@@ -20,6 +20,7 @@ Two touch gestures are available when the shell detects a coarse pointer:
 
 - **Swipe-to-snap:** a quick single-finger horizontal swipe on the focused window dispatches the same shortcut as <kbd>Super</kbd>+<kbd>Arrow</kbd> and snaps the window left or right.
 - **Three-finger overview:** a three-finger upward swipe opens the window switcher/overview. Lifting all three fingers resets the gesture state.
+- **Window move long-press:** dragging the title bar on touch hardware now requires ~200&nbsp;ms of contact plus a ~12&nbsp;px travel threshold before the window actually moves. This keeps vertical scrolling fluid while still enabling intentional repositioning.
 
 Both gestures rely on low-latency thresholds and ignore slow drags to avoid conflicting with window moves.
 

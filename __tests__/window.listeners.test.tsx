@@ -58,3 +58,98 @@ describe('Window event listeners', () => {
     }
   });
 });
+
+describe('Window touch drag gating', () => {
+  const createWindow = () => {
+    const windowRef = React.createRef<Window>();
+    const utils = render(
+      <Window
+        id="touch-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={windowRef}
+      />
+    );
+    return { windowRef, ...utils };
+  };
+
+  const createDragData = () => ({
+    node: { style: { transform: '' } },
+    x: 0,
+    y: 0,
+    deltaX: 0,
+    deltaY: 0,
+    lastX: 0,
+    lastY: 0,
+  });
+
+  it('prevents quick touch drags before the hold threshold', () => {
+    const { windowRef, unmount } = createWindow();
+    try {
+      const instance = windowRef.current!;
+      const dragData = createDragData();
+      instance.handleTitleBarPointerDown({ pointerType: 'touch', clientX: 10, clientY: 10 } as any);
+      instance.handleDragStart({ type: 'touchstart', touches: [{ clientX: 10, clientY: 10 }] } as any, dragData as any);
+
+      const result = instance.handleDrag(
+        { type: 'touchmove', touches: [{ clientX: 12, clientY: 12 }] } as any,
+        dragData as any
+      );
+
+      expect(result).toBe(false);
+      expect(instance.state.grabbed).toBe(false);
+    } finally {
+      unmount();
+    }
+  });
+
+  it('requires movement in addition to the long-press delay', () => {
+    const { windowRef, unmount } = createWindow();
+    try {
+      const instance = windowRef.current!;
+      const dragData = createDragData();
+      instance.handleTitleBarPointerDown({ pointerType: 'touch', clientX: 30, clientY: 40 } as any);
+      instance.handleDragStart({ type: 'touchstart', touches: [{ clientX: 30, clientY: 40 }] } as any, dragData as any);
+
+      const info = (instance as any)._dragPointerInfo;
+      info.startTime -= 400;
+
+      const result = instance.handleDrag(
+        { type: 'touchmove', touches: [{ clientX: 32, clientY: 41 }] } as any,
+        dragData as any
+      );
+
+      expect(result).toBe(false);
+      expect(instance.state.grabbed).toBe(false);
+    } finally {
+      unmount();
+    }
+  });
+
+  it('allows dragging once the touch gesture is intentional', () => {
+    const { windowRef, unmount } = createWindow();
+    try {
+      const instance = windowRef.current!;
+      const dragData = createDragData();
+      instance.handleTitleBarPointerDown({ pointerType: 'touch', clientX: 50, clientY: 60 } as any);
+      instance.handleDragStart({ type: 'touchstart', touches: [{ clientX: 50, clientY: 60 }] } as any, dragData as any);
+
+      const info = (instance as any)._dragPointerInfo;
+      info.startTime -= 400;
+
+      const result = instance.handleDrag(
+        { type: 'touchmove', touches: [{ clientX: 70, clientY: 85 }] } as any,
+        dragData as any
+      );
+
+      expect(result).not.toBe(false);
+      expect(instance.state.grabbed).toBe(true);
+    } finally {
+      unmount();
+    }
+  });
+});

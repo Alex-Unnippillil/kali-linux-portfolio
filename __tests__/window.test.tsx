@@ -79,8 +79,12 @@ afterEach(() => {
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('react-draggable', () => {
   const React = require('react');
-  const MockDraggable = ({ children, grid }: any) => (
-    <div data-testid="draggable-mock" data-grid={Array.isArray(grid) ? grid.join(',') : undefined}>
+  const MockDraggable = ({ children, grid, allowMobileScroll }: any) => (
+    <div
+      data-testid="draggable-mock"
+      data-grid={Array.isArray(grid) ? grid.join(',') : undefined}
+      data-allow-mobile-scroll={allowMobileScroll ? 'true' : 'false'}
+    >
       {children}
     </div>
   );
@@ -161,6 +165,23 @@ describe('Window snap grid configuration', () => {
 
     const draggable = screen.getByTestId('draggable-mock');
     expect(draggable).toHaveAttribute('data-grid', '16,24');
+  });
+
+  it('enables mobile scroll passthrough on draggable', () => {
+    render(
+      <Window
+        id="scroll-test"
+        title="Scroll Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const draggable = screen.getByTestId('draggable-mock');
+    expect(draggable).toHaveAttribute('data-allow-mobile-scroll', 'true');
   });
 
   it('snaps dimensions using axis-specific grid values', () => {
