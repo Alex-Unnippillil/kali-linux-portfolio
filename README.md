@@ -244,6 +244,12 @@ Copy `.env.local.example` to `.env.local` and populate the keys relevant to your
 | --- | --- |
 | `NEXT_PUBLIC_ENABLE_ANALYTICS` | Toggles Google Analytics 4 tracking on the client. |
 | `NEXT_PUBLIC_TRACKING_ID` | GA4 Measurement ID (`G-XXXXXXX`). |
+| `NEXT_PUBLIC_SENTRY_DSN` | Enables session replay and performance telemetry via Sentry when present. |
+| `NEXT_PUBLIC_SENTRY_ENVIRONMENT` | Optional Sentry environment name (defaults to `NODE_ENV`). |
+| `NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` | Sampling rate (0-1) for browser performance spans. |
+| `NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE` | Sampling rate (0-1) for baseline session replay captures. |
+| `NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE` | Sampling rate (0-1) for replay capture on error events. |
+| `NEXT_PUBLIC_SENTRY_TRACE_PROPAGATION_TARGETS` | Comma-separated hosts or regex patterns for distributed tracing. |
 | `NEXT_PUBLIC_SERVICE_ID` / `NEXT_PUBLIC_TEMPLATE_ID` / `NEXT_PUBLIC_USER_ID` | EmailJS identifiers for the Gedit contact app. |
 | `NEXT_PUBLIC_YOUTUBE_API_KEY` | Enables enhanced search within the YouTube app. |
 | `NEXT_PUBLIC_BEEF_URL` / `NEXT_PUBLIC_GHIDRA_URL` / `NEXT_PUBLIC_GHIDRA_WASM` | Optional remote iframe targets for simulated tooling. |
@@ -263,8 +269,11 @@ Copy `.env.local.example` to `.env.local` and populate the keys relevant to your
 ### Feature Flags & Static Export
 Set `NEXT_PUBLIC_STATIC_EXPORT=true` during `yarn export` to disable API routes. UI components should guard their behaviour with the flag or the presence of required environment variables.
 
-### Analytics
+### Analytics & Telemetry
 `utils/analytics.ts` wraps GA4. Analytics only fire when `NEXT_PUBLIC_ENABLE_ANALYTICS` is truthy. The project also renders `<Analytics />` and `<SpeedInsights />` from `@vercel/analytics` inside `_app.jsx`.
+
+#### Session replay
+`services/telemetry.ts` initializes Sentry Replay and Browser Tracing when `NEXT_PUBLIC_SENTRY_DSN` is configured. Input elements are automatically masked, authorization headers are stripped in `beforeSend`, and sampling behaviour is controlled through the Sentry environment variables above. The Settings app exposes an **Allow Replay & Performance Telemetry** toggle that persists preferences in IndexedDB/localStorage and immediately tears down active sessions when disabled.
 
 ---
 

@@ -35,11 +35,13 @@ describe('Settings reset flow', () => {
     const largeHitAreasToggle = screen.getByLabelText('Large Hit Areas');
     const highContrastToggle = screen.getByLabelText('High Contrast');
     const allowNetworkToggle = screen.getByLabelText('Allow Network Requests');
+    const telemetryToggle = screen.getByLabelText('Allow Replay & Performance Telemetry');
     const hapticsToggle = screen.getByLabelText('Haptics');
     const pongSpinToggle = screen.getByLabelText('Pong Spin');
 
     await waitFor(() => expect(hapticsToggle).toBeChecked());
     await waitFor(() => expect(pongSpinToggle).toBeChecked());
+    await waitFor(() => expect(telemetryToggle).toBeChecked());
 
     await user.selectOptions(themeSelect, 'dark');
     await user.click(alternateAccentRadio);
@@ -50,6 +52,7 @@ describe('Settings reset flow', () => {
     await user.click(largeHitAreasToggle);
     await user.click(highContrastToggle);
     await user.click(allowNetworkToggle);
+    await user.click(telemetryToggle);
     await user.click(hapticsToggle);
     await user.click(pongSpinToggle);
 
@@ -62,6 +65,7 @@ describe('Settings reset flow', () => {
     expect(largeHitAreasToggle).toBeChecked();
     expect(highContrastToggle).toBeChecked();
     expect(allowNetworkToggle).toBeChecked();
+    expect(telemetryToggle).not.toBeChecked();
     expect(hapticsToggle).not.toBeChecked();
     expect(pongSpinToggle).not.toBeChecked();
 
@@ -76,6 +80,7 @@ describe('Settings reset flow', () => {
     expect(largeHitAreasToggle.checked).toBe(defaults.largeHitAreas);
     expect(highContrastToggle.checked).toBe(defaults.highContrast);
     expect(allowNetworkToggle.checked).toBe(defaults.allowNetwork);
+    expect(telemetryToggle.checked).toBe(defaults.allowTelemetry);
     expect(hapticsToggle.checked).toBe(defaults.haptics);
     expect(pongSpinToggle.checked).toBe(defaults.pongSpin);
   });
