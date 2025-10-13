@@ -4,6 +4,8 @@
   border-radius: var(--radius-6);
   box-shadow: var(--shadow-2);
   overflow: hidden;
+  contain: layout paint;
+  content-visibility: visible;
   --window-motion-transform-duration: var(--window-motion-duration-restore);
   --window-motion-transform-easing: var(--window-motion-ease-restore);
   --window-motion-opacity-duration: var(--window-motion-duration-minimize);
@@ -15,6 +17,12 @@
     opacity var(--window-motion-opacity-duration) var(--window-motion-opacity-easing),
     visibility 0s linear;
   transition-delay: 0s, 0s, 0s, 0s, 0s;
+}
+
+@supports (content-visibility: auto) {
+  .windowFrame {
+    content-visibility: auto;
+  }
 }
 
 .windowFrame::before {
