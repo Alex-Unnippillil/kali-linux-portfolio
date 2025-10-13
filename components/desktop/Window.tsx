@@ -50,6 +50,7 @@ const readNodePosition = (node: HTMLElement): { x: number; y: number } | null =>
 const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
   (props, forwardedRef) => {
     const innerRef = useRef<BaseWindowInstance>(null);
+    const { initialX, initialY, onPositionChange } = props;
 
     const assignRef = useCallback(
       (instance: BaseWindowInstance) => {
@@ -76,14 +77,15 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       const topOffset = measureWindowTopOffset();
       const storedPosition = readNodePosition(node);
       const fallbackPosition = {
-        x: typeof props.initialX === "number" ? props.initialX : 0,
-        y: clampWindowTopPosition(props.initialY, topOffset),
+        x: typeof initialX === "number" ? initialX : 0,
+        y: clampWindowTopPosition(initialY, topOffset),
       };
       const currentPosition = storedPosition || fallbackPosition;
+      const viewport = typeof window.visualViewport === "object" ? window.visualViewport : null;
       const clamped = clampWindowPositionWithinViewport(currentPosition, rect, {
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
         topOffset,
+        viewportOffsetLeft: viewport?.offsetLeft,
+        viewportOffsetTop: viewport?.offsetTop,
       });
       if (!clamped) return;
       if (clamped.x === currentPosition.x && clamped.y === currentPosition.y) {
@@ -99,17 +101,29 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
         (node.style as unknown as Record<string, string>)["--window-transform-y"] = `${clamped.y}px`;
       }
 
-      if (typeof props.onPositionChange === "function") {
-        props.onPositionChange(clamped.x, clamped.y);
+      if (typeof onPositionChange === "function") {
+        onPositionChange(clamped.x, clamped.y);
       }
-    }, [props.initialX, props.initialY, props.onPositionChange]);
+    }, [initialX, initialY, onPositionChange]);
 
     useEffect(() => {
       if (typeof window === "undefined") return undefined;
       const handler = () => clampToViewport();
+      const viewport = typeof window.visualViewport === "object" ? window.visualViewport : null;
+
+      handler();
       window.addEventListener("resize", handler);
+      if (viewport) {
+        viewport.addEventListener("resize", handler);
+        viewport.addEventListener("scroll", handler);
+      }
+
       return () => {
         window.removeEventListener("resize", handler);
+        if (viewport) {
+          viewport.removeEventListener("resize", handler);
+          viewport.removeEventListener("scroll", handler);
+        }
       };
     }, [clampToViewport]);
 

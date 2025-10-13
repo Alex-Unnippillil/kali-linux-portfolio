@@ -20,6 +20,15 @@ const DEFAULT_FONT_SIZE = 16;
 
 export const DEFAULT_SNAP_BOTTOM_INSET = SNAP_BOTTOM_INSET;
 
+const getVisualViewport = () => {
+  if (typeof window === 'undefined') return null;
+  const { visualViewport } = window;
+  if (!visualViewport || typeof visualViewport !== 'object') {
+    return null;
+  }
+  return visualViewport;
+};
+
 const parseFontSize = (value) => {
   if (typeof value !== 'string') return DEFAULT_FONT_SIZE;
   const parsed = parseFloat(value);
@@ -45,8 +54,12 @@ const parseCssLengthValue = (value, computed) => {
     trimmed.endsWith('lvh') ||
     trimmed.endsWith('dvh')
   ) {
-    if (typeof window === 'undefined') return 0;
-    const viewportHeight = typeof window.innerHeight === 'number' ? window.innerHeight : 0;
+    const viewport = getVisualViewport();
+    const viewportHeight = viewport && typeof viewport.height === 'number'
+      ? viewport.height
+      : typeof window !== 'undefined' && typeof window.innerHeight === 'number'
+        ? window.innerHeight
+        : 0;
     return viewportHeight ? (numeric / 100) * viewportHeight : 0;
   }
 
@@ -56,8 +69,12 @@ const parseCssLengthValue = (value, computed) => {
     trimmed.endsWith('lvw') ||
     trimmed.endsWith('dvw')
   ) {
-    if (typeof window === 'undefined') return 0;
-    const viewportWidth = typeof window.innerWidth === 'number' ? window.innerWidth : 0;
+    const viewport = getVisualViewport();
+    const viewportWidth = viewport && typeof viewport.width === 'number'
+      ? viewport.width
+      : typeof window !== 'undefined' && typeof window.innerWidth === 'number'
+        ? window.innerWidth
+        : 0;
     return viewportWidth ? (numeric / 100) * viewportWidth : 0;
   }
 
@@ -108,15 +125,18 @@ export const measureWindowTopOffset = () => {
 
   const navbar = document.querySelector(NAVBAR_SELECTOR);
   if (!navbar) {
-    return DEFAULT_WINDOW_TOP_OFFSET;
+    const safeAreaTop = Math.max(0, measureSafeAreaInset('top'));
+    return Math.max(DEFAULT_WINDOW_TOP_OFFSET, DEFAULT_WINDOW_TOP_OFFSET + safeAreaTop);
   }
 
   const { height } = navbar.getBoundingClientRect();
   const measured = Number.isFinite(height) ? Math.ceil(height) : DEFAULT_NAVBAR_HEIGHT;
-  return Math.max(
+  const base = Math.max(
     measured + WINDOW_TOP_MARGIN + WINDOW_TOP_INSET,
     DEFAULT_WINDOW_TOP_OFFSET,
   );
+  const safeAreaTop = Math.max(0, measureSafeAreaInset('top'));
+  return Math.max(base, DEFAULT_WINDOW_TOP_OFFSET + safeAreaTop);
 };
 
 const readTaskbarHeightFromElement = (element) => {
@@ -174,12 +194,25 @@ const parseDimension = (value) => {
   return Number.isFinite(value) ? Math.max(value, 0) : 0;
 };
 
-const getViewportDimension = (dimension, fallback) => {
+const getViewportDimension = (dimension, viewport, visualKey, windowKey) => {
   if (typeof dimension === 'number' && Number.isFinite(dimension)) {
     return dimension;
   }
-  if (typeof window !== 'undefined' && typeof window[fallback] === 'number') {
-    return window[fallback];
+  if (viewport && typeof viewport[visualKey] === 'number') {
+    return viewport[visualKey];
+  }
+  if (typeof window !== 'undefined' && typeof window[windowKey] === 'number') {
+    return window[windowKey];
+  }
+  return 0;
+};
+
+const getViewportOffset = (offset, viewport, key) => {
+  if (typeof offset === 'number' && Number.isFinite(offset)) {
+    return offset;
+  }
+  if (viewport && typeof viewport[key] === 'number') {
+    return viewport[key];
   }
   return 0;
 };
@@ -200,11 +233,42 @@ export const clampWindowPositionWithinViewport = (
     return null;
   }
 
-  const viewportWidth = getViewportDimension(options.viewportWidth, 'innerWidth');
-  const viewportHeight = getViewportDimension(options.viewportHeight, 'innerHeight');
+  const viewport = getVisualViewport();
+  const viewportWidth = getViewportDimension(
+    options.viewportWidth,
+    viewport,
+    'width',
+    'innerWidth',
+  );
+  const viewportHeight = getViewportDimension(
+    options.viewportHeight,
+    viewport,
+    'height',
+    'innerHeight',
+  );
+  const viewportOffsetLeft = getViewportOffset(
+    options.viewportOffsetLeft,
+    viewport,
+    'offsetLeft',
+  );
+  const viewportOffsetTop = getViewportOffset(
+    options.viewportOffsetTop,
+    viewport,
+    'offsetTop',
+  );
   const topOffset = typeof options.topOffset === 'number'
     ? options.topOffset
     : measureWindowTopOffset();
+  const topSafeInset = typeof options.topInset === 'number'
+    ? Math.max(options.topInset, 0)
+    : Math.max(0, measureSafeAreaInset('top'));
+  const effectiveTopOffset = Math.max(topOffset, topSafeInset);
+  const leftInset = typeof options.leftInset === 'number'
+    ? Math.max(options.leftInset, 0)
+    : Math.max(0, measureSafeAreaInset('left'));
+  const rightInset = typeof options.rightInset === 'number'
+    ? Math.max(options.rightInset, 0)
+    : Math.max(0, measureSafeAreaInset('right'));
   const bottomInset = typeof options.bottomInset === 'number'
     ? Math.max(options.bottomInset, 0)
     : Math.max(0, measureSafeAreaInset('bottom'));
@@ -212,15 +276,18 @@ export const clampWindowPositionWithinViewport = (
     ? Math.max(options.snapBottomInset, 0)
     : measureSnapBottomInset();
 
+  const minX = viewportOffsetLeft + leftInset;
+  const minY = viewportOffsetTop + effectiveTopOffset;
+
   if (!viewportWidth || !viewportHeight) {
     return {
-      x: parsePositionCoordinate(position.x, 0),
-      y: clampWindowTopPosition(position.y, topOffset),
+      x: parsePositionCoordinate(position.x, minX),
+      y: clampWindowTopPosition(position.y, minY),
       bounds: {
-        minX: 0,
-        maxX: 0,
-        minY: topOffset,
-        maxY: topOffset,
+        minX,
+        maxX: minX,
+        minY,
+        maxY: minY,
       },
     };
   }
@@ -232,18 +299,23 @@ export const clampWindowPositionWithinViewport = (
     ? parseDimension(dimensions.height)
     : 0;
 
-  const horizontalSpace = Math.max(viewportWidth - width, 0);
-  const availableVertical = Math.max(viewportHeight - topOffset - snapBottomInset - bottomInset, 0);
+  const usableHorizontal = Math.max(viewportWidth - leftInset - rightInset, 0);
+  const horizontalSpace = Math.max(usableHorizontal - width, 0);
+  const availableVertical = Math.max(
+    viewportHeight - effectiveTopOffset - snapBottomInset - bottomInset,
+    0,
+  );
   const verticalSpace = Math.max(availableVertical - height, 0);
 
-  const minX = 0;
-  const maxX = horizontalSpace;
-  const minY = topOffset;
-  const maxY = topOffset + verticalSpace;
+  const maxX = minX + horizontalSpace;
+  const maxY = minY + verticalSpace;
 
-  const nextX = Math.min(Math.max(parsePositionCoordinate(position.x, 0), minX), maxX);
+  const nextX = Math.min(
+    Math.max(parsePositionCoordinate(position.x, minX), minX),
+    maxX,
+  );
   const nextY = Math.min(
-    Math.max(clampWindowTopPosition(position.y, topOffset), minY),
+    Math.max(clampWindowTopPosition(position.y, minY), minY),
     maxY,
   );
 

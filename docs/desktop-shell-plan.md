@@ -43,3 +43,9 @@ Link each roadmap item to required verification coverage:
 - **Touch and pen gestures** — ✅ Unit tests around gesture state machines; ✅ Cross-input interaction tests simulating touch/pointer events for snapping and context menus; ✅ Telemetry sampling that tracks gesture adoption without degrading mouse metrics.
 
 Each verification bundle should become a checklist item in feature PRs and update the roadmap to reference the corresponding tests and metrics, ensuring shell regressions are caught before release.
+
+## Mobile Viewport + Safe-Area Handling
+
+- **Simulated coverage.** Verified in iOS Safari (iPhone 15 Pro simulator, iOS 17) and Android Chrome (Pixel 7 simulator, Android 14) that opening the software keyboard or rotating the device resizes the visual viewport and triggers window repositioning so taskbar and notch areas remain unobstructed. The desktop window wrapper now listens for `visualViewport` resize/scroll events in addition to traditional `window` resizes.
+- **Safe-area awareness.** Geometry helpers in `utils/windowLayout` read CSS safe-area variables plus `visualViewport` offsets to clamp draggable windows within visible bounds on devices with notches, rounded corners, or gesture home indicators.
+- **Fallback behaviour.** When a browser does not expose the Visual Viewport API, the shell falls back to `window.innerWidth/innerHeight` measurements and CSS safe-area padding. Window coordinates still clamp against the navbar offset and taskbar height, preserving previous desktop behaviour while avoiding runtime errors on legacy engines.
