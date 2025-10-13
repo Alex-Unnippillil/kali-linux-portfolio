@@ -33,6 +33,7 @@
   --kali-blue-glow: rgba(15, 148, 210, 0.35);
   --kali-bg-solid: #0b121a;
   --kali-panel: rgba(17, 27, 36, 0.92);
+  --kali-terminal: color-mix(in srgb, var(--kali-panel) 82%, rgba(6, 20, 18, 0.92));
   --kali-panel-border: rgba(15, 148, 210, 0.18);
   --kali-panel-highlight: rgba(15, 148, 210, 0.06);
   --kali-terminal-green: #45ff9a;
