@@ -99,11 +99,22 @@ const Radare2 = ({ initialData = {} }) => {
 
   const cardSurfaceStyle = useMemo(
     () => ({
-      backgroundColor: themeTokens.panel,
-      border: `1px solid ${themeTokens.border}`,
+      backgroundColor: `var(--kali-panel, ${themeTokens.panel})`,
+      border: `1px solid var(--kali-border, ${themeTokens.border})`,
       boxShadow: "0 18px 45px -30px rgba(0,0,0,0.65)",
     }),
     [themeTokens.border, themeTokens.panel],
+  );
+
+  const accentButtonStyle = useMemo(
+    () => ({
+      backgroundColor: `var(--kali-blue, ${themeTokens.accent})`,
+      color: themeTokens.accentForeground,
+      border: `1px solid color-mix(in srgb, var(--kali-blue, ${themeTokens.accent}) 65%, transparent)`,
+      boxShadow:
+        "0 12px 32px -20px color-mix(in srgb, var(--kali-blue, ${themeTokens.accent}) 45%, transparent)",
+    }),
+    [themeTokens.accent, themeTokens.accentForeground],
   );
 
   const heuristicMatches = useMemo(
@@ -355,12 +366,12 @@ const Radare2 = ({ initialData = {} }) => {
                     isActive ? "font-semibold" : ""
                   } ${hasMatches ? "shadow-sm" : ""}`}
                   style={{
-                    borderColor: themeTokens.border,
+                    borderColor: `var(--kali-border, ${themeTokens.border})`,
                     backgroundColor: isActive
-                      ? themeTokens.accent
+                      ? `var(--kali-blue, ${themeTokens.accent})`
                       : hasMatches
                       ? "rgba(251, 191, 36, 0.18)"
-                      : themeTokens.panel,
+                      : `var(--kali-panel, ${themeTokens.panel})`,
                     color: isActive
                       ? themeTokens.accentForeground
                       : themeTokens.text,
@@ -402,19 +413,15 @@ const Radare2 = ({ initialData = {} }) => {
           className="px-2 py-1 rounded"
           aria-label="Seek to address"
           style={{
-            backgroundColor: themeTokens.panel,
+            backgroundColor: `var(--kali-panel, ${themeTokens.panel})`,
             color: themeTokens.text,
-            border: `1px solid ${themeTokens.border}`,
+            border: `1px solid var(--kali-border, ${themeTokens.border})`,
           }}
         />
         <button
           onClick={handleSeek}
           className="px-3 py-1 rounded"
-          style={{
-            backgroundColor: themeTokens.panel,
-            color: themeTokens.text,
-            border: `1px solid ${themeTokens.border}`,
-          }}
+          style={accentButtonStyle}
           title="Seek to address (Alt+S)"
         >
           Seek
@@ -426,19 +433,15 @@ const Radare2 = ({ initialData = {} }) => {
           className="px-2 py-1 rounded"
           aria-label="Find instruction"
           style={{
-            backgroundColor: themeTokens.panel,
+            backgroundColor: `var(--kali-panel, ${themeTokens.panel})`,
             color: themeTokens.text,
-            border: `1px solid ${themeTokens.border}`,
+            border: `1px solid var(--kali-border, ${themeTokens.border})`,
           }}
         />
         <button
           onClick={handleFind}
           className="px-3 py-1 rounded"
-          style={{
-            backgroundColor: themeTokens.panel,
-            color: themeTokens.text,
-            border: `1px solid ${themeTokens.border}`,
-          }}
+          style={accentButtonStyle}
           title="Find next match (Alt+F)"
         >
           Find
@@ -446,22 +449,14 @@ const Radare2 = ({ initialData = {} }) => {
         <button
           onClick={() => setMode((m) => (m === "code" ? "graph" : "code"))}
           className="px-3 py-1 rounded"
-          style={{
-            backgroundColor: themeTokens.panel,
-            color: themeTokens.text,
-            border: `1px solid ${themeTokens.border}`,
-          }}
+          style={accentButtonStyle}
         >
           {mode === "code" ? "Graph" : "Code"}
         </button>
         <button
           onClick={() => setShowGuide(true)}
           className="px-3 py-1 rounded"
-          style={{
-            backgroundColor: themeTokens.panel,
-            color: themeTokens.text,
-            border: `1px solid ${themeTokens.border}`,
-          }}
+          style={accentButtonStyle}
         >
           Help
         </button>
@@ -510,7 +505,7 @@ const Radare2 = ({ initialData = {} }) => {
                 ref={disasmRef}
                 className="overflow-auto rounded-lg border"
                 style={{
-                  borderColor: themeTokens.border,
+                  borderColor: `var(--kali-border, ${themeTokens.border})`,
                   backgroundColor: themeTokens.highlight,
                   maxHeight: "20rem",
                 }}
@@ -635,12 +630,12 @@ const Radare2 = ({ initialData = {} }) => {
                   }`}
                   style={{
                     borderColor: isActive
-                      ? themeTokens.accent
+                      ? `var(--kali-blue, ${themeTokens.accent})`
                       : isWarning
                       ? "rgba(251, 191, 36, 0.35)"
                       : "transparent",
                     backgroundColor: isActive
-                      ? themeTokens.accent
+                      ? `var(--kali-blue, ${themeTokens.accent})`
                       : isWarning
                       ? "rgba(251, 191, 36, 0.15)"
                       : isMuted
@@ -677,6 +672,9 @@ const Radare2 = ({ initialData = {} }) => {
                   <button
                     onClick={() => scrollToAddr(s.addr)}
                     className="underline"
+                    style={{
+                      color: `var(--kali-blue, ${themeTokens.accent})`,
+                    }}
                   >
                     {s.addr}: {s.text}
                   </button>
@@ -708,19 +706,15 @@ const Radare2 = ({ initialData = {} }) => {
                 className="w-full p-2 rounded"
                 aria-label={`Add note for ${currentAddr}`}
                 style={{
-                  backgroundColor: themeTokens.panel,
+                  backgroundColor: `var(--kali-panel, ${themeTokens.panel})`,
                   color: themeTokens.text,
-                  border: `1px solid ${themeTokens.border}`,
+                  border: `1px solid var(--kali-border, ${themeTokens.border})`,
                 }}
               />
               <button
                 onClick={handleAddNote}
                 className="px-3 py-1 rounded self-end"
-                style={{
-                  backgroundColor: themeTokens.panel,
-                  color: themeTokens.text,
-                  border: `1px solid ${themeTokens.border}`,
-                }}
+                style={accentButtonStyle}
               >
                 Save Note
               </button>
