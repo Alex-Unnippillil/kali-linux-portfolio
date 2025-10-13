@@ -40,6 +40,52 @@ jobs:
       - run: yarn dedupe --check
       - run: yarn test --coverage
 
+  e2e:
+    needs:
+      - lint
+      - typecheck
+      - test
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: yarn dedupe --check
+      - name: Install Playwright browsers
+        run: yarn playwright install --with-deps
+      - name: Run Playwright smoke tests (with retries)
+        uses: nick-fields/retry@v3
+        with:
+          max_attempts: 2
+          retry_on: error
+          timeout_minutes: 25
+          command: yarn test:e2e
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          if-no-files-found: ignore
+      - name: Upload Playwright traces and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: playwright-results
+          if-no-files-found: ignore
+      - name: Upload flaky test summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-flaky-report
+          path: playwright-artifacts
+          if-no-files-found: ignore
+
   security:
     runs-on: ubuntu-latest
     steps:
