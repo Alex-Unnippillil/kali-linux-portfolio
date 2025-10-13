@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useId, useRef } from "react";
 import BaseWindow from "../base/window";
 import {
   clampWindowPositionWithinViewport,
@@ -50,6 +50,34 @@ const readNodePosition = (node: HTMLElement): { x: number; y: number } | null =>
 const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
   (props, forwardedRef) => {
     const innerRef = useRef<BaseWindowInstance>(null);
+    const generatedTitleId = useId();
+
+    const contextValue = (props as any)?.context;
+    const contextModal = Boolean(
+      contextValue && typeof contextValue === "object" && (contextValue as any).modal,
+    );
+    const modalProp = (props as any)?.modal;
+    const isModal = typeof modalProp === "boolean" ? modalProp : contextModal;
+    const titleIdProp = (props as any)?.titleId;
+    const titleId = typeof titleIdProp === "string" ? titleIdProp : generatedTitleId;
+    const ariaModalProp = (props as any)?.ariaModal;
+    const ariaModal =
+      ariaModalProp !== undefined ? ariaModalProp : (isModal ? true : undefined);
+    const windowRoleProp = (props as any)?.windowRole;
+    const windowRole = windowRoleProp ?? (isModal ? "dialog" : "region");
+    const ariaLabelledByProp = (props as any)?.ariaLabelledBy;
+    const ariaLabelledBy = ariaLabelledByProp ?? titleId;
+
+    const normalizedProps = {
+      ...props,
+      modal: isModal,
+      titleId,
+      windowRole,
+      ariaLabelledBy,
+    } as BaseWindowProps;
+    if (ariaModal !== undefined) {
+      (normalizedProps as any).ariaModal = ariaModal;
+    }
 
     const assignRef = useCallback(
       (instance: BaseWindowInstance) => {
@@ -113,7 +141,7 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       };
     }, [clampToViewport]);
 
-    return <BaseWindow ref={assignRef} {...props} />;
+    return <BaseWindow ref={assignRef} {...normalizedProps} />;
   },
 );
 

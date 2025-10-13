@@ -92,6 +92,20 @@ jest.mock('react-draggable', () => {
 });
 jest.mock('../components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
 
+const FOCUSABLE_SELECTORS = [
+  'a[href]:not([tabindex="-1"])',
+  'area[href]:not([tabindex="-1"])',
+  'input:not([disabled]):not([tabindex="-1"])',
+  'select:not([disabled]):not([tabindex="-1"])',
+  'textarea:not([disabled]):not([tabindex="-1"])',
+  'button:not([disabled]):not([tabindex="-1"])',
+  'iframe',
+  'object',
+  'embed',
+  '[contenteditable="true"]',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ');
+
 describe('Window lifecycle', () => {
   it('invokes callbacks on close', () => {
     jest.useFakeTimers();
@@ -140,6 +154,141 @@ describe('Window lifecycle', () => {
     expect(frame).not.toBeNull();
     expect(frame).toHaveFocus();
     expect(focus).toHaveBeenCalledWith('focused-window');
+  });
+});
+
+describe('Window accessibility semantics', () => {
+  it('exposes the title via aria-labelledby and region role by default', () => {
+    render(
+      <Window
+        id="a11y-window"
+        title="Accessible Window"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const frame = document.getElementById('a11y-window');
+    expect(frame).not.toBeNull();
+    expect(frame).toHaveAttribute('role', 'region');
+    const labelledBy = frame?.getAttribute('aria-labelledby');
+    expect(labelledBy).toBeTruthy();
+    const labelElement = labelledBy ? document.getElementById(labelledBy) : null;
+    expect(labelElement).not.toBeNull();
+    expect(labelElement).toHaveTextContent('Accessible Window');
+  });
+
+  it('traps focus within modal windows when pressing Tab', () => {
+    render(
+      <Window
+        id="modal-window"
+        title="Modal"
+        screen={() => (
+          <div>
+            <button type="button">First action</button>
+            <button type="button">Second action</button>
+          </div>
+        )}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        modal
+      />
+    );
+
+    const frame = document.getElementById('modal-window') as HTMLElement | null;
+    expect(frame).not.toBeNull();
+    expect(frame).toHaveAttribute('aria-modal', 'true');
+    const focusable = Array.from(frame!.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS));
+    expect(focusable.length).toBeGreaterThan(1);
+    const firstFocusable = focusable[0];
+    const lastFocusable = focusable[focusable.length - 1];
+
+    lastFocusable.focus();
+    fireEvent.keyDown(lastFocusable, { key: 'Tab' });
+    expect(firstFocusable).toHaveFocus();
+
+    firstFocusable.focus();
+    fireEvent.keyDown(firstFocusable, { key: 'Tab', shiftKey: true });
+    expect(lastFocusable).toHaveFocus();
+  });
+
+  it('restores focus to the opener when a modal window closes', () => {
+    jest.useFakeTimers();
+
+    function Wrapper() {
+      const [open, setOpen] = React.useState(false);
+      return (
+        <>
+          <button type="button" data-testid="opener" onClick={() => setOpen(true)}>
+            Launch
+          </button>
+          {open ? (
+            <Window
+              id="modal-focus-return"
+              title="Modal"
+              screen={() => <button type="button">Inside</button>}
+              focus={() => {}}
+              hasMinimised={() => {}}
+              closed={() => setOpen(false)}
+              openApp={() => {}}
+              modal
+            />
+          ) : null}
+        </>
+      );
+    }
+
+    render(<Wrapper />);
+
+    const opener = screen.getByTestId('opener');
+    opener.focus();
+    fireEvent.click(opener);
+
+    const closeButton = screen.getByRole('button', { name: /window close/i });
+    fireEvent.click(closeButton);
+
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(opener).toHaveFocus();
+    jest.useRealTimers();
+  });
+
+  it('supports closing modal windows with control shortcuts', () => {
+    jest.useFakeTimers();
+    const closed = jest.fn();
+
+    render(
+      <Window
+        id="shortcut-window"
+        title="Shortcut"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={closed}
+        openApp={() => {}}
+        modal
+        isFocused
+      />
+    );
+
+    const frame = document.getElementById('shortcut-window');
+    expect(frame).not.toBeNull();
+    frame?.focus();
+    fireEvent.keyDown(frame!, { key: 'w', ctrlKey: true });
+
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(closed).toHaveBeenCalledWith('shortcut-window');
+    jest.useRealTimers();
   });
 });
 
