@@ -1,4 +1,5 @@
 import React from 'react';
+import { VirtuosoGrid } from 'react-virtuoso';
 import UbuntuApp from '../base/ubuntu_app';
 import { safeLocalStorage } from '../../utils/safeStorage';
 
@@ -6,6 +7,17 @@ const FAVORITES_KEY = 'launcherFavorites';
 const RECENTS_KEY = 'recentApps';
 
 const DEFAULT_FOLDER_ICON = '/themes/Yaru/system/folder.png';
+
+const VIRTUALIZATION_THRESHOLD = 24;
+const GRID_MAX_HEIGHT = 560;
+const GRID_CLASS_NAMES =
+    'grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6';
+
+const slugify = (value = '') =>
+    value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'section';
 
 const buildIdSet = (ids) => new Set(ids);
 
@@ -303,29 +315,113 @@ class AllApplications extends React.Component {
         );
     };
 
+    renderAppCollection = (
+        apps,
+        {
+            ariaLabel,
+            ariaLabelledby,
+            ariaDescribedby,
+            virtualizationId,
+            maxHeight = GRID_MAX_HEIGHT,
+        } = {}
+    ) => {
+        if (!apps || !apps.length) return null;
+        if (apps.length <= VIRTUALIZATION_THRESHOLD) {
+            return (
+                <div
+                    role="grid"
+                    aria-label={ariaLabel}
+                    aria-labelledby={ariaLabelledby}
+                    aria-describedby={ariaDescribedby}
+                    className={`mt-4 ${GRID_CLASS_NAMES}`}
+                >
+                    {apps.map((app) => this.renderAppTile(app))}
+                </div>
+            );
+        }
+
+        const List = React.forwardRef(({ style, className = '', ...props }, ref) => (
+            <div
+                {...props}
+                ref={ref}
+                role="grid"
+                aria-label={ariaLabel}
+                aria-labelledby={ariaLabelledby}
+                aria-describedby={ariaDescribedby}
+                style={{ ...style, display: 'grid' }}
+                className={`${GRID_CLASS_NAMES} ${className}`.trim()}
+            />
+        ));
+        List.displayName = 'AllAppsVirtualGrid';
+
+        const Item = React.forwardRef(({ style, className = '', ...props }, ref) => (
+            <div
+                {...props}
+                ref={ref}
+                role="gridcell"
+                style={style}
+                className={className}
+            />
+        ));
+        Item.displayName = 'AllAppsVirtualGridItem';
+
+        return (
+            <div
+                className="mt-4"
+                style={{ height: maxHeight }}
+                data-testid={
+                    virtualizationId ? `virtual-grid-${virtualizationId}` : undefined
+                }
+            >
+                <VirtuosoGrid
+                    style={{ height: '100%' }}
+                    totalCount={apps.length}
+                    overscan={48}
+                    data={apps}
+                    components={{ List, Item }}
+                    itemContent={(index, item) => this.renderAppTile(item)}
+                    useWindowScroll={false}
+                />
+            </div>
+        );
+    };
+
     renderSection = (title, apps) => {
         if (!apps.length) return null;
         const containerStyles = {
             borderColor: 'color-mix(in srgb, var(--color-accent), transparent 65%)',
             boxShadow: '0 20px 52px -30px color-mix(in srgb, var(--color-accent), transparent 55%)',
         };
+        const normalizedId = slugify(title);
+        const headingId = `${normalizedId}-heading`;
+        const countId = `${normalizedId}-count`;
+        const countLabel = `${apps.length} ${apps.length === 1 ? 'app' : 'apps'}`;
         return (
-            <section key={title} aria-label={`${title} apps`} className="w-full">
+            <section key={title} aria-labelledby={headingId} className="w-full">
                 <div
                     className="mb-8 rounded-3xl border bg-slate-900/65 p-5 shadow-xl backdrop-blur-xl"
                     style={containerStyles}
                 >
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                        <h2 className="text-base font-semibold uppercase tracking-[0.35em] text-white/80">
+                        <h2
+                            id={headingId}
+                            className="text-base font-semibold uppercase tracking-[0.35em] text-white/80"
+                        >
                             {title}
                         </h2>
-                        <span className="text-xs font-semibold uppercase tracking-[0.35em] text-white/50">
-                            {apps.length} {apps.length === 1 ? 'app' : 'apps'}
+                        <span
+                            id={countId}
+                            className="text-xs font-semibold uppercase tracking-[0.35em] text-white/50"
+                        >
+                            {countLabel}
                         </span>
                     </div>
-                    <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                        {apps.map((app) => this.renderAppTile(app))}
-                    </div>
+                    {this.renderAppCollection(apps, {
+                        ariaLabel: `${title} applications`,
+                        ariaLabelledby: headingId,
+                        ariaDescribedby: countId,
+                        virtualizationId: `section-${normalizedId}`,
+                    })}
                 </div>
             </section>
         );
@@ -343,6 +439,8 @@ class AllApplications extends React.Component {
             listStyle: 'none',
         };
         const countLabel = `${folder.items.length} ${folder.items.length === 1 ? 'app' : 'apps'}`;
+        const titleId = `${folder.id}-title`;
+        const countId = `${folder.id}-count`;
         return (
             <details
                 key={folder.id}
@@ -359,22 +457,29 @@ class AllApplications extends React.Component {
                             <img src={folder.icon} alt="" className="h-9 w-9 object-contain" aria-hidden="true" />
                         </span>
                         <span className="flex flex-col">
-                            <span className="text-lg font-semibold">{folder.title}</span>
+                            <span id={titleId} className="text-lg font-semibold">
+                                {folder.title}
+                            </span>
                             {folder.description ? (
                                 <span className="text-xs font-normal text-white/60">{folder.description}</span>
                             ) : null}
                         </span>
                     </span>
                     <span
+                        id={countId}
                         className="text-xs font-semibold uppercase tracking-[0.35em]"
                         style={{ color: `color-mix(in srgb, ${accent}, white 25%)` }}
                     >
                         {countLabel}
                     </span>
                 </summary>
-                <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                    {folder.items.map((app) => this.renderAppTile(app))}
-                </div>
+                {this.renderAppCollection(folder.items, {
+                    ariaLabel: `${folder.title} applications`,
+                    ariaLabelledby: titleId,
+                    ariaDescribedby: countId,
+                    virtualizationId: `folder-${folder.id}`,
+                    maxHeight: 520,
+                })}
             </details>
         );
     };
