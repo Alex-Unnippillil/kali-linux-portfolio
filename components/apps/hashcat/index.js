@@ -35,7 +35,7 @@ export const hashTypes = [
     id: '3200',
     name: 'bcrypt',
     summary: 'bcrypt $2*$',
-    regex: /^\$2[aby]\$.{56}$/,
+    regex: /^\$2[aby]\$\d{2}\$[./0-9A-Za-z]{53}$/,
     example:
       '$2b$12$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     output: 'password',
