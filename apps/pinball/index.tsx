@@ -481,13 +481,13 @@ export default function Pinball() {
           aria-label="Pinball playfield"
           className="border"
         />
-        <div className="absolute top-3 left-3 rounded bg-kali-surface/70 px-2 py-1 font-mono text-xs text-[var(--color-text)]">
+        <div className="absolute top-3 left-3 rounded bg-[var(--kali-overlay)] px-2 py-1 font-mono text-xs text-[var(--kali-text)]">
           Balls: {ballsRemaining}
         </div>
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 font-mono text-2xl text-[var(--color-text)]">
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 font-mono text-2xl text-[var(--kali-text)]">
           {formatScore(score)}
         </div>
-        <div className="absolute top-12 left-1/2 -translate-x-1/2 font-mono text-xs tracking-widest text-[color-mix(in_srgb,var(--color-text)_85%,transparent)]">
+        <div className="absolute top-12 left-1/2 -translate-x-1/2 font-mono text-xs tracking-widest text-[color-mix(in_srgb,var(--kali-text)_85%,transparent)]">
           HI {formatScore(highScore)}
         </div>
         <div className="absolute top-3 right-3 flex flex-col items-end space-y-2">
@@ -496,17 +496,17 @@ export default function Pinball() {
             type="button"
             onClick={handleLaunch}
             disabled={!ballLocked || ballsRemaining <= 0 || paused || tilt || gameOver}
-            className="rounded bg-kali-surface/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--color-text)] transition hover:bg-kali-surface/95 disabled:opacity-40"
+            className="rounded bg-[var(--kali-control-overlay)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--kali-text)] transition hover:bg-[color-mix(in_srgb,var(--kali-control)_30%,var(--kali-control-overlay))] disabled:opacity-40"
           >
             Launch Ball
           </button>
         </div>
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center text-center text-[var(--color-text)]">
-          <div className="rounded bg-kali-surface/85 px-3 py-2 text-sm text-[var(--color-text)] shadow-lg">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center text-center text-[var(--kali-text)]">
+          <div className="rounded bg-[color-mix(in_srgb,var(--kali-overlay)_92%,transparent)] px-3 py-2 text-sm text-[var(--kali-text)] shadow-lg">
             {statusMessage}
           </div>
           {!gameOver && !tilt && (
-            <div className="mt-2 rounded bg-kali-surface/60 px-2 py-1 text-xs uppercase tracking-wide text-[color-mix(in_srgb,var(--color-text)_85%,transparent)]">
+            <div className="mt-2 rounded bg-[color-mix(in_srgb,var(--kali-overlay)_78%,transparent)] px-2 py-1 text-xs uppercase tracking-wide text-[color-mix(in_srgb,var(--kali-text)_85%,transparent)]">
               Space to launch • N / RB to nudge
             </div>
           )}
