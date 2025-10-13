@@ -71,7 +71,20 @@ const SekurlsaLogonpasswords = () => {
   const sessions = useMemo(() => parseSessions(rawOutput), []);
   return (
     <>
-      <Meta />
+      <Meta
+        title="Mimikatz sekurlsa::logonpasswords — Sanitized Walkthrough"
+        description="Review how credential material surfaces within sekurlsa::logonpasswords output using fully redacted, education-only samples."
+        canonicalPath="/sekurlsa_logonpasswords"
+        og={{
+          title: 'Sekurlsa logonpasswords Overview',
+          subtitle: 'Understand credential artifacts without touching live systems',
+          badges: ['Credential parsing', 'Red team training', 'Sanitized data'],
+          project: 'sekurlsa-logonpasswords',
+          theme: 'light',
+          locale: 'en-GB',
+          image: '/images/logos/logo_1200.png',
+        }}
+      />
       <div style={{ backgroundColor: '#fcd34d', padding: '1rem', textAlign: 'center', fontWeight: 'bold' }}>
         Sanitized credential data for educational use only.
       </div>
