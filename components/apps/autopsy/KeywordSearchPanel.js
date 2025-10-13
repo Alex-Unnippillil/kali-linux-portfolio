@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatDate } from '../../../lib/intl';
 
 const escapeHtml = (str = '') =>
   str
@@ -76,7 +77,7 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
             </div>
             <div className="text-kali-text/60">{a.type}</div>
             <div className="text-xs">
-              {new Date(a.timestamp).toLocaleString()}
+              {formatDate(a.timestamp, { dateStyle: 'medium', timeStyle: 'short' })}
             </div>
             {a.user && (
               <div

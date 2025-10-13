@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import GameShell from '../../components/games/GameShell';
 import { toPng } from 'html-to-image';
 import useOPFSLeaderboard from '../../hooks/useOPFSLeaderboard';
+import { formatDate } from '@/lib/intl';
 import {
   Board,
   SIZE,
@@ -412,7 +413,7 @@ const Game2048 = () => {
             <ol className="list-decimal list-inside space-y-1">
               {scores.map((s, i) => (
                 <li key={i}>
-                  {new Date(s.date).toLocaleDateString()}: {s.score}
+                  {formatDate(s.date, { dateStyle: 'medium' })}: {s.score}
                 </li>
               ))}
             </ol>

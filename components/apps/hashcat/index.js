@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import progressInfo from './progress.json';
 import StatsChart from '../../StatsChart';
+import { formatNumber } from '../../../lib/intl';
 
 export const hashTypes = [
   {
@@ -489,7 +490,7 @@ function HashcatApp() {
           </div>
           {mask && (
             <div className="mt-2">
-              <p>Candidate space: {maskStats.count.toLocaleString()}</p>
+              <p>Candidate space: {formatNumber(maskStats.count)}</p>
               <p className="text-sm">
                 Estimated @1M/s: {formatTime(maskStats.time)}
               </p>

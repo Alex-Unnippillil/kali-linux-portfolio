@@ -5,6 +5,7 @@ import { toPng } from 'html-to-image';
 import usePersistentState from '../../../hooks/usePersistentState';
 import { useSettings } from '../../../hooks/useSettings';
 import type { ScheduledTweet } from '../state/scheduled';
+import { formatDate } from '@/lib/intl';
 
 interface TweetDraft {
   text: string;
@@ -182,7 +183,7 @@ export default function ThreadComposer() {
           <ul className="space-y-1">
             {scheduled.map((t) => (
               <li key={t.id} className="text-sm">
-                {new Date(t.time).toLocaleString()} - {t.text}
+                {formatDate(t.time, { dateStyle: 'medium', timeStyle: 'short' })} - {t.text}
               </li>
             ))}
           </ul>
@@ -194,7 +195,7 @@ export default function ThreadComposer() {
           <ul className="space-y-1">
             {published.map((t) => (
               <li key={t.id} className="text-sm">
-                {new Date(t.time).toLocaleString()} - {t.text}
+                {formatDate(t.time, { dateStyle: 'medium', timeStyle: 'short' })} - {t.text}
               </li>
             ))}
           </ul>

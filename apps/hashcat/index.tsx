@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import RulesSandbox from './components/RulesSandbox';
 import StatsChart from '../../components/StatsChart';
+import { formatNumber } from '@/lib/intl';
 
 interface Preset {
   value: string;
@@ -220,7 +221,7 @@ const Hashcat: React.FC = () => {
           </div>
           {mask && (
             <div className="mt-2">
-              <p>Candidate space: {maskStats.count.toLocaleString()}</p>
+              <p>Candidate space: {formatNumber(maskStats.count)}</p>
               <p className="text-sm">
                 Estimated @1M/s: {formatTime(maskStats.time)}
               </p>

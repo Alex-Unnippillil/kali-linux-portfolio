@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+import { createDateFormatter } from '../../lib/intl'
+
 const MONTHS = [
     "Jan",
     "Feb",
@@ -274,7 +276,7 @@ const Clock = ({
 
     const headingFormatter = useMemo(
         () =>
-            new Intl.DateTimeFormat(undefined, {
+            createDateFormatter({
                 month: 'long',
                 year: 'numeric'
             }),
@@ -287,7 +289,7 @@ const Clock = ({
 
     const friendlyDateFormatter = useMemo(
         () =>
-            new Intl.DateTimeFormat(undefined, {
+            createDateFormatter({
                 weekday: 'long',
                 month: 'long',
                 day: 'numeric'
@@ -297,21 +299,25 @@ const Clock = ({
 
     const friendlyTimeFormatter = useMemo(
         () =>
-            new Intl.DateTimeFormat(undefined, {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12
-            }),
+            createDateFormatter(
+                {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12
+                }
+            ),
         [hour12]
     )
 
     const timeFormatter = useMemo(
         () =>
-            new Intl.DateTimeFormat(undefined, {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12
-            }),
+            createDateFormatter(
+                {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12
+                }
+            ),
         [hour12]
     )
 
