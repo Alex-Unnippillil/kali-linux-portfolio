@@ -38,6 +38,10 @@ import {
 const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
 const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
 
+const TOP_EDGE_SWIPE_START_REGION = DESKTOP_TOP_PADDING + 24;
+const TOP_EDGE_SWIPE_TRIGGER_DISTANCE = 120;
+const TOP_EDGE_SWIPE_HORIZONTAL_TOLERANCE = 120;
+
 const sanitizeFolderItem = (item) => {
     if (!item) return null;
     if (typeof item === 'string') {
@@ -136,12 +140,41 @@ const SHORTCUT_OVERLAY_ID = OVERLAY_WINDOWS.shortcutSelector.id;
 const SWITCHER_OVERLAY_ID = OVERLAY_WINDOWS.windowSwitcher.id;
 const COMMAND_PALETTE_OVERLAY_ID = OVERLAY_WINDOWS.commandPalette.id;
 
+const OVERLAY_ALIAS_ENTRIES = Object.entries(OVERLAY_WINDOWS).map(([alias, meta]) => [meta.id, alias]);
+const OVERLAY_ALIAS_MAP = new Map(OVERLAY_ALIAS_ENTRIES);
+const OVERLAY_CANONICAL_MAP = new Map(Object.entries(OVERLAY_WINDOWS).map(([alias, meta]) => [alias, meta.id]));
+
+const getCanonicalOverlayId = (key) => OVERLAY_CANONICAL_MAP.get(key) || key;
+const getOverlayAlias = (id) => OVERLAY_ALIAS_MAP.get(id) || null;
+
+const applyOverlayAliases = (map) => {
+    if (!map || typeof map !== 'object') {
+        return map;
+    }
+    OVERLAY_ALIAS_MAP.forEach((alias, canonicalId) => {
+        if (!Object.prototype.hasOwnProperty.call(map, canonicalId)) {
+            return;
+        }
+        Object.defineProperty(map, alias, {
+            configurable: true,
+            enumerable: false,
+            get() {
+                return map[canonicalId];
+            },
+            set(value) {
+                map[canonicalId] = value;
+            },
+        });
+    });
+    return map;
+};
+
 const createOverlayFlagMap = (value) => {
     const flags = {};
     OVERLAY_WINDOW_LIST.forEach(({ id }) => {
         flags[id] = value;
     });
-    return flags;
+    return applyOverlayAliases(flags);
 };
 
 const createOverlayStateMap = () => {
@@ -157,7 +190,7 @@ const createOverlayStateMap = () => {
             next[id].transitionState = 'exited';
         }
     });
-    return next;
+    return applyOverlayAliases(next);
 };
 
 export class Desktop extends Component {
@@ -287,7 +320,7 @@ export class Desktop extends Component {
         this.preventNextIconClick = false;
         this.savedIconPositions = {};
 
-        this.gestureState = { pointer: null, overview: null };
+        this.gestureState = { pointer: null, overview: null, topEdge: null };
 
         this.currentPointerIsCoarse = false;
 
@@ -795,6 +828,95 @@ export class Desktop extends Component {
         };
     };
 
+    getTopEdgeSwipeStartBoundary = () => {
+        const safeArea = getSafeAreaInsets();
+        const safeTop = safeArea && typeof safeArea.top === 'number' ? safeArea.top : 0;
+        return TOP_EDGE_SWIPE_START_REGION + safeTop;
+    };
+
+    getTopEdgeSwipeTriggerDistance = () => TOP_EDGE_SWIPE_TRIGGER_DISTANCE;
+
+    tryStartTopEdgeSwipeGesture = (event) => {
+        if (!event || event.pointerType !== 'touch' || event.isPrimary === false) {
+            return false;
+        }
+        const existing = this.gestureState.topEdge;
+        if (existing && existing.pointerId !== event.pointerId) {
+            return false;
+        }
+        const startBoundary = this.getTopEdgeSwipeStartBoundary();
+        if (typeof event.clientY !== 'number' || event.clientY > startBoundary) {
+            return false;
+        }
+        this.gestureState.topEdge = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            lastX: event.clientX,
+            lastY: event.clientY,
+            startTime: typeof performance !== 'undefined' ? performance.now() : Date.now(),
+            triggered: false,
+        };
+        return true;
+    };
+
+    updateTopEdgeSwipeGesture = (event) => {
+        const gesture = this.gestureState.topEdge;
+        if (!gesture || gesture.pointerId !== event.pointerId || event.pointerType !== 'touch') {
+            return;
+        }
+        gesture.lastX = event.clientX;
+        gesture.lastY = event.clientY;
+        this.evaluateTopEdgeSwipeGesture(gesture);
+    };
+
+    finalizeTopEdgeSwipeGesture = (event) => {
+        const gesture = this.gestureState.topEdge;
+        if (!gesture || gesture.pointerId !== event.pointerId) {
+            return;
+        }
+        if (!gesture.triggered) {
+            gesture.lastX = event.clientX;
+            gesture.lastY = event.clientY;
+            this.evaluateTopEdgeSwipeGesture(gesture);
+        }
+        this.gestureState.topEdge = null;
+    };
+
+    cancelTopEdgeSwipeGesture = (event = null) => {
+        const gesture = this.gestureState.topEdge;
+        if (!gesture) return;
+        if (event && gesture.pointerId && gesture.pointerId !== event.pointerId) {
+            return;
+        }
+        this.gestureState.topEdge = null;
+    };
+
+    evaluateTopEdgeSwipeGesture = (gesture) => {
+        if (!gesture || gesture.triggered) {
+            return;
+        }
+        const triggerDistance = this.getTopEdgeSwipeTriggerDistance();
+        const lastY = typeof gesture.lastY === 'number' ? gesture.lastY : gesture.startY;
+        const deltaY = typeof lastY === 'number' ? lastY - gesture.startY : 0;
+        if (deltaY < triggerDistance) {
+            return;
+        }
+        const lastX = typeof gesture.lastX === 'number' ? gesture.lastX : gesture.startX;
+        const horizontalDrift = Math.abs((lastX ?? gesture.startX) - gesture.startX);
+        if (horizontalDrift > TOP_EDGE_SWIPE_HORIZONTAL_TOLERANCE) {
+            return;
+        }
+        if (this.isOverlayOpen(LAUNCHER_OVERLAY_ID)) {
+            gesture.triggered = true;
+            return;
+        }
+        if (!this.isOverlayOpen(SWITCHER_OVERLAY_ID)) {
+            this.openWindowSwitcher();
+        }
+        gesture.triggered = true;
+    };
+
     setupGestureListeners = () => {
         const node = this.desktopRef && this.desktopRef.current ? this.desktopRef.current : null;
         if (!node) return;
@@ -830,10 +952,15 @@ export class Desktop extends Component {
         this.gestureRoot = null;
         this.gestureState.pointer = null;
         this.gestureState.overview = null;
+        this.gestureState.topEdge = null;
     };
 
     handleShellPointerDown = (event) => {
         if (event.pointerType !== 'touch' || event.isPrimary === false) return;
+        const startedTopEdge = this.tryStartTopEdgeSwipeGesture(event);
+        if (startedTopEdge) {
+            return;
+        }
         const targetWindow = event.target && event.target.closest ? event.target.closest('.opened-window') : null;
         if (!targetWindow || !targetWindow.id) return;
         this.gestureState.pointer = {
@@ -849,12 +976,19 @@ export class Desktop extends Component {
 
     handleShellPointerMove = (event) => {
         const gesture = this.gestureState.pointer;
-        if (!gesture || gesture.pointerId !== event.pointerId) return;
-        gesture.lastX = event.clientX;
-        gesture.lastY = event.clientY;
+        if (gesture && gesture.pointerId === event.pointerId) {
+            gesture.lastX = event.clientX;
+            gesture.lastY = event.clientY;
+        }
+        if (!event.pointerType || event.pointerType === 'touch') {
+            this.updateTopEdgeSwipeGesture(event);
+        }
     };
 
     handleShellPointerUp = (event) => {
+        if (!event.pointerType || event.pointerType === 'touch') {
+            this.finalizeTopEdgeSwipeGesture(event);
+        }
         const gesture = this.gestureState.pointer;
         if (!gesture || gesture.pointerId !== event.pointerId) {
             return;
@@ -882,6 +1016,9 @@ export class Desktop extends Component {
     };
 
     handleShellPointerCancel = (event) => {
+        if (!event.pointerType || event.pointerType === 'touch') {
+            this.cancelTopEdgeSwipeGesture(event);
+        }
         const gesture = this.gestureState.pointer;
         if (gesture && gesture.pointerId === event.pointerId) {
             this.gestureState.pointer = null;
@@ -891,6 +1028,7 @@ export class Desktop extends Component {
     handleShellTouchStart = (event) => {
         if (event.touches && event.touches.length > 1) {
             this.gestureState.pointer = null;
+            this.cancelTopEdgeSwipeGesture();
         }
         if (!event.touches || event.touches.length !== 3) return;
         const centroid = this.computeTouchCentroid(event.touches);
@@ -930,10 +1068,14 @@ export class Desktop extends Component {
             gesture.triggered = true;
         }
         this.gestureState.overview = null;
+        if (!event.touches || event.touches.length === 0) {
+            this.cancelTopEdgeSwipeGesture();
+        }
     };
 
     handleShellTouchCancel = () => {
         this.gestureState.overview = null;
+        this.cancelTopEdgeSwipeGesture();
     };
 
     dispatchWindowCommand = (windowId, key) => {
@@ -1404,27 +1546,43 @@ export class Desktop extends Component {
         if (typeof callback === 'function') callback();
     };
 
-    isOverlayId = (id) => this.overlayRegistry?.has(id);
+    isOverlayId = (id) => this.overlayRegistry?.has(getCanonicalOverlayId(id));
 
-    getOverlayMeta = (id) => this.overlayRegistry?.get(id) || null;
+    getOverlayMeta = (id) => this.overlayRegistry?.get(getCanonicalOverlayId(id)) || null;
 
     getOverlayState = (id) => {
         const state = this.state.overlayWindows || {};
-        return state[id] || null;
+        const canonicalId = getCanonicalOverlayId(id);
+        return state[canonicalId] || null;
     };
 
     buildOverlayStateMap = (prev, id, partial) => {
-        const current = (prev && prev[id]) || {};
-        return {
+        const canonicalId = getCanonicalOverlayId(id);
+        const current = (prev && prev[canonicalId]) || {};
+        const next = {
             ...prev,
-            [id]: {
+            [canonicalId]: {
                 ...current,
                 ...partial,
             },
         };
+        const alias = getOverlayAlias(canonicalId);
+        if (alias) {
+            Object.defineProperty(next, alias, {
+                configurable: true,
+                enumerable: false,
+                get() {
+                    return next[canonicalId];
+                },
+            });
+        }
+        return next;
     };
 
-    isOverlayOpen = (id) => Boolean(this.state.overlayWindows?.[id]?.open);
+    isOverlayOpen = (id) => {
+        const canonicalId = getCanonicalOverlayId(id);
+        return Boolean(this.state.overlayWindows?.[canonicalId]?.open);
+    };
 
     getLauncherState = () => this.state.overlayWindows?.[LAUNCHER_OVERLAY_ID] || null;
 
@@ -1602,6 +1760,7 @@ export class Desktop extends Component {
         }
 
         const { closed, minimized, focused } = flags || {};
+        const canonicalId = getCanonicalOverlayId(id);
         let didUpdate = false;
 
         this.setState((prev) => {
@@ -1609,22 +1768,25 @@ export class Desktop extends Component {
 
             if (typeof closed === 'boolean') {
                 const previousClosed = prev.closed_windows || {};
-                if (!Object.prototype.hasOwnProperty.call(previousClosed, id) || previousClosed[id] !== closed) {
-                    partial.closed_windows = { ...previousClosed, [id]: closed };
+                if (!Object.prototype.hasOwnProperty.call(previousClosed, canonicalId) || previousClosed[canonicalId] !== closed) {
+                    const nextClosed = { ...previousClosed, [canonicalId]: closed };
+                    partial.closed_windows = applyOverlayAliases(nextClosed);
                 }
             }
 
             if (typeof minimized === 'boolean') {
                 const previousMinimized = prev.minimized_windows || {};
-                if (!Object.prototype.hasOwnProperty.call(previousMinimized, id) || previousMinimized[id] !== minimized) {
-                    partial.minimized_windows = { ...previousMinimized, [id]: minimized };
+                if (!Object.prototype.hasOwnProperty.call(previousMinimized, canonicalId) || previousMinimized[canonicalId] !== minimized) {
+                    const nextMinimized = { ...previousMinimized, [canonicalId]: minimized };
+                    partial.minimized_windows = applyOverlayAliases(nextMinimized);
                 }
             }
 
             if (typeof focused === 'boolean') {
                 const previousFocused = prev.focused_windows || {};
-                if (!Object.prototype.hasOwnProperty.call(previousFocused, id) || previousFocused[id] !== focused) {
-                    partial.focused_windows = { ...previousFocused, [id]: focused };
+                if (!Object.prototype.hasOwnProperty.call(previousFocused, canonicalId) || previousFocused[canonicalId] !== focused) {
+                    const nextFocused = { ...previousFocused, [canonicalId]: focused };
+                    partial.focused_windows = applyOverlayAliases(nextFocused);
                 }
             }
 
@@ -2783,7 +2945,8 @@ export class Desktop extends Component {
     };
 
     getOverlayDefaults = (key) => {
-        if (key === 'launcher') {
+        const alias = getOverlayAlias(key) || key;
+        if (alias === 'launcher') {
             return { open: false, minimized: false, maximized: false, transitionState: 'exited' };
         }
         return { open: false, minimized: false, maximized: false };
@@ -2798,9 +2961,10 @@ export class Desktop extends Component {
 
     updateOverlayState = (key, updater, callback) => {
         if (!key) return;
+        const canonicalId = getCanonicalOverlayId(key);
         this.setState((prevState) => {
             const overlays = prevState.overlayWindows || {};
-            const previous = overlays[key] ? { ...overlays[key] } : this.getOverlayDefaults(key);
+            const previous = overlays[canonicalId] ? { ...overlays[canonicalId] } : this.getOverlayDefaults(canonicalId);
             const nextState = typeof updater === 'function'
                 ? updater({ ...previous })
                 : { ...previous, ...(updater || {}) };
@@ -2823,11 +2987,12 @@ export class Desktop extends Component {
                 return null;
             }
 
+            const nextMap = applyOverlayAliases({
+                ...overlays,
+                [canonicalId]: next,
+            });
             return {
-                overlayWindows: {
-                    ...overlays,
-                    [key]: next,
-                },
+                overlayWindows: nextMap,
             };
         }, callback);
     };
@@ -4431,6 +4596,7 @@ export class Desktop extends Component {
                     };
                     return acc;
                 }, {});
+                overlayWindows = applyOverlayAliases(overlayWindows);
             }
             this.commitWorkspacePartial({ focused_windows: nextFocused }, prev.activeWorkspace);
             return {

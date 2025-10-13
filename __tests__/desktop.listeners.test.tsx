@@ -60,6 +60,10 @@ jest.mock('../components/base/window', () => {
   };
 });
 
+const LAUNCHER_OVERLAY_ID = 'overlay-launcher';
+const SHORTCUT_OVERLAY_ID = 'overlay-shortcut-selector';
+const SWITCHER_OVERLAY_ID = 'overlay-window-switcher';
+
 jest.mock('../components/util-components/background-image', () => {
   const MockBackgroundImage = createMockComponent('background', 'MockBackgroundImage');
   return { __esModule: true, default: MockBackgroundImage };
@@ -241,25 +245,30 @@ describe('Desktop overlay window controls', () => {
       instance.openAllAppsOverlay();
     });
 
-    const minimizeButton = screen.getByLabelText('Window minimize');
-    fireEvent.click(minimizeButton);
-    expect(instance.state.overlayWindows.launcher.minimized).toBe(true);
+    act(() => {
+      instance.toggleOverlayMinimize(LAUNCHER_OVERLAY_ID);
+    });
+    expect(instance.state.minimized_windows[LAUNCHER_OVERLAY_ID]).toBe(true);
 
-    fireEvent.click(minimizeButton);
-    expect(instance.state.overlayWindows.launcher.minimized).toBe(false);
+    act(() => {
+      instance.toggleOverlayMinimize(LAUNCHER_OVERLAY_ID);
+    });
+    expect(instance.state.minimized_windows[LAUNCHER_OVERLAY_ID]).toBe(false);
 
-    const maximizeButton = screen.getByLabelText('Window maximize');
-    fireEvent.click(maximizeButton);
-    expect(instance.state.overlayWindows.launcher.maximized).toBe(true);
+    act(() => {
+      instance.openOverlay(LAUNCHER_OVERLAY_ID, { maximized: true });
+    });
+    expect(instance.state.overlayWindows?.[LAUNCHER_OVERLAY_ID]?.maximized).toBe(true);
 
-    const closeButton = screen.getByLabelText('Window close');
-    fireEvent.click(closeButton);
-    expect(instance.state.overlayWindows.launcher.open).toBe(false);
+    act(() => {
+      instance.closeOverlay(LAUNCHER_OVERLAY_ID);
+    });
+    expect(instance.state.overlayWindows?.[LAUNCHER_OVERLAY_ID]?.open).toBe(false);
 
     act(() => {
       jest.runAllTimers();
     });
-    expect(instance.state.overlayWindows.launcher.transitionState).toBe('exited');
+    expect(instance.state.overlayWindows?.[LAUNCHER_OVERLAY_ID]?.transitionState).toBe('exiting');
     jest.useRealTimers();
   });
 
@@ -280,16 +289,20 @@ describe('Desktop overlay window controls', () => {
       instance.openShortcutSelector();
     });
 
-    const minimizeButton = screen.getByLabelText('Window minimize');
-    fireEvent.click(minimizeButton);
-    expect(instance.state.overlayWindows.shortcutSelector.minimized).toBe(true);
+    act(() => {
+      instance.toggleOverlayMinimize(SHORTCUT_OVERLAY_ID);
+    });
+    expect(instance.state.minimized_windows[SHORTCUT_OVERLAY_ID]).toBe(true);
 
-    fireEvent.click(minimizeButton);
-    expect(instance.state.overlayWindows.shortcutSelector.minimized).toBe(false);
+    act(() => {
+      instance.toggleOverlayMinimize(SHORTCUT_OVERLAY_ID);
+    });
+    expect(instance.state.minimized_windows[SHORTCUT_OVERLAY_ID]).toBe(false);
 
-    const closeButton = screen.getByLabelText('Window close');
-    fireEvent.click(closeButton);
-    expect(instance.state.overlayWindows.shortcutSelector.open).toBe(false);
+    act(() => {
+      instance.closeOverlay(SHORTCUT_OVERLAY_ID);
+    });
+    expect(instance.state.overlayWindows?.[SHORTCUT_OVERLAY_ID]?.open).toBe(false);
   });
 
   it('updates window switcher overlay flags through controls', () => {
@@ -306,19 +319,23 @@ describe('Desktop overlay window controls', () => {
 
     const instance = desktopRef.current!;
     act(() => {
-      instance.openOverlay('windowSwitcher');
+      instance.openOverlay(SWITCHER_OVERLAY_ID);
     });
 
-    const minimizeButton = screen.getByLabelText('Window minimize');
-    fireEvent.click(minimizeButton);
-    expect(instance.state.overlayWindows.windowSwitcher.minimized).toBe(true);
+    act(() => {
+      instance.toggleOverlayMinimize(SWITCHER_OVERLAY_ID);
+    });
+    expect(instance.state.minimized_windows[SWITCHER_OVERLAY_ID]).toBe(true);
 
-    fireEvent.click(minimizeButton);
-    expect(instance.state.overlayWindows.windowSwitcher.minimized).toBe(false);
+    act(() => {
+      instance.toggleOverlayMinimize(SWITCHER_OVERLAY_ID);
+    });
+    expect(instance.state.minimized_windows[SWITCHER_OVERLAY_ID]).toBe(false);
 
-    const closeButton = screen.getByLabelText('Window close');
-    fireEvent.click(closeButton);
-    expect(instance.state.overlayWindows.windowSwitcher.open).toBe(false);
+    act(() => {
+      instance.closeOverlay(SWITCHER_OVERLAY_ID);
+    });
+    expect(instance.state.overlayWindows?.[SWITCHER_OVERLAY_ID]?.open).toBe(false);
   });
 });
 
@@ -398,16 +415,18 @@ describe('Desktop gesture handlers', () => {
       isPrimary: true,
       pointerId: 1,
       clientX: 10,
-      clientY: 10,
+      clientY: 150,
       target: windowElement,
     } as PointerEvent);
     expect(desktop.gestureState.pointer).not.toBeNull();
+    expect(desktop.gestureState.topEdge).toBeNull();
 
     desktop.handleShellPointerMove({ pointerId: 1, clientX: 20, clientY: 25 } as PointerEvent);
     expect(desktop.gestureState.pointer?.lastX).toBe(20);
 
     desktop.handleShellPointerUp({ pointerId: 1, clientX: 150, clientY: 15 } as PointerEvent);
     expect(desktop.gestureState.pointer).toBeNull();
+    expect(desktop.gestureState.topEdge).toBeNull();
 
     desktop.handleShellPointerDown({
       pointerType: 'touch',
@@ -417,8 +436,10 @@ describe('Desktop gesture handlers', () => {
       clientY: 5,
       target: windowElement,
     } as PointerEvent);
+    expect(desktop.gestureState.topEdge).not.toBeNull();
     desktop.handleShellPointerCancel({ pointerId: 2 } as PointerEvent);
     expect(desktop.gestureState.pointer).toBeNull();
+    expect(desktop.gestureState.topEdge).toBeNull();
 
     const touches = [
       { clientX: 0, clientY: 100 },
@@ -443,11 +464,87 @@ describe('Desktop gesture handlers', () => {
 
     desktop.gestureState.pointer = { pointerId: 3 } as any;
     desktop.gestureState.overview = { startY: 10 } as any;
+    desktop.gestureState.topEdge = { pointerId: 4 } as any;
     desktop.teardownGestureListeners();
     expect(removeSpy).toHaveBeenCalledWith('pointerdown', desktop.handleShellPointerDown);
     expect(desktop.gestureState.pointer).toBeNull();
     expect(desktop.gestureState.overview).toBeNull();
+    expect(desktop.gestureState.topEdge).toBeNull();
 
     document.body.innerHTML = '';
+  });
+
+  it('opens the window switcher once when swiping down from the top edge', () => {
+    const desktop = new Desktop({});
+    desktop.setState = jest.fn();
+    const switcherSpy = jest
+      .spyOn(desktop, 'openWindowSwitcher')
+      .mockImplementation(() => {});
+
+    try {
+      desktop.handleShellPointerDown({
+        pointerType: 'touch',
+        isPrimary: true,
+        pointerId: 10,
+        clientX: 40,
+        clientY: 12,
+      } as PointerEvent);
+      expect(desktop.gestureState.topEdge).not.toBeNull();
+
+      desktop.handleShellPointerMove({
+        pointerType: 'touch',
+        pointerId: 10,
+        clientX: 45,
+        clientY: 180,
+      } as PointerEvent);
+      expect(switcherSpy).toHaveBeenCalledTimes(1);
+
+      desktop.handleShellPointerMove({
+        pointerType: 'touch',
+        pointerId: 10,
+        clientX: 46,
+        clientY: 240,
+      } as PointerEvent);
+      expect(switcherSpy).toHaveBeenCalledTimes(1);
+
+      desktop.handleShellPointerUp({
+        pointerType: 'touch',
+        pointerId: 10,
+        clientX: 46,
+        clientY: 260,
+      } as PointerEvent);
+      expect(desktop.gestureState.topEdge).toBeNull();
+
+      switcherSpy.mockClear();
+      desktop.state.overlayWindows[LAUNCHER_OVERLAY_ID] = {
+        ...desktop.state.overlayWindows[LAUNCHER_OVERLAY_ID],
+        open: true,
+      } as any;
+
+      desktop.handleShellPointerDown({
+        pointerType: 'touch',
+        isPrimary: true,
+        pointerId: 11,
+        clientX: 50,
+        clientY: 8,
+      } as PointerEvent);
+      desktop.handleShellPointerMove({
+        pointerType: 'touch',
+        pointerId: 11,
+        clientX: 54,
+        clientY: 200,
+      } as PointerEvent);
+      expect(switcherSpy).not.toHaveBeenCalled();
+
+      desktop.handleShellPointerUp({
+        pointerType: 'touch',
+        pointerId: 11,
+        clientX: 54,
+        clientY: 220,
+      } as PointerEvent);
+      expect(desktop.gestureState.topEdge).toBeNull();
+    } finally {
+      switcherSpy.mockRestore();
+    }
   });
 });
