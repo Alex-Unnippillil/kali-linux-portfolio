@@ -29,6 +29,7 @@ type CategoryDefinitionBase = {
 
 const TRANSITION_DURATION = 180;
 const CATEGORY_STORAGE_KEY = 'whisker-menu-category';
+const getNow = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 
 const CATEGORY_DEFINITIONS = [
   {
@@ -120,6 +121,17 @@ const isCategoryId = (
 ): value is CategoryDefinition['id'] =>
   CATEGORY_DEFINITIONS.some(cat => cat.id === value);
 
+type SearchModule = typeof import('../../lib/search');
+type SearchStatus = 'idle' | 'loading' | 'ready' | 'error';
+
+type SearchMetricsState = {
+  mode: 'worker' | 'fallback';
+  evaluated: number;
+  elapsedMs: number;
+  mainThreadMs: number;
+  error?: string;
+};
+
 const KALI_LOGO_PATH =
   [
     'M 22.060547 19.480469 C 18.150547 19.480469 13.970625 19.650234 9.640625 19.990234 C 8.570625 20.070234 7.7607813 20.990547 7.8007812 22.060547 C 7.8407813 23.130547 8.7207813 23.980469 9.8007812 23.980469 C 23.710781 24.000469 36.469141 25.689922 44.619141 28.419922 C 42.129141 28.209922 39.610547 28.089844 37.060547 28.089844 C 18.060547 28.089844 3.8009375 33.910391 3.2109375 34.150391 C 2.2409375 34.560391 1.7503125 35.630859 2.0703125 36.630859 C 2.3503125 37.460859 3.1307031 38 3.9707031 38 C 4.1307031 38 4.2909375 37.979453 4.4609375 37.939453 C 4.6109375 37.899453 20.480938 34 36.460938 34 C 38.520938 34 40.500859 34.069453 42.380859 34.189453',
@@ -156,6 +168,12 @@ const WhiskerMenu: React.FC = () => {
   const focusTimeoutRef = useRef<number | null>(null);
   const focusFrameRef = useRef<number | null>(null);
 
+  const searchModuleRef = useRef<SearchModule | null>(null);
+  const [searchStatus, setSearchStatus] = useState<SearchStatus>('idle');
+  const [searchMatches, setSearchMatches] = useState<string[]>([]);
+  const [searchMetrics, setSearchMetrics] = useState<SearchMetricsState | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
@@ -187,6 +205,52 @@ const WhiskerMenu: React.FC = () => {
     if (!isOpen) return;
     setRecentIds(readRecentAppIds());
   }, [isOpen]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let cancelled = false;
+
+    const bootstrap = async () => {
+      setSearchStatus('loading');
+      try {
+        const searchLib = await import('../../lib/search');
+        if (cancelled) return;
+        searchModuleRef.current = searchLib;
+
+        const documents = allApps.map(app => {
+          const keywords = [
+            app.title,
+            app.id.replace(/-/g, ' '),
+            app.favourite ? 'favorite' : null,
+          ].filter((value): value is string => Boolean(value));
+
+          return {
+            id: app.id,
+            title: app.title,
+            keywords,
+            description: `${app.title} application`,
+          };
+        });
+
+        const signature = JSON.stringify(documents.map(doc => [doc.id, doc.title]));
+        await searchLib.prepareSearchIndex(documents, { signature });
+        if (cancelled) return;
+        setSearchStatus('ready');
+        setSearchError(null);
+      } catch (error) {
+        if (cancelled) return;
+        console.error('Failed to initialize search worker', error);
+        setSearchStatus('error');
+        setSearchError(error instanceof Error ? error.message : String(error));
+      }
+    };
+
+    bootstrap();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [allApps]);
 
   useLayoutEffect(() => {
     if (!isOpen) return;
@@ -267,14 +331,38 @@ const WhiskerMenu: React.FC = () => {
     return found ?? categoryConfigs[0];
   }, [category, categoryConfigs]);
 
-  const currentApps = useMemo(() => {
-    let list = currentCategory?.apps ?? [];
-    if (query) {
-      const q = query.toLowerCase();
-      list = list.filter(a => a.title.toLowerCase().includes(q));
+  const fallbackSearch = useMemo<{ list: AppMeta[]; duration: number }>(() => {
+    const start = getNow();
+    const base = currentCategory?.apps ?? [];
+    if (!query) {
+      return { list: base, duration: getNow() - start };
     }
-    return list;
+    const lower = query.toLowerCase();
+    const filtered = base.filter(app => app.title.toLowerCase().includes(lower));
+    return { list: filtered, duration: getNow() - start };
   }, [currentCategory, query]);
+
+  const matchOrder = useMemo(() => {
+    const map = new Map<string, number>();
+    searchMatches.forEach((id, index) => map.set(id, index));
+    return map;
+  }, [searchMatches]);
+
+  const currentApps = useMemo(() => {
+    const base = currentCategory?.apps ?? [];
+    if (!query) {
+      return base;
+    }
+    if (searchStatus === 'ready') {
+      if (matchOrder.size === 0) {
+        return [];
+      }
+      return base
+        .filter(app => matchOrder.has(app.id))
+        .sort((a, b) => (matchOrder.get(a.id)! - matchOrder.get(b.id)!));
+    }
+    return fallbackSearch.list;
+  }, [currentCategory, query, searchStatus, matchOrder, fallbackSearch]);
 
   useEffect(() => {
     const storedCategory = safeLocalStorage?.getItem(CATEGORY_STORAGE_KEY);
@@ -302,6 +390,70 @@ const WhiskerMenu: React.FC = () => {
     window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
     setIsOpen(false);
   };
+
+  useEffect(() => {
+    if (!query) {
+      setSearchMatches([]);
+      setSearchMetrics(null);
+      if (searchStatus !== 'loading') {
+        setSearchError(null);
+      }
+      return;
+    }
+
+    if (searchStatus !== 'ready') {
+      setSearchMetrics({
+        mode: 'fallback',
+        evaluated: fallbackSearch.list.length,
+        elapsedMs: fallbackSearch.duration,
+        mainThreadMs: fallbackSearch.duration,
+        error: searchStatus === 'error' ? searchError ?? undefined : undefined,
+      });
+    }
+  }, [query, searchStatus, fallbackSearch, searchError]);
+
+  useEffect(() => {
+    if (!query || searchStatus !== 'ready') return;
+    const searchLib = searchModuleRef.current;
+    if (!searchLib) return;
+
+    let cancelled = false;
+    const start = getNow();
+
+    searchLib
+      .runSearch(query, { limit: 200, timeoutMs: 200 })
+      .then(response => {
+        if (cancelled) return;
+        const end = getNow();
+        setSearchMatches(response.results.map(result => result.id));
+        setSearchMetrics({
+          mode: 'worker',
+          evaluated: response.metrics.evaluated,
+          elapsedMs: response.metrics.elapsedMs,
+          mainThreadMs: end - start,
+        });
+        setSearchError(null);
+      })
+      .catch(error => {
+        if (cancelled) return;
+        const end = getNow();
+        const message = error instanceof Error ? error.message : String(error);
+        setSearchMatches([]);
+        setSearchMetrics({
+          mode: 'worker',
+          evaluated: 0,
+          elapsedMs: 0,
+          mainThreadMs: end - start,
+          error: message,
+        });
+        setSearchError(message);
+        setSearchStatus('error');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [query, searchStatus]);
 
   useEffect(() => {
     if (!isOpen && isVisible) {
@@ -637,6 +789,23 @@ const WhiskerMenu: React.FC = () => {
                   </button>
                 ))}
               </div>
+              {query && searchMetrics && (
+                <p
+                  className="mt-3 text-xs text-[#4aa8ff]"
+                  data-testid="search-metrics"
+                  role="status"
+                >
+                  {searchMetrics.mode === 'worker'
+                    ? `Worker evaluated ${searchMetrics.evaluated} apps in ${searchMetrics.elapsedMs.toFixed(1)}ms (main thread ${searchMetrics.mainThreadMs.toFixed(2)}ms).`
+                    : `Fallback search evaluated ${searchMetrics.evaluated} apps on the main thread in ${searchMetrics.elapsedMs.toFixed(1)}ms.`}
+                  {searchMetrics.error ? ` ${searchMetrics.error}` : ''}
+                </p>
+              )}
+              {searchStatus === 'error' && (
+                <p className="mt-2 text-xs text-amber-400" role="alert">
+                  Search worker unavailable — using main-thread filtering.
+                </p>
+              )}
             </div>
             <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-3">
               {currentApps.length === 0 ? (
