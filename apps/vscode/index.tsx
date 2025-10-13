@@ -188,8 +188,8 @@ export default function VsCode() {
       style={{ backgroundColor: kaliTheme.background, color: kaliTheme.text }}
     >
       <aside
-        className="flex flex-col items-center gap-3 px-2 py-4 border-r border-black/20 bg-black/20"
-        style={{ width: SIDEBAR_WIDTH, backgroundColor: kaliTheme.sidebar }}
+        className="flex flex-col items-center gap-3 px-2 py-4 border-r border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)]"
+        style={{ width: SIDEBAR_WIDTH, backgroundColor: 'var(--kali-panel)' }}
       >
         <div
           className="rounded-md bg-[color:var(--color-primary)] opacity-80 shadow-inner shadow-black/40 transition-opacity hover:opacity-100"
@@ -200,10 +200,9 @@ export default function VsCode() {
           style={{ width: ICON_SIZE, height: ICON_SIZE }}
         />
       </aside>
-      <div className="flex-1 flex flex-col border border-black/20 rounded-md overflow-hidden">
+      <div className="flex-1 flex flex-col border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] rounded-md overflow-hidden">
         <div
-          className="flex items-center justify-end gap-2 px-3 py-2 border-b border-black/20"
-          style={{ backgroundColor: kaliTheme.background }}
+          className="flex items-center justify-end gap-2 px-3 py-2 border-b border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)]"
         >
           <button aria-label="Minimize">
             <MinimizeIcon />
@@ -215,7 +214,7 @@ export default function VsCode() {
             <CloseIcon />
           </button>
         </div>
-        <nav className="flex items-center gap-1 border-b border-black/20 bg-black/10 px-2 py-1">
+        <nav className="flex items-center gap-1 border-b border-[color:var(--kali-panel-border)] bg-[var(--kali-panel-highlight)] px-2 py-1">
           {EDITOR_TABS.map(({ label, isActive }) => (
             <button
               key={label}
@@ -223,19 +222,23 @@ export default function VsCode() {
               aria-current={isActive ? 'page' : undefined}
               className={`flex items-center gap-2 rounded-t-md px-3 py-2 text-xs font-medium tracking-tight transition-colors ${
                 isActive
-                  ? 'bg-black/60 text-white shadow-[inset_0_-1px_0_rgba(255,255,255,0.2)]'
-                  : 'text-white/70 hover:text-white/90 hover:bg-black/20'
+                  ? 'border border-b-0 border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] text-[color:var(--color-text)] shadow-[inset_0_-1px_0_var(--kali-panel-border)]'
+                  : 'text-[color:var(--color-text)] opacity-70 hover:opacity-100 hover:bg-[var(--kali-panel-highlight)]'
               }`}
             >
               <span
-                className={`inline-flex h-2 w-2 rounded-full ${
-                  isActive ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]' : 'bg-white/30'
-                }`}
+                className="inline-flex h-2 w-2 rounded-full"
+                style={{
+                  backgroundColor: isActive ? 'var(--kali-terminal-green)' : 'var(--kali-panel-border)',
+                  boxShadow: isActive ? '0 0 6px var(--kali-terminal-green)' : undefined,
+                }}
               />
               {label}
             </button>
           ))}
-          <span className="ml-auto px-2 py-1 text-[11px] uppercase tracking-wide text-white/60">Spaces: 2</span>
+          <span className="ml-auto px-2 py-1 text-[11px] uppercase tracking-wide text-[color:var(--color-text)] opacity-60">
+            Spaces: 2
+          </span>
         </nav>
         <div className="relative flex-1" style={{ backgroundColor: kaliTheme.background }}>
           <ExternalFrame
@@ -246,9 +249,9 @@ export default function VsCode() {
             onError={handleFrameError}
           />
           {showOverlay && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/60 px-6 text-center">
+            <div className="absolute inset-0 flex items-center justify-center bg-[color:var(--color-overlay-strong)] px-6 text-center">
               <div
-                className="flex flex-col items-center gap-3 text-white"
+                className="flex flex-col items-center gap-3 text-[color:var(--color-text)]"
                 role={status === 'error' || status === 'timeout' ? 'alert' : 'status'}
                 aria-live="polite"
               >
@@ -258,7 +261,7 @@ export default function VsCode() {
                     href={STACKBLITZ_EMBED_URL.replace('embed=1&', '')}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded bg-white/20 px-3 py-1 text-sm font-medium hover:bg-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                    className="rounded border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel-highlight)] px-3 py-1 text-sm font-medium text-[color:var(--color-text)] transition-colors hover:bg-[var(--kali-panel)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)]"
                   >
                     Open in StackBlitz
                   </a>
@@ -266,7 +269,10 @@ export default function VsCode() {
               </div>
             </div>
           )}
-          <div className="absolute top-4 left-4 flex items-center gap-4 bg-black/50 p-4 rounded">
+          <div
+            className="absolute top-4 left-4 flex items-center gap-4 rounded border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] p-4 shadow-kali-panel"
+            style={{ backgroundColor: 'color-mix(in srgb, var(--kali-panel) 88%, transparent)' }}
+          >
             <Image
               src="/themes/Yaru/system/view-app-grid-symbolic.svg"
               alt="Open Folder"
@@ -277,10 +283,9 @@ export default function VsCode() {
           </div>
         </div>
         <div
-          className="flex items-center gap-3 px-3 py-2 border-t border-black/30 bg-black/60 text-white/80"
-          style={{ backgroundColor: kaliTheme.sidebar }}
+          className="flex items-center gap-3 px-3 py-2 border-t border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] text-[color:var(--color-text)] opacity-80"
         >
-          <span className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[12px] uppercase text-white">
+          <span className="flex items-center gap-1 rounded-full border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel-highlight)] px-2 py-1 text-[12px] uppercase text-[color:var(--color-text)]">
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -297,7 +302,7 @@ export default function VsCode() {
             </svg>
             MAIN
           </span>
-          <span className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-[12px] uppercase text-white">
+          <span className="flex items-center gap-1 rounded-full border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel-highlight)] px-2 py-1 text-[12px] uppercase text-[color:var(--color-text)]">
             <svg
               viewBox="0 0 24 24"
               fill="none"
