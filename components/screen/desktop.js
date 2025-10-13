@@ -4609,6 +4609,7 @@ export class Desktop extends Component {
             <main
                 id="desktop"
                 role="main"
+                tabIndex={-1}
                 ref={this.desktopRef}
                 className={" min-h-screen h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent"}
                 style={desktopStyle}
@@ -4617,6 +4618,7 @@ export class Desktop extends Component {
                 {/* Window Area */}
                 <div
                     id="window-area"
+                    tabIndex={-1}
                     className="absolute h-full w-full bg-transparent"
                     data-context="desktop-area"
                 >

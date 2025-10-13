@@ -300,7 +300,10 @@ export default class Navbar extends PureComponent {
                 render() {
                         const { workspaces, activeWorkspace } = this.state;
                         return (
-                                <div
+                                <nav
+                                        id="desktop-dock"
+                                        tabIndex={-1}
+                                        aria-label="Desktop dock"
                                         className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
                                 style={{
                                                 minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
@@ -341,7 +344,7 @@ export default class Navbar extends PureComponent {
                                                         <QuickSettings open={this.state.status_card} />
                                                 </div>
                                         </div>
-                                </div>
+                                </nav>
 			);
 		}
 

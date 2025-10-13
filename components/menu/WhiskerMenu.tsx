@@ -497,6 +497,7 @@ const WhiskerMenu: React.FC = () => {
   return (
     <div className="relative inline-flex">
       <button
+        id="desktop-launcher"
         ref={buttonRef}
         type="button"
         onClick={toggleMenu}
