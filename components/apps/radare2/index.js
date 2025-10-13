@@ -97,11 +97,24 @@ const Radare2 = ({ initialData = {} }) => {
     };
   }, [theme]);
 
+  const warningPalette = useMemo(() => {
+    const borderColor = themeTokens.border;
+    const panelColor = themeTokens.panel;
+    const accentColor = themeTokens.accent;
+
+    return {
+      border: `color-mix(in srgb, ${accentColor} 35%, ${borderColor})`,
+      surface: `color-mix(in srgb, ${borderColor} 35%, ${panelColor})`,
+      overlay: `color-mix(in srgb, ${accentColor} 18%, transparent)`,
+      badge: `color-mix(in srgb, ${accentColor} 24%, ${panelColor})`,
+    };
+  }, [themeTokens.accent, themeTokens.border, themeTokens.panel]);
+
   const cardSurfaceStyle = useMemo(
     () => ({
       backgroundColor: themeTokens.panel,
       border: `1px solid ${themeTokens.border}`,
-      boxShadow: "0 18px 45px -30px rgba(0,0,0,0.65)",
+      boxShadow: `0 18px 45px -30px color-mix(in srgb, ${themeTokens.border} 65%, transparent)`,
     }),
     [themeTokens.border, themeTokens.panel],
   );
@@ -359,7 +372,7 @@ const Radare2 = ({ initialData = {} }) => {
                     backgroundColor: isActive
                       ? themeTokens.accent
                       : hasMatches
-                      ? "rgba(251, 191, 36, 0.18)"
+                      ? warningPalette.surface
                       : themeTokens.panel,
                     color: isActive
                       ? themeTokens.accentForeground
@@ -536,12 +549,12 @@ const Radare2 = ({ initialData = {} }) => {
                           borderColor: isSelected
                             ? themeTokens.border
                             : hasWarning
-                            ? "rgba(251, 191, 36, 0.4)"
+                            ? warningPalette.border
                             : "transparent",
                           backgroundColor: isSelected
                             ? themeTokens.accent
                             : hasWarning
-                            ? "rgba(251, 191, 36, 0.12)"
+                            ? warningPalette.overlay
                             : "transparent",
                           color: isSelected
                             ? themeTokens.accentForeground
@@ -581,7 +594,7 @@ const Radare2 = ({ initialData = {} }) => {
                                   key={`${line.addr}-${heuristic.id}`}
                                   className="px-1.5 py-0.5 rounded-full"
                                   style={{
-                                    backgroundColor: "rgba(251, 191, 36, 0.25)",
+                                    backgroundColor: warningPalette.badge,
                                     color: themeTokens.text,
                                   }}
                                 >
@@ -637,12 +650,12 @@ const Radare2 = ({ initialData = {} }) => {
                     borderColor: isActive
                       ? themeTokens.accent
                       : isWarning
-                      ? "rgba(251, 191, 36, 0.35)"
+                      ? warningPalette.border
                       : "transparent",
                     backgroundColor: isActive
                       ? themeTokens.accent
                       : isWarning
-                      ? "rgba(251, 191, 36, 0.15)"
+                      ? warningPalette.surface
                       : isMuted
                       ? `color-mix(in srgb, ${themeTokens.muted} 45%, transparent)`
                       : themeTokens.highlight,
