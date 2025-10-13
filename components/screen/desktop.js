@@ -3901,10 +3901,71 @@ export class Desktop extends Component {
                 snapGrid,
                 context: this.state.window_context[id],
                 zIndex: 200 + index,
+                onWindowMenuRequest: (anchor) => this.handleWindowMenuRequest(id, anchor),
+                onBoundsCommit: (bounds) => this.handleWindowBoundsCommit(id, bounds),
             };
 
             return <Window key={id} {...props} />;
         }).filter(Boolean);
+    }
+
+    handleWindowMenuRequest = (id, anchor) => {
+        if (!id) return;
+        if (typeof document === 'undefined') return;
+        if (this.state.closed_windows?.[id] !== false) return;
+
+        const scrollX = typeof window !== 'undefined' ? window.scrollX || window.pageXOffset || 0 : 0;
+        const scrollY = typeof window !== 'undefined' ? window.scrollY || window.pageYOffset || 0 : 0;
+        let anchorRect = null;
+
+        if (anchor && typeof anchor === 'object') {
+            const { left, top, width, height } = anchor;
+            if ([left, top, width, height].every((value) => typeof value === 'number' && Number.isFinite(value))) {
+                anchorRect = { left, top, width, height };
+            }
+        }
+
+        if (!anchorRect) {
+            const node = document.getElementById(id);
+            if (node && typeof node.getBoundingClientRect === 'function') {
+                const rect = node.getBoundingClientRect();
+                anchorRect = {
+                    left: rect.left + scrollX,
+                    top: rect.top + scrollY,
+                    width: rect.width,
+                    height: rect.height,
+                };
+            }
+        }
+
+        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth || 0 : 0;
+        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight || 0 : 0;
+
+        const baseLeft = anchorRect?.left ?? (scrollX + viewportWidth / 2);
+        const baseTop = anchorRect?.top ?? (scrollY + viewportHeight / 2);
+
+        const pageX = baseLeft + 16;
+        const pageY = baseTop + 32;
+
+        this.hideAllContextMenu();
+        ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
+        this.setState({ context_app: id }, () => {
+            this.showContextMenu({ pageX, pageY }, "app");
+        });
+    }
+
+    handleWindowBoundsCommit = (id, bounds) => {
+        if (!id || !bounds) return;
+        const { width, height } = bounds;
+        if (!Number.isFinite(width) || !Number.isFinite(height)) return;
+        if (typeof window === 'undefined') return;
+        const viewportWidth = window.innerWidth || 0;
+        const viewportHeight = window.innerHeight || 0;
+        if (!viewportWidth || !viewportHeight) return;
+
+        const widthPercent = (width / viewportWidth) * 100;
+        const heightPercent = (height / viewportHeight) * 100;
+        this.updateWindowSize(id, widthPercent, heightPercent);
     }
 
     renderOverlayWindows = () => {

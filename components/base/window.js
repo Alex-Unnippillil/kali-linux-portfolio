@@ -127,6 +127,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._shellShortcutAttached = false;
     }
 
     notifySizeChange = () => {
@@ -156,6 +157,9 @@ export class Window extends Component {
         if (this.props.isFocused) {
             this.focusWindow();
         }
+        if (this.props.isFocused && !this.props.minimized) {
+            this.attachShellShortcutHandlers();
+        }
     }
 
     componentWillUnmount() {
@@ -169,6 +173,62 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.detachShellShortcutHandlers();
+    }
+
+    componentDidUpdate(prevProps) {
+        const gainedFocus = this.props.isFocused && !prevProps.isFocused;
+        const lostFocus = prevProps.isFocused && !this.props.isFocused;
+        const becameMinimized = !prevProps.minimized && this.props.minimized;
+        const restoredFromMinimize = prevProps.minimized && !this.props.minimized;
+
+        if ((gainedFocus || restoredFromMinimize) && !this.props.minimized) {
+            this.attachShellShortcutHandlers();
+        } else if (lostFocus || becameMinimized) {
+            this.detachShellShortcutHandlers();
+        }
+    }
+
+    attachShellShortcutHandlers = () => {
+        if (this._shellShortcutAttached || typeof document === 'undefined') return;
+        document.addEventListener('keydown', this.handleShellShortcut, true);
+        this._shellShortcutAttached = true;
+    }
+
+    detachShellShortcutHandlers = () => {
+        if (!this._shellShortcutAttached || typeof document === 'undefined') return;
+        document.removeEventListener('keydown', this.handleShellShortcut, true);
+        this._shellShortcutAttached = false;
+    }
+
+    handleShellShortcut = (event) => {
+        if (!event || event.defaultPrevented) return;
+        if (!this.props.isFocused) return;
+        if (this.props.minimized) return;
+        if (this.state.maximized) return;
+
+        const key = event.key;
+        const isAltSpace =
+            event.altKey &&
+            !event.shiftKey &&
+            !event.ctrlKey &&
+            !event.metaKey &&
+            (key === ' ' || key === 'Spacebar' || event.code === 'Space');
+
+        if (isAltSpace) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.requestWindowMenu();
+            return;
+        }
+
+        if (!(event.altKey && event.shiftKey)) return;
+        if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key)) return;
+        if (this.props.resizable === false) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        this.resizeWithKeyboard(key);
     }
 
     setDefaultWindowDimenstion = () => {
@@ -741,6 +801,103 @@ export class Window extends Component {
         if (this.state.grabbed) {
             this.handleStop();
         }
+    }
+
+    requestWindowMenu = () => {
+        if (typeof this.props.onWindowMenuRequest !== 'function') {
+            return;
+        }
+        const node = this.getWindowNode();
+        if (!node) {
+            this.props.onWindowMenuRequest(null);
+            return;
+        }
+        const rect = typeof node.getBoundingClientRect === 'function'
+            ? node.getBoundingClientRect()
+            : null;
+        if (!rect) {
+            this.props.onWindowMenuRequest(null);
+            return;
+        }
+        const scrollX = typeof window !== 'undefined' ? window.scrollX || window.pageXOffset || 0 : 0;
+        const scrollY = typeof window !== 'undefined' ? window.scrollY || window.pageYOffset || 0 : 0;
+        this.props.onWindowMenuRequest({
+            left: rect.left + scrollX,
+            top: rect.top + scrollY,
+            width: rect.width,
+            height: rect.height,
+        });
+    }
+
+    resizeWithKeyboard = (direction) => {
+        if (typeof window === 'undefined') return;
+        if (this.state.snapped) {
+            this.unsnapWindow();
+            return;
+        }
+
+        const viewportWidth = window.innerWidth || 0;
+        const viewportHeight = window.innerHeight || 0;
+        if (!viewportWidth || !viewportHeight) return;
+
+        const STEP_PX = 10;
+        const MIN_PERCENT = 20;
+        const MAX_PERCENT = 100;
+
+        const originalWidthPercent = this.state.width;
+        const originalHeightPercent = this.state.height;
+        const originalWidthPx = (originalWidthPercent / 100) * viewportWidth;
+        const originalHeightPx = (originalHeightPercent / 100) * viewportHeight;
+
+        let nextWidthPercent = originalWidthPercent;
+        let nextHeightPercent = originalHeightPercent;
+        let changed = false;
+
+        if (direction === 'ArrowLeft' || direction === 'ArrowRight') {
+            const delta = direction === 'ArrowLeft' ? -STEP_PX : STEP_PX;
+            const minWidthPx = viewportWidth * (MIN_PERCENT / 100);
+            const maxWidthPx = viewportWidth * (MAX_PERCENT / 100);
+            const adjusted = clamp(originalWidthPx + delta, minWidthPx, maxWidthPx);
+            if (Math.round(adjusted) !== Math.round(originalWidthPx)) {
+                nextWidthPercent = clamp((adjusted / viewportWidth) * 100, MIN_PERCENT, MAX_PERCENT);
+                changed = true;
+            }
+        } else if (direction === 'ArrowUp' || direction === 'ArrowDown') {
+            const delta = direction === 'ArrowUp' ? -STEP_PX : STEP_PX;
+            const minHeightPx = viewportHeight * (MIN_PERCENT / 100);
+            const maxHeightPx = viewportHeight * (MAX_PERCENT / 100);
+            const adjusted = clamp(originalHeightPx + delta, minHeightPx, maxHeightPx);
+            if (Math.round(adjusted) !== Math.round(originalHeightPx)) {
+                nextHeightPercent = clamp((adjusted / viewportHeight) * 100, MIN_PERCENT, MAX_PERCENT);
+                changed = true;
+            }
+        } else {
+            return;
+        }
+
+        if (!changed) return;
+
+        const updates = { preMaximizeSize: null };
+        if (nextWidthPercent !== originalWidthPercent) {
+            updates.width = nextWidthPercent;
+        }
+        if (nextHeightPercent !== originalHeightPercent) {
+            updates.height = nextHeightPercent;
+        }
+
+        const finalWidthPx = (nextWidthPercent / 100) * viewportWidth;
+        const finalHeightPx = (nextHeightPercent / 100) * viewportHeight;
+
+        this.setState(updates, () => {
+            this.resizeBoundries();
+            this.notifySizeChange();
+            if (typeof this.props.onBoundsCommit === 'function') {
+                this.props.onBoundsCommit({
+                    width: Math.round(finalWidthPx),
+                    height: Math.round(finalHeightPx),
+                });
+            }
+        });
     }
 
     handleKeyDown = (e) => {
