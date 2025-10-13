@@ -3,6 +3,8 @@
 
 html {
     font-size: clamp(12px, calc(16px * var(--font-multiplier)), 24px);
+    /* Mirror global guard against swipe-back navigation */
+    overscroll-behavior-x: none;
 }
 
 body{
