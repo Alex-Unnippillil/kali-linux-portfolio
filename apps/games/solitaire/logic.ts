@@ -14,7 +14,13 @@ export interface GameState {
   foundations: Record<Suit, Card[]>;
   tableau: Card[][];
   drawMode: 'draw1' | 'draw3';
+  score: number;
+  startTime: number;
+  isWon: boolean;
 }
+
+const FOUNDATION_SCORE = 10;
+const FLIP_BONUS = 5;
 
 const suits: Suit[] = ['♠', '♥', '♦', '♣'];
 
@@ -59,6 +65,9 @@ export const initGame = (drawMode: 'draw1' | 'draw3' = 'draw1'): GameState => {
     },
     tableau,
     drawMode,
+    score: 0,
+    startTime: Date.now(),
+    isWon: false,
   };
 };
 
@@ -123,27 +132,45 @@ export const getAutoMoves = (state: GameState) => {
 export const applyMoveToFoundation = (
   state: GameState,
   move: { from: 'waste' | 'tableau'; fromIndex: number; card: Card },
-) => {
+): boolean => {
+  const foundation = state.foundations[move.card.suit];
+  if (!canMoveToFoundation(move.card, foundation)) return false;
+
   if (move.from === 'waste') {
     state.waste.shift();
   } else {
     state.tableau[move.fromIndex].pop();
+    const newTop = state.tableau[move.fromIndex][
+      state.tableau[move.fromIndex].length - 1
+    ];
+    if (newTop && newTop.faceDown) {
+      newTop.faceDown = false;
+      state.score += FLIP_BONUS;
+    }
   }
-  state.foundations[move.card.suit].push(move.card);
+  foundation.push({ ...move.card, faceDown: false });
+  state.score += FOUNDATION_SCORE;
+  state.isWon = isVictory(state);
+  return true;
 };
 
 export const autoMove = (state: GameState) => {
   let moved = false;
   let moves = getAutoMoves(state);
   while (moves.length) {
-    applyMoveToFoundation(state, moves[0]);
+    const applied = applyMoveToFoundation(state, moves[0]);
+    if (!applied) break;
     moved = true;
     moves = getAutoMoves(state);
   }
+  state.isWon = isVictory(state);
   return moved;
 };
 
 export const getHint = (state: GameState): string | null => {
+  if (state.isWon || isVictory(state)) {
+    return 'You have already cleared all foundations.';
+  }
   const auto = getAutoMoves(state);
   if (auto.length) {
     const m = auto[0];
@@ -167,6 +194,12 @@ export const getHint = (state: GameState): string | null => {
       }
     }
   }
+  if (state.stock.length) {
+    return 'Draw a card from the stock.';
+  }
+  if (state.waste.length) {
+    return 'Recycle the waste pile into the stock by drawing.';
+  }
   return null;
 };
 
@@ -176,4 +209,7 @@ export const rankToString = (rank: number) => {
 };
 
 export const cardToString = (card: Card) => `${rankToString(card.rank)}${card.suit}`;
+
+export const isVictory = (state: GameState) =>
+  Object.values(state.foundations).every((pile) => pile.length === 13);
 
