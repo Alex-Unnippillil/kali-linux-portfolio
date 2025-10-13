@@ -101,25 +101,29 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
     if (!entropy)
       return {
         label: 'None',
-        barClass: 'bg-gray-600',
-        badgeClass: 'bg-gray-900/80 text-gray-300 border border-gray-600',
+        barClass: 'bg-[color:var(--kali-border)]',
+        badgeClass:
+          'border border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,var(--kali-border)_18%,transparent)] text-[color:color-mix(in_srgb,var(--kali-border)_88%,white)]',
       };
     if (entropy < 40)
       return {
         label: 'Weak',
-        barClass: 'bg-red-500',
-        badgeClass: 'bg-red-500/20 text-red-300 border border-red-400/60',
+        barClass: 'bg-[color:var(--color-severity-critical)]',
+        badgeClass:
+          'border border-[color:color-mix(in_srgb,var(--color-severity-critical)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--color-severity-critical)_16%,transparent)] text-[color:var(--color-severity-critical)]',
       };
     if (entropy < 80)
       return {
         label: 'Medium',
-        barClass: 'bg-yellow-400',
-        badgeClass: 'bg-yellow-500/20 text-yellow-200 border border-yellow-400/60',
+        barClass: 'bg-[color:var(--color-severity-medium)]',
+        badgeClass:
+          'border border-[color:color-mix(in_srgb,var(--color-severity-medium)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--color-severity-medium)_16%,transparent)] text-[color:var(--color-severity-medium)]',
       };
     return {
       label: 'Strong',
-      barClass: 'bg-green-500',
-      badgeClass: 'bg-green-500/20 text-green-200 border border-green-400/60',
+      barClass: 'bg-[color:var(--color-severity-low)]',
+      badgeClass:
+        'border border-[color:color-mix(in_srgb,var(--color-severity-low)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--color-severity-low)_16%,transparent)] text-[color:var(--color-severity-low)]',
     };
   };
 
@@ -133,16 +137,16 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
   };
 
   const toggleLabelClasses = (active: boolean) =>
-    `flex items-center gap-3 rounded-full border px-3 py-2 text-sm font-medium transition focus-within:ring-2 focus-within:ring-blue-500 focus-within:ring-offset-2 focus-within:ring-offset-gray-900 ${
+    `flex items-center gap-3 rounded-full border px-3 py-2 text-sm font-medium transition focus-within:ring-2 focus-within:ring-[color:var(--kali-control)] focus-within:ring-offset-2 focus-within:ring-offset-[var(--kali-panel)] ${
       active
-        ? 'bg-blue-600/20 border-blue-400/70 text-blue-100 shadow-lg shadow-blue-900/30'
-        : 'bg-gray-800/80 border-gray-700 text-gray-200 hover:bg-gray-700'
+        ? 'border-[color:color-mix(in_srgb,var(--kali-control)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-control)_22%,transparent)] text-[color:var(--kali-control)] shadow-[0_12px_30px_-18px_color-mix(in_srgb,var(--kali-control)_65%,transparent)]'
+        : 'border-[color:var(--kali-border)] bg-[color:var(--kali-control-surface)] text-white/80 hover:bg-[color:color-mix(in_srgb,var(--kali-control-surface)_88%,var(--kali-control))]'
     }`;
 
   const lengthLabelId = 'password-length-label';
 
   return (
-    <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-5">
+    <div className="flex h-full w-full flex-col space-y-5 bg-[var(--kali-panel)] p-4 text-white">
       <div className="space-y-3">
         <div className="flex items-center justify-between text-xs uppercase tracking-wide text-gray-400">
           <span id={lengthLabelId}>Password length</span>
@@ -155,7 +159,7 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
           max={MAX_LENGTH}
           value={length}
           onChange={(e) => handleLengthChange(parseInt(e.target.value, 10))}
-          className="w-full accent-blue-500"
+          className="w-full rounded-full bg-[color:var(--kali-control-surface)] accent-[color:var(--kali-control)]"
           aria-labelledby={lengthLabelId}
         />
         <div className="flex items-center gap-3">
@@ -169,7 +173,7 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
             max={MAX_LENGTH}
             value={length}
             onChange={(e) => handleLengthChange(parseInt(e.target.value, 10))}
-            className="w-20 rounded border border-gray-700 bg-gray-950 px-2 py-1 text-white focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-20 rounded border border-[color:var(--kali-border)] bg-[color:var(--kali-control-surface)] px-2 py-1 text-white focus:border-[color:var(--kali-control)] focus:outline-none focus:ring-2 focus:ring-[color:var(--kali-control)]"
             aria-labelledby="manual-length-label"
           />
         </div>
@@ -182,10 +186,10 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
               key={preset.label}
               type="button"
               onClick={() => applyPreset(preset.label)}
-              className={`px-4 py-2 rounded-full border transition focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 focus-visible:ring-offset-gray-900 text-sm font-semibold tracking-wide uppercase ${
+              className={`rounded-full border px-4 py-2 text-sm font-semibold uppercase tracking-wide transition focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-panel)] ${
                 isActive
-                  ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-900/40'
-                  : 'bg-gray-800 text-gray-200 border-gray-600 hover:bg-gray-700'
+                  ? 'border-[color:color-mix(in_srgb,var(--kali-control)_55%,transparent)] bg-[color:var(--kali-control)] text-[color:var(--color-inverse)] shadow-[0_12px_30px_-18px_color-mix(in_srgb,var(--kali-control)_65%,transparent)]'
+                  : 'border-[color:var(--kali-border)] bg-[color:var(--kali-control-surface)] text-white/80 hover:bg-[color:color-mix(in_srgb,var(--kali-control-surface)_88%,var(--kali-control))]'
               }`}
             >
               {preset.label}
@@ -203,7 +207,7 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
               clearPresetSelection();
               setUseLower(e.target.checked);
             }}
-            className="h-4 w-4 rounded border-gray-600 bg-gray-900 text-blue-500 focus:ring-blue-500"
+            className="h-4 w-4 rounded border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] text-[color:var(--kali-control)] focus:ring-[color:var(--kali-control)]"
             aria-label="Include lowercase characters"
           />
           <span>Lowercase</span>
@@ -217,7 +221,7 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
               clearPresetSelection();
               setUseUpper(e.target.checked);
             }}
-            className="h-4 w-4 rounded border-gray-600 bg-gray-900 text-blue-500 focus:ring-blue-500"
+            className="h-4 w-4 rounded border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] text-[color:var(--kali-control)] focus:ring-[color:var(--kali-control)]"
             aria-label="Include uppercase characters"
           />
           <span>Uppercase</span>
@@ -231,7 +235,7 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
               clearPresetSelection();
               setUseNumbers(e.target.checked);
             }}
-            className="h-4 w-4 rounded border-gray-600 bg-gray-900 text-blue-500 focus:ring-blue-500"
+            className="h-4 w-4 rounded border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] text-[color:var(--kali-control)] focus:ring-[color:var(--kali-control)]"
             aria-label="Include numbers"
           />
           <span>Numbers</span>
@@ -245,7 +249,7 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
               clearPresetSelection();
               setUseSymbols(e.target.checked);
             }}
-            className="h-4 w-4 rounded border-gray-600 bg-gray-900 text-blue-500 focus:ring-blue-500"
+            className="h-4 w-4 rounded border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] text-[color:var(--kali-control)] focus:ring-[color:var(--kali-control)]"
             aria-label="Include symbols"
           />
           <span>Symbols</span>
@@ -257,21 +261,21 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
           type="text"
           readOnly
           value={password}
-          className="flex-1 rounded border border-gray-700 bg-gray-950 px-3 py-2 font-mono text-lg leading-[1.2] text-green-100 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 rounded border border-[color:var(--kali-border)] bg-[color:var(--kali-control-surface)] px-3 py-2 font-mono text-lg leading-[1.2] text-green-100 placeholder:text-gray-500 focus:border-[color:var(--kali-control)] focus:outline-none focus:ring-2 focus:ring-[color:var(--kali-control)]"
           aria-label="Generated password"
         />
         <button
           type="button"
           onClick={copyToClipboard}
-          className="w-full rounded bg-blue-600 px-4 py-2 text-center text-sm font-semibold uppercase tracking-wide text-white shadow-lg shadow-blue-900/40 transition hover:bg-blue-500 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 focus-visible:ring-offset-gray-900 sm:w-auto"
+          className="w-full rounded bg-[color:var(--kali-control)] px-4 py-2 text-center text-sm font-semibold uppercase tracking-wide text-[color:var(--color-inverse)] shadow-[0_18px_35px_-22px_color-mix(in_srgb,var(--kali-control)_75%,transparent)] transition hover:bg-[color:color-mix(in_srgb,var(--kali-control)_88%,black)] focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-panel)] sm:w-auto"
         >
           Copy
         </button>
       </div>
-      {copied && <div className="text-sm font-medium text-green-400">Copied!</div>}
+      {copied && <div className="text-sm font-medium text-[color:var(--color-success)]">Copied!</div>}
       <div className="space-y-2">
         <div className="flex items-center gap-3">
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-800">
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-[color:var(--kali-control-surface)]">
             <div className={`h-full ${barClass}`} style={{ width }} />
           </div>
           <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${badgeClass}`}>
@@ -297,7 +301,7 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
         <button
           type="button"
           onClick={generatePassword}
-          className="w-full rounded bg-green-600 px-4 py-2 text-sm font-semibold uppercase tracking-wide text-white shadow-lg shadow-green-900/30 transition hover:bg-green-500 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-500 focus-visible:ring-offset-gray-900"
+          className="w-full rounded bg-[color:var(--color-success)] px-4 py-2 text-sm font-semibold uppercase tracking-wide text-[color:var(--color-inverse)] shadow-[0_18px_35px_-22px_color-mix(in_srgb,var(--color-success)_75%,transparent)] transition hover:bg-[color:color-mix(in_srgb,var(--color-success)_88%,black)] focus-visible:ring-2 focus-visible:ring-[color:var(--color-success)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-panel)]"
         >
           Generate
         </button>
