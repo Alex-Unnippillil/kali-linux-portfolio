@@ -15,6 +15,8 @@ class MyDocument extends Document {
     return (
       <Html lang="en" data-csp-nonce={nonce}>
         <Head>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
           <link rel="icon" href="/favicon.ico" />
           <link rel="manifest" href="/manifest.webmanifest" />
           <meta name="theme-color" content="#0f1317" />
