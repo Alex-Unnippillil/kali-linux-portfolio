@@ -6,6 +6,8 @@ import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
+import PreviewCanvas from '../window/PreviewCanvas';
+import { SettingsContext } from '../../hooks/useSettings';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
 
 const areWorkspacesEqual = (next, prev) => {
@@ -38,6 +40,8 @@ const areRunningAppsEqual = (next = [], prev = []) => {
 };
 
 export default class Navbar extends PureComponent {
+        static contextType = SettingsContext;
+
         constructor() {
                 super();
                 this.state = {
@@ -46,11 +50,17 @@ export default class Navbar extends PureComponent {
                         placesMenuOpen: false,
                         workspaces: [],
                         activeWorkspace: 0,
-                        runningApps: []
+                        runningApps: [],
+                        previewApp: null,
+                        previewAnchor: null,
+                        previewVisible: false
                 };
                 this.taskbarListRef = React.createRef();
                 this.draggingAppId = null;
                 this.pendingReorder = null;
+                this.previewTimer = null;
+                this.previewHideTimer = null;
+                this.previewLongPressTimer = null;
         }
 
         componentDidMount() {
@@ -64,6 +74,7 @@ export default class Navbar extends PureComponent {
                 if (typeof window !== 'undefined') {
                         window.removeEventListener('workspace-state', this.handleWorkspaceStateUpdate);
                 }
+                this.clearPreviewTimers();
         }
 
         handleWorkspaceStateUpdate = (event) => {
@@ -78,6 +89,19 @@ export default class Navbar extends PureComponent {
                         const activeChanged = previousState.activeWorkspace !== nextActiveWorkspace;
                         const runningAppsChanged = !areRunningAppsEqual(nextRunningApps, previousState.runningApps);
 
+                        let nextPreviewApp = previousState.previewApp;
+                        let nextPreviewAnchor = previousState.previewAnchor;
+                        let nextPreviewVisible = previousState.previewVisible;
+
+                        if (runningAppsChanged && previousState.previewApp) {
+                                const match = nextRunningApps.find((item) => item.id === previousState.previewApp.id) || null;
+                                nextPreviewApp = match;
+                                if (!match) {
+                                        nextPreviewAnchor = null;
+                                        nextPreviewVisible = false;
+                                }
+                        }
+
                         if (!workspacesChanged && !activeChanged && !runningAppsChanged) {
                                 return null;
                         }
@@ -85,7 +109,10 @@ export default class Navbar extends PureComponent {
                         return {
                                 workspaces: workspacesChanged ? nextWorkspaces : previousState.workspaces,
                                 activeWorkspace: nextActiveWorkspace,
-                                runningApps: runningAppsChanged ? nextRunningApps : previousState.runningApps
+                                runningApps: runningAppsChanged ? nextRunningApps : previousState.runningApps,
+                                previewApp: nextPreviewApp,
+                                previewAnchor: nextPreviewAnchor,
+                                previewVisible: nextPreviewVisible
                         };
                 });
         };
@@ -96,6 +123,7 @@ export default class Navbar extends PureComponent {
         };
 
         handleAppButtonClick = (app) => {
+                this.hidePreview(true);
                 const detail = { appId: app.id, action: 'toggle' };
                 this.dispatchTaskbarCommand(detail);
         };
@@ -155,6 +183,13 @@ export default class Navbar extends PureComponent {
                                 data-active={isActive ? 'true' : 'false'}
                                 onClick={() => this.handleAppButtonClick(app)}
                                 onKeyDown={(event) => this.handleAppButtonKeyDown(event, app)}
+                                onPointerEnter={(event) => this.handleAppPointerEnter(event, app)}
+                                onPointerLeave={this.handleAppPointerLeave}
+                                onPointerDown={(event) => this.handleAppPointerDown(event, app)}
+                                onPointerUp={this.handleAppPointerUp}
+                                onPointerCancel={this.handleAppPointerCancel}
+                                onFocus={(event) => this.handleAppFocus(event, app)}
+                                onBlur={this.handleAppBlur}
                                 className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
                         >
                                 <span className="relative inline-flex items-center justify-center">
@@ -193,6 +228,7 @@ export default class Navbar extends PureComponent {
         };
 
         handleAppDragStart = (event, app) => {
+                this.hidePreview(true);
                 this.draggingAppId = app.id;
                 if (event.dataTransfer) {
                         event.dataTransfer.effectAllowed = 'move';
@@ -218,6 +254,187 @@ export default class Navbar extends PureComponent {
 
         handleAppDragEnd = () => {
                 this.draggingAppId = null;
+        };
+
+        cancelPreviewTimer = () => {
+                if (this.previewTimer) {
+                        clearTimeout(this.previewTimer);
+                        this.previewTimer = null;
+                }
+        };
+
+        cancelHideTimer = () => {
+                if (this.previewHideTimer) {
+                        clearTimeout(this.previewHideTimer);
+                        this.previewHideTimer = null;
+                }
+        };
+
+        cancelLongPressTimer = () => {
+                if (this.previewLongPressTimer) {
+                        clearTimeout(this.previewLongPressTimer);
+                        this.previewLongPressTimer = null;
+                }
+        };
+
+        clearPreviewTimers = () => {
+                this.cancelPreviewTimer();
+                this.cancelHideTimer();
+                this.cancelLongPressTimer();
+        };
+
+        queuePreview = (app, target, delay = 180) => {
+                if (!app || !target) return;
+                this.cancelPreviewTimer();
+                this.previewTimer = setTimeout(() => {
+                        this.previewTimer = null;
+                        this.showPreview(app, target);
+                }, delay);
+        };
+
+        showPreview = (app, target) => {
+                if (!app || !target) return;
+                const rect = typeof target.getBoundingClientRect === 'function' ? target.getBoundingClientRect() : null;
+                if (!rect) return;
+                const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : rect.left + rect.width / 2;
+                const centerX = rect.left + rect.width / 2;
+                const clampedX = Math.min(Math.max(centerX, 16), viewportWidth ? viewportWidth - 16 : centerX);
+                this.cancelHideTimer();
+                this.setState({
+                        previewApp: app,
+                        previewAnchor: { x: clampedX, top: rect.top },
+                        previewVisible: true
+                });
+        };
+
+        hidePreview = (immediate = false) => {
+                this.cancelPreviewTimer();
+                this.cancelLongPressTimer();
+                if (immediate) {
+                        this.cancelHideTimer();
+                        if (this.state.previewApp || this.state.previewAnchor || this.state.previewVisible) {
+                                this.setState({ previewApp: null, previewAnchor: null, previewVisible: false });
+                        }
+                        return;
+                }
+
+                if (!this.state.previewApp) {
+                        this.cancelHideTimer();
+                        if (this.state.previewAnchor || this.state.previewVisible) {
+                                this.setState({ previewApp: null, previewAnchor: null, previewVisible: false });
+                        }
+                        return;
+                }
+
+                this.setState({ previewVisible: false });
+                this.cancelHideTimer();
+                this.previewHideTimer = setTimeout(() => {
+                        this.previewHideTimer = null;
+                        this.setState({ previewApp: null, previewAnchor: null });
+                }, 180);
+        };
+
+        handleAppPointerEnter = (event, app) => {
+                if (!app || this.draggingAppId) return;
+                if (event?.pointerType === 'touch') return;
+                const target = event?.currentTarget;
+                const delay = this.state.previewApp && this.state.previewApp.id === app.id ? 80 : 200;
+                this.queuePreview(app, target, delay);
+        };
+
+        handleAppPointerLeave = () => {
+                this.hidePreview();
+        };
+
+        handleAppPointerDown = (event, app) => {
+                if (!app) return;
+                if (event?.pointerType === 'touch') {
+                        const target = event.currentTarget;
+                        this.cancelLongPressTimer();
+                        this.previewLongPressTimer = setTimeout(() => {
+                                this.previewLongPressTimer = null;
+                                this.showPreview(app, target);
+                        }, 450);
+                }
+        };
+
+        handleAppPointerUp = (event) => {
+                if (event?.pointerType === 'touch') {
+                        this.hidePreview();
+                }
+        };
+
+        handleAppPointerCancel = (event) => {
+                if (event?.pointerType === 'touch') {
+                        this.hidePreview();
+                }
+        };
+
+        handleAppFocus = (event, app) => {
+                if (!app) return;
+                const target = event?.currentTarget;
+                if (target) {
+                        this.showPreview(app, target);
+                }
+        };
+
+        handleAppBlur = () => {
+                this.hidePreview();
+        };
+
+        renderPreviewFallback = (app) => {
+                if (!app) {
+                        return (
+                                <div className="flex h-full w-full items-center justify-center rounded-md bg-black/40 text-xs text-white/70">
+                                        No preview available
+                                </div>
+                        );
+                }
+                return (
+                        <div className="flex h-full w-full items-center justify-center rounded-md bg-white/5">
+                                <Image src={app.icon} alt="" width={48} height={48} className="h-12 w-12" />
+                        </div>
+                );
+        };
+
+        renderTaskbarPreview = () => {
+                const { previewApp, previewAnchor, previewVisible } = this.state;
+                if (!previewApp || !previewAnchor) return null;
+                const settings = this.context || {};
+                const reducedMotion = Boolean(settings?.reducedMotion);
+                const style = {
+                        left: previewAnchor.x,
+                        top: previewAnchor.top,
+                        transform: 'translate(-50%, calc(-100% - 16px))'
+                };
+                const containerClass = [
+                        'pointer-events-none fixed z-[280]',
+                        'transition-opacity duration-150 ease-out',
+                        previewVisible ? 'opacity-100' : 'opacity-0'
+                ].join(' ');
+                return (
+                        <div className={containerClass} style={style} aria-hidden="true">
+                                <div className="flex w-[min(280px,80vw)] flex-col gap-2 rounded-2xl border border-white/10 bg-[#0c1422]/95 p-3 shadow-2xl backdrop-blur">
+                                        <PreviewCanvas
+                                                windowId={previewApp.id}
+                                                isActive={previewVisible}
+                                                width={260}
+                                                height={160}
+                                                fallback={this.renderPreviewFallback(previewApp)}
+                                                disableCapture={reducedMotion}
+                                        />
+                                        <div className="flex items-center gap-2 text-xs font-medium text-white/90">
+                                                <Image src={previewApp.icon} alt="" width={20} height={20} className="h-5 w-5 flex-shrink-0" />
+                                                <span className="truncate">{previewApp.title}</span>
+                                        </div>
+                                        {reducedMotion && (
+                                                <p className="text-[11px] text-white/60">
+                                                        Live previews are disabled to respect reduced motion settings.
+                                                </p>
+                                        )}
+                                </div>
+                        </div>
+                );
         };
 
         getDragSourceId = (event) => {
@@ -300,50 +517,53 @@ export default class Navbar extends PureComponent {
                 render() {
                         const { workspaces, activeWorkspace } = this.state;
                         return (
-                                <div
-                                        className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
-                                style={{
-                                                minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
-                                                paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
-                                                paddingBottom: '0.25rem',
-                                                paddingLeft: `calc(0.75rem + var(--safe-area-left, 0px))`,
-                                                paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
-                                                '--desktop-navbar-height': `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px) + 0.375rem + 0.25rem)`
-                                        }}
-                                >
-                                        <div className="flex items-center gap-2 text-xs md:text-sm">
-                                                <WhiskerMenu />
-                                                {workspaces.length > 0 && (
-                                                        <WorkspaceSwitcher
-                                                                workspaces={workspaces}
-                                                                activeWorkspace={activeWorkspace}
-                                                                onSelect={this.handleWorkspaceSelect}
-                                                        />
-                                                )}
-                                                {this.renderRunningApps()}
-                                                <PerformanceGraph />
-                                        </div>
-                                        <div className="flex items-center gap-4 text-xs md:text-sm">
-                                                <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
-                                                <div
-                                                        id="status-bar"
-                                                        role="button"
-                                                        tabIndex={0}
-                                                        aria-label="System status"
-                                                        aria-expanded={this.state.status_card}
-                                                        onClick={this.handleStatusToggle}
-                                                        onKeyDown={this.handleStatusKeyDown}
-                                                        className={
-                                                                'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
-                                                        }
-                                                >
-                                                        <Status />
-                                                        <QuickSettings open={this.state.status_card} />
+                                <>
+                                        <div
+                                                className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
+                                                style={{
+                                                        minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
+                                                        paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
+                                                        paddingBottom: '0.25rem',
+                                                        paddingLeft: `calc(0.75rem + var(--safe-area-left, 0px))`,
+                                                        paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
+                                                        '--desktop-navbar-height': `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px) + 0.375rem + 0.25rem)`
+                                                }}
+                                        >
+                                                <div className="flex items-center gap-2 text-xs md:text-sm">
+                                                        <WhiskerMenu />
+                                                        {workspaces.length > 0 && (
+                                                                <WorkspaceSwitcher
+                                                                        workspaces={workspaces}
+                                                                        activeWorkspace={activeWorkspace}
+                                                                        onSelect={this.handleWorkspaceSelect}
+                                                                />
+                                                        )}
+                                                        {this.renderRunningApps()}
+                                                        <PerformanceGraph />
+                                                </div>
+                                                <div className="flex items-center gap-4 text-xs md:text-sm">
+                                                        <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
+                                                        <div
+                                                                id="status-bar"
+                                                                role="button"
+                                                                tabIndex={0}
+                                                                aria-label="System status"
+                                                                aria-expanded={this.state.status_card}
+                                                                onClick={this.handleStatusToggle}
+                                                                onKeyDown={this.handleStatusKeyDown}
+                                                                className={
+                                                                        'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
+                                                                }
+                                                        >
+                                                                <Status />
+                                                                <QuickSettings open={this.state.status_card} />
+                                                        </div>
                                                 </div>
                                         </div>
-                                </div>
-			);
-		}
+                                        {this.renderTaskbarPreview()}
+                                </>
+                        );
+                }
 
 
 }
