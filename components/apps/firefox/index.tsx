@@ -1,4 +1,5 @@
 import React, { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import useDataSaverPreference from '../../hooks/useDataSaverPreference';
 import { FirefoxSimulationView, SIMULATIONS, toSimulationKey } from './simulations';
 
 const DEFAULT_URL = 'https://www.kali.org/docs/';
@@ -79,6 +80,8 @@ const Firefox: React.FC = () => {
   const [simulation, setSimulation] = useState(() => getSimulation(initialUrl));
   const [isLoading, setIsLoading] = useState(() => !getSimulation(initialUrl));
   const inputRef = useRef<HTMLInputElement>(null);
+  const dataSaverEnabled = useDataSaverPreference();
+  const [allowLivePreview, setAllowLivePreview] = useState(false);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -102,6 +105,7 @@ const Firefox: React.FC = () => {
     const nextSimulation = getSimulation(url);
     setSimulation(nextSimulation);
     setIsLoading(!nextSimulation);
+    setAllowLivePreview(false);
     try {
       localStorage.setItem(STORAGE_KEY, url);
     } catch {
@@ -121,6 +125,18 @@ const Firefox: React.FC = () => {
       inputRef.current.select();
     }
   };
+
+  useEffect(() => {
+    if (dataSaverEnabled) {
+      setAllowLivePreview(false);
+    }
+  }, [dataSaverEnabled]);
+
+  useEffect(() => {
+    if (dataSaverEnabled && !allowLivePreview && !simulation) {
+      setIsLoading(false);
+    }
+  }, [dataSaverEnabled, allowLivePreview, simulation]);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[var(--kali-surface)] text-[color:var(--kali-text)]">
@@ -236,7 +252,7 @@ const Firefox: React.FC = () => {
         )}
         {simulation ? (
           <FirefoxSimulationView simulation={simulation} />
-        ) : (
+        ) : !dataSaverEnabled || allowLivePreview ? (
           <iframe
             key={address}
             title="Firefox"
@@ -247,6 +263,35 @@ const Firefox: React.FC = () => {
             onLoad={() => setIsLoading(false)}
             onError={() => setIsLoading(false)}
           />
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-4 border-t border-[color:color-mix(in_srgb,var(--kali-panel-border)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-bg)_96%,transparent)] text-center text-sm text-[color:color-mix(in_srgb,var(--kali-text)_86%,var(--kali-bg))]">
+            <div className="space-y-2 px-6">
+              <p className="font-semibold text-[color:var(--color-primary)]">Data saver is active</p>
+              <p>
+                Embedded sites are paused to conserve data. Open the link directly or load the preview once to continue.
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setAllowLivePreview(true);
+                  setIsLoading(true);
+                }}
+                className="rounded-md bg-[color:var(--color-primary)] px-4 py-2 text-sm font-semibold text-[color:var(--color-inverse)] shadow-[0_8px_22px_rgba(17,123,198,0.28)] transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)]"
+              >
+                Load preview once
+              </button>
+              <a
+                href={address}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-md border border-[color:color-mix(in_srgb,var(--kali-panel-border)_70%,transparent)] px-4 py-2 text-sm font-semibold text-[color:var(--kali-text)] transition hover:border-[color:var(--color-primary)] hover:text-[color:var(--color-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)]"
+              >
+                Open in new tab
+              </a>
+            </div>
+          </div>
         )}
       </div>
     </div>

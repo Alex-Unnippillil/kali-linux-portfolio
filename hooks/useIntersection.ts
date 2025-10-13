@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import useDataSaverPreference from './useDataSaverPreference';
 
 /**
  * useIntersection observes the given element and reports whether it is
@@ -10,6 +11,34 @@ export default function useIntersection<T extends Element>(
   options?: IntersectionObserverInit,
 ) {
   const [isIntersecting, setIntersecting] = useState(false);
+  const dataSaverEnabled = useDataSaverPreference();
+
+  const effectiveOptions = useMemo(() => {
+    if (!dataSaverEnabled) return options;
+    if (!options) {
+      return { threshold: 0.6 } as IntersectionObserverInit;
+    }
+
+    const nextOptions: IntersectionObserverInit = { ...options };
+    if (nextOptions.threshold === undefined) {
+      nextOptions.threshold = 0.6;
+      return nextOptions;
+    }
+
+    if (typeof nextOptions.threshold === 'number') {
+      nextOptions.threshold = Math.max(nextOptions.threshold, 0.6);
+      return nextOptions;
+    }
+
+    if (Array.isArray(nextOptions.threshold)) {
+      nextOptions.threshold = nextOptions.threshold.map((value) =>
+        Math.max(value, 0.6),
+      );
+      return nextOptions;
+    }
+
+    return nextOptions;
+  }, [options, dataSaverEnabled]);
 
   useEffect(() => {
     const node = ref.current;
@@ -21,11 +50,11 @@ export default function useIntersection<T extends Element>(
 
     const observer = new IntersectionObserver(([entry]) => {
       setIntersecting(entry.isIntersecting);
-    }, options);
+    }, effectiveOptions);
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [ref, options]);
+  }, [ref, effectiveOptions]);
 
   return isIntersecting;
 }

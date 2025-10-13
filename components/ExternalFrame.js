@@ -1,5 +1,6 @@
 import React, { forwardRef, useEffect, useState } from 'react';
 import Head from 'next/head';
+import useDataSaverPreference from '../hooks/useDataSaverPreference';
 
 const ALLOWLIST = ['https://vscode.dev', 'https://stackblitz.com'];
 
@@ -23,6 +24,10 @@ const ExternalFrame = (
   const [cookiesBlocked, setCookiesBlocked] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const dataSaverEnabled = useDataSaverPreference();
+  const [manualAllow, setManualAllow] = useState(false);
+
+  const shouldLoad = !dataSaverEnabled || manualAllow;
 
   useEffect(() => {
     try {
@@ -34,13 +39,25 @@ const ExternalFrame = (
     }
   }, []);
 
+  useEffect(() => {
+    if (!shouldLoad) {
+      setLoaded(false);
+    }
+  }, [shouldLoad]);
+
+  useEffect(() => {
+    if (dataSaverEnabled) {
+      setManualAllow(false);
+    }
+  }, [dataSaverEnabled]);
+
   if (!isAllowed(src)) {
     return null;
   }
 
   return (
     <>
-      {prefetch && (
+      {prefetch && shouldLoad && (
         <Head>
           <link rel="prefetch" href={src} />
         </Head>
@@ -63,27 +80,52 @@ const ExternalFrame = (
           >
             Open Externally
           </a>
-          <iframe
-            src={src}
-            title={title}
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture; microphone; camera"
-            referrerPolicy="no-referrer"
-            ref={ref}
-            onLoad={(e) => {
-              setLoaded(true);
-              onLoadProp?.(e);
-            }}
-            onError={(e) => {
-              setLoaded(false);
-              onErrorProp?.(e);
-            }}
-            className={`w-full h-full ${loaded ? '' : 'invisible'}`}
-            {...props}
-          />
-          {!loaded && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-200 animate-pulse" aria-hidden="true">
-              <span className="sr-only">Loading...</span>
+          {shouldLoad ? (
+            <>
+              <iframe
+                src={src}
+                title={title}
+                sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture; microphone; camera"
+                referrerPolicy="no-referrer"
+                ref={ref}
+                onLoad={(e) => {
+                  setLoaded(true);
+                  onLoadProp?.(e);
+                }}
+                onError={(e) => {
+                  setLoaded(false);
+                  onErrorProp?.(e);
+                }}
+                className={`w-full h-full ${loaded ? '' : 'invisible'}`}
+                {...props}
+              />
+              {!loaded && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-200 animate-pulse" aria-hidden="true">
+                  <span className="sr-only">Loading...</span>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gray-200/80 text-center text-sm text-gray-800">
+              <p className="max-w-xs">
+                Data saver is on. Heavy embeds stay paused until you choose to load them.
+              </p>
+              <button
+                type="button"
+                className="rounded bg-black px-3 py-1 text-white shadow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+                onClick={() => setManualAllow(true)}
+              >
+                Load once
+              </button>
+              <a
+                href={src}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-semibold text-gray-900 underline"
+              >
+                Open in new tab
+              </a>
             </div>
           )}
         </div>

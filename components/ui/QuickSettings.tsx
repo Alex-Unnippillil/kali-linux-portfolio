@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
+import { DATA_SAVER_EVENT } from '../../hooks/useDataSaverPreference';
 
 interface Props {
   open: boolean;
@@ -14,6 +15,7 @@ const QuickSettings = ({ open }: Props) => {
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const [reduceDataUsage, setReduceDataUsage] = usePersistentState('qs-reduce-data-usage', false);
   const [focusMode, setFocusMode] = usePersistentState('qs-focus-mode', false);
   const [brightness, setBrightness] = usePersistentState(
     'qs-brightness',
@@ -39,6 +41,24 @@ const QuickSettings = ({ open }: Props) => {
   useEffect(() => {
     document.documentElement.classList.toggle('reduce-motion', reduceMotion);
   }, [reduceMotion]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const attribute = 'data-reduce-data';
+    if (reduceDataUsage) {
+      root.setAttribute(attribute, 'true');
+    } else {
+      root.removeAttribute(attribute);
+    }
+    window.dispatchEvent(
+      new CustomEvent(DATA_SAVER_EVENT, { detail: { enabled: reduceDataUsage } }),
+    );
+
+    return () => {
+      root.removeAttribute(attribute);
+      window.dispatchEvent(new CustomEvent(DATA_SAVER_EVENT, { detail: { enabled: false } }));
+    };
+  }, [reduceDataUsage]);
 
   useEffect(() => {
     if (open) {
@@ -105,6 +125,7 @@ const QuickSettings = ({ open }: Props) => {
     { id: 'audio', label: 'Sound', value: sound ? 'On' : 'Muted' },
     { id: 'network', label: 'Network', value: online ? 'Online' : 'Offline' },
     { id: 'focus', label: 'Focus mode', value: focusMode ? 'On' : 'Off' },
+    { id: 'data', label: 'Data saver', value: reduceDataUsage ? 'On' : 'Off' },
     { id: 'volume', label: 'Volume', value: `${volume}%` },
   ];
 
@@ -134,6 +155,15 @@ const QuickSettings = ({ open }: Props) => {
       onToggle: () => setOnline(!online),
       accent: 'from-emerald-400/30 via-emerald-500/10 to-transparent',
       icon: <NetworkIcon />,
+    },
+    {
+      id: 'quick-settings-reduced-data',
+      label: 'Reduce data usage',
+      description: 'Delay heavy embeds until you confirm.',
+      value: reduceDataUsage,
+      onToggle: () => setReduceDataUsage(!reduceDataUsage),
+      accent: 'from-cyan-400/30 via-cyan-500/10 to-transparent',
+      icon: <DataSaverIcon />,
     },
     {
       id: 'quick-settings-reduced-motion',
@@ -507,6 +537,39 @@ const NetworkIcon = () => (
       strokeLinejoin="round"
     />
     <circle cx="12" cy="6" r="1.5" fill="currentColor" />
+  </svg>
+);
+
+const DataSaverIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="text-white"
+  >
+    <path
+      d="M4.5 7.5A7.5 7.5 0 0 1 12 3a7.5 7.5 0 0 1 7.5 4.5"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M6 10v7a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-7"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M10 12.5 12 15l2-2.5"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
   </svg>
 );
 
