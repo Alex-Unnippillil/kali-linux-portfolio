@@ -3,9 +3,24 @@ import noTopLevelWindow from './eslint-plugin-no-top-level-window/index.js';
 
 const compat = new FlatCompat();
 
+const jsFilePatterns = ['**/*.{js,cjs,mjs,jsx,ts,tsx}'];
+
 const config = [
+  {
+    files: jsFilePatterns,
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
+    },
+  },
   { ignores: ['components/apps/Chrome/index.tsx'] },
   {
+    files: jsFilePatterns,
     plugins: {
       'no-top-level-window': noTopLevelWindow,
     },
