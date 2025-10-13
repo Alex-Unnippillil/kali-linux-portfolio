@@ -7,6 +7,7 @@ if (typeof global.structuredClone !== 'function') {
 }
 require('fake-indexeddb/auto');
 import '@testing-library/jest-dom';
+jest.mock('react-virtuoso');
 
 // Provide TextEncoder/TextDecoder for libraries that expect them in the test environment
 // @ts-ignore

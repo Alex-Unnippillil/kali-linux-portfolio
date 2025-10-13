@@ -94,6 +94,7 @@
     "react-leaflet": "^5.0.0",
     "react-transition-group": "^4.4.5",
     "react-virtualized-auto-sizer": "^1.0.26",
+    "react-virtuoso": "^4.14.1",
     "react-window": "^2.0.2",
     "rrule": "2.7.2",
     "seedrandom": "^3.0.5",

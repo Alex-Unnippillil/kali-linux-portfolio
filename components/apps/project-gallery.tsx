@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { VirtuosoGrid } from 'react-virtuoso';
 import projectsData from '../../data/projects.json';
 
 interface Project {
@@ -19,15 +20,21 @@ interface Project {
 
 interface Props {
   openApp?: (id: string) => void;
+  projects?: Project[];
 }
+
+const PROJECT_VIRTUALIZATION_THRESHOLD = 12;
+const PROJECT_CARD_WRAPPER =
+  'mb-4 break-inside-avoid rounded shadow overflow-hidden bg-gray-800';
+const PROJECT_VIRTUALIZED_HEIGHT_CLASS = 'mt-4 h-[70vh] max-h-[720px]';
 
 const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 
 const STORAGE_KEY = 'project-gallery-filters';
 const STORAGE_FILE = 'project-gallery-filters.json';
 
-const ProjectGallery: React.FC<Props> = ({ openApp }) => {
-  const projects: Project[] = projectsData as Project[];
+const ProjectGallery: React.FC<Props> = ({ openApp, projects: projectsProp }) => {
+  const projects: Project[] = (projectsProp ?? (projectsData as Project[])) as Project[];
   const [search, setSearch] = useState('');
   const [stack, setStack] = useState('');
   const [year, setYear] = useState('');
@@ -35,6 +42,39 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   const [tags, setTags] = useState<string[]>([]);
   const [ariaMessage, setAriaMessage] = useState('');
   const [selected, setSelected] = useState<Project[]>([]);
+  const statusId = 'project-gallery-status';
+
+  const projectGridComponents = useMemo(() => {
+    const List = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+      ({ style, className = '', ...props }, ref) => (
+        <div
+          {...props}
+          ref={ref}
+          role="list"
+          aria-label="Project results"
+          aria-describedby={statusId}
+          style={{ ...style, display: 'grid' }}
+          className={`grid content-start gap-4 sm:grid-cols-2 md:grid-cols-3 ${className}`.trim()}
+        />
+      ),
+    );
+    List.displayName = 'ProjectGalleryGrid';
+
+    const Item = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+      ({ style, className = '', ...props }, ref) => (
+        <div
+          {...props}
+          ref={ref}
+          role="listitem"
+          style={style}
+          className={`${PROJECT_CARD_WRAPPER} ${className}`.trim()}
+        />
+      ),
+    );
+    Item.displayName = 'ProjectGalleryGridItem';
+
+    return { List, Item };
+  }, [statusId]);
 
   const readFilters = async () => {
     try {
@@ -152,6 +192,95 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
     });
   };
 
+  const renderProjectCard = (project: Project) => (
+    <div className="flex h-full flex-col">
+      <div className="flex h-48 flex-col md:flex-row">
+        <img
+          src={project.thumbnail}
+          alt={project.title}
+          className="h-48 w-full object-cover md:w-1/2"
+          loading="lazy"
+        />
+        <div className="h-48 w-full md:w-1/2">
+          <Editor
+            height="100%"
+            theme="vs-dark"
+            language={project.language}
+            value={project.snippet}
+            options={{ readOnly: true, minimap: { enabled: false } }}
+          />
+        </div>
+      </div>
+      <div className="space-y-2 p-4">
+        <h3 className="text-lg font-semibold">{project.title}</h3>
+        <p className="text-sm">{project.description}</p>
+        <button
+          onClick={() => toggleSelect(project)}
+          aria-label={`Select ${project.title} for comparison`}
+          className="rounded-full bg-gray-700 px-2 py-1 text-xs"
+        >
+          {selected.some((p) => p.id === project.id) ? 'Deselect' : 'Compare'}
+        </button>
+        <div className="flex flex-wrap gap-1">
+          {project.stack.map((s) => (
+            <button
+              key={s}
+              onClick={() => setStack(s)}
+              className="rounded-full bg-gray-700 px-2 py-1 text-xs"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {project.tags.map((t) => (
+            <button
+              key={t}
+              onClick={() =>
+                setTags((prev) =>
+                  prev.includes(t) ? prev.filter((tag) => tag !== t) : [...prev, t],
+                )
+              }
+              className="rounded-full bg-gray-700 px-2 py-1 text-xs"
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-3 pt-2 text-sm">
+          <a
+            href={project.repo}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 hover:underline"
+          >
+            Repo
+          </a>
+          {project.demo && (
+            <>
+              <a
+                href={project.demo}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:underline"
+              >
+                Live Demo
+              </a>
+              <button
+                onClick={() => openInFirefox(project.demo)}
+                className="text-blue-400 hover:underline"
+              >
+                Open in Firefox
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const shouldVirtualize = filtered.length > PROJECT_VIRTUALIZATION_THRESHOLD;
+
   return (
     <div className="p-4 h-full overflow-auto bg-ub-cool-grey text-white">
       <div className="flex flex-wrap gap-2 mb-4">
@@ -228,7 +357,9 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
           <table className="w-full text-sm text-left" role="table">
             <thead>
               <tr>
-                <th />
+                <th scope="col">
+                  <span className="sr-only">Attribute</span>
+                </th>
                 {selected.map((p) => (
                   <th key={p.id}>{p.title}</th>
                 ))}
@@ -251,104 +382,38 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
           </table>
         </div>
       )}
-      <div className="columns-1 sm:columns-2 md:columns-3 gap-4">
-        {filtered.map((project) => (
+        {shouldVirtualize ? (
           <div
-            key={project.id}
-            className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden"
+            className={`${PROJECT_VIRTUALIZED_HEIGHT_CLASS} overflow-hidden`}
+            data-testid="project-gallery-virtualized"
           >
-            <div className="flex flex-col md:flex-row h-48">
-              <img
-                src={project.thumbnail}
-                alt={project.title}
-                className="w-full md:w-1/2 h-48 object-cover"
-                loading="lazy"
-              />
-              <div className="w-full md:w-1/2 h-48">
-                <Editor
-                  height="100%"
-                  theme="vs-dark"
-                  language={project.language}
-                  value={project.snippet}
-                  options={{ readOnly: true, minimap: { enabled: false } }}
-                />
-              </div>
-            </div>
-            <div className="p-4 space-y-2">
-              <h3 className="text-lg font-semibold">{project.title}</h3>
-              <p className="text-sm">{project.description}</p>
-              <button
-                onClick={() => toggleSelect(project)}
-                aria-label={`Select ${project.title} for comparison`}
-                className="bg-gray-700 text-xs px-2 py-1 rounded-full"
-              >
-                {selected.some((p) => p.id === project.id)
-                  ? 'Deselect'
-                  : 'Compare'}
-              </button>
-              <div className="flex flex-wrap gap-1">
-                {project.stack.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setStack(s)}
-                    className="bg-gray-700 text-xs px-2 py-1 rounded-full"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {project.tags.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() =>
-                      setTags((prev) =>
-                        prev.includes(t)
-                          ? prev.filter((tag) => tag !== t)
-                          : [...prev, t]
-                      )
-                    }
-                    className="bg-gray-700 text-xs px-2 py-1 rounded-full"
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-3 text-sm pt-2">
-                <a
-                  href={project.repo}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-400 hover:underline"
-                >
-                  Repo
-                </a>
-                  {project.demo && (
-                    <>
-                      <a
-                        href={project.demo}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-400 hover:underline"
-                      >
-                        Live Demo
-                      </a>
-                      <button
-                        onClick={() => openInFirefox(project.demo)}
-                        className="text-blue-400 hover:underline"
-                      >
-                        Open in Firefox
-                      </button>
-                    </>
-                  )}
-              </div>
-            </div>
+            <VirtuosoGrid
+              style={{ height: '100%' }}
+              totalCount={filtered.length}
+              overscan={200}
+              data={filtered}
+              components={projectGridComponents}
+              itemContent={(_, project) => renderProjectCard(project)}
+              useWindowScroll={false}
+            />
           </div>
-        ))}
-      </div>
-      <div aria-live="polite" className="sr-only">
-        {ariaMessage}
-      </div>
+        ) : (
+          <div
+            role="list"
+            aria-label="Project results"
+            aria-describedby={statusId}
+            className="mt-4 columns-1 gap-4 sm:columns-2 md:columns-3"
+          >
+            {filtered.map((project) => (
+              <div key={project.id} role="listitem" className={PROJECT_CARD_WRAPPER}>
+                {renderProjectCard(project)}
+              </div>
+            ))}
+          </div>
+        )}
+        <div id={statusId} aria-live="polite" className="sr-only">
+          {ariaMessage}
+        </div>
     </div>
   );
 };
