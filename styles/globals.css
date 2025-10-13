@@ -193,3 +193,27 @@ html {
   background-color: var(--kali-border, var(--color-border));
   border-radius: 6px;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  html,
+  body,
+  html:focus-within {
+    scroll-behavior: auto !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+
+  .all-apps-anim,
+  .app-icon-launch {
+    animation: none !important;
+  }
+}

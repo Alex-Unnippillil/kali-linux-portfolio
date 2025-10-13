@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import Image from 'next/image'
+import { getMotionDuration, isReducedMotionEnabled } from '../../utils/motionPreferences'
 
 export class UbuntuApp extends Component {
     constructor() {
@@ -17,9 +18,19 @@ export class UbuntuApp extends Component {
 
     openApp = () => {
         if (this.props.disabled) return;
-        this.setState({ launching: true }, () => {
-            setTimeout(() => this.setState({ launching: false }), 300);
-        });
+        const reduceMotion = isReducedMotionEnabled();
+        if (!reduceMotion) {
+            this.setState({ launching: true }, () => {
+                const delay = getMotionDuration(300, { reducedMotion: reduceMotion });
+                if (delay > 0) {
+                    setTimeout(() => this.setState({ launching: false }), delay);
+                } else {
+                    this.setState({ launching: false });
+                }
+            });
+        } else if (this.state.launching) {
+            this.setState({ launching: false });
+        }
         this.props.openApp(this.props.id);
     }
 
