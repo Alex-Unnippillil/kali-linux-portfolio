@@ -11,8 +11,11 @@ const MimikatzPage: React.FC = () => {
 
   if (!confirmed) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-80 text-white z-50">
-        <div className="max-w-md p-6 bg-ub-dark rounded shadow text-center space-y-4">
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center px-4 text-kali-text"
+        style={{ backgroundColor: 'var(--kali-overlay)' }}
+      >
+        <div className="max-w-md space-y-4 rounded-xl border border-kali-border/60 bg-[var(--kali-panel)] p-6 text-center shadow-lg shadow-kali-panel">
           <h2 className="text-xl font-bold">High-Risk Command Warning</h2>
           <p>
             Mimikatz can execute high-risk commands that may compromise system
@@ -22,20 +25,20 @@ const MimikatzPage: React.FC = () => {
             href={disclaimerUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-300 underline"
+            className="text-kali-accent underline hover:text-kali-accent/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
           >
             Read the full disclaimer
           </a>
-          <div className="flex justify-center space-x-4 pt-2">
+          <div className="flex justify-center gap-3 pt-2">
             <button
               onClick={() => setConfirmed(true)}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded"
+              className="rounded-lg bg-kali-accent px-4 py-2 font-semibold text-kali-inverse shadow transition hover:bg-kali-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
             >
               Proceed
             </button>
             <button
               onClick={() => window.history.back()}
-              className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded"
+              className="rounded-lg border border-kali-border/70 bg-kali-muted px-4 py-2 font-semibold text-kali-text transition hover:bg-kali-surface/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
             >
               Cancel
             </button>
