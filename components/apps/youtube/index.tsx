@@ -10,6 +10,7 @@ import React, {
 } from 'react';
 import { demoYouTubeVideos } from '../../../data/youtube/demoVideos';
 import usePersistentState from '../../../hooks/usePersistentState';
+import useDataSaverPreference from '../../../hooks/useDataSaverPreference';
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
@@ -176,11 +177,23 @@ export default function YouTubeApp({ initialResults }: Props) {
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const requestIdRef = useRef(0);
+  const dataSaverEnabled = useDataSaverPreference();
+  const [allowPlayback, setAllowPlayback] = useState(false);
 
   useEffect(() => {
     setResults(fallbackInitial);
     setSelectedVideo((previous) => previous ?? fallbackInitial[0] ?? null);
   }, [fallbackInitial]);
+
+  useEffect(() => {
+    if (dataSaverEnabled) {
+      setAllowPlayback(false);
+    }
+  }, [dataSaverEnabled]);
+
+  useEffect(() => {
+    setAllowPlayback(false);
+  }, [selectedVideo?.id]);
 
   const setHistory = useCallback(
     (updater: React.SetStateAction<VideoResult[]>) => {
@@ -206,6 +219,7 @@ export default function YouTubeApp({ initialResults }: Props) {
         const filtered = prev.filter((item) => item.id !== normalized.id);
         return [normalized, ...filtered].slice(0, MAX_HISTORY_ITEMS);
       });
+      setAllowPlayback(false);
     },
     [setHistory],
   );
@@ -384,14 +398,42 @@ export default function YouTubeApp({ initialResults }: Props) {
           </h2>
           <div className="mt-3 aspect-video overflow-hidden rounded-lg bg-[var(--kali-panel-highlight)]">
             {selectedVideo ? (
-              <iframe
-                key={selectedVideo.id}
-                title={`YouTube player for ${selectedVideo.title}`}
-                src={`https://www.youtube-nocookie.com/embed/${selectedVideo.id}`}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="h-full w-full"
-              />
+              !dataSaverEnabled || allowPlayback ? (
+                <iframe
+                  key={selectedVideo.id}
+                  title={`YouTube player for ${selectedVideo.title}`}
+                  src={`https://www.youtube-nocookie.com/embed/${selectedVideo.id}`}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="h-full w-full"
+                />
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-4 bg-[color:color-mix(in_srgb,var(--kali-panel-highlight)_75%,transparent)] px-6 text-center text-sm text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
+                  <div>
+                    <p className="font-semibold text-[color:var(--color-primary)]">Data saver is active</p>
+                    <p className="mt-2 text-xs text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
+                      Streaming is paused to conserve data. Load this video once or open it directly on YouTube.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setAllowPlayback(true)}
+                      className="rounded-md bg-kali-control px-4 py-2 text-sm font-semibold text-black shadow-[0_12px_32px_-18px_rgba(5,145,255,0.45)] transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)]"
+                    >
+                      Load video once
+                    </button>
+                    <a
+                      href={`https://www.youtube.com/watch?v=${selectedVideo.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-md border border-[color:color-mix(in_srgb,var(--kali-panel-border)_65%,transparent)] px-4 py-2 text-sm font-semibold text-[color:var(--color-text)] transition hover:border-[color:var(--color-primary)] hover:text-[color:var(--color-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)]"
+                    >
+                      Open on YouTube
+                    </a>
+                  </div>
+                </div>
+              )
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
                 Search and choose a video to start watching.
