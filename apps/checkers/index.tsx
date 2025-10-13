@@ -50,14 +50,11 @@ export default function CheckersPage() {
     { board: Board; turn: 'red' | 'black'; noCapture: number }[]
   >([]);
   const workerRef = useRef<Worker | null>(null);
-  const moveRef = useRef(false);
   const positionCounts = useRef<Map<string, number>>(new Map());
   const [crowned, setCrowned] = useState<[number, number] | null>(null);
   const [hint, setHint] = useState<Move | null>(null);
   const hintRequest = useRef(false);
   const [moveLog, setMoveLog] = useState<MoveLogEntry[]>([]);
-  const movePathRef = useRef<[number, number][]>([]);
-  const captureSequenceRef = useRef(false);
   const [lastMoveSquares, setLastMoveSquares] = useState<[number, number][]>([]);
 
   const captureOpportunities = useMemo(() => {
@@ -65,7 +62,7 @@ export default function CheckersPage() {
     for (let r = 0; r < 8; r++) {
       for (let c = 0; c < 8; c++) {
         if (board[r][c]?.color === turn) {
-          total += getPieceMoves(board, r, c, false).filter((m) => m.captured).length;
+          total += getPieceMoves(board, r, c, false).filter((m) => m.captures.length).length;
         }
       }
     }
@@ -90,32 +87,13 @@ export default function CheckersPage() {
   const makeMove = useCallback(
     (move: Move) => {
       const actingPlayer = turn;
-      if (!moveRef.current) {
-        setHistory((h) => [...h, { board, turn, noCapture }]);
-        moveRef.current = true;
-        movePathRef.current = [move.from];
-        captureSequenceRef.current = false;
-      }
-      if (!movePathRef.current.length) {
-        movePathRef.current = [move.from];
-      }
-      movePathRef.current.push(move.to);
-      if (move.captured) captureSequenceRef.current = true;
+      setHistory((h) => [...h, { board, turn, noCapture }]);
       const { board: newBoard, capture, king } = applyMove(board, move);
-      const further = capture
-        ? getPieceMoves(newBoard, move.to[0], move.to[1]).filter((m) => m.captured)
-        : [];
       setBoard(newBoard);
       if (king) {
-        setCrowned([move.to[0], move.to[1]]);
+        const destination = move.path[move.path.length - 1];
+        setCrowned([destination[0], destination[1]]);
       }
-      if (capture && further.length) {
-        setSelected([move.to[0], move.to[1]]);
-        setMoves(further);
-        setNoCapture(0);
-        return;
-      }
-      moveRef.current = false;
       const next = turn === 'red' ? 'black' : 'red';
       const newNo = capture || king ? 0 : noCapture + 1;
       setNoCapture(newNo);
@@ -147,15 +125,13 @@ export default function CheckersPage() {
       setSelected(null);
       setMoves([]);
       setHint(null);
-      if (movePathRef.current.length >= 2) {
-        setLastMoveSquares([...movePathRef.current]);
-        const notation = movePathRef.current
+      if (move.path.length >= 2) {
+        setLastMoveSquares([...move.path]);
+        const notation = move.path
           .map(squareNotation)
-          .join(captureSequenceRef.current ? 'x' : '-');
+          .join(move.captures.length ? 'x' : '-');
         setMoveLog((prev) => [...prev, { player: actingPlayer, notation }]);
       }
-      movePathRef.current = [];
-      captureSequenceRef.current = false;
     },
     [board, turn, noCapture, rule, difficulty, algorithm, setMoveLog],
   );
@@ -207,14 +183,11 @@ export default function CheckersPage() {
     setWinner(null);
     setNoCapture(0);
     setHistory([]);
-    moveRef.current = false;
     positionCounts.current = new Map([[JSON.stringify(initial), 1]]);
     setCrowned(null);
     setHint(null);
     hintRequest.current = false;
     setMoveLog([]);
-    movePathRef.current = [];
-    captureSequenceRef.current = false;
     setLastMoveSquares([]);
   };
 
@@ -243,9 +216,6 @@ export default function CheckersPage() {
       });
     }
     setMoveLog((entries) => entries.slice(0, -1));
-    moveRef.current = false;
-    movePathRef.current = [];
-    captureSequenceRef.current = false;
     setLastMoveSquares([]);
   };
 
@@ -507,8 +477,10 @@ export default function CheckersPage() {
                   const isMove = moves.some((m) => m.to[0] === r && m.to[1] === c);
                   const isSelected = selected ? selected[0] === r && selected[1] === c : false;
                   const isCrowned = crowned && crowned[0] === r && crowned[1] === c;
-                  const isHint = hint && hint.from[0] === r && hint.from[1] === c;
-                  const isHintDest = hint && hint.to[0] === r && hint.to[1] === c;
+                  const hintPath = hint?.path ?? [];
+                  const isHintStart =
+                    hintPath.length > 0 && hintPath[0][0] === r && hintPath[0][1] === c;
+                  const isHintDest = hintPath.slice(1).some(([hr, hc]) => hr === r && hc === c);
                   const lastMoveIndex = lastMoveSquares.findIndex(
                     ([lr, lc]) => lr === r && lc === c,
                   );
@@ -537,7 +509,7 @@ export default function CheckersPage() {
                   if (isLastMoveStart) squareClasses.push('last-move-start');
                   if (isLastMoveEnd) squareClasses.push('last-move-end');
                   if (isMove) squareClasses.push('move-square');
-                  if (isHint || isHintDest) squareClasses.push('hint-square');
+                  if (isHintStart || isHintDest) squareClasses.push('hint-square');
                   if (isSelected) squareClasses.push('selected-square');
                   return (
                     <button
