@@ -7,6 +7,10 @@ import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
+import {
+        runTransitionUpdate,
+        runUserBlockingUpdate,
+} from '../../utils/perf/interactionPriority';
 
 const areWorkspacesEqual = (next, prev) => {
         if (next.length !== prev.length) return false;
@@ -73,20 +77,22 @@ export default class Navbar extends PureComponent {
                 const nextActiveWorkspace = typeof activeWorkspace === 'number' ? activeWorkspace : 0;
                 const nextRunningApps = Array.isArray(detail.runningApps) ? detail.runningApps : [];
 
-                this.setState((previousState) => {
-                        const workspacesChanged = !areWorkspacesEqual(nextWorkspaces, previousState.workspaces);
-                        const activeChanged = previousState.activeWorkspace !== nextActiveWorkspace;
-                        const runningAppsChanged = !areRunningAppsEqual(nextRunningApps, previousState.runningApps);
+                runTransitionUpdate('navbar:workspace-state', () => {
+                        this.setState((previousState) => {
+                                const workspacesChanged = !areWorkspacesEqual(nextWorkspaces, previousState.workspaces);
+                                const activeChanged = previousState.activeWorkspace !== nextActiveWorkspace;
+                                const runningAppsChanged = !areRunningAppsEqual(nextRunningApps, previousState.runningApps);
 
-                        if (!workspacesChanged && !activeChanged && !runningAppsChanged) {
-                                return null;
-                        }
+                                if (!workspacesChanged && !activeChanged && !runningAppsChanged) {
+                                        return null;
+                                }
 
-                        return {
-                                workspaces: workspacesChanged ? nextWorkspaces : previousState.workspaces,
-                                activeWorkspace: nextActiveWorkspace,
-                                runningApps: runningAppsChanged ? nextRunningApps : previousState.runningApps
-                        };
+                                return {
+                                        workspaces: workspacesChanged ? nextWorkspaces : previousState.workspaces,
+                                        activeWorkspace: nextActiveWorkspace,
+                                        runningApps: runningAppsChanged ? nextRunningApps : previousState.runningApps
+                                };
+                        });
                 });
         };
 
@@ -232,16 +238,18 @@ export default class Navbar extends PureComponent {
         reorderRunningApps = (sourceId, targetId, insertAfter = false) => {
                 if (!sourceId) return;
                 this.pendingReorder = null;
-                this.setState((prevState) => {
-                        const updated = this.computeReorderedApps(prevState.runningApps, sourceId, targetId, insertAfter);
-                        if (!updated) return null;
-                        this.pendingReorder = updated.map((item) => item.id);
-                        return { runningApps: updated };
-                }, () => {
-                        if (this.pendingReorder) {
-                                this.dispatchTaskbarCommand({ action: 'reorder', order: this.pendingReorder });
-                                this.pendingReorder = null;
-                        }
+                runTransitionUpdate('navbar:reorder-running-apps', () => {
+                        this.setState((prevState) => {
+                                const updated = this.computeReorderedApps(prevState.runningApps, sourceId, targetId, insertAfter);
+                                if (!updated) return null;
+                                this.pendingReorder = updated.map((item) => item.id);
+                                return { runningApps: updated };
+                        }, () => {
+                                if (this.pendingReorder) {
+                                        this.dispatchTaskbarCommand({ action: 'reorder', order: this.pendingReorder });
+                                        this.pendingReorder = null;
+                                }
+                        });
                 });
         };
 
@@ -280,14 +288,18 @@ export default class Navbar extends PureComponent {
 
         handleWorkspaceSelect = (workspaceId) => {
                 if (typeof workspaceId !== 'number') return;
-                this.setState({ activeWorkspace: workspaceId });
+                runUserBlockingUpdate('navbar:select-workspace', () => {
+                        this.setState({ activeWorkspace: workspaceId });
+                });
                 if (typeof window !== 'undefined') {
                         window.dispatchEvent(new CustomEvent('workspace-select', { detail: { workspaceId } }));
                 }
         };
 
         handleStatusToggle = () => {
-                this.setState((state) => ({ status_card: !state.status_card }));
+                runUserBlockingUpdate('navbar:toggle-status', () => {
+                        this.setState((state) => ({ status_card: !state.status_card }));
+                });
         };
 
         handleStatusKeyDown = (event) => {

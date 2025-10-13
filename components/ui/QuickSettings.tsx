@@ -1,7 +1,16 @@
 "use client";
 
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import {
+  ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
+import { beginInteractionMark, endInteractionMark } from '../../utils/perf/marks';
 
 interface Props {
   open: boolean;
@@ -31,6 +40,63 @@ const QuickSettings = ({ open }: Props) => {
   const [shouldRender, setShouldRender] = useState(open);
   const [isVisible, setIsVisible] = useState(open);
   const focusableTabIndex = open ? 0 : -1;
+  const [isTransitionPending, startNonBlockingTransition] = useTransition();
+
+  const runNonBlockingInteraction = useCallback(
+    (label: string, task: () => void) => {
+      const mark = beginInteractionMark(label, 'transition');
+      startNonBlockingTransition(() => {
+        try {
+          task();
+        } finally {
+          endInteractionMark(mark);
+        }
+      });
+    },
+    [startNonBlockingTransition],
+  );
+
+  const toggleSound = useCallback(() => {
+    runNonBlockingInteraction('quick-settings:toggle-sound', () => {
+      setSound((previous) => !previous);
+    });
+  }, [runNonBlockingInteraction, setSound]);
+
+  const toggleOnline = useCallback(() => {
+    runNonBlockingInteraction('quick-settings:toggle-network', () => {
+      setOnline((previous) => !previous);
+    });
+  }, [runNonBlockingInteraction, setOnline]);
+
+  const toggleReduceMotion = useCallback(() => {
+    runNonBlockingInteraction('quick-settings:toggle-reduce-motion', () => {
+      setReduceMotion((previous) => !previous);
+    });
+  }, [runNonBlockingInteraction, setReduceMotion]);
+
+  const toggleFocusMode = useCallback(() => {
+    runNonBlockingInteraction('quick-settings:toggle-focus-mode', () => {
+      setFocusMode((previous) => !previous);
+    });
+  }, [runNonBlockingInteraction, setFocusMode]);
+
+  const updateBrightness = useCallback(
+    (value: number) => {
+      runNonBlockingInteraction('quick-settings:brightness', () => {
+        setBrightness(Math.min(100, Math.max(0, value)));
+      });
+    },
+    [runNonBlockingInteraction, setBrightness],
+  );
+
+  const updateVolume = useCallback(
+    (value: number) => {
+      runNonBlockingInteraction('quick-settings:volume', () => {
+        setVolume(Math.min(100, Math.max(0, value)));
+      });
+    },
+    [runNonBlockingInteraction, setVolume],
+  );
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -96,10 +162,6 @@ const QuickSettings = ({ open }: Props) => {
     };
   }, [volume]);
 
-  if (!shouldRender) {
-    return null;
-  }
-
   const statusBadges = [
     { id: 'theme', label: 'Theme', value: theme === 'light' ? 'Light' : 'Dark' },
     { id: 'audio', label: 'Sound', value: sound ? 'On' : 'Muted' },
@@ -116,44 +178,47 @@ const QuickSettings = ({ open }: Props) => {
     onToggle: () => void;
     icon: ReactNode;
     accent: string;
-  }> = [
-    {
-      id: 'quick-settings-sound',
-      label: 'Sound',
-      description: 'Play system alerts and feedback.',
-      value: sound,
-      onToggle: () => setSound(!sound),
-      accent: 'from-sky-400/30 via-sky-500/10 to-transparent',
-      icon: <SoundIcon />,
-    },
-    {
-      id: 'quick-settings-network',
-      label: 'Network',
-      description: 'Keep simulated network online.',
-      value: online,
-      onToggle: () => setOnline(!online),
-      accent: 'from-emerald-400/30 via-emerald-500/10 to-transparent',
-      icon: <NetworkIcon />,
-    },
-    {
-      id: 'quick-settings-reduced-motion',
-      label: 'Reduced motion',
-      description: 'Limit animations for accessibility.',
-      value: reduceMotion,
-      onToggle: () => setReduceMotion(!reduceMotion),
-      accent: 'from-purple-400/30 via-purple-500/10 to-transparent',
-      icon: <MotionIcon />,
-    },
-    {
-      id: 'quick-settings-focus-mode',
-      label: 'Focus mode',
-      description: 'Silence badges and notifications.',
-      value: focusMode,
-      onToggle: () => setFocusMode(!focusMode),
-      accent: 'from-amber-400/30 via-amber-500/10 to-transparent',
-      icon: <FocusIcon />,
-    },
-  ];
+  }> = useMemo(
+    () => [
+      {
+        id: 'quick-settings-sound',
+        label: 'Sound',
+        description: 'Play system alerts and feedback.',
+        value: sound,
+        onToggle: toggleSound,
+        accent: 'from-sky-400/30 via-sky-500/10 to-transparent',
+        icon: <SoundIcon />,
+      },
+      {
+        id: 'quick-settings-network',
+        label: 'Network',
+        description: 'Keep simulated network online.',
+        value: online,
+        onToggle: toggleOnline,
+        accent: 'from-emerald-400/30 via-emerald-500/10 to-transparent',
+        icon: <NetworkIcon />,
+      },
+      {
+        id: 'quick-settings-reduced-motion',
+        label: 'Reduced motion',
+        description: 'Limit animations for accessibility.',
+        value: reduceMotion,
+        onToggle: toggleReduceMotion,
+        accent: 'from-purple-400/30 via-purple-500/10 to-transparent',
+        icon: <MotionIcon />,
+      },
+      {
+        id: 'quick-settings-focus-mode',
+        label: 'Focus mode',
+        description: 'Silence badges and notifications.',
+        value: focusMode,
+        onToggle: toggleFocusMode,
+        accent: 'from-amber-400/30 via-amber-500/10 to-transparent',
+        icon: <FocusIcon />,
+      },
+    ],
+    [focusMode, online, reduceMotion, sound, toggleFocusMode, toggleOnline, toggleReduceMotion, toggleSound],
+  );
 
   const sliderControls: Array<{
     id: string;
@@ -166,38 +231,49 @@ const QuickSettings = ({ open }: Props) => {
     unit?: string;
     ariaValueText?: string;
     disabled?: boolean;
-  }> = [
-    {
-      id: 'quick-settings-brightness',
-      label: 'Brightness',
-      description: 'Tune the simulated display glow.',
-      value: brightness,
-      onChange: (value) => setBrightness(Math.min(100, Math.max(0, value))),
-      icon: <SunIcon />,
-      accent: 'from-sky-400 via-sky-500 to-transparent',
-      unit: '%',
-      ariaValueText: `${brightness}% brightness`,
-    },
-    {
-      id: 'quick-settings-volume',
-      label: 'Master volume',
-      description: sound ? 'Adjust feedback alerts.' : 'Sound is muted — enable it above to hear alerts.',
-      value: volume,
-      onChange: (value) => setVolume(Math.min(100, Math.max(0, value))),
-      icon: <VolumeIcon muted={!sound} />,
-      accent: sound
-        ? 'from-emerald-400 via-emerald-500 to-transparent'
-        : 'from-slate-400 via-slate-500 to-transparent',
-      unit: '%',
-      ariaValueText: sound ? `${volume}% volume` : 'Muted',
-      disabled: !sound,
-    },
-  ];
+  }> = useMemo(
+    () => [
+      {
+        id: 'quick-settings-brightness',
+        label: 'Brightness',
+        description: 'Tune the simulated display glow.',
+        value: brightness,
+        onChange: updateBrightness,
+        icon: <SunIcon />,
+        accent: 'from-sky-400 via-sky-500 to-transparent',
+        unit: '%',
+        ariaValueText: `${brightness}% brightness`,
+      },
+      {
+        id: 'quick-settings-volume',
+        label: 'Master volume',
+        description: sound
+          ? 'Adjust feedback alerts.'
+          : 'Sound is muted — enable it above to hear alerts.',
+        value: volume,
+        onChange: updateVolume,
+        icon: <VolumeIcon muted={!sound} />,
+        accent: sound
+          ? 'from-emerald-400 via-emerald-500 to-transparent'
+          : 'from-slate-400 via-slate-500 to-transparent',
+        unit: '%',
+        ariaValueText: sound ? `${volume}% volume` : 'Muted',
+        disabled: !sound,
+      },
+    ],
+    [brightness, sound, updateBrightness, updateVolume, volume],
+  );
+
+  if (!shouldRender) {
+    return null;
+  }
 
   return (
     <div
       ref={panelRef}
       role="menu"
+      aria-busy={isTransitionPending ? 'true' : 'false'}
+      data-transition-pending={isTransitionPending ? 'true' : 'false'}
       aria-label="Quick settings"
       aria-hidden={!open}
       className={`group/qs absolute top-9 right-3 w-[19rem] origin-top-right rounded-2xl border border-white/15 bg-kali-surface/95 p-4 text-sm text-white shadow-kali-panel backdrop-blur-lg transition-all duration-200 focus:outline-none ${
