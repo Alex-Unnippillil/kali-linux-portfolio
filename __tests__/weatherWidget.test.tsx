@@ -27,6 +27,7 @@ const baseSettings = {
   largeHitAreas: defaults.largeHitAreas,
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
+  allowTelemetry: defaults.allowTelemetry,
   haptics: defaults.haptics,
   theme: 'default',
   desktopTheme,
@@ -40,6 +41,7 @@ const baseSettings = {
   setLargeHitAreas: () => {},
   setPongSpin: () => {},
   setAllowNetwork: () => {},
+  setAllowTelemetry: () => {},
   setHaptics: () => {},
   setTheme: () => {},
 };

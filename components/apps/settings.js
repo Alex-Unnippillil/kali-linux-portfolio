@@ -4,7 +4,34 @@ import { resetSettings, defaults, exportSettings as exportSettingsData, importSe
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const {
+        accent,
+        setAccent,
+        wallpaper,
+        setWallpaper,
+        useKaliWallpaper,
+        setUseKaliWallpaper,
+        density,
+        setDensity,
+        reducedMotion,
+        setReducedMotion,
+        largeHitAreas,
+        setLargeHitAreas,
+        fontScale,
+        setFontScale,
+        highContrast,
+        setHighContrast,
+        pongSpin,
+        setPongSpin,
+        allowNetwork,
+        setAllowNetwork,
+        allowTelemetry,
+        setAllowTelemetry,
+        haptics,
+        setHaptics,
+        theme,
+        setTheme,
+    } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -194,6 +221,18 @@ export function Settings() {
                 <label className="mr-2 text-kali-text/80 flex items-center">
                     <input
                         type="checkbox"
+                        checked={allowTelemetry}
+                        onChange={(e) => setAllowTelemetry(e.target.checked)}
+                        className="mr-2"
+                        aria-label="Allow replay telemetry"
+                    />
+                    Allow Replay & Performance Telemetry
+                </label>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-kali-text/80 flex items-center">
+                    <input
+                        type="checkbox"
                         checked={haptics}
                         onChange={(e) => setHaptics(e.target.checked)}
                         className="mr-2"
@@ -290,6 +329,7 @@ export function Settings() {
                         setHighContrast(defaults.highContrast);
                         setPongSpin(defaults.pongSpin);
                         setAllowNetwork(defaults.allowNetwork);
+                        setAllowTelemetry(defaults.allowTelemetry);
                         setHaptics(defaults.haptics);
                         setTheme('default');
                     }}
@@ -317,9 +357,12 @@ export function Settings() {
                         if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
                         if (parsed.pongSpin !== undefined) setPongSpin(parsed.pongSpin);
                         if (parsed.allowNetwork !== undefined) setAllowNetwork(parsed.allowNetwork);
+                        if (parsed.allowTelemetry !== undefined) setAllowTelemetry(parsed.allowTelemetry);
                         if (parsed.haptics !== undefined) setHaptics(parsed.haptics);
                         if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
-                        if (parsed.theme !== undefined) { setTheme(parsed.theme); }
+                        if (parsed.theme !== undefined) {
+                            setTheme(parsed.theme);
+                        }
                     } catch (err) {
                         console.error('Invalid settings', err);
                     }
