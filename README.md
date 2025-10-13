@@ -95,7 +95,7 @@ components/
   screen/             # Boot splash, lock screen, desktop, navbar
   apps/               # App catalog: games, utilities, and security simulations
   context-menus/      # Desktop and dock context menus
-  SEO/Meta.js         # Structured metadata helpers
+  SEO/Meta.tsx        # Structured metadata helpers
   util-components/    # Reusable UI primitives (buttons, layout helpers, etc.)
 
 hooks/
