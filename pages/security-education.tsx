@@ -33,7 +33,7 @@ const SecurityEducation = () => (
         >
           Use Kali Linux and related tools legally and ethically with proper authorization.
         </div>
-        <div className="grid gap-4 p-4 md:grid-cols-2">
+        <div className="info-grid p-4">
           <InfoFrame
             title="What"
             link="https://www.kali.org/docs/introduction/what-is-kali-linux/"
@@ -58,6 +58,18 @@ const SecurityEducation = () => (
         <div className="p-4">
           <WorkflowCard />
         </div>
+        <style jsx>{`
+          .info-grid {
+            display: grid;
+            gap: 1rem;
+          }
+
+          @container (min-width: 48rem) {
+            .info-grid {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+          }
+        `}</style>
       </div>
     )}
   />

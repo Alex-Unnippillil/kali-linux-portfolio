@@ -173,7 +173,7 @@ export default class Navbar extends PureComponent {
                                                 />
                                         )}
                                 </span>
-                                <span className="hidden whitespace-nowrap text-white md:inline">{app.title}</span>
+                                <span className="app-button-title whitespace-nowrap text-white">{app.title}</span>
                         </button>
                 );
         };
@@ -311,7 +311,7 @@ export default class Navbar extends PureComponent {
                                                 '--desktop-navbar-height': `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px) + 0.375rem + 0.25rem)`
                                         }}
                                 >
-                                        <div className="flex items-center gap-2 text-xs md:text-sm">
+                                        <div className="flex items-center gap-2 text-xs navbar-section">
                                                 <WhiskerMenu />
                                                 {workspaces.length > 0 && (
                                                         <WorkspaceSwitcher
@@ -323,7 +323,7 @@ export default class Navbar extends PureComponent {
                                                 {this.renderRunningApps()}
                                                 <PerformanceGraph />
                                         </div>
-                                        <div className="flex items-center gap-4 text-xs md:text-sm">
+                                        <div className="flex items-center gap-4 text-xs navbar-section">
                                                 <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
                                                 <div
                                                         id="status-bar"
@@ -341,6 +341,40 @@ export default class Navbar extends PureComponent {
                                                         <QuickSettings open={this.state.status_card} />
                                                 </div>
                                         </div>
+                                        <style jsx>{`
+                                                .main-navbar-vp {
+                                                        container-type: inline-size;
+                                                        container-name: desktop-navbar;
+                                                }
+
+                                                .navbar-section {
+                                                        font-size: 0.75rem;
+                                                        line-height: 1rem;
+                                                        transition: font-size 120ms ease;
+                                                }
+
+                                                .app-button-title {
+                                                        display: none;
+                                                }
+
+                                                @container desktop-navbar (min-width: 42rem) {
+                                                        .navbar-section {
+                                                                font-size: 0.8125rem;
+                                                                line-height: 1.2rem;
+                                                        }
+                                                }
+
+                                                @container desktop-navbar (min-width: 48rem) {
+                                                        .navbar-section {
+                                                                font-size: 0.875rem;
+                                                                line-height: 1.25rem;
+                                                        }
+
+                                                        .app-button-title {
+                                                                display: inline;
+                                                        }
+                                                }
+                                        `}</style>
                                 </div>
 			);
 		}

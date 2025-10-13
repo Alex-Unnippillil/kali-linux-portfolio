@@ -4,6 +4,8 @@
   border-radius: var(--radius-6);
   box-shadow: var(--shadow-2);
   overflow: hidden;
+  container-type: inline-size;
+  container-name: window;
   --window-motion-transform-duration: var(--window-motion-duration-restore);
   --window-motion-transform-easing: var(--window-motion-ease-restore);
   --window-motion-opacity-duration: var(--window-motion-duration-minimize);

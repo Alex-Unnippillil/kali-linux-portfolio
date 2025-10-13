@@ -39,6 +39,8 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
             touch-action: manipulation;
             font-size: clamp(0.95rem, 0.9rem + 0.2vw, 1rem);
             min-height: 100vh;
+            container-type: inline-size;
+            container-name: desktop-shell;
           }
 
           @supports (min-height: 100svh) {
@@ -53,7 +55,7 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
             }
           }
 
-          @media (min-width: 640px) {
+          @container (min-width: 40rem) {
             .desktop-shell {
               --shell-taskbar-height: 2.75rem;
               --shell-taskbar-padding-x: 0.875rem;
@@ -63,7 +65,7 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
             }
           }
 
-          @media (min-width: 768px) {
+          @container (min-width: 48rem) {
             .desktop-shell {
               --shell-taskbar-height: 3rem;
               --shell-taskbar-padding-x: 1rem;
@@ -76,7 +78,7 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
             }
           }
 
-          @media (min-width: 1024px) {
+          @container (min-width: 64rem) {
             .desktop-shell {
               --shell-taskbar-height: 3.25rem;
               --shell-taskbar-font-size: 0.95rem;
@@ -85,7 +87,7 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
             }
           }
 
-          @media (min-width: 1280px) {
+          @container (min-width: 80rem) {
             .desktop-shell {
               --shell-taskbar-height: 3.5rem;
               --shell-taskbar-font-size: 1rem;
