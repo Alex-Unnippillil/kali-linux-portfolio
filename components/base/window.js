@@ -105,6 +105,8 @@ export class Window extends Component {
             (isPortrait ? window.innerWidth * 0.05 : 60);
         this.startY = clampWindowTopPosition(props.initialY, initialTopInset);
 
+        this.snapSuppressionActive = false;
+
         this.state = {
             cursorType: "cursor-default",
             width: props.defaultWidth || (isPortrait ? 90 : 60),
@@ -344,7 +346,7 @@ export class Window extends Component {
         this._menuOpener = null;
     }
 
-    changeCursorToMove = () => {
+    changeCursorToMove = (event) => {
         this.focusWindow();
         if (this.state.maximized) {
             this.restoreWindow();
@@ -352,11 +354,33 @@ export class Window extends Component {
         if (this.state.snapped) {
             this.unsnapWindow();
         }
+        this.updateSnapSuppression(event?.altKey, { pointerActive: true });
         this.setState({ cursorType: "cursor-move", grabbed: true })
     }
 
     changeCursorToDefault = () => {
         this.setState({ cursorType: "cursor-default", grabbed: false })
+    }
+
+    updateSnapSuppression = (altPressed, { pointerActive = false } = {}) => {
+        const wasSuppressed = this.snapSuppressionActive;
+        const shouldSuppress = Boolean(pointerActive && altPressed);
+
+        if (shouldSuppress) {
+            if (!wasSuppressed && (this.state.snapPreview || this.state.snapPosition)) {
+                this.setState({ snapPreview: null, snapPosition: null });
+            }
+            this.snapSuppressionActive = true;
+            return false;
+        }
+
+        if (wasSuppressed) {
+            this.snapSuppressionActive = false;
+            return pointerActive;
+        }
+
+        this.snapSuppressionActive = false;
+        return pointerActive;
     }
 
     getSnapGrid = () => {
@@ -386,8 +410,9 @@ export class Window extends Component {
         return Math.round(value / size) * size;
     }
 
-    handleVerticleResize = () => {
+    handleVerticleResize = (event) => {
         if (this.props.resizable === false) return;
+        this.updateSnapSuppression(event?.altKey, { pointerActive: true });
         const px = (this.state.height / 100) * window.innerHeight + 1;
         const snapped = this.snapToGrid(px, 'y');
         const heightPercent = snapped / window.innerHeight * 100;
@@ -397,8 +422,9 @@ export class Window extends Component {
         });
     }
 
-    handleHorizontalResize = () => {
+    handleHorizontalResize = (event) => {
         if (this.props.resizable === false) return;
+        this.updateSnapSuppression(event?.altKey, { pointerActive: true });
         const px = (this.state.width / 100) * window.innerWidth + 1;
         const snapped = this.snapToGrid(px, 'x');
         const widthPercent = snapped / window.innerWidth * 100;
@@ -406,6 +432,14 @@ export class Window extends Component {
             this.resizeBoundries();
             this.notifySizeChange();
         });
+    }
+
+    handleResizeStart = (event) => {
+        this.updateSnapSuppression(event?.altKey, { pointerActive: true });
+    }
+
+    handleResizeEnd = () => {
+        this.updateSnapSuppression(false, { pointerActive: false });
     }
 
     setWinowsPosition = () => {
@@ -584,11 +618,15 @@ export class Window extends Component {
         if (data && data.node) {
             this.applyEdgeResistance(data.node, data);
         }
-        this.checkSnapPreview();
+        const shouldCheckSnap = this.updateSnapSuppression(e?.altKey, { pointerActive: true });
+        if (shouldCheckSnap && !this.snapSuppressionActive) {
+            this.checkSnapPreview();
+        }
     }
 
-    handleStop = () => {
+    handleStop = (event) => {
         this.changeCursorToDefault();
+        this.updateSnapSuppression(event?.altKey, { pointerActive: false });
         const snapPos = this.state.snapPosition;
         if (snapPos) {
             this.snapWindow(snapPos);
@@ -708,9 +746,9 @@ export class Window extends Component {
             e.preventDefault();
             e.stopPropagation();
             if (this.state.grabbed) {
-                this.handleStop();
+                this.handleStop(e);
             } else {
-                this.changeCursorToMove();
+                this.changeCursorToMove(e);
             }
         } else if (this.state.grabbed) {
             const step = 10;
@@ -730,7 +768,10 @@ export class Window extends Component {
                     x += dx;
                     y += dy;
                     node.style.transform = `translate(${x}px, ${y}px)`;
-                    this.checkSnapPreview();
+                    const shouldCheckSnap = this.updateSnapSuppression(e?.altKey, { pointerActive: true });
+                    if (shouldCheckSnap && !this.snapSuppressionActive) {
+                        this.checkSnapPreview();
+                    }
                     this.setWinowsPosition();
                 }
             }
@@ -890,8 +931,20 @@ export class Window extends Component {
                         onPointerDown={this.focusWindow}
                         onFocus={this.focusWindow}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && (
+                            <WindowYBorder
+                                resize={this.handleHorizontalResize}
+                                onResizeStart={this.handleResizeStart}
+                                onResizeEnd={this.handleResizeEnd}
+                            />
+                        )}
+                        {this.props.resizable !== false && (
+                            <WindowXBorder
+                                resize={this.handleVerticleResize}
+                                onResizeStart={this.handleResizeStart}
+                                onResizeEnd={this.handleResizeEnd}
+                            />
+                        )}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -957,8 +1010,14 @@ export class WindowYBorder extends Component {
                 <div
                     className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
                     draggable
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
+                    onDragStart={(e) => {
+                        e.dataTransfer.setDragImage(this.trpImg, 0, 0);
+                        this.props.onResizeStart?.(e);
+                    }}
                     onDrag={this.props.resize}
+                    onDragEnd={(e) => {
+                        this.props.onResizeEnd?.(e);
+                    }}
                 ></div>
             )
         }
@@ -977,8 +1036,14 @@ export class WindowXBorder extends Component {
                 <div
                     className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
                     draggable
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
+                    onDragStart={(e) => {
+                        e.dataTransfer.setDragImage(this.trpImg, 0, 0);
+                        this.props.onResizeStart?.(e);
+                    }}
                     onDrag={this.props.resize}
+                    onDragEnd={(e) => {
+                        this.props.onResizeEnd?.(e);
+                    }}
                 ></div>
             )
         }
