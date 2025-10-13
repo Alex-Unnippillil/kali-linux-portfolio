@@ -179,7 +179,7 @@ export default function Converter() {
   };
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto bg-ub-cool-grey p-4 text-white">
+    <div className="flex h-full flex-col overflow-y-auto bg-ub-cool-grey p-4 text-[color:var(--kali-text)]">
       <h2 className="mb-4 text-xl font-semibold">Converter</h2>
       <section className={`${cardClass} mb-4 p-2`}>
         <div
