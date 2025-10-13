@@ -10,7 +10,8 @@ const BackgroundImage = dynamic(
 import apps, { games } from '../../apps.config';
 import { DEFAULT_DESKTOP_FOLDERS } from '../../data/desktopFolders';
 import Window from '../desktop/Window';
-import UbuntuApp from '../base/ubuntu_app';
+import AppTile from '../base/app-tile';
+import { buildAppMetadata } from '../../lib/appRegistry';
 import SystemOverlayWindow from '../base/SystemOverlayWindow';
 import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
@@ -3760,6 +3761,7 @@ export class Desktop extends Component {
             const app = this.getAppById(appId);
             if (!app) return null;
 
+            const meta = buildAppMetadata(app);
             const props = {
                 name: app.title,
                 id: app.id,
@@ -3769,6 +3771,7 @@ export class Desktop extends Component {
                 prefetch: app.screen?.prefetch,
                 style: this.desktopIconVariables,
                 accentVariables: this.desktopAccentVariables,
+                href: meta.path,
             };
 
             const position = (keyboardMoveState && keyboardMoveState.id === appId && keyboardMoveState.position)
@@ -3800,7 +3803,7 @@ export class Desktop extends Component {
                     onPointerEnter={() => this.handleIconPointerEnter(app.id)}
                     onPointerLeave={() => this.handleIconPointerLeave(app.id)}
                 >
-                    <UbuntuApp
+                    <AppTile
                         {...props}
                         draggable={false}
                         isBeingDragged={isDragging}

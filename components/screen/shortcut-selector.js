@@ -1,5 +1,6 @@
 import React from 'react';
-import UbuntuApp from '../base/ubuntu_app';
+import AppTile from '../base/app-tile';
+import { buildAppMetadata } from '../../lib/appRegistry';
 
 class ShortcutSelector extends React.Component {
     constructor() {
@@ -40,17 +41,21 @@ class ShortcutSelector extends React.Component {
 
     renderApps = () => {
         const apps = this.state.apps || [];
-        return apps.map((app) => (
-            <UbuntuApp
-                key={app.id}
-                name={app.title}
-                id={app.id}
-                icon={app.icon}
-                openApp={() => this.selectApp(app.id)}
-                disabled={app.disabled}
-                prefetch={app.screen?.prefetch}
-            />
-        ));
+        return apps.map((app) => {
+            const meta = buildAppMetadata(app);
+            return (
+                <AppTile
+                    key={app.id}
+                    name={app.title}
+                    id={app.id}
+                    icon={app.icon}
+                    openApp={() => this.selectApp(app.id)}
+                    disabled={app.disabled}
+                    prefetch={app.screen?.prefetch}
+                    href={meta.path}
+                />
+            );
+        });
     };
 
     render() {
