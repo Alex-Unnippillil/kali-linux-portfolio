@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Component } from 'react';
+import React, { Component, forwardRef } from 'react';
 import BootingScreen from './screen/booting_screen';
 import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
@@ -8,8 +8,10 @@ import Navbar from './screen/navbar';
 import Layout from './desktop/Layout';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
+import useSession from '../hooks/useSession';
+import { useSnapGridSetting, useSnapSetting } from '../hooks/usePersistentState';
 
-export default class Ubuntu extends Component {
+class UbuntuShell extends Component {
         constructor() {
                 super();
                 this.state = {
@@ -209,7 +211,7 @@ export default class Ubuntu extends Component {
                 safeLocalStorage?.setItem('shut-down', false);
 	};
 
-	render() {
+        render() {
         return (
                 <Layout id="monitor-screen">
                                 <LockScreen
@@ -217,14 +219,49 @@ export default class Ubuntu extends Component {
                                         bgImgName={this.state.bg_image_name}
                                         unLockScreen={this.unLockScreen}
                                 />
-				<BootingScreen
-					visible={this.state.booting_screen}
-					isShutDown={this.state.shutDownScreen}
-					turnOn={this.turnOn}
-				/>
+                                <BootingScreen
+                                        visible={this.state.booting_screen}
+                                        isShutDown={this.state.shutDownScreen}
+                                        turnOn={this.turnOn}
+                                />
                                 <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-                                <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+                                <Desktop
+                                        bg_image_name={this.state.bg_image_name}
+                                        changeBackgroundImage={this.changeBackgroundImage}
+                                        session={this.props.session}
+                                        setSession={this.props.setSession}
+                                        clearSession={this.props.clearSession}
+                                        snapEnabled={this.props.snapEnabled}
+                                        snapGrid={this.props.snapGrid}
+                                />
                 </Layout>
         );
-	}
+        }
 }
+
+UbuntuShell.defaultProps = {
+        clearSession: () => {},
+};
+
+const Ubuntu = forwardRef((props, ref) => {
+        const { session, setSession, resetSession } = useSession();
+        const [snapEnabled] = useSnapSetting();
+        const [snapGrid] = useSnapGridSetting();
+
+        return (
+                <UbuntuShell
+                        {...props}
+                        ref={ref}
+                        session={session}
+                        setSession={setSession}
+                        clearSession={resetSession}
+                        snapEnabled={snapEnabled}
+                        snapGrid={snapGrid}
+                />
+        );
+});
+
+Ubuntu.displayName = 'Ubuntu';
+
+export default Ubuntu;
+export { UbuntuShell };
