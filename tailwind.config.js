@@ -141,7 +141,7 @@ module.exports = {
         const width = `${(i / 12) * 100}%`;
         cols[`.col-${i}`] = { flex: `0 0 ${width}`, maxWidth: width };
         if (i < 12) {
-          cols[`.offset-${i}`] = { marginLeft: width };
+          cols[`.offset-${i}`] = { marginInlineStart: width };
         }
       }
       addUtilities(cols, ['responsive']);

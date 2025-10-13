@@ -20,6 +20,7 @@ import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 import { Rajdhani } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
+import { LocaleDirectionProvider } from '../hooks/useLocaleDirection';
 
 type PeriodicSyncPermissionDescriptor = PermissionDescriptor & {
   name: 'periodic-background-sync';
@@ -205,15 +206,17 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
 
   return (
     <ErrorBoundary>
-      <div className={kaliSans.className}>
-        <a
-          href="#app-grid"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
-        >
-          Skip to app grid
-        </a>
-        <SettingsProvider>
-          <NotificationCenter>
+      <LocaleDirectionProvider>
+        <div className={kaliSans.className}>
+          <a
+            href="#app-grid"
+          className="skip-link sr-only focus:not-sr-only focus:absolute focus:top-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
+          style={{ insetInlineStart: 0 }}
+          >
+            Skip to app grid
+          </a>
+          <SettingsProvider>
+            <NotificationCenter>
             <PipPortalProvider>
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
@@ -233,7 +236,8 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
             </PipPortalProvider>
           </NotificationCenter>
         </SettingsProvider>
-      </div>
+        </div>
+      </LocaleDirectionProvider>
     </ErrorBoundary>
   );
 }

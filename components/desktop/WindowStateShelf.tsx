@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import type { CSSProperties } from 'react';
 import Image from 'next/image';
 import clsx from 'clsx';
 
@@ -71,8 +72,12 @@ function WindowStateShelf({
 }: WindowShelfProps) {
     const containerClasses = clsx(
         'pointer-events-auto fixed bottom-4 z-[70] w-[18rem] max-w-[92vw] text-sm text-white drop-shadow-xl',
-        anchor === 'left' ? 'left-4' : 'right-4',
     );
+
+    const anchorOffset: CSSProperties =
+        anchor === 'left'
+            ? { insetInlineStart: '1rem' }
+            : { insetInlineEnd: '1rem' };
 
     const headerClasses = clsx(
         'flex w-full items-center justify-between rounded-lg border border-white/10 bg-gradient-to-br px-3 py-2',
@@ -80,9 +85,10 @@ function WindowStateShelf({
     );
 
     const toggleClasses = clsx(
-        'flex w-full items-center justify-between rounded-lg px-3 py-2 text-left font-medium text-white/90 transition-colors hover:text-white',
+        'flex w-full items-center justify-between rounded-lg px-3 py-2 font-medium text-white/90 transition-colors hover:text-white',
         focusRing,
     );
+    const toggleStyle: CSSProperties = { textAlign: 'start' };
 
     const listWrapperClasses = clsx(
         'mt-2 overflow-hidden rounded-lg border border-white/10 bg-slate-950/80 backdrop-blur',
@@ -94,16 +100,20 @@ function WindowStateShelf({
     const resolvedAction = actionLabel || (accent === 'minimized' ? 'Restore window' : 'Reopen window');
 
     return (
-        <aside className={containerClasses} aria-label={`${label} panel`}>
+        <aside className={containerClasses} style={anchorOffset} aria-label={`${label} panel`}>
             <div className={headerClasses}>
                 <button
                     type="button"
                     onClick={onToggle}
                     aria-expanded={open}
                     className={toggleClasses}
+                    style={toggleStyle}
                 >
                     <span>{label}</span>
-                    <span className={clsx('ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold', badgeStyles[accent])}>
+                    <span
+                        className={clsx('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold', badgeStyles[accent])}
+                        style={{ marginInlineStart: '0.5rem' }}
+                    >
                         {count}
                     </span>
                 </button>
@@ -119,12 +129,13 @@ function WindowStateShelf({
                                     type="button"
                                     onClick={() => onActivate(entry.id)}
                                     className={clsx(
-                                        'flex flex-1 items-center gap-3 rounded-md px-1 py-1 text-left transition-colors hover:text-white/95',
+                                        'flex flex-1 items-center gap-3 rounded-md px-1 py-1 transition-colors hover:text-white/95',
                                         focusRing,
                                     )}
+                                    style={{ textAlign: 'start' }}
                                 >
                                     {renderIcon(entry)}
-                                    <span className="flex flex-col text-left">
+                                    <span className="flex flex-col" style={{ textAlign: 'start' }}>
                                         <span className="text-sm font-semibold leading-tight">{entry.title}</span>
                                         <span className="text-[0.7rem] uppercase tracking-wide text-white/60">{resolvedAction}</span>
                                     </span>

@@ -20,15 +20,15 @@
 .windowFrame::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inset-inline-end: 0;
   height: 2px;
   background: var(--color-window-accent);
   opacity: 0;
   pointer-events: none;
-  border-top-left-radius: calc(var(--radius-6) - 1px);
-  border-top-right-radius: calc(var(--radius-6) - 1px);
+  border-start-start-radius: calc(var(--radius-6) - 1px);
+  border-start-end-radius: calc(var(--radius-6) - 1px);
   transition: opacity var(--motion-fast) ease;
   z-index: 2;
 }
@@ -95,8 +95,8 @@
 
 .windowTitlebar {
   height: 28px;
-  border-top-left-radius: calc(var(--radius-6) - 1px);
-  border-top-right-radius: calc(var(--radius-6) - 1px);
+  border-start-start-radius: calc(var(--radius-6) - 1px);
+  border-start-end-radius: calc(var(--radius-6) - 1px);
   position: relative;
   z-index: 1;
 }

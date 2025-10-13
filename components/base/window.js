@@ -6,6 +6,7 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import { useLocaleDirection } from '../../hooks/useLocaleDirection';
 import {
     clampWindowTopPosition,
     DEFAULT_WINDOW_TOP_OFFSET,
@@ -988,8 +989,13 @@ export class WindowXBorder extends Component {
 export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
+    const { isRtl } = useLocaleDirection();
+    const directionalIconProps = isRtl ? { 'data-rtl-mirror': 'true' } : {};
     return (
-        <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[8.25rem]`}>
+        <div
+            className={`${styles.windowControls} absolute select-none top-0 flex justify-center items-center min-w-[8.25rem]`}
+            style={{ insetInlineEnd: 0, marginInlineEnd: '0.25rem' }}
+        >
             {pipSupported && props.pip && (
                 <button
                     type="button"
@@ -1038,6 +1044,7 @@ export function WindowEditButtons(props) {
                                 width={16}
                                 height={16}
                                 sizes="16px"
+                                {...directionalIconProps}
                             />
                         </button>
                     ) : (

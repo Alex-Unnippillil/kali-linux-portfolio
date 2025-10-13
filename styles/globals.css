@@ -42,7 +42,56 @@
   --kali-control: var(--color-control-accent);
   --kali-control-surface: color-mix(in srgb, var(--kali-control) 18%, var(--kali-surface));
   --kali-control-overlay: color-mix(in srgb, var(--kali-control) 24%, var(--kali-overlay));
+  --safe-area-inline-start: var(--safe-area-left, 0px);
+  --safe-area-inline-end: var(--safe-area-right, 0px);
   accent-color: var(--color-control-accent);
+}
+
+:root[dir='rtl'] {
+  direction: rtl;
+  --safe-area-inline-start: var(--safe-area-right, 0px);
+  --safe-area-inline-end: var(--safe-area-left, 0px);
+}
+
+html[dir='rtl'] body {
+  direction: rtl;
+}
+
+.skip-link {
+  inset-inline-start: 0;
+}
+
+.skip-link:focus {
+  inset-inline-start: 0;
+}
+
+:where(html[dir='rtl'] .text-left) {
+  text-align: start !important;
+}
+
+:where(html[dir='rtl'] .text-right) {
+  text-align: end !important;
+}
+
+.main-navbar-vp {
+  flex-direction: row;
+}
+
+:where(html[dir='rtl'] .main-navbar-vp) {
+  flex-direction: row-reverse;
+}
+
+:where(html[dir='rtl'] .main-navbar-vp > div) {
+  flex-direction: row-reverse;
+}
+
+:where(html[dir='rtl'] .main-navbar-vp ul[role='list']) {
+  flex-direction: row-reverse;
+}
+
+:where(html[dir='rtl'] [data-rtl-mirror='true']) {
+  transform: scaleX(-1);
+  transform-origin: center;
 }
 
 body {
