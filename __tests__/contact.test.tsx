@@ -19,7 +19,9 @@ describe('contact form', () => {
   });
 
   it('success posts to api', async () => {
-    const fetchMock = jest.fn().mockResolvedValue({ ok: true });
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValue({ ok: true, status: 200, json: jest.fn() });
     const result = await processContactForm(
       {
         name: 'Alex',
@@ -39,5 +41,6 @@ describe('contact form', () => {
       })
     );
     expect(result.success).toBe(true);
+    expect(result.queued).toBeFalsy();
   });
 });
