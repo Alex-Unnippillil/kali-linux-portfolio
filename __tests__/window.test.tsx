@@ -763,17 +763,26 @@ describe('Window keyboard dragging', () => {
       />
     );
 
+    const dialog = screen.getByRole('dialog', { name: 'Test' });
     const handle = screen.getByText('Test').parentElement!;
 
-    fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
-    fireEvent.keyDown(handle, { key: 'ArrowRight' });
+    fireEvent.keyDown(dialog, { key: ' ', code: 'Space' });
+    fireEvent.keyDown(dialog, { key: 'ArrowRight' });
 
     const winEl = document.getElementById('test-window')!;
     expect(winEl.style.transform).toBe('translate(10px, 0px)');
-    expect(handle).toHaveAttribute('aria-grabbed', 'true');
+    expect(handle).toHaveAttribute('aria-keyshortcuts', expect.stringContaining('Space'));
+    expect(handle).toHaveAttribute('aria-describedby', `${winEl.id}-drag-instructions`);
+    expect(handle.dataset.grabbed).toBe('true');
+    expect(dialog).toHaveAttribute('aria-describedby', expect.stringContaining(`${winEl.id}-shortcut-help`));
 
-    fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
-    expect(handle).toHaveAttribute('aria-grabbed', 'false');
+    const shortcutHelp = document.getElementById(`${winEl.id}-shortcut-help`);
+    expect(shortcutHelp?.textContent).toMatch(/Alt plus Arrow keys/i);
+
+    fireEvent.keyDown(dialog, { key: ' ', code: 'Space' });
+    expect(handle.dataset.grabbed).toBe('false');
+    expect(dialog).toHaveAttribute('aria-labelledby', `${winEl.id}-title`);
+    expect(dialog).toHaveAttribute('aria-keyshortcuts', expect.stringContaining('Alt+ArrowLeft'));
   });
 });
 

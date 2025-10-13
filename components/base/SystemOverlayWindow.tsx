@@ -94,6 +94,11 @@ export default function SystemOverlayWindow({
         }
     };
 
+    const resolvedLabelledBy = ariaLabelledBy ?? `${id}-title`;
+    const dragInstructionsId = `${id}-drag-instructions`;
+    const shortcutHelpId = `${id}-shortcut-help`;
+    const resolvedDescribedBy = [ariaDescribedBy, dragInstructionsId, shortcutHelpId].filter(Boolean).join(' ') || undefined;
+
     return (
         <div
             ref={overlayRef}
@@ -107,12 +112,17 @@ export default function SystemOverlayWindow({
                 role="dialog"
                 aria-modal={ariaModal}
                 aria-label={ariaLabel}
-                aria-labelledby={ariaLabelledBy}
-                aria-describedby={ariaDescribedBy}
+                aria-labelledby={resolvedLabelledBy}
+                aria-describedby={resolvedDescribedBy}
                 tabIndex={-1}
             >
+                <span id={shortcutHelpId} className="sr-only">
+                    Use Alt plus Arrow keys to snap the window and Shift plus Arrow keys to resize. Press Escape to close the window.
+                </span>
                 <WindowTopBar
                     title={title}
+                    titleId={resolvedLabelledBy}
+                    dragInstructionsId={dragInstructionsId}
                     onKeyDown={undefined}
                     onBlur={undefined}
                     grabbed={false}

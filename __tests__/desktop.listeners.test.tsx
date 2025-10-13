@@ -26,10 +26,26 @@ function createMockComponent(testId: string, displayName: string) {
 
 jest.mock('../components/base/window', () => {
   const MockWindow = createMockComponent('window', 'MockWindow');
-  function MockWindowTopBar({ title }: { title: string }) {
+  function MockWindowTopBar({
+    title,
+    titleId = 'mock-title',
+    dragInstructionsId = 'mock-drag-instructions',
+  }: {
+    title: string;
+    titleId?: string;
+    dragInstructionsId?: string;
+  }) {
     return (
-      <div data-testid="window-top-bar" role="presentation">
-        {title}
+      <div
+        data-testid="window-top-bar"
+        role="presentation"
+        aria-labelledby={titleId}
+        aria-describedby={dragInstructionsId}
+      >
+        <div id={titleId}>{title}</div>
+        <span id={dragInstructionsId} className="sr-only">
+          Mock drag instructions
+        </span>
       </div>
     );
   }

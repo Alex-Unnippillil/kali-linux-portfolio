@@ -293,6 +293,11 @@ const BeefPage: React.FC = () => {
                   Minimized
                 </span>
               )}
+              {isMinimized && (
+                <span className="sr-only" aria-live="polite">
+                  BeEF demo is minimized. Activate the restore button to bring the window back into view.
+                </span>
+              )}
             </div>
           </div>
           <div className="flex items-center">

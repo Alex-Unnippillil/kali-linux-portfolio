@@ -703,8 +703,26 @@ export class Window extends Component {
         });
     }
 
-    handleTitleBarKeyDown = (e) => {
-        if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
+    releaseGrab = () => {
+        if (this.state.grabbed) {
+            this.handleStop();
+        }
+    }
+
+    handleKeyDown = (e) => {
+        const { key, altKey, shiftKey } = e;
+        if (key === 'Escape') {
+            this.closeWindow();
+            return;
+        }
+
+        if (key === 'Tab') {
+            this.focusWindow();
+            return;
+        }
+
+        const isToggleKey = key === ' ' || key === 'Space' || key === 'Spacebar' || key === 'Enter';
+        if (isToggleKey && !altKey && !shiftKey) {
             e.preventDefault();
             e.stopPropagation();
             if (this.state.grabbed) {
@@ -712,13 +730,17 @@ export class Window extends Component {
             } else {
                 this.changeCursorToMove();
             }
-        } else if (this.state.grabbed) {
+            return;
+        }
+
+        if (this.state.grabbed && !altKey && !shiftKey) {
             const step = 10;
-            let dx = 0, dy = 0;
-            if (e.key === 'ArrowLeft') dx = -step;
-            else if (e.key === 'ArrowRight') dx = step;
-            else if (e.key === 'ArrowUp') dy = -step;
-            else if (e.key === 'ArrowDown') dy = step;
+            let dx = 0;
+            let dy = 0;
+            if (key === 'ArrowLeft') dx = -step;
+            else if (key === 'ArrowRight') dx = step;
+            else if (key === 'ArrowUp') dy = -step;
+            else if (key === 'ArrowDown') dy = step;
             if (dx !== 0 || dy !== 0) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -734,59 +756,52 @@ export class Window extends Component {
                     this.setWinowsPosition();
                 }
             }
+            return;
         }
-    }
 
-    releaseGrab = () => {
-        if (this.state.grabbed) {
-            this.handleStop();
-        }
-    }
-
-    handleKeyDown = (e) => {
-        if (e.key === 'Escape') {
-            this.closeWindow();
-        } else if (e.key === 'Tab') {
-            this.focusWindow();
-        } else if (e.altKey) {
-            if (e.key === 'ArrowDown') {
+        if (altKey) {
+            if (key === 'ArrowDown') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.unsnapWindow();
-            } else if (e.key === 'ArrowLeft') {
+            } else if (key === 'ArrowLeft') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.snapWindow('left');
-            } else if (e.key === 'ArrowRight') {
+            } else if (key === 'ArrowRight') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.snapWindow('right');
-            } else if (e.key === 'ArrowUp') {
+            } else if (key === 'ArrowUp') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.snapWindow('top');
             }
             this.focusWindow();
-        } else if (e.shiftKey) {
+            return;
+        }
+
+        if (shiftKey) {
             const step = 1;
-            if (e.key === 'ArrowLeft') {
+            if (key === 'ArrowLeft') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20), preMaximizeSize: null }), this.resizeBoundries);
-            } else if (e.key === 'ArrowRight') {
+            } else if (key === 'ArrowRight') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100), preMaximizeSize: null }), this.resizeBoundries);
-            } else if (e.key === 'ArrowUp') {
+            } else if (key === 'ArrowUp') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20), preMaximizeSize: null }), this.resizeBoundries);
-            } else if (e.key === 'ArrowDown') {
+            } else if (key === 'ArrowDown') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100), preMaximizeSize: null }), this.resizeBoundries);
             }
             this.focusWindow();
+            return;
         }
     }
 
@@ -823,6 +838,11 @@ export class Window extends Component {
                 : (this.state.snapped
                     ? `snapped-${this.state.snapped}`
                     : 'active'));
+
+        const titleId = `${this.id}-title`;
+        const dragInstructionsId = `${this.id}-drag-instructions`;
+        const shortcutHelpId = `${this.id}-shortcut-help`;
+        const describedByIds = [dragInstructionsId, shortcutHelpId].filter(Boolean).join(' ');
 
         return (
             <>
@@ -884,17 +904,24 @@ export class Window extends Component {
                         role="dialog"
                         data-window-state={windowState}
                         aria-hidden={this.props.minimized ? true : false}
-                        aria-label={this.props.title}
+                        aria-labelledby={titleId}
+                        aria-describedby={describedByIds || undefined}
+                        aria-keyshortcuts="Space Enter Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp Alt+ArrowDown Shift+ArrowLeft Shift+ArrowRight Shift+ArrowUp Shift+ArrowDown"
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                         onPointerDown={this.focusWindow}
                         onFocus={this.focusWindow}
                     >
+                        <span id={shortcutHelpId} className="sr-only">
+                            Use Alt plus Arrow keys to snap the window and Shift plus Arrow keys to resize. Press Escape to close the window.
+                        </span>
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
                         <WindowTopBar
                             title={this.props.title}
-                            onKeyDown={this.handleTitleBarKeyDown}
+                            titleId={titleId}
+                            dragInstructionsId={dragInstructionsId}
+                            onKeyDown={this.handleKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
                             onPointerDown={this.focusWindow}
@@ -925,19 +952,25 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick }) {
+export function WindowTopBar({ title, titleId, dragInstructionsId, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick }) {
     return (
         <div
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
             tabIndex={0}
             role="button"
-            aria-grabbed={grabbed}
+            aria-labelledby={titleId}
+            aria-describedby={dragInstructionsId}
+            aria-keyshortcuts="Space Enter ArrowLeft ArrowRight ArrowUp ArrowDown"
+            data-grabbed={grabbed ? 'true' : 'false'}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
             onPointerDown={onPointerDown}
             onDoubleClick={onDoubleClick}
         >
-            <div className="flex justify-center w-full text-sm font-bold">{title}</div>
+            <div id={titleId} className="flex justify-center w-full text-sm font-bold">{title}</div>
+            <span id={dragInstructionsId} className="sr-only">
+                Press Space or Enter to pick up the window, then use the Arrow keys to move it. Press Space or Enter again to drop the window in place.
+            </span>
         </div>
     )
 }
