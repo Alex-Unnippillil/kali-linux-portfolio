@@ -433,7 +433,7 @@ describe('Window snapping finalize and release', () => {
     const expectedHeight = computeSnappedHeightPercent();
     expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 5);
     const snapTop = getSnapTranslateTop();
-    expect(winEl.style.transform).toBe(`translate(0px, ${snapTop}px)`);
+    expect(winEl.style.transform).toBe(`translate3d(0px, ${snapTop}px, 0)`);
   });
 
   it('snaps window on drag stop near right edge on large viewport', () => {
@@ -477,7 +477,7 @@ describe('Window snapping finalize and release', () => {
     const expectedHeight = computeSnappedHeightPercent();
     expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 5);
     const rightSnapTop = getSnapTranslateTop();
-    expect(winEl.style.transform).toBe(`translate(${window.innerWidth / 2}px, ${rightSnapTop}px)`);
+    expect(winEl.style.transform).toBe(`translate3d(${window.innerWidth / 2}px, ${rightSnapTop}px, 0)`);
   });
 
   it('snaps window on drag stop near top edge', () => {
@@ -520,7 +520,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.width).toBeCloseTo(100, 2);
     expect(ref.current!.state.height).toBeCloseTo(computeSnappedHeightPercent(), 5);
     const topSnapTop = getSnapTranslateTop();
-    expect(winEl.style.transform).toBe(`translate(0px, ${topSnapTop}px)`);
+    expect(winEl.style.transform).toBe(`translate3d(0px, ${topSnapTop}px, 0)`);
   });
 
   it('snaps window on drag stop near the top-left corner', () => {
@@ -563,7 +563,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.width).toBeCloseTo(50, 2);
     expect(ref.current!.state.height).toBeCloseTo(computeQuarterHeightPercent(), 5);
     const snapTop = getSnapTranslateTop();
-    expect(winEl.style.transform).toBe(`translate(0px, ${snapTop}px)`);
+    expect(winEl.style.transform).toBe(`translate3d(0px, ${snapTop}px, 0)`);
   });
 
   it('snaps window on drag stop near the bottom-right corner', () => {
@@ -608,7 +608,7 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 5);
     const expectedX = window.innerWidth / 2;
     const expectedY = getSnapTranslateTop();
-    expect(winEl.style.transform).toBe(`translate(${expectedX}px, ${expectedY}px)`);
+    expect(winEl.style.transform).toBe(`translate3d(${expectedX}px, ${expectedY}px, 0)`);
   });
 
   it('releases snap with Alt+ArrowDown restoring size', () => {
@@ -745,7 +745,7 @@ describe('Window maximize behavior', () => {
     fireEvent.click(maximizeButton);
 
     const winEl = document.getElementById('test-window') as HTMLElement | null;
-    expect(winEl?.style.transform).toBe(`translate(-1pt, ${safeTop - DESKTOP_TOP_PADDING}px)`);
+    expect(winEl?.style.transform).toBe(`translate3d(-1pt, ${safeTop - DESKTOP_TOP_PADDING}px, 0)`);
   });
 });
 
@@ -769,7 +769,7 @@ describe('Window keyboard dragging', () => {
     fireEvent.keyDown(handle, { key: 'ArrowRight' });
 
     const winEl = document.getElementById('test-window')!;
-    expect(winEl.style.transform).toBe('translate(10px, 0px)');
+    expect(winEl.style.transform).toBe('translate3d(10px, 0px, 0)');
     expect(handle).toHaveAttribute('aria-grabbed', 'true');
 
     fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
@@ -811,7 +811,7 @@ describe('Edge resistance', () => {
     });
 
     const expectedTop = ref.current!.state.safeAreaTop ?? 0;
-    expect(winEl.style.transform).toBe(`translate(0px, ${expectedTop}px)`);
+    expect(winEl.style.transform).toBe(`translate3d(0px, ${expectedTop}px, 0)`);
   });
 });
 
@@ -848,7 +848,7 @@ describe('Window viewport constraints', () => {
     });
 
     act(() => {
-      winEl.style.transform = 'translate(1100px, 750px)';
+      winEl.style.transform = 'translate3d(1100px, 750px, 0)';
       winEl.style.setProperty('--window-transform-x', '1100px');
       winEl.style.setProperty('--window-transform-y', '750px');
     });
@@ -859,7 +859,7 @@ describe('Window viewport constraints', () => {
       window.dispatchEvent(new Event('resize'));
     });
 
-    const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(winEl.style.transform);
+    const match = /translate(?:3d)?\(\s*([-\d.]+)(?:px|pt),\s*([-\d.]+)px(?:,\s*(?:0|0px)\s*)?\)/.exec(winEl.style.transform);
     expect(match).not.toBeNull();
     if (!match) return;
 

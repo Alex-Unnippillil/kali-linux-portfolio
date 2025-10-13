@@ -23,7 +23,8 @@ describe('BeEF standalone window controls', () => {
     fireEvent.click(minimizeButton);
 
     expect(getFrame()).toHaveAttribute('data-window-state', 'minimized');
-    expect(screen.getByText(/beef demo is minimized/i)).toBeInTheDocument();
+    expect(screen.getByText(/minimized/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/restore window/i)).toBeInTheDocument();
 
     const restoreButtons = screen.getAllByRole('button', { name: /restore window/i });
     fireEvent.click(restoreButtons[restoreButtons.length - 1]);
