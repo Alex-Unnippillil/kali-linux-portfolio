@@ -288,6 +288,9 @@ export class Desktop extends Component {
         this.savedIconPositions = {};
 
         this.gestureState = { pointer: null, overview: null };
+        this.supportsOverscrollBehavior = undefined;
+        this.touchGestureOptions = null;
+        this.shouldBlockPullToRefresh = false;
 
         this.currentPointerIsCoarse = false;
 
@@ -795,6 +798,22 @@ export class Desktop extends Component {
         };
     };
 
+    detectOverscrollBehaviorSupport = () => {
+        if (typeof window === 'undefined') return false;
+        const css = window.CSS;
+        if (!css || typeof css.supports !== 'function') {
+            return false;
+        }
+        try {
+            return (
+                css.supports('overscroll-behavior-y: contain') ||
+                css.supports('overscroll-behavior: contain')
+            );
+        } catch (error) {
+            return false;
+        }
+    };
+
     setupGestureListeners = () => {
         const node = this.desktopRef && this.desktopRef.current ? this.desktopRef.current : null;
         if (!node) return;
@@ -804,15 +823,21 @@ export class Desktop extends Component {
         if (this.gestureListenersAttached) return;
         this.gestureListenersAttached = true;
         this.gestureRoot = node;
-        const options = { passive: true };
-        node.addEventListener('pointerdown', this.handleShellPointerDown, options);
-        node.addEventListener('pointermove', this.handleShellPointerMove, options);
-        node.addEventListener('pointerup', this.handleShellPointerUp, options);
-        node.addEventListener('pointercancel', this.handleShellPointerCancel, options);
-        node.addEventListener('touchstart', this.handleShellTouchStart, options);
-        node.addEventListener('touchmove', this.handleShellTouchMove, options);
-        node.addEventListener('touchend', this.handleShellTouchEnd, options);
-        node.addEventListener('touchcancel', this.handleShellTouchCancel, options);
+        if (typeof this.supportsOverscrollBehavior !== 'boolean') {
+            this.supportsOverscrollBehavior = this.detectOverscrollBehaviorSupport();
+        }
+        const pointerOptions = { passive: true };
+        const touchOptions = this.supportsOverscrollBehavior === false ? { passive: false } : { passive: true };
+        this.touchGestureOptions = touchOptions;
+        this.shouldBlockPullToRefresh = false;
+        node.addEventListener('pointerdown', this.handleShellPointerDown, pointerOptions);
+        node.addEventListener('pointermove', this.handleShellPointerMove, pointerOptions);
+        node.addEventListener('pointerup', this.handleShellPointerUp, pointerOptions);
+        node.addEventListener('pointercancel', this.handleShellPointerCancel, pointerOptions);
+        node.addEventListener('touchstart', this.handleShellTouchStart, touchOptions);
+        node.addEventListener('touchmove', this.handleShellTouchMove, touchOptions);
+        node.addEventListener('touchend', this.handleShellTouchEnd, touchOptions);
+        node.addEventListener('touchcancel', this.handleShellTouchCancel, touchOptions);
     };
 
     teardownGestureListeners = () => {
@@ -830,6 +855,7 @@ export class Desktop extends Component {
         this.gestureRoot = null;
         this.gestureState.pointer = null;
         this.gestureState.overview = null;
+        this.shouldBlockPullToRefresh = false;
     };
 
     handleShellPointerDown = (event) => {
@@ -889,8 +915,12 @@ export class Desktop extends Component {
     };
 
     handleShellTouchStart = (event) => {
-        if (event.touches && event.touches.length > 1) {
+        const touchCount = event.touches ? event.touches.length : 0;
+        if (touchCount > 1) {
             this.gestureState.pointer = null;
+        }
+        if (this.supportsOverscrollBehavior === false) {
+            this.shouldBlockPullToRefresh = touchCount === 1;
         }
         if (!event.touches || event.touches.length !== 3) return;
         const centroid = this.computeTouchCentroid(event.touches);
@@ -904,6 +934,14 @@ export class Desktop extends Component {
     };
 
     handleShellTouchMove = (event) => {
+        if (this.supportsOverscrollBehavior === false) {
+            const touchCount = event.touches ? event.touches.length : 0;
+            if (touchCount !== 1) {
+                this.shouldBlockPullToRefresh = false;
+            } else if (this.shouldBlockPullToRefresh && event.cancelable && typeof event.preventDefault === 'function') {
+                event.preventDefault();
+            }
+        }
         const gesture = this.gestureState.overview;
         if (!gesture) return;
         const centroid = this.computeTouchCentroid(event.touches);
@@ -912,6 +950,9 @@ export class Desktop extends Component {
     };
 
     handleShellTouchEnd = (event) => {
+        if (this.supportsOverscrollBehavior === false) {
+            this.shouldBlockPullToRefresh = false;
+        }
         const gesture = this.gestureState.overview;
         if (!gesture) {
             return;
@@ -933,6 +974,9 @@ export class Desktop extends Component {
     };
 
     handleShellTouchCancel = () => {
+        if (this.supportsOverscrollBehavior === false) {
+            this.shouldBlockPullToRefresh = false;
+        }
         this.gestureState.overview = null;
     };
 
