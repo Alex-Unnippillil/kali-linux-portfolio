@@ -47,6 +47,18 @@ const computeLeftSnapTestTop = () => {
 
 const getSnapTranslateTop = () => measureWindowTopOffset();
 
+const parseTranslate = (value: string): { x: number; y: number } => {
+  const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(value || '');
+  if (match) {
+    const x = parseFloat(match[1]);
+    const y = parseFloat(match[2]);
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      return { x, y };
+    }
+  }
+  return { x: 0, y: 0 };
+};
+
 const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: width });
   Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: height });
@@ -611,7 +623,7 @@ describe('Window snapping finalize and release', () => {
     expect(winEl.style.transform).toBe(`translate(${expectedX}px, ${expectedY}px)`);
   });
 
-  it('releases snap with Alt+ArrowDown restoring size', () => {
+  it('moves and releases snap with Alt+ArrowDown restoring size', () => {
     setViewport(1024, 768);
     const ref = React.createRef<any>();
     render(
@@ -652,26 +664,42 @@ describe('Window snapping finalize and release', () => {
     const snappedHeight = computeSnappedHeightPercent();
     expect(ref.current!.state.height).toBeCloseTo(snappedHeight, 5);
 
-    const keyboardEvent = {
-      key: 'ArrowDown',
-      altKey: true,
-      preventDefault: jest.fn(),
-      stopPropagation: jest.fn()
-    } as unknown as KeyboardEvent;
+    expect(winEl.style.transform).toBe(`translate(0px, ${getSnapTranslateTop()}px)`);
+
+    const storedBeforeMove = parseFloat(winEl.style.getPropertyValue('--window-transform-y') || '0');
+
+    const parseRectFromTransform = () => {
+      const { x, y } = parseTranslate(winEl.style.transform || 'translate(0px, 0px)');
+      return {
+        left: x,
+        top: y,
+        right: x + 100,
+        bottom: y + 100,
+        width: 100,
+        height: 100,
+        x,
+        y,
+        toJSON: () => {},
+      } as DOMRect;
+    };
+
+    winEl.getBoundingClientRect = parseRectFromTransform;
 
     act(() => {
       ref.current!.handleKeyDown({
         key: 'ArrowDown',
         altKey: true,
         preventDefault: jest.fn(),
-        stopPropagation: jest.fn()
+        stopPropagation: jest.fn(),
+        shiftKey: false,
       } as any);
-
     });
 
     expect(ref.current!.state.snapped).toBeNull();
     expect(ref.current!.state.width).toBe(60);
     expect(ref.current!.state.height).toBe(85);
+    const after = parseTranslate(winEl.style.transform || 'translate(0px, 0px)');
+    expect(after.y).toBe(storedBeforeMove + 10);
   });
 
   it('releases snap when starting drag', () => {
@@ -767,13 +795,161 @@ describe('Window keyboard dragging', () => {
 
     fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
     fireEvent.keyDown(handle, { key: 'ArrowRight' });
+    fireEvent.keyDown(handle, { key: 'ArrowDown', shiftKey: true });
 
     const winEl = document.getElementById('test-window')!;
-    expect(winEl.style.transform).toBe('translate(10px, 0px)');
+    expect(winEl.style.transform).toBe('translate(10px, 100px)');
     expect(handle).toHaveAttribute('aria-grabbed', 'true');
 
     fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
     expect(handle).toHaveAttribute('aria-grabbed', 'false');
+  });
+
+  it('moves focused window with Alt+Arrow keys and accelerates with Shift', () => {
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => {
+      const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(winEl.style.transform || 'translate(0px, 0px)');
+      const x = match ? parseFloat(match[1]) : 0;
+      const y = match ? parseFloat(match[2]) : 0;
+      return {
+        left: x,
+        top: y,
+        right: x + 100,
+        bottom: y + 80,
+        width: 100,
+        height: 80,
+        x,
+        y,
+        toJSON: () => {},
+      } as DOMRect;
+    };
+
+    act(() => {
+      ref.current!.handleKeyDown({
+        key: 'ArrowRight',
+        altKey: true,
+        shiftKey: false,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      } as any);
+    });
+
+    expect(winEl.style.transform).toBe('translate(10px, 0px)');
+
+    act(() => {
+      ref.current!.handleKeyDown({
+        key: 'ArrowDown',
+        altKey: true,
+        shiftKey: true,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      } as any);
+    });
+
+    expect(winEl.style.transform).toBe('translate(10px, 100px)');
+  });
+
+  it('allows Alt+Arrow movement from the title bar without grabbing', () => {
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const handle = screen.getByText('Test').parentElement!;
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => {
+      const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(winEl.style.transform || 'translate(0px, 0px)');
+      const x = match ? parseFloat(match[1]) : 0;
+      const y = match ? parseFloat(match[2]) : 0;
+      return {
+        left: x,
+        top: y,
+        right: x + 120,
+        bottom: y + 90,
+        width: 120,
+        height: 90,
+        x,
+        y,
+        toJSON: () => {},
+      } as DOMRect;
+    };
+
+    fireEvent.keyDown(handle, { key: 'ArrowUp', altKey: true });
+
+    expect(winEl.style.transform).toBe('translate(0px, -10px)');
+  });
+
+  it('keeps Shift+Arrow resizing available', () => {
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const initialWidth = ref.current!.state.width;
+    act(() => {
+      ref.current!.handleKeyDown({
+        key: 'ArrowRight',
+        shiftKey: true,
+        altKey: false,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      } as any);
+    });
+
+    expect(ref.current!.state.width).toBe(initialWidth + 1);
+  });
+});
+
+describe('Window accessibility metadata', () => {
+  it('annotates the title bar with keyboard shortcuts', () => {
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const handle = screen.getByText('Test').parentElement!;
+    expect(handle).toHaveAttribute('aria-keyshortcuts');
+    expect(handle.getAttribute('aria-keyshortcuts')).toContain('Alt+ArrowLeft');
+    expect(handle.getAttribute('aria-keyshortcuts')).toContain('Shift+ArrowRight');
   });
 });
 

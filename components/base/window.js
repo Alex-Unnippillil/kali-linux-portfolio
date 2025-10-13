@@ -703,8 +703,55 @@ export class Window extends Component {
         });
     }
 
+    getKeyboardStep = (event, base = 10) => {
+        const multiplier = event.shiftKey ? 10 : 1;
+        return base * multiplier;
+    }
+
+    getNodeTranslation = (node) => {
+        if (!node) return { x: 0, y: 0 };
+        const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform || '');
+        if (match) {
+            const parsedX = parseFloat(match[1]);
+            const parsedY = parseFloat(match[2]);
+            if (Number.isFinite(parsedX) && Number.isFinite(parsedY)) {
+                return { x: parsedX, y: parsedY };
+            }
+        }
+
+        const storedX = node.style.getPropertyValue?.('--window-transform-x');
+        const storedY = node.style.getPropertyValue?.('--window-transform-y');
+        const parseStored = (value) => {
+            if (typeof value !== 'string') return null;
+            const parsed = parseFloat(value);
+            return Number.isFinite(parsed) ? parsed : null;
+        };
+        const fallbackX = parseStored(storedX);
+        const fallbackY = parseStored(storedY);
+        return {
+            x: fallbackX ?? 0,
+            y: fallbackY ?? 0,
+        };
+    }
+
+    moveWindowBy = (dx, dy) => {
+        if (dx === 0 && dy === 0) return;
+        const node = this.getWindowNode();
+        if (!node) return;
+        if (this.state.snapped) {
+            this.unsnapWindow();
+        }
+        const { x, y } = this.getNodeTranslation(node);
+        const nextX = x + dx;
+        const nextY = y + dy;
+        node.style.transform = `translate(${nextX}px, ${nextY}px)`;
+        this.checkSnapPreview();
+        this.setWinowsPosition();
+    }
+
     handleTitleBarKeyDown = (e) => {
-        if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
+        const isActivationKey = e.key === ' ' || e.key === 'Space' || e.key === 'Enter';
+        if (isActivationKey) {
             e.preventDefault();
             e.stopPropagation();
             if (this.state.grabbed) {
@@ -712,29 +759,26 @@ export class Window extends Component {
             } else {
                 this.changeCursorToMove();
             }
-        } else if (this.state.grabbed) {
-            const step = 10;
-            let dx = 0, dy = 0;
-            if (e.key === 'ArrowLeft') dx = -step;
-            else if (e.key === 'ArrowRight') dx = step;
-            else if (e.key === 'ArrowUp') dy = -step;
-            else if (e.key === 'ArrowDown') dy = step;
-            if (dx !== 0 || dy !== 0) {
-                e.preventDefault();
-                e.stopPropagation();
-                const node = this.getWindowNode();
-                if (node) {
-                    const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
-                    let x = match ? parseFloat(match[1]) : 0;
-                    let y = match ? parseFloat(match[2]) : 0;
-                    x += dx;
-                    y += dy;
-                    node.style.transform = `translate(${x}px, ${y}px)`;
-                    this.checkSnapPreview();
-                    this.setWinowsPosition();
-                }
-            }
+            return;
         }
+
+        const arrowKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+        const isArrowKey = arrowKeys.includes(e.key);
+        const shouldHandleMove = isArrowKey && (this.state.grabbed || e.altKey);
+        if (!shouldHandleMove) {
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+        const step = this.getKeyboardStep(e);
+        let dx = 0;
+        let dy = 0;
+        if (e.key === 'ArrowLeft') dx = -step;
+        else if (e.key === 'ArrowRight') dx = step;
+        else if (e.key === 'ArrowUp') dy = -step;
+        else if (e.key === 'ArrowDown') dy = step;
+        this.moveWindowBy(dx, dy);
     }
 
     releaseGrab = () => {
@@ -746,28 +790,33 @@ export class Window extends Component {
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
             this.closeWindow();
-        } else if (e.key === 'Tab') {
+            return;
+        }
+
+        if (e.key === 'Tab') {
             this.focusWindow();
-        } else if (e.altKey) {
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.unsnapWindow();
-            } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('left');
-            } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('right');
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('top');
-            }
+            return;
+        }
+
+        const arrowKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+        const isArrowKey = arrowKeys.includes(e.key);
+
+        if (e.altKey && isArrowKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            const step = this.getKeyboardStep(e);
+            let dx = 0;
+            let dy = 0;
+            if (e.key === 'ArrowLeft') dx = -step;
+            else if (e.key === 'ArrowRight') dx = step;
+            else if (e.key === 'ArrowUp') dy = -step;
+            else if (e.key === 'ArrowDown') dy = step;
+            this.moveWindowBy(dx, dy);
             this.focusWindow();
-        } else if (e.shiftKey) {
+            return;
+        }
+
+        if (e.shiftKey && !e.altKey && isArrowKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
                 e.preventDefault();
@@ -926,12 +975,29 @@ export default Window
 
 // Window's title bar
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick }) {
+    const shortcuts = [
+        'Space',
+        'Enter',
+        'Alt+ArrowLeft',
+        'Alt+ArrowRight',
+        'Alt+ArrowUp',
+        'Alt+ArrowDown',
+        'Alt+Shift+ArrowLeft',
+        'Alt+Shift+ArrowRight',
+        'Alt+Shift+ArrowUp',
+        'Alt+Shift+ArrowDown',
+        'Shift+ArrowLeft',
+        'Shift+ArrowRight',
+        'Shift+ArrowUp',
+        'Shift+ArrowDown',
+    ].join(' ');
     return (
         <div
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
+            aria-keyshortcuts={shortcuts}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
             onPointerDown={onPointerDown}
