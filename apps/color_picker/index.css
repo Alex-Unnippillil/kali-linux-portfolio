@@ -1,7 +1,7 @@
 body {
   font-family: Arial, Helvetica, sans-serif;
   padding: 2rem;
-  background: #f4f4f4;
+  background: var(--kali-bg);
 }
 h1 {
   margin-bottom: 1rem;
@@ -9,14 +9,24 @@ h1 {
 #color-input {
   width: 80px;
   height: 80px;
-  border: none;
+  border: 1px solid var(--kali-border);
   border-radius: 4px;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s ease;
+  box-shadow: var(--shadow-2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  accent-color: color-mix(in srgb, var(--kali-control) 55%, AccentColor);
 }
 #color-input:hover {
   transform: scale(1.05);
+  border-color: color-mix(in srgb, var(--kali-control) 60%, var(--kali-border));
+  box-shadow: var(--shadow-2), 0 0 0 3px color-mix(in srgb, var(--kali-control) 18%, transparent);
+}
+#color-input:focus-visible {
+  transform: scale(1.05);
+  border-color: color-mix(in srgb, var(--kali-control) 70%, var(--kali-border));
+  box-shadow: var(--shadow-2), 0 0 0 3px color-mix(in srgb, var(--kali-control) 28%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--kali-control) 65%, AccentColor);
+  outline-offset: 3px;
 }
 #swatches {
   margin-top: 1.5rem;
@@ -27,12 +37,20 @@ h1 {
 .swatch {
   width: 40px;
   height: 40px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--kali-border);
   border-radius: 4px;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 .swatch:hover {
   transform: scale(1.1);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  border-color: color-mix(in srgb, var(--kali-control) 60%, var(--kali-border));
+  box-shadow: var(--shadow-2), 0 0 0 3px color-mix(in srgb, var(--kali-control) 16%, transparent);
+}
+.swatch:focus-visible {
+  transform: scale(1.1);
+  border-color: color-mix(in srgb, var(--kali-control) 70%, var(--kali-border));
+  box-shadow: var(--shadow-2), 0 0 0 3px color-mix(in srgb, var(--kali-control) 26%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--kali-control) 70%, AccentColor);
+  outline-offset: 3px;
 }
