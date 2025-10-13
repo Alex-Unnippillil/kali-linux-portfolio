@@ -419,7 +419,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
       <div
         ref={containerRef}
-        className="relative flex-1 min-h-[420px] overflow-hidden rounded-2xl border border-kali-border/80 bg-kali-surface/95 shadow-lg backdrop-blur focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+        className="relative flex-1 min-h-[420px] overflow-hidden rounded-2xl border border-kali-border/80 bg-kali-surface/95 shadow-lg backdrop-blur focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
         tabIndex={0}
       >
         <div className="pointer-events-none absolute inset-0 rounded-2xl border border-kali-border/60" aria-hidden="true" />
@@ -427,7 +427,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           <button
             type="button"
             aria-label="Move left"
-            className="pointer-events-auto rounded-full border border-white/10 bg-kali-surface/85 px-4 py-3 text-xl font-semibold text-white shadow transition hover:border-kali-control hover:bg-kali-control/90 hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+            className="pointer-events-auto rounded-full border border-[color:var(--kali-border)] bg-kali-surface/85 px-4 py-3 text-xl font-semibold text-[color:var(--kali-text)] shadow transition-colors hover:border-[color:var(--color-control-accent)] hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_22%,var(--kali-surface))] hover:text-[color:var(--color-inverse)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
             {...bind('left')}
           >
             ◀
@@ -435,7 +435,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           <button
             type="button"
             aria-label="Move right"
-            className="pointer-events-auto rounded-full border border-white/10 bg-kali-surface/85 px-4 py-3 text-xl font-semibold text-white shadow transition hover:border-kali-control hover:bg-kali-control/90 hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+            className="pointer-events-auto rounded-full border border-[color:var(--kali-border)] bg-kali-surface/85 px-4 py-3 text-xl font-semibold text-[color:var(--kali-text)] shadow transition-colors hover:border-[color:var(--color-control-accent)] hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_22%,var(--kali-surface))] hover:text-[color:var(--color-inverse)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
             {...bind('right')}
           >
             ▶
@@ -443,7 +443,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           <button
             type="button"
             aria-label="Jump"
-            className="pointer-events-auto rounded-full border border-white/10 bg-kali-surface/85 px-4 py-3 text-xl font-semibold text-white shadow transition hover:border-kali-control hover:bg-kali-control/90 hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+            className="pointer-events-auto rounded-full border border-[color:var(--kali-border)] bg-kali-surface/85 px-4 py-3 text-xl font-semibold text-[color:var(--kali-text)] shadow transition-colors hover:border-[color:var(--color-control-accent)] hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_22%,var(--kali-surface))] hover:text-[color:var(--color-inverse)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
             {...bind('jump')}
           >
             ⇧
@@ -465,7 +465,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
                 <button
                   type="button"
                   onClick={() => setWaiting({ device: 'key', action: entry.action })}
-                  className="rounded-md border border-kali-border/70 bg-kali-background/40 px-2 py-1 text-xs font-medium text-white transition hover:border-kali-control hover:text-kali-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                  className="rounded-md border border-kali-border/70 bg-kali-background/40 px-2 py-1 text-xs font-medium text-white transition hover:border-kali-control hover:text-kali-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                 >
                   {keyMap[entry.action]}
                 </button>
@@ -482,7 +482,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
                 <button
                   type="button"
                   onClick={() => setWaiting({ device: 'pad', action: entry.action })}
-                  className="rounded-md border border-kali-border/70 bg-kali-background/40 px-2 py-1 text-xs font-medium text-white transition hover:border-kali-control hover:text-kali-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                  className="rounded-md border border-kali-border/70 bg-kali-background/40 px-2 py-1 text-xs font-medium text-white transition hover:border-kali-control hover:text-kali-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                 >
                   {padMap[entry.action]}
                 </button>
