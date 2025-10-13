@@ -140,11 +140,11 @@ const ContactApp: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-kali-backdrop text-white p-4">
+    <div className="min-h-screen bg-kali-backdrop p-4 text-[color:var(--kali-text)]">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
         <div>
           <h1 className="mb-2 text-2xl">Contact</h1>
-          <p className="text-sm text-white/70">
+          <p className="text-sm text-[color:var(--kali-text-muted)]">
             Let me know how I can help with your security project, workshop, or
             collaboration idea.
           </p>
@@ -152,9 +152,12 @@ const ContactApp: React.FC = () => {
         {successMessage && (
           <div
             role="alert"
-            className="flex items-start gap-3 rounded-lg border border-kali-primary/45 bg-kali-surface/80 px-5 py-4 text-sm text-kali-primary shadow-lg shadow-kali-panel"
+            className="flex items-start gap-3 rounded-lg border border-[color:color-mix(in_srgb,var(--kali-control)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-control)_16%,var(--kali-panel))] px-5 py-4 text-sm text-[color:var(--kali-text)] shadow-lg shadow-kali-panel"
           >
-            <span aria-hidden="true" className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-kali-primary/20 text-kali-primary">
+            <span
+              aria-hidden="true"
+              className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--kali-control)_30%,transparent)] text-[color:var(--kali-control)]"
+            >
               <svg
                 className="h-4 w-4"
                 xmlns="http://www.w3.org/2000/svg"
@@ -169,35 +172,37 @@ const ContactApp: React.FC = () => {
               </svg>
             </span>
             <div>
-              <p className="font-semibold text-white">Message sent</p>
-              <p className="mt-1 leading-relaxed">{successMessage}</p>
+              <p className="font-semibold text-[color:var(--kali-control)]">Message sent</p>
+              <p className="mt-1 leading-relaxed text-[color:var(--kali-text-muted)]">
+                {successMessage}
+              </p>
             </div>
           </div>
         )}
         <div className="grid gap-8 lg:grid-cols-[1.6fr,1fr]">
           <form
             onSubmit={handleSubmit}
-            className="space-y-8 rounded-xl border border-white/10 bg-kali-surface/90 p-6 shadow-2xl shadow-black/30"
+            className="space-y-8 rounded-xl border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-surface)] p-6 shadow-kali-panel"
           >
-            <div className="flex flex-col gap-3 rounded-lg border border-white/10 bg-kali-surface/80 p-4 text-sm text-white/70">
-              <p className="font-semibold text-white">Prefer email?</p>
-              <p className="leading-relaxed">
+            <div className="flex flex-col gap-3 rounded-lg border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-surface)_85%,transparent)] p-4 text-sm text-[color:var(--kali-text-muted)]">
+              <p className="font-semibold text-[color:var(--kali-text)]">Prefer email?</p>
+              <p className="leading-relaxed text-[color:var(--kali-text-muted)]">
                 {"Reach me at "}
-                <span className="font-mono text-kali-primary">{EMAIL}</span>. Copy
+                <span className="font-mono text-[color:var(--kali-control)]">{EMAIL}</span>. Copy
                 the address or open your default mail client.
               </p>
               <div className="mt-1 flex flex-wrap gap-3 text-sm">
                 <button
                   type="button"
                   onClick={() => copyToClipboard(EMAIL)}
-                  className="rounded-md border border-kali-primary/60 px-3 py-1 font-medium text-kali-primary transition hover:bg-kali-primary/10 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                  className="rounded-md border border-[color:color-mix(in_srgb,var(--kali-control)_60%,transparent)] px-3 py-1 font-medium text-[color:var(--kali-control)] transition hover:bg-[color:color-mix(in_srgb,var(--kali-control)_18%,transparent)] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--kali-control)]"
                 >
                   Copy address
                 </button>
                 <button
                   type="button"
                   onClick={() => openMailto(EMAIL)}
-                  className="rounded-md border border-kali-primary/60 px-3 py-1 font-medium text-kali-primary transition hover:bg-kali-primary/10 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                  className="rounded-md border border-[color:color-mix(in_srgb,var(--kali-control)_60%,transparent)] px-3 py-1 font-medium text-[color:var(--kali-control)] transition hover:bg-[color:color-mix(in_srgb,var(--kali-control)_18%,transparent)] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--kali-control)]"
                 >
                   Open email app
                 </button>
@@ -207,25 +212,25 @@ const ContactApp: React.FC = () => {
               <div className="space-y-2">
                 <label
                   htmlFor="contact-name"
-                  className="block text-sm font-medium text-white"
+                  className="block text-sm font-medium text-[color:var(--kali-text)]"
                   id="contact-name-label"
                 >
                   Name
                 </label>
-                <p className="text-xs text-white/60">
+                <p className="text-xs text-[color:var(--kali-text-subtle)]">
                   Introduce yourself so I know how to address you in the reply.
                 </p>
                 <div className="relative">
                   <input
                     id="contact-name"
-                    className="h-11 w-full rounded-lg border border-white/10 bg-white/5 pl-10 pr-3 text-white shadow-inner shadow-black/40 transition focus:border-kali-primary focus:outline-none focus:ring-2 focus:ring-kali-focus/70 focus:ring-offset-2 focus:ring-offset-[var(--kali-bg)]"
+                    className="h-11 w-full rounded-lg border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] pl-10 pr-3 text-[color:var(--kali-text)] shadow-inner shadow-[inset_0_1px_0_0_color:color-mix(in_srgb,var(--kali-panel)_55%,transparent)] transition focus:border-[color:var(--kali-control)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--kali-control)_60%,transparent)] focus:ring-offset-2 focus:ring-offset-[var(--kali-bg)]"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
                     aria-labelledby="contact-name-label"
                   />
                   <svg
-                    className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-white/50"
+                    className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-[color:var(--kali-text-faint)]"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -243,19 +248,19 @@ const ContactApp: React.FC = () => {
               <div className="space-y-2">
                 <label
                   htmlFor="contact-email"
-                  className="block text-sm font-medium text-white"
+                  className="block text-sm font-medium text-[color:var(--kali-text)]"
                   id="contact-email-label"
                 >
                   Email
                 </label>
-                <p className="text-xs text-white/60">
+                <p className="text-xs text-[color:var(--kali-text-subtle)]">
                   I will use this address to send follow-ups or share resources.
                 </p>
                 <div className="relative">
                   <input
                     id="contact-email"
                     type="email"
-                    className="h-11 w-full rounded-lg border border-white/10 bg-white/5 pl-10 pr-3 text-white shadow-inner shadow-black/40 transition focus:border-kali-primary focus:outline-none focus:ring-2 focus:ring-kali-focus/70 focus:ring-offset-2 focus:ring-offset-[var(--kali-bg)]"
+                    className="h-11 w-full rounded-lg border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] pl-10 pr-3 text-[color:var(--kali-text)] shadow-inner shadow-[inset_0_1px_0_0_color:color-mix(in_srgb,var(--kali-panel)_55%,transparent)] transition focus:border-[color:var(--kali-control)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--kali-control)_60%,transparent)] focus:ring-offset-2 focus:ring-offset-[var(--kali-bg)]"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -264,7 +269,7 @@ const ContactApp: React.FC = () => {
                     aria-labelledby="contact-email-label"
                   />
                   <svg
-                    className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-white/50"
+                    className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-[color:var(--kali-text-faint)]"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -287,19 +292,19 @@ const ContactApp: React.FC = () => {
               <div className="space-y-2">
                 <label
                   htmlFor="contact-message"
-                  className="block text-sm font-medium text-white"
+                  className="block text-sm font-medium text-[color:var(--kali-text)]"
                   id="contact-message-label"
                 >
                   Message
                 </label>
-                <p className="text-xs text-white/60">
+                <p className="text-xs text-[color:var(--kali-text-subtle)]">
                   Share objectives, timelines, and any sensitive details using
                   secure channels if needed.
                 </p>
                 <div className="relative">
                   <textarea
                     id="contact-message"
-                    className="w-full rounded-lg border border-white/10 bg-white/5 p-3 pl-11 text-white shadow-inner shadow-black/40 transition focus:border-kali-primary focus:outline-none focus:ring-2 focus:ring-kali-focus/70 focus:ring-offset-2 focus:ring-offset-[var(--kali-bg)]"
+                    className="w-full rounded-lg border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] p-3 pl-11 text-[color:var(--kali-text)] shadow-inner shadow-[inset_0_1px_0_0_color:color-mix(in_srgb,var(--kali-panel)_55%,transparent)] transition focus:border-[color:var(--kali-control)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--kali-control)_60%,transparent)] focus:ring-offset-2 focus:ring-offset-[var(--kali-bg)]"
                     rows={4}
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
@@ -309,7 +314,7 @@ const ContactApp: React.FC = () => {
                     aria-labelledby="contact-message-label"
                   />
                   <svg
-                    className="pointer-events-none absolute left-3 top-3 h-6 w-6 text-white/50"
+                    className="pointer-events-none absolute left-3 top-3 h-6 w-6 text-[color:var(--kali-text-faint)]"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -341,7 +346,7 @@ const ContactApp: React.FC = () => {
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex h-12 w-full items-center justify-center rounded-lg bg-kali-primary px-4 text-sm font-semibold uppercase tracking-wide text-slate-900 shadow-md shadow-[0_12px_38px_rgba(15,148,210,0.35)] transition hover:bg-kali-primary/90 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex h-12 w-full items-center justify-center rounded-lg bg-[color:var(--kali-control)] px-4 text-sm font-semibold uppercase tracking-wide text-[color:var(--color-inverse)] shadow-[0_12px_38px_color-mix(in_srgb,var(--kali-control)_35%,transparent)] transition hover:bg-[color:color-mix(in_srgb,var(--kali-control)_92%,var(--kali-text)_8%)] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--kali-control)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {submitting ? "Sending..." : "Send message"}
               </button>
@@ -349,34 +354,34 @@ const ContactApp: React.FC = () => {
                 <div
                   role="progressbar"
                   aria-label="Sending message"
-                  className="h-1 w-full overflow-hidden rounded bg-kali-surface/70"
+                  className="h-1 w-full overflow-hidden rounded bg-[color:color-mix(in_srgb,var(--kali-panel)_70%,transparent)]"
                 >
-                  <div className="h-full w-full origin-left animate-pulse bg-kali-primary" />
+                  <div className="h-full w-full origin-left animate-pulse bg-[color:var(--kali-control)]" />
                 </div>
               )}
             </div>
           </form>
-          <aside className="flex flex-col gap-6 rounded-xl border border-white/10 bg-kali-surface/80 p-6 shadow-2xl shadow-black/30">
+          <aside className="flex flex-col gap-6 rounded-xl border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-surface)_85%,transparent)] p-6 shadow-kali-panel">
             <section>
               <h2 className="text-lg font-semibold text-kali-primary">Response time</h2>
-              <p className="mt-2 text-sm text-white/70">
-                I typically reply within <span className="font-medium">24 hours</span>
+              <p className="mt-2 text-sm text-[color:var(--kali-text-muted)]">
+                I typically reply within <span className="font-medium text-[color:var(--kali-text)]">24 hours</span>
                 . Urgent inquiries are prioritized and receive a same-day
                 acknowledgement.
               </p>
             </section>
             <section>
               <h2 className="text-lg font-semibold text-kali-primary">FAQs</h2>
-              <ul className="mt-2 space-y-3 text-sm text-white/70">
+              <ul className="mt-2 space-y-3 text-sm text-[color:var(--kali-text-muted)]">
                 <li>
-                  <span className="block font-medium text-white">
+                  <span className="block font-medium text-[color:var(--kali-text)]">
                     Do you accept collaboration proposals?
                   </span>
                   Absolutely—share your idea and any timelines so I can plan the
                   next steps.
                 </li>
                 <li>
-                  <span className="block font-medium text-white">
+                  <span className="block font-medium text-[color:var(--kali-text)]">
                     What should I include?
                   </span>
                   Provide context, goals, and any relevant documentation to
@@ -388,15 +393,15 @@ const ContactApp: React.FC = () => {
               <h2 className="text-lg font-semibold text-kali-primary">
                 Threat model checklist
               </h2>
-              <ul className="mt-3 space-y-3 text-sm text-white/70">
+              <ul className="mt-3 space-y-3 text-sm text-[color:var(--kali-text-muted)]">
                 {threatChecklist.map((item) => (
                   <li
                     key={item.title}
-                    className="flex gap-3 rounded-lg border border-white/10 bg-kali-surface/80 p-3"
+                    className="flex gap-3 rounded-lg border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-surface)_88%,transparent)] p-3"
                   >
                     <span
                       aria-hidden="true"
-                      className="mt-1 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-kali-primary/20 text-kali-primary"
+                      className="mt-1 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--kali-control)_30%,transparent)] text-[color:var(--kali-control)]"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -412,8 +417,8 @@ const ContactApp: React.FC = () => {
                       </svg>
                     </span>
                     <div>
-                      <p className="font-medium text-white">{item.title}</p>
-                      <p className="text-xs text-white/60">{item.description}</p>
+                      <p className="font-medium text-[color:var(--kali-text)]">{item.title}</p>
+                      <p className="text-xs text-[color:var(--kali-text-subtle)]">{item.description}</p>
                     </div>
                   </li>
                 ))}
@@ -421,14 +426,14 @@ const ContactApp: React.FC = () => {
             </section>
             <section>
               <h2 className="text-lg font-semibold text-kali-primary">Trust badges</h2>
-              <div className="mt-3 flex flex-wrap gap-3 text-xs font-semibold uppercase tracking-wide text-white/80">
-                <span className="rounded border border-kali-primary/50 bg-kali-primary/10 px-3 py-1 text-kali-primary">
+              <div className="mt-3 flex flex-wrap gap-3 text-xs font-semibold uppercase tracking-wide text-[color:var(--kali-text-muted)]">
+                <span className="rounded border border-[color:color-mix(in_srgb,var(--kali-control)_50%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-control)_18%,transparent)] px-3 py-1 text-[color:var(--kali-control)]">
                   GDPR mindful
                 </span>
-                <span className="rounded border border-white/10 bg-white/5 px-3 py-1 text-white/80">
+                <span className="rounded border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] px-3 py-1 text-[color:var(--kali-text-muted)]">
                   Security focused
                 </span>
-                <span className="rounded border border-white/10 bg-white/5 px-3 py-1 text-white/80">
+                <span className="rounded border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] px-3 py-1 text-[color:var(--kali-text-muted)]">
                   Open source ally
                 </span>
               </div>
