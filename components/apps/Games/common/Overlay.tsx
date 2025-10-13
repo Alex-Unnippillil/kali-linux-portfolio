@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Toast from '../../../ui/Toast';
+import { useWindowLifecycle } from '../../../desktop/Window';
 
 /**
  * Heads up display for games. Provides pause/resume, sound toggle and
@@ -25,9 +26,16 @@ export default function Overlay({
   const count = useRef(0);
   const [toast, setToast] = useState('');
   const pausedByDisconnect = useRef(false);
+  const { isForeground } = useWindowLifecycle();
 
   // track fps using requestAnimationFrame
   useEffect(() => {
+    if (!isForeground) {
+      setFps(0);
+      count.current = 0;
+      frame.current = performance.now();
+      return undefined;
+    }
     let raf: number;
     const measure = (now: number) => {
       count.current += 1;
@@ -40,7 +48,7 @@ export default function Overlay({
     };
     raf = requestAnimationFrame(measure);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [isForeground]);
 
   const togglePause = useCallback(() => {
     setPaused((p) => {
@@ -86,6 +94,13 @@ export default function Overlay({
       window.removeEventListener('gamepadconnected', handleConnect);
     };
   }, [onPause, onResume]);
+
+  useEffect(() => {
+    if (!isForeground && !paused) {
+      setPaused(true);
+      onPause?.();
+    }
+  }, [isForeground, onPause, paused]);
 
   return (
     <>

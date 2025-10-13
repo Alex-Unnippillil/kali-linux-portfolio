@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
+import { useWindowLifecycle } from '../../desktop/Window';
 import {
   initializeGame,
   drawFromStock,
@@ -96,6 +97,7 @@ const Solitaire = () => {
   const [bankroll, setBankroll] = useState(0);
   const [bankrollReady, setBankrollReady] = useState(false);
   const foundationCountRef = useRef(0);
+  const { isForeground } = useWindowLifecycle();
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -209,7 +211,10 @@ const Solitaire = () => {
 
   useEffect(() => {
     if (won) {
-      if (timer.current) clearInterval(timer.current);
+      if (timer.current) {
+        clearInterval(timer.current);
+        timer.current = null;
+      }
       setStats((s) => {
         const bestScore = vegasScore > s.bestScore ? vegasScore : s.bestScore;
         const bestTime = s.bestTime === 0 || time < s.bestTime ? time : s.bestTime;
@@ -246,15 +251,33 @@ const Solitaire = () => {
       });
       return;
     }
-    if (paused) {
-      if (timer.current) clearInterval(timer.current);
+    if (paused || !isForeground) {
+      if (timer.current) {
+        clearInterval(timer.current);
+        timer.current = null;
+      }
       return;
     }
     timer.current = setInterval(() => setTime((t) => t + 1), 1000);
     return () => {
-      if (timer.current) clearInterval(timer.current);
+      if (timer.current) {
+        clearInterval(timer.current);
+        timer.current = null;
+      }
     };
-  }, [won, paused, game, time, isDaily, variant, drawMode, passLimit, setStats, vegasScore]);
+  }, [
+    won,
+    paused,
+    isForeground,
+    game,
+    time,
+    isDaily,
+    variant,
+    drawMode,
+    passLimit,
+    setStats,
+    vegasScore,
+  ]);
 
   useEffect(() => {
     if (game.foundations.every((p) => p.length === 13)) {

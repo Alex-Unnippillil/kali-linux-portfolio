@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useWindowLifecycle } from '../../desktop/Window';
 import QRCode from 'qrcode';
 
 const QRScanner: React.FC = () => {
@@ -13,10 +14,25 @@ const QRScanner: React.FC = () => {
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
   const [torch, setTorch] = useState(false);
   const [preview, setPreview] = useState('');
+  const { isForeground } = useWindowLifecycle();
 
   useEffect(() => {
     let active = true;
     const video = videoRef.current;
+    if (!isForeground) {
+      active = false;
+      controlsRef.current?.stop?.();
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      trackRef.current = null;
+      if (video) {
+        video.pause?.();
+        video.srcObject = null;
+      }
+      return () => {
+        active = false;
+      };
+    }
     const start = async () => {
       if (!navigator.mediaDevices?.getUserMedia) {
         setError('Camera API not supported');
@@ -78,10 +94,14 @@ const QRScanner: React.FC = () => {
       active = false;
       controlsRef.current?.stop?.();
       streamRef.current?.getTracks().forEach((t) => t.stop());
-      if (video) video.srcObject = null;
+      if (video) {
+        video.pause?.();
+        video.srcObject = null;
+      }
       trackRef.current = null;
+      streamRef.current = null;
     };
-  }, [facing]);
+  }, [facing, isForeground]);
 
   useEffect(() => {
     const track = trackRef.current as any;

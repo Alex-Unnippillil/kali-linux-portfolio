@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useWindowLifecycle } from '../../../desktop/Window';
 
 export interface GamepadState {
   buttons: number[];
@@ -16,6 +17,7 @@ export default function useGamepad(): GamepadState {
     axes: [],
     connected: false,
   });
+  const { isForeground } = useWindowLifecycle();
 
   useEffect(() => {
     const handleConnect = () =>
@@ -31,6 +33,9 @@ export default function useGamepad(): GamepadState {
   }, []);
 
   useEffect(() => {
+    if (!isForeground) {
+      return undefined;
+    }
     let raf: number;
     const read = () => {
       const pads = navigator.getGamepads?.();
@@ -48,7 +53,7 @@ export default function useGamepad(): GamepadState {
     };
     raf = requestAnimationFrame(read);
     return () => cancelAnimationFrame(raf);
-  }, [state.connected]);
+  }, [state.connected, isForeground]);
 
   return state;
 }

@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import { publish } from '../../../../../utils/pubsub';
 import { hasOffscreenCanvas } from '../../../../../utils/feature';
+import { useWindowLifecycle } from '../../../../desktop/Window';
 
 interface PerfSample {
   t: number;
@@ -38,8 +39,17 @@ const PerfOverlay: React.FC = () => {
   const lastRef = useRef<number>(0);
   const rafRef = useRef<number>(0);
   const workerRef = useRef<Worker | null>(null);
+  const { isForeground } = useWindowLifecycle();
 
   useEffect(() => {
+    if (!isForeground) {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      }
+      lastRef.current = 0;
+      return undefined;
+    }
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -69,7 +79,11 @@ const PerfOverlay: React.FC = () => {
 
       return () => {
         worker.terminate();
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        workerRef.current = null;
+        if (rafRef.current) {
+          cancelAnimationFrame(rafRef.current);
+          rafRef.current = 0;
+        }
       };
     }
 
@@ -113,9 +127,12 @@ const PerfOverlay: React.FC = () => {
     rafRef.current = requestAnimationFrame(loop);
     return () => {
       mounted = false;
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      }
     };
-  }, []);
+  }, [isForeground]);
 
   const handleExport = () => {
     if (workerRef.current) workerRef.current.postMessage({ type: 'dump' });
@@ -124,8 +141,19 @@ const PerfOverlay: React.FC = () => {
 
   return (
     <div className="absolute bottom-2 left-2 z-50 bg-black bg-opacity-50 text-white p-1 text-xs space-y-1">
-      <canvas ref={canvasRef} width={150} height={60} className="block" />
-      <button type="button" onClick={handleExport} className="underline">
+      <canvas
+        ref={canvasRef}
+        width={150}
+        height={60}
+        className="block"
+        aria-hidden="true"
+      />
+      <button
+        type="button"
+        onClick={handleExport}
+        className="underline"
+        aria-label="Export performance samples as JSON"
+      >
         Export JSON
       </button>
     </div>
