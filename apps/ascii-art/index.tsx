@@ -322,7 +322,7 @@ const AsciiArtApp = () => {
   };
 
   const previewPaneClasses =
-    'min-h-[12rem] whitespace-pre overflow-auto rounded border border-[color:var(--kali-border)] bg-[color:var(--color-dark)] p-[6px] font-mono leading-tight shadow-inner shadow-black/40';
+    'min-h-[12rem] whitespace-pre overflow-auto rounded border border-[color:var(--kali-border)] bg-[var(--kali-panel)] p-[6px] font-mono leading-tight text-[color:var(--color-text)] shadow-inner shadow-[color:color-mix(in_srgb,var(--kali-panel-border)_65%,rgba(8,15,23,0.6))]';
 
   return (
     <div className="flex h-full flex-col gap-4 overflow-auto bg-kali-background p-4 font-mono text-kali-text">
@@ -433,7 +433,7 @@ const AsciiArtApp = () => {
               <pre
                 key={i}
                 onMouseEnter={() => copy(s)}
-                className="cursor-pointer whitespace-pre rounded border border-[color:var(--kali-border)] bg-[color:var(--color-dark)] p-2 font-mono leading-none transition-colors hover:bg-[var(--kali-panel-highlight)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                className="cursor-pointer whitespace-pre rounded border border-[color:var(--kali-border)] bg-[var(--kali-panel)] p-2 font-mono leading-none text-[color:var(--color-text)] transition-colors hover:bg-[var(--kali-panel-highlight)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
                 style={{ imageRendering: 'pixelated' }}
               >
                 {s}
