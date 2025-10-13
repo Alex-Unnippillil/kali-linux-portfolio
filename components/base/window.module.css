@@ -58,6 +58,27 @@
   transition-delay: 0s, 0s, 0s, 0s, var(--window-motion-opacity-duration);
 }
 
+.windowShellRoot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.windowShellExpanded {
+  position: fixed;
+  top: var(--window-shell-top, 0px);
+  right: var(--window-shell-right, 0px);
+  bottom: var(--window-shell-bottom, 0px);
+  left: var(--window-shell-left, 0px);
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0 !important;
+  transform: none !important;
+  border-radius: 0;
+}
+
 .snapPreview {
   transition: opacity var(--window-motion-duration-snap-preview) var(--window-motion-ease-snap-preview);
 }
