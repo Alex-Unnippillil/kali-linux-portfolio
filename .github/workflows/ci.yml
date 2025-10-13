@@ -40,6 +40,29 @@ jobs:
       - run: yarn dedupe --check
       - run: yarn test --coverage
 
+  mutation:
+    runs-on: ubuntu-latest
+    needs:
+      - lint
+      - typecheck
+      - test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: yarn dedupe --check
+      - run: yarn mutation:test
+      - name: Upload mutation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-report
+          path: reports/mutation
+          if-no-files-found: ignore
+
   security:
     runs-on: ubuntu-latest
     steps:

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker-js/master/packages/core/schema/stryker-schema.json",
+  "packageManager": "yarn",
+  "plugins": [
+    "@stryker-mutator/jest-runner",
+    "@stryker-mutator/typescript-checker"
+  ],
+  "testRunner": "jest",
+  "coverageAnalysis": "perTest",
+  "concurrency": 4,
+  "checkers": ["typescript"],
+  "tsconfigFile": "tsconfig.json",
+  "jest": {
+    "configFile": "jest.config.js",
+    "projectType": "custom"
+  },
+  "reporters": ["progress", "clear-text", "html", "json"],
+  "htmlReporter": {
+    "fileName": "reports/mutation/index.html"
+  },
+  "jsonReporter": {
+    "fileName": "reports/mutation/mutation.json"
+  },
+  "mutate": [
+    "utils/**/*.{ts,tsx,js,jsx}",
+    "modules/**/*.{ts,tsx,js,jsx}",
+    "services/**/*.{ts,tsx,js,jsx}",
+    "hooks/**/*.{ts,tsx,js,jsx}",
+    "lib/**/*.{ts,tsx,js,jsx}",
+    "!**/*.d.ts",
+    "!**/__tests__/**",
+    "!**/*.test.*",
+    "!**/tests/**"
+  ],
+  "ignorePatterns": ["**/node_modules/**", "**/.next/**"],
+  "thresholds": {
+    "high": 80,
+    "low": 70,
+    "break": 70
+  },
+  "tempDirName": "node_modules/.stryker-tmp"
+}
