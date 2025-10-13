@@ -20,9 +20,9 @@ interface StatProps {
 }
 
 const Stat = ({ label, value }: StatProps) => (
-  <div className="bg-black/30 rounded-md p-4">
-    <dt className="text-sm uppercase tracking-wide text-slate-300">{label}</dt>
-    <dd className="mt-1 font-mono text-lg text-white break-words">{value}</dd>
+  <div className="rounded-lg border border-white/10 bg-kali-surface/80 p-4 shadow-kali-panel">
+    <dt className="text-sm uppercase tracking-wide text-white/70">{label}</dt>
+    <dd className="mt-1 break-words font-mono text-lg text-white">{value}</dd>
   </div>
 );
 
@@ -70,33 +70,36 @@ const SubnetCalculator = () => {
         </header>
 
         <form
-          className="grid gap-4 rounded-md bg-black/30 p-4 sm:grid-cols-2"
+          className="grid gap-4 rounded-xl border border-white/10 bg-kali-surface/80 p-4 shadow-kali-panel backdrop-blur-sm sm:grid-cols-2"
           onSubmit={(event) => event.preventDefault()}
         >
           <label
             className="flex flex-col gap-2"
             htmlFor="subnet-calculator-ipv4-address"
           >
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-300">IPv4 address</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-white/70">IPv4 address</span>
             <input
               id="subnet-calculator-ipv4-address"
-              className="rounded-md border border-slate-600 bg-black/40 px-3 py-2 font-mono text-white focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className="rounded-lg border border-white/10 bg-kali-background/70 px-3 py-2 font-mono text-white transition focus:border-kali-control focus:outline-none focus:ring-2 focus:ring-kali-control/50"
               aria-label="IPv4 address"
               inputMode="numeric"
               placeholder="e.g. 10.0.0.42"
               value={ipAddress}
               onChange={(event) => setIpAddress(event.target.value)}
             />
+            <span className="text-xs text-[color:color-mix(in_srgb,var(--color-warning)_70%,white)]">
+              Use dotted decimal notation (for example 192.168.1.10).
+            </span>
           </label>
 
           <label
             className="flex flex-col gap-2"
             htmlFor="subnet-calculator-cidr-prefix"
           >
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-300">CIDR prefix</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-white/70">CIDR prefix</span>
             <input
               id="subnet-calculator-cidr-prefix"
-              className="rounded-md border border-slate-600 bg-black/40 px-3 py-2 font-mono text-white focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className="rounded-lg border border-white/10 bg-kali-background/70 px-3 py-2 font-mono text-white transition focus:border-kali-control focus:outline-none focus:ring-2 focus:ring-kali-control/50"
               aria-label="CIDR prefix"
               type="number"
               min={0}
@@ -104,13 +107,16 @@ const SubnetCalculator = () => {
               value={cidrInput}
               onChange={(event) => setCidrInput(event.target.value)}
             />
+            <span className="text-xs text-[color:color-mix(in_srgb,var(--color-warning)_70%,white)]">
+              Enter a value between 0 and 32 to describe the subnet mask length.
+            </span>
           </label>
         </form>
 
         {'error' in result ? (
           <div
             role="alert"
-            className="rounded-md border border-red-500/60 bg-red-900/40 px-4 py-3 text-sm text-red-100"
+            className="rounded-lg border border-[color:color-mix(in_srgb,var(--color-warning)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--color-warning)_14%,transparent)] px-4 py-3 text-sm text-[color:color-mix(in_srgb,var(--color-warning)_85%,white)] shadow-kali-panel"
           >
             {result.error}
           </div>
