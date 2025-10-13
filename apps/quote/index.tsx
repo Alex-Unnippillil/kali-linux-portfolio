@@ -318,7 +318,7 @@ export default function QuoteApp() {
   const isFav = current ? favorites.includes(keyOf(current)) : false;
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-[var(--color-text)] p-4 overflow-auto">
+    <div className="h-full w-full flex flex-col items-center justify-start bg-[var(--kali-bg)] text-[var(--color-text)] p-4 overflow-auto">
       {dailyQuote && (
         <div
           className="mb-6 w-full max-w-2xl rounded-lg p-4 text-left shadow-lg backdrop-blur kali-panel"
@@ -512,25 +512,25 @@ export default function QuoteApp() {
       </div>
       <style jsx>{`
         .kali-panel {
-          background: color-mix(in srgb, var(--color-surface) 65%, transparent);
-          border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
-          color: var(--color-text);
+          background: color-mix(in srgb, var(--kali-surface) 85%, transparent);
+          border: 1px solid color-mix(in srgb, var(--kali-border) 70%, transparent);
+          color: var(--kali-text);
         }
         .daily-quote-text {
-          color: color-mix(in srgb, var(--color-text) 92%, transparent);
+          color: color-mix(in srgb, var(--kali-text) 92%, transparent);
         }
         .daily-quote-author {
-          color: color-mix(in srgb, var(--color-text) 68%, transparent);
+          color: color-mix(in srgb, var(--kali-text) 68%, transparent);
         }
         .kali-gradient-card {
-          border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+          border: 1px solid color-mix(in srgb, var(--kali-border) 55%, transparent);
           background: linear-gradient(
             135deg,
-            color-mix(in srgb, var(--color-primary) 38%, transparent) 0%,
-            color-mix(in srgb, var(--color-primary) 20%, var(--color-surface)) 42%,
-            color-mix(in srgb, var(--color-secondary) 70%, transparent) 100%
+            color-mix(in srgb, var(--kali-blue) 38%, transparent) 0%,
+            color-mix(in srgb, var(--kali-blue) 20%, var(--kali-surface)) 42%,
+            color-mix(in srgb, var(--kali-control) 70%, transparent) 100%
           );
-          color: var(--color-text);
+          color: var(--kali-text);
         }
         .quote-card-glyph {
           color: color-mix(in srgb, var(--color-text) 12%, transparent);
