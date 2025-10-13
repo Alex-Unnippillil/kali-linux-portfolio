@@ -4,8 +4,8 @@ import React, { Component } from 'react';
 import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
-import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import { emitWindowEvent } from '../../utils/windowTelemetry';
 import {
     clampWindowTopPosition,
     DEFAULT_WINDOW_TOP_OFFSET,
@@ -127,6 +127,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._hasEmittedCloseEvent = false;
     }
 
     notifySizeChange = () => {
@@ -136,12 +137,51 @@ export class Window extends Component {
         }
     }
 
+    resolveSnapDescriptor = (overrideSnap) => {
+        if (overrideSnap !== undefined) {
+            return overrideSnap ?? 'none';
+        }
+        if (this.state?.maximized) {
+            return 'maximized';
+        }
+        if (this.props?.minimized) {
+            return 'minimized';
+        }
+        if (this.state?.snapped) {
+            return this.state.snapped;
+        }
+        return 'none';
+    }
+
+    reportWindowEvent = (eventName, overrides = {}) => {
+        const targetId = this.id || this.props.id;
+        if (!targetId) {
+            return;
+        }
+        const node = this.getWindowNode();
+        const bounds = node && typeof node.getBoundingClientRect === 'function'
+            ? node.getBoundingClientRect()
+            : null;
+
+        emitWindowEvent(eventName, {
+            id: targetId,
+            bounds,
+            snap: this.resolveSnapDescriptor(overrides.snap),
+        });
+    }
+
+    reportWindowEventDeferred = (eventName, overrides = {}) => {
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => this.reportWindowEvent(eventName, overrides));
+        } else {
+            setTimeout(() => this.reportWindowEvent(eventName, overrides), 16);
+        }
+    }
+
     componentDidMount() {
         this.id = this.props.id;
         this.setDefaultWindowDimenstion();
-
-        // google analytics
-        ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
+        this.reportWindowEventDeferred('wm_open');
 
         // on window resize, resize boundary
         window.addEventListener('resize', this.resizeBoundries);
@@ -159,7 +199,10 @@ export class Window extends Component {
     }
 
     componentWillUnmount() {
-        ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+        if (!this._hasEmittedCloseEvent) {
+            this.reportWindowEvent('wm_close');
+            this._hasEmittedCloseEvent = true;
+        }
 
         window.removeEventListener('resize', this.resizeBoundries);
         window.removeEventListener('context-menu-open', this.setInertBackground);
@@ -394,6 +437,7 @@ export class Window extends Component {
         this.setState({ height: heightPercent, preMaximizeSize: null }, () => {
             this.resizeBoundries();
             this.notifySizeChange();
+            this.reportWindowEventDeferred('wm_resize_end');
         });
     }
 
@@ -405,6 +449,7 @@ export class Window extends Component {
         this.setState({ width: widthPercent, preMaximizeSize: null }, () => {
             this.resizeBoundries();
             this.notifySizeChange();
+            this.reportWindowEventDeferred('wm_resize_end');
         });
     }
 
@@ -487,6 +532,7 @@ export class Window extends Component {
         }, () => {
             this.resizeBoundries();
             this.notifySizeChange();
+            this.reportWindowEventDeferred('wm_snap', { snap: resolvedPosition });
         });
     }
 
@@ -595,6 +641,7 @@ export class Window extends Component {
         } else {
             this.setState({ snapPreview: null, snapPosition: null });
         }
+        this.reportWindowEventDeferred('wm_drag_end');
     }
 
     focusWindow = () => {
@@ -623,6 +670,7 @@ export class Window extends Component {
     minimizeWindow = () => {
         this.setWinowsPosition();
         this.props.hasMinimised(this.id);
+        this.reportWindowEvent('wm_minimize', { snap: 'minimized' });
     }
 
     restoreWindow = () => {
@@ -652,12 +700,15 @@ export class Window extends Component {
         const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         this.setTransformMotionPreset(node, 'restore');
+        const emitRestore = () => this.reportWindowEventDeferred('wm_restore', { snap: 'none' });
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
+            emitRestore();
             return;
         }
 
         node.style.transform = endTransform;
+        emitRestore();
     }
 
     maximizeWindow = () => {
@@ -686,6 +737,7 @@ export class Window extends Component {
             }
             this.setState({ maximized: true, height: heightPercent, width: 100.2, preMaximizeSize: currentSize }, () => {
                 this.notifySizeChange();
+                this.reportWindowEventDeferred('wm_maximize', { snap: 'maximized' });
             });
         }
     }
@@ -693,6 +745,8 @@ export class Window extends Component {
     closeWindow = () => {
         this.setWinowsPosition();
         this.setState({ closed: true, preMaximizeSize: null }, () => {
+            this._hasEmittedCloseEvent = true;
+            this.reportWindowEvent('wm_close');
             this.deactivateOverlay();
             setTimeout(() => {
                 const targetId = this.id ?? this.props.id;
