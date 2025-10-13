@@ -2,193 +2,24 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import confetti from 'canvas-confetti';
 import usePersistentState from '../../hooks/usePersistentState';
 import { PieceGenerator } from '../../games/tetris/logic';
+import {
+  attemptRotation,
+  canMove,
+  createEmptyBoard,
+  createPiece,
+  getGhostY,
+  mergePiece,
+  TETROMINO_COLORS,
+} from '../../games/tetris/srs';
 
 const WIDTH = 10;
 const HEIGHT = 20;
 const CELL_SIZE = 16;
 
-const TETROMINOS = {
-  I: { shape: [[1, 1, 1, 1]], color: '#06b6d4' },
-  J: { shape: [[1, 0, 0], [1, 1, 1]], color: '#3b82f6' },
-  L: { shape: [[0, 0, 1], [1, 1, 1]], color: '#f97316' },
-  O: { shape: [[1, 1], [1, 1]], color: '#eab308' },
-  S: { shape: [[0, 1, 1], [1, 1, 0]], color: '#22c55e' },
-  T: { shape: [[0, 1, 0], [1, 1, 1]], color: '#a855f7' },
-  Z: { shape: [[1, 1, 0], [0, 1, 1]], color: '#ef4444' },
-};
-
-const createBoard = () => Array.from({ length: HEIGHT }, () => Array(WIDTH).fill(0));
-
-const rotate = (matrix) => matrix[0].map((_, i) => matrix.map((row) => row[i]).reverse());
-
-const createPiece = (type) => ({
-  shape: TETROMINOS[type].shape.map((r) => r.slice()),
-  color: TETROMINOS[type].color,
-  type,
-  rotation: 0,
-});
-
-const KICKS = {
-  JLSTZ: {
-    0: {
-      1: [
-        [0, 0],
-        [-1, 0],
-        [-1, 1],
-        [0, -2],
-        [-1, -2],
-      ],
-      3: [
-        [0, 0],
-        [1, 0],
-        [1, 1],
-        [0, -2],
-        [1, -2],
-      ],
-    },
-    1: {
-      0: [
-        [0, 0],
-        [1, 0],
-        [1, -1],
-        [0, 2],
-        [1, 2],
-      ],
-      2: [
-        [0, 0],
-        [1, 0],
-        [1, -1],
-        [0, 2],
-        [1, 2],
-      ],
-    },
-    2: {
-      1: [
-        [0, 0],
-        [-1, 0],
-        [-1, 1],
-        [0, -2],
-        [-1, -2],
-      ],
-      3: [
-        [0, 0],
-        [1, 0],
-        [1, 1],
-        [0, -2],
-        [1, -2],
-      ],
-    },
-    3: {
-      2: [
-        [0, 0],
-        [-1, 0],
-        [-1, -1],
-        [0, 2],
-        [-1, 2],
-      ],
-      0: [
-        [0, 0],
-        [-1, 0],
-        [-1, -1],
-        [0, 2],
-        [-1, 2],
-      ],
-    },
-  },
-  I: {
-    0: {
-      1: [
-        [0, 0],
-        [-2, 0],
-        [1, 0],
-        [-2, -1],
-        [1, 2],
-      ],
-      3: [
-        [0, 0],
-        [-1, 0],
-        [2, 0],
-        [-1, 2],
-        [2, -1],
-      ],
-    },
-    1: {
-      0: [
-        [0, 0],
-        [2, 0],
-        [-1, 0],
-        [2, 1],
-        [-1, -2],
-      ],
-      2: [
-        [0, 0],
-        [-1, 0],
-        [2, 0],
-        [-1, 2],
-        [2, -1],
-      ],
-    },
-    2: {
-      1: [
-        [0, 0],
-        [1, 0],
-        [-2, 0],
-        [1, -2],
-        [-2, 1],
-      ],
-      3: [
-        [0, 0],
-        [2, 0],
-        [-1, 0],
-        [2, 1],
-        [-1, -2],
-      ],
-    },
-    3: {
-      2: [
-        [0, 0],
-        [-2, 0],
-        [1, 0],
-        [-2, -1],
-        [1, 2],
-      ],
-      0: [
-        [0, 0],
-        [1, 0],
-        [-2, 0],
-        [1, -2],
-        [-2, 1],
-      ],
-    },
-  },
-};
+const createBoard = () => createEmptyBoard(HEIGHT, WIDTH);
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
 const TSPIN_SCORES = [400, 800, 1200, 1600];
-
-const canMove = (board, shape, x, y) => {
-  for (let r = 0; r < shape.length; r += 1) {
-    for (let c = 0; c < shape[r].length; c += 1) {
-      if (shape[r][c]) {
-        const nx = x + c;
-        const ny = y + r;
-        if (nx < 0 || nx >= WIDTH || ny >= HEIGHT) return false;
-        if (ny >= 0 && board[ny][nx]) return false;
-      }
-    }
-  }
-  return true;
-};
-
-const merge = (board, shape, x, y, type) => {
-  const newBoard = board.map((row) => row.slice());
-  for (let r = 0; r < shape.length; r += 1) {
-    for (let c = 0; c < shape[r].length; c += 1) {
-      if (shape[r][c]) newBoard[y + r][x + c] = type;
-    }
-  }
-  return newBoard;
-};
 
 const defaultKeys = {
   left: 'ArrowLeft',
@@ -314,11 +145,15 @@ const Tetris = () => {
     }
   }, [playSound]);
 
-  const getDropY = useCallback((b = boardRef.current, sh = pieceRef.current.shape, x = posRef.current.x, y = posRef.current.y) => {
-    let dy = y;
-    while (canMove(b, sh, x, dy + 1)) dy += 1;
-    return dy;
-  }, []);
+  const getDropY = useCallback(
+    (
+      b = boardRef.current,
+      sh = pieceRef.current.shape,
+      x = posRef.current.x,
+      y = posRef.current.y,
+    ) => getGhostY(b, sh, x, y),
+    [],
+  );
 
   const endSprint = useCallback(() => {
     const time = performance.now() - sprintStartRef.current;
@@ -377,7 +212,7 @@ const Tetris = () => {
       clearTimeout(lockRef.current);
       lockRef.current = null;
     }
-    const newBoard = merge(
+    const newBoard = mergePiece(
       boardRef.current,
       pieceRef.current.shape,
       posRef.current.x,
@@ -489,30 +324,30 @@ const Tetris = () => {
   }, [placePiece]);
 
   const rotatePiece = useCallback(() => {
-    const p = pieceRef.current;
-    const from = p.rotation;
-    const to = (p.rotation + 1) % 4;
-    const rotated = rotate(p.shape);
-    const table = p.type === 'O' ? { [to]: [[0, 0]] } : KICKS[p.type === 'I' ? 'I' : 'JLSTZ'];
-    const kicks = table[from]?.[to] || [[0, 0]];
-    for (const [dx, dy] of kicks) {
-      const nx = posRef.current.x + dx;
-      const ny = posRef.current.y + dy;
-      if (canMove(boardRef.current, rotated, nx, ny)) {
-        setPiece({ ...p, shape: rotated, rotation: to });
-        setPos({ x: nx, y: ny });
-        lastRotateRef.current = true;
-        if (lockRef.current) {
-          clearTimeout(lockRef.current);
-          lockRef.current = null;
-        }
-        if (!canMove(boardRef.current, rotated, nx, ny + 1)) {
-          lockRef.current = setTimeout(() => {
-            placePiece();
-          }, 500);
-        }
-        return;
-      }
+    const result = attemptRotation(
+      pieceRef.current,
+      boardRef.current,
+      posRef.current,
+    );
+    if (!result) return;
+    setPiece(result.piece);
+    setPos(result.position);
+    lastRotateRef.current = true;
+    if (lockRef.current) {
+      clearTimeout(lockRef.current);
+      lockRef.current = null;
+    }
+    if (
+      !canMove(
+        boardRef.current,
+        result.piece.shape,
+        result.position.x,
+        result.position.y + 1,
+      )
+    ) {
+      lockRef.current = setTimeout(() => {
+        placePiece();
+      }, 500);
     }
   }, [placePiece]);
 
@@ -538,7 +373,7 @@ const Tetris = () => {
     if (hold) {
       const temp = hold;
       setHold(current);
-      setPiece(temp);
+      setPiece(createPiece(temp.type));
     } else {
       setHold(current);
       setPiece(next[0]);
@@ -638,7 +473,7 @@ const Tetris = () => {
       boardRef.current.forEach((row, y) => {
         row.forEach((cell, x) => {
           if (cell) {
-            ctx.fillStyle = TETROMINOS[cell].color;
+            ctx.fillStyle = TETROMINO_COLORS[cell];
             ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
             ctx.strokeStyle = '#111827';
             ctx.strokeRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
@@ -649,7 +484,7 @@ const Tetris = () => {
           ctx.fillRect(0, y * CELL_SIZE, WIDTH * CELL_SIZE, CELL_SIZE);
         }
       });
-    const ghostY = getDropY();
+      const ghostY = getDropY();
     ctx.globalAlpha = 0.3;
     pieceRef.current.shape.forEach((row, r) => {
       row.forEach((c, col) => {
@@ -721,6 +556,7 @@ const Tetris = () => {
           width={WIDTH * CELL_SIZE}
           height={HEIGHT * CELL_SIZE}
           className="border border-gray-700 transition-transform"
+          aria-label="Tetris playfield"
           style={{ transform: shake ? 'translateY(2px)' : 'none' }}
         />
         <div className="flex flex-col text-sm">
@@ -795,29 +631,35 @@ const Tetris = () => {
           <div className="bg-gray-800 p-4 rounded">
             <h2 className="mb-2 text-center">Settings</h2>
             <div className="mb-2 flex items-center">
-              <label className="w-24">7-Bag</label>
+              <label className="w-24" htmlFor="tetris-use-bag">7-Bag</label>
               <input
+                id="tetris-use-bag"
                 type="checkbox"
+                aria-label="Toggle seven-bag randomizer"
                 checked={useBag}
                 onChange={(e) => setUseBag(e.target.checked)}
               />
             </div>
             <div className="mb-2 flex items-center">
-              <label className="w-24">DAS {das}ms</label>
+              <label className="w-24" htmlFor="tetris-das">DAS {das}ms</label>
               <input
+                id="tetris-das"
                 type="range"
                 min="50"
                 max="500"
+                aria-label="Adjust delayed auto shift"
                 value={das}
                 onChange={(e) => setDas(Number(e.target.value))}
               />
             </div>
             <div className="mb-2 flex items-center">
-              <label className="w-24">ARR {arr}ms</label>
+              <label className="w-24" htmlFor="tetris-arr">ARR {arr}ms</label>
               <input
+                id="tetris-arr"
                 type="range"
                 min="10"
                 max="200"
+                aria-label="Adjust auto repeat rate"
                 value={arr}
                 onChange={(e) => setArr(Number(e.target.value))}
               />
@@ -825,9 +667,13 @@ const Tetris = () => {
             <h3 className="mb-2 text-center">Key Bindings</h3>
             {Object.keys(keyBindings).map((k) => (
               <div key={k} className="flex items-center mb-2">
-                <label className="w-24 capitalize">{k}</label>
+                <label className="w-24 capitalize" htmlFor={`tetris-key-${k}`}>
+                  {k}
+                </label>
                 <input
+                  id={`tetris-key-${k}`}
                   className="text-black px-1"
+                  aria-label={`Set ${k} key binding`}
                   value={keyBindings[k]}
                   onChange={(e) => setKeyBindings({ ...keyBindings, [k]: e.target.value })}
                 />
