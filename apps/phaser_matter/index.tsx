@@ -415,42 +415,35 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           onTouchEnd: () => (controls.current[key] = false),
         };
 
+  const hudButtonClass =
+    'pointer-events-auto rounded-full border border-kali-border/60 bg-kali-surface-muted/85 px-4 py-3 text-xl font-semibold text-white shadow transition hover:border-kali-control hover:bg-kali-control/90 hover:text-kali-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus';
+
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
       <div
         ref={containerRef}
-        className="relative flex-1 min-h-[420px] overflow-hidden rounded-2xl border border-kali-border/80 bg-kali-surface/95 shadow-lg backdrop-blur focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+        className="relative flex-1 min-h-[420px] overflow-hidden rounded-2xl border border-kali-border/80 bg-kali-overlay/90 shadow-lg backdrop-blur focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
         tabIndex={0}
       >
         <div className="pointer-events-none absolute inset-0 rounded-2xl border border-kali-border/60" aria-hidden="true" />
         <div className="absolute inset-x-6 bottom-6 flex items-center justify-between gap-4 pointer-events-none">
-          <button
-            type="button"
-            aria-label="Move left"
-            className="pointer-events-auto rounded-full border border-white/10 bg-kali-surface/85 px-4 py-3 text-xl font-semibold text-white shadow transition hover:border-kali-control hover:bg-kali-control/90 hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
-            {...bind('left')}
-          >
+          <button type="button" aria-label="Move left" className={hudButtonClass} {...bind('left')}>
             ◀
           </button>
           <button
             type="button"
             aria-label="Move right"
-            className="pointer-events-auto rounded-full border border-white/10 bg-kali-surface/85 px-4 py-3 text-xl font-semibold text-white shadow transition hover:border-kali-control hover:bg-kali-control/90 hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+            className={hudButtonClass}
             {...bind('right')}
           >
             ▶
           </button>
-          <button
-            type="button"
-            aria-label="Jump"
-            className="pointer-events-auto rounded-full border border-white/10 bg-kali-surface/85 px-4 py-3 text-xl font-semibold text-white shadow transition hover:border-kali-control hover:bg-kali-control/90 hover:text-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
-            {...bind('jump')}
-          >
+          <button type="button" aria-label="Jump" className={hudButtonClass} {...bind('jump')}>
             ⇧
           </button>
         </div>
       </div>
-      <aside className="w-full space-y-4 rounded-2xl border border-kali-border/80 bg-kali-surface/95 p-4 text-sm leading-relaxed text-white shadow-lg backdrop-blur lg:w-72">
+      <aside className="w-full space-y-4 rounded-2xl border border-kali-border/80 bg-kali-surface-raised/95 p-4 text-sm leading-relaxed text-white shadow-lg backdrop-blur lg:w-72">
         {waiting && (
           <div className="rounded-lg border border-kali-control/50 bg-kali-control/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-kali-control">
             Press a {waiting.device === 'key' ? 'key' : 'button'}...
