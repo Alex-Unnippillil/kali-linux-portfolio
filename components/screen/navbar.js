@@ -7,6 +7,7 @@ import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
+import WorkspaceLayoutMenu from '../menu/WorkspaceLayoutMenu';
 
 const areWorkspacesEqual = (next, prev) => {
         if (next.length !== prev.length) return false;
@@ -320,6 +321,7 @@ export default class Navbar extends PureComponent {
                                                                 onSelect={this.handleWorkspaceSelect}
                                                         />
                                                 )}
+                                                <WorkspaceLayoutMenu />
                                                 {this.renderRunningApps()}
                                                 <PerformanceGraph />
                                         </div>

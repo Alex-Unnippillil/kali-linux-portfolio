@@ -20,6 +20,7 @@ import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 import { Rajdhani } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
+import { getStoredWorkspaceLayout, WORKSPACE_LAYOUT_EVENTS } from '../utils/windowLayout';
 
 type PeriodicSyncPermissionDescriptor = PermissionDescriptor & {
   name: 'periodic-background-sync';
@@ -201,6 +202,27 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
         window.Notification = OriginalNotification;
       }
     };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const workspaceName = params.get('ws');
+      if (!workspaceName) return;
+      const stored = getStoredWorkspaceLayout(workspaceName, window.innerWidth);
+      if (!stored || !stored.layout) {
+        console.warn(`Workspace layout "${workspaceName}" is not available for this width.`);
+        return;
+      }
+      window.dispatchEvent(
+        new CustomEvent(WORKSPACE_LAYOUT_EVENTS.apply, {
+          detail: { layout: stored.layout, name: workspaceName, source: 'query' },
+        }),
+      );
+    } catch (error) {
+      console.warn('Failed to process workspace query parameter.', error);
+    }
   }, []);
 
   return (
