@@ -1,7 +1,13 @@
 import {
   createInitialState,
   stepSnake,
+  getDelayForDifficulty,
+  getWrapForMode,
+  DEFAULT_DIFFICULTY,
+  DEFAULT_WRAP_MODE,
   type Point,
+  type SnakeDifficulty,
+  type SnakeWrapMode,
 } from '../index';
 
 describe('snake engine', () => {
@@ -105,5 +111,24 @@ describe('snake engine', () => {
       [{ x: 0, y: 0 }],
       5,
     );
+  });
+});
+
+describe('snake settings helpers', () => {
+  it('returns the default difficulty delay when an unknown key is provided', () => {
+    expect(getDelayForDifficulty('normal')).toBe(
+      getDelayForDifficulty(DEFAULT_DIFFICULTY),
+    );
+    expect(
+      getDelayForDifficulty('unknown' as SnakeDifficulty),
+    ).toBe(getDelayForDifficulty(DEFAULT_DIFFICULTY));
+  });
+
+  it('maps wrap modes to boolean values with a sane default', () => {
+    expect(getWrapForMode('toroidal')).toBe(true);
+    expect(getWrapForMode(DEFAULT_WRAP_MODE)).toBe(false);
+    expect(
+      getWrapForMode('mystery' as SnakeWrapMode),
+    ).toBe(false);
   });
 });

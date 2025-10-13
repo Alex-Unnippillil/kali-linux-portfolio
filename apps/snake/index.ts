@@ -1,5 +1,38 @@
 export const GRID_SIZE = 20;
 
+export const SNAKE_DIFFICULTIES = {
+  relaxed: { label: 'Relaxed', delay: 220 },
+  normal: { label: 'Normal', delay: 150 },
+  fast: { label: 'Fast', delay: 110 },
+  extreme: { label: 'Extreme', delay: 80 },
+} as const;
+
+export type SnakeDifficulty = keyof typeof SNAKE_DIFFICULTIES;
+
+export const DEFAULT_DIFFICULTY: SnakeDifficulty = 'normal';
+
+export const getDelayForDifficulty = (difficulty: SnakeDifficulty): number =>
+  SNAKE_DIFFICULTIES[difficulty]?.delay ??
+  SNAKE_DIFFICULTIES[DEFAULT_DIFFICULTY].delay;
+
+export const isSnakeDifficulty = (value: unknown): value is SnakeDifficulty =>
+  typeof value === 'string' && value in SNAKE_DIFFICULTIES;
+
+export const WRAP_MODES = {
+  bounded: { label: 'Walls', wrap: false },
+  toroidal: { label: 'Wrap Around', wrap: true },
+} as const;
+
+export type SnakeWrapMode = keyof typeof WRAP_MODES;
+
+export const DEFAULT_WRAP_MODE: SnakeWrapMode = 'bounded';
+
+export const getWrapForMode = (mode: SnakeWrapMode): boolean =>
+  WRAP_MODES[mode]?.wrap ?? WRAP_MODES[DEFAULT_WRAP_MODE].wrap;
+
+export const isSnakeWrapMode = (value: unknown): value is SnakeWrapMode =>
+  typeof value === 'string' && value in WRAP_MODES;
+
 export interface Point {
   x: number;
   y: number;

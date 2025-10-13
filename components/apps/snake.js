@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
 import { useSaveSlots, useGameLoop } from './Games/common';
@@ -10,10 +10,17 @@ import {
   GRID_SIZE,
   createInitialState,
   stepSnake,
+  SNAKE_DIFFICULTIES,
+  DEFAULT_DIFFICULTY,
+  getDelayForDifficulty,
+  WRAP_MODES,
+  DEFAULT_WRAP_MODE,
+  getWrapForMode,
+  isSnakeDifficulty,
+  isSnakeWrapMode,
 } from '../../apps/snake';
 
 const CELL_SIZE = 16; // pixels
-const DEFAULT_SPEED = 120; // ms per move
 
 const Snake = () => {
   const canvasRef = useCanvasResize(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
@@ -46,13 +53,18 @@ const Snake = () => {
   const prefersReducedMotion = usePrefersReducedMotion();
 
   const [running, setRunning] = useState(true);
-  const [wrap, setWrap] = usePersistentState(
-    'snake_wrap',
-    false,
-    (v) => typeof v === 'boolean',
+  const [wrapMode, setWrapMode] = usePersistentState(
+    'snake_wrap_mode',
+    DEFAULT_WRAP_MODE,
+    isSnakeWrapMode,
+  );
+  const wrap = getWrapForMode(wrapMode);
+  const [difficulty, setDifficulty] = usePersistentState(
+    'snake_difficulty',
+    DEFAULT_DIFFICULTY,
+    isSnakeDifficulty,
   );
   const [sound, setSound] = useState(true);
-  const [speed, setSpeed] = useState(DEFAULT_SPEED);
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [highScore, setHighScore] = usePersistentState(
@@ -60,7 +72,8 @@ const Snake = () => {
     0,
     (v) => typeof v === 'number',
   );
-  const speedRef = useRef(DEFAULT_SPEED);
+  const speedRef = useRef(getDelayForDifficulty(difficulty));
+  const difficultyRef = useRef(difficulty);
   const {
     save: saveReplay,
     load: loadReplay,
@@ -83,8 +96,11 @@ const Snake = () => {
   }, []);
 
   useEffect(() => {
-    speedRef.current = speed;
-  }, [speed]);
+    difficultyRef.current = difficulty;
+    const delay = getDelayForDifficulty(difficulty);
+    speedRef.current = delay;
+    accumulatorRef.current = Math.min(accumulatorRef.current, delay);
+  }, [difficulty]);
 
   useEffect(() => {
     scoreRef.current = score;
@@ -112,6 +128,20 @@ const Snake = () => {
       setRunning(false);
     }
   }, [prefersReducedMotion]);
+
+  useEffect(() => {
+    const handlePauseHotkey = (event) => {
+      if (event.key.toLowerCase() !== 'p') return;
+      event.preventDefault();
+      setRunning((prev) => {
+        const next = !prev;
+        runningRef.current = next;
+        return next;
+      });
+    };
+    window.addEventListener('keydown', handlePauseHotkey);
+    return () => window.removeEventListener('keydown', handlePauseHotkey);
+  }, [setRunning]);
 
   /**
    * Play a short tone if sound is enabled.
@@ -272,7 +302,6 @@ const Snake = () => {
       setScore(nextScore);
       haptics.score();
       beep(440);
-      setSpeed((s) => Math.max(50, s * 0.95));
     }
 
     recordingRef.current.push({
@@ -285,20 +314,25 @@ const Snake = () => {
       obstacles: obstaclesRef.current.map((o) => ({ ...o })),
       score: scoreRef.current,
     });
-  }, [wrap, beep, haptics, prefersReducedMotion, setRunning, setSpeed]);
+  }, [wrap, beep, haptics, prefersReducedMotion, setRunning]);
 
   const tick = useCallback(
     (delta) => {
       accumulatorRef.current += delta * 1000;
-      if (accumulatorRef.current < speedRef.current) {
+      const stepDuration = speedRef.current;
+      if (accumulatorRef.current < stepDuration) {
         draw();
         return;
       }
-      while (accumulatorRef.current >= speedRef.current) {
-        accumulatorRef.current -= speedRef.current;
+      let steps = 0;
+      const maxSteps = 5;
+      while (accumulatorRef.current >= stepDuration && steps < maxSteps) {
+        accumulatorRef.current -= stepDuration;
         advanceGame();
         if (!runningRef.current) break;
+        steps += 1;
       }
+      accumulatorRef.current = Math.min(accumulatorRef.current, stepDuration);
       draw();
     },
     [advanceGame, draw],
@@ -331,9 +365,14 @@ const Snake = () => {
   useEffect(() => {
     if (gameOver && recordingRef.current.length) {
       const name = `replay-${Date.now()}`;
-      saveReplay(name, { frames: recordingRef.current, wrap });
+      saveReplay(name, {
+        frames: recordingRef.current,
+        wrap,
+        wrapMode,
+        difficulty,
+      });
     }
-  }, [gameOver, saveReplay, wrap]);
+  }, [difficulty, gameOver, saveReplay, wrap, wrapMode]);
 
   /** Reset the game to its initial state. */
   const reset = useCallback(() => {
@@ -355,8 +394,8 @@ const Snake = () => {
     scoreRef.current = 0;
     setGameOver(false);
     setRunning(true);
-    setSpeed(DEFAULT_SPEED);
-    speedRef.current = DEFAULT_SPEED;
+    const delay = getDelayForDifficulty(difficultyRef.current);
+    speedRef.current = delay;
     recordingRef.current = [
       {
         snake: snakeRef.current.map((s) => ({
@@ -379,7 +418,15 @@ const Snake = () => {
       playbackRef.current = data.frames || [];
       playbackIndexRef.current = 0;
       playingRef.current = true;
-      setWrap(data.wrap ?? false);
+      const nextWrapMode = isSnakeWrapMode(data.wrapMode)
+        ? data.wrapMode
+        : data.wrap
+        ? 'toroidal'
+        : DEFAULT_WRAP_MODE;
+      setWrapMode(nextWrapMode);
+      if (isSnakeDifficulty(data.difficulty)) {
+        setDifficulty(data.difficulty);
+      }
       setRunning(true);
       runningRef.current = true;
       setGameOver(false);
@@ -394,8 +441,14 @@ const Snake = () => {
         setScore(frameScore);
       }
     },
-    [loadReplay, setWrap],
+    [loadReplay, setDifficulty, setWrapMode],
   );
+
+  const difficultyOptions = useMemo(
+    () => Object.entries(SNAKE_DIFFICULTIES),
+    [],
+  );
+  const wrapOptions = useMemo(() => Object.entries(WRAP_MODES), []);
 
   return (
     <GameLayout gameId="snake" score={score} highScore={highScore}>
@@ -432,9 +485,13 @@ const Snake = () => {
           </button>
           <button
             className="px-2 py-1 bg-gray-700 rounded"
-            onClick={() => setWrap((w) => !w)}
+            onClick={() =>
+              setWrapMode((mode) =>
+                mode === 'toroidal' ? 'bounded' : 'toroidal',
+              )
+            }
           >
-            {wrap ? 'Wrap' : 'No Wrap'}
+            {wrap ? 'Wrap: On' : 'Wrap: Off'}
           </button>
           <button
             className="px-2 py-1 bg-gray-700 rounded"
@@ -450,17 +507,44 @@ const Snake = () => {
           </button>
         </div>
         <div className="mt-2 flex items-center space-x-2">
-          <label htmlFor="speed">Speed</label>
-          <input
-            id="speed"
-            type="range"
-            min="50"
-            max="300"
-            step="10"
-            value={speed}
-            onChange={(e) => setSpeed(Number(e.target.value))}
-            aria-label="Speed"
-          />
+          <label htmlFor="difficulty">Difficulty</label>
+          <select
+            id="difficulty"
+            className="bg-gray-700 rounded px-2 py-1"
+            value={difficulty}
+            onChange={(event) => {
+              const next = event.target.value;
+              if (isSnakeDifficulty(next)) {
+                setDifficulty(next);
+              }
+            }}
+          >
+            {difficultyOptions.map(([value, info]) => (
+              <option key={value} value={value}>
+                {info.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="mt-2 flex items-center space-x-2">
+          <label htmlFor="wrap-mode">Wrap Mode</label>
+          <select
+            id="wrap-mode"
+            className="bg-gray-700 rounded px-2 py-1"
+            value={wrapMode}
+            onChange={(event) => {
+              const next = event.target.value;
+              if (isSnakeWrapMode(next)) {
+                setWrapMode(next);
+              }
+            }}
+          >
+            {wrapOptions.map(([value, info]) => (
+              <option key={value} value={value}>
+                {info.label}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="mt-2 flex items-center space-x-2">
           <label htmlFor="replay">Replay</label>
