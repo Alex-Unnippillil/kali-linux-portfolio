@@ -118,16 +118,18 @@ const ContactApp: React.FC = () => {
         recaptchaToken,
       });
       if (result.success) {
-        const confirmation =
-          "Your message is on its way. Expect a reply within 24 hours.";
-        setToast("Message sent");
+        const queued = result.queued === true;
+        const confirmation = queued
+          ? "Message saved locally. We'll deliver it once you're back online."
+          : "Your message is on its way. Expect a reply within 24 hours.";
+        setToast(queued ? "Message queued" : "Message sent");
         setSuccessMessage(confirmation);
         setName("");
         setEmail("");
         setMessage("");
         setHoneypot("");
         localStorage.removeItem(DRAFT_KEY);
-        trackEvent("contact_submit", { method: "form" });
+        trackEvent("contact_submit", { method: queued ? "queued" : "form" });
       } else {
         setError(result.error || "Submission failed");
         trackEvent("contact_submit_error", { method: "form" });

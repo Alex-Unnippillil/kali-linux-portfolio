@@ -18,6 +18,7 @@ import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { initializeOfflineQueue } from '../utils/offlineQueue';
 import { Rajdhani } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
 
@@ -83,6 +84,8 @@ const kaliSans = Rajdhani({
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
   useEffect(() => {
+    const cleanup = initializeOfflineQueue();
+
     const initAnalytics = async (): Promise<void> => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
       if (trackingId) {
@@ -139,6 +142,9 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
       });
     }
 
+    return () => {
+      cleanup?.();
+    };
   }, []);
 
   useEffect(() => {
