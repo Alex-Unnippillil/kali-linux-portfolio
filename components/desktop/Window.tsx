@@ -4,6 +4,8 @@ import {
   clampWindowPositionWithinViewport,
   clampWindowTopPosition,
   measureWindowTopOffset,
+  getViewportSize,
+  subscribeToLayoutChanges,
 } from "../../utils/windowLayout";
 
 type BaseWindowProps = React.ComponentProps<typeof BaseWindow>;
@@ -11,6 +13,21 @@ type BaseWindowProps = React.ComponentProps<typeof BaseWindow>;
 type BaseWindowInstance = InstanceType<typeof BaseWindow> | null;
 
 type MutableRef<T> = React.MutableRefObject<T>;
+
+type FrameHandle = { cancel: () => void };
+
+const scheduleFrame = (callback: () => void): FrameHandle => {
+  if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+    const id = window.requestAnimationFrame(() => {
+      callback();
+    });
+    return { cancel: () => window.cancelAnimationFrame(id) };
+  }
+  const timeout = setTimeout(() => {
+    callback();
+  }, 16);
+  return { cancel: () => clearTimeout(timeout) };
+};
 
 const parsePx = (value?: string | null): number | null => {
   if (typeof value !== "string") return null;
@@ -50,6 +67,8 @@ const readNodePosition = (node: HTMLElement): { x: number; y: number } | null =>
 const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
   (props, forwardedRef) => {
     const innerRef = useRef<BaseWindowInstance>(null);
+    const writeFrameRef = useRef<FrameHandle | null>(null);
+    const writePayloadRef = useRef<{ node: HTMLElement; x: number; y: number } | null>(null);
 
     const assignRef = useCallback(
       (instance: BaseWindowInstance) => {
@@ -64,6 +83,28 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       [forwardedRef],
     );
 
+    const schedulePositionWrite = useCallback((node: HTMLElement, x: number, y: number) => {
+      writePayloadRef.current = { node, x, y };
+      if (writeFrameRef.current) {
+        return;
+      }
+      writeFrameRef.current = scheduleFrame(() => {
+        const payload = writePayloadRef.current;
+        writeFrameRef.current = null;
+        writePayloadRef.current = null;
+        if (!payload) return;
+        const { node: target, x: nextX, y: nextY } = payload;
+        target.style.transform = `translate(${nextX}px, ${nextY}px)`;
+        if (typeof target.style.setProperty === "function") {
+          target.style.setProperty("--window-transform-x", `${nextX}px`);
+          target.style.setProperty("--window-transform-y", `${nextY}px`);
+        } else {
+          (target.style as unknown as Record<string, string>)["--window-transform-x"] = `${nextX}px`;
+          (target.style as unknown as Record<string, string>)["--window-transform-y"] = `${nextY}px`;
+        }
+      });
+    }, []);
+
     const clampToViewport = useCallback(() => {
       if (typeof window === "undefined") return;
       const instance = innerRef.current;
@@ -73,6 +114,7 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       if (!node || typeof node.getBoundingClientRect !== "function") return;
 
       const rect = node.getBoundingClientRect();
+      const { width: viewportWidth, height: viewportHeight } = getViewportSize();
       const topOffset = measureWindowTopOffset();
       const storedPosition = readNodePosition(node);
       const fallbackPosition = {
@@ -81,8 +123,8 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       };
       const currentPosition = storedPosition || fallbackPosition;
       const clamped = clampWindowPositionWithinViewport(currentPosition, rect, {
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
+        viewportWidth,
+        viewportHeight,
         topOffset,
       });
       if (!clamped) return;
@@ -90,28 +132,55 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
         return;
       }
 
-      node.style.transform = `translate(${clamped.x}px, ${clamped.y}px)`;
-      if (typeof node.style.setProperty === "function") {
-        node.style.setProperty("--window-transform-x", `${clamped.x}px`);
-        node.style.setProperty("--window-transform-y", `${clamped.y}px`);
-      } else {
-        (node.style as unknown as Record<string, string>)["--window-transform-x"] = `${clamped.x}px`;
-        (node.style as unknown as Record<string, string>)["--window-transform-y"] = `${clamped.y}px`;
-      }
+      schedulePositionWrite(node, clamped.x, clamped.y);
 
       if (typeof props.onPositionChange === "function") {
         props.onPositionChange(clamped.x, clamped.y);
       }
-    }, [props.initialX, props.initialY, props.onPositionChange]);
+    }, [props.initialX, props.initialY, props.onPositionChange, schedulePositionWrite]);
 
     useEffect(() => {
-      if (typeof window === "undefined") return undefined;
-      const handler = () => clampToViewport();
-      window.addEventListener("resize", handler);
+      if (writeFrameRef.current) {
+        writeFrameRef.current.cancel();
+        writeFrameRef.current = null;
+      }
+      writePayloadRef.current = null;
       return () => {
-        window.removeEventListener("resize", handler);
+        if (writeFrameRef.current) {
+          writeFrameRef.current.cancel();
+          writeFrameRef.current = null;
+        }
+        writePayloadRef.current = null;
+      };
+    }, []);
+
+    useEffect(() => {
+      const unsubscribe = subscribeToLayoutChanges(clampToViewport);
+      clampToViewport();
+      return () => {
+        unsubscribe();
       };
     }, [clampToViewport]);
+
+    useEffect(() => {
+      if (typeof ResizeObserver === "undefined") {
+        return undefined;
+      }
+      const instance = innerRef.current;
+      const node = instance && typeof instance.getWindowNode === "function"
+        ? instance.getWindowNode()
+        : null;
+      if (!node) {
+        return undefined;
+      }
+      const observer = new ResizeObserver(() => {
+        clampToViewport();
+      });
+      observer.observe(node);
+      return () => {
+        observer.disconnect();
+      };
+    }, [clampToViewport, props.id]);
 
     return <BaseWindow ref={assignRef} {...props} />;
   },
