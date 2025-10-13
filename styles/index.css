@@ -127,8 +127,8 @@ input[type=range].ubuntu-slider {
     -webkit-appearance: none;
     background: linear-gradient(
         to right,
-        color-mix(in srgb, var(--kali-blue) 40%, transparent) 0%,
-        color-mix(in srgb, var(--kali-blue) 40%, transparent) 100%
+        color-mix(in srgb, var(--color-control-accent) 45%, transparent) 0%,
+        color-mix(in srgb, var(--color-control-accent) 45%, transparent) 100%
     );
     background-position: center;
     background-size: 99% 3px;
@@ -145,8 +145,8 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     -webkit-box-sizing: border-box;
     box-sizing: border-box;
     -webkit-appearance: none;
-    background-color: var(--kali-blue);
-    border: 2px solid color-mix(in srgb, var(--kali-blue-dark) 60%, transparent);
+    background-color: var(--color-primary);
+    border: 2px solid color-mix(in srgb, var(--color-primary) 60%, transparent);
     pointer-events: none;
     border-radius: 50%;
     width: 12px;
@@ -156,7 +156,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 
 input[type=range].kali-slider:focus-visible::-webkit-slider-thumb,
 input[type=range].ubuntu-slider:focus-visible::-webkit-slider-thumb {
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--kali-blue) 35%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-focus-ring) 45%, transparent);
 }
 
 .notFocused {
