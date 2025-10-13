@@ -19,6 +19,13 @@ const ResourceMonitor = () => {
   const [paused, setPaused] = useState(false);
   const [stress, setStress] = useState(false);
   const [fps, setFps] = useState(0);
+  const [themeTokens, setThemeTokens] = useState(() => ({
+    cpu: '#0f94d2',
+    mem: '#45ff9a',
+    fps: '#38bdf8',
+    net: '#f59e0b',
+    label: '#f8fafc',
+  }));
 
   const stressWindows = useRef([]);
   const stressEls = useRef([]);
@@ -126,12 +133,15 @@ const ResourceMonitor = () => {
     if (arr.length > MAX_POINTS) arr.shift();
   };
 
-  const drawCharts = (dataset = dataRef.current) => {
-    drawChart(cpuCanvas.current, dataset.cpu, '#00ff00', 'CPU %', 100);
-    drawChart(memCanvas.current, dataset.mem, '#ffd700', 'Memory %', 100);
-    drawChart(fpsCanvas.current, dataset.fps, '#00ffff', 'FPS', 120);
-    drawChart(netCanvas.current, dataset.net, '#ff00ff', 'Mbps', 100);
-  };
+  const drawCharts = useCallback(
+    (dataset = dataRef.current) => {
+      drawChart(cpuCanvas.current, dataset.cpu, themeTokens.cpu, themeTokens.label, 'CPU %', 100);
+      drawChart(memCanvas.current, dataset.mem, themeTokens.mem, themeTokens.label, 'Memory %', 100);
+      drawChart(fpsCanvas.current, dataset.fps, themeTokens.fps, themeTokens.label, 'FPS', 120);
+      drawChart(netCanvas.current, dataset.net, themeTokens.net, themeTokens.label, 'Mbps', 100);
+    },
+    [themeTokens],
+  );
 
   const animateCharts = useCallback(() => {
     const from = { ...displayRef.current };
@@ -160,7 +170,7 @@ const ResourceMonitor = () => {
 
     cancelAnimationFrame(animRef.current);
     animRef.current = requestAnimationFrame(step);
-  }, []);
+  }, [drawCharts]);
 
   const scheduleDraw = useCallback(() => {
     const now = performance.now();
@@ -170,24 +180,40 @@ const ResourceMonitor = () => {
     }
   }, [animateCharts]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const style = getComputedStyle(document.documentElement);
+    setThemeTokens((prev) => ({
+      cpu: style.getPropertyValue('--color-accent')?.trim() || prev.cpu,
+      mem: style.getPropertyValue('--kali-terminal-green')?.trim() || prev.mem,
+      fps: style.getPropertyValue('--color-info')?.trim() || prev.fps,
+      net: style.getPropertyValue('--color-warning')?.trim() || prev.net,
+      label: style.getPropertyValue('--kali-terminal-text')?.trim() || prev.label,
+    }));
+  }, []);
+
+  useEffect(() => {
+    scheduleDraw();
+  }, [scheduleDraw]);
+
   const togglePause = () => setPaused((p) => !p);
   const toggleStress = () => setStress((s) => !s);
 
   return (
     <div
       ref={containerRef}
-      className="relative h-full w-full flex flex-col bg-[var(--kali-panel)] text-white font-ubuntu overflow-hidden"
+      className="relative h-full w-full flex flex-col bg-[color:var(--kali-panel)] text-white font-ubuntu overflow-hidden"
     >
       <div className="p-2 flex gap-2 items-center">
         <button
           onClick={togglePause}
-          className="px-3 py-1.5 rounded border border-[var(--kali-panel-border)] bg-kali-control text-black font-semibold transition-colors hover:bg-kali-control/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+          className="px-3 py-1.5 rounded border border-[color:var(--kali-panel-border)] bg-kali-control text-kali-inverse font-semibold transition-colors hover:bg-kali-control/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
         >
           {paused ? 'Resume' : 'Pause'}
         </button>
         <button
           onClick={toggleStress}
-          className="px-3 py-1.5 rounded border border-[var(--kali-panel-border)] bg-kali-control text-black font-semibold transition-colors hover:bg-kali-control/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+          className="px-3 py-1.5 rounded border border-[color:var(--kali-panel-border)] bg-kali-control text-kali-inverse font-semibold transition-colors hover:bg-kali-control/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
         >
           {stress ? 'Stop Stress' : 'Stress Test'}
         </button>
@@ -200,7 +226,7 @@ const ResourceMonitor = () => {
           height={100}
           role="img"
           aria-label="CPU usage chart"
-          className="rounded border border-[var(--kali-panel-border)] bg-[var(--kali-panel-highlight)]"
+          className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel-highlight)]"
         />
         <canvas
           ref={memCanvas}
@@ -208,7 +234,7 @@ const ResourceMonitor = () => {
           height={100}
           role="img"
           aria-label="Memory usage chart"
-          className="rounded border border-[var(--kali-panel-border)] bg-[var(--kali-panel-highlight)]"
+          className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel-highlight)]"
         />
         <canvas
           ref={fpsCanvas}
@@ -216,7 +242,7 @@ const ResourceMonitor = () => {
           height={100}
           role="img"
           aria-label="FPS chart"
-          className="rounded border border-[var(--kali-panel-border)] bg-[var(--kali-panel-highlight)]"
+          className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel-highlight)]"
         />
         <canvas
           ref={netCanvas}
@@ -224,7 +250,7 @@ const ResourceMonitor = () => {
           height={100}
           role="img"
           aria-label="Network speed chart"
-          className="rounded border border-[var(--kali-panel-border)] bg-[var(--kali-panel-highlight)]"
+          className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel-highlight)]"
         />
       </div>
       {stressWindows.current.map((_, i) => (
@@ -233,21 +259,21 @@ const ResourceMonitor = () => {
           ref={(el) => {
             stressEls.current[i] = el;
           }}
-          className="absolute w-8 h-6 bg-white bg-opacity-20 border border-gray-500 pointer-events-none"
+          className="absolute h-6 w-8 rounded-sm border border-[color:color-mix(in_srgb,var(--kali-control)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-control)_24%,transparent)] shadow-[0_0_10px_rgba(15,148,210,0.35)] pointer-events-none"
         />
       ))}
     </div>
   );
 };
 
-function drawChart(canvas, values, color, label, maxVal) {
+function drawChart(canvas, values, strokeColor, labelColor, label, maxVal) {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   const w = canvas.width;
   const h = canvas.height;
   ctx.clearRect(0, 0, w, h);
-  ctx.strokeStyle = color;
+  ctx.strokeStyle = strokeColor;
   ctx.lineWidth = 2;
   ctx.beginPath();
   values.forEach((v, i) => {
@@ -258,7 +284,7 @@ function drawChart(canvas, values, color, label, maxVal) {
   });
   ctx.stroke();
   const latest = values[values.length - 1] || 0;
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = labelColor;
   ctx.font = '12px sans-serif';
   ctx.fillText(`${label}: ${latest.toFixed(1)}`, 4, 12);
 }
