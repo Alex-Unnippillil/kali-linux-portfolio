@@ -1,0 +1,251 @@
+.os-desktop {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  background: radial-gradient(circle at top left, #1a2332, #0b0e16 65%);
+  color: #f1f5f9;
+  font-family: var(--font-sans, 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.os-window {
+  position: absolute;
+  background: rgba(21, 28, 40, 0.92);
+  border: 1px solid rgba(87, 130, 255, 0.18);
+  border-radius: 10px;
+  box-shadow: 0 18px 48px rgba(9, 12, 20, 0.5);
+  color: inherit;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  contain: layout paint;
+  transition: box-shadow 120ms ease-in-out, border-color 120ms ease-in-out;
+}
+
+.os-window--active {
+  border-color: rgba(94, 163, 255, 0.6);
+  box-shadow: 0 24px 64px rgba(11, 18, 30, 0.65);
+}
+
+.os-window__titlebar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0.75rem 0.4rem 0.95rem;
+  background: linear-gradient(180deg, rgba(41, 54, 78, 0.95), rgba(26, 35, 53, 0.9));
+  border-bottom: 1px solid rgba(87, 130, 255, 0.12);
+  cursor: grab;
+  touch-action: none;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  backdrop-filter: blur(12px);
+}
+
+.os-window__titlebar:focus {
+  outline: 2px solid rgba(94, 163, 255, 0.65);
+  outline-offset: -1px;
+}
+
+.os-window__titlebar:active {
+  cursor: grabbing;
+}
+
+.os-window__title {
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.os-window__controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.os-window__controls button {
+  width: 1.9rem;
+  height: 1.6rem;
+  border-radius: 6px;
+  border: 1px solid rgba(125, 141, 173, 0.25);
+  background: rgba(15, 20, 30, 0.65);
+  color: inherit;
+  font-size: 0.9rem;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.os-window__controls button:hover {
+  background: rgba(71, 110, 214, 0.55);
+  border-color: rgba(128, 166, 255, 0.55);
+}
+
+.os-window__controls button:focus-visible {
+  outline: 2px solid rgba(138, 180, 255, 0.8);
+  outline-offset: 1px;
+}
+
+.os-window__content {
+  flex: 1 1 auto;
+  background: rgba(10, 14, 22, 0.85);
+  padding: 1.25rem;
+  overflow: auto;
+  content-visibility: auto;
+  contain: paint;
+}
+
+.os-window__placeholder {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: rgba(226, 232, 240, 0.82);
+}
+
+.os-resize-handle {
+  position: absolute;
+  touch-action: none;
+  background: transparent;
+}
+
+.os-resize-handle--n,
+.os-resize-handle--s {
+  left: 10px;
+  right: 10px;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.os-resize-handle--n {
+  top: -4px;
+}
+
+.os-resize-handle--s {
+  bottom: -4px;
+}
+
+.os-resize-handle--e,
+.os-resize-handle--w {
+  top: 10px;
+  bottom: 10px;
+  width: 8px;
+  cursor: ew-resize;
+}
+
+.os-resize-handle--e {
+  right: -4px;
+}
+
+.os-resize-handle--w {
+  left: -4px;
+}
+
+.os-resize-handle--ne,
+.os-resize-handle--nw,
+.os-resize-handle--se,
+.os-resize-handle--sw {
+  width: 12px;
+  height: 12px;
+}
+
+.os-resize-handle--ne {
+  top: -4px;
+  right: -4px;
+  cursor: nesw-resize;
+}
+
+.os-resize-handle--nw {
+  top: -4px;
+  left: -4px;
+  cursor: nwse-resize;
+}
+
+.os-resize-handle--se {
+  bottom: -4px;
+  right: -4px;
+  cursor: nwse-resize;
+}
+
+.os-resize-handle--sw {
+  bottom: -4px;
+  left: -4px;
+  cursor: nesw-resize;
+}
+
+.os-snap-preview {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 10px;
+  background: rgba(86, 141, 255, 0.18);
+  outline: 2px solid rgba(86, 141, 255, 0.55);
+  z-index: 2;
+}
+
+.os-taskbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3.2rem;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  backdrop-filter: blur(14px);
+  background: linear-gradient(180deg, rgba(12, 17, 27, 0.88), rgba(7, 10, 16, 0.95));
+  border-top: 1px solid rgba(87, 130, 255, 0.18);
+}
+
+.os-taskbar__item {
+  min-width: 7rem;
+  height: 2.2rem;
+  border-radius: 8px;
+  border: 1px solid rgba(86, 141, 255, 0.22);
+  background: rgba(19, 27, 42, 0.85);
+  color: inherit;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.75rem;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.os-taskbar__item:hover,
+.os-taskbar__item:focus-visible {
+  background: rgba(91, 145, 255, 0.55);
+  border-color: rgba(142, 183, 255, 0.65);
+}
+
+.os-taskbar__item:focus-visible {
+  outline: 2px solid rgba(138, 180, 255, 0.75);
+  outline-offset: 2px;
+}
+
+.os-taskbar__empty {
+  font-size: 0.8rem;
+  color: rgba(203, 213, 225, 0.75);
+}
+
+@media (max-width: 768px) {
+  .os-window__titlebar {
+    padding: 0.3rem 0.6rem 0.35rem 0.75rem;
+  }
+
+  .os-window__content {
+    padding: 1rem;
+  }
+
+  .os-taskbar {
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    height: auto;
+  }
+
+  .os-taskbar__item {
+    min-width: 6rem;
+  }
+}
