@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import type { ReactNode, Ref } from 'react';
+import type { FC, ReactNode, Ref } from 'react';
 import styles from './window.module.css';
 import { WindowEditButtons, WindowTopBar } from './window';
 
@@ -32,6 +32,20 @@ const defaultOverlayState = {
     minimized: false,
     maximized: false,
 };
+
+const FallbackTopBar: FC<{ title: string }> = ({ title }) => (
+    <div className="flex items-center justify-between px-4 py-2 text-sm font-semibold text-white/80">
+        {title}
+    </div>
+);
+
+const ResolvedWindowTopBar =
+    typeof WindowTopBar === 'function' ? WindowTopBar : FallbackTopBar;
+
+const ResolvedWindowEditButtons =
+    typeof WindowEditButtons === 'function'
+        ? WindowEditButtons
+        : () => null;
 
 export default function SystemOverlayWindow({
     id,
@@ -111,7 +125,7 @@ export default function SystemOverlayWindow({
                 aria-describedby={ariaDescribedBy}
                 tabIndex={-1}
             >
-                <WindowTopBar
+                <ResolvedWindowTopBar
                     title={title}
                     onKeyDown={undefined}
                     onBlur={undefined}
@@ -119,7 +133,7 @@ export default function SystemOverlayWindow({
                     onPointerDown={undefined}
                     onDoubleClick={onMaximize ? handleMaximize : undefined}
                 />
-                <WindowEditButtons
+                <ResolvedWindowEditButtons
                     minimize={handleMinimize}
                     maximize={handleMaximize}
                     isMaximised={Boolean(maximized)}
