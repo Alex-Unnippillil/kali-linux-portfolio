@@ -11859,19 +11859,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-draggable@npm:^4.4.5":
-  version: 4.5.0
-  resolution: "react-draggable@npm:4.5.0"
-  dependencies:
-    clsx: "npm:^2.1.1"
-    prop-types: "npm:^15.8.1"
-  peerDependencies:
-    react: ">= 16.3.0"
-    react-dom: ">= 16.3.0"
-  checksum: 10c0/6f7591fe450555218bf0d9e31984be02451bf3f678fb121f51ac0a0a645d01a1b5ea8248ef9afddcd24239028911fd88032194b9c00b30ad5ece76ea13397fc3
-  languageName: node
-  linkType: hard
-
 "react-force-graph@npm:^1.45.0":
   version: 1.48.0
   resolution: "react-force-graph@npm:1.48.0"
@@ -13899,6 +13886,7 @@ __metadata:
     capstone-wasm: "npm:^1.0.3"
     chess.js: "npm:^1.0.0"
     chrono-node: "npm:^2.8.4"
+    clsx: "npm:^2.1.1"
     cron-parser: "npm:^5.3.0"
     cytoscape: "npm:^3.33.1"
     cytoscape-cose-bilkent: "npm:^4.1.0"
@@ -13945,7 +13933,6 @@ __metadata:
     react-bootstrap: "npm:^2.10.4"
     react-cytoscapejs: "npm:^2.0.0"
     react-dom: "npm:19.1.1"
-    react-draggable: "npm:^4.4.5"
     react-force-graph: "npm:^1.45.0"
     react-ga4: "npm:^2.1.0"
     react-github-calendar: "npm:^4.5.9"

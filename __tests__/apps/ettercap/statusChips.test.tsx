@@ -2,11 +2,6 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import EttercapPage from '../../../apps/ettercap';
 
-jest.mock('react-draggable', () => ({
-  __esModule: true,
-  default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
-
 describe('EttercapPage status chips', () => {
   it('renders the status chips once the demo starts', () => {
     render(<EttercapPage />);

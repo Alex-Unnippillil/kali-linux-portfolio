@@ -65,6 +65,38 @@ const setVisualViewport = (width?: number, height?: number) => {
   delete (window as any).visualViewport;
 };
 
+type RectConfig = { left: number; top: number; width: number; height: number };
+
+const setWindowRect = (element: HTMLElement, rect: RectConfig) => {
+  element.getBoundingClientRect = () => ({
+    left: rect.left,
+    top: rect.top,
+    right: rect.left + rect.width,
+    bottom: rect.top + rect.height,
+    width: rect.width,
+    height: rect.height,
+    x: rect.left,
+    y: rect.top,
+    toJSON: () => {},
+  } as DOMRect);
+  element.style.setProperty('--window-transform-x', `${rect.left}px`);
+  element.style.setProperty('--window-transform-y', `${rect.top}px`);
+  element.style.transform = `translate(${rect.left}px, ${rect.top}px)`;
+};
+
+const startDragAt = (instance: any, clientX: number, clientY: number) => {
+  instance.handlePointerDragStart?.(null, { clientX, clientY });
+};
+
+const moveDragTo = (instance: any, clientX: number, clientY: number) => {
+  instance.handlePointerDragMove?.(null, { clientX, clientY });
+};
+
+const endDragAt = (instance: any, clientX: number, clientY: number) => {
+  instance.handlePointerDragEnd?.(null, { clientX, clientY });
+  instance.handlePointerCaptureEnd?.();
+};
+
 beforeEach(() => {
   setViewport(1440, 900);
   measureSafeAreaInsetMock.mockReturnValue(0);
@@ -77,19 +109,6 @@ afterEach(() => {
 });
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
-jest.mock('react-draggable', () => {
-  const React = require('react');
-  const MockDraggable = ({ children, grid }: any) => (
-    <div data-testid="draggable-mock" data-grid={Array.isArray(grid) ? grid.join(',') : undefined}>
-      {children}
-    </div>
-  );
-  MockDraggable.displayName = 'MockDraggable';
-  return {
-    __esModule: true,
-    default: MockDraggable,
-  };
-});
 jest.mock('../components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
 
 describe('Window lifecycle', () => {
@@ -144,25 +163,6 @@ describe('Window lifecycle', () => {
 });
 
 describe('Window snap grid configuration', () => {
-  it('applies custom grid to draggable when snapping is enabled', () => {
-    render(
-      <Window
-        id="grid-test"
-        title="Grid Test"
-        screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
-        snapEnabled
-        snapGrid={[16, 24]}
-      />
-    );
-
-    const draggable = screen.getByTestId('draggable-mock');
-    expect(draggable).toHaveAttribute('data-grid', '16,24');
-  });
-
   it('snaps dimensions using axis-specific grid values', () => {
     const ref = React.createRef<any>();
     render(
@@ -215,9 +215,13 @@ describe('Window snapping preview', () => {
       y: 150,
       toJSON: () => {}
     });
+    winEl.style.setProperty('--window-transform-x', '5px');
+    winEl.style.setProperty('--window-transform-y', '150px');
+    winEl.style.transform = 'translate(5px, 150px)';
 
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handlePointerDragStart(null, { clientX: 8, clientY: 160 });
+      ref.current!.handlePointerDragMove(null, { clientX: 8, clientY: 160 });
     });
 
     const preview = screen.getByTestId('snap-preview');
@@ -256,9 +260,13 @@ describe('Window snapping preview', () => {
       y: 200,
       toJSON: () => {}
     });
+    winEl.style.setProperty('--window-transform-x', '200px');
+    winEl.style.setProperty('--window-transform-y', '200px');
+    winEl.style.transform = 'translate(200px, 200px)';
 
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handlePointerDragStart(null, { clientX: 260, clientY: 260 });
+      ref.current!.handlePointerDragMove(null, { clientX: 260, clientY: 260 });
     });
 
     expect(screen.queryByTestId('snap-preview')).toBeNull();
@@ -281,20 +289,11 @@ describe('Window snapping preview', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 400,
-      top: 5,
-      right: 500,
-      bottom: 105,
-      width: 100,
-      height: 100,
-      x: 400,
-      y: 5,
-      toJSON: () => {}
-    });
+    setWindowRect(winEl, { left: 400, top: 5, width: 100, height: 100 });
 
     act(() => {
-      ref.current!.handleDrag();
+      startDragAt(ref.current!, 410, 15);
+      moveDragTo(ref.current!, 410, 15);
     });
 
     expect(ref.current!.state.snapPosition).toBe('top');
@@ -321,20 +320,11 @@ describe('Window snapping preview', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 4,
-      top: 6,
-      right: 104,
-      bottom: 106,
-      width: 100,
-      height: 100,
-      x: 4,
-      y: 6,
-      toJSON: () => {}
-    });
+    setWindowRect(winEl, { left: 4, top: 6, width: 100, height: 100 });
 
     act(() => {
-      ref.current!.handleDrag();
+      startDragAt(ref.current!, 12, 18);
+      moveDragTo(ref.current!, 12, 18);
     });
 
     expect(ref.current!.state.snapPosition).toBe('top-left');
@@ -362,20 +352,11 @@ describe('Window snapping preview', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 1490,
-      top: 770,
-      right: 1590,
-      bottom: 870,
-      width: 100,
-      height: 100,
-      x: 1490,
-      y: 770,
-      toJSON: () => {}
-    });
+    setWindowRect(winEl, { left: 1490, top: 770, width: 100, height: 100 });
 
     act(() => {
-      ref.current!.handleDrag();
+      startDragAt(ref.current!, 1575, 840);
+      moveDragTo(ref.current!, 1575, 840);
     });
 
     expect(ref.current!.state.snapPosition).toBe('right');
@@ -409,23 +390,14 @@ describe('Window snapping finalize and release', () => {
 
     const winEl = document.getElementById('test-window')!;
     const leftSnapTop = computeLeftSnapTestTop();
-    winEl.getBoundingClientRect = () => ({
-      left: 5,
-      top: leftSnapTop,
-      right: 105,
-      bottom: leftSnapTop + 100,
-      width: 100,
-      height: 100,
-      x: 5,
-      y: leftSnapTop,
-      toJSON: () => {}
-    });
+    setWindowRect(winEl, { left: 5, top: leftSnapTop, width: 100, height: 100 });
 
     act(() => {
-      ref.current!.handleDrag();
+      startDragAt(ref.current!, 12, leftSnapTop + 12);
+      moveDragTo(ref.current!, 12, leftSnapTop + 12);
     });
     act(() => {
-      ref.current!.handleStop();
+      endDragAt(ref.current!, 12, leftSnapTop + 12);
     });
 
     expect(ref.current!.state.snapped).toBe('left');
@@ -453,23 +425,14 @@ describe('Window snapping finalize and release', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 1820,
-      top: 200,
-      right: 1920,
-      bottom: 300,
-      width: 100,
-      height: 100,
-      x: 1820,
-      y: 200,
-      toJSON: () => {}
-    });
+    setWindowRect(winEl, { left: 1820, top: 200, width: 100, height: 100 });
 
     act(() => {
-      ref.current!.handleDrag();
+      startDragAt(ref.current!, 1870, 250);
+      moveDragTo(ref.current!, 1870, 250);
     });
     act(() => {
-      ref.current!.handleStop();
+      endDragAt(ref.current!, 1870, 250);
     });
 
     expect(ref.current!.state.snapped).toBe('right');
@@ -497,23 +460,14 @@ describe('Window snapping finalize and release', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 400,
-      top: 6,
-      right: 500,
-      bottom: 106,
-      width: 100,
-      height: 100,
-      x: 400,
-      y: 6,
-      toJSON: () => {}
-    });
+    setWindowRect(winEl, { left: 400, top: 6, width: 100, height: 100 });
 
     act(() => {
-      ref.current!.handleDrag();
+      startDragAt(ref.current!, 450, 20);
+      moveDragTo(ref.current!, 450, 20);
     });
     act(() => {
-      ref.current!.handleStop();
+      endDragAt(ref.current!, 450, 20);
     });
 
     expect(ref.current!.state.snapped).toBe('top');
@@ -540,23 +494,14 @@ describe('Window snapping finalize and release', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 6,
-      top: 8,
-      right: 106,
-      bottom: 208,
-      width: 100,
-      height: 200,
-      x: 6,
-      y: 8,
-      toJSON: () => {}
-    });
+    setWindowRect(winEl, { left: 6, top: 8, width: 100, height: 200 });
 
     act(() => {
-      ref.current!.handleDrag();
+      startDragAt(ref.current!, 20, 36);
+      moveDragTo(ref.current!, 20, 36);
     });
     act(() => {
-      ref.current!.handleStop();
+      endDragAt(ref.current!, 20, 36);
     });
 
     expect(ref.current!.state.snapped).toBe('top-left');
@@ -583,23 +528,14 @@ describe('Window snapping finalize and release', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 1500,
-      top: 760,
-      right: 1600,
-      bottom: 860,
-      width: 100,
-      height: 100,
-      x: 1500,
-      y: 760,
-      toJSON: () => {}
-    });
+    setWindowRect(winEl, { left: 1500, top: 760, width: 100, height: 100 });
 
     act(() => {
-      ref.current!.handleDrag();
+      startDragAt(ref.current!, 1580, 820);
+      moveDragTo(ref.current!, 1580, 820);
     });
     act(() => {
-      ref.current!.handleStop();
+      endDragAt(ref.current!, 1580, 820);
     });
 
     expect(ref.current!.state.snapped).toBe('right');
@@ -629,23 +565,14 @@ describe('Window snapping finalize and release', () => {
 
     const winEl = document.getElementById('test-window')!;
     const leftSnapTop = computeLeftSnapTestTop();
-    winEl.getBoundingClientRect = () => ({
-      left: 5,
-      top: leftSnapTop,
-      right: 105,
-      bottom: leftSnapTop + 100,
-      width: 100,
-      height: 100,
-      x: 5,
-      y: leftSnapTop,
-      toJSON: () => {}
-    });
+    setWindowRect(winEl, { left: 5, top: leftSnapTop, width: 100, height: 100 });
 
     act(() => {
-      ref.current!.handleDrag();
+      startDragAt(ref.current!, 15, leftSnapTop + 20);
+      moveDragTo(ref.current!, 15, leftSnapTop + 20);
     });
     act(() => {
-      ref.current!.handleStop();
+      endDragAt(ref.current!, 15, leftSnapTop + 20);
     });
 
     expect(ref.current!.state.snapped).toBe('left');
@@ -691,23 +618,14 @@ describe('Window snapping finalize and release', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 5,
-      top: 150,
-      right: 105,
-      bottom: 250,
-      width: 100,
-      height: 100,
-      x: 5,
-      y: 150,
-      toJSON: () => {}
-    });
+    setWindowRect(winEl, { left: 5, top: 150, width: 100, height: 100 });
 
     act(() => {
-      ref.current!.handleDrag();
+      startDragAt(ref.current!, 15, 170);
+      moveDragTo(ref.current!, 15, 170);
     });
     act(() => {
-      ref.current!.handleStop();
+      endDragAt(ref.current!, 15, 170);
     });
 
     expect(ref.current!.state.snapped).toBe('left');
@@ -764,11 +682,12 @@ describe('Window keyboard dragging', () => {
     );
 
     const handle = screen.getByText('Test').parentElement!;
+    const winEl = document.getElementById('test-window')!;
+    setWindowRect(winEl, { left: 0, top: 0, width: 100, height: 100 });
 
     fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
     fireEvent.keyDown(handle, { key: 'ArrowRight' });
 
-    const winEl = document.getElementById('test-window')!;
     expect(winEl.style.transform).toBe('translate(10px, 0px)');
     expect(handle).toHaveAttribute('aria-grabbed', 'true');
 
@@ -794,24 +713,15 @@ describe('Edge resistance', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 0,
-      top: 0,
-      right: 100,
-      bottom: 100,
-      width: 100,
-      height: 100,
-      x: 0,
-      y: 0,
-      toJSON: () => {}
-    });
+    const topBound = ref.current!.state.safeAreaTop ?? 0;
+    setWindowRect(winEl, { left: 0, top: topBound, width: 100, height: 100 });
 
     act(() => {
-      ref.current!.handleDrag({}, { node: winEl, x: -100, y: -50 } as any);
+      startDragAt(ref.current!, 16, topBound + 16);
+      moveDragTo(ref.current!, -80, topBound - 40);
     });
 
-    const expectedTop = ref.current!.state.safeAreaTop ?? 0;
-    expect(winEl.style.transform).toBe(`translate(0px, ${expectedTop}px)`);
+    expect(winEl.style.transform).toBe(`translate(0px, ${topBound}px)`);
   });
 });
 

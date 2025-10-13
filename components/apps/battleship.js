@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Draggable from 'react-draggable';
+import PointerDraggable from '../common/PointerDraggable';
 import {
   MonteCarloAI,
   RandomSalvoAI,
@@ -452,9 +452,10 @@ const Battleship = () => {
             <div className="relative border border-ub-dark-grey" style={{width:BOARD_SIZE*CELL,height:BOARD_SIZE*CELL}}>
               {renderBoard(playerBoard)}
                 {ships.map((ship,i)=>(
-                  <Draggable
+                  <PointerDraggable
                     key={ship.id}
                     grid={[CELL,CELL]}
+                    bounds="parent"
                     position={{x:(ship.x||0)*CELL,y:(ship.y||0)*CELL}}
                     onStart={(e,data)=>handleDrag(i,e,data)}
                     onDrag={(e,data)=>handleDrag(i,e,data)}
@@ -466,7 +467,7 @@ const Battleship = () => {
                       style={{width:(ship.dir===0?ship.len:1)*CELL,height:(ship.dir===1?ship.len:1)*CELL}}
                       onDoubleClick={()=>rotateShip(ship.id)}
                     />
-                  </Draggable>
+                  </PointerDraggable>
                 ))}
             </div>
             <div className="flex flex-col space-y-2">

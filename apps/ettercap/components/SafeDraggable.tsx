@@ -1,15 +1,19 @@
 'use client';
 
 import React from 'react';
-import Draggable from 'react-draggable';
+import PointerDraggable, { PointerDraggableProps } from '../../components/common/PointerDraggable';
 
-type DraggableComponentProps = React.ComponentProps<typeof Draggable>;
-type SafeDraggableProps = React.PropsWithChildren<DraggableComponentProps>;
+type SafeDraggableProps = React.PropsWithChildren<PointerDraggableProps>;
 
 export default function SafeDraggable({ children, ...props }: SafeDraggableProps) {
   if (typeof window === 'undefined') {
     return <>{children}</>;
   }
 
-  return <Draggable {...props}>{children}</Draggable>;
+  const child = React.Children.only(children);
+  return (
+    <PointerDraggable {...props}>
+      {child}
+    </PointerDraggable>
+  );
 }
