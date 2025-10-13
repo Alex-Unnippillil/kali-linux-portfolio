@@ -27,13 +27,14 @@ import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
 import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
-import { useSettings } from '../../hooks/useSettings';
+import { useSettings, SettingsContext } from '../../hooks/useSettings';
 import {
     clampWindowPositionWithinViewport,
     clampWindowTopPosition,
     getSafeAreaInsets,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
+import { UI_HAPTIC_EVENTS, triggerUIHaptic } from '../../utils/uiHaptics';
 
 const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
 const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
@@ -164,6 +165,8 @@ export class Desktop extends Component {
     static defaultProps = {
         snapGrid: [8, 8],
     };
+
+    static contextType = SettingsContext;
 
     constructor(props) {
         super(props);
@@ -2635,6 +2638,14 @@ export class Desktop extends Component {
         this.attachIconKeyboardListeners();
     };
 
+    triggerDesktopHaptic = (eventKey) => {
+        const context = this.context || {};
+        triggerUIHaptic(eventKey, {
+            hapticsEnabled: context.haptics,
+            reducedMotion: context.reducedMotion,
+        });
+    }
+
     handleIconPointerMove = (event) => {
         if (!this.iconDragState || event.pointerId !== this.iconDragState.pointerId) return;
         const dragState = this.iconDragState;
@@ -2669,10 +2680,12 @@ export class Desktop extends Component {
             const dropTarget = this.getFolderDropTarget(event, dragState);
             if (dropTarget && dropTarget.type === 'folder') {
                 this.moveIconIntoFolder(dragState.id, dropTarget.id);
+                this.triggerDesktopHaptic(UI_HAPTIC_EVENTS.ICON_DROP);
             } else {
                 const position = this.resolveDropPosition(event, dragState);
                 this.updateIconPosition(dragState.id, position.x, position.y, true);
                 this.setState({ draggingIconId: null });
+                this.triggerDesktopHaptic(UI_HAPTIC_EVENTS.ICON_DROP);
             }
             return;
         }

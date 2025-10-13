@@ -6,6 +6,7 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import { SettingsContext } from '../../hooks/useSettings';
 import {
     clampWindowTopPosition,
     DEFAULT_WINDOW_TOP_OFFSET,
@@ -15,6 +16,7 @@ import {
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET } from '../../utils/uiConstants';
+import { UI_HAPTIC_EVENTS, triggerUIHaptic } from '../../utils/uiHaptics';
 
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
@@ -92,6 +94,8 @@ export class Window extends Component {
         snapGrid: [8, 8],
     };
 
+    static contextType = SettingsContext;
+
     constructor(props) {
         super(props);
         this.id = null;
@@ -134,6 +138,14 @@ export class Window extends Component {
             const { width, height } = this.state;
             this.props.onSizeChange(width, height);
         }
+    }
+
+    triggerWindowHaptic = (eventKey) => {
+        const context = this.context || {};
+        triggerUIHaptic(eventKey, {
+            hapticsEnabled: context.haptics,
+            reducedMotion: context.reducedMotion,
+        });
     }
 
     componentDidMount() {
@@ -476,6 +488,7 @@ export class Window extends Component {
             this.setTransformMotionPreset(node, 'snap');
             node.style.transform = `translate(${region.left}px, ${region.top}px)`;
         }
+        const previousSnap = this.state.snapped;
         this.setState({
             snapPreview: null,
             snapPosition: null,
@@ -487,6 +500,9 @@ export class Window extends Component {
         }, () => {
             this.resizeBoundries();
             this.notifySizeChange();
+            if (previousSnap !== resolvedPosition) {
+                this.triggerWindowHaptic(UI_HAPTIC_EVENTS.WINDOW_SNAP);
+            }
         });
     }
 
@@ -623,6 +639,7 @@ export class Window extends Component {
     minimizeWindow = () => {
         this.setWinowsPosition();
         this.props.hasMinimised(this.id);
+        this.triggerWindowHaptic(UI_HAPTIC_EVENTS.WINDOW_MINIMIZE);
     }
 
     restoreWindow = () => {
