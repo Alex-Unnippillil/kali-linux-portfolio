@@ -6,6 +6,17 @@ import {
   WINDOW_TOP_MARGIN,
 } from './uiConstants';
 
+export const WINDOW_STATE_PARAM = 'windowState';
+export const SHARED_WINDOW_STATE_STORAGE_KEY = '__DESKTOP_WINDOW_STATE__';
+export const SHARED_WINDOW_STATE_TOKEN_KEY = '__DESKTOP_WINDOW_STATE_TOKENS__';
+
+const MAX_POSITION = 32000;
+const MIN_SIZE_PERCENT = 10;
+const MAX_SIZE_PERCENT = 100;
+const MAX_CONTEXT_STRING_LENGTH = 2048;
+const MAX_CONTEXT_DEPTH = 4;
+const MAX_CONTEXT_ARRAY_LENGTH = 64;
+
 const NAVBAR_SELECTOR = '.main-navbar-vp';
 const DEFAULT_NAVBAR_HEIGHT = NAVBAR_HEIGHT + NAVBAR_VERTICAL_PADDING;
 const SAFE_AREA_PROPERTIES = {
@@ -19,6 +30,27 @@ const TASKBAR_HEIGHT_PROPERTY = '--shell-taskbar-height';
 const DEFAULT_FONT_SIZE = 16;
 
 export const DEFAULT_SNAP_BOTTOM_INSET = SNAP_BOTTOM_INSET;
+
+const clamp = (value, min, max) => {
+  if (typeof value !== 'number' || Number.isNaN(value)) return min;
+  if (typeof min === 'number' && value < min) return min;
+  if (typeof max === 'number' && value > max) return max;
+  return value;
+};
+
+const isPlainObject = (value) => {
+  if (!value || typeof value !== 'object') return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+};
+
+const sanitizeNumber = (value, min, max) => {
+  if (typeof value !== 'number') {
+    value = Number(value);
+  }
+  if (!Number.isFinite(value)) return null;
+  return clamp(value, min, max);
+};
 
 const parseFontSize = (value) => {
   if (typeof value !== 'string') return DEFAULT_FONT_SIZE;
@@ -257,4 +289,271 @@ export const clampWindowPositionWithinViewport = (
       maxY,
     },
   };
+};
+
+const sanitizeContextValue = (value, depth) => {
+  if (depth > MAX_CONTEXT_DEPTH) return undefined;
+  if (
+    typeof value === 'string'
+  ) {
+    return value.slice(0, MAX_CONTEXT_STRING_LENGTH);
+  }
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : undefined;
+  }
+  if (typeof value === 'boolean' || value === null) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    const next = [];
+    for (let index = 0; index < value.length && index < MAX_CONTEXT_ARRAY_LENGTH; index += 1) {
+      const item = sanitizeContextValue(value[index], depth + 1);
+      if (item !== undefined) {
+        next.push(item);
+      }
+    }
+    return next;
+  }
+  if (isPlainObject(value)) {
+    const entries = Object.entries(value);
+    const next = {};
+    entries.forEach(([key, val]) => {
+      if (typeof key !== 'string') return;
+      const sanitized = sanitizeContextValue(val, depth + 1);
+      if (sanitized !== undefined) {
+        next[key] = sanitized;
+      }
+    });
+    return next;
+  }
+  return undefined;
+};
+
+const sanitizeContext = (value) => {
+  if (!isPlainObject(value)) return undefined;
+  const sanitized = sanitizeContextValue(value, 0);
+  if (!sanitized || typeof sanitized !== 'object' || Array.isArray(sanitized)) {
+    return undefined;
+  }
+  return sanitized;
+};
+
+export const sanitizeWindowSnapshot = (value) => {
+  if (!value || typeof value !== 'object') return null;
+  const id = typeof value.id === 'string' ? value.id.trim() : '';
+  if (!id || !/^[\w.-]+$/.test(id)) {
+    return null;
+  }
+
+  const snapshot = { id };
+
+  if (value.position && typeof value.position === 'object') {
+    const x = sanitizeNumber(value.position.x, 0, MAX_POSITION);
+    const y = sanitizeNumber(value.position.y, 0, MAX_POSITION);
+    if (x !== null && y !== null) {
+      snapshot.position = { x, y };
+    }
+  }
+
+  if (value.size && typeof value.size === 'object') {
+    const width = sanitizeNumber(value.size.width, MIN_SIZE_PERCENT, MAX_SIZE_PERCENT);
+    const height = sanitizeNumber(value.size.height, MIN_SIZE_PERCENT, MAX_SIZE_PERCENT);
+    if (width !== null && height !== null) {
+      snapshot.size = { width, height };
+    }
+  }
+
+  if (value.context) {
+    const context = sanitizeContext(value.context);
+    if (context) {
+      snapshot.context = context;
+    }
+  }
+
+  return snapshot;
+};
+
+const toBase64Url = (value) => {
+  try {
+    if (typeof Buffer !== 'undefined') {
+      return Buffer.from(value, 'utf8').toString('base64url');
+    }
+  } catch (error) {
+    // ignore buffer errors and fall back
+  }
+  if (typeof window !== 'undefined' && typeof window.btoa === 'function') {
+    return window
+      .btoa(value)
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/u, '');
+  }
+  return null;
+};
+
+const fromBase64Url = (value) => {
+  if (typeof value !== 'string') return null;
+  try {
+    if (typeof Buffer !== 'undefined') {
+      return Buffer.from(value, 'base64url').toString('utf8');
+    }
+  } catch (error) {
+    // ignore buffer decode errors
+  }
+  if (typeof window !== 'undefined' && typeof window.atob === 'function') {
+    try {
+      const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+      return window.atob(normalized);
+    } catch (error) {
+      return null;
+    }
+  }
+  return null;
+};
+
+export const encodeWindowSnapshot = (snapshot) => {
+  const sanitized = sanitizeWindowSnapshot(snapshot);
+  if (!sanitized) return null;
+  try {
+    const json = JSON.stringify(sanitized);
+    return toBase64Url(json);
+  } catch (error) {
+    return null;
+  }
+};
+
+export const decodeWindowSnapshot = (encoded) => {
+  if (typeof encoded !== 'string' || !encoded) return null;
+  const json = fromBase64Url(encoded);
+  if (!json) return null;
+  try {
+    const parsed = JSON.parse(json);
+    return sanitizeWindowSnapshot(parsed);
+  } catch (error) {
+    return null;
+  }
+};
+
+const resolveBaseUrl = (base) => {
+  if (base) {
+    return base;
+  }
+  if (typeof window !== 'undefined' && window.location) {
+    return window.location.href;
+  }
+  return null;
+};
+
+export const buildWindowSnapshotUrl = (snapshot, baseUrl) => {
+  const encoded = encodeWindowSnapshot(snapshot);
+  if (!encoded) return null;
+  const base = resolveBaseUrl(baseUrl);
+  if (!base) return null;
+  try {
+    const url = new URL(base, typeof window !== 'undefined' ? window.location?.origin : 'http://localhost');
+    url.searchParams.set(WINDOW_STATE_PARAM, encoded);
+    return url.toString();
+  } catch (error) {
+    return null;
+  }
+};
+
+export const parseWindowSnapshotFromUrl = (url) => {
+  const base = resolveBaseUrl(url);
+  if (!base) return null;
+  try {
+    const parsedUrl = new URL(base, typeof window !== 'undefined' ? window.location?.origin : 'http://localhost');
+    const token = parsedUrl.searchParams.get(WINDOW_STATE_PARAM);
+    if (!token) return null;
+    return decodeWindowSnapshot(token);
+  } catch (error) {
+    return null;
+  }
+};
+
+export const readWindowNodePosition = (node) => {
+  if (!node || !node.style) {
+    return null;
+  }
+
+  const style = node.style;
+
+  if (typeof style.getPropertyValue === 'function') {
+    const x = style.getPropertyValue('--window-transform-x');
+    const y = style.getPropertyValue('--window-transform-y');
+    const parsedX = typeof x === 'string' ? parseFloat(x) : null;
+    const parsedY = typeof y === 'string' ? parseFloat(y) : null;
+    if (Number.isFinite(parsedX) && Number.isFinite(parsedY)) {
+      return { x: parsedX, y: parsedY };
+    }
+  }
+
+  if (typeof style.transform === 'string' && style.transform.length) {
+    const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(style.transform);
+    if (match) {
+      const parsedX = parseFloat(match[1]);
+      const parsedY = parseFloat(match[2]);
+      if (Number.isFinite(parsedX) && Number.isFinite(parsedY)) {
+        return { x: parsedX, y: parsedY };
+      }
+    }
+  }
+
+  return null;
+};
+
+const getWindowStateStore = () => {
+  if (typeof window === 'undefined') return null;
+  const store = window[SHARED_WINDOW_STATE_STORAGE_KEY];
+  if (store && typeof store === 'object') {
+    return store;
+  }
+  window[SHARED_WINDOW_STATE_STORAGE_KEY] = {};
+  return window[SHARED_WINDOW_STATE_STORAGE_KEY];
+};
+
+export const storeSharedWindowState = (snapshot) => {
+  const sanitized = sanitizeWindowSnapshot(snapshot);
+  if (!sanitized) return false;
+  const store = getWindowStateStore();
+  if (!store) return false;
+  store[sanitized.id] = sanitized;
+  return true;
+};
+
+export const consumeSharedWindowState = (id) => {
+  if (typeof id !== 'string' || !id) return null;
+  const store = getWindowStateStore();
+  if (!store) return null;
+  const snapshot = store[id];
+  if (snapshot) {
+    delete store[id];
+    return snapshot;
+  }
+  return null;
+};
+
+const getTokenStore = () => {
+  if (typeof window === 'undefined') return null;
+  const store = window[SHARED_WINDOW_STATE_TOKEN_KEY];
+  if (store && typeof store === 'object') {
+    return store;
+  }
+  window[SHARED_WINDOW_STATE_TOKEN_KEY] = {};
+  return window[SHARED_WINDOW_STATE_TOKEN_KEY];
+};
+
+export const hasProcessedWindowStateToken = (token) => {
+  if (!token || typeof token !== 'string') return false;
+  const store = getTokenStore();
+  if (!store) return false;
+  return Boolean(store[token]);
+};
+
+export const markWindowStateTokenProcessed = (token) => {
+  if (!token || typeof token !== 'string') return false;
+  const store = getTokenStore();
+  if (!store) return false;
+  store[token] = true;
+  return true;
 };

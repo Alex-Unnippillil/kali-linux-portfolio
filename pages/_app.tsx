@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import type { ReactElement } from 'react';
 import type { AppProps } from 'next/app';
+import { useRouter } from 'next/router';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -18,8 +19,16 @@ import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import {
+  hasProcessedWindowStateToken,
+  markWindowStateTokenProcessed,
+  parseWindowSnapshotFromUrl,
+  storeSharedWindowState,
+  WINDOW_STATE_PARAM,
+} from '../utils/windowLayout';
 import { Rajdhani } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
+import type { SerializedWindowState } from '../types/windowState';
 
 type PeriodicSyncPermissionDescriptor = PermissionDescriptor & {
   name: 'periodic-background-sync';
@@ -28,6 +37,8 @@ type PeriodicSyncPermissionDescriptor = PermissionDescriptor & {
 declare global {
   interface Window {
     manualRefresh?: () => Promise<void>;
+    __DESKTOP_WINDOW_STATE__?: Record<string, SerializedWindowState>;
+    __DESKTOP_WINDOW_STATE_TOKENS__?: Record<string, boolean>;
   }
 
   interface ServiceWorkerRegistration {
@@ -82,6 +93,79 @@ const kaliSans = Rajdhani({
 });
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let currentUrl: string | null = null;
+    try {
+      currentUrl = window.location.href;
+    } catch {
+      currentUrl = null;
+    }
+
+    if (!currentUrl) return;
+
+    let token: string | null = null;
+    try {
+      token = new URL(currentUrl).searchParams.get(WINDOW_STATE_PARAM);
+    } catch {
+      token = null;
+    }
+
+    if (!token || hasProcessedWindowStateToken(token)) {
+      return;
+    }
+
+    const snapshot = parseWindowSnapshotFromUrl(currentUrl) as SerializedWindowState | null;
+    markWindowStateTokenProcessed(token);
+    if (!snapshot) {
+      return;
+    }
+
+    storeSharedWindowState(snapshot);
+
+    try {
+      const parsed = new URL(currentUrl);
+      parsed.searchParams.delete(WINDOW_STATE_PARAM);
+      const cleaned = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      if (cleaned && cleaned !== router.asPath) {
+        void router.replace(cleaned, undefined, { shallow: true });
+      }
+    } catch {
+      // ignore URL cleanup errors
+    }
+
+    const detail: Record<string, unknown> = { id: snapshot.id };
+    if (snapshot.context && typeof snapshot.context === 'object') {
+      Object.assign(detail, snapshot.context);
+    }
+
+    const waitForDesktop = () => new Promise<void>((resolve) => {
+      if (typeof document === 'undefined') {
+        resolve();
+        return;
+      }
+
+      let attempts = 0;
+      const maxAttempts = 40;
+      const step = () => {
+        attempts += 1;
+        if (document.getElementById('window-area') || attempts >= maxAttempts) {
+          resolve();
+          return;
+        }
+        window.setTimeout(step, 75);
+      };
+      step();
+    });
+
+    void waitForDesktop().then(() => {
+      window.dispatchEvent(new CustomEvent('open-app', { detail }));
+    });
+  }, [router, router.asPath]);
+
   useEffect(() => {
     const initAnalytics = async (): Promise<void> => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
