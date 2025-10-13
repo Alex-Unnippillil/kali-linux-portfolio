@@ -15,13 +15,15 @@ export default function Forecast({ days }: { days: ForecastDay[] }) {
       {days.map((d) => (
         <div
           key={d.date}
-          className="flex min-w-[84px] flex-1 flex-col items-center gap-2 rounded-md bg-white/5 p-2 text-center"
+          className="flex min-w-[84px] flex-1 flex-col items-center gap-2 rounded-md border border-kali-primary/25 bg-kali-surface/80 p-2 text-center shadow-sm"
         >
-          <div className="text-xs uppercase tracking-wide text-white/60">
+          <div className="text-xs uppercase tracking-wide text-kali-primary/80">
             {formatDayLabel(d.date)}
           </div>
           <WeatherIcon code={d.condition} className="h-10 w-10" />
-          <div className="text-sm font-medium">{Math.round(d.temp)}°</div>
+          <div className="text-sm font-semibold text-kali-primary">
+            {Math.round(d.temp)}°
+          </div>
         </div>
       ))}
     </div>

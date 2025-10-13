@@ -172,7 +172,7 @@ export default function WeatherApp() {
   };
 
   return (
-    <div className="p-4 text-white space-y-6">
+    <div className="space-y-6 p-4 text-white">
       <div className="flex flex-wrap gap-2">
         <input
           className="text-black px-2 py-1 rounded"
@@ -182,7 +182,7 @@ export default function WeatherApp() {
           onChange={(e) => setGroupName(e.target.value)}
         />
         <button
-          className="bg-blue-600 px-3 py-1 rounded text-sm font-medium"
+          className="rounded bg-kali-primary px-3 py-1 text-sm font-semibold text-kali-secondary shadow-[0_6px_16px_rgba(15,148,210,0.25)] transition hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
           onClick={saveGroup}
         >
           Save Group
@@ -190,10 +190,10 @@ export default function WeatherApp() {
         {groups.map((g) => (
           <button
             key={g.name}
-            className={`px-3 py-1 rounded text-sm font-medium transition ${
+            className={`rounded border px-3 py-1 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
               currentGroup === g.name
-                ? 'bg-blue-800'
-                : 'bg-white/15 hover:bg-white/25'
+                ? 'border-kali-primary/60 bg-kali-primary text-kali-secondary shadow-[0_6px_18px_rgba(15,148,210,0.35)]'
+                : 'border-kali-primary/30 bg-kali-surface/80 text-white/80 hover:bg-kali-surface/95'
             }`}
             onClick={() => switchGroup(g.name)}
           >
@@ -224,7 +224,7 @@ export default function WeatherApp() {
           onChange={(e) => setLon(e.target.value)}
         />
         <button
-          className="bg-blue-600 px-3 py-1 rounded text-sm font-medium"
+          className="rounded bg-kali-primary px-3 py-1 text-sm font-semibold text-kali-secondary shadow-[0_6px_16px_rgba(15,148,210,0.25)] transition hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
           onClick={addCity}
         >
           Add
@@ -239,7 +239,7 @@ export default function WeatherApp() {
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => onDrop(i)}
             onClick={() => setSelected(city)}
-            className="bg-white/10 p-4 rounded cursor-pointer transition hover:bg-white/15 focus-within:bg-white/15"
+            className="cursor-pointer rounded border border-kali-primary/25 bg-kali-surface/80 p-4 shadow-sm transition hover:bg-kali-surface/95 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-kali-focus"
           >
             <CityTile city={city} />
           </div>
