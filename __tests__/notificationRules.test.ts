@@ -91,3 +91,192 @@ describe('notification rule engine', () => {
     expect(low?.priority).toBe('low');
   });
 });
+
+describe('notification rule engine edge cases', () => {
+  it('normalizes urgency and priority hints across multiple formats', () => {
+    expect(derivePriorityFromHints({ urgency: 'critical' })?.priority).toBe('critical');
+    expect(derivePriorityFromHints({ urgency: 'normal' })?.priority).toBe('normal');
+    expect(derivePriorityFromHints({ 'urgency-level': 2 })?.priority).toBe('critical');
+    expect(derivePriorityFromHints({ 'urgency-level': '0' })?.priority).toBe('low');
+
+    expect(derivePriorityFromHints({ priority: '2' })?.priority).toBe('critical');
+    expect(derivePriorityFromHints({ priority: 1 })?.priority).toBe('high');
+    expect(derivePriorityFromHints({ importance: 'High' })?.priority).toBe('high');
+    expect(derivePriorityFromHints({ importance: 0 })?.priority).toBe('low');
+  });
+
+  it('exhaustively normalizes priority hints and urgency fallbacks', () => {
+    const priorityCases: Array<{ hints: Record<string, unknown>; expected: string | null }> = [
+      { hints: { priority: 'critical' }, expected: 'critical' },
+      { hints: { priority: 'HIGH' }, expected: 'high' },
+      { hints: { priority: 'normal' }, expected: 'normal' },
+      { hints: { priority: 'low' }, expected: 'low' },
+      { hints: { priority: '0' }, expected: 'low' },
+      { hints: { priority: true as unknown as string }, expected: null },
+      { hints: { priority: undefined as unknown as string }, expected: null },
+      { hints: { priority: ['critical'] as unknown as string[] }, expected: 'critical' },
+      { hints: { importance: ['low'] as unknown as string[] }, expected: 'low' },
+      { hints: { importance: true as unknown as string }, expected: null },
+    ];
+
+    priorityCases.forEach(({ hints, expected }) => {
+      const result = derivePriorityFromHints(hints);
+      if (expected === null) {
+        expect(result).toBeNull();
+      } else {
+        expect(result?.priority).toBe(expected);
+      }
+    });
+
+    const urgencyVariants: Array<{ hints: Record<string, unknown>; expected: string | null }> = [
+      { hints: { urgency: 'high' }, expected: 'high' },
+      { hints: { urgency: 'critical' }, expected: 'critical' },
+      { hints: { urgency: 'low' }, expected: 'low' },
+      { hints: { urgency: 'normal' }, expected: 'normal' },
+      { hints: { urgency: '2' }, expected: 'critical' },
+      { hints: { urgency: '1' }, expected: 'high' },
+      { hints: { urgency: '0' }, expected: 'low' },
+      { hints: { urgency: undefined as unknown as string }, expected: null },
+    ];
+
+    urgencyVariants.forEach(({ hints, expected }) => {
+      const result = derivePriorityFromHints(hints);
+      if (expected === null) {
+        expect(result).toBeNull();
+      } else {
+        expect(result?.priority).toBe(expected);
+      }
+    });
+  });
+
+  it('returns null for malformed priority hints after normalization', () => {
+    expect(derivePriorityFromHints({ priority: ['normal', 'low'] as unknown as string[] })).toBeNull();
+    expect(
+      derivePriorityFromHints({
+        importance: { level: 'critical' } as unknown as string,
+      }),
+    ).toBeNull();
+    expect(derivePriorityFromHints({ urgency: 'urgent' })).toBeNull();
+  });
+
+  it('matches complex rule constraints including prefixes, keywords, and hints', () => {
+    const complexRuleSet = {
+      version: 1,
+      defaultPriority: 'low' as const,
+      rules: [
+        {
+          id: 'complex-match',
+          priority: 'critical' as const,
+          match: {
+            appIdPrefix: ['sec-'],
+            bodyContains: ['breach'],
+            titleContains: ['Alert'],
+            keywords: ['breach'],
+            hints: {
+              channel: ['security', undefined as unknown as string],
+              severity: ['critical', '2'],
+            },
+          },
+        },
+      ],
+    };
+
+    const matched = classifyNotification(
+      {
+        appId: 'sec-monitor',
+        title: 'Alert: Breach detected',
+        body: 'Sensor reported breach error at node 4',
+        hints: { channel: 'Security', severity: '2' },
+      },
+      complexRuleSet,
+    );
+
+    expect(matched).toEqual({
+      priority: 'critical',
+      matchedRuleId: 'complex-match',
+      source: 'rule',
+    });
+
+    const missingHint = classifyNotification(
+      {
+        appId: 'sec-monitor',
+        title: 'Alert: Breach detected',
+        body: 'Sensor reported breach error at node 4',
+        hints: { channel: 'operations' },
+      },
+      complexRuleSet,
+    );
+
+    expect(missingHint).toEqual({ priority: 'low', matchedRuleId: null, source: 'default' });
+
+    const prefixMiss = classifyNotification(
+      {
+        appId: 'ops-monitor',
+        title: 'Alert: Breach detected',
+        body: 'Sensor reported breach error at node 4',
+        hints: { channel: 'Security', severity: 'critical' },
+      },
+      complexRuleSet,
+    );
+
+    expect(prefixMiss).toEqual({ priority: 'low', matchedRuleId: null, source: 'default' });
+
+    const titleMiss = classifyNotification(
+      {
+        appId: 'sec-monitor',
+        title: 'Status update',
+        body: 'Sensor reported breach error at node 4',
+        hints: { channel: 'Security', severity: 'critical' },
+      },
+      complexRuleSet,
+    );
+
+    expect(titleMiss).toEqual({ priority: 'low', matchedRuleId: null, source: 'default' });
+
+    const keywordMiss = classifyNotification(
+      {
+        appId: 'sec-monitor',
+        title: 'Alert: System ready',
+        body: 'All services running nominal checks completed',
+        hints: { channel: 'Security', severity: 'critical' },
+      },
+      complexRuleSet,
+    );
+
+    expect(keywordMiss).toEqual({ priority: 'low', matchedRuleId: null, source: 'default' });
+
+    const undefinedHints = classifyNotification(
+      {
+        appId: 'sec-monitor',
+        title: 'Alert: Breach detected',
+        body: 'Sensor reported breach error at node 4',
+      },
+      complexRuleSet,
+    );
+
+    expect(undefinedHints).toEqual({ priority: 'low', matchedRuleId: null, source: 'default' });
+
+    const undefinedCandidates = classifyNotification(
+      {
+        appId: 'sec-monitor',
+        title: 'Alert: Breach detected',
+        body: 'Sensor reported breach error at node 4',
+        hints: { channel: undefined as unknown as string, severity: undefined as unknown as string },
+      },
+      complexRuleSet,
+    );
+
+    expect(undefinedCandidates).toEqual({ priority: 'low', matchedRuleId: null, source: 'default' });
+
+    const missingBody = classifyNotification(
+      {
+        appId: 'sec-monitor',
+        title: 'Alert: Breach detected',
+        hints: { channel: 'Security', severity: 'critical' },
+      },
+      complexRuleSet,
+    );
+
+    expect(missingBody).toEqual({ priority: 'low', matchedRuleId: null, source: 'default' });
+  });
+});
