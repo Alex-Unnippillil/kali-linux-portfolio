@@ -4019,8 +4019,19 @@ export class Desktop extends Component {
             return Math.round(value / size) * size;
         };
         const safeTopOffset = measureWindowTopOffset();
-        const nextX = snapValue(x, gridX);
-        const nextY = clampWindowTopPosition(snapValue(y, gridY), safeTopOffset);
+        const snappedX = snapValue(x, gridX);
+        const snappedY = snapValue(y, gridY);
+        const node = typeof document !== 'undefined' ? document.getElementById(id) : null;
+        const rect = node && typeof node.getBoundingClientRect === 'function'
+            ? node.getBoundingClientRect()
+            : null;
+        const clamped = clampWindowPositionWithinViewport(
+            { x: snappedX, y: snappedY },
+            rect,
+            { topOffset: safeTopOffset },
+        );
+        const nextX = clamped ? clamped.x : snappedX;
+        const nextY = clamped ? clamped.y : clampWindowTopPosition(snappedY, safeTopOffset);
         this.setWorkspaceState(prev => ({
             window_positions: { ...prev.window_positions, [id]: { x: nextX, y: nextY } }
         }), () => {

@@ -37,6 +37,10 @@
   opacity: 1;
 }
 
+.windowFrameKeyboardFocus::before {
+  opacity: 1;
+}
+
 .windowFrameInactive {
   filter: brightness(0.85);
 }

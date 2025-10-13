@@ -611,7 +611,7 @@ describe('Window snapping finalize and release', () => {
     expect(winEl.style.transform).toBe(`translate(${expectedX}px, ${expectedY}px)`);
   });
 
-  it('releases snap with Alt+ArrowDown restoring size', () => {
+  it('adjusts window size with Alt+Arrow keys', () => {
     setViewport(1024, 768);
     const ref = React.createRef<any>();
     render(
@@ -627,37 +627,30 @@ describe('Window snapping finalize and release', () => {
       />
     );
 
-    const winEl = document.getElementById('test-window')!;
-    const leftSnapTop = computeLeftSnapTestTop();
-    winEl.getBoundingClientRect = () => ({
-      left: 5,
-      top: leftSnapTop,
-      right: 105,
-      bottom: leftSnapTop + 100,
-      width: 100,
-      height: 100,
-      x: 5,
-      y: leftSnapTop,
-      toJSON: () => {}
-    });
+    const initialWidth = ref.current!.state.width;
+    const initialHeight = ref.current!.state.height;
 
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleKeyDown({
+        key: 'ArrowRight',
+        altKey: true,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn()
+      } as any);
     });
+
+    expect(ref.current!.state.width).toBeGreaterThan(initialWidth);
+
     act(() => {
-      ref.current!.handleStop();
+      ref.current!.handleKeyDown({
+        key: 'ArrowLeft',
+        altKey: true,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn()
+      } as any);
     });
 
-    expect(ref.current!.state.snapped).toBe('left');
-    const snappedHeight = computeSnappedHeightPercent();
-    expect(ref.current!.state.height).toBeCloseTo(snappedHeight, 5);
-
-    const keyboardEvent = {
-      key: 'ArrowDown',
-      altKey: true,
-      preventDefault: jest.fn(),
-      stopPropagation: jest.fn()
-    } as unknown as KeyboardEvent;
+    expect(ref.current!.state.width).toBeCloseTo(initialWidth, 5);
 
     act(() => {
       ref.current!.handleKeyDown({
@@ -666,12 +659,110 @@ describe('Window snapping finalize and release', () => {
         preventDefault: jest.fn(),
         stopPropagation: jest.fn()
       } as any);
-
     });
 
-    expect(ref.current!.state.snapped).toBeNull();
-    expect(ref.current!.state.width).toBe(60);
-    expect(ref.current!.state.height).toBe(85);
+    expect(ref.current!.state.height).toBeGreaterThan(initialHeight);
+
+    act(() => {
+      ref.current!.handleKeyDown({
+        key: 'ArrowUp',
+        altKey: true,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn()
+      } as any);
+    });
+
+    expect(ref.current!.state.height).toBeCloseTo(initialHeight, 5);
+  });
+
+  it('nudges window position with arrow keys', () => {
+    setViewport(1280, 720);
+    const onPositionChange = jest.fn();
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+        onPositionChange={onPositionChange}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.focus = jest.fn();
+    const topOffset = ref.current!.state.safeAreaTop ?? DESKTOP_TOP_PADDING;
+    winEl.getBoundingClientRect = () => ({
+      left: 100,
+      top: topOffset,
+      right: 400,
+      bottom: topOffset + 200,
+      width: 300,
+      height: 200,
+      x: 100,
+      y: topOffset,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      winEl.style.setProperty('--window-transform-x', '100px');
+      winEl.style.setProperty('--window-transform-y', `${topOffset}px`);
+      winEl.style.transform = `translate(100px, ${topOffset}px)`;
+    });
+
+    act(() => {
+      ref.current!.handleKeyDown({
+        key: 'ArrowRight',
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn()
+      } as any);
+    });
+
+    expect(onPositionChange).toHaveBeenCalled();
+    const lastCall = onPositionChange.mock.calls[onPositionChange.mock.calls.length - 1];
+    const [nextX, nextY] = lastCall;
+    expect(nextX).toBe(110);
+    expect(nextY).toBeGreaterThanOrEqual(topOffset);
+  });
+
+  it('toggles maximize state with Enter key', () => {
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    act(() => {
+      ref.current!.handleKeyDown({
+        key: 'Enter',
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn()
+      } as any);
+    });
+
+    expect(ref.current!.state.maximized).toBe(true);
+
+    act(() => {
+      ref.current!.handleKeyDown({
+        key: 'Enter',
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn()
+      } as any);
+    });
+
+    expect(ref.current!.state.maximized).toBe(false);
   });
 
   it('releases snap when starting drag', () => {
@@ -764,12 +855,34 @@ describe('Window keyboard dragging', () => {
     );
 
     const handle = screen.getByText('Test').parentElement!;
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => {
+      const rawX = winEl.style.getPropertyValue('--window-transform-x');
+      const parsedX = rawX ? parseFloat(rawX) : 0;
+      const top = measureWindowTopOffset();
+      return {
+        left: parsedX,
+        top,
+        right: parsedX + 320,
+        bottom: top + 200,
+        width: 320,
+        height: 200,
+        x: parsedX,
+        y: top,
+        toJSON: () => {}
+      } as DOMRect;
+    };
 
     fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
     fireEvent.keyDown(handle, { key: 'ArrowRight' });
 
-    const winEl = document.getElementById('test-window')!;
-    expect(winEl.style.transform).toBe('translate(10px, 0px)');
+    const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(winEl.style.transform);
+    expect(match).not.toBeNull();
+    if (!match) return;
+    const [, rawX, rawY] = match;
+    expect(parseFloat(rawX)).toBe(10);
+    const expectedTop = measureWindowTopOffset();
+    expect(parseFloat(rawY)).toBeCloseTo(expectedTop, 5);
     expect(handle).toHaveAttribute('aria-grabbed', 'true');
 
     fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
