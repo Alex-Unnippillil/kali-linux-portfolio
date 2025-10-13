@@ -78,7 +78,7 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
         onChange={handlePresetSelect}
         defaultValue=""
         aria-label="Preset filters"
-        className="px-2 py-1 bg-gray-800 rounded text-white"
+        className="rounded border border-kali-border/40 bg-kali-surface/90 px-2 py-1 text-sm text-kali-terminal focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-primary/70"
       >
         <option value="">Preset filters...</option>
         {allPresets.map(({ label, expression }) => (
@@ -95,12 +95,12 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
         onKeyDown={handleKeyDown}
         placeholder="Quick search (e.g. tcp)"
         aria-label="Quick search"
-        className="px-2 py-1 bg-gray-800 rounded text-white"
+        className="rounded border border-kali-border/40 bg-kali-surface/90 px-2 py-1 text-sm text-kali-terminal placeholder:text-kali-terminal/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-primary/70"
       />
       <button
         onClick={handleSavePreset}
         aria-label="Save filter preset"
-        className="px-2 py-1 bg-gray-700 rounded text-white"
+        className="rounded border border-kali-border/40 bg-kali-primary/20 px-2 py-1 text-sm font-semibold text-kali-terminal transition hover:bg-kali-primary/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-primary/70"
         type="button"
       >
         Save
@@ -108,14 +108,16 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
       <button
         onClick={handleShare}
         aria-label="Share filter preset"
-        className="px-2 py-1 bg-gray-700 rounded text-white"
+        className="rounded border border-kali-border/40 bg-kali-primary/20 px-2 py-1 text-sm font-semibold text-kali-terminal transition hover:bg-kali-primary/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-primary/70"
         type="button"
       >
         Share
       </button>
       <datalist id="display-filter-suggestions">
         {suggestions.map((f) => (
-          <option key={f} value={f} />
+          <option key={f} value={f}>
+            {f}
+          </option>
         ))}
       </datalist>
     </>
