@@ -264,7 +264,20 @@ Copy `.env.local.example` to `.env.local` and populate the keys relevant to your
 Set `NEXT_PUBLIC_STATIC_EXPORT=true` during `yarn export` to disable API routes. UI components should guard their behaviour with the flag or the presence of required environment variables.
 
 ### Analytics
-`utils/analytics.ts` wraps GA4. Analytics only fire when `NEXT_PUBLIC_ENABLE_ANALYTICS` is truthy. The project also renders `<Analytics />` and `<SpeedInsights />` from `@vercel/analytics` inside `_app.jsx`.
+`utils/analytics.ts` wraps GA4. Analytics only fire when `NEXT_PUBLIC_ENABLE_ANALYTICS` is truthy and respect the browser's [Do Not Track](https://en.wikipedia.org/wiki/Do_Not_Track) setting. The project also renders `<Analytics />` and `<SpeedInsights />` from `@vercel/analytics` inside `_app.jsx`.
+
+### Performance Budgets
+Speed Insights provides observability for runtime performance, and Playwright enforces guardrails to prevent regressions. The test suite (`playwright/speed-insights.spec.ts`) currently asserts the following budgets when `NEXT_PUBLIC_STATIC_EXPORT` is not set to `'true'`:
+
+| Metric | Budget |
+| --- | --- |
+| Total transfer size (document + resources) | ≤ 1.6 MB |
+| JavaScript transfer size | ≤ 0.9 MB |
+| CSS transfer size | ≤ 0.35 MB |
+| DOMContentLoaded (ms) | ≤ 4,500 |
+| Time to First Byte (ms) | ≤ 1,200 |
+
+If the app requires additional assets, update both the budget table above and the Playwright test to keep documentation in sync.
 
 ---
 
