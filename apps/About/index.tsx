@@ -37,7 +37,7 @@ export default function AboutPage() {
           <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">
             <div className="flex justify-center sm:flex-shrink-0">
               <Image
-                src="/images/logos/bitmoji.png"
+                src="/images/logos/bitmoji.1b21789f.png"
                 alt="Alex Unnippillil"
                 width={128}
                 height={128}

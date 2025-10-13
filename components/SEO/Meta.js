@@ -23,12 +23,12 @@ export default function Meta() {
             <meta name="theme-color" content="#0f1317" />
 
             {/* Search Engine */}
-            <meta name="image" content="images/logos/fevicon.png" />
+            <meta name="image" content="images/logos/fevicon.6ecd8f54.png" />
             {/* Schema.org for Google */}
             <meta itemProp="name" content="Alex Unnippillil Portfolio " />
             <meta itemProp="description"
                 content="Alex Unnippillil Personal Portfolio Website" />
-            <meta itemProp="image" content="images/logos/fevicon.png" />
+            <meta itemProp="image" content="images/logos/fevicon.6ecd8f54.png" />
             {/* Twitter */}
             <meta name="twitter:card" content="summary" />
             <meta name="twitter:title" content="Alex Unnippillil Personal Portfolio Website" />
@@ -36,20 +36,20 @@ export default function Meta() {
                 content="Alex Unnippillil Personal Portfolio Website" />
             <meta name="twitter:site" content="alexunnippillil" />
             <meta name="twitter:creator" content="unnippillil" />
-            <meta name="twitter:image:src" content="images/logos/logo_1024.png" />
+            <meta name="twitter:image:src" content="images/logos/logo_1024.87b54bff.png" />
             {/* Open Graph general (Facebook, Pinterest & Google+) */}
             <meta name="og:title" content="Alex Unnippillil Personal Portfolio Website " />
             <meta name="og:description"
                 content="Alex Unnippillil Personal Portfolio Website. ." />
-            <meta name="og:image" content="https://unnippillil.com/images/logos/logo_1200.png" />
+            <meta name="og:image" content="https://unnippillil.com/images/logos/logo_1200.87b54bff.png" />
             <meta name="og:url" content="https://unnippillil.com/" />
             <meta name="og:site_name" content="Alex Unnippillil Personal Portfolio" />
             <meta name="og:locale" content="en_CA" />
             <meta name="og:type" content="website" />
 
             <link rel="canonical" href="https://unnippillil.com/" />
-            <link rel="icon" href="images/logos/fevicon.svg" />
-            <link rel="apple-touch-icon" href="images/logos/logo.png" />
+            <link rel="icon" href="images/logos/fevicon.b89c13d3.svg" />
+            <link rel="apple-touch-icon" href="images/logos/logo.3d30ab8f.png" />
             <script
                 type="application/ld+json"
                 nonce={nonce}
