@@ -1,0 +1,23 @@
+{
+  "name": "@unnippillil/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@eslint/js": "^9.13.0",
+    "@rushstack/eslint-patch": "^1.13.0",
+    "@typescript-eslint/eslint-plugin": "^8.13.0",
+    "@typescript-eslint/parser": "^8.13.0",
+    "globals": "^15.14.0"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0",
+    "typescript": "^5.0.0"
+  },
+  "exports": {
+    "./eslint": "./eslint/index.mjs",
+    "./eslint/react": "./eslint/react.mjs",
+    "./jest": "./jest/preset.cjs",
+    "./tsconfig/base.json": "./tsconfig/base.json"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "extends": "@unnippillil/config/tsconfig/base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "types/**/*.d.ts"],
+  "exclude": ["node_modules", "__tests__", "components/apps/archive", "components/apps/kismet"]
+}

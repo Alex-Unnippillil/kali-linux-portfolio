@@ -48,7 +48,9 @@ nvm use              # Activates the matching runtime
 cp .env.local.example .env.local
 # Populate keys: analytics, EmailJS, Supabase, etc.
 yarn install
-yarn dev             # Starts Next.js with hot reload
+yarn dev             # Runs Turbo to start the web app workspace
+# or run the workspace directly:
+# yarn workspace @unnippillil/web dev
 ```
 
 ### Production Build (Serverful)
@@ -82,37 +84,24 @@ The service worker is generated during `next build` by [`@ducanh2912/next-pwa`](
 ## Project Architecture
 
 ```
-pages/
-  _app.jsx            # Global providers (desktop shell, analytics, legal banner)
-  _document.jsx       # HTML scaffold
-  index.jsx           # Mounts <Ubuntu /> desktop
-  api/                # Demo-only API routes (disabled during static export)
-  apps/               # Example conventional pages
-
-components/
-  ubuntu.tsx          # Boot → lock → desktop state machine
-  base/               # Window frame, chrome, and focus manager
-  screen/             # Boot splash, lock screen, desktop, navbar
-  apps/               # App catalog: games, utilities, and security simulations
-  context-menus/      # Desktop and dock context menus
-  SEO/Meta.js         # Structured metadata helpers
-  util-components/    # Reusable UI primitives (buttons, layout helpers, etc.)
-
-hooks/
-  usePersistentState.ts   # Validated localStorage state with reset helper
-  useSettings.tsx         # User preferences (theme, wallpaper, accent)
-  useAssetLoader.ts       # Lazy asset loading for canvas games
-  useCanvasResize.ts      # Responsive canvas sizing for games
-
-public/
-  images/             # Wallpapers, icons, avatars
-  apps/               # Static assets for games (sprites, sounds, levels)
-  sw.js               # Generated service worker after `next build`
-
-__tests__/            # Jest unit tests, smoke tests, utilities
-playwright/           # Playwright helpers for end-to-end testing
+apps/
+  web/                # Next.js application workspace (desktop shell, apps, pages)
+    app/              # App Router experiments and metadata routes
+    components/       # Desktop window manager, app implementations, utilities
+    pages/            # Legacy Pages Router entries, API stubs, app routes
+    public/           # Wallpapers, icons, sprites, service worker output
+    scripts/          # Tooling scoped to the web workspace (lint, smoke tests)
+    __tests__/        # Jest unit tests and smoke coverage for the desktop
+packages/
+  config/             # Shared ESLint, Jest, and TypeScript presets
+  ui/                 # Shared React UI primitives consumed by workspaces
 .github/workflows/    # GitHub Actions (static export pipeline, lint/test gates)
+turbo.json            # Turbo pipeline orchestrating workspace scripts
 ```
+
+`@unnippillil/ui` exposes desktop primitives such as tooltips, tabbed windows, and toast notifications. Import them with
+`import { TabbedWindow } from '@unnippillil/ui';`. Tooling packages consume the presets from `@unnippillil/config`, ensuring
+linting and type-checking stay consistent across workspaces.
 
 **Windowing model.** `components/screen/desktop.js` maintains the global window registry, handles z-index ordering, and orchestrates dock shortcuts, favorites, and analytics events.
 
