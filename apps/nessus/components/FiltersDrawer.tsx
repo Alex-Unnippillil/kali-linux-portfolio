@@ -29,7 +29,7 @@ export default function FiltersDrawer({
       role="presentation"
     >
       <aside
-        className={`absolute right-0 top-0 flex h-full w-full max-w-xs flex-col overflow-y-auto border-l border-slate-800/70 bg-slate-950/95 p-6 text-slate-200 shadow-2xl shadow-black/40 transition-transform ${open ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`absolute right-0 top-0 flex h-full w-full max-w-xs flex-col overflow-y-auto border-l border-slate-800/70 bg-slate-950/95 p-6 text-slate-200 shadow-[var(--shadow-elevation-overlay)] shadow-black/40 transition-transform ${open ? 'translate-x-0' : 'translate-x-full'}`}
         onClick={(e) => e.stopPropagation()}
         aria-label="Nessus filters"
       >

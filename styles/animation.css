@@ -9,4 +9,88 @@
   --window-motion-ease-maximize: cubic-bezier(0.2, 0.8, 0.4, 1);
   --window-motion-duration-snap-preview: var(--window-motion-duration-snap);
   --window-motion-ease-snap-preview: var(--window-motion-ease-snap);
+
+  /* Focus ring timing pairs with elevation scale (styles/tokens.css) */
+  --focus-ring-duration: var(--motion-fast);
+  --focus-ring-ease: cubic-bezier(0.33, 1, 0.68, 1);
+  --focus-ring-shadow-ground: 0 0 0 2px color-mix(in srgb, var(--focus-outline-color) 60%, transparent);
+  --focus-ring-shadow-raised: 0 0 0 3px color-mix(in srgb, var(--focus-outline-color) 62%, transparent);
+  --focus-ring-shadow-floating: 0 0 0 4px color-mix(in srgb, var(--focus-outline-color) 65%, transparent);
+  --focus-ring-shadow-window: 0 0 0 5px color-mix(in srgb, var(--focus-outline-color) 68%, transparent);
+  --focus-ring-shadow-overlay: 0 0 0 6px color-mix(in srgb, var(--focus-outline-color) 70%, transparent);
+  --focus-ring-base-shadow-ground: var(--shadow-elevation-0);
+  --focus-ring-base-shadow-raised: var(--shadow-elevation-1);
+  --focus-ring-base-shadow-floating: var(--shadow-elevation-1);
+  --focus-ring-base-shadow-window: var(--shadow-elevation-2);
+  --focus-ring-base-shadow-overlay: var(--shadow-elevation-overlay);
+  --focus-ring-outline-offset-ground: 2px;
+  --focus-ring-outline-offset-raised: 3px;
+  --focus-ring-outline-offset-floating: 4px;
+  --focus-ring-outline-offset-window: 5px;
+  --focus-ring-outline-offset-overlay: 6px;
+  --focus-ring-animation-ground: focus-ring-ground var(--focus-ring-duration) var(--focus-ring-ease) forwards;
+  --focus-ring-animation-raised: focus-ring-raised var(--focus-ring-duration) var(--focus-ring-ease) forwards;
+  --focus-ring-animation-floating: focus-ring-floating var(--focus-ring-duration) var(--focus-ring-ease) forwards;
+  --focus-ring-animation-window: focus-ring-window var(--focus-ring-duration) var(--focus-ring-ease) forwards;
+  --focus-ring-animation-overlay: focus-ring-overlay var(--focus-ring-duration) var(--focus-ring-ease) forwards;
+}
+
+@keyframes focus-ring-ground {
+  0% {
+    box-shadow: var(--focus-ring-base-shadow-ground);
+  }
+  60% {
+    box-shadow: var(--focus-ring-base-shadow-ground), color-mix(in srgb, var(--focus-outline-color) 35%, transparent);
+  }
+  100% {
+    box-shadow: var(--focus-ring-base-shadow-ground), var(--focus-ring-shadow-ground);
+  }
+}
+
+@keyframes focus-ring-raised {
+  0% {
+    box-shadow: var(--focus-ring-base-shadow-raised);
+  }
+  60% {
+    box-shadow: var(--focus-ring-base-shadow-raised), color-mix(in srgb, var(--focus-outline-color) 32%, transparent);
+  }
+  100% {
+    box-shadow: var(--focus-ring-base-shadow-raised), var(--focus-ring-shadow-raised);
+  }
+}
+
+@keyframes focus-ring-floating {
+  0% {
+    box-shadow: var(--focus-ring-base-shadow-floating);
+  }
+  60% {
+    box-shadow: var(--focus-ring-base-shadow-floating), color-mix(in srgb, var(--focus-outline-color) 30%, transparent);
+  }
+  100% {
+    box-shadow: var(--focus-ring-base-shadow-floating), var(--focus-ring-shadow-floating);
+  }
+}
+
+@keyframes focus-ring-window {
+  0% {
+    box-shadow: var(--focus-ring-base-shadow-window);
+  }
+  60% {
+    box-shadow: var(--focus-ring-base-shadow-window), color-mix(in srgb, var(--focus-outline-color) 28%, transparent);
+  }
+  100% {
+    box-shadow: var(--focus-ring-base-shadow-window), var(--focus-ring-shadow-window);
+  }
+}
+
+@keyframes focus-ring-overlay {
+  0% {
+    box-shadow: var(--focus-ring-base-shadow-overlay);
+  }
+  60% {
+    box-shadow: var(--focus-ring-base-shadow-overlay), color-mix(in srgb, var(--focus-outline-color) 26%, transparent);
+  }
+  100% {
+    box-shadow: var(--focus-ring-base-shadow-overlay), var(--focus-ring-shadow-overlay);
+  }
 }

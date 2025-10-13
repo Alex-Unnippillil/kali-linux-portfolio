@@ -22,7 +22,7 @@ const DsniffPage: React.FC = () => {
               highlights how credential leakage is surfaced and triaged.
             </p>
           </header>
-          <div className="overflow-hidden rounded-3xl border border-[color:color-mix(in_srgb,var(--kali-panel-border)_78%,transparent)] bg-[color-mix(in_srgb,var(--kali-panel)_88%,var(--kali-bg))] shadow-2xl">
+          <div className="overflow-hidden rounded-3xl border border-[color:color-mix(in_srgb,var(--kali-panel-border)_78%,transparent)] bg-[color-mix(in_srgb,var(--kali-panel)_88%,var(--kali-bg))] shadow-[var(--shadow-elevation-overlay)]">
             <DsniffApp />
           </div>
         </section>
@@ -40,7 +40,7 @@ const DsniffPage: React.FC = () => {
               weak transport layers allow adversaries to intercept credentials.
             </p>
           </header>
-          <div className="overflow-hidden rounded-3xl border border-[color:color-mix(in_srgb,var(--kali-panel-border)_78%,transparent)] bg-[color-mix(in_srgb,var(--kali-panel)_88%,var(--kali-bg))] shadow-2xl">
+          <div className="overflow-hidden rounded-3xl border border-[color:color-mix(in_srgb,var(--kali-panel-border)_78%,transparent)] bg-[color-mix(in_srgb,var(--kali-panel)_88%,var(--kali-bg))] shadow-[var(--shadow-elevation-overlay)]">
             <CredentialExplainer />
           </div>
         </section>
@@ -58,7 +58,7 @@ const DsniffPage: React.FC = () => {
               affects response times without touching real infrastructure.
             </p>
           </header>
-          <div className="overflow-hidden rounded-3xl border border-[color:color-mix(in_srgb,var(--kali-panel-border)_78%,transparent)] bg-[color-mix(in_srgb,var(--kali-panel)_88%,var(--kali-bg))] shadow-2xl">
+          <div className="overflow-hidden rounded-3xl border border-[color:color-mix(in_srgb,var(--kali-panel-border)_78%,transparent)] bg-[color-mix(in_srgb,var(--kali-panel)_88%,var(--kali-bg))] shadow-[var(--shadow-elevation-overlay)]">
             <StressSandbox />
           </div>
         </section>

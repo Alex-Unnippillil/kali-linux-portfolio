@@ -2,7 +2,8 @@
   position: relative;
   border: 1px solid var(--color-window-border);
   border-radius: var(--radius-6);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-elevation-2);
+  z-index: var(--z-elevation-2);
   overflow: hidden;
   --window-motion-transform-duration: var(--window-motion-duration-restore);
   --window-motion-transform-easing: var(--window-motion-ease-restore);
@@ -15,6 +16,12 @@
     opacity var(--window-motion-opacity-duration) var(--window-motion-opacity-easing),
     visibility 0s linear;
   transition-delay: 0s, 0s, 0s, 0s, 0s;
+}
+
+.windowFrame:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-elevation-2), var(--focus-ring-shadow-window);
+  animation: var(--focus-ring-animation-window);
 }
 
 .windowFrame::before {
@@ -113,7 +120,9 @@
 
 .windowControlButton:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--color-window-accent);
+  --focus-ring-base-shadow-raised: 0 0 0 0 transparent;
+  box-shadow: var(--focus-ring-shadow-raised);
+  animation: var(--focus-ring-animation-raised);
 }
 
 .windowYBorder {
