@@ -23,14 +23,16 @@ describe('theme persistence and unlocking', () => {
 
   test('themes unlock at score milestones', () => {
     const unlocked = getUnlockedThemes(600);
-    expect(unlocked).toEqual(expect.arrayContaining(['default', 'neon', 'dark']));
+    expect(unlocked).toEqual(expect.arrayContaining(['default', 'neon', 'dark', 'hc']));
     expect(unlocked).not.toContain('matrix');
   });
 
-  test('dark class applied for neon and matrix themes', () => {
+  test('dark class applied for neon, matrix, and high-contrast themes', () => {
     setTheme('neon');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
     setTheme('matrix');
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+    setTheme('hc');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
   });
 
@@ -40,6 +42,7 @@ describe('theme persistence and unlocking', () => {
       :root { --color-bg: white; }
       html[data-theme='dark'] { --color-bg: black; }
       html[data-theme='neon'] { --color-bg: red; }
+      html[data-theme='hc'] { --color-bg: blue; }
     `;
     document.head.appendChild(style);
 
@@ -57,6 +60,11 @@ describe('theme persistence and unlocking', () => {
     expect(
       getComputedStyle(document.documentElement).getPropertyValue('--color-bg')
     ).toBe('red');
+
+    setTheme('hc');
+    expect(
+      getComputedStyle(document.documentElement).getPropertyValue('--color-bg')
+    ).toBe('blue');
   });
 
   test('defaults to system preference when no stored theme', () => {

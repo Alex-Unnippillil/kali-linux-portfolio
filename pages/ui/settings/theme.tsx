@@ -3,6 +3,7 @@
 import { ChangeEvent, useEffect, useMemo } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import { useSettings } from '../../../hooks/useSettings';
+import { THEME_LABELS } from '../../../components/ui/ThemeSwitcher';
 import {
   THEME_UNLOCKS,
   getUnlockedThemes,
@@ -40,7 +41,7 @@ function Toggle({
 }
 
 export default function ThemeSettings() {
-  const { theme, setTheme } = useSettings();
+  const { theme, setTheme, setHighContrast } = useSettings();
   const [panelSize, setPanelSize] = usePersistentState('app:panel-icons', 16);
   const [gridSize, setGridSize] = usePersistentState('app:grid-icons', 64);
   const [highScore] = usePersistentState<number>(
@@ -57,8 +58,9 @@ export default function ThemeSettings() {
   useEffect(() => {
     if (!isThemeUnlocked(theme, highScore)) {
       setTheme('default');
+      setHighContrast(false);
     }
-  }, [theme, highScore, setTheme]);
+  }, [theme, highScore, setTheme, setHighContrast]);
 
   const handleChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const next = e.target.value;
@@ -66,6 +68,7 @@ export default function ThemeSettings() {
       return;
     }
     setTheme(next);
+    setHighContrast(next === 'hc');
   };
 
   return (
@@ -89,9 +92,11 @@ export default function ThemeSettings() {
         >
           {Object.entries(THEME_UNLOCKS).map(([value, requiredScore]) => {
             const unlocked = unlockedThemes.has(value);
+            const optionLabel =
+              THEME_LABELS[value] ?? value.charAt(0).toUpperCase() + value.slice(1);
             return (
               <option key={value} value={value} disabled={!unlocked}>
-                {value.charAt(0).toUpperCase() + value.slice(1)}
+                {optionLabel}
                 {!unlocked ? ` (unlock at ${requiredScore})` : ''}
               </option>
             );

@@ -126,6 +126,31 @@ html[data-theme='matrix'] {
 
 }
 
+/* High contrast theme */
+html[data-theme='hc'] {
+  --color-bg: #000000;
+  --color-text: #ffffff;
+  --color-primary: #ffde00;
+  --color-secondary: #000000;
+  --color-accent: #ffde00;
+  --color-error: #ff375f;
+  --color-muted: #121212;
+  --color-surface: #050505;
+  --color-surface-muted: #101010;
+  --color-surface-raised: #151515;
+  --color-inverse: #000000;
+  --color-border: #ffffff;
+  --color-terminal: #00ff9a;
+  --color-dark: #000000;
+  --color-overlay-strong: rgba(0, 0, 0, 0.9);
+  --color-overlay-soft: rgba(0, 0, 0, 0.75);
+  --color-info: #00b8ff;
+  --color-severity-low: #00ff9a;
+  --color-severity-medium: #ffb700;
+  --color-severity-high: #ff7b00;
+  --color-severity-critical: #ff375f;
+}
+
 ::selection {
   background: color-mix(in srgb, var(--color-primary) 65%, var(--kali-bg));
   color: var(--kali-text);
