@@ -112,16 +112,16 @@ const AutopsyPage: React.FC = () => {
               tabIndex={isSelected ? 0 : -1}
               onClick={() => setView(tab.id)}
               onKeyDown={(event) => handleKeyDown(event, index)}
-              className={`flex min-w-[12rem] flex-1 flex-col gap-1 rounded-md border px-4 py-3 text-left shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ubt-blue focus-visible:ring-offset-2 focus-visible:ring-offset-ub-cool-grey ${
+              className={`flex min-w-[12rem] flex-1 flex-col gap-1 rounded-md border px-4 py-3 text-left shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-dark ${
                 isSelected
-                  ? 'border-ub-border-orange bg-ub-cool-grey text-white shadow-md'
-                  : 'border-transparent bg-ub-lite-abrgn/50 text-ubt-grey hover:bg-ub-lite-abrgn/70'
+                  ? 'border-kali-accent bg-kali-surface text-kali-text shadow-md'
+                  : 'border-transparent bg-kali-dark/60 text-kali-text/75 hover:bg-kali-dark/80'
               }`}
             >
               <span className="text-sm font-semibold uppercase tracking-wide">
                 {tab.label}
               </span>
-              <span className="text-sm leading-snug text-ubt-grey">
+              <span className="text-sm leading-snug text-kali-text/80">
                 {tab.description}
               </span>
             </button>
@@ -132,9 +132,9 @@ const AutopsyPage: React.FC = () => {
         id="mode-description"
         role="note"
         aria-live="polite"
-        className="space-y-1 rounded-lg border border-ub-border-orange/40 bg-ub-cool-grey/70 p-4 text-sm text-ubt-grey shadow-inner"
+        className="space-y-1 rounded-lg border border-kali-accent/50 bg-kali-surface/80 p-4 text-sm text-kali-text/80 shadow-inner"
       >
-        <p className="text-base font-semibold text-white">
+        <p className="text-base font-semibold text-kali-text">
           {currentTab.label} mode
         </p>
         <p className="leading-relaxed">{currentTab.callout}</p>
@@ -150,7 +150,7 @@ const AutopsyPage: React.FC = () => {
               aria-labelledby={`tab-${tab.id}`}
               aria-describedby="mode-description"
               hidden={!isActive}
-              className={`min-h-[22rem] rounded-lg border border-ub-border-orange/30 bg-ub-cool-grey/80 p-4 shadow-sm transition-all duration-200 ${
+              className={`min-h-[22rem] rounded-lg border border-kali-accent/40 bg-kali-surface/90 p-4 shadow-sm transition-all duration-200 ${
                 isActive ? 'opacity-100' : 'opacity-0'
               }`}
             >

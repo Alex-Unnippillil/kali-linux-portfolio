@@ -49,11 +49,11 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
           placeholder="Keyword search"
-          className="flex-grow bg-ub-grey text-white px-2 py-1 rounded"
+          className="flex-grow rounded border border-kali-border/60 bg-kali-dark px-2 py-1 text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus/80"
         />
         <button
           onClick={exportHits}
-          className="bg-ub-orange px-2 py-1 rounded text-sm text-black"
+          className="rounded border border-kali-accent/80 bg-kali-accent px-2 py-1 text-sm font-semibold text-kali-text transition hover:bg-kali-accent/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus"
         >
           Export Hits
         </button>
@@ -64,7 +64,7 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
             type="button"
             key={`${a.name}-${idx}`}
             onClick={() => onSelect(a)}
-            className="p-2 bg-ub-grey rounded text-sm text-left flex flex-col"
+            className="flex flex-col gap-1 rounded border border-kali-border/60 bg-kali-dark/80 p-2 text-left text-sm text-kali-text transition hover:border-kali-accent/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus/80"
           >
             <div className="flex items-center font-bold">
               <span className="mr-1" aria-hidden="true">
@@ -74,7 +74,7 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
                 dangerouslySetInnerHTML={{ __html: highlight(a.name) }}
               />
             </div>
-            <div className="text-gray-400">{a.type}</div>
+            <div className="text-kali-text/60">{a.type}</div>
             <div className="text-xs">
               {new Date(a.timestamp).toLocaleString()}
             </div>

@@ -242,17 +242,17 @@ function Timeline({ events, onSelect }) {
       <div aria-live="polite" className="sr-only">
         {zoomAnnouncement}
       </div>
-      <div className="flex space-x-2 mb-1">
+      <div className="mb-1 flex space-x-2">
         <button
           onClick={() => setZoom((z) => Math.min(z * 2, MAX_ZOOM))}
-          className="bg-ub-orange text-black px-2 py-1 rounded"
+          className="rounded border border-kali-accent/80 bg-kali-accent px-2 py-1 text-sm font-semibold text-kali-text transition hover:bg-kali-accent/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus"
           aria-label="Zoom in"
         >
           +
         </button>
         <button
           onClick={() => setZoom((z) => Math.max(z / 2, MIN_ZOOM))}
-          className="bg-ub-orange text-black px-2 py-1 rounded"
+          className="rounded border border-kali-accent/80 bg-kali-accent px-2 py-1 text-sm font-semibold text-kali-text transition hover:bg-kali-accent/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus"
           aria-label="Zoom out"
         >
           -
@@ -292,7 +292,7 @@ function Timeline({ events, onSelect }) {
           </datalist>
           {hoverIndex !== null && sorted[hoverIndex] && (
             <div
-              className="absolute -top-10 bg-ub-grey text-xs p-1 rounded"
+              className="absolute -top-10 rounded border border-kali-border/70 bg-kali-dark/95 px-2 py-1 text-xs text-kali-text shadow-lg"
               style={{
                 left: `${
                   sorted.length > 1
@@ -317,18 +317,18 @@ function Timeline({ events, onSelect }) {
       )}
       <div
         ref={containerRef}
-        className="w-full overflow-x-auto p-1.5 bg-gradient-to-r from-ub-grey to-ub-cool-grey rounded"
+        className="w-full overflow-x-auto rounded bg-gradient-to-r from-kali-dark/90 to-kali-surface/80 p-1.5"
       >
         <canvas
           ref={canvasRef}
-          className="bg-ub-grey"
+          className="bg-kali-dark/95"
           role="img"
           aria-label="File event timeline"
         />
       </div>
       <canvas
         ref={overviewRef}
-        className="bg-ub-grey mt-2 w-full"
+        className="mt-2 w-full rounded bg-kali-dark/90"
         height={20}
         aria-label="Timeline overview"
       />
@@ -586,7 +586,7 @@ function Autopsy({ initialArtifacts = null }) {
   }, [artifacts]);
 
   return (
-    <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white p-4 space-y-4">
+    <div className="flex h-full w-full flex-col space-y-4 bg-kali-surface p-4 text-kali-text">
       <div
         aria-live="polite"
         className="sr-only"
@@ -598,11 +598,11 @@ function Autopsy({ initialArtifacts = null }) {
           value={caseName}
           onChange={(e) => setCaseName(e.target.value)}
           placeholder="Case name"
-          className="flex-grow bg-ub-grey text-white px-2 py-1 rounded"
+          className="flex-grow rounded border border-kali-border/60 bg-kali-dark px-2 py-1 text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus/80"
         />
         <button
           onClick={createCase}
-          className="bg-ub-orange px-3 py-1 rounded"
+          className="rounded border border-kali-accent/80 bg-kali-accent px-3 py-1 font-semibold text-kali-text shadow-sm transition hover:bg-kali-accent/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus"
         >
           Create Case
         </button>
@@ -611,7 +611,7 @@ function Autopsy({ initialArtifacts = null }) {
         href="https://sleuthkit.org/autopsy/docs/user-docs/"
         target="_blank"
         rel="noopener noreferrer"
-        className="underline text-ubt-blue text-sm"
+        className="text-sm font-medium text-kali-accent underline"
       >
         Autopsy documentation
       </a>
@@ -622,7 +622,7 @@ function Autopsy({ initialArtifacts = null }) {
             <select
               value={selectedPlugin}
               onChange={(e) => setSelectedPlugin(e.target.value)}
-              className="bg-ub-grey text-white px-2 py-1 rounded"
+              className="rounded border border-kali-border/60 bg-kali-dark px-2 py-1 text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus/80"
             >
               <option value="">Select Plugin</option>
               {plugins.map((p) => (
@@ -644,7 +644,7 @@ function Autopsy({ initialArtifacts = null }) {
         <textarea
           readOnly
           value={analysis}
-          className="bg-ub-grey text-xs text-white p-2 rounded resize-none"
+          className="resize-none rounded border border-kali-border/60 bg-kali-dark p-2 text-xs text-kali-text"
         />
       )}
       {artifacts.length > 0 && (
@@ -654,7 +654,7 @@ function Autopsy({ initialArtifacts = null }) {
               aria-label="Filter by type"
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="bg-ub-grey text-white px-2 py-1 rounded"
+              className="rounded border border-kali-border/60 bg-kali-dark px-2 py-1 text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus/80"
             >
               {types.map((t) => (
                 <option key={t} value={t}>
@@ -666,7 +666,7 @@ function Autopsy({ initialArtifacts = null }) {
               aria-label="Filter by user"
               value={userFilter}
               onChange={(e) => setUserFilter(e.target.value)}
-              className="bg-ub-grey text-white px-2 py-1 rounded"
+              className="rounded border border-kali-border/60 bg-kali-dark px-2 py-1 text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus/80"
             >
               {users.map((u) => (
                 <option key={u} value={u}>
@@ -678,7 +678,7 @@ function Autopsy({ initialArtifacts = null }) {
               aria-label="Filter by plugin"
               value={pluginFilter}
               onChange={(e) => setPluginFilter(e.target.value)}
-              className="bg-ub-grey text-white px-2 py-1 rounded"
+              className="rounded border border-kali-border/60 bg-kali-dark px-2 py-1 text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus/80"
             >
               {pluginOptions.map((p) => (
                 <option key={p} value={p}>
@@ -691,14 +691,14 @@ function Autopsy({ initialArtifacts = null }) {
               aria-label="Start time"
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
-              className="bg-ub-grey text-white px-2 py-1 rounded"
+              className="rounded border border-kali-border/60 bg-kali-dark px-2 py-1 text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus/80"
             />
             <input
               type="datetime-local"
               aria-label="End time"
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
-              className="bg-ub-grey text-white px-2 py-1 rounded"
+              className="rounded border border-kali-border/60 bg-kali-dark px-2 py-1 text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus/80"
             />
           </div>
           <KeywordSearchPanel
@@ -720,11 +720,11 @@ function Autopsy({ initialArtifacts = null }) {
                 {renderTree(fileTree)}
               </div>
               {selectedFile && (
-                <div className="flex-grow bg-ub-grey p-2 rounded text-xs">
+                <div className="flex-grow rounded border border-kali-border/60 bg-kali-dark/80 p-2 text-xs text-kali-text">
                   <div className="font-bold mb-1">{selectedFile.name}</div>
                   <div className="mb-1">SHA-256: {selectedFile.hash}</div>
                   {selectedFile.known && (
-                    <div className="mb-1 text-green-400">
+                    <div className="mb-1 text-kali-accent">
                       Known: {selectedFile.known}
                     </div>
                   )}
@@ -732,9 +732,9 @@ function Autopsy({ initialArtifacts = null }) {
                     <button
                       className={`${
                         previewTab === 'hex'
-                          ? 'bg-ub-orange text-black'
-                          : 'bg-ub-cool-grey'
-                      } px-2 py-1 rounded`}
+                          ? 'bg-kali-accent text-kali-text'
+                          : 'bg-kali-dark/70 text-kali-text/80'
+                      } rounded px-2 py-1 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus`}
                       onClick={() => setPreviewTab('hex')}
                     >
                       Hex
@@ -742,9 +742,9 @@ function Autopsy({ initialArtifacts = null }) {
                     <button
                       className={`${
                         previewTab === 'text'
-                          ? 'bg-ub-orange text-black'
-                          : 'bg-ub-cool-grey'
-                      } px-2 py-1 rounded`}
+                          ? 'bg-kali-accent text-kali-text'
+                          : 'bg-kali-dark/70 text-kali-text/80'
+                      } rounded px-2 py-1 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus`}
                       onClick={() => setPreviewTab('text')}
                     >
                       Text
@@ -753,9 +753,9 @@ function Autopsy({ initialArtifacts = null }) {
                       <button
                         className={`${
                           previewTab === 'image'
-                            ? 'bg-ub-orange text-black'
-                            : 'bg-ub-cool-grey'
-                        } px-2 py-1 rounded`}
+                            ? 'bg-kali-accent text-kali-text'
+                            : 'bg-kali-dark/70 text-kali-text/80'
+                        } rounded px-2 py-1 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus`}
                         onClick={() => setPreviewTab('image')}
                       >
                         Image
@@ -787,7 +787,7 @@ function Autopsy({ initialArtifacts = null }) {
         </div>
       )}
       {selectedArtifact && (
-        <div className="fixed right-0 top-0 w-64 h-full bg-ub-grey p-4 overflow-y-auto">
+        <div className="fixed right-0 top-0 h-full w-64 overflow-y-auto bg-kali-dark/95 p-4 text-kali-text shadow-2xl">
           <button
             onClick={() => setSelectedArtifact(null)}
             className="mb-2 text-right w-full"
@@ -798,7 +798,7 @@ function Autopsy({ initialArtifacts = null }) {
             className="font-bold"
             dangerouslySetInnerHTML={{ __html: escapeFilename(selectedArtifact.name) }}
           />
-          <div className="text-gray-400">{selectedArtifact.type}</div>
+          <div className="text-kali-text/60">{selectedArtifact.type}</div>
           <div className="text-xs">
             {new Date(selectedArtifact.timestamp).toLocaleString()}
           </div>
