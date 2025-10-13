@@ -512,9 +512,10 @@ export default function QuoteApp() {
       </div>
       <style jsx>{`
         .kali-panel {
-          background: color-mix(in srgb, var(--color-surface) 65%, transparent);
-          border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+          background: var(--kali-panel);
+          border: 1px solid var(--kali-panel-border);
           color: var(--color-text);
+          box-shadow: 0 12px 32px -18px color-mix(in srgb, var(--kali-blue) 32%, transparent);
         }
         .daily-quote-text {
           color: color-mix(in srgb, var(--color-text) 92%, transparent);
@@ -523,14 +524,15 @@ export default function QuoteApp() {
           color: color-mix(in srgb, var(--color-text) 68%, transparent);
         }
         .kali-gradient-card {
-          border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+          border: 1px solid var(--kali-panel-border);
           background: linear-gradient(
             135deg,
-            color-mix(in srgb, var(--color-primary) 38%, transparent) 0%,
-            color-mix(in srgb, var(--color-primary) 20%, var(--color-surface)) 42%,
-            color-mix(in srgb, var(--color-secondary) 70%, transparent) 100%
+            color-mix(in srgb, var(--kali-blue) 78%, var(--kali-panel)) 0%,
+            color-mix(in srgb, var(--kali-blue-dark) 64%, var(--color-ub-lite-abrgn)) 46%,
+            color-mix(in srgb, var(--color-ubt-blue) 58%, var(--color-ub-cool-grey)) 100%
           );
           color: var(--color-text);
+          box-shadow: 0 18px 40px -22px color-mix(in srgb, var(--kali-blue) 45%, transparent);
         }
         .quote-card-glyph {
           color: color-mix(in srgb, var(--color-text) 12%, transparent);
@@ -545,66 +547,70 @@ export default function QuoteApp() {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
-          background: color-mix(in srgb, var(--color-dark) 65%, transparent);
-          color: color-mix(in srgb, var(--color-text) 92%, transparent);
-          box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-dark) 35%, transparent);
-          transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+          border: 1px solid var(--kali-border);
+          background: var(--kali-control-surface);
+          color: color-mix(in srgb, var(--color-text) 96%, transparent);
+          box-shadow: 0 0 0 1px color-mix(in srgb, var(--kali-control) 35%, transparent);
+          transition: background var(--motion-fast) ease, border-color var(--motion-fast) ease,
+            transform var(--motion-fast) ease;
         }
         .kali-icon-button:hover {
-          background: color-mix(in srgb, var(--color-dark) 78%, transparent);
-          border-color: color-mix(in srgb, var(--color-border) 75%, transparent);
+          background: var(--kali-control-overlay);
+          border-color: color-mix(in srgb, var(--kali-control) 60%, var(--kali-border));
         }
         .kali-icon-button:focus-visible {
-          outline: 2px solid var(--color-focus-ring);
+          outline: 2px solid var(--focus-outline-color);
           outline-offset: 2px;
-          box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-focus-ring) 35%, transparent);
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--kali-control) 35%, transparent);
         }
         .kbd-hint {
           color: color-mix(in srgb, var(--color-text) 55%, transparent);
         }
         .kali-chip-button {
           border-radius: 9999px;
-          border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
-          background: color-mix(in srgb, var(--color-surface) 55%, transparent);
-          color: color-mix(in srgb, var(--color-text) 92%, transparent);
+          border: 1px solid var(--kali-border);
+          background: color-mix(in srgb, var(--kali-panel) 86%, transparent 14%);
+          color: color-mix(in srgb, var(--color-text) 95%, transparent);
+          box-shadow: 0 1px 0 0 color-mix(in srgb, var(--kali-blue) 24%, transparent);
         }
         .kali-chip-button:hover {
-          background: color-mix(in srgb, var(--color-surface) 70%, transparent);
-          border-color: color-mix(in srgb, var(--color-border) 75%, transparent);
+          background: color-mix(in srgb, var(--kali-control-overlay) 45%, var(--kali-panel));
+          border-color: color-mix(in srgb, var(--kali-control) 55%, var(--kali-border));
         }
         .kali-chip-button:focus-visible {
-          outline: 2px solid var(--color-focus-ring);
+          outline: 2px solid var(--focus-outline-color);
           outline-offset: 2px;
-          box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-focus-ring) 30%, transparent);
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--kali-control) 35%, transparent);
         }
         .kali-chip-button:disabled {
           cursor: not-allowed;
-          background: color-mix(in srgb, var(--color-surface) 35%, transparent);
-          border-color: color-mix(in srgb, var(--color-border) 45%, transparent);
-          color: color-mix(in srgb, var(--color-text) 45%, transparent);
+          background: color-mix(in srgb, var(--kali-panel) 72%, transparent 28%);
+          border-color: color-mix(in srgb, var(--kali-border) 65%, transparent 35%);
+          color: color-mix(in srgb, var(--color-text) 52%, transparent);
+          box-shadow: none;
         }
         .kali-chip-button--accent {
-          background: color-mix(in srgb, var(--color-primary) 35%, var(--color-dark));
-          border-color: color-mix(in srgb, var(--color-primary) 70%, var(--color-border));
-          color: color-mix(in srgb, var(--color-text) 98%, transparent);
-          box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 35%, transparent);
+          background: color-mix(in srgb, var(--kali-control) 48%, var(--kali-panel));
+          border-color: color-mix(in srgb, var(--kali-control) 68%, var(--kali-border));
+          color: var(--color-text);
+          box-shadow: 0 0 0 1px color-mix(in srgb, var(--kali-control) 45%, transparent);
         }
         .kali-chip-button--accent:hover {
-          background: color-mix(in srgb, var(--color-primary) 45%, var(--color-dark));
-          border-color: color-mix(in srgb, var(--color-primary) 80%, var(--color-border));
+          background: color-mix(in srgb, var(--kali-control) 62%, var(--kali-panel));
+          border-color: color-mix(in srgb, var(--kali-control) 80%, var(--kali-border));
         }
         .kali-chip-button--accent:focus-visible {
-          outline-color: var(--color-focus-ring);
-          box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-focus-ring) 35%, transparent);
+          outline-color: var(--focus-outline-color);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--kali-control) 35%, transparent);
         }
         .kali-chip-button--active {
-          background: color-mix(in srgb, var(--color-primary) 28%, var(--color-surface));
-          border-color: color-mix(in srgb, var(--color-primary) 55%, var(--color-border));
+          background: color-mix(in srgb, var(--kali-control) 32%, var(--kali-panel));
+          border-color: color-mix(in srgb, var(--kali-control) 60%, var(--kali-border));
         }
         .kali-chip-button--dashed {
           border-style: dashed;
-          background: color-mix(in srgb, var(--color-surface) 45%, transparent);
+          background: color-mix(in srgb, var(--kali-panel-highlight) 60%, var(--kali-panel));
+          color: color-mix(in srgb, var(--color-text) 92%, transparent);
         }
         .kali-input {
           border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
