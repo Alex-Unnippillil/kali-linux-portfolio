@@ -18,6 +18,7 @@ import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { isDoNotTrackEnabled, setAnalyticsClient } from '../utils/analytics';
 import { Rajdhani } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
 
@@ -83,17 +84,69 @@ const kaliSans = Rajdhani({
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
   useEffect(() => {
+    let isMounted = true;
+
+    const enableAnalytics =
+      (process.env.NEXT_PUBLIC_ENABLE_ANALYTICS ?? '').toLowerCase() === 'true';
+    const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
+
     const initAnalytics = async (): Promise<void> => {
-      const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
-      if (trackingId) {
+      if (!enableAnalytics || !trackingId || isDoNotTrackEnabled()) {
+        return;
+      }
+
+      try {
         const { default: ReactGA } = await import('react-ga4');
+        if (!isMounted) return;
         ReactGA.initialize(trackingId);
+        setAnalyticsClient(ReactGA);
+      } catch (err) {
+        console.error('Analytics initialization failed', err);
       }
     };
 
-    void initAnalytics().catch((err) => {
-      console.error('Analytics initialization failed', err);
-    });
+    let removeReadyListener: (() => void) | undefined;
+
+    if (
+      typeof window !== 'undefined' &&
+      typeof document !== 'undefined' &&
+      enableAnalytics &&
+      trackingId &&
+      !isDoNotTrackEnabled()
+    ) {
+      const run = (): void => {
+        if (!isMounted) return;
+        void initAnalytics();
+      };
+
+      const schedule = (): void => {
+        const idleCallback = (window as typeof window & {
+          requestIdleCallback?: (cb: IdleRequestCallback) => number;
+        }).requestIdleCallback;
+
+        if (typeof idleCallback === 'function') {
+          idleCallback(() => run());
+        } else {
+          window.setTimeout(run, 0);
+        }
+      };
+
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        schedule();
+      } else {
+        const onReadyStateChange = (): void => {
+          if (document.readyState === 'interactive') {
+            document.removeEventListener('readystatechange', onReadyStateChange);
+            schedule();
+          }
+        };
+
+        document.addEventListener('readystatechange', onReadyStateChange);
+        removeReadyListener = () => {
+          document.removeEventListener('readystatechange', onReadyStateChange);
+        };
+      }
+    }
 
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
       const swPath = resolveServiceWorkerPath();
@@ -139,6 +192,13 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
       });
     }
 
+    return () => {
+      isMounted = false;
+      setAnalyticsClient(null);
+      if (removeReadyListener) {
+        removeReadyListener();
+      }
+    };
   }, []);
 
   useEffect(() => {
