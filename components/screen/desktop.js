@@ -33,6 +33,9 @@ import {
     clampWindowTopPosition,
     getSafeAreaInsets,
     measureWindowTopOffset,
+    serializeWorkspaceSnapshot,
+    deserializeWorkspaceSnapshot,
+    WORKSPACE_LAYOUT_EVENTS,
 } from '../../utils/windowLayout';
 
 const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
@@ -566,6 +569,23 @@ export class Desktop extends Component {
         return merged;
     };
 
+    filterWorkspaceWindowMap = (map) => {
+        const result = {};
+        if (!map || typeof map !== 'object') {
+            return result;
+        }
+        Object.entries(map).forEach(([id, value]) => {
+            if (!id || !this.validAppIds.has(id)) {
+                return;
+            }
+            if (this.isOverlayId(id)) {
+                return;
+            }
+            result[id] = value;
+        });
+        return result;
+    };
+
     setupPointerMediaWatcher = () => {
         if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
             this.configureTouchTargets(false);
@@ -971,6 +991,23 @@ export class Desktop extends Component {
                 label: workspace.label,
                 openWindows,
             };
+        });
+    };
+
+    getSerializableWorkspaceLayout = () => {
+        const activeWorkspace = this.state.activeWorkspace;
+        const snapshot = this.workspaceSnapshots[activeWorkspace] || this.createEmptyWorkspaceState();
+        const stack = Array.isArray(this.workspaceStacks[activeWorkspace])
+            ? this.workspaceStacks[activeWorkspace].filter((id) => this.validAppIds.has(id) && !this.isOverlayId(id))
+            : [];
+        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : undefined;
+        return serializeWorkspaceSnapshot({
+            workspaceId: activeWorkspace,
+            closedWindows: this.filterWorkspaceWindowMap(snapshot.closed_windows),
+            windowPositions: this.filterWorkspaceWindowMap(snapshot.window_positions),
+            windowSizes: this.filterWorkspaceWindowMap(snapshot.window_sizes),
+            stack,
+            viewportWidth,
         });
     };
 
@@ -2782,6 +2819,103 @@ export class Desktop extends Component {
         window.dispatchEvent(new CustomEvent('workspace-state', { detail }));
     };
 
+    handleWorkspaceLayoutRequest = (event) => {
+        if (typeof window === 'undefined') return;
+        const requestId = event?.detail?.requestId;
+        const layout = this.getSerializableWorkspaceLayout();
+        window.dispatchEvent(new CustomEvent(WORKSPACE_LAYOUT_EVENTS.response, {
+            detail: { requestId, layout },
+        }));
+    };
+
+    handleWorkspaceLayoutApply = (event) => {
+        const layout = event?.detail?.layout;
+        if (!layout) {
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent(WORKSPACE_LAYOUT_EVENTS.applied, {
+                    detail: { success: false, reason: 'missing-layout' },
+                }));
+            }
+            return;
+        }
+        const result = this.applySerializedWorkspaceLayout(layout);
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent(WORKSPACE_LAYOUT_EVENTS.applied, {
+                detail: {
+                    success: !result || result.success !== false ? true : false,
+                    reason: result?.reason,
+                    layout,
+                },
+            }));
+        }
+    };
+
+    applySerializedWorkspaceLayout = (layout) => {
+        const normalized = deserializeWorkspaceSnapshot(layout);
+        if (!normalized) {
+            return { success: false, reason: 'invalid-layout' };
+        }
+        const validWindowIds = normalized.openWindows.filter(
+            (id) => this.validAppIds.has(id) && !this.isOverlayId(id),
+        );
+        const uniqueIds = Array.from(new Set(validWindowIds));
+        const currentlyOpen = Object.keys(this.state.closed_windows || {}).filter(
+            (id) =>
+                this.state.closed_windows[id] === false &&
+                this.validAppIds.has(id) &&
+                !this.isOverlayId(id),
+        );
+        currentlyOpen.forEach((id) => {
+            if (!uniqueIds.includes(id)) {
+                this.closeApp(id);
+            }
+        });
+        const topOffset = measureWindowTopOffset();
+        this.setWorkspaceState((prev) => {
+            const window_positions = { ...(prev.window_positions || {}) };
+            const window_sizes = { ...(prev.window_sizes || {}) };
+            uniqueIds.forEach((id) => {
+                const position = normalized.positions?.[id];
+                if (position && typeof position === 'object') {
+                    const x = typeof position.x === 'number' && Number.isFinite(position.x)
+                        ? position.x
+                        : 0;
+                    const yValue = typeof position.y === 'number' && Number.isFinite(position.y)
+                        ? position.y
+                        : 0;
+                    window_positions[id] = {
+                        x,
+                        y: clampWindowTopPosition(yValue, topOffset),
+                    };
+                }
+                const size = normalized.sizes?.[id];
+                if (size && typeof size === 'object') {
+                    const width = typeof size.width === 'number' && Number.isFinite(size.width)
+                        ? Math.max(0, Math.round(size.width))
+                        : 0;
+                    const height = typeof size.height === 'number' && Number.isFinite(size.height)
+                        ? Math.max(0, Math.round(size.height))
+                        : 0;
+                    if (width > 0 && height > 0) {
+                        window_sizes[id] = { width, height };
+                    }
+                }
+            });
+            return { window_positions, window_sizes };
+        }, () => {
+            const orderedTopFirst = normalized.stack.filter((id) => uniqueIds.includes(id));
+            const desiredOrder = orderedTopFirst.length ? orderedTopFirst : uniqueIds;
+            const openOrder = desiredOrder.slice().reverse();
+            openOrder.forEach((id) => this.openApp(id));
+            const focusId = desiredOrder[0];
+            if (focusId) {
+                this.focus(focusId);
+            }
+            this.broadcastWorkspaceState();
+        });
+        return { success: true };
+    };
+
     getOverlayDefaults = (key) => {
         if (key === 'launcher') {
             return { open: false, minimized: false, maximized: false, transitionState: 'exited' };
@@ -2841,6 +2975,8 @@ export class Desktop extends Component {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.addEventListener(WORKSPACE_LAYOUT_EVENTS.request, this.handleWorkspaceLayoutRequest);
+            window.addEventListener(WORKSPACE_LAYOUT_EVENTS.apply, this.handleWorkspaceLayoutApply);
             this.broadcastWorkspaceState();
             this.broadcastIconSizePreset(this.state.iconSizePreset);
         }
@@ -2944,6 +3080,8 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.removeEventListener(WORKSPACE_LAYOUT_EVENTS.request, this.handleWorkspaceLayoutRequest);
+            window.removeEventListener(WORKSPACE_LAYOUT_EVENTS.apply, this.handleWorkspaceLayoutApply);
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
