@@ -11,6 +11,10 @@ describe('BeEF app', () => {
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
     fireEvent.click(screen.getByRole('button', { name: /next/i }));
     expect(screen.getByText(/Payload Builder/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Payloads run locally in a sandbox and never touch the network./i)
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /copy/i })).toBeInTheDocument();
   });
 
   test('can reset lab back to disclaimer', () => {
@@ -22,5 +26,8 @@ describe('BeEF app', () => {
     }
     fireEvent.click(screen.getByRole('button', { name: /reset lab/i }));
     expect(screen.getByText(/Disclaimer/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Use these security tools only in environments where you have explicit authorization./i)
+    ).toBeInTheDocument();
   });
 });
