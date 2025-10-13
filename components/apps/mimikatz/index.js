@@ -46,15 +46,19 @@ const maskSensitive = (line, show) => {
 const alertPalettes = {
   warning: {
     icon: "⚠️",
-    accent: "color-mix(in srgb, #ff5c7a 78%, var(--kali-blue) 22%)",
+    accent: "var(--color-warning)",
   },
   success: {
     icon: "✅",
-    accent: "var(--kali-terminal-green)",
+    accent: "var(--color-success)",
+  },
+  error: {
+    icon: "❌",
+    accent: "var(--color-error)",
   },
   info: {
     icon: "ℹ️",
-    accent: "var(--kali-blue)",
+    accent: "var(--color-info)",
   },
 };
 
@@ -64,10 +68,10 @@ const KaliAlert = ({ tone = "info", children }) => {
   return (
     <div
       role="alert"
-      className="mb-2 flex items-center gap-3 rounded-xl border px-3 py-2 text-sm font-medium shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur"
+      className="mb-2 flex items-center gap-3 rounded-xl border border-kali-border/60 bg-kali-surface-muted/80 px-3 py-2 text-sm font-medium shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur"
       style={{
-        background: "color-mix(in srgb, var(--kali-panel) 88%, rgba(15,148,210,0.08) 12%)",
-        borderColor: "color-mix(in srgb, var(--kali-blue) 25%, transparent)",
+        background: `color-mix(in srgb, var(--kali-surface) 88%, color-mix(in srgb, ${palette.accent} 12%, transparent))`,
+        borderColor: `color-mix(in srgb, ${palette.accent} 38%, transparent)`,
         color: "var(--kali-terminal-text)",
         boxShadow: `0 12px 28px -12px color-mix(in srgb, ${palette.accent} 45%, transparent)`,
       }}
@@ -99,18 +103,18 @@ const MimikatzApp = () => {
   const toneStyles = useMemo(
     () => ({
       success: {
-        color: "var(--kali-terminal-green)",
+        color: "var(--color-success)",
         textShadow:
-          "0 0 8px color-mix(in srgb, var(--kali-terminal-green) 55%, transparent)",
+          "0 0 8px color-mix(in srgb, var(--color-success) 55%, transparent)",
       },
       error: {
-        color: "color-mix(in srgb, #ff5c7a 82%, var(--kali-blue) 18%)",
-        textShadow: "0 0 8px color-mix(in srgb, #ff5c7a 45%, transparent)",
+        color: "var(--color-error)",
+        textShadow: "0 0 8px color-mix(in srgb, var(--color-error) 45%, transparent)",
       },
       info: {
-        color: "var(--kali-terminal-text)",
+        color: "color-mix(in srgb, var(--kali-terminal-text) 85%, rgba(148,163,184,0.25))",
         textShadow:
-          "0 0 6px color-mix(in srgb, var(--kali-terminal-text) 28%, transparent)",
+          "0 0 6px color-mix(in srgb, var(--kali-terminal-text) 32%, transparent)",
       },
     }),
     [],
@@ -140,12 +144,12 @@ const MimikatzApp = () => {
 
   return (
     <div className="flex h-full w-full flex-col bg-kali-surface/95 text-kali-text">
-      <div className="border-b border-white/5 bg-[var(--kali-panel)] px-3 pt-3">
+      <div className="border-b border-kali-border/60 bg-kali-surface-raised/90 px-3 pt-3">
         <KaliAlert tone="warning">Demo only. No real credentials are used.</KaliAlert>
         <div
           role="tablist"
           aria-label="Mimikatz modules"
-          className="flex gap-2 rounded-xl border border-white/5 bg-white/5 p-1 shadow-inner shadow-black/30 backdrop-blur"
+          className="flex gap-2 rounded-xl border border-kali-border/60 bg-kali-surface-muted/80 p-1 shadow-inner shadow-kali-panel backdrop-blur"
         >
           {tabs.map((t) => {
             const isActive = active === t.id;
@@ -158,8 +162,8 @@ const MimikatzApp = () => {
                 aria-controls={consoleId}
                 className={`flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] ${
                   isActive
-                    ? "bg-kali-primary/90 text-slate-900 shadow-[0_12px_20px_-12px_rgba(15,148,210,0.85)]"
-                    : "border border-transparent text-white/70 hover:border-white/10 hover:bg-white/10 hover:text-white"
+                    ? "bg-kali-accent/90 text-kali-inverse shadow-[0_12px_20px_-12px_color-mix(in_srgb,var(--color-accent)_85%,transparent)]"
+                    : "border border-transparent text-kali-text/70 hover:border-kali-border/70 hover:bg-kali-surface/70 hover:text-kali-text"
                 }`}
                 onClick={() => setActive(t.id)}
               >
@@ -171,13 +175,13 @@ const MimikatzApp = () => {
         </div>
       </div>
       <div className="flex-1 overflow-auto px-3 py-4">
-        <div className="mb-3 flex items-center justify-between text-xs uppercase tracking-wide text-white/60">
+        <div className="mb-3 flex items-center justify-between text-xs uppercase tracking-wide text-kali-text/60">
           <div className="flex items-center gap-2 font-semibold">
             <input
               type="checkbox"
               checked={showSensitive}
               onChange={(e) => setShowSensitive(e.target.checked)}
-              className="h-4 w-4 rounded border border-white/20 bg-transparent accent-kali-control"
+              className="h-4 w-4 rounded border border-kali-border/60 bg-transparent accent-kali-control"
               id={showSensitiveId}
               aria-labelledby={showSensitiveLabelId}
             />
@@ -191,7 +195,7 @@ const MimikatzApp = () => {
           </div>
           <button
             type="button"
-            className="rounded-md border border-white/10 bg-white/5 px-3 py-1 font-semibold text-white/80 transition-colors duration-200 hover:border-kali-primary/40 hover:bg-kali-primary/15 hover:text-white"
+            className="rounded-md border border-kali-border/60 bg-kali-surface-muted/80 px-3 py-1 font-semibold text-kali-text/80 transition-colors duration-200 hover:border-kali-accent/50 hover:bg-kali-accent/15 hover:text-kali-text"
             onClick={exportOutput}
           >
             Export
@@ -199,7 +203,7 @@ const MimikatzApp = () => {
         </div>
         <div
           id={consoleId}
-          className="space-y-2 rounded-2xl border border-white/5 bg-[color-mix(in_srgb,var(--kali-bg-solid)_85%,rgba(10,15,25,0.9)_15%)] p-3 font-mono text-sm shadow-inner shadow-[0_0_24px_rgba(0,0,0,0.5)] transition-all duration-200"
+          className="space-y-2 rounded-2xl border border-kali-border/60 bg-kali-surface-muted/80 p-3 font-mono text-sm shadow-inner shadow-[0_0_24px_rgba(0,0,0,0.5)] transition-all duration-200"
           style={{
             color: "var(--kali-terminal-text)",
           }}
@@ -210,7 +214,7 @@ const MimikatzApp = () => {
             return (
               <div
                 key={`${active}-${idx}`}
-                className="flex items-start gap-2 rounded-lg px-2 py-1 transition-colors duration-200 hover:bg-white/10"
+                className="flex items-start gap-2 rounded-lg px-2 py-1 transition-colors duration-200 hover:bg-kali-surface/60"
               >
                 <span
                   id={`${active}-line-${idx}`}
@@ -220,7 +224,7 @@ const MimikatzApp = () => {
                   {maskSensitive(line, showSensitive)}
                 </span>
                 <button
-                  className="mt-0.5 text-base text-white/40 transition-colors duration-200 hover:text-kali-primary"
+                  className="mt-0.5 text-base text-kali-text/40 transition-colors duration-200 hover:text-kali-accent"
                   onClick={() => copyLine(line)}
                   aria-label="Copy line"
                 >
