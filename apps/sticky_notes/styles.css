@@ -1,9 +1,24 @@
+:root {
+  color-scheme: dark;
+  --color-bg: var(--kali-bg, #0b121a);
+  --color-text: var(--kali-text, #f5faff);
+  --color-surface: var(--kali-panel, rgba(17, 27, 36, 0.92));
+  --color-muted: color-mix(in srgb, var(--color-surface) 88%, transparent 12%);
+  --color-inverse: color-mix(in srgb, #000000 85%, var(--color-bg, #0b121a) 15%);
+  --color-border: var(--kali-border, rgba(15, 148, 210, 0.18));
+  --color-control-accent: var(--kali-control, var(--kali-blue, #0f94d2));
+  --color-focus-ring: var(--focus-outline-color, var(--kali-blue, #0f94d2));
+  --note-shadow-strong: 0 14px 24px color-mix(in srgb, var(--color-inverse), transparent 88%);
+  --note-shadow-soft: 0 2px 6px color-mix(in srgb, var(--color-inverse), transparent 92%);
+}
+
 body {
-  font-family: sans-serif;
+  font-family: var(--font-family-base, sans-serif);
   margin: 0;
   padding: 0;
   height: 100vh;
   background: var(--color-bg);
+  color: var(--color-text);
 }
 
 #add-note {
@@ -12,6 +27,18 @@ body {
   left: 10px;
   z-index: 1000;
   padding: 8px 12px;
+  border-radius: var(--radius-md, 4px);
+  border: 1px solid color-mix(in srgb, var(--color-border), transparent 35%);
+  background: color-mix(in srgb, var(--color-surface) 72%, var(--color-control-accent) 28%);
+  color: var(--color-text);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background-color var(--motion-fast, 150ms) ease,
+    border-color var(--motion-fast, 150ms) ease,
+    box-shadow var(--motion-fast, 150ms) ease,
+    transform var(--motion-fast, 150ms) ease;
+  box-shadow: var(--note-shadow-soft);
 }
 
 #notes {
@@ -28,9 +55,21 @@ body {
   padding: 10px;
   resize: both;
   overflow: auto;
-  box-shadow: 0 4px 6px color-mix(in srgb, var(--color-inverse), transparent 90%),
-    0 1px 3px color-mix(in srgb, var(--color-inverse), transparent 92%);
-  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-surface) 70%, transparent 30%);
+  border-radius: var(--radius-md, 4px);
+  border: 1px solid color-mix(in srgb, var(--color-border), transparent 20%);
+  box-shadow: var(--note-shadow-strong), var(--note-shadow-soft);
+  color: var(--color-inverse);
+  backdrop-filter: blur(6px);
+  transition: box-shadow var(--motion-fast, 150ms) ease,
+    border-color var(--motion-fast, 150ms) ease;
+}
+
+.note:focus-within,
+.note:hover {
+  border-color: color-mix(in srgb, var(--color-control-accent) 60%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-control-accent) 50%, transparent),
+    var(--note-shadow-strong);
 }
 
 .note textarea {
@@ -40,23 +79,103 @@ body {
   background: transparent;
   resize: none;
   outline: none;
+  color: inherit;
+  font: inherit;
+  line-height: 1.4;
 }
 
 .note .controls {
   display: flex;
+  align-items: center;
   justify-content: space-between;
+  gap: 8px;
   margin-bottom: 5px;
 }
 
-.note .delete-note {
-  background: transparent;
-  border: none;
+.note input[type='color'] {
+  appearance: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: var(--radius-sm, 2px);
+  border: 1px solid color-mix(in srgb, var(--color-border), transparent 25%);
+  background: var(--color-surface);
   cursor: pointer;
+  transition: border-color var(--motion-fast, 150ms) ease,
+    box-shadow var(--motion-fast, 150ms) ease,
+    transform var(--motion-fast, 150ms) ease;
+}
+
+.note input[type='color']:hover,
+.note input[type='color']:focus-visible {
+  border-color: color-mix(in srgb, var(--color-control-accent) 55%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-control-accent) 40%, transparent);
+  transform: translateY(-1px);
+}
+
+.note input[type='color']::-webkit-color-swatch-wrapper {
+  padding: 0;
+  border-radius: inherit;
+}
+
+.note input[type='color']::-webkit-color-swatch,
+.note input[type='color']::-moz-color-swatch {
+  border: none;
+  border-radius: inherit;
+}
+
+.note .delete-note {
+  background: color-mix(in srgb, var(--color-surface) 78%, transparent 22%);
+  border: 1px solid color-mix(in srgb, var(--color-border), transparent 35%);
+  border-radius: var(--radius-md, 4px);
+  color: var(--color-text);
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background-color var(--motion-fast, 150ms) ease,
+    border-color var(--motion-fast, 150ms) ease,
+    box-shadow var(--motion-fast, 150ms) ease,
+    transform var(--motion-fast, 150ms) ease;
+  box-shadow: var(--note-shadow-soft);
+}
+
+#add-note:hover,
+#add-note:focus-visible,
+.note .delete-note:hover,
+.note .delete-note:focus-visible {
+  background: color-mix(in srgb, var(--color-surface) 55%, var(--color-control-accent) 45%);
+  border-color: color-mix(in srgb, var(--color-control-accent) 70%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-control-accent) 55%, transparent),
+    var(--note-shadow-strong);
+  transform: translateY(-1px);
+}
+
+#add-note:focus-visible,
+.note .delete-note:focus-visible,
+.note input[type='color']:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+#add-note:active,
+.note .delete-note:active {
+  transform: translateY(0);
+  box-shadow: var(--note-shadow-soft);
 }
 
 @container (max-width: 400px) {
   .note {
     width: 150px;
     min-height: 150px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #add-note,
+  .note,
+  .note input[type='color'],
+  .note .delete-note {
+    transition: none;
   }
 }
