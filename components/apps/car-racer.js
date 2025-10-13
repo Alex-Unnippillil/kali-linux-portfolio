@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import React, { useRef, useEffect, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import { CAR_SKINS, loadSkinAssets } from '../../apps/games/car-racer/customization';
@@ -560,9 +561,9 @@ const CarRacer = () => {
     setShowCustomization(false);
   };
 
-  return (
-    <div className="h-full w-full relative text-white select-none">
-      <canvas ref={canvasRef} className="h-full w-full bg-black" />
+    return (
+      <div className="h-full w-full relative text-white select-none">
+        <canvas ref={canvasRef} className="h-full w-full bg-black" aria-label="Car racer game canvas" />
       {showCustomization && (
         <div className="absolute inset-0 bg-black bg-opacity-60 z-20 flex flex-col items-center justify-center space-y-4">
           <div className="flex space-x-4">
@@ -572,10 +573,13 @@ const CarRacer = () => {
                 onClick={() => setSkin(s.key)}
                 className={`border-2 ${skin === s.key ? 'border-white' : 'border-transparent'}`}
               >
-                <img
+                <Image
                   src={skinAssets[s.key]?.src || s.src}
                   alt={s.label}
+                  width={32}
+                  height={48}
                   className="h-12 w-8"
+                  decoding="async"
                 />
               </button>
             ))}

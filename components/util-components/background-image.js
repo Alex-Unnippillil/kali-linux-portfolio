@@ -1,5 +1,6 @@
 "use client";
 
+import NextImage from 'next/image';
 import React, { useEffect, useMemo, useState } from 'react';
 import KaliWallpaper from './kali-wallpaper';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
@@ -147,14 +148,17 @@ export default function BackgroundImage({ theme }) {
             {theme?.useKaliWallpaper ? (
                 <KaliWallpaper className="h-full w-full" />
             ) : effectiveUrl ? (
-                <img
+                <NextImage
                     key={effectiveUrl}
                     src={effectiveUrl}
                     alt=""
-                    className="h-full w-full object-cover"
+                    fill
+                    className="object-cover"
                     style={{
                         transform: 'scale(1.05)',
                     }}
+                    sizes="100vw"
+                    decoding="async"
                     onError={handleImageError}
                 />
             ) : null}

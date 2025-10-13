@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 const CARD_PREVIEW_HEIGHT = 180;
@@ -222,15 +223,27 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose, contai
                                 <div className="flex h-full flex-col text-left">
                                     <div className="relative overflow-hidden rounded-t-xl bg-black/70" style={{ height: CARD_PREVIEW_HEIGHT }}>
                                         {window.preview ? (
-                                            <img
-                                                src={window.preview}
-                                                alt={`${window.title} preview`}
-                                                className="h-full w-full object-cover"
-                                            />
+                                            <div className="relative h-full w-full">
+                                                <Image
+                                                    src={window.preview}
+                                                    alt={`${window.title} preview`}
+                                                    fill
+                                                    className="object-cover"
+                                                    sizes="(min-width: 1024px) 280px, 90vw"
+                                                    decoding="async"
+                                                />
+                                            </div>
                                         ) : (
                                             <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-white/10 to-white/5">
                                                 {window.icon ? (
-                                                    <img src={window.icon} alt="" className="h-12 w-12" />
+                                                    <Image
+                                                        src={window.icon}
+                                                        alt=""
+                                                        width={48}
+                                                        height={48}
+                                                        className="h-12 w-12"
+                                                        decoding="async"
+                                                    />
                                                 ) : (
                                                     <span className="text-xs text-white/60">No preview</span>
                                                 )}
@@ -238,7 +251,14 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose, contai
                                         )}
                                         {window.icon && (
                                             <div className="absolute bottom-3 left-3 flex h-12 w-12 items-center justify-center rounded-xl bg-black/70 shadow-lg">
-                                                <img src={window.icon} alt="" className="h-8 w-8" />
+                                                <Image
+                                                    src={window.icon}
+                                                    alt=""
+                                                    width={32}
+                                                    height={32}
+                                                    className="h-8 w-8"
+                                                    decoding="async"
+                                                />
                                             </div>
                                         )}
                                     </div>

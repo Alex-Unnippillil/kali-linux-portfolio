@@ -1,3 +1,4 @@
+import Image from "next/image";
 import React, {
   useCallback,
   useEffect,
@@ -402,11 +403,14 @@ const Radare2 = ({ initialData = {} }) => {
       style={{ backgroundColor: themeTokens.bg, color: themeTokens.text }}
     >
       {showGuide && <GuideOverlay onClose={() => setShowGuide(false)} />}
-      <div className="flex gap-2 mb-4 flex-wrap items-center">
-        <img
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Image
           src="/themes/Yaru/apps/radare2.svg"
           alt="Radare2 badge"
-          className="w-12 h-12"
+          width={48}
+          height={48}
+          className="h-12 w-12"
+          decoding="async"
         />
         <input
           value={seekAddr}

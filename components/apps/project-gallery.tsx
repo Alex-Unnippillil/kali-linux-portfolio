@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import projectsData from '../../data/projects.json';
@@ -226,9 +227,9 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
       {selected.length === 2 && (
         <div className="mb-4 overflow-auto">
           <table className="w-full text-sm text-left" role="table">
-            <thead>
-              <tr>
-                <th />
+              <thead>
+                <tr>
+                  <th scope="col" aria-label="Field" />
                 {selected.map((p) => (
                   <th key={p.id}>{p.title}</th>
                 ))}
@@ -257,13 +258,17 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
             key={project.id}
             className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden"
           >
-            <div className="flex flex-col md:flex-row h-48">
-              <img
-                src={project.thumbnail}
-                alt={project.title}
-                className="w-full md:w-1/2 h-48 object-cover"
-                loading="lazy"
-              />
+            <div className="flex h-48 flex-col md:flex-row">
+              <div className="relative h-48 w-full md:w-1/2">
+                <Image
+                  src={project.thumbnail}
+                  alt={project.title}
+                  fill
+                  className="object-cover"
+                  sizes="(min-width: 768px) 50vw, 100vw"
+                  decoding="async"
+                />
+              </div>
               <div className="w-full md:w-1/2 h-48">
                 <Editor
                   height="100%"

@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
@@ -454,7 +455,14 @@ const HydraApp = () => {
                 service === m.value ? 'bg-blue-600' : 'bg-gray-700'
               }`}
             >
-              <img src={m.icon} alt={m.label} className="w-6 h-6 mr-2" />
+              <Image
+                src={m.icon}
+                alt={m.label}
+                width={24}
+                height={24}
+                className="mr-2 h-6 w-6"
+                decoding="async"
+              />
               <span>{m.label}</span>
             </div>
           ))}
@@ -467,6 +475,7 @@ const HydraApp = () => {
             onChange={(e) => setTarget(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="192.168.0.1"
+            aria-label="Hydra target host"
           />
         </div>
         <div>
@@ -475,6 +484,7 @@ const HydraApp = () => {
             value={service}
             onChange={(e) => setService(e.target.value)}
             className="w-full p-2 rounded text-black"
+            aria-label="Hydra service"
           >
             {availableServices.map((s) => (
               <option key={s} value={s}>
@@ -489,6 +499,7 @@ const HydraApp = () => {
             value={selectedUser}
             onChange={(e) => setSelectedUser(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Select user list"
           >
             {userLists.map((l) => (
               <option key={l.name} value={l.name}>
@@ -504,6 +515,7 @@ const HydraApp = () => {
               addWordList(e.target.files[0], setUserLists, userLists)
             }
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Upload user list"
           />
           <ul>
             {userLists.map((l) => (
@@ -525,6 +537,7 @@ const HydraApp = () => {
             value={selectedPass}
             onChange={(e) => setSelectedPass(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Select password list"
           >
             {passLists.map((l) => (
               <option key={l.name} value={l.name}>
@@ -540,6 +553,7 @@ const HydraApp = () => {
               addWordList(e.target.files[0], setPassLists, passLists)
             }
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Upload password list"
           />
           <ul>
             {passLists.map((l) => (
@@ -563,6 +577,7 @@ const HydraApp = () => {
             onChange={(e) => setCharset(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="abc123"
+            aria-label="Character set"
           />
         </div>
         <div className="col-span-2">
@@ -573,6 +588,7 @@ const HydraApp = () => {
             onChange={(e) => setRule(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="1:3"
+            aria-label="Rule length range"
           />
           <p className="mt-1 text-sm">
             Candidate space: {candidateSpace.toLocaleString()}
@@ -582,6 +598,7 @@ const HydraApp = () => {
             width="300"
             height="100"
             className="bg-gray-800 mt-2 w-full"
+            aria-label="Hydra attempt chart"
           ></canvas>
         </div>
         <div className="col-span-2 flex flex-wrap gap-1.5 mt-2">
@@ -651,10 +668,13 @@ const HydraApp = () => {
         onAttemptChange={handleAttempt}
       />
       <div className="mt-4 flex items-center gap-2">
-        <img
+        <Image
           src="/themes/Yaru/status/changes-prevent-symbolic.svg"
           alt="credentials"
-          className="w-5 h-5"
+          width={20}
+          height={20}
+          className="h-5 w-5"
+          decoding="async"
         />
         <div className="flex-1 bg-gray-700 h-2 rounded">
           <div

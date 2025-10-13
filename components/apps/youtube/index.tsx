@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import React, {
   FormEvent,
   useCallback,
@@ -441,11 +442,18 @@ export default function YouTubeApp({ initialResults }: Props) {
                       aria-label={`Watch ${video.title} again`}
                     >
                       {video.thumbnail ? (
-                        <img
-                          src={video.thumbnail}
-                          alt=""
-                          className="h-12 w-20 rounded object-cover"
-                        />
+                        <div className="h-12 w-20 overflow-hidden rounded">
+                          <div className="relative h-full w-full">
+                            <Image
+                              src={video.thumbnail}
+                              alt=""
+                              fill
+                              className="object-cover"
+                              sizes="(min-width: 1024px) 80px, 33vw"
+                              decoding="async"
+                            />
+                          </div>
+                        </div>
                       ) : (
                         <div className="flex h-12 w-20 items-center justify-center rounded bg-[var(--kali-panel-highlight)] text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
                           No preview
@@ -501,11 +509,18 @@ export default function YouTubeApp({ initialResults }: Props) {
                   aria-label={`Watch ${video.title}`}
                 >
                   {video.thumbnail ? (
-                    <img
-                      src={video.thumbnail}
-                      alt=""
-                      className="h-40 w-full object-cover"
-                    />
+                    <div className="h-40 w-full overflow-hidden">
+                      <div className="relative h-full w-full">
+                        <Image
+                          src={video.thumbnail}
+                          alt=""
+                          fill
+                          className="object-cover"
+                          sizes="(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 50vw"
+                          decoding="async"
+                        />
+                      </div>
+                    </div>
                   ) : (
                     <div className="flex h-40 w-full items-center justify-center bg-[var(--kali-panel-highlight)] text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
                       No preview available

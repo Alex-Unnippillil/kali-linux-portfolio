@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import React from 'react';
 
 export type PlacesMenuItem = {
@@ -35,12 +36,29 @@ const KALI_ICON_MAP: Record<string, string> = {
   'user-trash-full': '/themes/Kali/places/user-trash-full.svg',
 };
 
-const FALLBACK_FLAG = 'data-fallback-applied';
-const FALLBACK_SRC = 'data-fallback-src';
-
 const resolveKaliIcon = (id: string): string | undefined => {
   const normalizedId = id.toLowerCase();
   return KALI_ICON_MAP[normalizedId];
+};
+
+const PlaceIcon: React.FC<{ src: string; fallback?: string }> = ({ src, fallback }) => {
+  const [currentSrc, setCurrentSrc] = React.useState(src);
+
+  return (
+    <Image
+      src={currentSrc}
+      alt=""
+      width={28}
+      height={28}
+      className="h-7 w-7 flex-shrink-0"
+      decoding="async"
+      onError={() => {
+        if (fallback && currentSrc !== fallback) {
+          setCurrentSrc(fallback);
+        }
+      }}
+    />
+  );
 };
 
 const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) => {
@@ -65,28 +83,7 @@ const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) =>
                 onClick={handleClick}
                 className="flex w-full items-center gap-3 rounded px-3 py-2 text-left transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-ubb-orange"
               >
-                <img
-                  src={src}
-                  alt=""
-                  width={28}
-                  height={28}
-                  className="h-7 w-7 flex-shrink-0"
-                  data-fallback-src={item.icon}
-                  onError={(event) => {
-                    const target = event.currentTarget;
-                    if (target.getAttribute(FALLBACK_FLAG) === 'true') {
-                      return;
-                    }
-
-                    const fallback = target.getAttribute(FALLBACK_SRC);
-                    if (!fallback) {
-                      return;
-                    }
-
-                    target.setAttribute(FALLBACK_FLAG, 'true');
-                    target.src = fallback;
-                  }}
-                />
+                <PlaceIcon src={src} fallback={item.icon} />
                 <span className="truncate">{item.label}</span>
               </button>
             </li>

@@ -355,15 +355,19 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
         className="mt-2 w-full px-2 py-1 rounded text-black"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
+        aria-label={`Filter ${title} skills`}
       />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map((badge) => (
-          <img
+          <Image
             key={badge.alt}
             className="m-1 cursor-pointer"
             src={badge.src}
             alt={badge.alt}
             title={badge.description}
+            width={badge.width ?? 64}
+            height={badge.height ?? 64}
+            decoding="async"
             onClick={() => setSelected(badge)}
           />
         ))}

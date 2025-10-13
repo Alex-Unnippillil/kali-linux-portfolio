@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import React from 'react';
 import UbuntuApp from '../base/ubuntu_app';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -355,8 +356,16 @@ class AllApplications extends React.Component {
                     style={summaryStyles}
                 >
                     <span className="flex items-center gap-3">
-                        <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-slate-800/70 ring-1 ring-white/10">
-                            <img src={folder.icon} alt="" className="h-9 w-9 object-contain" aria-hidden="true" />
+                        <span className="relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-slate-800/70 ring-1 ring-white/10">
+                            <Image
+                                src={folder.icon}
+                                alt=""
+                                fill
+                                className="object-contain"
+                                sizes="48px"
+                                decoding="async"
+                                aria-hidden="true"
+                            />
                         </span>
                         <span className="flex flex-col">
                             <span className="text-lg font-semibold">{folder.title}</span>

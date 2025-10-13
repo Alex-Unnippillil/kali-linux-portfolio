@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import React, { useState, useEffect, useRef } from 'react';
 import TaskOverview from './task-overview';
 import PolicySettings from './policy-settings';
@@ -682,7 +683,14 @@ const OpenVASApp = () => {
           aria-label="Download summary"
           className="mt-2 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-kali-primary text-white transition hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
         >
-          <img src="/themes/Yaru/status/download.svg" alt="" className="w-4 h-4" />
+          <Image
+            src="/themes/Yaru/status/download.svg"
+            alt=""
+            width={16}
+            height={16}
+            className="h-4 w-4"
+            decoding="async"
+          />
         </a>
       )}
       <footer className="mt-4 text-xs text-white/60">

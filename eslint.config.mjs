@@ -34,6 +34,12 @@ const config = [
       'no-restricted-globals': ['error', 'window', 'document'],
     },
   },
+  {
+    files: ['components/**/*.{js,jsx,ts,tsx}'],
+    rules: {
+      '@next/next/no-img-element': 'error',
+    },
+  },
   ...compat.config({
     extends: ['next/core-web-vitals'],
     rules: {

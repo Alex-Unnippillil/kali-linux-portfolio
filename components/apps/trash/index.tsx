@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useEffect, useCallback } from 'react';
 
 interface TrashItem {
@@ -143,9 +144,27 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
             className={`m-2 border p-1 w-32 cursor-pointer ${selected === idx ? 'bg-ub-drk-abrgn' : ''}`}
           >
             {item.image ? (
-              <img src={item.image} alt={item.title} className="h-20 w-full object-cover" />
+              <div className="relative h-20 w-full">
+                <Image
+                  src={item.image}
+                  alt={item.title}
+                  fill
+                  className="object-cover"
+                  sizes="100vw"
+                  decoding="async"
+                />
+              </div>
             ) : item.icon ? (
-              <img src={item.icon} alt={item.title} className="h-20 w-20 mx-auto object-contain" />
+              <div className="relative mx-auto h-20 w-20">
+                <Image
+                  src={item.icon}
+                  alt={item.title}
+                  fill
+                  className="object-contain"
+                  sizes="80px"
+                  decoding="async"
+                />
+              </div>
             ) : null}
             <p className="text-center text-xs truncate mt-1" title={item.title}>
               {item.title}

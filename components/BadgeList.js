@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import useIntersection from '../hooks/useIntersection';
 
 const BadgeList = ({ badges, className = '' }) => {
@@ -59,6 +60,7 @@ const BadgeList = ({ badges, className = '' }) => {
         className="mb-2 px-2 py-1 rounded text-black font-normal"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
+        aria-label="Filter skills"
       />
       <div ref={listRef} className="flex flex-wrap justify-center items-start w-full">
         {listVisible &&
@@ -73,10 +75,13 @@ const BadgeList = ({ badges, className = '' }) => {
               }}
               aria-label={badge.label}
             >
-              <img
+              <Image
                 src={badge.src}
                 alt={badge.alt}
                 title={badge.description || badge.label}
+                width={badge.width ?? 64}
+                height={badge.height ?? 64}
+                decoding="async"
               />
             </button>
           ))}

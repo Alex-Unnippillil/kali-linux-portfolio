@@ -1,5 +1,6 @@
 "use client";
 
+import Image from 'next/image';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
 type CommandPaletteItemType = 'app' | 'window' | 'action';
@@ -27,9 +28,9 @@ type CommandPaletteProps = {
 };
 
 const SECTION_METADATA: Record<CommandPaletteItemType, { label: string }> = {
-  window: { label: 'Recent Windows' },
   app: { label: 'Applications' },
   action: { label: 'Settings & Actions' },
+  ['window']: { label: 'Recent Windows' },
 };
 
 const isMacLike = (): boolean => {
@@ -117,10 +118,18 @@ export default function CommandPalette({
       setActiveIndex(0);
       return;
     }
+    if (typeof window === 'undefined') {
+      searchInputRef.current?.focus({ preventScroll: true });
+      return;
+    }
     const raf = window.requestAnimationFrame(() => {
       searchInputRef.current?.focus({ preventScroll: true });
     });
-    return () => window.cancelAnimationFrame(raf);
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.cancelAnimationFrame(raf);
+      }
+    };
   }, [open]);
 
   useEffect(() => {
@@ -311,11 +320,14 @@ export default function CommandPalette({
                       >
                         <span className="flex h-9 w-9 items-center justify-center rounded-md bg-white/10 text-white/70">
                           {item.icon ? (
-                            <img
+                            <Image
                               src={item.icon}
                               alt=""
                               className="h-5 w-5"
                               aria-hidden="true"
+                              width={20}
+                              height={20}
+                              decoding="async"
                             />
                           ) : (
                             <span aria-hidden="true" className="text-base font-semibold">
