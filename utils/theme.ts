@@ -59,7 +59,6 @@ export interface DesktopTheme {
   wallpaperUrl: string | null;
   fallbackWallpaperUrl: string | null;
   wallpaperName: string | null;
-  blur: number;
   overlay?: string;
   useKaliWallpaper: boolean;
 }
@@ -67,7 +66,6 @@ export interface DesktopTheme {
 type DesktopThemePreset = {
   accent?: string;
   wallpaperName?: string;
-  blur?: number;
   overlay?: string;
   useKaliWallpaper?: boolean;
 };
@@ -76,14 +74,12 @@ export const DESKTOP_THEME_PRESETS: Record<string, DesktopThemePreset> = {
   dark: {
     accent: '#64b5f6',
     wallpaperName: 'wall-7',
-    blur: 24,
     overlay: 'linear-gradient(160deg, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.52) 70%)',
     useKaliWallpaper: false,
   },
   neon: {
     accent: '#00f6ff',
     wallpaperName: 'wall-5',
-    blur: 18,
     overlay:
       'linear-gradient(125deg, rgba(0, 12, 24, 0.85) 0%, rgba(0, 6, 12, 0.45) 45%, rgba(0, 0, 0, 0.78) 100%)',
     useKaliWallpaper: false,
@@ -91,7 +87,6 @@ export const DESKTOP_THEME_PRESETS: Record<string, DesktopThemePreset> = {
   matrix: {
     accent: '#00ff9c',
     wallpaperName: 'wall-8',
-    blur: 20,
     overlay: 'linear-gradient(140deg, rgba(0, 36, 16, 0.82) 0%, rgba(0, 0, 0, 0.85) 85%)',
     useKaliWallpaper: false,
   },
@@ -125,7 +120,6 @@ export const resolveDesktopTheme = ({
     wallpaperUrl: resolvedWallpaperUrl,
     fallbackWallpaperUrl: fallbackWallpaperUrl ?? resolvedWallpaperUrl,
     wallpaperName: wallpaperName ?? null,
-    blur: preset.blur ?? 18,
     overlay: preset.overlay,
     useKaliWallpaper: resolvedUseKali,
   };

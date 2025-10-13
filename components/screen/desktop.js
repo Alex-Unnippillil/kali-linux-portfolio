@@ -183,7 +183,6 @@ export class Desktop extends Component {
             wallpaperUrl: props.desktopTheme && props.desktopTheme.wallpaperUrl,
             fallbackWallpaperUrl: (props.desktopTheme && props.desktopTheme.fallbackWallpaperUrl) || '/wallpapers/wall-2.webp',
             wallpaperName: (props.desktopTheme && props.desktopTheme.wallpaperName) || 'wall-2',
-            blur: (props.desktopTheme && typeof props.desktopTheme.blur === 'number') ? props.desktopTheme.blur : 18,
             overlay: props.desktopTheme ? props.desktopTheme.overlay : undefined,
             useKaliWallpaper: Boolean(props.desktopTheme && props.desktopTheme.useKaliWallpaper),
         };
@@ -466,7 +465,6 @@ export class Desktop extends Component {
                 : theme.wallpaperUrl || theme.fallbackWallpaperUrl || fallback.wallpaperUrl || fallback.fallbackWallpaperUrl || null,
             fallbackWallpaperUrl: theme.fallbackWallpaperUrl || fallback.fallbackWallpaperUrl || null,
             wallpaperName: theme.wallpaperName || fallback.wallpaperName || null,
-            blur: typeof theme.blur === 'number' ? theme.blur : (fallback.blur || 18),
             overlay: theme.overlay !== undefined ? theme.overlay : fallback.overlay,
             useKaliWallpaper: typeof theme.useKaliWallpaper === 'boolean'
                 ? theme.useKaliWallpaper
@@ -486,7 +484,6 @@ export class Desktop extends Component {
             themeA.wallpaperUrl === themeB.wallpaperUrl &&
             themeA.fallbackWallpaperUrl === themeB.fallbackWallpaperUrl &&
             themeA.wallpaperName === themeB.wallpaperName &&
-            themeA.blur === themeB.blur &&
             themeA.overlay === themeB.overlay &&
             themeA.useKaliWallpaper === themeB.useKaliWallpaper
         );
@@ -4590,7 +4587,6 @@ export class Desktop extends Component {
         const accentColor = theme && theme.accent ? theme.accent : '#1793d1';
         const wallpaperSource = (theme && (theme.wallpaperUrl || theme.fallbackWallpaperUrl)) || '';
         const wallpaperCss = wallpaperSource ? `url("${wallpaperSource}")` : 'none';
-        const blurValue = theme && typeof theme.blur === 'number' ? `${theme.blur}px` : '0px';
         const overlayValue = theme && theme.overlay ? theme.overlay : 'none';
         const baseNavbarHeight = DESKTOP_TOP_PADDING - (WINDOW_TOP_MARGIN + WINDOW_TOP_INSET);
         const windowTopSpacing = WINDOW_TOP_MARGIN + WINDOW_TOP_INSET;
@@ -4599,7 +4595,6 @@ export class Desktop extends Component {
             minHeight: '100dvh',
             '--desktop-accent': accentColor,
             '--desktop-wallpaper': wallpaperCss,
-            '--desktop-blur': blurValue,
             '--desktop-overlay': overlayValue,
         };
         const overlayWindows = this.state.overlayWindows || {};
