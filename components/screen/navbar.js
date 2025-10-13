@@ -8,6 +8,14 @@ import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
 
+const MOBILE_ACTION_BAR_HEIGHT = 64;
+
+const OVERLAY_IDS = Object.freeze({
+        launcher: 'overlay-launcher',
+        commandPalette: 'overlay-command-palette',
+        windowSwitcher: 'overlay-window-switcher'
+});
+
 const areWorkspacesEqual = (next, prev) => {
         if (next.length !== prev.length) return false;
         for (let index = 0; index < next.length; index += 1) {
@@ -46,25 +54,52 @@ export default class Navbar extends PureComponent {
                         placesMenuOpen: false,
                         workspaces: [],
                         activeWorkspace: 0,
-                        runningApps: []
+                        runningApps: [],
+                        isMobile: false
                 };
                 this.taskbarListRef = React.createRef();
                 this.draggingAppId = null;
                 this.pendingReorder = null;
+                this.mobileMediaQuery = null;
         }
 
         componentDidMount() {
                 if (typeof window !== 'undefined') {
                         window.addEventListener('workspace-state', this.handleWorkspaceStateUpdate);
                         window.dispatchEvent(new CustomEvent('workspace-request'));
+                        this.mobileMediaQuery = window.matchMedia('(max-width: 767px)');
+                        if (this.mobileMediaQuery) {
+                                this.setState({ isMobile: this.mobileMediaQuery.matches });
+                                if (typeof this.mobileMediaQuery.addEventListener === 'function') {
+                                        this.mobileMediaQuery.addEventListener('change', this.handleMobileViewportChange);
+                                } else if (typeof this.mobileMediaQuery.addListener === 'function') {
+                                        this.mobileMediaQuery.addListener(this.handleMobileViewportChange);
+                                }
+                        }
                 }
         }
 
         componentWillUnmount() {
                 if (typeof window !== 'undefined') {
                         window.removeEventListener('workspace-state', this.handleWorkspaceStateUpdate);
+                        if (this.mobileMediaQuery) {
+                                if (typeof this.mobileMediaQuery.removeEventListener === 'function') {
+                                        this.mobileMediaQuery.removeEventListener('change', this.handleMobileViewportChange);
+                                } else if (typeof this.mobileMediaQuery.removeListener === 'function') {
+                                        this.mobileMediaQuery.removeListener(this.handleMobileViewportChange);
+                                }
+                                this.mobileMediaQuery = null;
+                        }
                 }
         }
+
+        handleMobileViewportChange = (event) => {
+                const matches = Boolean(event?.matches);
+                this.setState((previous) => ({
+                        isMobile: matches,
+                        status_card: matches ? previous.status_card : false
+                }));
+        };
 
         handleWorkspaceStateUpdate = (event) => {
                 const detail = event?.detail || {};
@@ -105,6 +140,24 @@ export default class Navbar extends PureComponent {
                         event.preventDefault();
                         this.handleAppButtonClick(app);
                 }
+        };
+
+        handleOverlayToggle = (appId) => {
+                if (!appId) return;
+                this.setState({ status_card: false });
+                this.dispatchTaskbarCommand({ appId, action: 'toggle' });
+        };
+
+        handleLauncherToggle = () => {
+                this.handleOverlayToggle(OVERLAY_IDS.launcher);
+        };
+
+        handleCommandPaletteToggle = () => {
+                this.handleOverlayToggle(OVERLAY_IDS.commandPalette);
+        };
+
+        handleWindowSwitcherToggle = () => {
+                this.handleOverlayToggle(OVERLAY_IDS.windowSwitcher);
         };
 
         renderRunningApps = () => {
@@ -297,12 +350,103 @@ export default class Navbar extends PureComponent {
                 }
         };
 
-                render() {
-                        const { workspaces, activeWorkspace } = this.state;
-                        return (
-                                <div
-                                        className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
+        renderMobileActionButton = ({ id, label, icon, onClick }) => (
+                <button
+                        key={id}
+                        type="button"
+                        className="group flex flex-1 flex-col items-center gap-1 rounded-xl border border-transparent bg-white/5 px-3 py-2 text-xs font-medium text-white/70 transition hover:border-white/20 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                        onClick={onClick}
+                        aria-label={label}
+                >
+                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white">
+                                <Image src={icon} alt="" width={28} height={28} className="h-6 w-6 opacity-90" />
+                        </span>
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/80">
+                                {label}
+                        </span>
+                </button>
+        );
+
+        renderMobileActionBar = () => {
+                const { isMobile } = this.state;
+                if (!isMobile) return null;
+
+                const actions = [
+                        {
+                                id: 'launcher',
+                                label: 'Launcher',
+                                icon: '/themes/Yaru/system/view-app-grid-symbolic.svg',
+                                onClick: this.handleLauncherToggle
+                        },
+                        {
+                                id: 'search',
+                                label: 'Search',
+                                icon: '/themes/Yaru/apps/word-search.svg',
+                                onClick: this.handleCommandPaletteToggle
+                        },
+                        {
+                                id: 'recent',
+                                label: 'Recent',
+                                icon: '/themes/Yaru/window/window-restore-symbolic.svg',
+                                onClick: this.handleWindowSwitcherToggle
+                        }
+                ];
+
+                return (
+                        <div
+                                className="mobile-action-bar fixed inset-x-0 bottom-0 z-[260] flex items-end justify-center gap-3 bg-slate-950/90 px-4 pb-3 pt-2 text-ubt-grey shadow-[0_-8px_30px_rgba(8,11,20,0.7)] backdrop-blur-md md:hidden"
                                 style={{
+                                        paddingLeft: `calc(var(--safe-area-left, 0px) + 1rem)`,
+                                        paddingRight: `calc(var(--safe-area-right, 0px) + 1rem)`,
+                                        paddingBottom: `calc(var(--safe-area-bottom, 0px) + 0.75rem)`,
+                                        minHeight: `calc(${MOBILE_ACTION_BAR_HEIGHT}px + var(--safe-area-bottom, 0px))`,
+                                        '--shell-taskbar-height': `calc(${MOBILE_ACTION_BAR_HEIGHT}px + var(--safe-area-bottom, 0px))`
+                                }}
+                        >
+                                <div className="flex w-full items-center gap-3">
+                                        {actions.map((action) => this.renderMobileActionButton(action))}
+                                        <div className="mobile-quick-settings relative flex flex-1 flex-col items-center">
+                                                <button
+                                                        type="button"
+                                                        aria-label="Quick settings"
+                                                        aria-expanded={this.state.status_card}
+                                                        onClick={this.handleStatusToggle}
+                                                        onKeyDown={this.handleStatusKeyDown}
+                                                        className="flex w-full flex-1 flex-col items-center gap-1 rounded-xl border border-transparent bg-white/5 px-3 py-2 text-xs font-medium text-white/70 transition hover:border-white/20 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                                                >
+                                                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white">
+                                                                <svg
+                                                                        aria-hidden="true"
+                                                                        viewBox="0 0 24 24"
+                                                                        className="h-6 w-6 opacity-90"
+                                                                        fill="none"
+                                                                        stroke="currentColor"
+                                                                        strokeWidth="1.8"
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                >
+                                                                        <circle cx="12" cy="12" r="3.2" />
+                                                                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                                                                </svg>
+                                                        </span>
+                                                        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/80">
+                                                                Settings
+                                                        </span>
+                                                </button>
+                                                <QuickSettings open={this.state.status_card} />
+                                        </div>
+                                </div>
+                        </div>
+                );
+        };
+
+        render() {
+                const { workspaces, activeWorkspace, isMobile } = this.state;
+                return (
+                        <>
+                                <div
+                                        className="main-navbar-vp fixed inset-x-0 top-0 z-[260] hidden w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md md:flex"
+                                        style={{
                                                 minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
                                                 paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
                                                 paddingBottom: '0.25rem',
@@ -325,25 +469,27 @@ export default class Navbar extends PureComponent {
                                         </div>
                                         <div className="flex items-center gap-4 text-xs md:text-sm">
                                                 <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
-                                                <div
-                                                        id="status-bar"
-                                                        role="button"
-                                                        tabIndex={0}
-                                                        aria-label="System status"
-                                                        aria-expanded={this.state.status_card}
-                                                        onClick={this.handleStatusToggle}
-                                                        onKeyDown={this.handleStatusKeyDown}
-                                                        className={
-                                                                'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
-                                                        }
-                                                >
-                                                        <Status />
-                                                        <QuickSettings open={this.state.status_card} />
-                                                </div>
+                                                {!isMobile && (
+                                                        <div
+                                                                id="status-bar"
+                                                                role="button"
+                                                                tabIndex={0}
+                                                                aria-label="System status"
+                                                                aria-expanded={this.state.status_card}
+                                                                onClick={this.handleStatusToggle}
+                                                                onKeyDown={this.handleStatusKeyDown}
+                                                                className={
+                                                                        'relative hidden rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 md:inline-flex'
+                                                                }
+                                                        >
+                                                                <Status />
+                                                                <QuickSettings open={this.state.status_card} />
+                                                        </div>
+                                                )}
                                         </div>
                                 </div>
-			);
-		}
-
-
+                                {this.renderMobileActionBar()}
+                        </>
+                );
+        }
 }
