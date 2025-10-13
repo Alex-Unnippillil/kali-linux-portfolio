@@ -349,9 +349,9 @@ const KismetApp = ({ onNetworkDiscovered }) => {
   );
 
   return (
-    <div className="space-y-6 p-4 text-white lg:space-y-8">
+    <div className="space-y-6 p-4 text-[color:var(--kali-text)] lg:space-y-8">
       <div
-        className="rounded-xl border border-kali-border/70 bg-kali-surface/90 p-4 text-sm shadow-kali-panel"
+        className="rounded-xl border border-kali-border/70 bg-[color:var(--kali-surface)] p-4 text-sm shadow-kali-panel"
         role="status"
       >
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -369,14 +369,14 @@ const KismetApp = ({ onNetworkDiscovered }) => {
             <button
               type="button"
               onClick={labMode ? disableLabMode : enableLabMode}
-              className="rounded-lg bg-kali-control px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-black shadow-sm transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+              className="rounded-lg bg-[color:var(--color-accent)] px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-[color:var(--color-inverse)] shadow-sm transition hover:bg-[color:color-mix(in_srgb,var(--color-accent)_88%,transparent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             >
               {labMode ? 'Disable Lab Mode' : 'Enable Lab Mode'}
             </button>
             <button
               type="button"
               onClick={resetToFixtures}
-              className="rounded-lg border border-kali-border/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-kali-accent transition hover:bg-[color:var(--color-accent)]/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+              className="rounded-lg border border-kali-border/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-kali-accent transition hover:bg-[color:color-mix(in_srgb,var(--color-accent)_12%,transparent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             >
               Reload fixtures
             </button>
@@ -385,11 +385,11 @@ const KismetApp = ({ onNetworkDiscovered }) => {
       </div>
 
       {!labMode && (
-        <div className="rounded-xl border border-kali-border/70 bg-kali-surface/90 p-4 text-xs shadow-kali-panel">
+        <div className="rounded-xl border border-kali-border/70 bg-[color:var(--kali-surface)] p-4 text-xs shadow-kali-panel">
           <p className="text-sm font-semibold uppercase tracking-wide text-kali-accent">
             Offline summary
           </p>
-          <ul className="mt-3 list-disc space-y-1 pl-5 text-white/80">
+          <ul className="mt-3 list-disc space-y-1 pl-5 text-[color:color-mix(in_srgb,var(--kali-text)_82%,transparent)]">
             <li>Access points discovered: {fixtureSummary.totalNetworks}</li>
             <li>Total beacon frames observed: {fixtureSummary.totalFrames}</li>
             <li>
@@ -404,7 +404,7 @@ const KismetApp = ({ onNetworkDiscovered }) => {
 
       {labMode && (
         <>
-          <div className="flex flex-wrap items-end gap-4 rounded-xl border border-kali-border/60 bg-kali-surface/80 p-4">
+          <div className="flex flex-wrap items-end gap-4 rounded-xl border border-kali-border/60 bg-[color:var(--color-surface-muted)] p-4">
             <label className="text-xs" htmlFor="channel-filter">
               <span className="mb-1 block text-[0.7rem] font-semibold uppercase tracking-wide">
                 Channel filter
@@ -412,7 +412,7 @@ const KismetApp = ({ onNetworkDiscovered }) => {
               <select
                 id="channel-filter"
                 aria-label="Channel filter"
-                className="w-36 rounded-lg border border-kali-border/60 bg-kali-dark p-1.5 text-xs text-white shadow-sm focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
+                className="w-36 rounded-lg border border-kali-border/60 bg-kali-dark p-1.5 text-xs text-[color:var(--kali-text)] shadow-sm focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
                 value={channelFilter}
                 onChange={(e) => setChannelFilter(e.target.value)}
               >
@@ -433,10 +433,10 @@ const KismetApp = ({ onNetworkDiscovered }) => {
                 <span className="mb-1 block text-[0.7rem] font-semibold uppercase tracking-wide">
                   Device vendor
                 </span>
-              <select
+                <select
                   id="device-filter"
                   aria-label="Device vendor filter"
-                  className="w-44 rounded-lg border border-kali-border/60 bg-kali-dark p-1.5 text-xs text-white shadow-sm focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
+                  className="w-44 rounded-lg border border-kali-border/60 bg-kali-dark p-1.5 text-xs text-[color:var(--kali-text)] shadow-sm focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
                   value={deviceFilter}
                   onChange={(e) => setDeviceFilter(e.target.value)}
                 >
@@ -471,7 +471,7 @@ const KismetApp = ({ onNetworkDiscovered }) => {
 
           {error && (
             <div
-              className="rounded-lg border border-red-500/80 bg-red-900/70 p-3 text-xs font-semibold uppercase tracking-wide text-red-100 shadow ring-1 ring-red-400/60"
+              className="rounded-lg border border-[color:color-mix(in_srgb,var(--color-error)_65%,transparent)] bg-[color:color-mix(in_srgb,var(--color-error)_16%,var(--kali-surface))] p-3 text-xs font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-error)_75%,var(--kali-text))] shadow ring-1 ring-[color:color-mix(in_srgb,var(--color-error)_45%,transparent)]"
               role="alert"
               aria-live="assertive"
             >
@@ -482,7 +482,7 @@ const KismetApp = ({ onNetworkDiscovered }) => {
           <div className="grid gap-6 xl:grid-cols-12">
             <section className="space-y-4 xl:col-span-7">
               {filteredNetworks.length > 0 ? (
-                <div className="overflow-hidden rounded-xl border border-kali-border/60 bg-kali-surface/90 shadow-kali-panel">
+                <div className="overflow-hidden rounded-xl border border-kali-border/60 bg-[color:var(--kali-surface)] shadow-kali-panel">
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm" aria-label="Networks">
                       <thead className="bg-kali-dark/80 text-xs uppercase tracking-wide text-kali-muted">
@@ -494,9 +494,9 @@ const KismetApp = ({ onNetworkDiscovered }) => {
                           <th className="px-4 py-3">Frames</th>
                         </tr>
                       </thead>
-                      <tbody className="text-white/90">
+                      <tbody className="text-[color:color-mix(in_srgb,var(--kali-text)_92%,transparent)]">
                         {filteredNetworks.map((n) => (
-                          <tr key={n.bssid} className="odd:bg-white/5">
+                          <tr key={n.bssid} className="odd:bg-[color:var(--color-surface-muted)]">
                             <td className="px-4 py-2">{n.ssid || '(hidden)'}</td>
                             <td className="px-4 py-2 font-mono text-xs">{n.bssid}</td>
                             <td className="px-4 py-2">{n.channel ?? '-'}</td>
@@ -509,13 +509,13 @@ const KismetApp = ({ onNetworkDiscovered }) => {
                   </div>
                 </div>
               ) : (
-                <div className="rounded-xl border border-kali-border/60 bg-kali-surface/80 p-4 text-xs text-kali-muted">
+                <div className="rounded-xl border border-kali-border/60 bg-[color:var(--color-surface-muted)] p-4 text-xs text-kali-muted">
                   No networks match the selected filters.
                 </div>
               )}
 
               {clients.length > 0 && (
-                <div className="overflow-hidden rounded-xl border border-kali-border/60 bg-kali-surface/90 shadow-kali-panel">
+                <div className="overflow-hidden rounded-xl border border-kali-border/60 bg-[color:var(--kali-surface)] shadow-kali-panel">
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs" aria-label="Client devices">
                       <thead className="bg-kali-dark/80 uppercase tracking-wide text-kali-muted">
@@ -525,9 +525,9 @@ const KismetApp = ({ onNetworkDiscovered }) => {
                           <th className="px-4 py-3">Known networks</th>
                         </tr>
                       </thead>
-                      <tbody className="text-white/90">
+                      <tbody className="text-[color:color-mix(in_srgb,var(--kali-text)_92%,transparent)]">
                         {filteredClients.map((client) => (
-                          <tr key={client.mac} className="odd:bg-white/5">
+                          <tr key={client.mac} className="odd:bg-[color:var(--color-surface-muted)]">
                             <td className="px-4 py-2 font-mono text-[0.7rem]">{client.mac}</td>
                             <td className="px-4 py-2">{client.vendor}</td>
                             <td className="px-4 py-2">
@@ -552,7 +552,7 @@ const KismetApp = ({ onNetworkDiscovered }) => {
             </section>
 
             <aside className="space-y-4 xl:col-span-5">
-              <div className="rounded-xl border border-kali-border/60 bg-kali-surface/90 p-4 shadow-kali-panel">
+              <div className="rounded-xl border border-kali-border/60 bg-[color:var(--kali-surface)] p-4 shadow-kali-panel">
                 <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-kali-accent">
                   Channel utilization
                 </h3>
@@ -561,7 +561,7 @@ const KismetApp = ({ onNetworkDiscovered }) => {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-kali-border/60 bg-kali-surface/90 p-4 shadow-kali-panel">
+              <div className="rounded-xl border border-kali-border/60 bg-[color:var(--kali-surface)] p-4 shadow-kali-panel">
                 <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-kali-accent">
                   Frames over time
                 </h3>
