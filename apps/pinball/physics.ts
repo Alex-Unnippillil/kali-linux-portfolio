@@ -37,8 +37,8 @@ export interface PinballWorld {
   destroy: () => void;
   setBounce: (bounce: number) => void;
   setTheme: (theme: ThemeConfig) => void;
-  setLeftFlipper: (angle: number) => void;
-  setRightFlipper: (angle: number) => void;
+  setLeftFlipperInput: (input: number, power: number) => void;
+  setRightFlipperInput: (input: number, power: number) => void;
   resetFlippers: () => void;
   nudge: (force: { x: number; y: number }) => void;
   resetBall: () => void;
@@ -68,6 +68,33 @@ export function createPinballWorld(
 ): PinballWorld {
   const engine = Engine.create();
   engine.gravity.y = 1.1;
+  engine.positionIterations = 12;
+  engine.velocityIterations = 8;
+
+  const COLLISION_CATEGORY = {
+    PLAYFIELD: 0x0001,
+    FLIPPER: 0x0002,
+    BALL: 0x0004,
+    SENSOR: 0x0008,
+  } as const;
+
+  const clamp = (value: number, min: number, max: number) =>
+    Math.min(Math.max(value, min), max);
+
+  const easeOutCubic = (t: number) => 1 - (1 - t) ** 3;
+
+  const computeFlipperTarget = (
+    restAngle: number,
+    engagedAngle: number,
+    input: number,
+    power: number,
+  ) => {
+    const normalized = easeOutCubic(clamp(input, 0, 1));
+    const powerScale = clamp(power, 0.5, 2);
+    const scaledEngaged = engagedAngle * powerScale;
+    const delta = scaledEngaged - restAngle;
+    return restAngle + delta * normalized;
+  };
 
   const render = Render.create({
     canvas,
@@ -87,15 +114,48 @@ export function createPinballWorld(
     friction: 0.001,
     render: { visible: false },
     label: "ball",
+    collisionFilter: {
+      category: COLLISION_CATEGORY.BALL,
+      mask:
+        COLLISION_CATEGORY.PLAYFIELD |
+        COLLISION_CATEGORY.FLIPPER |
+        COLLISION_CATEGORY.SENSOR,
+    },
   });
 
   Body.setInertia(ball, Infinity);
 
   const boundaries = [
-    Bodies.rectangle(WIDTH / 2, -20, WIDTH, 40, { isStatic: true }),
-    Bodies.rectangle(WIDTH / 2, HEIGHT + 20, WIDTH, 40, { isStatic: true, isSensor: true, label: DRAIN_LABEL }),
-    Bodies.rectangle(-20, HEIGHT / 2, 40, HEIGHT, { isStatic: true }),
-    Bodies.rectangle(WIDTH + 20, HEIGHT / 2, 40, HEIGHT, { isStatic: true }),
+    Bodies.rectangle(WIDTH / 2, -20, WIDTH, 40, {
+      isStatic: true,
+      collisionFilter: {
+        category: COLLISION_CATEGORY.PLAYFIELD,
+        mask: COLLISION_CATEGORY.BALL,
+      },
+    }),
+    Bodies.rectangle(WIDTH / 2, HEIGHT + 20, WIDTH, 40, {
+      isStatic: true,
+      isSensor: true,
+      label: DRAIN_LABEL,
+      collisionFilter: {
+        category: COLLISION_CATEGORY.SENSOR,
+        mask: COLLISION_CATEGORY.BALL,
+      },
+    }),
+    Bodies.rectangle(-20, HEIGHT / 2, 40, HEIGHT, {
+      isStatic: true,
+      collisionFilter: {
+        category: COLLISION_CATEGORY.PLAYFIELD,
+        mask: COLLISION_CATEGORY.BALL,
+      },
+    }),
+    Bodies.rectangle(WIDTH + 20, HEIGHT / 2, 40, HEIGHT, {
+      isStatic: true,
+      collisionFilter: {
+        category: COLLISION_CATEGORY.PLAYFIELD,
+        mask: COLLISION_CATEGORY.BALL,
+      },
+    }),
   ];
 
   const funnelGuides = [
@@ -103,17 +163,35 @@ export function createPinballWorld(
       isStatic: true,
       angle: 0.32,
       render: { fillStyle: "#1f2937" },
+      collisionFilter: {
+        category: COLLISION_CATEGORY.PLAYFIELD,
+        mask: COLLISION_CATEGORY.BALL,
+      },
     }),
     Bodies.rectangle(WIDTH / 2 + 70, 130, 140, 16, {
       isStatic: true,
       angle: -0.32,
       render: { fillStyle: "#1f2937" },
+      collisionFilter: {
+        category: COLLISION_CATEGORY.PLAYFIELD,
+        mask: COLLISION_CATEGORY.BALL,
+      },
     }),
-    Bodies.rectangle(WIDTH - 40, HEIGHT / 2, 20, HEIGHT, { isStatic: true }),
+    Bodies.rectangle(WIDTH - 40, HEIGHT / 2, 20, HEIGHT, {
+      isStatic: true,
+      collisionFilter: {
+        category: COLLISION_CATEGORY.PLAYFIELD,
+        mask: COLLISION_CATEGORY.BALL,
+      },
+    }),
     Bodies.rectangle(WIDTH - 100, HEIGHT - 60, 160, 16, {
       isStatic: true,
       angle: -0.3,
       render: { fillStyle: "#1f2937" },
+      collisionFilter: {
+        category: COLLISION_CATEGORY.PLAYFIELD,
+        mask: COLLISION_CATEGORY.BALL,
+      },
     }),
   ];
 
@@ -122,6 +200,10 @@ export function createPinballWorld(
     angle: DEFAULT_LEFT_ANGLE,
     restitution: bounce,
     render: { fillStyle: theme.flipper },
+    collisionFilter: {
+      category: COLLISION_CATEGORY.FLIPPER,
+      mask: COLLISION_CATEGORY.BALL,
+    },
   });
 
   const rightFlipper = Bodies.rectangle(WIDTH - 120, HEIGHT - 40, 80, 20, {
@@ -129,18 +211,30 @@ export function createPinballWorld(
     angle: DEFAULT_RIGHT_ANGLE,
     restitution: bounce,
     render: { fillStyle: theme.flipper },
+    collisionFilter: {
+      category: COLLISION_CATEGORY.FLIPPER,
+      mask: COLLISION_CATEGORY.BALL,
+    },
   });
 
   const leftLane = Bodies.rectangle(80, 80, 40, 10, {
     isStatic: true,
     isSensor: true,
     label: "lane-left",
+    collisionFilter: {
+      category: COLLISION_CATEGORY.SENSOR,
+      mask: COLLISION_CATEGORY.BALL,
+    },
   });
 
   const rightLane = Bodies.rectangle(WIDTH - 80, 80, 40, 10, {
     isStatic: true,
     isSensor: true,
     label: "lane-right",
+    collisionFilter: {
+      category: COLLISION_CATEGORY.SENSOR,
+      mask: COLLISION_CATEGORY.BALL,
+    },
   });
 
   const bumpers = [
@@ -149,18 +243,30 @@ export function createPinballWorld(
       restitution: 1.3,
       label: `${BUMPER_LABEL}-center`,
       render: { fillStyle: "#f59e0b" },
+      collisionFilter: {
+        category: COLLISION_CATEGORY.PLAYFIELD,
+        mask: COLLISION_CATEGORY.BALL,
+      },
     }),
     Bodies.circle(WIDTH / 2 - 80, 260, BUMPER_RADIUS, {
       isStatic: true,
       restitution: 1.25,
       label: `${BUMPER_LABEL}-left`,
       render: { fillStyle: "#f59e0b" },
+      collisionFilter: {
+        category: COLLISION_CATEGORY.PLAYFIELD,
+        mask: COLLISION_CATEGORY.BALL,
+      },
     }),
     Bodies.circle(WIDTH / 2 + 80, 260, BUMPER_RADIUS, {
       isStatic: true,
       restitution: 1.25,
       label: `${BUMPER_LABEL}-right`,
       render: { fillStyle: "#f59e0b" },
+      collisionFilter: {
+        category: COLLISION_CATEGORY.PLAYFIELD,
+        mask: COLLISION_CATEGORY.BALL,
+      },
     }),
   ];
 
@@ -171,6 +277,10 @@ export function createPinballWorld(
       restitution: 1.05,
       label: `${SLING_LABEL}-left`,
       render: { fillStyle: "#4ade80" },
+      collisionFilter: {
+        category: COLLISION_CATEGORY.PLAYFIELD,
+        mask: COLLISION_CATEGORY.BALL,
+      },
     }),
     Bodies.rectangle(WIDTH - 85, HEIGHT - 120, 120, 16, {
       isStatic: true,
@@ -178,6 +288,10 @@ export function createPinballWorld(
       restitution: 1.05,
       label: `${SLING_LABEL}-right`,
       render: { fillStyle: "#4ade80" },
+      collisionFilter: {
+        category: COLLISION_CATEGORY.PLAYFIELD,
+        mask: COLLISION_CATEGORY.BALL,
+      },
     }),
   ];
 
@@ -186,16 +300,28 @@ export function createPinballWorld(
       isStatic: true,
       isSensor: true,
       label: `${TARGET_LABEL}-1`,
+      collisionFilter: {
+        category: COLLISION_CATEGORY.SENSOR,
+        mask: COLLISION_CATEGORY.BALL,
+      },
     }),
     Bodies.rectangle(WIDTH - 120, 320, 14, 40, {
       isStatic: true,
       isSensor: true,
       label: `${TARGET_LABEL}-2`,
+      collisionFilter: {
+        category: COLLISION_CATEGORY.SENSOR,
+        mask: COLLISION_CATEGORY.BALL,
+      },
     }),
     Bodies.rectangle(WIDTH / 2, 360, 14, 40, {
       isStatic: true,
       isSensor: true,
       label: `${TARGET_LABEL}-3`,
+      collisionFilter: {
+        category: COLLISION_CATEGORY.SENSOR,
+        mask: COLLISION_CATEGORY.BALL,
+      },
     }),
   ];
 
@@ -218,6 +344,36 @@ export function createPinballWorld(
   const bumperTimers = new Map<Matter.Body, number>();
   const targetStates = new Map<Matter.Body, boolean>();
   let locked = true;
+
+  const flipperState = {
+    left: {
+      input: 0,
+      power: 1,
+      current: DEFAULT_LEFT_ANGLE,
+    },
+    right: {
+      input: 0,
+      power: 1,
+      current: DEFAULT_RIGHT_ANGLE,
+    },
+  };
+
+  const syncFlipper = (
+    body: Matter.Body,
+    state: { input: number; power: number; current: number },
+    restAngle: number,
+    engagedAngle: number,
+    dt: number,
+  ) => {
+    const target = computeFlipperTarget(restAngle, engagedAngle, state.input, state.power);
+    const maxStep = dt * 32;
+    const delta = target - state.current;
+    const step = clamp(delta, -maxStep, maxStep);
+    const nextAngle = state.current + step;
+    Body.setAngle(body, nextAngle);
+    Body.setAngularVelocity(body, step / Math.max(dt, 1e-4));
+    state.current = nextAngle;
+  };
 
   const lightLane = (lane: Lane) => {
     glow[lane] = true;
@@ -394,12 +550,26 @@ export function createPinballWorld(
   Events.on(engine, "collisionStart", handleCollision);
   Events.on(render, "afterRender", handleAfterRender);
 
+  const FIXED_TIMESTEP = 1 / 120;
+  const MAX_ACCUMULATED_TIME = 0.25;
+  let accumulator = 0;
+
   const step = (delta: number) => {
-    Engine.update(engine, delta * 1000);
+    const clampedDelta = Math.min(delta, MAX_ACCUMULATED_TIME);
+    accumulator += clampedDelta;
+
+    while (accumulator >= FIXED_TIMESTEP) {
+      syncFlipper(leftFlipper, flipperState.left, DEFAULT_LEFT_ANGLE, -Math.PI / 4, FIXED_TIMESTEP);
+      syncFlipper(rightFlipper, flipperState.right, DEFAULT_RIGHT_ANGLE, Math.PI / 4, FIXED_TIMESTEP);
+      Engine.update(engine, FIXED_TIMESTEP * 1000);
+      accumulator -= FIXED_TIMESTEP;
+    }
+
     if (locked) {
       Body.setPosition(ball, spawnPosition);
       Body.setVelocity(ball, { x: 0, y: 0 });
     }
+
     Render.world(render);
   };
 
@@ -414,17 +584,27 @@ export function createPinballWorld(
     rightFlipper.render.fillStyle = value.flipper;
   };
 
-  const setLeftFlipper = (angle: number) => {
-    Body.setAngle(leftFlipper, angle);
+  const setLeftFlipperInput = (input: number, power: number) => {
+    flipperState.left.input = clamp(input, 0, 1);
+    flipperState.left.power = clamp(power, 0.5, 2);
   };
 
-  const setRightFlipper = (angle: number) => {
-    Body.setAngle(rightFlipper, angle);
+  const setRightFlipperInput = (input: number, power: number) => {
+    flipperState.right.input = clamp(input, 0, 1);
+    flipperState.right.power = clamp(power, 0.5, 2);
   };
 
   const resetFlippers = () => {
-    setLeftFlipper(DEFAULT_LEFT_ANGLE);
-    setRightFlipper(DEFAULT_RIGHT_ANGLE);
+    flipperState.left.input = 0;
+    flipperState.right.input = 0;
+    flipperState.left.power = 1;
+    flipperState.right.power = 1;
+    flipperState.left.current = DEFAULT_LEFT_ANGLE;
+    flipperState.right.current = DEFAULT_RIGHT_ANGLE;
+    Body.setAngle(leftFlipper, DEFAULT_LEFT_ANGLE);
+    Body.setAngle(rightFlipper, DEFAULT_RIGHT_ANGLE);
+    Body.setAngularVelocity(leftFlipper, 0);
+    Body.setAngularVelocity(rightFlipper, 0);
   };
 
   const resetBall = () => {
@@ -460,8 +640,8 @@ export function createPinballWorld(
     },
     setBounce,
     setTheme,
-    setLeftFlipper,
-    setRightFlipper,
+    setLeftFlipperInput,
+    setRightFlipperInput,
     resetFlippers,
     nudge,
     resetBall,

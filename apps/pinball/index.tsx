@@ -54,6 +54,8 @@ export default function Pinball() {
   const [launchPower, setLaunchPower] = useState(0.8);
   const nudgesRef = useRef<number[]>([]);
   const lastNudgeRef = useRef(0);
+  const flipperInputRef = useRef({ left: 0, right: 0 });
+  const flipperPowerRef = useRef(flipperPower);
   const { getHighScore, setHighScore } = useGamePersistence("pinball");
   const [highScore, setHighScoreState] = useState(0);
   const scoreHandlerRef = useRef<(value: number) => void>(() => {});
@@ -74,6 +76,10 @@ export default function Pinball() {
 
   const handleTilt = useCallback(() => {
     setTilt(true);
+    flipperInputRef.current = { left: 0, right: 0 };
+    const power = flipperPowerRef.current;
+    worldRef.current?.setLeftFlipperInput(0, power);
+    worldRef.current?.setRightFlipperInput(0, power);
     window.setTimeout(() => {
       setTilt(false);
       nudgesRef.current = [];
@@ -134,6 +140,7 @@ export default function Pinball() {
     });
     setBallLocked(true);
     worldRef.current?.resetFlippers();
+    flipperInputRef.current = { left: 0, right: 0 };
     worldRef.current?.resetBall();
   }, []);
 
@@ -182,6 +189,14 @@ export default function Pinball() {
     worldRef.current?.setTheme(themes[theme]);
   }, [theme]);
 
+  useEffect(() => {
+    flipperPowerRef.current = flipperPower;
+    if (!worldRef.current) return;
+    const { left, right } = flipperInputRef.current;
+    worldRef.current.setLeftFlipperInput(left, flipperPower);
+    worldRef.current.setRightFlipperInput(right, flipperPower);
+  }, [flipperPower]);
+
   const handleNudge = useCallback(() => {
     const now = Date.now();
     nudgesRef.current = nudgesRef.current.filter((t) => now - t < 3000);
@@ -218,9 +233,11 @@ export default function Pinball() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (tilt) return;
       if (event.code === "ArrowLeft") {
-        worldRef.current?.setLeftFlipper((-Math.PI / 4) * flipperPower);
+        flipperInputRef.current.left = 1;
+        worldRef.current?.setLeftFlipperInput(1, flipperPower);
       } else if (event.code === "ArrowRight") {
-        worldRef.current?.setRightFlipper((Math.PI / 4) * flipperPower);
+        flipperInputRef.current.right = 1;
+        worldRef.current?.setRightFlipperInput(1, flipperPower);
       } else if (event.code === "KeyN") {
         tryNudge();
       } else if (event.code === "Space") {
@@ -231,9 +248,11 @@ export default function Pinball() {
 
     const handleKeyUp = (event: KeyboardEvent) => {
       if (event.code === "ArrowLeft") {
-        worldRef.current?.setLeftFlipper(constants.DEFAULT_LEFT_ANGLE);
+        flipperInputRef.current.left = 0;
+        worldRef.current?.setLeftFlipperInput(0, flipperPower);
       } else if (event.code === "ArrowRight") {
-        worldRef.current?.setRightFlipper(constants.DEFAULT_RIGHT_ANGLE);
+        flipperInputRef.current.right = 0;
+        worldRef.current?.setRightFlipperInput(0, flipperPower);
       }
     };
 
@@ -274,6 +293,7 @@ export default function Pinball() {
     setScore(0);
     worldRef.current?.resetBall();
     worldRef.current?.resetFlippers();
+    flipperInputRef.current = { left: 0, right: 0 };
     setTilt(false);
     nudgesRef.current = [];
     setBallsRemaining(MAX_BALLS);
