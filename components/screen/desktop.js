@@ -4637,6 +4637,7 @@ export class Desktop extends Component {
                     openShortcutSelector={this.openShortcutSelector}
                     iconSizePreset={this.state.iconSizePreset}
                     setIconSizePreset={this.setIconSizePreset}
+                    onClose={this.hideAllContextMenu}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />

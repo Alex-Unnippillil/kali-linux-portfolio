@@ -1,9 +1,14 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import useFocusTrap from '../../hooks/useFocusTrap'
+import useRovingTabIndex from '../../hooks/useRovingTabIndex'
 import logger from '../../utils/logger'
 
 function DesktopMenu(props) {
 
     const [isFullScreen, setIsFullScreen] = useState(false)
+    const menuRef = useRef(null)
+    useFocusTrap(menuRef, props.active)
+    useRovingTabIndex(menuRef, props.active, 'vertical')
     const iconSizePreset = props.iconSizePreset || 'medium'
     const setIconSizePreset = typeof props.setIconSizePreset === 'function' ? props.setIconSizePreset : () => { }
     const iconSizeOptions = [
@@ -50,11 +55,21 @@ function DesktopMenu(props) {
         }
     }
 
+    const handleKeyDown = (e) => {
+        if (e.key === 'Escape') {
+            props.onClose && props.onClose()
+        }
+    }
+
     return (
         <div
             id="desktop-menu"
             role="menu"
             aria-label="Desktop context menu"
+            aria-orientation="vertical"
+            aria-hidden={!props.active}
+            ref={menuRef}
+            onKeyDown={handleKeyDown}
             className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
         >
             <button
@@ -166,8 +181,8 @@ function DesktopMenu(props) {
 
 function Devider() {
     return (
-        <div className="flex justify-center w-full">
-            <div className=" border-t border-gray-900 py-1 w-2/5"></div>
+        <div className="flex justify-center w-full" role="none">
+            <div role="separator" aria-hidden="true" className=" border-t border-gray-900 py-1 w-2/5"></div>
         </div>
     );
 }

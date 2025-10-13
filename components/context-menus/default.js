@@ -17,6 +17,7 @@ function DefaultMenu(props) {
         <div
             id="default-menu"
             role="menu"
+            aria-orientation="vertical"
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}
@@ -70,8 +71,8 @@ function DefaultMenu(props) {
 
 function Devider() {
     return (
-        <div className="flex justify-center w-full">
-            <div className=" border-t border-gray-900 py-1 w-2/5"></div>
+        <div className="flex justify-center w-full" role="none">
+            <div role="separator" aria-hidden="true" className=" border-t border-gray-900 py-1 w-2/5"></div>
         </div>
     );
 }
