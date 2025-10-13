@@ -65,9 +65,9 @@ jest.mock('../components/util-components/background-image', () => {
   return { __esModule: true, default: MockBackgroundImage };
 });
 
-jest.mock('../components/base/ubuntu_app', () => {
-  const MockUbuntuApp = createMockComponent('ubuntu-app', 'MockUbuntuApp');
-  return { __esModule: true, default: MockUbuntuApp };
+jest.mock('../components/base/app-tile', () => {
+  const MockAppTile = createMockComponent('ubuntu-app', 'MockAppTile');
+  return { __esModule: true, default: MockAppTile };
 });
 
 jest.mock('../components/screen/all-applications', () => {

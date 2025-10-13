@@ -4,32 +4,56 @@ import { Desktop } from '../../components/screen/desktop';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('html-to-image', () => ({ toPng: jest.fn().mockResolvedValue('data:image/png;base64,') }));
-jest.mock('../../components/util-components/background-image', () => () => <div data-testid="background" />);
+jest.mock('../../components/util-components/background-image', () => function MockBackground() {
+  return <div data-testid="background" />;
+});
 jest.mock('../../components/base/window', () => ({
   __esModule: true,
-  default: () => <div data-testid="window" />,
-  WindowTopBar: () => <div data-testid="window-top-bar" />,
-  WindowEditButtons: () => <div data-testid="window-edit-buttons" />,
+  default: function MockWindow() {
+    return <div data-testid="window" />;
+  },
+  WindowTopBar: function MockWindowTopBar() {
+    return <div data-testid="window-top-bar" />;
+  },
+  WindowEditButtons: function MockWindowEditButtons() {
+    return <div data-testid="window-edit-buttons" />;
+  },
 }));
-jest.mock('../../components/base/ubuntu_app', () => () => <div data-testid="ubuntu-app" />);
-jest.mock('../../components/screen/all-applications', () => () => <div data-testid="all-apps" />);
-jest.mock('../../components/screen/shortcut-selector', () => () => <div data-testid="shortcut-selector" />);
-jest.mock('../../components/screen/window-switcher', () => () => <div data-testid="window-switcher" />);
+jest.mock('../../components/base/app-tile', () => function MockAppTile() {
+  return <div data-testid="ubuntu-app" />;
+});
+jest.mock('../../components/screen/all-applications', () => function MockAllApps() {
+  return <div data-testid="all-apps" />;
+});
+jest.mock('../../components/screen/shortcut-selector', () => function MockShortcutSelector() {
+  return <div data-testid="shortcut-selector" />;
+});
+jest.mock('../../components/screen/window-switcher', () => function MockWindowSwitcher() {
+  return <div data-testid="window-switcher" />;
+});
 jest.mock('../../components/context-menus/desktop-menu', () => ({
   __esModule: true,
-  default: () => <div data-testid="desktop-menu" />,
+  default: function MockDesktopMenu() {
+    return <div data-testid="desktop-menu" />;
+  },
 }));
 jest.mock('../../components/context-menus/default', () => ({
   __esModule: true,
-  default: () => <div data-testid="default-menu" />,
+  default: function MockDefaultMenu() {
+    return <div data-testid="default-menu" />;
+  },
 }));
 jest.mock('../../components/context-menus/app-menu', () => ({
   __esModule: true,
-  default: () => <div data-testid="app-menu" />,
+  default: function MockAppMenu() {
+    return <div data-testid="app-menu" />;
+  },
 }));
 jest.mock('../../components/context-menus/taskbar-menu', () => ({
   __esModule: true,
-  default: () => <div data-testid="taskbar-menu" />,
+  default: function MockTaskbarMenu() {
+    return <div data-testid="taskbar-menu" />;
+  },
 }));
 jest.mock('../../utils/recentStorage', () => ({ addRecentApp: jest.fn() }));
 
@@ -83,7 +107,6 @@ describe('Desktop command palette integration', () => {
         value: originalMatchMedia,
       });
     } else {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error clean up mock
       delete window.matchMedia;
     }

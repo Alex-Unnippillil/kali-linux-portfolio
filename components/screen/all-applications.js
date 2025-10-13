@@ -1,5 +1,6 @@
 import React from 'react';
-import UbuntuApp from '../base/ubuntu_app';
+import AppTile from '../base/app-tile';
+import { buildAppMetadata } from '../../lib/appRegistry';
 import { safeLocalStorage } from '../../utils/safeStorage';
 
 const FAVORITES_KEY = 'launcherFavorites';
@@ -271,6 +272,7 @@ class AllApplications extends React.Component {
 
     renderAppTile = (app) => {
         const isFavorite = this.state.favorites.includes(app.id);
+        const meta = buildAppMetadata(app);
         return (
             <div
                 key={app.id}
@@ -291,13 +293,14 @@ class AllApplications extends React.Component {
                 >
                     ★
                 </button>
-                <UbuntuApp
+                <AppTile
                     name={app.title}
                     id={app.id}
                     icon={app.icon}
                     openApp={() => this.openApp(app.id)}
                     disabled={app.disabled}
                     prefetch={app.screen?.prefetch}
+                    href={meta.path}
                 />
             </div>
         );
