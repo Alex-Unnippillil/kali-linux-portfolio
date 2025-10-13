@@ -16,6 +16,18 @@ jobs:
       - run: yarn dedupe --check
       - run: npm run lint
 
+  i18n-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: yarn dedupe --check
+      - run: CI=1 yarn i18n:audit
+
   typecheck:
     runs-on: ubuntu-latest
     steps:

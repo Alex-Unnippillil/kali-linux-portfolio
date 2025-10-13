@@ -18,6 +18,7 @@ import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { DEFAULT_LOCALE, setLocale, translate } from '../lib/i18n';
 import { Rajdhani } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
 
@@ -83,6 +84,32 @@ const kaliSans = Rajdhani({
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
   useEffect(() => {
+    const applyLocale = (rawLocale?: string | null) => {
+      const resolved = setLocale(rawLocale ?? DEFAULT_LOCALE);
+      if (typeof document !== 'undefined') {
+        document.documentElement.lang = resolved;
+      }
+    };
+
+    if (typeof navigator !== 'undefined') {
+      const initial = navigator.language ?? (navigator.languages?.[0] ?? DEFAULT_LOCALE);
+      applyLocale(initial);
+
+      const handleLanguageChange = () => {
+        applyLocale(navigator.language ?? (navigator.languages?.[0] ?? DEFAULT_LOCALE));
+      };
+
+      window.addEventListener('languagechange', handleLanguageChange);
+      return () => {
+        window.removeEventListener('languagechange', handleLanguageChange);
+      };
+    }
+
+    applyLocale(DEFAULT_LOCALE);
+    return undefined;
+  }, []);
+
+  useEffect(() => {
     const initAnalytics = async (): Promise<void> => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
       if (trackingId) {
@@ -145,16 +172,20 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
     const liveRegion = document.getElementById('live-region');
     if (!liveRegion) return undefined;
 
-    const update = (message: string): void => {
+    const emit = (message: string): void => {
       liveRegion.textContent = '';
       setTimeout(() => {
         liveRegion.textContent = message;
       }, 100);
     };
 
-    const handleCopy = (): void => update('Copied to clipboard');
-    const handleCut = (): void => update('Cut to clipboard');
-    const handlePaste = (): void => update('Pasted from clipboard');
+    const announce = (key: string, fallback: string): void => {
+      emit(translate(key, { fallback }));
+    };
+
+    const handleCopy = (): void => announce('common.clipboard.copied', 'Copied to clipboard');
+    const handleCut = (): void => announce('common.clipboard.cut', 'Cut to clipboard');
+    const handlePaste = (): void => announce('common.clipboard.pasted', 'Pasted from clipboard');
 
     window.addEventListener('copy', handleCopy);
     window.addEventListener('cut', handleCut);
@@ -165,14 +196,14 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
     const originalRead = clipboard?.readText?.bind(clipboard);
     if (clipboard && originalWrite) {
       clipboard.writeText = async (text: string): Promise<void> => {
-        update('Copied to clipboard');
+        announce('common.clipboard.copied', 'Copied to clipboard');
         await originalWrite(text);
       };
     }
     if (clipboard && originalRead) {
       clipboard.readText = async (): Promise<string> => {
         const text = await originalRead();
-        update('Pasted from clipboard');
+        announce('common.clipboard.pasted', 'Pasted from clipboard');
         return text;
       };
     }
@@ -182,7 +213,7 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
       const WrappedNotification = class extends OriginalNotification {
         constructor(title: string, options?: NotificationOptions) {
           super(title, options);
-          update(`${title}${options?.body ? ` ${options.body}` : ''}`);
+          emit(`${title}${options?.body ? ` ${options.body}` : ''}`);
         }
       };
 
