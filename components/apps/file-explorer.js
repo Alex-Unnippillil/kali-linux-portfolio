@@ -263,16 +263,30 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
 
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
-      <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
-        <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-          Open Folder
-        </button>
-        {path.length > 1 && (
-          <button onClick={goBack} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-            Back
+      <div
+        className="sticky top-0 z-20 flex w-full flex-wrap items-center gap-2 border-b border-white/10 bg-ub-warm-grey/80 p-2 text-xs backdrop-blur-sm sm:static sm:flex-nowrap sm:border-b-0 sm:text-sm sm:backdrop-blur-0"
+      >
+        <div className="flex items-center gap-2">
+          <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+            Open Folder
           </button>
-        )}
-        <Breadcrumbs path={path} onNavigate={navigateToBreadcrumb} />
+          {path.length > 1 && (
+            <button onClick={goBack} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+              Back
+            </button>
+          )}
+        </div>
+        <Breadcrumbs
+          path={path}
+          onNavigate={navigateToBreadcrumb}
+          className="flex-1 min-w-0"
+          style={{
+            '--breadcrumb-fg': 'rgba(255, 255, 255, 0.95)',
+            '--breadcrumb-muted': 'rgba(255, 255, 255, 0.6)',
+            '--breadcrumb-hover-bg': 'rgba(255, 255, 255, 0.14)',
+            '--breadcrumb-active-bg': 'rgba(255, 255, 255, 0.2)',
+          }}
+        />
         {locationError && (
           <div className="text-xs text-red-300" role="status">
             {locationError}

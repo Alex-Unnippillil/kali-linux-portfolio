@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import Breadcrumbs from '../../components/ui/Breadcrumbs';
 import share, { canShare } from '../../utils/share';
 
 interface Script {
@@ -250,26 +251,29 @@ const NmapNSE: React.FC = () => {
               {tags.length ? tags.join(', ') : 'Loading…'}
             </p>
           </div>
-          <nav
-            aria-label="Script breadcrumb"
-            className="rounded-lg border border-[color:var(--kali-border)] bg-[var(--kali-panel)] p-4 text-center shadow-kali-panel md:text-left"
-          >
+          <div className="rounded-lg border border-[color:var(--kali-border)] bg-[var(--kali-panel)] p-4 text-center shadow-kali-panel md:text-left">
             <p className="text-xs uppercase tracking-wide text-[color:var(--color-muted)]">Breadcrumb</p>
             {selected ? (
-              <p
-                className="mt-2 font-mono text-sm text-[color:var(--color-text)]"
+              <Breadcrumbs
                 data-testid="nmap-breadcrumb"
-              >
-                <span className="capitalize text-kali-accent">{selected.tag}</span>{' '}
-                <span aria-hidden="true" className="text-[color:var(--color-muted)]">
-                  ›
-                </span>{' '}
-                <span className="text-[color:var(--color-text)]">{selected.name}</span>
-              </p>
+                path={[
+                  { name: selected.tag || '' },
+                  { name: selected.name },
+                ]}
+                separator="›"
+                className="mt-2 w-full justify-center font-mono text-sm text-[color:var(--color-text)] md:justify-start [&_li:first-child>*]:text-kali-accent"
+                ariaLabel="Script breadcrumb"
+                style={{
+                  '--breadcrumb-fg': 'var(--color-text)',
+                  '--breadcrumb-muted': 'color-mix(in srgb, var(--color-text) 55%, transparent)',
+                  '--breadcrumb-hover-bg': 'color-mix(in srgb, var(--color-text) 12%, transparent)',
+                  '--breadcrumb-active-bg': 'color-mix(in srgb, var(--color-text) 18%, transparent)',
+                }}
+              />
             ) : (
               <p className="mt-2 text-[color:var(--color-muted)]">Select a script to see the path.</p>
             )}
-          </nav>
+          </div>
           <div className="rounded-lg border border-[color:var(--kali-border)] bg-[var(--kali-panel)] p-4 shadow-kali-panel md:text-right">
             <p className="text-xs uppercase tracking-wide text-[color:var(--color-muted)]">Last run</p>
             {lastRun ? (
