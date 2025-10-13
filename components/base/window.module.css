@@ -10,11 +10,17 @@
   --window-motion-opacity-easing: var(--window-motion-ease-minimize);
   transition:
     transform var(--window-motion-transform-duration) var(--window-motion-transform-easing),
+    width var(--window-motion-transform-duration) var(--window-motion-transform-easing),
+    height var(--window-motion-transform-duration) var(--window-motion-transform-easing),
     filter var(--motion-fast) ease,
     box-shadow var(--motion-fast) ease,
     opacity var(--window-motion-opacity-duration) var(--window-motion-opacity-easing),
     visibility 0s linear;
-  transition-delay: 0s, 0s, 0s, 0s, 0s;
+  transition-delay: 0s;
+}
+
+.windowFrameMotionDisabled {
+  transition: none !important;
 }
 
 .windowFrame::before {
