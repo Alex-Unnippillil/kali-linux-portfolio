@@ -1587,6 +1587,27 @@ export class Desktop extends Component {
             }
             return;
         }
+        if (item.type === 'search') {
+            const url = item?.data?.url;
+            if (typeof url === 'string' && url) {
+                const explicitFlag = typeof item?.data?.openInNewTab === 'boolean'
+                    ? item.data.openInNewTab
+                    : undefined;
+                const defaultNewTab = /^https?:/i.test(url) && !url.startsWith('/');
+                const openInNewTab = explicitFlag ?? defaultNewTab;
+                try {
+                    if (openInNewTab) {
+                        window.open(url, '_blank', 'noopener,noreferrer');
+                    } else {
+                        window.location.href = url;
+                    }
+                } catch (error) {
+                    window.location.href = url;
+                }
+            }
+            this.closeCommandPalette();
+            return;
+        }
         if (item.id) {
             this.openApp(item.id);
         }
