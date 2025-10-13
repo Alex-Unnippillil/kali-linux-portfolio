@@ -169,7 +169,8 @@ export default class Navbar extends PureComponent {
                                                 <span
                                                         aria-hidden="true"
                                                         data-testid="running-indicator"
-                                                        className="absolute -bottom-1 left-1/2 h-1 w-2 -translate-x-1/2 rounded-full bg-current"
+                                                        className="absolute -bottom-1 h-1 w-2 rounded-full bg-current"
+                                                        style={{ insetInlineStart: '50%', transform: 'translateX(-50%)' }}
                                                 />
                                         )}
                                 </span>
@@ -306,8 +307,8 @@ export default class Navbar extends PureComponent {
                                                 minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
                                                 paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
                                                 paddingBottom: '0.25rem',
-                                                paddingLeft: `calc(0.75rem + var(--safe-area-left, 0px))`,
-                                                paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
+                                                paddingInlineStart: `calc(0.75rem + var(--safe-area-inline-start, var(--safe-area-left, 0px)))`,
+                                                paddingInlineEnd: `calc(0.75rem + var(--safe-area-inline-end, var(--safe-area-right, 0px)))`,
                                                 '--desktop-navbar-height': `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px) + 0.375rem + 0.25rem)`
                                         }}
                                 >

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 
 interface ToastProps {
   message: string;
@@ -28,17 +29,24 @@ const Toast: React.FC<ToastProps> = ({
     };
   }, [duration, onClose]);
 
+  const floatingStyles: (CSSProperties & { '--tw-translate-x'?: string }) = {
+    insetInlineStart: '50%',
+    '--tw-translate-x': '-50%',
+  };
+
   return (
     <div
       role="status"
       aria-live="polite"
-      className={`fixed top-4 left-1/2 -translate-x-1/2 transform bg-gray-900 text-white border border-gray-700 px-4 py-3 rounded-md shadow-md flex items-center transition-transform duration-150 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'}`}
+      className={`fixed top-4 transform bg-gray-900 text-white border border-gray-700 px-4 py-3 rounded-md shadow-md flex items-center transition-transform duration-150 ease-in-out ${visible ? 'translate-y-0' : '-translate-y-full'}`}
+      style={floatingStyles}
     >
       <span>{message}</span>
       {onAction && actionLabel && (
         <button
           onClick={onAction}
-          className="ml-4 underline focus:outline-none"
+          className="underline focus:outline-none"
+          style={{ marginInlineStart: '1rem' }}
         >
           {actionLabel}
         </button>

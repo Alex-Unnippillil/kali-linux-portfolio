@@ -188,8 +188,8 @@ const HexEditor = ({ hex, theme }) => {
                           : 'var(--r2-surface)',
                         color: selected ? '#000' : 'var(--r2-text)',
                         '--tw-ring-color': 'var(--r2-accent)',
-                        marginLeft: colIdx === 8 ? '0.5rem' : undefined,
-                      }}
+                        marginInlineStart: colIdx === 8 ? '0.5rem' : undefined,
+                    }}
                     >
                       {b}
                     </button>
