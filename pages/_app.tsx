@@ -17,6 +17,7 @@ import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
+import ServiceWorkerUpdateAnnouncer from '../components/common/ServiceWorkerUpdateAnnouncer';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 import { Rajdhani } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
@@ -215,6 +216,7 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
         <SettingsProvider>
           <NotificationCenter>
             <PipPortalProvider>
+              <ServiceWorkerUpdateAnnouncer />
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
               <ShortcutOverlay />
