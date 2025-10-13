@@ -1,6 +1,5 @@
-import { act, render, waitFor } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import ShareTarget from '../pages/share-target';
-import InputHub from '../pages/input-hub';
 import { useRouter } from 'next/router';
 
 jest.mock('next/router', () => ({
@@ -9,82 +8,64 @@ jest.mock('next/router', () => ({
 
 const useRouterMock = useRouter as unknown as jest.Mock;
 
-describe('Share target workflow', () => {
-  let currentRouter: any;
-  let replaceMock: jest.Mock;
+function createRouterMock(overrides: Record<string, unknown> = {}) {
+  return {
+    isReady: true,
+    query: {},
+    replace: jest.fn(),
+    ...overrides,
+  };
+}
 
-  beforeEach(() => {
-    replaceMock = jest.fn();
-    currentRouter = { isReady: true, query: {}, replace: replaceMock };
-    useRouterMock.mockImplementation(() => currentRouter);
-  });
-
+describe('Share target redirect for sticky notes', () => {
   afterEach(() => {
-    delete (window as any).launchQueue;
     jest.clearAllMocks();
   });
 
-  it('passes shared file metadata through to the input hub message', async () => {
-    let consumer: ((params: any) => Promise<void> | void) | undefined;
-    (window as any).launchQueue = {
-      setConsumer: jest.fn((cb: typeof consumer) => {
-        consumer = cb;
-      }),
-    };
-
-    currentRouter.query = {
-      text: 'Shared message',
-    };
-
-    const { unmount } = render(<ShareTarget />);
-
-    expect((window as any).launchQueue.setConsumer).toHaveBeenCalled();
-    expect(consumer).toBeDefined();
-
-    const sharedFiles = [
-      { name: 'evidence.txt', type: 'text/plain' },
-      { name: 'report.pdf', type: 'application/pdf' },
-    ];
-    const launchParams = {
-      files: sharedFiles.map((file) => ({
-        getFile: jest.fn().mockResolvedValue(
-          new File(['test'], file.name, { type: file.type })
-        ),
-      })),
-    };
-
-    await act(async () => {
-      await consumer?.(launchParams);
+  it('redirects to sticky notes with sanitized share parameters', async () => {
+    const replaceMock = jest.fn();
+    const router = createRouterMock({
+      query: {
+        title: '  Incident Note  ',
+        text: ' Investigation details ',
+        url: ' https://example.com/findings ',
+      },
+      replace: replaceMock,
     });
+    useRouterMock.mockReturnValue(router);
+
+    render(<ShareTarget />);
 
     await waitFor(() => {
       expect(replaceMock).toHaveBeenCalled();
     });
 
     const target = replaceMock.mock.calls[0][0] as string;
-    expect(target.startsWith('/input-hub?')).toBe(true);
+    expect(target.startsWith('/apps/sticky_notes')).toBe(true);
+
     const query = target.split('?')[1];
+    expect(query).toBeDefined();
     const params = new URLSearchParams(query);
-    const filesParam = params.get('files');
-    expect(filesParam).toBeTruthy();
+    expect(params.get('title')).toBe('Incident Note');
+    expect(params.get('text')).toBe('Investigation details');
+    expect(params.get('url')).toBe('https://example.com/findings');
+  });
 
-    const parsed = JSON.parse(filesParam as string);
-    expect(parsed).toEqual(sharedFiles);
+  it('omits empty parameters and falls back to base sticky notes route', async () => {
+    const replaceMock = jest.fn();
+    const router = createRouterMock({
+      query: {
+        title: '   ',
+        text: '',
+      },
+      replace: replaceMock,
+    });
+    useRouterMock.mockReturnValue(router);
 
-    unmount();
-
-    currentRouter = {
-      query: Object.fromEntries(params.entries()),
-    };
-
-    const { container } = render(<InputHub />);
-
-    const messageField = container.querySelector('textarea[placeholder="Message"]') as HTMLTextAreaElement;
-    expect(messageField).toBeTruthy();
+    render(<ShareTarget />);
 
     await waitFor(() => {
-      expect(messageField.value).toContain('File: evidence.txt (text/plain)');
-      expect(messageField.value).toContain('File: report.pdf (application/pdf)');
+      expect(replaceMock).toHaveBeenCalledWith('/apps/sticky_notes');
     });
   });
 });
