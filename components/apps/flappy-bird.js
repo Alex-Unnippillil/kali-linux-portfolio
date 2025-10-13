@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import useCanvasResize from "../../hooks/useCanvasResize";
 import {
   BIRD_SKINS,
@@ -9,17 +9,107 @@ import {
 const WIDTH = 400;
 const HEIGHT = 300;
 
+const DIFFICULTY_PROFILES = [
+  {
+    id: "classic",
+    label: "Classic",
+    description: "Balanced ramp with steady speed growth and mild gap changes.",
+    speed: {
+      start: 2,
+      max: 4.2,
+      increment: 0.08,
+      mobileScale: 0.85,
+    },
+    gap: {
+      base: 90,
+      min: 58,
+      shrinkAmount: 2,
+      shrinkRate: 5,
+      variance: 12,
+    },
+    spawn: {
+      base: 100,
+      min: 70,
+      step: 5,
+      scoreStep: 5,
+    },
+  },
+  {
+    id: "arcade",
+    label: "Arcade",
+    description: "Faster pipes and aggressive gap variance for thrill seekers.",
+    speed: {
+      start: 2.4,
+      max: 5.2,
+      increment: 0.12,
+      mobileScale: 0.8,
+    },
+    gap: {
+      base: 86,
+      min: 52,
+      shrinkAmount: 3,
+      shrinkRate: 4,
+      variance: 18,
+    },
+    spawn: {
+      base: 92,
+      min: 64,
+      step: 6,
+      scoreStep: 4,
+    },
+  },
+  {
+    id: "zen",
+    label: "Zen",
+    description: "Gentle ramp that favours practice and relaxed play.",
+    speed: {
+      start: 1.8,
+      max: 3.4,
+      increment: 0.05,
+      mobileScale: 0.9,
+    },
+    gap: {
+      base: 96,
+      min: 64,
+      shrinkAmount: 1,
+      shrinkRate: 6,
+      variance: 8,
+    },
+    spawn: {
+      base: 104,
+      min: 78,
+      step: 4,
+      scoreStep: 6,
+    },
+  },
+];
+
 const FlappyBird = () => {
   const canvasRef = useCanvasResize(WIDTH, HEIGHT);
   const liveRef = useRef(null);
   const [started, setStarted] = useState(false);
   const [skin, setSkin] = useState(0);
   const [pipeSkinIndex, setPipeSkinIndex] = useState(0);
+  const [selectedDifficulty, setSelectedDifficulty] = useState(
+    DIFFICULTY_PROFILES[0].id,
+  );
   const birdImages = useRef([]);
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const scoreRef = useRef(0);
   const bestRef = useRef(0);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const leaderboardRef = useRef([]);
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [shareMessage, setShareMessage] = useState("");
+  const shareTimeoutRef = useRef(null);
+
+  const difficultyProfile = useMemo(() => {
+    const found = DIFFICULTY_PROFILES.find(
+      (profile) => profile.id === selectedDifficulty,
+    );
+    return found || DIFFICULTY_PROFILES[0];
+  }, [selectedDifficulty]);
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -31,6 +121,15 @@ const FlappyBird = () => {
       setPipeSkinIndex(
         parseInt(localStorage.getItem("flappy-pipe-skin") || "0", 10),
       );
+      const savedDifficulty = localStorage.getItem("flappy-difficulty-profile");
+      if (savedDifficulty) setSelectedDifficulty(savedDifficulty);
+      const savedLeaderboard = JSON.parse(
+        localStorage.getItem("flappy-leaderboard") || "[]",
+      );
+      if (Array.isArray(savedLeaderboard)) {
+        leaderboardRef.current = savedLeaderboard;
+        setLeaderboard(savedLeaderboard);
+      }
     } catch {
       /* ignore */
     }
@@ -42,6 +141,12 @@ const FlappyBird = () => {
       img.src = src;
       return img;
     });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (shareTimeoutRef.current) clearTimeout(shareTimeoutRef.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -89,12 +194,14 @@ const FlappyBird = () => {
     const jump = -7;
 
     const pipeWidth = 40;
-    const baseGap = 80;
+    const baseGap = difficultyProfile.gap.base;
     const practiceGap = 120;
-    const minGap = 60;
     let gap = practiceMode ? practiceGap : baseGap;
-    let pipeInterval = 100;
-    const pipeSpeed = 2;
+    const spawnSettings = difficultyProfile.spawn;
+    let pipeInterval = spawnSettings.base;
+    let currentPipeSpeed = difficultyProfile.speed.start;
+    const maxPipeSpeed = difficultyProfile.speed.max;
+    const pipeSpeedIncrement = difficultyProfile.speed.increment;
     let nextPipeFrame = pipeInterval;
 
     // game state
@@ -107,6 +214,15 @@ const FlappyBird = () => {
     let birdAngle = 0;
     let loopId = 0;
     let highHz = localStorage.getItem("flappy-120hz") === "1";
+    const isMobile =
+      typeof navigator !== "undefined" && navigator.maxTouchPoints > 0;
+    if (isMobile) highHz = false;
+    const speedScale = isMobile
+      ? difficultyProfile.speed.mobileScale || 1
+      : 1;
+    currentPipeSpeed *= speedScale;
+    const scaledPipeIncrement = pipeSpeedIncrement * speedScale;
+    const scaledMaxSpeed = maxPipeSpeed * speedScale;
     let fps = highHz ? 120 : 60;
 
     // sky, clouds, and wind
@@ -136,18 +252,20 @@ const FlappyBird = () => {
     }
 
     function initClouds() {
-      cloudsBack = Array.from({ length: 3 }, () => makeCloud(0.2));
-      cloudsFront = Array.from({ length: 3 }, () => makeCloud(0.5));
+      const backCount = isMobile ? 2 : 3;
+      const frontCount = isMobile ? 2 : 3;
+      cloudsBack = Array.from({ length: backCount }, () => makeCloud(0.2));
+      cloudsFront = Array.from({ length: frontCount }, () => makeCloud(0.5));
     }
 
     function initHills() {
       hillsBack = Array.from({ length: 2 }, (_, i) => ({
         x: i * width,
-        speed: 0.3,
+        speed: isMobile ? 0.2 : 0.3,
       }));
       hillsFront = Array.from({ length: 2 }, (_, i) => ({
         x: i * width,
-        speed: 0.6,
+        speed: isMobile ? 0.45 : 0.6,
       }));
     }
 
@@ -274,7 +392,8 @@ const FlappyBird = () => {
     let rand = createRandom(seed);
 
     function initFoliage() {
-      foliage = Array.from({ length: 6 }, () => ({
+      const count = isMobile ? 4 : 6;
+      foliage = Array.from({ length: count }, () => ({
         x: rand() * width,
         h: rand() * 20 + 20,
       }));
@@ -302,9 +421,16 @@ const FlappyBird = () => {
     }
     let best = 0;
     let ghostRun = null;
+    function getRecordKeys() {
+      const gravityKey = GRAVITY_VARIANTS[gravityVariant].name;
+      return {
+        gravityKey,
+        compoundKey: `${gravityKey}-${difficultyProfile.id}`,
+      };
+    }
     function loadRecord() {
-      const key = GRAVITY_VARIANTS[gravityVariant].name;
-      const rec = records[key];
+      const { gravityKey, compoundKey } = getRecordKeys();
+      const rec = records[compoundKey] || records[gravityKey];
       best = rec ? rec.score : 0;
       ghostRun = rec ? rec.run : null;
       bestRef.current = best;
@@ -334,7 +460,21 @@ const FlappyBird = () => {
     let runPositions = [];
     let ghostFrame = 0;
 
+    function computeGap() {
+      if (practiceMode) return practiceGap;
+      const shrinkSteps = Math.floor(score / difficultyProfile.gap.shrinkRate);
+      const shrinkAmount = shrinkSteps * difficultyProfile.gap.shrinkAmount;
+      const base = Math.max(
+        difficultyProfile.gap.min,
+        difficultyProfile.gap.base - shrinkAmount,
+      );
+      const variance = difficultyProfile.gap.variance;
+      const randomOffset = variance ? (rand() - 0.5) * 2 * variance : 0;
+      return Math.max(difficultyProfile.gap.min, base + randomOffset);
+    }
+
     function addPipe() {
+      gap = computeGap();
       const top = rand() * (height - gap - 40) + 20;
       pipes.push({ x: width, top, bottom: top + gap });
     }
@@ -355,7 +495,8 @@ const FlappyBird = () => {
       ghostFrame = 0;
       gravity = GRAVITY_VARIANTS[gravityVariant].value;
       gap = practiceMode ? practiceGap : baseGap;
-      pipeInterval = 100;
+      pipeInterval = spawnSettings.base;
+      currentPipeSpeed = difficultyProfile.speed.start * speedScale;
       nextPipeFrame = pipeInterval;
       initClouds();
       initHills();
@@ -511,7 +652,8 @@ const FlappyBird = () => {
             if (score > best) {
               best = score;
               bestRef.current = best;
-              records[GRAVITY_VARIANTS[gravityVariant].name] = {
+              const { compoundKey, gravityKey } = getRecordKeys();
+              records[compoundKey] = {
                 score: best,
                 run: {
                   pos: runPositions.slice(),
@@ -520,9 +662,33 @@ const FlappyBird = () => {
                 },
               };
               localStorage.setItem("flappy-records", JSON.stringify(records));
-              ghostRun = records[GRAVITY_VARIANTS[gravityVariant].name].run;
+              if (records[gravityKey]) delete records[gravityKey];
+              ghostRun = records[compoundKey].run;
             }
             lastRun = { seed, flaps: flapFrames };
+            if (!practiceMode && score > 0) {
+              const gravityName = GRAVITY_VARIANTS[gravityVariant].name;
+              const entry = {
+                score,
+                difficulty: difficultyProfile.label,
+                difficultyId: difficultyProfile.id,
+                gravity: gravityName,
+                timestamp: Date.now(),
+              };
+              const updated = [...leaderboardRef.current, entry]
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 10);
+              leaderboardRef.current = updated;
+              setLeaderboard(updated);
+              try {
+                localStorage.setItem(
+                  "flappy-leaderboard",
+                  JSON.stringify(updated),
+                );
+              } catch {
+                /* ignore */
+              }
+            }
           }
           isReplaying = false;
           stopLoop();
@@ -539,11 +705,18 @@ const FlappyBird = () => {
       updateHills();
 
       if (frame >= nextPipeFrame) {
-        gap = practiceMode
-          ? practiceGap
-          : Math.max(minGap, baseGap - Math.floor(score / 5) * 2);
         addPipe();
-        pipeInterval = Math.max(60, 100 - Math.floor(score / 5) * 5);
+        if (!practiceMode) {
+          currentPipeSpeed = Math.min(
+            scaledMaxSpeed,
+            currentPipeSpeed + scaledPipeIncrement,
+          );
+        }
+        pipeInterval = Math.max(
+          spawnSettings.min,
+          spawnSettings.base -
+            Math.floor(score / spawnSettings.scoreStep) * spawnSettings.step,
+        );
         nextPipeFrame = frame + pipeInterval;
       }
 
@@ -570,7 +743,7 @@ const FlappyBird = () => {
       let passed = 0;
       for (let i = 0; i < pipes.length; i++) {
         const pipe = pipes[i];
-        pipe.x -= pipeSpeed;
+        pipe.x -= currentPipeSpeed;
 
         // collision with current pipe
         if (
@@ -604,6 +777,7 @@ const FlappyBird = () => {
     function startLoop() {
       stopLoop();
       fps = highHz ? 120 : 60;
+      if (isMobile) fps = Math.min(fps, 60);
       if (practiceMode) fps /= 2;
       let last = performance.now();
       const frameFunc = (now) => {
@@ -680,8 +854,9 @@ const FlappyBird = () => {
         if (liveRef.current)
           liveRef.current.textContent = `Gravity: ${GRAVITY_VARIANTS[gravityVariant].name}`;
       } else if (e.code === "KeyX" && !running) {
-        const key = GRAVITY_VARIANTS[gravityVariant].name;
-        delete records[key];
+        const { gravityKey, compoundKey } = getRecordKeys();
+        delete records[compoundKey];
+        delete records[gravityKey];
         localStorage.setItem("flappy-records", JSON.stringify(records));
         loadRecord();
         if (liveRef.current) liveRef.current.textContent = "Record reset";
@@ -728,10 +903,146 @@ const FlappyBird = () => {
       canvas.removeEventListener("touchstart", handlePointer);
       stopLoop();
     };
-  }, [canvasRef, started, pipeSkinIndex, skin]);
+  }, [canvasRef, started, pipeSkinIndex, skin, difficultyProfile]);
+
+  const notifyShare = (message) => {
+    if (shareTimeoutRef.current) clearTimeout(shareTimeoutRef.current);
+    setShareMessage(message);
+    shareTimeoutRef.current = setTimeout(() => {
+      setShareMessage("");
+    }, 3000);
+  };
+
+  const handleShareLeaderboard = async () => {
+    if (!leaderboardRef.current.length) {
+      notifyShare("Play a round to populate the leaderboard!");
+      return;
+    }
+
+    const lines = leaderboardRef.current
+      .map(
+        (entry, index) =>
+          `${index + 1}. ${entry.score} pts — ${entry.gravity} • ${entry.difficulty}`,
+      )
+      .join("\n");
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "";
+    const shareUrl = origin ? `${origin}/apps/flappy-bird` : "/apps/flappy-bird";
+    const text = `Flappy Bird Top Scores:\n${lines}\nPlay: ${shareUrl}`;
+
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({
+          title: "Flappy Bird Leaderboard",
+          text,
+        });
+        notifyShare("Leaderboard shared!");
+      } else if (
+        typeof navigator !== "undefined" &&
+        navigator.clipboard &&
+        navigator.clipboard.writeText
+      ) {
+        await navigator.clipboard.writeText(text);
+        notifyShare("Leaderboard copied to clipboard");
+      } else {
+        notifyShare("Sharing isn't supported in this browser");
+      }
+    } catch (error) {
+      if (!error || error.name !== "AbortError") {
+        notifyShare("Share canceled");
+      }
+    }
+  };
+
+  const renderLeaderboardList = (className = "") => {
+    const classes = [
+      "max-h-48",
+      "overflow-y-auto",
+      "space-y-1",
+      "text-sm",
+      className,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    if (!leaderboard.length) {
+      return (
+        <ol className={classes}>
+          <li className="text-xs text-gray-300">No scores yet. Take flight!</li>
+        </ol>
+      );
+    }
+
+    return (
+      <ol className={classes}>
+        {leaderboard.map((entry, index) => {
+          const date = new Date(entry.timestamp);
+          const dateLabel = date.toLocaleDateString(undefined, {
+            month: "short",
+            day: "numeric",
+          });
+          return (
+            <li
+              key={`${entry.timestamp}-${entry.score}-${index}`}
+              className="flex items-center justify-between gap-2 rounded bg-gray-800/60 px-2 py-1"
+            >
+              <span className="font-mono text-base">{`${index + 1}. ${entry.score}`}</span>
+              <span className="text-right text-xs leading-tight text-gray-300">
+                {entry.gravity} • {entry.difficulty}
+                <br />
+                {dateLabel}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    );
+  };
 
   return (
     <div className="relative w-full h-full">
+      <button
+        type="button"
+        className="absolute top-2 right-2 z-30 rounded bg-gray-800 px-3 py-1 text-xs font-semibold text-white shadow focus:outline-none focus:ring"
+        onClick={() => setLeaderboardOpen(true)}
+      >
+        Leaderboard
+      </button>
+      {leaderboardOpen && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black bg-opacity-70 text-white">
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-80 max-w-full rounded-lg bg-gray-900 p-4 shadow-lg"
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Top Scores</h2>
+              <button
+                type="button"
+                className="rounded bg-gray-800 px-2 py-1 text-xs text-white focus:outline-none focus:ring"
+                onClick={() => setLeaderboardOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            {renderLeaderboardList("max-h-56")}
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                className="flex-1 rounded bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring"
+                onClick={handleShareLeaderboard}
+              >
+                Share leaderboard
+              </button>
+            </div>
+            {shareMessage && (
+              <p className="mt-2 text-xs text-gray-200" aria-live="polite">
+                {shareMessage}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
       {!started && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center space-y-4 bg-black bg-opacity-70 text-white">
           <label className="flex flex-col items-center">
@@ -762,15 +1073,65 @@ const FlappyBird = () => {
               ))}
             </select>
           </label>
+          <label className="flex flex-col items-center text-center">
+            Difficulty
+            <select
+              className="mt-1 w-40 text-black"
+              value={selectedDifficulty}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSelectedDifficulty(value);
+                try {
+                  localStorage.setItem("flappy-difficulty-profile", value);
+                } catch {
+                  /* ignore */
+                }
+              }}
+            >
+              {DIFFICULTY_PROFILES.map((profile) => (
+                <option key={profile.id} value={profile.id}>
+                  {profile.label}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 max-w-xs text-xs text-gray-200">
+              {difficultyProfile.description}
+            </span>
+          </label>
+          <div className="w-72 max-w-full rounded bg-gray-900 bg-opacity-80 p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-sm font-semibold uppercase tracking-wide">
+                Local Leaderboard
+              </h3>
+              <button
+                type="button"
+                className="rounded bg-blue-600 px-2 py-1 text-xs font-semibold text-white hover:bg-blue-500 focus:outline-none focus:ring"
+                onClick={handleShareLeaderboard}
+              >
+                Share
+              </button>
+            </div>
+            {renderLeaderboardList()}
+            {shareMessage && (
+              <p className="mt-2 text-xs text-gray-200" aria-live="polite">
+                {shareMessage}
+              </p>
+            )}
+          </div>
           <button
             className="px-6 py-3 w-32 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={() => {
               try {
                 localStorage.setItem("flappy-bird-skin", String(skin));
                 localStorage.setItem("flappy-pipe-skin", String(pipeSkinIndex));
+                localStorage.setItem(
+                  "flappy-difficulty-profile",
+                  selectedDifficulty,
+                );
               } catch {
                 /* ignore */
               }
+              setLeaderboardOpen(false);
               setStarted(true);
             }}
           >
