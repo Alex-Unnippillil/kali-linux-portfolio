@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import DOMPurify from 'dompurify';
 
+import { trustedHtml } from '../../../utils/security/trusted-types';
+
 // Preset character sets and color palettes
 const presetCharSets = {
   standard: '@#S%?*+;:,.',
@@ -377,6 +379,7 @@ export default function AsciiArt() {
           accept="image/*"
           onChange={handleFile}
           className="mb-2"
+          aria-label="Upload image for ASCII conversion"
         />
         <label className="flex items-center gap-2">
           Charset:
@@ -387,6 +390,7 @@ export default function AsciiArt() {
               setCharSet(DOMPurify.sanitize(e.target.value).slice(0, 256))
             }
             className="px-1 bg-gray-700"
+            aria-label="Custom character set"
           />
         </label>
         <label className="flex items-center gap-2">
@@ -412,6 +416,7 @@ export default function AsciiArt() {
             value={cellSize}
             onChange={(e) => setCellSize(Number(e.target.value))}
             className="w-16 px-1 bg-gray-700"
+            aria-label="Cell size in pixels"
           />
         </label>
         <label className="flex items-center gap-2">
@@ -458,6 +463,7 @@ export default function AsciiArt() {
             value={paletteName}
             onChange={(e) => setPaletteName(e.target.value)}
             className="bg-gray-700"
+            aria-label="Color palette"
           >
             {Object.keys(palettes).map((p) => (
               <option key={p} value={p}>
@@ -472,6 +478,7 @@ export default function AsciiArt() {
             value={font}
             onChange={(e) => setFont(e.target.value)}
             className="bg-gray-700"
+            aria-label="Font family"
           >
             {fonts.map((f) => (
               <option key={f} value={f}>
@@ -486,6 +493,7 @@ export default function AsciiArt() {
             type="checkbox"
             checked={useColor}
             onChange={(e) => setUseColor(e.target.checked)}
+            aria-label="Use color output"
           />
         </label>
         <button
@@ -570,14 +578,19 @@ export default function AsciiArt() {
             backgroundImage:
               'linear-gradient(0deg, transparent calc(100% - 1px), rgba(255,255,255,0.1) calc(100% - 1px)), linear-gradient(90deg, transparent calc(100% - 1px), rgba(255,255,255,0.1) calc(100% - 1px))',
           }}
+          aria-label="ASCII art editor"
         />
       ) : (
         <pre
           className="font-mono whitespace-pre overflow-auto flex-1"
-          dangerouslySetInnerHTML={{ __html: asciiHtml }}
+          dangerouslySetInnerHTML={trustedHtml(asciiHtml)}
         />
       )}
-      <canvas ref={canvasRef} className="hidden w-full h-full" />
+        <canvas
+          ref={canvasRef}
+          className="hidden w-full h-full"
+          aria-hidden="true"
+        />
       <div className="sr-only" aria-live="polite">
         {altText}
       </div>

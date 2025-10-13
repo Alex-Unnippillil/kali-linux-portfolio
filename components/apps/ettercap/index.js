@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import data from './data.json';
 import ArpLab from './components/ArpLab';
 import vendors from '../kismet/oui.json';
+import { trustedHtml } from '../../../utils/security/trusted-types';
 
 const { arpTable, flows } = data;
 const attackerMac = 'aa:aa:aa:aa:aa:aa';
@@ -478,21 +479,23 @@ const stopSpoof = () => {
       ref={containerRef}
       className="relative h-full w-full bg-gray-900 text-white p-4 flex flex-col"
     >
-      <div className="flex mb-4 space-x-2">
-        <input
-          className="flex-1 p-2 rounded text-black"
-          placeholder="Victim IP"
-          value={target1}
-          onChange={(e) => setTarget1(e.target.value)}
-          disabled={running}
-        />
-        <input
-          className="flex-1 p-2 rounded text-black"
-          placeholder="Gateway IP"
-          value={target2}
-          onChange={(e) => setTarget2(e.target.value)}
-          disabled={running}
-        />
+        <div className="flex mb-4 space-x-2">
+          <input
+            className="flex-1 p-2 rounded text-black"
+            placeholder="Victim IP"
+            value={target1}
+            onChange={(e) => setTarget1(e.target.value)}
+            disabled={running}
+            aria-label="Victim IP address"
+          />
+          <input
+            className="flex-1 p-2 rounded text-black"
+            placeholder="Gateway IP"
+            value={target2}
+            onChange={(e) => setTarget2(e.target.value)}
+            disabled={running}
+            aria-label="Gateway IP address"
+          />
         {!running ? (
           <button
             className="px-4 py-2 bg-green-600 rounded"
@@ -596,14 +599,16 @@ const stopSpoof = () => {
           <div key={i}>{l}</div>
         ))}
       </div>
-      <div className="mt-4">
-        <h2 className="font-semibold">Lab Storyboard</h2>
-        <canvas
-          ref={boardRef}
-          width={300}
-          height={200}
-          className="bg-gray-800 rounded mt-2 cursor-move"
-        />
+        <div className="mt-4">
+          <h2 className="font-semibold">Lab Storyboard</h2>
+          <canvas
+            ref={boardRef}
+            width={300}
+            height={200}
+            className="bg-gray-800 rounded mt-2 cursor-move"
+            role="img"
+            aria-label="Storyboard of spoofing steps"
+          />
         <div className="mt-2 space-x-2">
           <button
             className="px-2 py-1 bg-blue-600 rounded"
@@ -634,14 +639,16 @@ const stopSpoof = () => {
           </div>
         </div>
       </div>
-      <div className="mt-4">
-        <h2 className="font-semibold">Host Pairs</h2>
-        <canvas
-          ref={canvasRef}
-          width={300}
-          height={200}
-          className="bg-gray-800 rounded mt-2"
-        />
+        <div className="mt-4">
+          <h2 className="font-semibold">Host Pairs</h2>
+          <canvas
+            ref={canvasRef}
+            width={300}
+            height={200}
+            className="bg-gray-800 rounded mt-2"
+            role="img"
+            aria-label="Visualization of host pairs"
+          />
         <div className="text-xs mt-2">
           {flows[flowIndex]
             ? `Traffic ${flows[flowIndex].source} → ${flows[flowIndex].destination} (${flows[flowIndex].protocol})`
@@ -704,27 +711,29 @@ const stopSpoof = () => {
           </tbody>
         </table>
       </div>
-      <div className="mt-4">
-        <h2 className="font-semibold">Filter Editor</h2>
-        <select
-          className="mt-2 p-1 rounded text-black"
-          onChange={(e) => setFilterText(filterExamples[e.target.value])}
-        >
+        <div className="mt-4">
+          <h2 className="font-semibold">Filter Editor</h2>
+          <select
+            className="mt-2 p-1 rounded text-black"
+            onChange={(e) => setFilterText(filterExamples[e.target.value])}
+            aria-label="Filter example presets"
+          >
           {Object.keys(filterExamples).map((k) => (
             <option key={k}>{k}</option>
           ))}
         </select>
-        <textarea
-          className="w-full h-24 mt-2 p-2 rounded text-black font-mono"
-          value={filterText}
-          onChange={(e) => setFilterText(e.target.value)}
-        />
+          <textarea
+            className="w-full h-24 mt-2 p-2 rounded text-black font-mono"
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+            aria-label="Custom Ettercap filter"
+          />
         <pre
           className="mt-2 p-2 bg-gray-800 rounded overflow-auto text-xs font-mono"
           aria-label="syntax highlighted filter"
         >
           <code
-            dangerouslySetInnerHTML={{ __html: highlightFilter(filterText) }}
+            dangerouslySetInnerHTML={trustedHtml(highlightFilter(filterText))}
           />
         </pre>
       </div>

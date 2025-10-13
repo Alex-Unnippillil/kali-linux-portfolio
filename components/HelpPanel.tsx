@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
+import { trustedHtml } from '../utils/security/trusted-types';
 
 interface HelpPanelProps {
   appId: string;
@@ -68,7 +69,7 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
             className="bg-white text-black p-4 rounded max-w-md w-full h-full overflow-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div dangerouslySetInnerHTML={{ __html: html }} />
+            <div dangerouslySetInnerHTML={trustedHtml(html)} />
           </div>
         </div>
       )}

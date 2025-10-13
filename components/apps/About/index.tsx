@@ -9,6 +9,7 @@ import SafetyNote from './SafetyNote';
 import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
+import { trustedHtml } from '../../../utils/security/trusted-types';
 
 class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
   screens: Record<string, React.ReactNode> = {};
@@ -116,7 +117,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
           <script
             type="application/ld+json"
             nonce={nonce}
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
+            dangerouslySetInnerHTML={trustedHtml(JSON.stringify(structured))}
           />
         </Head>
         <div
@@ -355,6 +356,7 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
         className="mt-2 w-full px-2 py-1 rounded text-black"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
+        aria-label={`Filter ${title} badges`}
       />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map((badge) => (
