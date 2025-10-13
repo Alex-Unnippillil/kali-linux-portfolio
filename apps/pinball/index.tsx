@@ -18,21 +18,21 @@ const MAX_BALLS = 3;
 const tonePalette = {
   success: {
     banner:
-      "border-[color-mix(in_srgb,var(--game-color-success)_55%,transparent)] bg-[color-mix(in_srgb,var(--game-color-success)_18%,var(--color-surface))] text-white shadow-lg",
+      "border-[color-mix(in_srgb,var(--color-success)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-success)_18%,var(--kali-surface))] text-[color:color-mix(in_srgb,var(--color-success)_12%,var(--color-text))] shadow-lg",
     label:
-      "text-[color-mix(in_srgb,var(--game-color-success)_70%,#f8fafc)]",
+      "text-[color:color-mix(in_srgb,var(--color-success)_72%,#f8fafc)]",
   },
   warning: {
     banner:
-      "border-[color-mix(in_srgb,var(--game-color-warning)_55%,transparent)] bg-[color-mix(in_srgb,var(--game-color-warning)_18%,var(--color-surface))] text-white shadow-lg",
+      "border-[color-mix(in_srgb,var(--color-warning)_48%,transparent)] bg-[color-mix(in_srgb,var(--color-warning)_18%,var(--kali-surface))] text-[color:color-mix(in_srgb,var(--color-warning)_8%,var(--color-text))] shadow-lg",
     label:
-      "text-[color-mix(in_srgb,var(--game-color-warning)_72%,#f8fafc)]",
+      "text-[color:color-mix(in_srgb,var(--color-warning)_78%,#fdf4e3)]",
   },
   danger: {
     banner:
-      "border-[color-mix(in_srgb,var(--game-color-danger)_55%,transparent)] bg-[color-mix(in_srgb,var(--game-color-danger)_22%,var(--color-surface))] text-white shadow-lg",
+      "border-[color-mix(in_srgb,var(--color-danger)_55%,transparent)] bg-[color-mix(in_srgb,var(--color-danger)_22%,var(--kali-surface))] text-[color:color-mix(in_srgb,var(--color-danger)_16%,#f8fafc)] shadow-lg",
     label:
-      "text-[color-mix(in_srgb,var(--game-color-danger)_78%,#f8fafc)]",
+      "text-[color:color-mix(in_srgb,var(--color-danger)_82%,#f8fafc)]",
   },
 } as const;
 
@@ -481,7 +481,7 @@ export default function Pinball() {
           aria-label="Pinball playfield"
           className="border"
         />
-        <div className="absolute top-3 left-3 rounded bg-kali-surface/70 px-2 py-1 font-mono text-xs text-[var(--color-text)]">
+        <div className="absolute top-3 left-3 rounded bg-[var(--kali-overlay)] px-2 py-1 font-mono text-xs text-[color:color-mix(in_srgb,var(--color-text)_96%,white)]">
           Balls: {ballsRemaining}
         </div>
         <div className="absolute top-3 left-1/2 -translate-x-1/2 font-mono text-2xl text-[var(--color-text)]">
@@ -496,24 +496,24 @@ export default function Pinball() {
             type="button"
             onClick={handleLaunch}
             disabled={!ballLocked || ballsRemaining <= 0 || paused || tilt || gameOver}
-            className="rounded bg-kali-surface/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--color-text)] transition hover:bg-kali-surface/95 disabled:opacity-40"
+            className="rounded bg-[var(--kali-overlay)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_95%,white)] transition hover:bg-[color-mix(in_srgb,var(--kali-overlay)_88%,transparent)] disabled:opacity-40"
           >
             Launch Ball
           </button>
         </div>
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center text-center text-[var(--color-text)]">
-          <div className="rounded bg-kali-surface/85 px-3 py-2 text-sm text-[var(--color-text)] shadow-lg">
+          <div className="rounded bg-[color-mix(in_srgb,var(--kali-overlay)_92%,transparent)] px-3 py-2 text-sm text-[color:color-mix(in_srgb,var(--color-text)_96%,white)] shadow-lg">
             {statusMessage}
           </div>
           {!gameOver && !tilt && (
-            <div className="mt-2 rounded bg-kali-surface/60 px-2 py-1 text-xs uppercase tracking-wide text-[color-mix(in_srgb,var(--color-text)_85%,transparent)]">
+            <div className="mt-2 rounded bg-[color-mix(in_srgb,var(--kali-overlay)_78%,transparent)] px-2 py-1 text-xs uppercase tracking-wide text-[color-mix(in_srgb,var(--color-text)_85%,transparent)]">
               Space to launch • N / RB to nudge
             </div>
           )}
         </div>
         {tilt && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[color-mix(in_srgb,var(--game-color-danger)_42%,var(--kali-bg))]">
-            <div className="rounded border-4 border-[color-mix(in_srgb,var(--game-color-danger)_70%,#f8fafc)] bg-[color-mix(in_srgb,var(--game-color-danger)_48%,var(--color-surface))] px-6 py-3 text-4xl font-bold text-white shadow-lg">
+          <div className="absolute inset-0 flex items-center justify-center bg-[color-mix(in_srgb,var(--color-danger)_42%,var(--color-overlay-strong))]">
+            <div className="rounded border-4 border-[color-mix(in_srgb,var(--color-danger)_70%,#f8fafc)] bg-[color-mix(in_srgb,var(--color-danger)_36%,var(--kali-surface))] px-6 py-3 text-4xl font-bold text-[color:color-mix(in_srgb,var(--color-danger)_12%,#f8fafc)] shadow-lg">
               TILT
             </div>
           </div>
