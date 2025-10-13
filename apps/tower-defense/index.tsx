@@ -455,7 +455,7 @@ const TowerDefense = () => {
 
   return (
     <GameLayout gameId="tower-defense">
-      <div className="p-3 text-gray-100">
+      <div className="p-3 text-[color:var(--kali-text)]">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
           <div className="flex flex-1 flex-col items-center gap-3">
             <div className="relative w-full max-w-[420px]">
@@ -463,7 +463,7 @@ const TowerDefense = () => {
                 ref={canvasRef}
                 width={CANVAS_SIZE}
                 height={CANVAS_SIZE}
-                className="h-auto w-full rounded-lg border border-gray-700 bg-black shadow-inner"
+                className="h-auto w-full rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] shadow-inner"
                 aria-label="Tower defense map canvas"
                 style={{ imageRendering: "pixelated" }}
                 onClick={handleCanvasClick}
@@ -472,19 +472,19 @@ const TowerDefense = () => {
               />
               <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-2 text-[0.7rem] sm:text-xs">
                 <div className="flex justify-between gap-2">
-                  <div className="rounded-md bg-black/70 px-2 py-1 font-medium uppercase tracking-wide text-gray-100 shadow backdrop-blur">
-                    <p className="text-[0.65rem] sm:text-xs">Wave {waveRef.current}</p>
-                    <p className="font-normal normal-case text-gray-200">{waveStatus}</p>
+                  <div className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/95 px-2 py-1 font-medium uppercase tracking-wide text-[color:var(--kali-text)] shadow-kali-panel backdrop-blur">
+                    <p className="text-[0.65rem] text-[color:var(--kali-text)] opacity-80 sm:text-xs">Wave {waveRef.current}</p>
+                    <p className="font-normal normal-case text-[color:var(--kali-text)] opacity-90">{waveStatus}</p>
                   </div>
-                  <div className="rounded-md bg-black/70 px-2 py-1 text-right font-medium uppercase tracking-wide text-gray-100 shadow backdrop-blur">
-                    <p className="text-[0.65rem] sm:text-xs">Mode</p>
-                    <p className="font-normal normal-case text-gray-200">{modeLabel}</p>
+                  <div className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/95 px-2 py-1 text-right font-medium uppercase tracking-wide text-[color:var(--kali-text)] shadow-kali-panel backdrop-blur">
+                    <p className="text-[0.65rem] text-[color:var(--kali-text)] opacity-80 sm:text-xs">Mode</p>
+                    <p className="font-normal normal-case text-[color:var(--kali-text)] opacity-90">{modeLabel}</p>
                   </div>
                 </div>
                 {selectedTower && (
-                  <div className="rounded-md bg-black/70 px-2 py-1 text-gray-200 shadow backdrop-blur">
-                    <p className="text-[0.65rem] font-semibold uppercase tracking-wide">Tower</p>
-                    <p className="text-[0.65rem] sm:text-xs">
+                  <div className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/95 px-2 py-1 text-[color:var(--kali-text)] shadow-kali-panel backdrop-blur">
+                    <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[color:var(--kali-text)] opacity-80">Tower</p>
+                    <p className="text-[0.65rem] text-[color:var(--kali-text)] opacity-90 sm:text-xs">
                       Range {selectedTower.range.toFixed(1)} · Damage {selectedTower.damage.toFixed(1)} · Lv {selectedTower.level}
                     </p>
                   </div>
@@ -493,48 +493,48 @@ const TowerDefense = () => {
             </div>
             <div className="flex w-full max-w-[420px] flex-wrap items-center justify-center gap-2 text-xs sm:text-sm">
               <button
-                className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 font-medium transition hover:bg-gray-700"
+                className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] px-3 py-1 font-medium text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-panel)]"
                 onClick={() => setEditing((e) => !e)}
               >
                 {editing ? "Finish Editing" : "Edit Path"}
               </button>
               <button
-                className="rounded-md border border-gray-600 bg-emerald-700 px-3 py-1 font-semibold text-white transition enabled:hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-md border border-[color:var(--kali-border)] bg-kali-severity-high px-3 py-1 font-semibold text-white transition enabled:hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
                 onClick={start}
                 disabled={running.current || waveCountdownRef.current !== null}
               >
                 Launch Wave
               </button>
               <button
-                className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 font-medium transition hover:bg-gray-700"
+                className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] px-3 py-1 font-medium text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-panel)]"
                 onClick={exportWaves}
               >
                 Export Waves
               </button>
               <button
-                className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 font-medium transition hover:bg-gray-700"
+                className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] px-3 py-1 font-medium text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-panel)]"
                 onClick={importWaves}
               >
                 Import Waves
               </button>
             </div>
           </div>
-          <aside className="w-full rounded-lg border border-gray-700/60 bg-gray-900/60 p-3 shadow-lg backdrop-blur lg:max-w-xs">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-200">
+          <aside className="w-full rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/90 p-3 text-[color:var(--kali-text)] shadow-kali-panel backdrop-blur lg:max-w-xs">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:var(--kali-text)] opacity-90">
               Wave Designer
             </h2>
-            <p className="mt-1 text-[0.7rem] text-gray-300">
+            <p className="mt-1 text-[0.7rem] text-[color:var(--kali-text)] opacity-80">
               Queue enemy types for each wave. Use the buttons to append foes and adjust difficulty without crowding the playfield.
             </p>
             <div className="mt-3 space-y-2 max-h-56 overflow-y-auto pr-1">
               {waveConfig.map((wave, i) => (
                 <div
                   key={i}
-                  className="rounded border border-gray-700/70 bg-black/40 p-2"
+                  className="rounded border border-[color:var(--kali-border)]/70 bg-[color:var(--kali-panel)]/70 p-2"
                 >
-                  <div className="flex items-center justify-between gap-2 text-[0.7rem] font-medium uppercase tracking-wide text-gray-200">
+                  <div className="flex items-center justify-between gap-2 text-[0.7rem] font-medium uppercase tracking-wide text-[color:var(--kali-text)] opacity-80">
                     <span>Wave {i + 1}</span>
-                    <span className="font-normal normal-case text-gray-300">
+                    <span className="font-normal normal-case text-[color:var(--kali-text)] opacity-70">
                       {wave.length ? wave.join(", ") : "empty"}
                     </span>
                   </div>
@@ -542,7 +542,7 @@ const TowerDefense = () => {
                     {(Object.keys(ENEMY_TYPES) as (keyof typeof ENEMY_TYPES)[]).map((t) => (
                       <button
                         key={t}
-                        className="rounded bg-gray-700 px-2 py-1 font-semibold uppercase tracking-wide text-gray-100 transition hover:bg-gray-600"
+                        className="rounded border border-[color:var(--kali-border)]/60 bg-[color:var(--kali-panel-highlight)] px-2 py-1 font-semibold uppercase tracking-wide text-[color:var(--color-primary)] transition hover:bg-[color:color-mix(in_srgb,var(--color-primary)_25%,var(--kali-panel))]"
                         onClick={() => addEnemyToWave(i, t)}
                       >
                         +{t}
@@ -553,13 +553,13 @@ const TowerDefense = () => {
               ))}
             </div>
             <button
-              className="mt-3 w-full rounded-md border border-dashed border-gray-600 bg-gray-800/70 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-200 transition hover:bg-gray-700/80"
+              className="mt-3 w-full rounded-md border border-dashed border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/80 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-panel)]"
               onClick={addWave}
             >
               Add Wave
             </button>
             <label
-              className="mt-3 block text-xs font-semibold uppercase tracking-wide text-gray-300"
+              className="mt-3 block text-xs font-semibold uppercase tracking-wide text-[color:var(--kali-text)] opacity-70"
               htmlFor="wave-json-editor"
             >
               Wave JSON
@@ -567,26 +567,26 @@ const TowerDefense = () => {
             <textarea
               id="wave-json-editor"
               aria-label="Wave configuration JSON"
-              className="mt-2 h-28 w-full rounded-md border border-gray-700 bg-black/70 p-2 font-mono text-[0.65rem] text-gray-100 focus:border-emerald-500 focus:outline-none"
+              className="mt-2 h-28 w-full rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/90 p-2 font-mono text-[0.65rem] text-[color:var(--kali-text)] focus:border-[color:var(--color-primary)] focus:outline-none"
               value={waveJson}
               onChange={(e) => setWaveJson(e.target.value)}
             />
             {selectedTower && (
-              <div className="mt-4 rounded-lg border border-gray-700/60 bg-black/40 p-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-200">
+              <div className="mt-4 rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/80 p-3">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-[color:var(--kali-text)] opacity-90">
                   Tower Upgrades
                 </h3>
                 <div className="mt-2 flex flex-col items-center gap-2">
                   <RangeUpgradeTree tower={selectedTower} />
                   <div className="flex w-full flex-wrap justify-center gap-2 text-[0.65rem]">
                     <button
-                      className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 font-medium transition hover:bg-gray-700"
+                      className="rounded-md border border-[color:var(--kali-border)] bg-kali-control px-3 py-1 font-medium text-black transition hover:brightness-110"
                       onClick={() => upgrade("range")}
                     >
                       Increase Range
                     </button>
                     <button
-                      className="rounded-md border border-gray-600 bg-gray-800 px-3 py-1 font-medium transition hover:bg-gray-700"
+                      className="rounded-md border border-[color:var(--kali-border)] bg-kali-control px-3 py-1 font-medium text-black transition hover:brightness-110"
                       onClick={() => upgrade("damage")}
                     >
                       Increase Damage

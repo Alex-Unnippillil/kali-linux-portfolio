@@ -2,6 +2,7 @@ import { randomBytes } from 'crypto';
 import { contactSchema } from '../../utils/contactSchema';
 import { validateServerEnv } from '../../lib/validate';
 import { getServiceSupabase } from '../../lib/supabase';
+import { formatCookie } from '../../utils/cookies';
 
 // Simple in-memory rate limiter. Not suitable for distributed environments.
 export const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -23,9 +24,17 @@ export default async function handler(req, res) {
   }
   if (req.method === 'GET') {
     const token = randomBytes(32).toString('hex');
+    const shouldUseSecure =
+      req.headers['x-forwarded-proto'] === 'https' ||
+      process.env.NODE_ENV === 'production';
     res.setHeader(
       'Set-Cookie',
-      `csrfToken=${token}; HttpOnly; Path=/; SameSite=Strict`
+      formatCookie('csrfToken', token, {
+        httpOnly: true,
+        path: '/',
+        sameSite: 'Strict',
+        secure: shouldUseSecure,
+      })
     );
     res.status(200).json({ ok: true, csrfToken: token });
     return;

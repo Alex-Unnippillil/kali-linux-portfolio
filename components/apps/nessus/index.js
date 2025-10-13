@@ -180,8 +180,8 @@ const Nessus = () => {
 
   if (!token) {
     return (
-      <div className="h-full w-full bg-gray-900 text-white flex items-center justify-center">
-        <form onSubmit={login} className="space-y-2 p-4 w-64">
+      <div className="flex h-full w-full items-center justify-center bg-kali-surface/95 text-kali-text">
+        <form onSubmit={login} className="w-64 space-y-2 p-4">
           <label htmlFor="nessus-url" className="block text-sm">
             Nessus URL
           </label>
@@ -193,6 +193,7 @@ const Nessus = () => {
             aria-invalid={error ? 'true' : undefined}
             aria-describedby={error ? 'nessus-error' : undefined}
             placeholder="https://nessus:8834"
+            aria-label="Nessus URL"
           />
           <label htmlFor="nessus-username" className="block text-sm">
             Username
@@ -204,6 +205,7 @@ const Nessus = () => {
             onChange={(e) => setUsername(e.target.value)}
             aria-invalid={error ? 'true' : undefined}
             aria-describedby={error ? 'nessus-error' : undefined}
+            aria-label="Username"
           />
           <label htmlFor="nessus-password" className="block text-sm">
             Password
@@ -216,8 +218,12 @@ const Nessus = () => {
             onChange={(e) => setPassword(e.target.value)}
             aria-invalid={error ? 'true' : undefined}
             aria-describedby={error ? 'nessus-error' : undefined}
+            aria-label="Password"
           />
-          <button type="submit" className="w-full bg-blue-600 py-2 rounded">
+          <button
+            type="submit"
+            className="w-full rounded bg-kali-primary py-2 text-kali-inverse transition hover:bg-kali-primary/90"
+          >
             Login
           </button>
           {error && <FormError id="nessus-error">{error}</FormError>}
@@ -227,10 +233,13 @@ const Nessus = () => {
   }
 
   return (
-    <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
+    <div className="h-full w-full overflow-auto bg-kali-surface/95 p-4 text-kali-text">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl">Scans</h2>
-        <button onClick={logout} className="bg-red-600 px-2 py-1 rounded">
+        <button
+          onClick={logout}
+          className="rounded bg-kali-error px-2 py-1 text-sm font-medium text-white transition hover:bg-kali-error/90"
+        >
           Logout
         </button>
       </div>
@@ -244,13 +253,14 @@ const Nessus = () => {
           accept=".nessus,.xml"
           onChange={handleFile}
           className="text-black mb-2"
+          aria-label="Upload Nessus XML"
         />
         {parseError && <FormError>{parseError}</FormError>}
         {findings.length > 0 && (
           <div className="mt-2">
             <button
               onClick={exportCSV}
-              className="bg-green-600 px-2 py-1 rounded mb-2"
+              className="mb-2 rounded bg-kali-success px-2 py-1 text-sm font-medium text-kali-inverse transition hover:bg-kali-success/90"
             >
               Export CSV
             </button>
@@ -278,7 +288,7 @@ const Nessus = () => {
                       <td className="p-1">{f.severity}</td>
                       <td className="p-1">
                         {falsePositives.some((fp) => fp.findingId === f.id) ? (
-                          <span className="text-xs text-green-400">Marked</span>
+                          <span className="text-xs text-kali-success">Marked</span>
                         ) : feedbackId === f.id ? (
                           <form onSubmit={submitFeedback} className="space-y-1">
                             <input
@@ -286,17 +296,18 @@ const Nessus = () => {
                               value={feedbackText}
                               onChange={(e) => setFeedbackText(e.target.value)}
                               placeholder="Reason"
+                              aria-label="False positive reason"
                             />
                             <div className="flex space-x-2">
                               <button
                                 type="submit"
-                                className="bg-green-600 px-2 py-1 rounded text-xs"
+                                className="rounded bg-kali-success px-2 py-1 text-xs font-medium text-kali-inverse transition hover:bg-kali-success/90"
                               >
                                 Submit
                               </button>
                               <button
                                 type="button"
-                                className="bg-gray-600 px-2 py-1 rounded text-xs"
+                                className="rounded bg-kali-surface-muted px-2 py-1 text-xs text-kali-text/80 transition hover:bg-kali-surface"
                                 onClick={() => setFeedbackId(null)}
                               >
                                 Cancel
@@ -305,7 +316,7 @@ const Nessus = () => {
                           </form>
                         ) : (
                           <button
-                            className="text-xs bg-yellow-600 px-2 py-1 rounded"
+                            className="text-xs font-medium text-kali-inverse transition hover:brightness-105 rounded bg-kali-severity-medium px-2 py-1"
                             onClick={() => setFeedbackId(f.id)}
                           >
                             False Positive
@@ -326,19 +337,24 @@ const Nessus = () => {
       <PluginScoreHeatmap findings={findings} />
       {error && <FormError className="mb-2">{error}</FormError>}
       <form onSubmit={addJob} className="mb-4 space-x-2">
-        <input
-          className="p-1 rounded text-black"
-          placeholder="Scan ID"
-          value={newJob.scanId}
-          onChange={(e) => setNewJob({ ...newJob, scanId: e.target.value })}
-        />
-        <input
-          className="p-1 rounded text-black"
-          placeholder="Schedule"
-          value={newJob.schedule}
-          onChange={(e) => setNewJob({ ...newJob, schedule: e.target.value })}
-        />
-        <button type="submit" className="bg-blue-600 px-2 py-1 rounded">
+          <input
+            className="p-1 rounded text-black"
+            placeholder="Scan ID"
+            value={newJob.scanId}
+            onChange={(e) => setNewJob({ ...newJob, scanId: e.target.value })}
+            aria-label="Scan ID"
+          />
+          <input
+            className="p-1 rounded text-black"
+            placeholder="Schedule"
+            value={newJob.schedule}
+            onChange={(e) => setNewJob({ ...newJob, schedule: e.target.value })}
+            aria-label="Scan schedule"
+          />
+        <button
+          type="submit"
+          className="rounded bg-kali-primary px-2 py-1 text-sm font-medium text-kali-inverse transition hover:bg-kali-primary/90"
+        >
           Add Job
         </button>
       </form>
@@ -362,7 +378,7 @@ const Nessus = () => {
                 {scan.name} - {scan.status}
               </span>
               <button
-                className="text-xs bg-yellow-600 px-2 py-1 rounded"
+                className="text-xs font-medium text-kali-inverse transition hover:brightness-105 rounded bg-kali-severity-medium px-2 py-1"
                 onClick={() => setFeedbackId(scan.id)}
               >
                 False Positive
@@ -375,17 +391,18 @@ const Nessus = () => {
                   value={feedbackText}
                   onChange={(e) => setFeedbackText(e.target.value)}
                   placeholder="Reason"
+                  aria-label="False positive reason"
                 />
                 <div className="flex space-x-2">
                   <button
                     type="submit"
-                    className="bg-green-600 px-2 py-1 rounded text-xs"
+                    className="rounded bg-kali-success px-2 py-1 text-xs font-medium text-kali-inverse transition hover:bg-kali-success/90"
                   >
                     Submit
                   </button>
                   <button
                     type="button"
-                    className="bg-gray-600 px-2 py-1 rounded text-xs"
+                    className="rounded bg-kali-surface-muted px-2 py-1 text-xs text-kali-text/80 transition hover:bg-kali-surface"
                     onClick={() => setFeedbackId(null)}
                   >
                     Cancel
@@ -397,25 +414,27 @@ const Nessus = () => {
         ))}
       </ul>
       {selected && (
-        <div className="fixed top-0 right-0 w-80 h-full bg-gray-800 p-4 overflow-auto shadow-lg">
-          <button
-            type="button"
-            onClick={() => setSelected(null)}
-            className="mb-2 bg-red-600 px-2 py-1 rounded text-sm"
-          >
-            Close
-          </button>
-          <h3 className="text-xl mb-2">{selected.name}</h3>
-          <p className="text-sm mb-2">
-            <span className="font-bold">Host:</span> {selected.host}
-          </p>
-          <p className="text-sm mb-2">
-            <span className="font-bold">CVSS:</span> {selected.cvss} ({selected.severity})
-          </p>
-          <p className="mb-2 text-sm whitespace-pre-wrap">{selected.description}</p>
-          <p className="text-sm text-green-300">
-            {selected.solution || 'No solution provided.'}
-          </p>
+        <div className="fixed inset-0 z-50 flex justify-end bg-kali-overlay/80 backdrop-blur-sm">
+          <aside className="h-full w-80 overflow-auto border border-white/10 bg-kali-surface-raised/95 p-4 text-kali-text shadow-kali-panel">
+            <button
+              type="button"
+              onClick={() => setSelected(null)}
+              className="mb-2 rounded bg-kali-error px-2 py-1 text-sm font-medium text-white transition hover:bg-kali-error/90"
+            >
+              Close
+            </button>
+            <h3 className="mb-2 text-xl">{selected.name}</h3>
+            <p className="mb-2 text-sm">
+              <span className="font-bold">Host:</span> {selected.host}
+            </p>
+            <p className="mb-2 text-sm">
+              <span className="font-bold">CVSS:</span> {selected.cvss} ({selected.severity})
+            </p>
+            <p className="mb-2 whitespace-pre-wrap text-sm">{selected.description}</p>
+            <p className="text-sm text-kali-success">
+              {selected.solution || 'No solution provided.'}
+            </p>
+          </aside>
         </div>
       )}
     </div>

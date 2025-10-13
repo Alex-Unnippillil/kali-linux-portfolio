@@ -29,7 +29,7 @@ const LevelThumb: React.FC<{ level: string[] }> = ({ level }) => {
   const tileStyle = { width: LEVEL_THUMB_CELL, height: LEVEL_THUMB_CELL } as React.CSSProperties;
   return (
     <div
-      className="relative bg-gray-700 shadow-md"
+      className="relative rounded border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] shadow-md"
       style={{ width: width * LEVEL_THUMB_CELL, height: height * LEVEL_THUMB_CELL }}
     >
       {level.map((row, y) =>
@@ -40,8 +40,14 @@ const LevelThumb: React.FC<{ level: string[] }> = ({ level }) => {
           return (
             <div
               key={`t-${k}`}
-              className={`absolute ${isWall ? 'bg-gray-800' : 'bg-gray-600'} ${
-                isTarget ? 'ring-1 ring-yellow-400' : ''
+              className={`absolute border ${
+                isWall
+                  ? 'border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)]'
+                  : 'border-[color:color-mix(in_srgb,var(--kali-control)_20%,transparent)] bg-[color:var(--kali-control-surface)]'
+              } ${
+                isTarget
+                  ? 'ring-1 ring-[color:color-mix(in_srgb,var(--kali-control)_70%,transparent)]'
+                  : ''
               } shadow-inner`}
               style={{ ...tileStyle, left: x * LEVEL_THUMB_CELL, top: y * LEVEL_THUMB_CELL }}
             />
@@ -55,7 +61,7 @@ const LevelThumb: React.FC<{ level: string[] }> = ({ level }) => {
             return (
               <div
                 key={`b-${k}`}
-                className="absolute bg-orange-400"
+                className="absolute bg-[color:var(--color-warning)]"
                 style={{ ...tileStyle, left: x * LEVEL_THUMB_CELL, top: y * LEVEL_THUMB_CELL }}
               />
             );
@@ -64,7 +70,7 @@ const LevelThumb: React.FC<{ level: string[] }> = ({ level }) => {
             return (
               <div
                 key={`p-${k}`}
-                className="absolute bg-blue-400"
+                className="absolute bg-[color:var(--kali-control)]"
                 style={{ ...tileStyle, left: x * LEVEL_THUMB_CELL, top: y * LEVEL_THUMB_CELL }}
               />
             );
@@ -503,86 +509,103 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
   const importInputId = React.useId();
 
   return (
-    <div className="p-4 space-y-4 select-none">
+    <div className="select-none space-y-4 p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div className="flex flex-wrap items-end gap-3">
-          <label htmlFor={packSelectId} className="flex flex-col text-xs text-gray-300">
-            <span className="font-semibold uppercase tracking-wide">Pack</span>
+          <label
+            htmlFor={packSelectId}
+            className="flex flex-col text-xs text-[color:color-mix(in_srgb,var(--kali-text)_72%,transparent)]"
+          >
+            <span className="font-semibold uppercase tracking-wide text-[color:var(--kali-text)]">Pack</span>
             <select
               id={packSelectId}
               value={packIndex}
               onChange={(e) => selectPack(Number(e.target.value))}
-              className="mt-1 rounded border border-gray-600 bg-gray-900 px-2 py-1 text-sm text-gray-100 shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="mt-1 rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-surface)] px-2 py-1 text-sm text-[color:var(--kali-text)] shadow-sm transition focus:border-[color:var(--kali-control)] focus:outline-none focus:ring-2 focus:ring-[color:var(--kali-control)] focus:ring-offset-2 focus:ring-offset-[var(--kali-bg)]"
             >
               {packs.map((p, i) => (
                 <option key={p.name} value={i}>{`${p.name} (${p.difficulty})`}</option>
               ))}
             </select>
           </label>
-          <label htmlFor={levelSelectId} className="flex flex-col text-xs text-gray-300">
-            <span className="font-semibold uppercase tracking-wide">Level</span>
+          <label
+            htmlFor={levelSelectId}
+            className="flex flex-col text-xs text-[color:color-mix(in_srgb,var(--kali-text)_72%,transparent)]"
+          >
+            <span className="font-semibold uppercase tracking-wide text-[color:var(--kali-text)]">Level</span>
             <select
               id={levelSelectId}
               value={index}
               onChange={(e) => selectLevel(Number(e.target.value))}
-              className="mt-1 rounded border border-gray-600 bg-gray-900 px-2 py-1 text-sm text-gray-100 shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="mt-1 rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-surface)] px-2 py-1 text-sm text-[color:var(--kali-text)] shadow-sm transition focus:border-[color:var(--kali-control)] focus:outline-none focus:ring-2 focus:ring-[color:var(--kali-control)] focus:ring-offset-2 focus:ring-offset-[var(--kali-bg)]"
             >
               {currentPack.levels.map((_, i) => (
                 <option key={i} value={i}>{`Level ${i + 1}`}</option>
               ))}
             </select>
           </label>
-          <label htmlFor={importInputId} className="flex flex-col text-xs text-gray-300">
-            <span className="font-semibold uppercase tracking-wide">Import</span>
+          <label
+            htmlFor={importInputId}
+            className="flex flex-col text-xs text-[color:color-mix(in_srgb,var(--kali-text)_72%,transparent)]"
+          >
+            <span className="font-semibold uppercase tracking-wide text-[color:var(--kali-text)]">Import</span>
             <input
               id={importInputId}
               type="file"
               accept=".txt,.sas"
               onChange={handleFile}
               aria-label="Import custom levels"
-              className="mt-1 cursor-pointer text-sm text-gray-100"
+              className="mt-1 cursor-pointer text-sm text-[color:color-mix(in_srgb,var(--kali-text)_85%,transparent)]"
             />
           </label>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => setShowLevels(true)}
-              className="rounded bg-gray-200/80 px-3 py-1 text-sm font-medium text-gray-900 shadow hover:bg-white/80 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="rounded bg-kali-control px-3 py-1 text-sm font-semibold text-slate-900 shadow transition hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_85%,#000000)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
             >
               Levels
             </button>
             <button
               type="button"
               onClick={handleHint}
-              className="rounded bg-amber-400/30 px-3 py-1 text-sm font-medium text-amber-100 shadow hover:bg-amber-400/40 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-control-overlay)] px-3 py-1 text-sm font-semibold text-[color:var(--kali-control)] shadow transition hover:bg-[color:var(--kali-control-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
             >
               Hint
             </button>
             <button
               type="button"
               onClick={handlePreview}
-              className="rounded bg-amber-400/30 px-3 py-1 text-sm font-medium text-amber-100 shadow hover:bg-amber-400/40 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-control-overlay)] px-3 py-1 text-sm font-semibold text-[color:var(--kali-control)] shadow transition hover:bg-[color:var(--kali-control-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
             >
               Preview
             </button>
           </div>
         </div>
-        <div className="flex flex-col items-start gap-2 text-sm text-gray-100">
+        <div className="flex flex-col items-start gap-2 text-sm text-[color:var(--kali-text)]">
           <div className="flex flex-wrap gap-2">
-            <span className="rounded bg-gray-900/60 px-3 py-1 shadow-sm">Moves: {state.moves}</span>
-            <span className="rounded bg-gray-900/60 px-3 py-1 shadow-sm">Pushes: {state.pushes}</span>
-            <span className="rounded bg-gray-900/60 px-3 py-1 shadow-sm">Best: {best ?? '-'}</span>
-            <span className="rounded bg-gray-900/60 px-3 py-1 shadow-sm">Min: {minPushes ?? '-'}</span>
+            <span className="rounded border border-[color:var(--kali-panel-border)]/60 bg-[color:color-mix(in_srgb,var(--kali-panel)_70%,transparent)] px-3 py-1 shadow-sm">
+              Moves: {state.moves}
+            </span>
+            <span className="rounded border border-[color:var(--kali-panel-border)]/60 bg-[color:color-mix(in_srgb,var(--kali-panel)_70%,transparent)] px-3 py-1 shadow-sm">
+              Pushes: {state.pushes}
+            </span>
+            <span className="rounded border border-[color:var(--kali-panel-border)]/60 bg-[color:color-mix(in_srgb,var(--kali-panel)_70%,transparent)] px-3 py-1 shadow-sm">
+              Best: {best ?? '-'}
+            </span>
+            <span className="rounded border border-[color:var(--kali-panel-border)]/60 bg-[color:color-mix(in_srgb,var(--kali-panel)_70%,transparent)] px-3 py-1 shadow-sm">
+              Min: {minPushes ?? '-'}
+            </span>
           </div>
-          {hint && <div className="text-xs text-amber-200">Hint: {hint}</div>}
-          {status && <div className="text-xs text-red-400">{status}</div>}
+          {hint && <div className="text-xs text-[color:var(--color-info)]">Hint: {hint}</div>}
+          {status && <div className="text-xs text-[color:var(--color-error)]">{status}</div>}
         </div>
       </div>
       <div ref={boardWrapperRef} className="w-full">
         <div className="mx-auto flex justify-center">
           <div className="relative" style={{ width: scaledBoardWidth, height: scaledBoardHeight }}>
             <div
-              className="relative rounded-md bg-gray-800 shadow-lg"
+              className="relative rounded-md border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] shadow-lg"
               style={{
                 width: baseBoardWidth,
                 height: baseBoardHeight,
@@ -601,14 +624,16 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
                   const inGhost = ghost.has(k);
                   const inSolution = solutionPath.has(k);
                   const tileClasses = [
-                    'absolute shadow-inner transition-colors duration-150',
-                    isWall ? 'bg-gray-900' : 'bg-gray-700/90',
+                    'absolute border shadow-inner transition-colors duration-150',
+                    isWall
+                      ? 'border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)]'
+                      : 'border-[color:color-mix(in_srgb,var(--kali-control)_22%,transparent)] bg-[color:var(--kali-control-surface)]',
                   ];
                   if (isTarget) {
                     tileClasses.push(
                       isBoxOnTarget
-                        ? 'bg-emerald-400/25 ring-2 ring-emerald-300'
-                        : 'bg-amber-300/25 ring-2 ring-amber-300'
+                        ? 'bg-[color:color-mix(in_srgb,var(--color-success)_18%,var(--kali-control-surface))] ring-2 ring-[color:var(--color-success)]'
+                        : 'bg-[color:color-mix(in_srgb,var(--kali-control)_24%,var(--kali-control-surface))] ring-2 ring-[color:var(--kali-control)]'
                     );
                   }
                   return (
@@ -620,19 +645,19 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
                       />
                       {isReach && !isWall && (
                         <div
-                          className="absolute bg-sky-400/25"
+                          className="absolute bg-[color:color-mix(in_srgb,var(--kali-control)_30%,transparent)]"
                           style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
                         />
                       )}
                       {inGhost && (
                         <div
-                          className="absolute bg-blue-300/40"
+                          className="absolute bg-[color:color-mix(in_srgb,var(--color-info)_38%,transparent)]"
                           style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
                         />
                       )}
                       {inSolution && (
                         <div
-                          className="absolute bg-purple-300/40"
+                          className="absolute bg-[color:color-mix(in_srgb,var(--color-accent)_38%,transparent)]"
                           style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
                         />
                       )}
@@ -649,10 +674,10 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
                     key={b}
                     className={`absolute transition-transform duration-100 ${
                       dead
-                        ? 'bg-red-500'
+                        ? 'bg-[color:var(--color-severity-critical)]'
                         : onTarget
-                        ? 'bg-emerald-400 ring-2 ring-emerald-200'
-                        : 'bg-orange-400'
+                        ? 'bg-[color:var(--color-success)] ring-2 ring-[color:color-mix(in_srgb,var(--color-success)_65%,transparent)]'
+                        : 'bg-[color:var(--kali-control)]'
                     } shadow-lg`}
                     style={{
                       ...cellStyle,
@@ -664,12 +689,12 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
               {puffs.map((p) => (
                 <div
                   key={p.id}
-                  className="absolute pointer-events-none w-4 h-4 rounded-full bg-gray-200 opacity-70 animate-ping"
+                  className="absolute h-4 w-4 animate-ping rounded-full bg-[color:var(--kali-text)]/70"
                   style={{ left: p.x * CELL + CELL / 2 - 8, top: p.y * CELL + CELL / 2 - 8 }}
                 />
               ))}
               <div
-                className="absolute bg-blue-400 transition-transform duration-100"
+                className="absolute bg-[color:var(--kali-control)] transition-transform duration-100"
                 style={{
                   ...cellStyle,
                   transform: `translate(${state.player.x * CELL}px, ${state.player.y * CELL}px)`,
@@ -683,26 +708,26 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
         <button
           type="button"
           onClick={handleUndo}
-          className="rounded bg-gray-200/80 px-3 py-1 text-sm font-medium text-gray-900 shadow hover:bg-white/80 focus:outline-none focus:ring-2 focus:ring-amber-400"
+          className="rounded bg-kali-control px-3 py-1 text-sm font-semibold text-slate-900 shadow transition hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_85%,#000000)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
         >
           Undo
         </button>
         <button
           type="button"
           onClick={handleRedo}
-          className="rounded bg-gray-200/80 px-3 py-1 text-sm font-medium text-gray-900 shadow hover:bg-white/80 focus:outline-none focus:ring-2 focus:ring-amber-400"
+          className="rounded bg-kali-control px-3 py-1 text-sm font-semibold text-slate-900 shadow transition hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_85%,#000000)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
         >
           Redo
         </button>
         <button
           type="button"
           onClick={handleReset}
-          className="rounded bg-gray-200/80 px-3 py-1 text-sm font-medium text-gray-900 shadow hover:bg-white/80 focus:outline-none focus:ring-2 focus:ring-amber-400"
+          className="rounded bg-kali-control px-3 py-1 text-sm font-semibold text-slate-900 shadow transition hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_85%,#000000)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
         >
           Reset
         </button>
       </div>
-      <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-gray-300">
+      <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)]">
         <span>Arrow keys: Move</span>
         <span>Z or U: Undo</span>
         <span>Y: Redo</span>
@@ -710,11 +735,11 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       </div>
       {showStats && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex"
+          className="fixed inset-0 flex bg-[color:var(--kali-overlay)]/85 backdrop-blur-sm"
           onClick={() => setShowStats(false)}
         >
           <div
-            className="bg-white p-4 space-y-2"
+            className="space-y-2 rounded-xl border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-surface)]/95 p-4 text-[color:var(--kali-text)] shadow-kali-panel"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="font-bold">Level Complete!</div>
@@ -724,7 +749,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
             <button
               type="button"
               onClick={() => setShowStats(false)}
-              className="px-2 py-1 bg-gray-300 rounded"
+              className="rounded bg-kali-control px-2 py-1 text-sm font-semibold text-slate-900 transition hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_85%,#000000)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
             >
               Close
             </button>
@@ -733,42 +758,46 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       )}
       {showLevels && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex"
+          className="fixed inset-0 flex bg-[color:var(--kali-overlay)]/85 backdrop-blur-sm"
           onClick={() => setShowLevels(false)}
         >
           <div
-            className="w-[640px] max-w-full space-y-4 rounded bg-white p-4 shadow-xl"
+            className="w-[640px] max-w-full space-y-4 rounded-2xl border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-surface)]/95 p-4 text-[color:var(--kali-text)] shadow-kali-panel"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Choose a level</h2>
-              <div className="text-sm text-gray-500">
-                Pack: <span className="font-medium text-gray-700">{packs[packIndex].name}</span>
+              <h2 className="text-lg font-semibold text-[color:var(--kali-text)]">Choose a level</h2>
+              <div className="text-sm text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)]">
+                Pack: <span className="font-medium text-[color:var(--kali-text)]">{packs[packIndex].name}</span>
               </div>
             </div>
             <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
               <div className="sm:w-1/3">
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Packs</h3>
-                <div className="max-h-80 overflow-y-auto rounded border border-gray-200">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_65%,transparent)]">
+                  Packs
+                </h3>
+                <div className="max-h-80 overflow-y-auto rounded border border-[color:var(--kali-panel-border)]/70">
                   {packs.map((p, i) => (
                     <button
                       key={p.name}
                       type="button"
                       className={`flex w-full justify-between gap-2 px-3 py-2 text-left text-sm ${
                         i === packIndex
-                          ? 'bg-amber-100 font-semibold text-gray-900'
-                          : 'bg-white text-gray-600 hover:bg-gray-100'
+                          ? 'bg-[color:var(--kali-control-surface)] font-semibold text-[color:var(--kali-text)] shadow-[0_0_0_1px_color-mix(in_srgb,var(--kali-control)_45%,transparent)]'
+                          : 'bg-[color:var(--kali-surface)] text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)] hover:bg-[color:var(--kali-control-overlay)]'
                       }`}
                       onClick={() => selectPack(i)}
                     >
                       <span>{p.name}</span>
-                      <span className="text-xs uppercase tracking-wide text-gray-400">{p.difficulty}</span>
+                      <span className="text-xs uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_55%,transparent)]">
+                        {p.difficulty}
+                      </span>
                     </button>
                   ))}
                 </div>
               </div>
               <div className="flex-1">
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_65%,transparent)]">
                   Levels in {packs[packIndex].name}
                 </h3>
                 <div className="max-h-80 overflow-y-auto">
@@ -778,7 +807,9 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
                         key={i}
                         type="button"
                         className={`flex flex-col items-center gap-2 rounded border px-2 py-2 transition-colors ${
-                          i === index ? 'border-amber-500 bg-amber-50' : 'border-transparent bg-white hover:border-amber-200'
+                          i === index
+                            ? 'border-[color:var(--kali-control)] bg-[color:var(--kali-control-surface)]'
+                            : 'border-transparent bg-[color:var(--kali-surface)] hover:border-[color:var(--kali-control)]/40 hover:bg-[color:var(--kali-control-overlay)]'
                         }`}
                         onClick={() => {
                           selectLevel(i);
@@ -786,7 +817,9 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
                         }}
                       >
                         <LevelThumb level={lvl} />
-                        <span className="text-xs font-medium text-gray-600">Level {i + 1}</span>
+                        <span className="text-xs font-medium text-[color:color-mix(in_srgb,var(--kali-text)_75%,transparent)]">
+                          Level {i + 1}
+                        </span>
                       </button>
                     ))}
                   </div>

@@ -42,17 +42,41 @@ const escapeHtml = (str = '') =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
+const severityKeys = ['low', 'medium', 'high', 'critical'];
+
+const severityStyles = {
+  low: {
+    surface: 'bg-kali-severity-low',
+    chart: 'fill-kali-severity-low',
+    text: 'text-white',
+  },
+  medium: {
+    surface: 'bg-kali-severity-medium',
+    chart: 'fill-kali-severity-medium',
+    text: 'text-kali-inverse',
+  },
+  high: {
+    surface: 'bg-kali-severity-high',
+    chart: 'fill-kali-severity-high',
+    text: 'text-white',
+  },
+  critical: {
+    surface: 'bg-kali-severity-critical',
+    chart: 'fill-kali-severity-critical',
+    text: 'text-white',
+  },
+};
+
 const SeverityChart = ({ data, selected, onSelect }) => {
-  const levels = ['low', 'medium', 'high', 'critical'];
-  const max = Math.max(...levels.map((l) => data[l] || 0), 1);
+  const max = Math.max(...severityKeys.map((l) => data[l] || 0), 1);
   return (
     <svg
       viewBox="0 0 100 60"
       role="img"
       aria-label="OpenVAS findings severity chart"
-      className="w-full h-32 mb-4"
+      className="mb-4 h-32 w-full"
     >
-      {levels.map((level, i) => {
+      {severityKeys.map((level, i) => {
         const value = data[level] || 0;
         const height = (value / max) * 50;
         const x = i * 24 + 5;
@@ -72,9 +96,9 @@ const SeverityChart = ({ data, selected, onSelect }) => {
               y={y}
               width="20"
               height={height}
-              className={`${severityColors[level]} ${onSelect ? 'cursor-pointer' : ''} ${
-                isSelected ? 'stroke-white stroke-2' : ''
-              }`}
+              className={`${severityStyles[level]?.chart ?? ''} ${
+                onSelect ? 'cursor-pointer transition-transform' : ''
+              } ${isSelected ? 'stroke-white stroke-2' : ''}`}
               role={onSelect ? 'button' : undefined}
               tabIndex={onSelect ? 0 : undefined}
               aria-label={`${value} ${level} findings`}
@@ -97,12 +121,6 @@ const SeverityChart = ({ data, selected, onSelect }) => {
 };
 
 const severityLevels = ['All', 'Low', 'Medium', 'High', 'Critical'];
-const severityColors = {
-  low: 'bg-green-700',
-  medium: 'bg-yellow-700',
-  high: 'bg-orange-700',
-  critical: 'bg-red-700',
-};
 
 const remediationMap = {
   low: 'Review configuration and apply best practices.',
@@ -333,58 +351,65 @@ const OpenVASApp = () => {
     )
   );
 
-  const color = (i, j) => {
+  const matrixSeverity = (i, j) => {
     const idx = Math.max(i, j);
-    return ['bg-green-700', 'bg-yellow-700', 'bg-orange-700', 'bg-red-700'][idx];
+    return severityKeys[Math.min(idx, severityKeys.length - 1)];
   };
 
   return (
-    <div className="h-full w-full p-4 bg-ub-cool-grey text-white overflow-auto">
+    <div className="h-full w-full overflow-auto bg-kali-surface/95 p-4 text-white">
       <TaskOverview />
       <PolicySettings policy={templates[profile]} />
       {hostReports.length > 0 && (
         <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 mb-4">
-          {hostReports.map((h) => (
-            <button
-              key={h.host}
-              type="button"
-              onClick={() => setActiveHost(h)}
-              className="p-4 bg-gray-800 rounded text-left focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <div className="font-bold mb-1">{h.host}</div>
-              <div className="mb-1">
-                <span
-                  className={`px-2 py-1 rounded text-xs ${severityColors[h.risk.toLowerCase()]}`}
-                >
-                  {h.risk}
-                </span>
-              </div>
-              <div className="text-xs">
-                {Object.entries(h.summary).map(([sev, count]) => (
-                  <span key={sev} className="mr-2 capitalize">
-                    {sev}: {count}
+          {hostReports.map((h) => {
+            const riskTheme = severityStyles[h.risk.toLowerCase()] ?? {};
+            return (
+              <button
+                key={h.host}
+                type="button"
+                onClick={() => setActiveHost(h)}
+                className="rounded-lg border border-white/10 bg-kali-surface p-4 text-left transition hover:bg-kali-surface-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+              >
+                <div className="font-bold mb-1">{h.host}</div>
+                <div className="mb-1">
+                  <span
+                    className={`rounded px-2 py-1 text-xs font-semibold ${
+                      riskTheme.surface ?? ''
+                    } ${riskTheme.text ?? 'text-white'}`}
+                  >
+                    {h.risk}
                   </span>
-                ))}
-              </div>
-            </button>
-          ))}
+                </div>
+                <div className="text-xs text-white/70">
+                  {Object.entries(h.summary).map(([sev, count]) => (
+                    <span key={sev} className="mr-2 capitalize">
+                      {sev}: {count}
+                    </span>
+                  ))}
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
-      <h2 className="text-lg mb-2">OpenVAS Scanner</h2>
-      <div className="flex mb-4 space-x-2">
-        <input
-          className="flex-1 p-2 rounded text-black"
-          placeholder="Target (e.g. 192.168.1.1)"
-          value={target}
-          onChange={(e) => setTarget(e.target.value)}
-        />
-        <input
-          className="flex-1 p-2 rounded text-black"
-          placeholder="Group (e.g. Servers)"
-          value={group}
-          onChange={(e) => setGroup(e.target.value)}
-        />
-        <div className="flex items-center space-x-2" role="tablist" aria-label="Scan profile">
+      <h2 className="mb-2 text-lg font-semibold">OpenVAS Scanner</h2>
+      <div className="mb-4 flex flex-wrap gap-2">
+          <input
+            className="flex-1 min-w-[12rem] rounded-lg bg-kali-surface-muted px-3 py-2 text-sm text-white placeholder-white/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+            placeholder="Target (e.g. 192.168.1.1)"
+            value={target}
+            onChange={(e) => setTarget(e.target.value)}
+            aria-label="Scan target"
+          />
+          <input
+            className="flex-1 min-w-[10rem] rounded-lg bg-kali-surface-muted px-3 py-2 text-sm text-white placeholder-white/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+            placeholder="Group (e.g. Servers)"
+            value={group}
+            onChange={(e) => setGroup(e.target.value)}
+            aria-label="Asset group"
+          />
+        <div className="flex items-center gap-2" role="tablist" aria-label="Scan profile">
           {profileTabs.map((p) => (
             <button
               key={p.id}
@@ -393,8 +418,10 @@ const OpenVASApp = () => {
               aria-selected={profile === p.id}
               aria-label={p.label}
               onClick={() => setProfile(p.id)}
-              className={`w-6 h-6 flex items-center justify-center rounded ${
-                profile === p.id ? 'bg-gray-700' : 'bg-gray-600'
+              className={`flex h-8 w-8 items-center justify-center rounded-md border border-white/10 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
+                profile === p.id
+                  ? 'bg-kali-surface-raised text-kali-control shadow-[0_0_0_1px_rgba(255,255,255,0.12)]'
+                  : 'bg-kali-surface-muted text-white/70 hover:text-white'
               }`}
             >
               {p.icon}
@@ -405,16 +432,16 @@ const OpenVASApp = () => {
           type="button"
           onClick={() => runScan()}
           disabled={loading}
-          className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
+          className="rounded-lg bg-kali-severity-low px-4 py-2 text-sm font-semibold text-white transition hover:bg-kali-severity-low/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? 'Scanning...' : 'Scan'}
         </button>
       </div>
       {loading && (
-        <div className="w-full bg-gray-700 h-2 mb-4">
+        <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-kali-surface-muted">
           <div
             style={{ width: `${progress}%` }}
-            className="h-2 bg-green-500 transition-all"
+            className={`h-full transition-all ${severityStyles.low?.surface ?? ''}`}
           />
         </div>
       )}
@@ -446,21 +473,25 @@ const OpenVASApp = () => {
                 {['low', 'medium', 'high', 'critical'].map((impact, j) => {
                   const cell = matrix[i][j];
                   const count = cell.length;
+                  const severityKey = matrixSeverity(i, j);
+                  const severityTheme = severityStyles[severityKey] ?? {};
+                  const bgClass = severityTheme.surface ?? '';
+                  const textClass = severityTheme.text ?? 'text-white';
                   return (
                     <button
                       key={`${likelihood}-${impact}`}
                       type="button"
                       onClick={() => handleCellClick(likelihood, impact)}
                       disabled={count === 0}
-                      className={`p-2 ${color(i, j)} text-white focus:outline-none w-full ${
+                      className={`w-full rounded-md p-2 font-semibold ${bgClass} ${textClass} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
                         reduceMotion.current ? '' : 'transition-transform hover:scale-105'
                       } ${
                         filter &&
                         filter.likelihood === likelihood &&
                         filter.impact === impact
-                          ? 'ring-2 ring-white'
+                          ? 'ring-2 ring-white/80'
                           : ''
-                      } disabled:opacity-50`}
+                      } disabled:cursor-not-allowed disabled:opacity-45`}
                       aria-label={`${count} findings with ${likelihood} likelihood and ${impact} impact`}
                     >
                       {count}
@@ -480,10 +511,10 @@ const OpenVASApp = () => {
                 key={level}
                 onClick={() => handleSeverityChange(level)}
                 aria-pressed={severity === level}
-                className={`px-3 py-1 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                className={`rounded-full border border-white/10 px-3 py-1 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
                   severity === level
-                    ? 'bg-white text-black'
-                    : 'bg-gray-800 text-white'
+                    ? 'bg-kali-control text-black shadow-[0_0_0_1px_rgba(255,255,255,0.25)]'
+                    : 'bg-kali-surface-muted text-white/80 hover:text-white'
                 }`}
               >
                 {level}
@@ -496,7 +527,9 @@ const OpenVASApp = () => {
               .map((level) => (
                 <div key={level} className="flex items-center">
                   <span
-                    className={`w-3 h-3 mr-1 ${severityColors[level.toLowerCase()]}`}
+                    className={`mr-1 h-3 w-3 rounded-sm ${
+                      severityStyles[level.toLowerCase()]?.surface ?? ''
+                    }`}
                   />
                   {level}
                 </div>
@@ -510,22 +543,25 @@ const OpenVASApp = () => {
             <li
               key={idx}
               role="listitem"
-              className={`p-2 rounded ${severityColors[f.severity]} text-white`}
+              className={`rounded-lg p-2 shadow-sm ${
+                severityStyles[f.severity]?.surface ?? ''
+              } ${severityStyles[f.severity]?.text ?? 'text-white'}`}
             >
               <button
                 type="button"
                 onClick={() => setSelected(f)}
-                className="w-full text-left focus:outline-none"
+                aria-label={`View finding details for ${f.description}`}
+                className="w-full text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               >
                 <div className="flex items-center justify-between">
                   <span
                     dangerouslySetInnerHTML={{ __html: escapeHtml(f.description) }}
                   />
-                  <div className="flex gap-1 ml-2">
-                    <span className="px-1 py-0.5 bg-red-700 rounded text-xs">
+                  <div className="ml-2 flex gap-1">
+                    <span className="rounded bg-kali-severity-critical px-1 py-0.5 text-xs font-semibold text-white">
                       CVSS {f.cvss}
                     </span>
-                    <span className="px-1 py-0.5 bg-blue-700 rounded text-xs">
+                    <span className="rounded bg-kali-info px-1 py-0.5 text-xs font-semibold text-kali-inverse">
                       EPSS {(f.epss * 100).toFixed(1)}%
                     </span>
                   </div>
@@ -539,20 +575,23 @@ const OpenVASApp = () => {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 bg-black/70 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-kali-overlay/80 p-4 backdrop-blur-sm"
         >
-          <div className="bg-gray-800 p-4 rounded max-w-md w-full">
-            <h3 className="text-lg mb-2">Host {activeHost.host} Findings</h3>
-            <ul className="space-y-2 max-h-60 overflow-auto">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-kali-surface-raised p-4 shadow-lg sm:p-5">
+            <h3 className="mb-3 text-lg font-semibold">Host {activeHost.host} Findings</h3>
+            <ul className="max-h-60 space-y-2 overflow-auto pr-1">
               {activeHost.vulns.map((v, i) => (
-                <li key={i} className="p-2 bg-gray-700 rounded">
+                <li
+                  key={i}
+                  className="rounded-lg border border-white/10 bg-kali-surface-muted/90 p-3 shadow-inner"
+                >
                   <div className="flex items-center justify-between">
                     <span className="font-semibold">{v.title}</span>
                     <div className="flex gap-1 ml-2">
-                      <span className="px-2 py-0.5 rounded text-xs bg-red-700">
+                      <span className="rounded-full bg-kali-severity-critical px-2 py-0.5 text-xs font-semibold text-white">
                         CVSS {v.cvss}
                       </span>
-                      <span className="px-2 py-0.5 rounded text-xs bg-blue-700">
+                      <span className="rounded-full bg-kali-info px-2 py-0.5 text-xs font-semibold text-kali-inverse">
                         EPSS {(v.epss * 100).toFixed(1)}%
                       </span>
                     </div>
@@ -561,7 +600,7 @@ const OpenVASApp = () => {
                     {v.remediation.map((tag) => (
                       <span
                         key={tag}
-                        className="inline-block mr-1 mb-1 px-2 py-0.5 bg-gray-600 rounded text-xs"
+                        className="mr-1 mb-1 inline-block rounded-full border border-white/10 bg-kali-surface-raised/70 px-2 py-0.5 text-xs text-white/80"
                       >
                         {tag}
                       </span>
@@ -573,7 +612,7 @@ const OpenVASApp = () => {
             <button
               type="button"
               onClick={() => setActiveHost(null)}
-              className="mt-4 px-3 py-1 bg-blue-600 rounded"
+              className="mt-4 inline-flex items-center justify-center rounded-md bg-kali-primary px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             >
               Close
             </button>
@@ -584,35 +623,35 @@ const OpenVASApp = () => {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 bg-black/70 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-kali-overlay/80 p-4 backdrop-blur-sm"
         >
-          <div className="bg-gray-800 p-4 rounded max-w-md w-full">
-            <h3 className="text-lg mb-2">Issue Detail</h3>
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-kali-surface-raised p-4 shadow-lg sm:p-5">
+            <h3 className="mb-3 text-lg font-semibold">Issue Detail</h3>
             <p
-              className="mb-2"
+              className="mb-3 text-sm text-white/90"
               dangerouslySetInnerHTML={{ __html: escapeHtml(selected.description) }}
             />
-            <div className="flex gap-2 mb-2">
+            <div className="mb-3 flex flex-wrap gap-2 text-sm">
               {selected.cvss !== undefined && (
-                <span className="px-2 py-0.5 bg-red-700 rounded text-xs">
+                <span className="rounded-full bg-kali-severity-critical px-2 py-0.5 text-xs font-semibold text-white">
                   CVSS {selected.cvss}
                 </span>
               )}
               {selected.epss !== undefined && (
-                <span className="px-2 py-0.5 bg-blue-700 rounded text-xs">
+                <span className="rounded-full bg-kali-info px-2 py-0.5 text-xs font-semibold text-kali-inverse">
                   EPSS {(selected.epss * 100).toFixed(1)}%
                 </span>
               )}
             </div>
             {selected.remediation && (
-              <p className="text-sm mb-4">
+              <p className="mb-4 text-sm text-white/80">
                 <span className="font-bold">Remediation:</span> {selected.remediation}
               </p>
             )}
             <button
               type="button"
               onClick={() => setSelected(null)}
-              className="px-3 py-1 bg-blue-600 rounded"
+              className="inline-flex items-center justify-center rounded-md bg-kali-primary px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             >
               Close
             </button>
@@ -623,9 +662,14 @@ const OpenVASApp = () => {
         {announce}
       </div>
       {output && (
-        <div className="bg-black text-white text-xs font-mono rounded overflow-auto">
+        <div className="overflow-auto rounded-lg border border-white/10 bg-kali-surface-muted text-xs font-mono text-white">
           {output.split('\n').map((line, i) => (
-            <div key={i} className={`px-2 ${i % 2 ? 'bg-gray-900' : 'bg-gray-800'}`}>
+            <div
+              key={i}
+              className={`px-2 py-1 ${
+                i % 2 ? 'bg-kali-surface' : 'bg-kali-surface-muted/80'
+              }`}
+            >
               {line || '\u00A0'}
             </div>
           ))}
@@ -636,17 +680,17 @@ const OpenVASApp = () => {
           href={summaryUrl}
           download="openvas-summary.md"
           aria-label="Download summary"
-          className="inline-flex items-center mt-2 p-2 bg-blue-600 rounded"
+          className="mt-2 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-kali-primary text-white transition hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
         >
           <img src="/themes/Yaru/status/download.svg" alt="" className="w-4 h-4" />
         </a>
       )}
-      <footer className="mt-4 text-xs text-gray-400">
+      <footer className="mt-4 text-xs text-white/60">
         <a
           href="https://www.openvas.org"
           target="_blank"
           rel="noopener noreferrer"
-          className="underline"
+          className="text-kali-info underline hover:text-kali-info/80"
         >
           Official OpenVAS documentation
         </a>

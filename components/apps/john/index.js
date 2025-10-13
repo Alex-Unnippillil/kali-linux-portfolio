@@ -295,12 +295,12 @@ const JohnApp = () => {
   );
 
   return (
-    <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white">
+    <div className="h-full w-full flex flex-col bg-kali-surface text-kali-text">
       <p className="text-xs text-yellow-300 p-2">
         {johnPlaceholders.banners.desktop}
       </p>
       <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-2">
-        <label htmlFor="john-hashes" className="text-sm">
+        <label htmlFor="john-hashes" id="john-hashes-label" className="text-sm">
           Hashes (one per line)
         </label>
         <textarea
@@ -308,18 +308,19 @@ const JohnApp = () => {
           value={hashes}
           onChange={handleHashesChange}
           placeholder="Enter hashes"
-          className="flex-1 px-2 py-1 bg-gray-800 text-white rounded h-24"
+          className="flex-1 px-2 py-1 bg-kali-dark text-kali-text rounded border border-kali-border h-24 focus:outline-none focus:ring-2 focus:ring-kali-focus focus:border-transparent"
+          aria-labelledby="john-hashes-label"
           aria-invalid={error ? 'true' : undefined}
           aria-describedby={error ? 'john-error' : undefined}
         />
         {hashTypes.length > 0 && (
-          <ul className="text-xs text-gray-300">
+          <ul className="text-xs text-kali-text/70">
             {hashTypes.map((t, i) => (
               <li key={i}>{`Hash ${i + 1}: ${t}`}</li>
             ))}
           </ul>
         )}
-        <label htmlFor="john-rule-text" className="text-sm">
+        <label htmlFor="john-rule-text" id="john-rule-text-label" className="text-sm">
           Rules
         </label>
         <textarea
@@ -327,9 +328,10 @@ const JohnApp = () => {
           value={ruleText}
           onChange={handleRuleTextChange}
           placeholder="Enter rules"
-          className="flex-1 px-2 py-1 bg-gray-800 text-white rounded h-24"
+          className="flex-1 px-2 py-1 bg-kali-dark text-kali-text rounded border border-kali-border h-24 focus:outline-none focus:ring-2 focus:ring-kali-focus focus:border-transparent"
+          aria-labelledby="john-rule-text-label"
         />
-        <label htmlFor="john-rule" className="text-sm">
+        <label htmlFor="john-rule" id="john-rule-label" className="text-sm">
           Rule file
         </label>
         <input
@@ -337,23 +339,25 @@ const JohnApp = () => {
           type="file"
           accept=".rule,.rules,.txt"
           onChange={handleRuleUpload}
+          aria-labelledby="john-rule-label"
           className="text-sm"
         />
-        <label htmlFor="john-mode" className="text-sm">
+        <label htmlFor="john-mode" id="john-mode-label" className="text-sm">
           Mode
         </label>
         <select
           id="john-mode"
           value={mode}
           onChange={handleModeChange}
-          className="px-2 py-1 bg-gray-800 text-white rounded"
+          className="px-2 py-1 bg-kali-dark text-kali-text rounded border border-kali-border focus:outline-none focus:ring-2 focus:ring-kali-focus focus:border-transparent"
+          aria-labelledby="john-mode-label"
         >
           <option value="wordlist">Wordlist</option>
           <option value="incremental">Incremental</option>
         </select>
         {mode === 'wordlist' && (
           <>
-            <label htmlFor="john-wordlist-text" className="text-sm">
+            <label htmlFor="john-wordlist-text" id="john-wordlist-text-label" className="text-sm">
               Wordlist
             </label>
             <textarea
@@ -361,9 +365,10 @@ const JohnApp = () => {
               value={wordlistText}
               onChange={handleWordlistTextChange}
               placeholder="Enter wordlist (one per line)"
-              className="flex-1 px-2 py-1 bg-gray-800 text-white rounded h-24"
+              className="flex-1 px-2 py-1 bg-kali-dark text-kali-text rounded border border-kali-border h-24 focus:outline-none focus:ring-2 focus:ring-kali-focus focus:border-transparent"
+              aria-labelledby="john-wordlist-text-label"
             />
-            <label htmlFor="john-wordlist" className="text-sm">
+            <label htmlFor="john-wordlist" id="john-wordlist-label" className="text-sm">
               Wordlist file
             </label>
             <input
@@ -371,15 +376,17 @@ const JohnApp = () => {
               type="file"
               accept=".txt"
               onChange={handleWordlistUpload}
+              aria-labelledby="john-wordlist-label"
               className="text-sm"
             />
-            <label htmlFor="john-sample-wordlist" className="text-sm">
+            <label htmlFor="john-sample-wordlist" id="john-sample-wordlist-label" className="text-sm">
               Sample wordlist
             </label>
             <select
               id="john-sample-wordlist"
               onChange={handleSampleWordlist}
-              className="px-2 py-1 bg-gray-800 text-white rounded text-sm"
+              className="px-2 py-1 bg-kali-dark text-kali-text rounded text-sm border border-kali-border focus:outline-none focus:ring-2 focus:ring-kali-focus focus:border-transparent"
+              aria-labelledby="john-sample-wordlist-label"
             >
               <option value="">Select sample</option>
               {sampleWordlists.map((s) => (
@@ -391,7 +398,7 @@ const JohnApp = () => {
           </>
         )}
         {stats && (
-          <div className="text-xs bg-gray-900 p-2 rounded">
+          <div className="text-xs bg-[color:color-mix(in_srgb,_var(--color-dark)_92%,_transparent)] border border-kali-border p-2 rounded">
             {candidates.length > 0 && (
               <>
                 <p className="mb-1">Candidate preview:</p>
@@ -407,7 +414,7 @@ const JohnApp = () => {
             <StatsChart count={stats.count} time={stats.time} />
           </div>
         )}
-        <label htmlFor="john-endpoints" className="text-sm">
+        <label htmlFor="john-endpoints" id="john-endpoints-label" className="text-sm">
           Endpoints (comma separated)
         </label>
         <input
@@ -416,12 +423,13 @@ const JohnApp = () => {
           value={endpoints}
           onChange={(e) => setEndpoints(e.target.value)}
           placeholder="endpoint1, endpoint2"
-          className="px-2 py-1 bg-gray-800 text-white rounded"
+          className="px-2 py-1 bg-kali-dark text-kali-text rounded border border-kali-border focus:outline-none focus:ring-2 focus:ring-kali-focus focus:border-transparent"
+          aria-labelledby="john-endpoints-label"
         />
         <div className="flex items-center gap-2">
           <button
             type="submit"
-            className="px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded self-start"
+            className="px-4 py-1 bg-kali-primary text-kali-inverse rounded self-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus hover:bg-[color:var(--kali-blue-dark)]"
             disabled={loading}
           >
             {loading ? 'Running...' : 'Crack'}
@@ -430,7 +438,7 @@ const JohnApp = () => {
             <button
               type="button"
               onClick={handleCancel}
-              className="px-4 py-1 bg-red-700 hover:bg-red-600 rounded"
+              className="px-4 py-1 rounded bg-[color:var(--game-color-danger)] text-white transition-colors hover:bg-[color:color-mix(in_srgb,var(--game-color-danger)85%,#000)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--game-color-danger)]"
             >
               Cancel
             </button>
@@ -438,15 +446,15 @@ const JohnApp = () => {
         </div>
         {loading && (
           <>
-            <div className="w-full bg-gray-700 rounded h-4 overflow-hidden mt-2 relative">
+            <div className="w-full bg-kali-muted rounded h-4 overflow-hidden mt-2 relative border border-kali-border/60">
               <div
                 className="h-full"
                 style={{
                   width: `${progress}%`,
                   backgroundImage:
                     phase === 'wordlist'
-                      ? 'repeating-linear-gradient(45deg,#065f46,#065f46 10px,#1e3a8a 10px,#1e3a8a 20px)'
-                      : 'repeating-linear-gradient(45deg,#1e3a8a,#1e3a8a 10px,#065f46 10px,#065f46 20px)',
+                      ? 'repeating-linear-gradient(45deg, var(--color-primary), var(--color-primary) 12px, color-mix(in srgb, var(--color-primary) 75%, transparent) 12px, color-mix(in srgb, var(--color-primary) 75%, transparent) 24px)'
+                      : 'repeating-linear-gradient(45deg, color-mix(in srgb, var(--color-primary) 85%, transparent), color-mix(in srgb, var(--color-primary) 85%, transparent) 12px, color-mix(in srgb, var(--game-color-danger) 80%, transparent) 12px, color-mix(in srgb, var(--game-color-danger) 80%, transparent) 24px)',
                   backgroundSize: '20px 20px',
                   backgroundPosition: `${phase === 'wordlist' ? animOffset : -animOffset}px 0`,
                   transition: prefersReducedMotion ? 'none' : 'width 0.2s ease-out',
@@ -458,37 +466,47 @@ const JohnApp = () => {
               >
                 <span className="sr-only">{`Progress ${Math.round(progress)} percent`}</span>
               </div>
-              <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
+              <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-kali-text">
                 {`${Math.round(progress)}%`}
               </span>
             </div>
-            <p className="text-xs mt-1 text-white" aria-live="polite">
+            <p className="text-xs mt-1 text-kali-text" aria-live="polite">
               {`Keyspace ${Math.round(progress)}% - ${phase}`}
             </p>
           </>
         )}
         {error && <FormError id="john-error">{error}</FormError>}
       </form>
-      <pre className="flex-1 overflow-auto p-4 whitespace-pre-wrap">{output}</pre>
-      <div className="p-4 flex flex-col gap-2 border-t border-gray-700">
-        <label htmlFor="john-potfile" className="text-sm">Potfile</label>
+      <pre className="flex-1 overflow-auto p-4 whitespace-pre-wrap bg-kali-dark text-kali-text border-t border-kali-border">
+        {output}
+      </pre>
+      <div className="p-4 flex flex-col gap-2 border-t border-kali-border/60 bg-kali-surface">
+        <label htmlFor="john-potfile" id="john-potfile-label" className="text-sm">
+          Potfile
+        </label>
         <input
           id="john-potfile"
           type="file"
           accept=".pot,.txt"
           onChange={handlePotfileUpload}
+          aria-labelledby="john-potfile-label"
           className="text-sm"
         />
         {potfileEntries.length > 0 && (
           <>
+            <label htmlFor="john-potfile-filter" className="sr-only" id="john-potfile-filter-label">
+              Filter potfile entries
+            </label>
             <input
               type="text"
+              id="john-potfile-filter"
               value={potFilter}
               onChange={(e) => setPotFilter(e.target.value)}
               placeholder="Filter"
-              className="px-2 py-1 bg-gray-800 text-white rounded text-sm"
+              className="px-2 py-1 bg-kali-dark text-kali-text rounded text-sm border border-kali-border focus:outline-none focus:ring-2 focus:ring-kali-focus focus:border-transparent"
+              aria-labelledby="john-potfile-filter-label"
             />
-            <div className="max-h-40 overflow-auto bg-gray-900 p-2 rounded text-xs">
+            <div className="max-h-40 overflow-auto bg-[color:color-mix(in_srgb,_var(--color-dark)_92%,_transparent)] p-2 rounded text-xs border border-kali-border">
               {filteredPotfile.map((p, i) => (
                 <div key={i}>{`${p.hash}:${p.password}`}</div>
               ))}
@@ -496,7 +514,7 @@ const JohnApp = () => {
             <button
               type="button"
               onClick={handleExport}
-              className="self-start px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm"
+              className="self-start px-3 py-1 bg-kali-muted hover:bg-kali-dark text-kali-text rounded text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus"
             >
               Export
             </button>

@@ -14,14 +14,26 @@ if (isBrowser) {
     list.innerHTML = '';
     history.forEach((item) => {
       const li = document.createElement('li');
+      li.className = 'history-item';
+      li.tabIndex = 0;
       li.textContent = item;
-      li.addEventListener('click', async () => {
+
+      const copyItem = async () => {
         try {
           await navigator.clipboard.writeText(item);
         } catch (err) {
           console.error('Failed to copy text:', err);
         }
+      };
+
+      li.addEventListener('click', copyItem);
+      li.addEventListener('keydown', async (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          await copyItem();
+        }
       });
+
       list.appendChild(li);
     });
   }

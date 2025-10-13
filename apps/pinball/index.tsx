@@ -15,6 +15,27 @@ const themes: Record<string, { bg: string; flipper: string }> = {
 const formatScore = (value: number) => value.toString().padStart(6, "0");
 const MAX_BALLS = 3;
 
+const tonePalette = {
+  success: {
+    banner:
+      "border-[color-mix(in_srgb,var(--game-color-success)_55%,transparent)] bg-[color-mix(in_srgb,var(--game-color-success)_18%,var(--color-surface))] text-white shadow-lg",
+    label:
+      "text-[color-mix(in_srgb,var(--game-color-success)_70%,#f8fafc)]",
+  },
+  warning: {
+    banner:
+      "border-[color-mix(in_srgb,var(--game-color-warning)_55%,transparent)] bg-[color-mix(in_srgb,var(--game-color-warning)_18%,var(--color-surface))] text-white shadow-lg",
+    label:
+      "text-[color-mix(in_srgb,var(--game-color-warning)_72%,#f8fafc)]",
+  },
+  danger: {
+    banner:
+      "border-[color-mix(in_srgb,var(--game-color-danger)_55%,transparent)] bg-[color-mix(in_srgb,var(--game-color-danger)_22%,var(--color-surface))] text-white shadow-lg",
+    label:
+      "text-[color-mix(in_srgb,var(--game-color-danger)_78%,#f8fafc)]",
+  },
+} as const;
+
 export default function Pinball() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const worldRef = useRef<PinballWorld | null>(null);
@@ -290,12 +311,11 @@ export default function Pinball() {
       return {
         overlay: "Booting table...",
         banner: {
-          toneClass:
-            "border-slate-500/60 bg-slate-900/80 text-slate-100 shadow-inner",
+          toneClass: tonePalette.warning.banner,
           ball: "Booting",
           objective: "Initializing table systems.",
           tiltLabel: "Calibrating…",
-          tiltTone: "text-slate-200",
+          tiltTone: tonePalette.warning.label,
         },
       } as const;
     }
@@ -304,12 +324,11 @@ export default function Pinball() {
       return {
         overlay: "Game over! Hit reset to start a new run.",
         banner: {
-          toneClass:
-            "border-rose-500/40 bg-rose-900/70 text-rose-100 shadow-lg",
+          toneClass: tonePalette.danger.banner,
           ball: "Spent (no balls left)",
           objective: "Hit reset to start a new run.",
           tiltLabel: "Clear",
-          tiltTone: "text-rose-100",
+          tiltTone: tonePalette.danger.label,
         },
       } as const;
     }
@@ -318,14 +337,13 @@ export default function Pinball() {
       return {
         overlay: "TILT! Controls locked.",
         banner: {
-          toneClass:
-            "border-red-500/50 bg-red-900/70 text-red-100 shadow-lg",
+          toneClass: tonePalette.danger.banner,
           ball: ballLocked
             ? `Locked (${ballsRemaining} left)`
             : `Frozen mid-play (${ballsRemaining} left)`,
           objective: "Wait for the table to recover.",
           tiltLabel: "Active",
-          tiltTone: "text-red-100",
+          tiltTone: tonePalette.danger.label,
         },
       } as const;
     }
@@ -334,14 +352,13 @@ export default function Pinball() {
       return {
         overlay: "Paused.",
         banner: {
-          toneClass:
-            "border-sky-500/40 bg-sky-900/60 text-sky-100 shadow-lg",
+          toneClass: tonePalette.warning.banner,
           ball: baseBallSummary,
           objective: ballLocked
             ? "Resume and launch when you're ready."
             : "Resume to keep the run alive.",
           tiltLabel: "Clear",
-          tiltTone: "text-emerald-200",
+          tiltTone: tonePalette.success.label,
         },
       } as const;
     }
@@ -350,12 +367,12 @@ export default function Pinball() {
       overlay: baseObjective,
       banner: {
         toneClass: ballLocked
-          ? "border-amber-500/40 bg-amber-900/60 text-amber-100 shadow-lg"
-          : "border-emerald-500/40 bg-emerald-900/60 text-emerald-100 shadow-lg",
+          ? tonePalette.warning.banner
+          : tonePalette.success.banner,
         ball: baseBallSummary,
         objective: baseObjective,
         tiltLabel: "Clear",
-        tiltTone: ballLocked ? "text-amber-100" : "text-emerald-100",
+        tiltTone: tonePalette.success.label,
       },
     } as const;
   }, [ballLocked, ballsRemaining, gameOver, paused, ready, tilt]);
@@ -384,6 +401,7 @@ export default function Pinball() {
                 onChange={(event) =>
                   setFlipperPower(parseFloat(event.target.value))
                 }
+                aria-label="Flipper strength"
                 className="w-full accent-amber-400"
               />
             </label>
@@ -403,6 +421,7 @@ export default function Pinball() {
                 step="0.1"
                 value={bounce}
                 onChange={(event) => setBounce(parseFloat(event.target.value))}
+                aria-label="Table elasticity"
                 className="w-full accent-sky-400"
               />
             </label>
@@ -424,6 +443,7 @@ export default function Pinball() {
                 onChange={(event) =>
                   setLaunchPower(parseFloat(event.target.value))
                 }
+                aria-label="Launch power"
                 className="w-full accent-emerald-400"
               />
             </label>
@@ -458,15 +478,16 @@ export default function Pinball() {
           ref={canvasRef}
           width={constants.WIDTH}
           height={constants.HEIGHT}
+          aria-label="Pinball playfield"
           className="border"
         />
-        <div className="absolute top-3 left-3 text-white text-xs font-mono bg-black/40 px-2 py-1 rounded">
+        <div className="absolute top-3 left-3 rounded bg-[var(--kali-overlay)] px-2 py-1 font-mono text-xs text-[var(--kali-text)]">
           Balls: {ballsRemaining}
         </div>
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 text-white font-mono text-2xl">
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 font-mono text-2xl text-[var(--kali-text)]">
           {formatScore(score)}
         </div>
-        <div className="absolute top-12 left-1/2 -translate-x-1/2 text-white font-mono text-xs tracking-widest">
+        <div className="absolute top-12 left-1/2 -translate-x-1/2 font-mono text-xs tracking-widest text-[color-mix(in_srgb,var(--kali-text)_85%,transparent)]">
           HI {formatScore(highScore)}
         </div>
         <div className="absolute top-3 right-3 flex flex-col items-end space-y-2">
@@ -475,24 +496,24 @@ export default function Pinball() {
             type="button"
             onClick={handleLaunch}
             disabled={!ballLocked || ballsRemaining <= 0 || paused || tilt || gameOver}
-            className="rounded bg-black/70 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white transition disabled:opacity-40 hover:bg-black/80"
+            className="rounded bg-[var(--kali-control-overlay)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--kali-text)] transition hover:bg-[color-mix(in_srgb,var(--kali-control)_30%,var(--kali-control-overlay))] disabled:opacity-40"
           >
             Launch Ball
           </button>
         </div>
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center text-center text-white">
-          <div className="rounded bg-black/70 px-3 py-2 text-sm shadow-lg">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center text-center text-[var(--kali-text)]">
+          <div className="rounded bg-[color-mix(in_srgb,var(--kali-overlay)_92%,transparent)] px-3 py-2 text-sm text-[var(--kali-text)] shadow-lg">
             {statusMessage}
           </div>
           {!gameOver && !tilt && (
-            <div className="mt-2 rounded bg-black/40 px-2 py-1 text-xs uppercase tracking-wide">
+            <div className="mt-2 rounded bg-[color-mix(in_srgb,var(--kali-overlay)_78%,transparent)] px-2 py-1 text-xs uppercase tracking-wide text-[color-mix(in_srgb,var(--kali-text)_85%,transparent)]">
               Space to launch • N / RB to nudge
             </div>
           )}
         </div>
         {tilt && (
-          <div className="absolute inset-0 flex items-center justify-center bg-red-700/80">
-            <div className="text-white font-bold text-4xl px-6 py-3 border-4 border-white rounded">
+          <div className="absolute inset-0 flex items-center justify-center bg-[color-mix(in_srgb,var(--game-color-danger)_42%,var(--kali-bg))]">
+            <div className="rounded border-4 border-[color-mix(in_srgb,var(--game-color-danger)_70%,#f8fafc)] bg-[color-mix(in_srgb,var(--game-color-danger)_48%,var(--color-surface))] px-6 py-3 text-4xl font-bold text-white shadow-lg">
               TILT
             </div>
           </div>

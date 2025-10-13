@@ -12,8 +12,48 @@ import RequestChart from './RequestChart';
 
 const HISTORY_KEY = 'network-insights-history';
 
+const BADGE_BASE = 'rounded border px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wide';
+const STATUS_BADGES: Record<'neutral' | 'low' | 'medium' | 'high' | 'critical', string> = {
+  neutral:
+    'border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_72%,transparent)] text-[color:color-mix(in_srgb,var(--color-text)_88%,transparent)]',
+  low: 'border-[color:color-mix(in_srgb,var(--color-severity-low)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--color-severity-low)_18%,transparent)] text-[color:color-mix(in_srgb,var(--color-severity-low)_82%,white)]',
+  medium:
+    'border-[color:color-mix(in_srgb,var(--color-severity-medium)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--color-severity-medium)_18%,transparent)] text-[color:color-mix(in_srgb,var(--color-severity-medium)_82%,white)]',
+  high: 'border-[color:color-mix(in_srgb,var(--color-severity-high)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--color-severity-high)_18%,transparent)] text-[color:color-mix(in_srgb,var(--color-severity-high)_85%,white)]',
+  critical:
+    'border-[color:color-mix(in_srgb,var(--color-severity-critical)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--color-severity-critical)_18%,transparent)] text-[color:color-mix(in_srgb,var(--color-severity-critical)_85%,white)]',
+};
+
+const METHOD_BADGE_CLASS =
+  `${BADGE_BASE} border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_70%,transparent)] text-[color:color-mix(in_srgb,var(--color-text)_90%,transparent)]`;
+const MUTED_TEXT_CLASS = 'text-[color:color-mix(in_srgb,var(--color-text)_68%,transparent)]';
+
 const formatBytes = (bytes?: number) =>
   typeof bytes === 'number' ? `${(bytes / 1024).toFixed(1)} kB` : '—';
+
+const getStatusBadgeClass = (status?: number) => {
+  if (typeof status !== 'number') {
+    return `${BADGE_BASE} ${STATUS_BADGES.neutral}`;
+  }
+
+  if (status >= 500) {
+    return `${BADGE_BASE} ${STATUS_BADGES.critical}`;
+  }
+
+  if (status >= 400) {
+    return `${BADGE_BASE} ${STATUS_BADGES.high}`;
+  }
+
+  if (status >= 300) {
+    return `${BADGE_BASE} ${STATUS_BADGES.medium}`;
+  }
+
+  if (status >= 200) {
+    return `${BADGE_BASE} ${STATUS_BADGES.low}`;
+  }
+
+  return `${BADGE_BASE} ${STATUS_BADGES.medium}`;
+};
 
 export default function NetworkInsights() {
   const [active, setActive] = useState<FetchEntry[]>(getActiveFetches());
@@ -87,8 +127,8 @@ export default function NetworkInsights() {
   return (
     <div className="p-3 text-xs text-white bg-[var(--kali-bg)] space-y-3">
       <div className="grid gap-3 lg:grid-cols-2">
-        <section className="rounded-lg border border-gray-700 bg-[var(--kali-panel)] shadow-inner">
-          <header className="flex items-center gap-2 border-b border-gray-700 px-3 py-2">
+        <section className="rounded-lg border border-[color:var(--kali-border)] bg-[var(--kali-panel)] shadow-inner">
+          <header className="flex items-center gap-2 border-b border-b-[color:var(--kali-border)] px-3 py-2">
             <h2 className="text-[0.75rem] font-semibold uppercase tracking-wide text-gray-300">
               Active Fetches
             </h2>
@@ -96,17 +136,19 @@ export default function NetworkInsights() {
               {active.length}
             </span>
           </header>
-          <ul className="divide-y divide-gray-700">
-            {active.length === 0 && <li className="px-3 py-2 text-gray-400">None</li>}
+          <ul className="divide-y divide-[color:var(--kali-border)]">
+            {active.length === 0 && (
+              <li className={`px-3 py-2 ${MUTED_TEXT_CLASS}`}>None</li>
+            )}
             {active.map((f) => (
               <li key={f.id} className="px-3 py-2" data-testid="active-item">
                 <div className="truncate">
-                  <span className="mr-2 rounded bg-slate-700 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wide text-gray-200">
+                  <span className={`mr-2 ${METHOD_BADGE_CLASS}`}>
                     {f.method}
                   </span>
                   {f.url}
                 </div>
-                <div className="text-gray-400">
+                <div className={MUTED_TEXT_CLASS}>
                   {((typeof performance !== 'undefined' ? performance.now() : Date.now()) - f.startTime).toFixed(0)}ms elapsed
                 </div>
               </li>
@@ -114,8 +156,8 @@ export default function NetworkInsights() {
           </ul>
         </section>
 
-        <section className="rounded-lg border border-gray-700 bg-[var(--kali-panel)] shadow-inner">
-          <header className="space-y-2 border-b border-gray-700 px-3 py-2">
+        <section className="rounded-lg border border-[color:var(--kali-border)] bg-[var(--kali-panel)] shadow-inner">
+          <header className="space-y-2 border-b border-b-[color:var(--kali-border)] px-3 py-2">
             <div className="flex items-center gap-2">
               <h2 className="text-[0.75rem] font-semibold uppercase tracking-wide text-gray-300">
                 History
@@ -125,13 +167,13 @@ export default function NetworkInsights() {
               </span>
               <button
                 onClick={handleExport}
-                className="rounded bg-slate-800 px-2 py-1 text-[0.7rem] font-semibold uppercase tracking-wide hover:bg-slate-700"
+                className="rounded border border-[color:var(--kali-border)] bg-[var(--kali-panel)] px-2 py-1 text-[0.7rem] font-semibold uppercase tracking-wide transition-colors hover:bg-[var(--kali-panel-highlight)]"
               >
                 Export
               </button>
               <button
                 onClick={handleClearHistory}
-                className="rounded border border-slate-600 px-2 py-1 text-[0.7rem] font-semibold uppercase tracking-wide hover:bg-slate-700"
+                className="rounded border border-[color:var(--kali-border)] bg-[var(--kali-panel)] px-2 py-1 text-[0.7rem] font-semibold uppercase tracking-wide transition-colors hover:bg-[var(--kali-panel-highlight)]"
               >
                 Clear
               </button>
@@ -141,7 +183,7 @@ export default function NetworkInsights() {
                 Method
                 <select
                   aria-label="Method"
-                  className="rounded bg-slate-900 px-2 py-1 text-white"
+                  className="rounded border border-[color:var(--kali-border)] bg-[var(--kali-panel)] px-2 py-1 text-white"
                   value={methodFilter}
                   onChange={(event) => setMethodFilter(event.target.value)}
                 >
@@ -157,7 +199,7 @@ export default function NetworkInsights() {
                 Status
                 <select
                   aria-label="Status"
-                  className="rounded bg-slate-900 px-2 py-1 text-white"
+                  className="rounded border border-[color:var(--kali-border)] bg-[var(--kali-panel)] px-2 py-1 text-white"
                   value={statusFilter}
                   onChange={(event) => setStatusFilter(event.target.value)}
                 >
@@ -176,30 +218,36 @@ export default function NetworkInsights() {
               )}
             </div>
           </header>
-          <ul className="divide-y divide-gray-700">
-            {history.length === 0 && <li className="px-3 py-2 text-gray-400">No requests</li>}
+          <ul className="divide-y divide-[color:var(--kali-border)]">
+            {history.length === 0 && <li className={`px-3 py-2 ${MUTED_TEXT_CLASS}`}>No requests</li>}
             {history.length > 0 && filteredHistory.length === 0 && (
-              <li className="px-3 py-2 text-gray-400">No requests match the current filters</li>
+              <li className={`px-3 py-2 ${MUTED_TEXT_CLASS}`}>No requests match the current filters</li>
             )}
             {filteredHistory.map((f) => {
               const statusValue = typeof f.status === 'number' ? String(f.status) : 'Unknown';
               return (
-                <li key={f.id} className="px-3 py-2" data-testid="history-item">
+                <li
+                  key={f.id}
+                  className="px-3 py-2 transition-colors bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,transparent)] hover:bg-[var(--kali-panel-highlight)]"
+                  data-testid="history-item"
+                >
                   <div className="flex flex-wrap items-center gap-2 text-[0.7rem]">
-                    <span className="rounded bg-slate-700 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wide text-gray-200">
+                    <span className={METHOD_BADGE_CLASS}>
                       {f.method}
                     </span>
-                    <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wide text-gray-200">
+                    <span className={getStatusBadgeClass(f.status)}>
                       {statusValue}
                     </span>
                     <span className="truncate text-xs text-white/90">{f.url}</span>
                     {f.fromServiceWorkerCache && (
-                      <span className="rounded bg-emerald-600/30 px-1.5 py-0.5 text-[0.6rem] uppercase tracking-wide text-emerald-300">
+                      <span
+                        className={`${BADGE_BASE} border-[color:color-mix(in_srgb,var(--color-severity-low)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--color-severity-low)_14%,transparent)] text-[color:color-mix(in_srgb,var(--color-severity-low)_78%,white)]`}
+                      >
                         SW cache
                       </span>
                     )}
                   </div>
-                  <div className="text-gray-400">
+                  <div className={MUTED_TEXT_CLASS}>
                     {f.duration ? `${f.duration.toFixed(0)}ms` : ''} · req {formatBytes(f.requestSize)} · res {formatBytes(f.responseSize)}
                   </div>
                 </li>

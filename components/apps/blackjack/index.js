@@ -5,11 +5,14 @@ import { recommendAction } from '../../../games/blackjack/coach';
 
 const CHIP_VALUES = [1, 5, 25, 100];
 const CHIP_COLORS = {
-  1: 'bg-gray-200 text-black',
-  5: 'bg-red-800 text-white',
-  25: 'bg-green-800 text-white',
-  100: 'bg-blue-900 text-white',
+  1: 'bg-kali-surface text-kali-text shadow-[0_0_0_1px_rgba(255,255,255,0.08)]',
+  5: 'bg-kali-muted text-kali-text shadow-[0_0_12px_rgba(15,148,210,0.2)]',
+  25: 'bg-kali-primary text-kali-inverse shadow-[0_0_14px_rgba(15,148,210,0.35)]',
+  100: 'bg-kali-control text-kali-inverse shadow-[0_0_18px_rgba(15,148,210,0.45)]',
 };
+
+const CONTROL_BUTTON_BASE =
+  'rounded bg-kali-muted text-kali-text transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus hover:bg-kali-primary hover:text-kali-inverse';
 
 const Card = ({ card, faceDown, peeking }) => {
   const [flipped, setFlipped] = useState(false);
@@ -320,11 +323,11 @@ const Blackjack = () => {
           peeking={peeking && idx === 1}
         />
       ))}
-      <div className="min-w-[2rem] rounded bg-black/40 px-2 py-1 text-center text-sm sm:text-base">
+      <div className="min-w-[2rem] rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-surface)_82%,transparent)] px-2 py-1 text-center text-sm sm:text-base text-kali-text">
         {handValue(hand.cards)}
       </div>
       {overlay && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded bg-black bg-opacity-75 px-2 text-xs">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded border border-[color:color-mix(in_srgb,var(--kali-control)_35%,var(--kali-border))] bg-[var(--kali-control-overlay)] px-2 text-xs font-semibold text-[color:var(--kali-control)] shadow-[0_6px_20px_rgba(9,15,23,0.55)]">
           {overlay.toUpperCase()}
         </div>
       )}
@@ -351,7 +354,7 @@ const Blackjack = () => {
 
   if (practice) {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-ub-cool-grey p-4 text-white select-none">
+      <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-[color:color-mix(in_srgb,var(--color-surface)_65%,transparent)] p-4 text-kali-text select-none">
         {practiceCard && (
           <div className="text-4xl">{`${practiceCard.value}${practiceCard.suit}`}</div>
         )}
@@ -359,20 +362,20 @@ const Blackjack = () => {
           type="number"
           value={practiceGuess}
           onChange={(e) => setPracticeGuess(e.target.value)}
-          className="w-24 rounded px-2 py-1 text-center text-black"
+          className="w-24 rounded border border-[color:var(--kali-border)] bg-[var(--kali-surface)] px-2 py-1 text-center text-kali-text transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
           aria-label="Enter running count guess"
         />
         <div className="flex flex-wrap items-center justify-center gap-2">
           <button
             type="button"
-            className="rounded bg-gray-700 px-3 py-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-400"
+            className={`${CONTROL_BUTTON_BASE} px-3 py-1 text-sm font-medium`}
             onClick={submitPractice}
           >
             Submit
           </button>
           <button
             type="button"
-            className="rounded bg-gray-700 px-3 py-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-400"
+            className={`${CONTROL_BUTTON_BASE} px-3 py-1 text-sm font-medium`}
             onClick={endPractice}
           >
             Exit
@@ -392,35 +395,49 @@ const Blackjack = () => {
   }
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-ub-cool-grey p-4 text-white select-none">
+    <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-[color:color-mix(in_srgb,var(--color-surface)_65%,transparent)] p-4 text-kali-text select-none">
       <div className="flex flex-wrap items-center justify-center gap-3 text-sm sm:text-base">
-        <div className="rounded bg-black/40 px-3 py-1">Bankroll: {availableBankroll}</div>
-        <div className={`h-8 w-6 rounded bg-gray-700 ${shuffling ? 'shuffle' : ''}`} aria-hidden="true"></div>
-        {showCount && <div className="rounded bg-black/40 px-3 py-1">RC: {runningCount}</div>}
+        <div className="rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-surface)_82%,transparent)] px-3 py-1 text-kali-text">
+          Bankroll: {availableBankroll}
+        </div>
+        <div
+          className={`h-8 w-6 rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-muted)_88%,transparent)] ${
+            shuffling ? 'shuffle' : ''
+          }`}
+          aria-hidden="true"
+        ></div>
+        {showCount && (
+          <div className="rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-surface)_82%,transparent)] px-3 py-1 text-kali-text">
+            RC: {runningCount}
+          </div>
+        )}
       </div>
       <div className="flex flex-wrap items-center justify-center gap-2 text-sm sm:text-base">
         <button
           type="button"
-          className="rounded bg-gray-700 px-2 py-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-400"
+          className={`${CONTROL_BUTTON_BASE} px-2 py-1 text-sm sm:text-base font-medium`}
           onClick={() => setShowHints(!showHints)}
         >
           {showHints ? 'Hide Hints' : 'Show Hints'}
         </button>
         <button
           type="button"
-          className="rounded bg-gray-700 px-2 py-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-400"
+          className={`${CONTROL_BUTTON_BASE} px-2 py-1 text-sm sm:text-base font-medium`}
           onClick={() => setShowCount(!showCount)}
         >
           {showCount ? 'Hide Count' : 'Show Count'}
         </button>
         <button
           type="button"
-          className="rounded bg-gray-700 px-2 py-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-400"
+          className={`${CONTROL_BUTTON_BASE} px-2 py-1 text-sm sm:text-base font-medium`}
           onClick={startPractice}
         >
           Practice Count
         </button>
-        <label htmlFor="penetration-slider" className="flex items-center gap-2 rounded bg-black/30 px-2 py-1 text-xs sm:text-sm">
+        <label
+          htmlFor="penetration-slider"
+          className="flex items-center gap-2 rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-surface)_78%,transparent)] px-2 py-1 text-xs sm:text-sm text-kali-text"
+        >
           <span className="uppercase tracking-wide">Pen</span>
           <input
             id="penetration-slider"
@@ -433,7 +450,7 @@ const Blackjack = () => {
               const val = parseFloat(e.target.value);
               if (!Number.isNaN(val)) setPenetration(val);
             }}
-            className="h-1 w-24 accent-yellow-400"
+            className="h-1 w-24 accent-[var(--color-control-accent)]"
             aria-label="Penetration"
           />
           <span>{(penetration * 100).toFixed(0)}%</span>
@@ -452,8 +469,10 @@ const Blackjack = () => {
               <button
                 key={v}
                 type="button"
-                className={`chip transition ${CHIP_COLORS[v]} ${
-                  bet + v > bankroll / handCount ? 'cursor-not-allowed opacity-40' : 'hover:scale-105'
+                className={`chip transition ${CHIP_COLORS[v]} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
+                  bet + v > bankroll / handCount
+                    ? 'cursor-not-allowed opacity-40'
+                    : 'hover:scale-105 hover:bg-kali-primary hover:text-kali-inverse hover:shadow-[0_0_18px_rgba(15,148,210,0.45)]'
                 }`}
                 onClick={() => bet + v <= bankroll / handCount && setBet(bet + v)}
                 aria-label={`Add ${v} chip`}
@@ -464,12 +483,15 @@ const Blackjack = () => {
             ))}
             <button
               type="button"
-              className="rounded bg-gray-700 px-2 py-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-400"
+              className={`${CONTROL_BUTTON_BASE} px-2 py-1 text-sm font-medium`}
               onClick={() => setBet(0)}
             >
               Clear
             </button>
-            <label htmlFor="hand-count" className="flex items-center gap-2 rounded bg-black/30 px-2 py-1 text-xs sm:text-sm">
+            <label
+              htmlFor="hand-count"
+              className="flex items-center gap-2 rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-surface)_78%,transparent)] px-2 py-1 text-xs sm:text-sm text-kali-text"
+            >
               <span className="text-sm">Hands</span>
               <input
                 id="hand-count"
@@ -481,13 +503,13 @@ const Blackjack = () => {
                   const val = parseInt(e.target.value, 10);
                   if (!Number.isNaN(val)) setHandCount(val);
                 }}
-                className="w-12 rounded px-1 text-black"
+                className="w-12 rounded border border-[color:var(--kali-border)] bg-[var(--kali-surface)] px-1 text-kali-text transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
                 aria-label="Hand count"
               />
             </label>
             <button
               type="button"
-              className="rounded bg-gray-700 px-2 py-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-400 disabled:cursor-not-allowed disabled:opacity-50"
+              className={`${CONTROL_BUTTON_BASE} px-3 py-1 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-kali-muted disabled:hover:text-kali-text`}
               onClick={start}
               disabled={bet === 0}
             >
@@ -497,7 +519,7 @@ const Blackjack = () => {
         </div>
       ) : (
         <div className="flex w-full max-w-xl flex-col items-center gap-2 text-center">
-          <div className="text-sm uppercase tracking-wide text-yellow-300">Dealer</div>
+          <div className="text-sm uppercase tracking-wide text-kali-control">Dealer</div>
           {renderHand(
             { cards: dealerHand },
             !message.includes('complete') && current < playerHands.length,
@@ -508,7 +530,7 @@ const Blackjack = () => {
       )}
       {playerHands.map((hand, idx) => (
         <div key={idx} className="flex w-full max-w-xl flex-col items-center gap-2">
-          <div className="text-sm uppercase tracking-wide text-yellow-300">
+          <div className="text-sm uppercase tracking-wide text-kali-control">
             {`Player${playerHands.length > 1 ? ` ${idx + 1}` : ''}`}
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2">
@@ -532,7 +554,11 @@ const Blackjack = () => {
                   <button
                     key={type}
                     type="button"
-                    className={`rounded px-3 py-1 text-sm sm:text-base transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-400 disabled:cursor-not-allowed disabled:opacity-50 ${isRecommended ? 'border-2 border-yellow-400 text-yellow-300' : 'bg-gray-700'}`}
+                    className={`${CONTROL_BUTTON_BASE} px-3 py-1 text-sm sm:text-base font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
+                      isRecommended
+                        ? 'bg-kali-primary text-kali-inverse shadow-[0_0_18px_rgba(15,148,210,0.45)] hover:bg-[color:color-mix(in_srgb,var(--color-primary)_85%,transparent)]'
+                        : ''
+                    }`}
                     onClick={() => act(type)}
                     disabled={!available}
                     aria-keyshortcuts={shortcut}
@@ -549,7 +575,7 @@ const Blackjack = () => {
       {showInsurance && (
         <button
           type="button"
-          className="rounded bg-gray-700 px-3 py-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-400"
+          className={`${CONTROL_BUTTON_BASE} px-3 py-1 text-sm font-medium`}
           onClick={takeInsurance}
         >
           Take Insurance
@@ -558,7 +584,7 @@ const Blackjack = () => {
       <div className="mt-2 text-center text-base sm:text-lg" aria-live="polite" role="status">
         {message}
       </div>
-      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 rounded bg-black/30 px-4 py-2 text-sm sm:text-base">
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 rounded border border-[color:color-mix(in_srgb,var(--kali-control)_35%,var(--kali-border))] bg-[var(--kali-control-overlay)] px-4 py-2 text-sm sm:text-base text-kali-text">
         <span>Wins: {stats.wins}</span>
         <span>Losses: {stats.losses}</span>
         <span>Pushes: {stats.pushes}</span>

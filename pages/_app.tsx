@@ -37,6 +37,39 @@ declare global {
   }
 }
 
+const resolveServiceWorkerPath = (): string => {
+  const buildPath = (raw?: string | null): string | undefined => {
+    if (!raw) return undefined;
+    const trimmed = raw.trim();
+    if (!trimmed) return undefined;
+
+    const withScheme = /^(https?:)?\/\//i.test(trimmed);
+    const normalized = trimmed.endsWith('/') && trimmed !== '/' ? trimmed.replace(/\/+$/, '') : trimmed;
+
+    if (withScheme) {
+      return `${normalized}/sw.js`;
+    }
+
+    const prefixed = normalized.startsWith('/') ? normalized : `/${normalized}`;
+    if (prefixed === '/' || prefixed === '') {
+      return '/sw.js';
+    }
+
+    return `${prefixed}/sw.js`;
+  };
+
+  const assetPrefix =
+    typeof window !== 'undefined'
+      ? (window as typeof window & { __NEXT_DATA__?: { assetPrefix?: string } }).__NEXT_DATA__?.assetPrefix
+      : undefined;
+
+  return (
+    buildPath(process.env.NEXT_PUBLIC_BASE_PATH ?? process.env.BASE_PATH) ??
+    buildPath(assetPrefix) ??
+    '/sw.js'
+  );
+};
+
 interface MyAppProps extends AppProps {}
 
 type AnalyticsEventWithMetadata = BeforeSendEvent & {
@@ -63,11 +96,20 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
     });
 
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+      const swPath = resolveServiceWorkerPath();
       const register = async (): Promise<void> => {
         try {
-          const registration = await navigator.serviceWorker.register('/sw.js');
+          const registration = await navigator.serviceWorker.register(swPath);
 
-          window.manualRefresh = () => registration.update();
+          window.manualRefresh = async () => {
+            try {
+              const existingRegistration = await navigator.serviceWorker.getRegistration(swPath);
+              const activeRegistration = existingRegistration ?? (await navigator.serviceWorker.register(swPath));
+              await activeRegistration.update();
+            } catch (manualRefreshError) {
+              console.error('Service worker manual refresh failed', manualRefreshError);
+            }
+          };
 
           if ('periodicSync' in registration && registration.periodicSync) {
             try {
