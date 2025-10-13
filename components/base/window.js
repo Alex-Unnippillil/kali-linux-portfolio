@@ -487,6 +487,10 @@ export class Window extends Component {
         }, () => {
             this.resizeBoundries();
             this.notifySizeChange();
+            if (typeof this.props.onSnap === 'function') {
+                const targetId = this.id ?? this.props.id;
+                this.props.onSnap(resolvedPosition, targetId);
+            }
         });
     }
 
@@ -621,6 +625,10 @@ export class Window extends Component {
     }
 
     minimizeWindow = () => {
+        if (typeof this.props.onWillMinimize === 'function') {
+            const targetId = this.id ?? this.props.id;
+            this.props.onWillMinimize(targetId);
+        }
         this.setWinowsPosition();
         this.props.hasMinimised(this.id);
     }
