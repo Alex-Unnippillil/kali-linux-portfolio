@@ -29,6 +29,24 @@ const percentOf = (value, total) => {
     return (value / total) * 100;
 };
 
+const resolveViewportDimensions = () => {
+    if (typeof window === 'undefined') {
+        return { width: 0, height: 0 };
+    }
+    const { visualViewport } = window;
+    const viewportWidth = typeof visualViewport?.width === 'number'
+        ? visualViewport.width
+        : window.innerWidth;
+    const viewportHeight = typeof visualViewport?.height === 'number'
+        ? visualViewport.height
+        : window.innerHeight;
+
+    return {
+        width: Number.isFinite(viewportWidth) ? viewportWidth : 0,
+        height: Number.isFinite(viewportHeight) ? viewportHeight : 0,
+    };
+};
+
 const SNAP_LABELS = {
     left: 'Snap left half',
     right: 'Snap right half',
@@ -462,8 +480,7 @@ export class Window extends Component {
             : position;
         this.setWinowsPosition();
         this.focusWindow();
-        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
-        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        const { width: viewportWidth, height: viewportHeight } = resolveViewportDimensions();
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         if (!viewportWidth || !viewportHeight) return;
         const snapBottomInset = measureSnapBottomInset();
@@ -508,8 +525,7 @@ export class Window extends Component {
         const node = this.getWindowNode();
         if (!node) return;
         const rect = node.getBoundingClientRect();
-        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
-        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        const { width: viewportWidth, height: viewportHeight } = resolveViewportDimensions();
         if (!viewportWidth || !viewportHeight) return;
 
         const horizontalThreshold = computeEdgeThreshold(viewportWidth);

@@ -480,6 +480,65 @@ describe('Window snapping finalize and release', () => {
     expect(winEl.style.transform).toBe(`translate(${window.innerWidth / 2}px, ${rightSnapTop}px)`);
   });
 
+  it('uses visual viewport dimensions when previewing and snapping', () => {
+    setViewport(1280, 800);
+    setVisualViewport(900, 700);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    const visual = (window as any).visualViewport;
+    const halfWidth = visual.width / 2;
+    const rectTop = 200;
+    winEl.getBoundingClientRect = () => ({
+      left: visual.width - 100,
+      top: rectTop,
+      right: visual.width,
+      bottom: rectTop + 100,
+      width: 100,
+      height: 100,
+      x: visual.width - 100,
+      y: rectTop,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+
+    const preview = screen.getByTestId('snap-preview');
+    expect(preview).toHaveAttribute('aria-label', 'Snap right half');
+    expect(preview).toHaveStyle(`left: ${halfWidth}px`);
+    expect(preview).toHaveStyle(`width: ${halfWidth}px`);
+
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(ref.current!.state.snapped).toBe('right');
+    expect(ref.current!.state.width).toBeCloseTo(50, 2);
+
+    const topInset = measureWindowTopOffset();
+    const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
+    const snapBottomInset = measureSnapBottomInset();
+    const availableHeight = visual.height - topInset - snapBottomInset - safeBottom;
+    const expectedHeightPercent = (availableHeight / visual.height) * 100;
+
+    expect(ref.current!.state.height).toBeCloseTo(expectedHeightPercent, 5);
+    expect(winEl.style.transform).toBe(`translate(${halfWidth}px, ${topInset}px)`);
+  });
+
   it('snaps window on drag stop near top edge', () => {
     setViewport(1366, 768);
     const ref = React.createRef<any>();
