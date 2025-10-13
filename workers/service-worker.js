@@ -1,4 +1,6 @@
 const CACHE_NAME = 'periodic-cache-v1';
+const GITHUB_CACHE = 'github-metadata-v1';
+const GITHUB_TTL_MS = 24 * 60 * 60 * 1000;
 const ASSETS = [
   '/apps/weather.js',
   '/feeds',
@@ -49,6 +51,11 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  if (request.method === 'GET' && url.origin === 'https://api.github.com' && url.pathname.startsWith('/repos/')) {
+    event.respondWith(handleGitHubRequest(request));
+    return;
+  }
+
   if (url.pathname.startsWith('/apps/')) {
     event.respondWith(
       caches.open(CACHE_NAME).then(async (cache) => {
@@ -70,3 +77,48 @@ self.addEventListener('fetch', (event) => {
     caches.match(request).then((cached) => cached || fetch(request)),
   );
 });
+
+async function handleGitHubRequest(request) {
+  const cache = await caches.open(GITHUB_CACHE);
+  const cached = await cache.match(request);
+  const now = Date.now();
+
+  if (cached) {
+    const fetchedHeader = cached.headers.get('sw-fetched-at');
+    const fetchedAt = fetchedHeader ? Number(fetchedHeader) : undefined;
+    if (typeof fetchedAt === 'number' && Number.isFinite(fetchedAt) && now - fetchedAt < GITHUB_TTL_MS) {
+      return tagCachedResponse(cached, 'HIT');
+    }
+  }
+
+  try {
+    const networkResponse = await fetch(request);
+    const buffered = await networkResponse.clone().arrayBuffer();
+    const headers = new Headers(networkResponse.headers);
+    headers.set('sw-fetched-at', String(Date.now()));
+    headers.set('x-service-worker-cache', 'MISS');
+    const responseForCache = new Response(buffered, {
+      status: networkResponse.status,
+      statusText: networkResponse.statusText,
+      headers,
+    });
+    await cache.put(request, responseForCache.clone());
+    return responseForCache;
+  } catch (error) {
+    if (cached) {
+      return tagCachedResponse(cached, 'STALE');
+    }
+    throw error;
+  }
+}
+
+async function tagCachedResponse(response, state) {
+  const headers = new Headers(response.headers);
+  headers.set('x-service-worker-cache', state);
+  const body = await response.clone().arrayBuffer();
+  return new Response(body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
