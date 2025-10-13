@@ -1,6 +1,12 @@
 import React from 'react';
 import UbuntuApp from '../base/ubuntu_app';
-import { safeLocalStorage } from '../../utils/safeStorage';
+import { safeLocalStorage, readStorageValue, writeStorageValue } from '../../utils/safeStorage';
+import {
+    CATEGORY_DEFINITIONS,
+    CATEGORY_STORAGE_KEY,
+    DEFAULT_CATEGORY_ID,
+    isCategoryId,
+} from '../menu/categoryData';
 
 const FAVORITES_KEY = 'launcherFavorites';
 const RECENTS_KEY = 'recentApps';
@@ -204,6 +210,7 @@ class AllApplications extends React.Component {
             unfilteredApps: [],
             favorites: [],
             recents: [],
+            activeCategory: DEFAULT_CATEGORY_ID,
         };
     }
 
@@ -221,11 +228,18 @@ class AllApplications extends React.Component {
         persistIds(FAVORITES_KEY, favorites);
         persistIds(RECENTS_KEY, recents);
 
+        const storedCategory = readStorageValue(CATEGORY_STORAGE_KEY);
+        const activeCategory =
+            typeof storedCategory === 'string' && isCategoryId(storedCategory)
+                ? storedCategory
+                : DEFAULT_CATEGORY_ID;
+
         this.setState({
             apps: sorted,
             unfilteredApps: sorted,
             favorites,
             recents,
+            activeCategory,
         });
     }
 
@@ -267,6 +281,12 @@ class AllApplications extends React.Component {
             persistIds(FAVORITES_KEY, favorites);
             return { favorites };
         });
+    };
+
+    handleCategorySelect = (id) => {
+        if (!isCategoryId(id)) return;
+        writeStorageValue(CATEGORY_STORAGE_KEY, id);
+        this.setState({ activeCategory: id });
     };
 
     renderAppTile = (app) => {
@@ -380,7 +400,7 @@ class AllApplications extends React.Component {
     };
 
     render() {
-        const { apps, favorites, recents } = this.state;
+        const { apps, favorites, recents, activeCategory } = this.state;
         const { searchInputRef, headingId = 'all-apps-title' } = this.props;
         const appMap = new Map(apps.map((app) => [app.id, app]));
         const favoriteApps = sortAppsByTitle(
@@ -391,44 +411,62 @@ class AllApplications extends React.Component {
         const recentApps = recents
             .map((id) => appMap.get(id))
             .filter(Boolean);
+        const currentCategory =
+            CATEGORY_DEFINITIONS.find((category) => category.id === activeCategory) ||
+            CATEGORY_DEFINITIONS[0];
+        const showFavoritesSection =
+            currentCategory.type === 'home' || currentCategory.type === 'favorites';
+        const showRecentsSection =
+            currentCategory.type === 'home' || currentCategory.type === 'recent';
+        const showFolders = currentCategory.type === 'home' || currentCategory.type === 'all';
+        const categoryAppList =
+            currentCategory.type === 'ids'
+                ? currentCategory.appIds
+                      .map((id) => appMap.get(id))
+                      .filter(Boolean)
+                : [];
         const gameIdSet = new Set((this.props.games || []).map((game) => game.id));
-        const folderTemplates = createFolderDefinitions(gameIdSet).map((folder) => ({
-            ...folder,
-            items: [],
-        }));
-        const assignedIds = new Set();
-        apps.forEach((app) => {
-            for (const folder of folderTemplates) {
-                if (folder.match && folder.match(app)) {
-                    folder.items.push(app);
-                    assignedIds.add(app.id);
-                    return;
-                }
-            }
-        });
-        const remainingApps = apps.filter((app) => !assignedIds.has(app.id));
-        if (remainingApps.length) {
-            folderTemplates.push({
-                id: 'other',
-                title: 'Additional Apps',
-                description: 'Tools that do not fit into the main folders.',
-                icon: DEFAULT_FOLDER_ICON,
-                accent: '#94a3b8',
-                match: () => false,
-                items: sortAppsByTitle(remainingApps),
-            });
-        }
-        const folderSections = folderTemplates
-            .map((folder) => ({
+        let folderSections = [];
+        if (showFolders) {
+            const folderTemplates = createFolderDefinitions(gameIdSet).map((folder) => ({
                 ...folder,
-                items: sortAppsByTitle(folder.items || []),
-            }))
-            .filter((folder) => folder.items.length > 0);
+                items: [],
+            }));
+            const assignedIds = new Set();
+            apps.forEach((app) => {
+                for (const folder of folderTemplates) {
+                    if (folder.match && folder.match(app)) {
+                        folder.items.push(app);
+                        assignedIds.add(app.id);
+                        return;
+                    }
+                }
+            });
+            const remainingApps = apps.filter((app) => !assignedIds.has(app.id));
+            if (remainingApps.length) {
+                folderTemplates.push({
+                    id: 'other',
+                    title: 'Additional Apps',
+                    description: 'Tools that do not fit into the main folders.',
+                    icon: DEFAULT_FOLDER_ICON,
+                    accent: '#94a3b8',
+                    match: () => false,
+                    items: sortAppsByTitle(remainingApps),
+                });
+            }
+            folderSections = folderTemplates
+                .map((folder) => ({
+                    ...folder,
+                    items: sortAppsByTitle(folder.items || []),
+                }))
+                .filter((folder) => folder.items.length > 0);
+        }
 
         const hasResults =
-            favoriteApps.length > 0 ||
-            recentApps.length > 0 ||
-            folderSections.length > 0;
+            (showFavoritesSection && favoriteApps.length > 0) ||
+            (showRecentsSection && recentApps.length > 0) ||
+            (currentCategory.type === 'ids' && categoryAppList.length > 0) ||
+            (showFolders && folderSections.length > 0);
 
         const headerAccentStyles = {
             borderColor: 'color-mix(in srgb, var(--color-accent), transparent 55%)',
@@ -477,12 +515,54 @@ class AllApplications extends React.Component {
                                 aria-label="Search applications"
                             />
                         </div>
+                        <nav
+                            aria-label="Application categories"
+                            className="mt-2 overflow-x-auto py-1"
+                            style={{ WebkitOverflowScrolling: 'touch' }}
+                        >
+                            <div className="flex flex-wrap gap-3">
+                                {CATEGORY_DEFINITIONS.map((category) => {
+                                    const isActive = category.id === currentCategory.id;
+                                    const buttonClasses = [
+                                        'group flex items-center gap-3 rounded-2xl border px-4 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900/80',
+                                        isActive
+                                            ? 'border-white/40 bg-slate-900/80 text-white shadow-lg'
+                                            : 'border-white/10 bg-slate-900/50 text-white/70 hover:border-white/30 hover:text-white',
+                                    ].join(' ');
+                                    const activeStyles = isActive
+                                        ? {
+                                              borderColor: 'color-mix(in srgb, var(--color-accent), transparent 55%)',
+                                              boxShadow: '0 24px 60px -35px color-mix(in srgb, var(--color-accent), transparent 55%)',
+                                          }
+                                        : undefined;
+                                    return (
+                                        <button
+                                            key={category.id}
+                                            type="button"
+                                            className={buttonClasses}
+                                            onClick={() => this.handleCategorySelect(category.id)}
+                                            aria-pressed={isActive}
+                                            data-testid={`launcher-category-${category.id}`}
+                                            style={activeStyles}
+                                        >
+                                            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950/60 ring-1 ring-white/10">
+                                                <img src={category.icon} alt="" className="h-5 w-5" aria-hidden="true" />
+                                            </span>
+                                            <span className="text-left font-semibold tracking-tight">{category.label}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </nav>
                     </div>
                 </header>
                 <div className="mt-10 flex w-full max-w-6xl flex-col items-stretch px-4 pb-12 sm:px-6 md:px-8">
-                    {this.renderSection('Favorites', favoriteApps)}
-                    {this.renderSection('Recent', recentApps)}
-                    {folderSections.length ? (
+                    {showFavoritesSection ? this.renderSection('Favorites', favoriteApps) : null}
+                    {showRecentsSection ? this.renderSection('Recent', recentApps) : null}
+                    {currentCategory.type === 'ids'
+                        ? this.renderSection(currentCategory.label, categoryAppList)
+                        : null}
+                    {showFolders && folderSections.length ? (
                         <div className="space-y-6">
                             {folderSections.map((folder) =>
                                 this.renderFolder(folder, forceOpenFolders)
@@ -491,7 +571,15 @@ class AllApplications extends React.Component {
                     ) : null}
                     {!hasResults && (
                         <p className="mt-6 text-center text-sm text-white/70">
-                            No applications match your search.
+                            {this.state.query
+                                ? 'No applications match your search.'
+                                : currentCategory.type === 'home'
+                                  ? 'Launch apps to populate Recents or pin favorites for quick access.'
+                                  : currentCategory.type === 'favorites'
+                                    ? 'Pin applications from the launcher to see them here.'
+                                    : currentCategory.type === 'recent'
+                                      ? 'Recently opened applications will appear here.'
+                                      : 'No applications are available in this category yet.'}
                         </p>
                     )}
                 </div>

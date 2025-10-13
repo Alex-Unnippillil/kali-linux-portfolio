@@ -3,9 +3,16 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react';
 import Image from 'next/image';
 import apps from '../../apps.config';
-import { safeLocalStorage } from '../../utils/safeStorage';
+import { readStorageValue, writeStorageValue } from '../../utils/safeStorage';
 import { readRecentAppIds } from '../../utils/recentStorage';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import {
+  CATEGORY_DEFINITIONS,
+  CATEGORY_STORAGE_KEY,
+  DEFAULT_CATEGORY_ID,
+  isCategoryId,
+  type CategoryDefinition,
+} from './categoryData';
 
 type AppMeta = {
   id: string;
@@ -15,110 +22,7 @@ type AppMeta = {
   favourite?: boolean;
 };
 
-type CategorySource =
-  | { type: 'all' }
-  | { type: 'favorites' }
-  | { type: 'recent' }
-  | { type: 'ids'; appIds: readonly string[] };
-
-type CategoryDefinitionBase = {
-  id: string;
-  label: string;
-  icon: string;
-} & CategorySource;
-
 const TRANSITION_DURATION = 180;
-const CATEGORY_STORAGE_KEY = 'whisker-menu-category';
-
-const CATEGORY_DEFINITIONS = [
-  {
-    id: 'all',
-    label: 'All Applications',
-    icon: '/themes/Yaru/system/view-app-grid-symbolic.svg',
-    type: 'all',
-  },
-  {
-    id: 'favorites',
-    label: 'Favorites',
-    icon: '/themes/Yaru/status/projects.svg',
-    type: 'favorites',
-  },
-  {
-    id: 'recent',
-    label: 'Recent',
-    icon: '/themes/Yaru/status/process-working-symbolic.svg',
-    type: 'recent',
-  },
-  {
-    id: 'information-gathering',
-    label: 'Information Gathering',
-    icon: '/themes/Yaru/apps/radar-symbolic.svg',
-    type: 'ids',
-    appIds: ['nmap-nse', 'reconng', 'kismet', 'wireshark'],
-  },
-  {
-    id: 'vulnerability-analysis',
-    label: 'Vulnerability Analysis',
-    icon: '/themes/Yaru/apps/nessus.svg',
-    type: 'ids',
-    appIds: ['nessus', 'openvas', 'nikto'],
-  },
-  {
-    id: 'web-app-analysis',
-    label: 'Web App Analysis',
-    icon: '/themes/Yaru/apps/http.svg',
-    type: 'ids',
-    appIds: ['http', 'beef', 'metasploit'],
-  },
-  {
-    id: 'password-attacks',
-    label: 'Password Attacks',
-    icon: '/themes/Yaru/apps/john.svg',
-    type: 'ids',
-    appIds: ['john', 'hashcat', 'hydra'],
-  },
-  {
-    id: 'wireless-attacks',
-    label: 'Wireless Attacks',
-    icon: '/themes/Yaru/status/network-wireless-signal-good-symbolic.svg',
-    type: 'ids',
-    appIds: ['kismet', 'reaver', 'wireshark'],
-  },
-  {
-    id: 'exploitation-tools',
-    label: 'Exploitation Tools',
-    icon: '/themes/Yaru/apps/metasploit.svg',
-    type: 'ids',
-    appIds: ['metasploit', 'security-tools', 'beef'],
-  },
-  {
-    id: 'sniffing-spoofing',
-    label: 'Sniffing & Spoofing',
-    icon: '/themes/Yaru/apps/ettercap.svg',
-    type: 'ids',
-    appIds: ['dsniff', 'ettercap', 'wireshark'],
-  },
-  {
-    id: 'post-exploitation',
-    label: 'Post Exploitation',
-    icon: '/themes/Yaru/apps/msf-post.svg',
-    type: 'ids',
-    appIds: ['msf-post', 'mimikatz', 'volatility'],
-  },
-  {
-    id: 'forensics-reporting',
-    label: 'Forensics & Reporting',
-    icon: '/themes/Yaru/apps/autopsy.svg',
-    type: 'ids',
-    appIds: ['autopsy', 'evidence-vault', 'project-gallery'],
-  },
-] as const satisfies readonly CategoryDefinitionBase[];
-
-type CategoryDefinition = (typeof CATEGORY_DEFINITIONS)[number];
-const isCategoryId = (
-  value: string,
-): value is CategoryDefinition['id'] =>
-  CATEGORY_DEFINITIONS.some(cat => cat.id === value);
 
 const KALI_LOGO_PATH =
   [
@@ -141,7 +45,7 @@ const WhiskerMenu: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [category, setCategory] = useState<CategoryDefinition['id']>('all');
+  const [category, setCategory] = useState<CategoryDefinition['id']>(DEFAULT_CATEGORY_ID);
   const [isDesktop, setIsDesktop] = useState(false);
 
   const [query, setQuery] = useState('');
@@ -238,6 +142,9 @@ const WhiskerMenu: React.FC = () => {
     return CATEGORY_DEFINITIONS.map((definition) => {
       let appsForCategory: AppMeta[] = [];
       switch (definition.type) {
+        case 'home':
+          appsForCategory = recentApps;
+          break;
         case 'all':
           appsForCategory = allApps;
           break;
@@ -268,24 +175,33 @@ const WhiskerMenu: React.FC = () => {
   }, [category, categoryConfigs]);
 
   const currentApps = useMemo(() => {
-    let list = currentCategory?.apps ?? [];
+    if (!currentCategory) return [];
+    let list = currentCategory.apps ?? [];
+    if (currentCategory.type === 'home') {
+      list = query ? allApps : currentCategory.apps ?? [];
+    }
     if (query) {
       const q = query.toLowerCase();
       list = list.filter(a => a.title.toLowerCase().includes(q));
     }
     return list;
-  }, [currentCategory, query]);
+  }, [allApps, currentCategory, query]);
 
   useEffect(() => {
-    const storedCategory = safeLocalStorage?.getItem(CATEGORY_STORAGE_KEY);
+    const storedCategory = readStorageValue(CATEGORY_STORAGE_KEY);
     if (storedCategory && isCategoryId(storedCategory)) {
       setCategory(storedCategory);
+      const index = CATEGORY_DEFINITIONS.findIndex(cat => cat.id === storedCategory);
+      if (index >= 0) {
+        setCategoryHighlight(index);
+      }
     }
   }, []);
 
-  useEffect(() => {
-    safeLocalStorage?.setItem(CATEGORY_STORAGE_KEY, currentCategory.id);
-  }, [currentCategory.id]);
+  const selectCategory = useCallback((nextCategory: CategoryDefinition['id']) => {
+    setCategory(nextCategory);
+    writeStorageValue(CATEGORY_STORAGE_KEY, nextCategory);
+  }, []);
 
   useEffect(() => {
     if (!isVisible) return;
@@ -464,7 +380,7 @@ const WhiskerMenu: React.FC = () => {
       const nextIndex = (current + direction + categoryConfigs.length) % categoryConfigs.length;
       const nextCategory = categoryConfigs[nextIndex];
       if (nextCategory) {
-        setCategory(nextCategory.id);
+        selectCategory(nextCategory.id);
         focusCategoryButton(nextIndex);
       }
       return nextIndex;
@@ -489,7 +405,7 @@ const WhiskerMenu: React.FC = () => {
       event.preventDefault();
       const selected = categoryConfigs[categoryHighlight];
       if (selected) {
-        setCategory(selected.id);
+        selectCategory(selected.id);
       }
     }
   };
@@ -564,9 +480,10 @@ const WhiskerMenu: React.FC = () => {
                   }`}
                   style={{ scrollSnapAlign: 'start' }}
                   role="option"
+                  data-testid={`category-${cat.id}`}
                   aria-selected={category === cat.id}
                   onClick={() => {
-                    setCategory(cat.id);
+                    selectCategory(cat.id);
                     setCategoryHighlight(index);
                   }}
                 >
@@ -617,30 +534,55 @@ const WhiskerMenu: React.FC = () => {
                   onChange={e => setQuery(e.target.value)}
                 />
               </div>
-              <div className="flex flex-wrap items-center gap-3">
-                {favoriteApps.slice(0, 6).map((app) => (
-                  <button
-                    key={app.id}
-                    type="button"
-                    onClick={() => openSelectedApp(app.id)}
-                    className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#122136] text-white transition hover:-translate-y-0.5 hover:bg-[#1b2d46] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29]"
-                    aria-label={`Open ${app.title}`}
-                  >
-                    <Image
-                      src={app.icon}
-                      alt=""
-                      width={24}
-                      height={24}
-                      className="h-6 w-6"
-                      sizes="24px"
-                    />
-                  </button>
-                ))}
-              </div>
+              {currentCategory.type === 'home' && (
+                <div className="space-y-3" data-testid="whisker-home-pinned">
+                  <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-[#4aa8ff]">
+                    <span>Pinned</span>
+                    <span className="text-[11px] text-white/60">
+                      {favoriteApps.length > 0 ? `${Math.min(favoriteApps.length, 6)} shown` : 'None yet'}
+                    </span>
+                  </div>
+                  {favoriteApps.length > 0 ? (
+                    <div className="flex flex-wrap items-center gap-3">
+                      {favoriteApps.slice(0, 6).map((app) => (
+                        <button
+                          key={app.id}
+                          type="button"
+                          onClick={() => openSelectedApp(app.id)}
+                          className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#122136] text-white transition hover:-translate-y-0.5 hover:bg-[#1b2d46] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29]"
+                          aria-label={`Open ${app.title}`}
+                        >
+                          <Image
+                            src={app.icon}
+                            alt=""
+                            width={24}
+                            height={24}
+                            className="h-6 w-6"
+                            sizes="24px"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400">Pin apps from the catalog to keep them here.</p>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-3">
+              {currentCategory.type === 'home' && !query ? (
+                <div
+                  className="mb-3 flex items-center justify-between px-1 text-xs uppercase tracking-[0.3em] text-[#4aa8ff]"
+                  data-testid="whisker-home-recent-label"
+                >
+                  <span>Recent</span>
+                  <span className="text-[11px] text-white/60">
+                    {currentApps.length > 0 ? `${currentApps.length} app${currentApps.length === 1 ? '' : 's'}` : 'None yet'}
+                  </span>
+                </div>
+              ) : null}
               {currentApps.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-gray-500">
+                <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-sm text-gray-500">
                   <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#121f33] text-[#4aa8ff]">
                     <svg
                       width="24"
@@ -658,7 +600,17 @@ const WhiskerMenu: React.FC = () => {
                       <line x1="12" y1="16" x2="12.01" y2="16" />
                     </svg>
                   </span>
-                  <p>No applications match your search.</p>
+                  <p>
+                    {query
+                      ? 'No applications match your search.'
+                      : currentCategory.type === 'home'
+                        ? 'Launch apps to populate your Recents.'
+                        : currentCategory.type === 'favorites'
+                          ? 'Pin applications to see them here.'
+                          : currentCategory.type === 'recent'
+                            ? 'Recently opened apps will appear here.'
+                            : 'No applications are available in this category yet.'}
+                  </p>
                 </div>
               ) : (
                 <ul className="space-y-2" data-testid="whisker-menu-app-list">
