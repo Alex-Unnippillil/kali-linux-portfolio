@@ -160,6 +160,39 @@ const createOverlayStateMap = () => {
     return next;
 };
 
+const deriveWindowMetadata = (snapshot = {}) => {
+    const {
+        closed_windows = {},
+        minimized_windows = {},
+        focused_windows = {},
+        window_positions = {},
+        window_sizes = {},
+    } = snapshot;
+
+    const ids = new Set([
+        ...Object.keys(closed_windows || {}),
+        ...Object.keys(minimized_windows || {}),
+        ...Object.keys(focused_windows || {}),
+        ...Object.keys(window_positions || {}),
+        ...Object.keys(window_sizes || {}),
+    ]);
+
+    const metadata = {};
+    ids.forEach((id) => {
+        const bounds = window_positions?.[id];
+        const size = window_sizes?.[id];
+        metadata[id] = {
+            visible: closed_windows?.[id] === false && minimized_windows?.[id] !== true,
+            focused: Boolean(focused_windows?.[id]),
+            minimized: Boolean(minimized_windows?.[id]),
+            bounds: bounds ? { ...bounds } : null,
+            size: size ? { ...size } : null,
+        };
+    });
+
+    return metadata;
+};
+
 export class Desktop extends Component {
     static defaultProps = {
         snapGrid: [8, 8],
@@ -175,6 +208,7 @@ export class Desktop extends Component {
             'minimized_windows',
             'window_positions',
             'window_sizes',
+            'window_metadata',
         ]);
         this.windowSizeStorageKey = 'desktop_window_sizes';
         this.defaultThemeConfig = {
@@ -270,13 +304,21 @@ export class Desktop extends Component {
             closedShelfOpen: false,
         };
 
-        this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
-            focused_windows: {},
-            closed_windows: {},
-            minimized_windows: {},
-            window_positions: {},
-            window_sizes: { ...initialWindowSizes },
-        }));
+        this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => {
+            const snapshot = {
+                focused_windows: {},
+                closed_windows: {},
+                minimized_windows: {},
+                window_positions: {},
+                window_sizes: { ...initialWindowSizes },
+            };
+            snapshot.window_metadata = deriveWindowMetadata(snapshot);
+            return snapshot;
+        });
+        this.workspaceWindowMetadata = new Map();
+        this.workspaceSnapshots.forEach((snapshot, index) => {
+            this.workspaceWindowMetadata.set(index, snapshot.window_metadata || deriveWindowMetadata(snapshot));
+        });
 
         this.desktopRef = React.createRef();
         this.folderNameInputRef = React.createRef();
@@ -335,21 +377,29 @@ export class Desktop extends Component {
 
     }
 
-    createEmptyWorkspaceState = () => ({
-        focused_windows: createOverlayFlagMap(false),
-        closed_windows: createOverlayFlagMap(true),
-        minimized_windows: createOverlayFlagMap(false),
-        window_positions: {},
-        window_sizes: {},
-    });
+    createEmptyWorkspaceState = () => {
+        const snapshot = {
+            focused_windows: createOverlayFlagMap(false),
+            closed_windows: createOverlayFlagMap(true),
+            minimized_windows: createOverlayFlagMap(false),
+            window_positions: {},
+            window_sizes: {},
+        };
+        snapshot.window_metadata = deriveWindowMetadata(snapshot);
+        return snapshot;
+    };
 
-    cloneWorkspaceState = (state) => ({
-        focused_windows: { ...state.focused_windows },
-        closed_windows: { ...state.closed_windows },
-        minimized_windows: { ...state.minimized_windows },
-        window_positions: { ...state.window_positions },
-        window_sizes: { ...(state.window_sizes || {}) },
-    });
+    cloneWorkspaceState = (state = {}) => {
+        const snapshot = {
+            focused_windows: { ...(state.focused_windows || {}) },
+            closed_windows: { ...(state.closed_windows || {}) },
+            minimized_windows: { ...(state.minimized_windows || {}) },
+            window_positions: { ...(state.window_positions || {}) },
+            window_sizes: { ...(state.window_sizes || {}) },
+        };
+        snapshot.window_metadata = deriveWindowMetadata(snapshot);
+        return snapshot;
+    };
 
     getActiveUserId = () => {
         const { user } = this.props || {};
@@ -542,13 +592,18 @@ export class Desktop extends Component {
     commitWorkspacePartial = (partial, index) => {
         const targetIndex = typeof index === 'number' ? index : this.state.activeWorkspace;
         const snapshot = this.workspaceSnapshots[targetIndex] || this.createEmptyWorkspaceState();
-        const nextSnapshot = { ...snapshot };
+        const nextSnapshot = this.cloneWorkspaceState(snapshot);
         Object.entries(partial).forEach(([key, value]) => {
             if (this.workspaceKeys.has(key)) {
                 nextSnapshot[key] = value;
             }
         });
+        nextSnapshot.window_metadata = deriveWindowMetadata(nextSnapshot);
         this.workspaceSnapshots[targetIndex] = nextSnapshot;
+        if (!this.workspaceWindowMetadata) {
+            this.workspaceWindowMetadata = new Map();
+        }
+        this.workspaceWindowMetadata.set(targetIndex, nextSnapshot.window_metadata);
     };
 
     mergeWorkspaceMaps = (current = {}, base = {}, validKeys = null) => {
@@ -564,6 +619,63 @@ export class Desktop extends Component {
             }
         });
         return merged;
+    };
+
+    cloneWorkspaceWindowMetadata = (metadata = {}) => {
+        const clone = {};
+        Object.entries(metadata || {}).forEach(([id, entry = {}]) => {
+            clone[id] = {
+                visible: Boolean(entry.visible),
+                focused: Boolean(entry.focused),
+                minimized: Boolean(entry.minimized),
+                bounds: entry.bounds ? { ...entry.bounds } : null,
+                size: entry.size ? { ...entry.size } : null,
+            };
+        });
+        return clone;
+    };
+
+    getWorkspaceWindowMetadata = (workspaceId) => {
+        const safeWorkspaceId = typeof workspaceId === 'number' && workspaceId >= 0
+            ? workspaceId
+            : 0;
+        if (!this.workspaceWindowMetadata) {
+            this.workspaceWindowMetadata = new Map();
+        }
+        if (!this.workspaceWindowMetadata.has(safeWorkspaceId)) {
+            const snapshot = this.workspaceSnapshots[safeWorkspaceId] || this.createEmptyWorkspaceState();
+            const metadata = snapshot.window_metadata || deriveWindowMetadata(snapshot);
+            this.workspaceWindowMetadata.set(safeWorkspaceId, metadata);
+        }
+        return this.workspaceWindowMetadata.get(safeWorkspaceId) || {};
+    };
+
+    getWorkspaceWindowMetadataSnapshot = () => {
+        const snapshot = {};
+        for (let index = 0; index < this.workspaceCount; index += 1) {
+            snapshot[index] = this.cloneWorkspaceWindowMetadata(this.getWorkspaceWindowMetadata(index));
+        }
+        return snapshot;
+    };
+
+    persistActiveWorkspaceState = () => {
+        const { activeWorkspace } = this.state || {};
+        if (typeof activeWorkspace !== 'number') {
+            return;
+        }
+        const snapshot = {
+            focused_windows: { ...(this.state.focused_windows || {}) },
+            closed_windows: { ...(this.state.closed_windows || {}) },
+            minimized_windows: { ...(this.state.minimized_windows || {}) },
+            window_positions: { ...(this.state.window_positions || {}) },
+            window_sizes: { ...(this.state.window_sizes || {}) },
+        };
+        snapshot.window_metadata = deriveWindowMetadata(snapshot);
+        this.workspaceSnapshots[activeWorkspace] = snapshot;
+        if (!this.workspaceWindowMetadata) {
+            this.workspaceWindowMetadata = new Map();
+        }
+        this.workspaceWindowMetadata.set(activeWorkspace, snapshot.window_metadata);
     };
 
     setupPointerMediaWatcher = () => {
@@ -950,15 +1062,26 @@ export class Desktop extends Component {
         this.workspaceSnapshots = this.workspaceSnapshots.map((snapshot, index) => {
             const existing = snapshot || this.createEmptyWorkspaceState();
             if (index === this.state.activeWorkspace) {
-                return this.cloneWorkspaceState(baseState);
+                const next = this.cloneWorkspaceState(baseState);
+                if (!this.workspaceWindowMetadata) {
+                    this.workspaceWindowMetadata = new Map();
+                }
+                this.workspaceWindowMetadata.set(index, next.window_metadata || deriveWindowMetadata(next));
+                return next;
             }
-            return {
+            const next = {
                 focused_windows: this.mergeWorkspaceMaps(existing.focused_windows, baseState.focused_windows, validKeys),
                 closed_windows: this.mergeWorkspaceMaps(existing.closed_windows, baseState.closed_windows, validKeys),
                 minimized_windows: this.mergeWorkspaceMaps(existing.minimized_windows, baseState.minimized_windows, validKeys),
                 window_positions: this.mergeWorkspaceMaps(existing.window_positions, baseState.window_positions, validKeys),
                 window_sizes: this.mergeWorkspaceMaps(existing.window_sizes, baseState.window_sizes, validKeys),
             };
+            next.window_metadata = deriveWindowMetadata(next);
+            if (!this.workspaceWindowMetadata) {
+                this.workspaceWindowMetadata = new Map();
+            }
+            this.workspaceWindowMetadata.set(index, next.window_metadata);
+            return next;
         });
     };
 
@@ -2719,7 +2842,15 @@ export class Desktop extends Component {
     switchWorkspace = (workspaceId) => {
         if (workspaceId === this.state.activeWorkspace) return;
         if (workspaceId < 0 || workspaceId >= this.state.workspaces.length) return;
-        const snapshot = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
+        this.persistActiveWorkspaceState();
+        const snapshot = this.cloneWorkspaceState(
+            this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState(),
+        );
+        this.workspaceSnapshots[workspaceId] = snapshot;
+        if (!this.workspaceWindowMetadata) {
+            this.workspaceWindowMetadata = new Map();
+        }
+        this.workspaceWindowMetadata.set(workspaceId, snapshot.window_metadata || deriveWindowMetadata(snapshot));
         const nextTheme = this.getWorkspaceTheme(workspaceId);
         this.closeOverlay('windowSwitcher');
         this.setState({
@@ -2728,6 +2859,7 @@ export class Desktop extends Component {
             closed_windows: { ...snapshot.closed_windows },
             minimized_windows: { ...snapshot.minimized_windows },
             window_positions: { ...snapshot.window_positions },
+            window_sizes: { ...snapshot.window_sizes },
             switcherWindows: [],
             currentTheme: nextTheme,
         }, () => {
@@ -2778,6 +2910,10 @@ export class Desktop extends Component {
             activeWorkspace: this.state.activeWorkspace,
             runningApps: this.getRunningAppSummaries(),
             iconSizePreset: this.state.iconSizePreset,
+            workspaceWindows: this.getWorkspaceWindowMetadataSnapshot(),
+            currentWorkspaceWindows: this.cloneWorkspaceWindowMetadata(
+                this.getWorkspaceWindowMetadata(this.state.activeWorkspace),
+            ),
         };
         window.dispatchEvent(new CustomEvent('workspace-state', { detail }));
     };
