@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import UbuntuApp from '../base/ubuntu_app';
 import { safeLocalStorage } from '../../utils/safeStorage';
 
@@ -8,6 +8,44 @@ const RECENTS_KEY = 'recentApps';
 const DEFAULT_FOLDER_ICON = '/themes/Yaru/system/folder.png';
 
 const buildIdSet = (ids) => new Set(ids);
+
+const PrefetchOnVisible = ({ children, onVisible, rootMargin = '35%' }) => {
+    const targetRef = useRef(null);
+    const triggeredRef = useRef(false);
+
+    useEffect(() => {
+        if (typeof onVisible !== 'function' || triggeredRef.current) return undefined;
+
+        const node = targetRef.current;
+        if (!node) return undefined;
+
+        if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
+            triggeredRef.current = true;
+            onVisible();
+            return undefined;
+        }
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting && !triggeredRef.current) {
+                    triggeredRef.current = true;
+                    onVisible();
+                    observer.disconnect();
+                }
+            });
+        }, { rootMargin });
+
+        observer.observe(node);
+
+        return () => observer.disconnect();
+    }, [onVisible, rootMargin]);
+
+    return React.cloneElement(React.Children.only(children), {
+        ref: (node) => {
+            targetRef.current = node;
+        },
+    });
+};
 
 const SYSTEM_APP_IDS = buildIdSet([
     'terminal',
@@ -271,10 +309,25 @@ class AllApplications extends React.Component {
 
     renderAppTile = (app) => {
         const isFavorite = this.state.favorites.includes(app.id);
-        return (
+        const loadHints = app.loadHints || {};
+        const prefetchFn =
+            typeof app.screen?.prefetch === 'function'
+                ? app.screen.prefetch
+                : undefined;
+        const shouldHoverPrefetch = Boolean(
+            prefetchFn && loadHints.prefetchOnHover
+        );
+        const shouldObserveVisibility = Boolean(
+            prefetchFn && loadHints.prefetchOnVisible
+        );
+        const loadStrategy = loadHints.strategy || 'standard';
+
+        const tile = (
             <div
-                key={app.id}
                 className="relative flex w-full items-center justify-center rounded-2xl border border-white/10 bg-slate-900/70 p-3 shadow-lg transition hover:border-sky-300/70 focus-within:ring-2 focus-within:ring-sky-300/70"
+                data-load-strategy={loadStrategy}
+                data-prefetch-on-hover={shouldHoverPrefetch || undefined}
+                data-prefetch-on-visible={shouldObserveVisibility || undefined}
             >
                 <button
                     type="button"
@@ -297,9 +350,21 @@ class AllApplications extends React.Component {
                     icon={app.icon}
                     openApp={() => this.openApp(app.id)}
                     disabled={app.disabled}
-                    prefetch={app.screen?.prefetch}
+                    prefetch={shouldHoverPrefetch ? prefetchFn : undefined}
                 />
             </div>
+        );
+
+        if (shouldObserveVisibility) {
+            return (
+                <PrefetchOnVisible key={app.id} onVisible={prefetchFn}>
+                    {tile}
+                </PrefetchOnVisible>
+            );
+        }
+
+        return (
+            <React.Fragment key={app.id}>{tile}</React.Fragment>
         );
     };
 
