@@ -15,6 +15,7 @@ export default function usePersistedState(key, defaultValue) {
   });
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     try {
       window.localStorage.setItem(key, JSON.stringify(value));
     } catch {

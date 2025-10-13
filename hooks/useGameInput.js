@@ -21,6 +21,7 @@ export default function useGameInput({ onInput, game } = {}) {
 
   // Load mapping once on mount or when game changes
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const key = game ? `${game}:keymap` : 'game-keymap';
     try {
       const stored = window.localStorage.getItem(key);
@@ -41,6 +42,7 @@ export default function useGameInput({ onInput, game } = {}) {
         e.preventDefault();
       }
     };
+    if (typeof window === 'undefined') return undefined;
     window.addEventListener('keydown', handle);
     window.addEventListener('keyup', handle);
     return () => {

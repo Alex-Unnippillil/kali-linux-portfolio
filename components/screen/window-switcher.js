@@ -52,6 +52,8 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose, contai
     }, [showSearch]);
 
     useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+
         const handleKeyUp = (event) => {
             if (event.key === 'Alt') {
                 const win = filtered[selected];

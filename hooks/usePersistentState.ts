@@ -34,6 +34,7 @@ export default function usePersistentState<T>(
   });
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     try {
       window.localStorage.setItem(key, JSON.stringify(state));
     } catch {
@@ -43,10 +44,12 @@ export default function usePersistentState<T>(
 
   const reset = () => setState(getInitial());
   const clear = () => {
-    try {
-      window.localStorage.removeItem(key);
-    } catch {
-      // ignore remove errors
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.removeItem(key);
+      } catch {
+        // ignore remove errors
+      }
     }
     reset();
   };

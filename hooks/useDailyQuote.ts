@@ -67,9 +67,11 @@ export default function useDailyQuote(tag?: string) {
   const [quote, setQuote] = useState<Quote | null>(null);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const today = new Date().toISOString().slice(0, 10);
     try {
-      const stored = localStorage.getItem('dailyQuote');
+      const stored = window.localStorage.getItem('dailyQuote');
       if (stored) {
         const parsed: Quote = JSON.parse(stored);
         if (parsed.date === today && (!tag || parsed.tags?.includes(tag))) {
@@ -98,7 +100,7 @@ export default function useDailyQuote(tag?: string) {
 
     const toStore: Quote = { ...fetched, date: today } as Quote;
     try {
-      localStorage.setItem('dailyQuote', JSON.stringify(toStore));
+      window.localStorage.setItem('dailyQuote', JSON.stringify(toStore));
     } catch {
       // ignore storage errors
     }
