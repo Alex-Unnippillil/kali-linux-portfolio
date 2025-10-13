@@ -12,6 +12,22 @@ body{
     color: var(--color-text);
 }
 
+main.window-parent {
+    touch-action: pan-x pan-y;
+}
+
+@supports (overscroll-behavior: contain) {
+    main.window-parent {
+        overscroll-behavior: contain;
+    }
+}
+
+@supports (overscroll-behavior-y: contain) {
+    main.window-parent {
+        overscroll-behavior-y: contain;
+    }
+}
+
 :root {
     /* Stack utility defaults */
     --stack-space-0-5: 0.125rem;
