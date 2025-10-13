@@ -1,18 +1,22 @@
 import React from "react";
 import clsx from "clsx";
 
-type LayoutProps = React.HTMLAttributes<HTMLDivElement>;
+type LayoutProps = React.HTMLAttributes<HTMLDivElement> & {
+  'aria-label'?: string;
+};
 
 const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
-  ({ className, children, ...props }, ref) => {
+  ({ className, children, role = 'region', 'aria-label': ariaLabel = 'Desktop surface', ...rest }, ref) => {
     return (
       <div
         ref={ref}
+        role={role}
+        aria-label={ariaLabel}
         className={clsx(
           "desktop-shell relative min-h-screen w-full overflow-hidden bg-transparent text-white antialiased",
           className,
         )}
-        {...props}
+        {...rest}
       >
         {children}
         <style jsx>{`

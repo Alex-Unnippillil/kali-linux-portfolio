@@ -4609,6 +4609,7 @@ export class Desktop extends Component {
             <main
                 id="desktop"
                 role="main"
+                aria-label="Desktop workspace"
                 ref={this.desktopRef}
                 className={" min-h-screen h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent"}
                 style={desktopStyle}
@@ -4618,6 +4619,8 @@ export class Desktop extends Component {
                 <div
                     id="window-area"
                     className="absolute h-full w-full bg-transparent"
+                    role="region"
+                    aria-label="Desktop window surface"
                     data-context="desktop-area"
                 >
                     {this.renderWindows()}
@@ -4630,55 +4633,58 @@ export class Desktop extends Component {
                 {this.renderDesktopApps()}
 
                 {/* Context Menus */}
-                <DesktopMenu
-                    active={this.state.context_menus.desktop}
-                    openApp={this.openApp}
-                    addNewFolder={this.addNewFolder}
-                    openShortcutSelector={this.openShortcutSelector}
-                    iconSizePreset={this.state.iconSizePreset}
-                    setIconSizePreset={this.setIconSizePreset}
-                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
-                />
-                <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
-                <AppMenu
-                    active={this.state.context_menus.app}
-                    pinned={this.initFavourite[this.state.context_app]}
-                    pinApp={() => this.pinApp(this.state.context_app)}
-                    unpinApp={() => this.unpinApp(this.state.context_app)}
-                    onClose={this.hideAllContextMenu}
-                />
-                <TaskbarMenu
-                    active={this.state.context_menus.taskbar}
-                    minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
-                    onMinimize={() => {
-                        const id = this.state.context_app;
-                        if (!id) return;
-                        const isOverlay = this.isOverlayId(id);
-                        if (this.state.minimized_windows[id]) {
-                            if (isOverlay) {
-                                this.openOverlay(id, { transitionState: 'entered' });
+                <aside aria-label="Desktop overlay menus">
+                    <DesktopMenu
+                        active={this.state.context_menus.desktop}
+                        openApp={this.openApp}
+                        addNewFolder={this.addNewFolder}
+                        openShortcutSelector={this.openShortcutSelector}
+                        iconSizePreset={this.state.iconSizePreset}
+                        setIconSizePreset={this.setIconSizePreset}
+                        clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    />
+                    <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
+                    <AppMenu
+                        active={this.state.context_menus.app}
+                        pinned={this.initFavourite[this.state.context_app]}
+                        pinApp={() => this.pinApp(this.state.context_app)}
+                        unpinApp={() => this.unpinApp(this.state.context_app)}
+                        onClose={this.hideAllContextMenu}
+                    />
+                    <TaskbarMenu
+                        active={this.state.context_menus.taskbar}
+                        minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
+                        onMinimize={() => {
+                            const id = this.state.context_app;
+                            if (!id) return;
+                            const isOverlay = this.isOverlayId(id);
+                            if (this.state.minimized_windows[id]) {
+                                if (isOverlay) {
+                                    this.openOverlay(id, { transitionState: 'entered' });
+                                } else {
+                                    this.openApp(id);
+                                }
                             } else {
-                                this.openApp(id);
+                                if (isOverlay) {
+                                    this.minimizeOverlay(id);
+                                } else {
+                                    this.hasMinimised(id);
+                                }
                             }
-                        } else {
-                            if (isOverlay) {
-                                this.minimizeOverlay(id);
+                        }}
+                        onClose={() => {
+                            const id = this.state.context_app;
+                            if (!id) return;
+                            if (this.isOverlayId(id)) {
+                                this.closeOverlay(id);
                             } else {
-                                this.hasMinimised(id);
+                                this.closeApp(id);
                             }
-                        }
-                    }}
-                    onClose={() => {
-                        const id = this.state.context_app;
-                        if (!id) return;
-                        if (this.isOverlayId(id)) {
-                            this.closeOverlay(id);
-                        } else {
-                            this.closeApp(id);
-                        }
-                    }}
-                    onCloseMenu={this.hideAllContextMenu}
-                />
+                        }}
+                        onCloseMenu={this.hideAllContextMenu}
+                    />
+                    {this.renderOverlayWindows()}
+                </aside>
 
                 {/* Folder Input Name Bar */}
                 {
@@ -4711,11 +4717,11 @@ export class Desktop extends Component {
                     />
                 ) : null}
 
-                {this.renderOverlayWindows()}
-
-                <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-                    {this.state.liveRegionMessage}
-                </div>
+                <footer aria-label="Desktop live updates" className="sr-only" role="contentinfo">
+                    <div role="status" aria-live="polite" aria-atomic="true">
+                        {this.state.liveRegionMessage}
+                    </div>
+                </footer>
 
             </main>
         );

@@ -300,9 +300,10 @@ export default class Navbar extends PureComponent {
                 render() {
                         const { workspaces, activeWorkspace } = this.state;
                         return (
-                                <div
-                                        className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
-                                style={{
+                                <nav
+                                        aria-label="Desktop navigation"
+                                        className="main-navbar-vp fixed inset-x-0 top-0 z-[260] bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
+                                        style={{
                                                 minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
                                                 paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
                                                 paddingBottom: '0.25rem',
@@ -311,9 +312,10 @@ export default class Navbar extends PureComponent {
                                                 '--desktop-navbar-height': `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px) + 0.375rem + 0.25rem)`
                                         }}
                                 >
-                                        <div className="flex items-center gap-2 text-xs md:text-sm">
-                                                <WhiskerMenu />
-                                                {workspaces.length > 0 && (
+                                        <div className="flex w-full items-center justify-between">
+                                                <div className="flex items-center gap-2 text-xs md:text-sm">
+                                                        <WhiskerMenu />
+                                                        {workspaces.length > 0 && (
                                                         <WorkspaceSwitcher
                                                                 workspaces={workspaces}
                                                                 activeWorkspace={activeWorkspace}
@@ -341,9 +343,10 @@ export default class Navbar extends PureComponent {
                                                         <QuickSettings open={this.state.status_card} />
                                                 </div>
                                         </div>
-                                </div>
-			);
-		}
+                                        </div>
+                                </nav>
+                        );
+                }
 
 
 }
