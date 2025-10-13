@@ -7,6 +7,7 @@ import {
 } from './uiConstants';
 
 const NAVBAR_SELECTOR = '.main-navbar-vp';
+const MOBILE_TASKBAR_SELECTOR = '.mobile-action-bar';
 const DEFAULT_NAVBAR_HEIGHT = NAVBAR_HEIGHT + NAVBAR_VERTICAL_PADDING;
 const SAFE_AREA_PROPERTIES = {
   top: '--safe-area-top',
@@ -17,6 +18,7 @@ const SAFE_AREA_PROPERTIES = {
 
 const TASKBAR_HEIGHT_PROPERTY = '--shell-taskbar-height';
 const DEFAULT_FONT_SIZE = 16;
+const MIN_WINDOW_TOP_OFFSET = WINDOW_TOP_MARGIN + WINDOW_TOP_INSET;
 
 export const DEFAULT_SNAP_BOTTOM_INSET = SNAP_BOTTOM_INSET;
 
@@ -77,6 +79,19 @@ const readSafeAreaInset = (computed, property) => {
   return parseSafeAreaValue(computed.getPropertyValue(property));
 };
 
+const getElementHeight = (element) => {
+  if (!element || typeof element.getBoundingClientRect !== 'function') {
+    return 0;
+  }
+
+  const { height } = element.getBoundingClientRect();
+  if (typeof height !== 'number' || Number.isNaN(height)) {
+    return 0;
+  }
+
+  return Math.max(Math.ceil(height), 0);
+};
+
 export const getSafeAreaInsets = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return { top: 0, right: 0, bottom: 0, left: 0 };
@@ -108,13 +123,28 @@ export const measureWindowTopOffset = () => {
 
   const navbar = document.querySelector(NAVBAR_SELECTOR);
   if (!navbar) {
-    return DEFAULT_WINDOW_TOP_OFFSET;
+    const safeTop = measureSafeAreaInset('top');
+    return Math.max(MIN_WINDOW_TOP_OFFSET + safeTop, MIN_WINDOW_TOP_OFFSET);
   }
 
-  const { height } = navbar.getBoundingClientRect();
-  const measured = Number.isFinite(height) ? Math.ceil(height) : DEFAULT_NAVBAR_HEIGHT;
+  const computed = typeof window.getComputedStyle === 'function'
+    ? window.getComputedStyle(navbar)
+    : null;
+
+  const isHidden = Boolean(
+    computed &&
+    ((computed.display && computed.display === 'none') ||
+      (computed.visibility && computed.visibility === 'hidden')),
+  );
+
+  const measuredHeight = isHidden ? 0 : getElementHeight(navbar);
+  if (measuredHeight <= 0) {
+    const safeTop = measureSafeAreaInset('top');
+    return Math.max(MIN_WINDOW_TOP_OFFSET + safeTop, MIN_WINDOW_TOP_OFFSET);
+  }
+
   return Math.max(
-    measured + WINDOW_TOP_MARGIN + WINDOW_TOP_INSET,
+    measuredHeight + WINDOW_TOP_MARGIN + WINDOW_TOP_INSET,
     DEFAULT_WINDOW_TOP_OFFSET,
   );
 };
@@ -136,6 +166,12 @@ const readTaskbarHeightFromElement = (element) => {
 export const measureTaskbarHeight = () => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return DEFAULT_SNAP_BOTTOM_INSET;
+  }
+
+  const mobileTaskbar = document.querySelector(MOBILE_TASKBAR_SELECTOR);
+  const measuredMobile = getElementHeight(mobileTaskbar);
+  if (measuredMobile > 0) {
+    return measuredMobile;
   }
 
   const shell = document.querySelector('.desktop-shell');

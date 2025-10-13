@@ -22,6 +22,10 @@ body{
     --stack-space-4: var(--space-4);
     --stack-space-6: var(--space-5);
     --stack-space-8: var(--space-6);
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-right: env(safe-area-inset-right, 0px);
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-left: env(safe-area-inset-left, 0px);
 }
 
 .space-y-0\.5 > :not([hidden]) ~ :not([hidden]) {
@@ -196,6 +200,31 @@ input[type=range].ubuntu-slider:focus-visible::-webkit-slider-thumb {
 
 .windowMainScreen {
     container-type: inline-size;
+}
+
+@media (max-width: 767px) {
+    .desktop-shell {
+        padding-bottom: calc(var(--shell-taskbar-height, 3.5rem) + var(--safe-area-bottom, 0px));
+    }
+}
+
+.mobile-action-bar {
+    --mobile-action-max-width: min(100%, 32rem);
+}
+
+.mobile-action-bar > .flex {
+    width: var(--mobile-action-max-width);
+}
+
+.mobile-action-bar .mobile-quick-settings .group\/qs {
+    top: auto !important;
+    bottom: calc(100% + 0.75rem);
+    left: 0;
+    right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    width: min(22rem, calc(100vw - (var(--safe-area-left, 0px) + var(--safe-area-right, 0px) + 2rem)));
+    transform-origin: bottom center;
 }
 
 .windowMainScreen::-webkit-scrollbar-track {
