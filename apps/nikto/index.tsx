@@ -92,24 +92,27 @@ const NiktoPage: React.FC = () => {
     {
       key: 'High',
       icon: '🚨',
-      accent: 'border-red-600/70 shadow-red-900/40',
-      badge: 'bg-red-500/20 text-red-200 ring-1 ring-red-400/40',
+      accent:
+        'border-kali-severity-high/60 shadow-[0_18px_42px_color-mix(in_srgb,var(--color-severity-high)_22%,transparent)]',
+      badge: 'bg-kali-severity-high/20 text-kali-severity-high ring-1 ring-kali-severity-high/40',
       recommendation:
         'Prioritize immediate remediation, patch vulnerable services, and restrict public access.',
     },
     {
       key: 'Medium',
       icon: '⚠️',
-      accent: 'border-amber-500/60 shadow-amber-900/20',
-      badge: 'bg-amber-400/20 text-amber-100 ring-1 ring-amber-400/40',
+      accent:
+        'border-kali-severity-medium/60 shadow-[0_18px_42px_color-mix(in_srgb,var(--color-severity-medium)_22%,transparent)]',
+      badge: 'bg-kali-severity-medium/20 text-kali-severity-medium ring-1 ring-kali-severity-medium/40',
       recommendation:
         'Schedule fixes in the next maintenance cycle and harden exposed configurations.',
     },
     {
       key: 'Info',
       icon: 'ℹ️',
-      accent: 'border-sky-500/60 shadow-sky-900/20',
-      badge: 'bg-sky-400/20 text-sky-100 ring-1 ring-sky-400/40',
+      accent:
+        'border-kali-severity-low/60 shadow-[0_18px_42px_color-mix(in_srgb,var(--color-severity-low)_22%,transparent)]',
+      badge: 'bg-kali-severity-low/20 text-kali-severity-low ring-1 ring-kali-severity-low/40',
       recommendation:
         'Improve security hygiene and monitor future scans for drift.',
     },
@@ -167,7 +170,7 @@ const NiktoPage: React.FC = () => {
   }, [rawLog]);
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen bg-kali-background text-kali-text">
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6">
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold text-sky-100">Nikto Scanner</h1>
@@ -177,19 +180,19 @@ const NiktoPage: React.FC = () => {
         </div>
         <form
           onSubmit={(e) => e.preventDefault()}
-          className="grid gap-4 rounded-2xl border border-gray-800 bg-gray-900/60 p-4 shadow-lg shadow-black/40 md:grid-cols-3"
+          className="grid gap-4 rounded-2xl border border-kali-border/70 bg-kali-surface/80 p-4 text-kali-text shadow-kali-panel md:grid-cols-3"
         >
           <div className="space-y-2">
             <label
               id="nikto-host-label"
               htmlFor="nikto-host"
-              className="block text-xs font-semibold uppercase tracking-wide text-gray-300"
+              className="block text-xs font-semibold uppercase tracking-wide text-kali-text/70"
             >
               Host
             </label>
             <input
               id="nikto-host"
-              className="w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white shadow-inner shadow-black/40 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+              className="w-full rounded-lg border border-kali-border/60 bg-kali-dark px-3 py-2 text-sm text-kali-text shadow-inner shadow-black/40 focus:border-kali-control focus:outline-none focus:ring-1 focus:ring-kali-control"
               value={host}
               onChange={(e) => setHost(e.target.value)}
               aria-labelledby="nikto-host-label"
@@ -199,100 +202,104 @@ const NiktoPage: React.FC = () => {
             <label
               id="nikto-port-label"
               htmlFor="nikto-port"
-              className="block text-xs font-semibold uppercase tracking-wide text-gray-300"
+              className="block text-xs font-semibold uppercase tracking-wide text-kali-text/70"
             >
               Port
             </label>
             <input
               id="nikto-port"
               type="number"
-              className="w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white shadow-inner shadow-black/40 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+              className="w-full rounded-lg border border-kali-border/60 bg-kali-dark px-3 py-2 text-sm text-kali-text shadow-inner shadow-black/40 focus:border-kali-control focus:outline-none focus:ring-1 focus:ring-kali-control"
               value={port}
               onChange={(e) => setPort(e.target.value)}
               aria-labelledby="nikto-port-label"
             />
           </div>
-          <div className="flex items-center gap-2 rounded-lg border border-gray-800/80 bg-gray-950 px-3 py-2 text-sm">
+          <div className="flex items-center gap-2 rounded-lg border border-kali-border/70 bg-kali-dark/90 px-3 py-2 text-sm">
             <input
               id="nikto-ssl"
               type="checkbox"
-              className="h-4 w-4 rounded border border-gray-700 bg-gray-900 text-sky-400 focus:ring-sky-500"
+              className="h-4 w-4 rounded border border-kali-border/70 bg-kali-surface/80 text-kali-control focus:ring-kali-control"
               checked={ssl}
               onChange={(e) => setSsl(e.target.checked)}
               aria-labelledby="nikto-ssl-label"
             />
-            <label htmlFor="nikto-ssl" className="text-xs font-semibold uppercase tracking-wide text-gray-300" id="nikto-ssl-label">
+            <label
+              htmlFor="nikto-ssl"
+              className="text-xs font-semibold uppercase tracking-wide text-kali-text/70"
+              id="nikto-ssl-label"
+            >
               SSL
             </label>
           </div>
         </form>
-        <div className="overflow-hidden rounded-2xl border border-gray-800 bg-gray-900/70 shadow-lg shadow-black/50">
-          <div className="flex flex-col gap-2 border-b border-gray-800/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="overflow-hidden rounded-2xl border border-kali-border/70 bg-kali-surface/85 shadow-kali-panel">
+          <div className="flex flex-col gap-2 border-b border-kali-border/60 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-white">Command Preview</h2>
-              <p className="text-xs text-gray-400">Copy the simulated command string for your notes.</p>
+              <h2 className="text-lg font-semibold text-kali-text">Command Preview</h2>
+              <p className="text-xs text-kali-text/60">Copy the simulated command string for your notes.</p>
             </div>
             <button
               type="button"
               onClick={copyCommand}
-              className="inline-flex items-center justify-center rounded-full bg-sky-600 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-white transition-colors hover:bg-sky-500"
+              className="inline-flex items-center justify-center rounded-full border border-kali-control/60 bg-kali-control/80 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-kali-text transition-colors hover:bg-kali-control"
             >
               {copiedCommand ? 'Copied!' : 'Copy'}
             </button>
           </div>
-          <pre className="max-h-48 overflow-auto bg-black/80 px-5 py-4 text-sm text-emerald-300">{command}</pre>
+          <pre className="max-h-48 overflow-auto bg-kali-dark/80 px-5 py-4 font-mono text-sm text-kali-terminal">{command}</pre>
         </div>
-        <section className="relative space-y-6 rounded-3xl border border-gray-800/80 bg-gray-900/60 p-6 shadow-xl shadow-black/40">
+        <section className="relative space-y-6 rounded-3xl border border-kali-border/70 bg-kali-surface/85 p-6 shadow-kali-panel">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-white">Target Overview</h2>
-              <p className="text-sm text-gray-300">Snapshot of the simulated host and captured response headers.</p>
+              <h2 className="text-xl font-semibold text-kali-text">Target Overview</h2>
+              <p className="text-sm text-kali-text/70">Snapshot of the simulated host and captured response headers.</p>
             </div>
-            <span className="inline-flex items-center rounded-full border border-white/10 bg-gradient-to-r from-sky-500 via-blue-500 to-purple-600 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-white shadow-lg shadow-purple-900/40">
+            <span className="inline-flex items-center rounded-full border border-kali-control/40 bg-[color:var(--kali-control-surface)] px-4 py-1 text-xs font-semibold uppercase tracking-wide text-kali-text shadow-[0_12px_28px_color-mix(in_srgb,var(--color-control)_22%,transparent)]">
               Phase 3 • {findings.length} results
             </span>
           </div>
           <div className="grid gap-6 lg:grid-cols-[1.15fr_minmax(0,1fr)]">
             <div className="space-y-4">
-              <div className="rounded-2xl border border-gray-800 bg-gray-950/80 p-5">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-300">Target Summary</h3>
+              <div className="rounded-2xl border border-kali-border/70 bg-kali-surface/90 p-5">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-kali-text/70">Target Summary</h3>
                 <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
                   <div className="space-y-1">
-                    <dt className="text-xs uppercase tracking-wide text-gray-400">URL</dt>
-                    <dd className="font-mono text-base text-sky-200 break-all">{url}</dd>
+                    <dt className="text-xs uppercase tracking-wide text-kali-text/60">URL</dt>
+                    <dd className="break-all font-mono text-base text-kali-control">{url}</dd>
                   </div>
                   <div className="space-y-1">
-                    <dt className="text-xs uppercase tracking-wide text-gray-400">Host</dt>
-                    <dd className="font-mono text-base text-sky-200 break-all">{host || 'Not specified'}</dd>
+                    <dt className="text-xs uppercase tracking-wide text-kali-text/60">Host</dt>
+                    <dd className="break-all font-mono text-base text-kali-control">{host || 'Not specified'}</dd>
                   </div>
                   <div className="space-y-1">
-                    <dt className="text-xs uppercase tracking-wide text-gray-400">Port</dt>
-                    <dd className="font-mono text-base text-sky-200">{port || 'Default'}</dd>
+                    <dt className="text-xs uppercase tracking-wide text-kali-text/60">Port</dt>
+                    <dd className="font-mono text-base text-kali-control">{port || 'Default'}</dd>
                   </div>
                   <div className="space-y-1">
-                    <dt className="text-xs uppercase tracking-wide text-gray-400">Headers Parsed</dt>
-                    <dd className="font-mono text-base text-sky-200">{headers.length}</dd>
+                    <dt className="text-xs uppercase tracking-wide text-kali-text/60">Headers Parsed</dt>
+                    <dd className="font-mono text-base text-kali-control">{headers.length}</dd>
                   </div>
                 </dl>
               </div>
               {headers.length > 0 && (
-                <div className="overflow-hidden rounded-2xl border border-gray-800 bg-gray-950/60">
-                  <header className="border-b border-gray-800/80 bg-gray-900/80 px-5 py-3">
-                    <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-300">Captured Headers</h3>
+                <div className="overflow-hidden rounded-2xl border border-kali-terminal/40 bg-kali-dark/80">
+                  <header className="border-b border-kali-terminal/30 bg-kali-dark/70 px-5 py-3">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-kali-terminal">Captured Headers</h3>
                   </header>
                   <div className="max-h-60 overflow-auto">
-                    <table className="min-w-full divide-y divide-gray-800 text-sm">
-                      <thead className="bg-gray-900/60 text-xs uppercase tracking-wide text-gray-400">
+                    <table className="min-w-full divide-y divide-kali-terminal/20 text-sm text-kali-terminal">
+                      <thead className="bg-kali-dark/70 text-xs uppercase tracking-wide text-kali-terminal/80">
                         <tr>
                           <th scope="col" className="px-4 py-2 text-left">Header</th>
                           <th scope="col" className="px-4 py-2 text-left">Value</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-900/60 font-mono">
+                      <tbody className="divide-y divide-kali-terminal/15 font-mono">
                         {headers.map((h) => (
-                          <tr key={h.name} className="odd:bg-gray-900/40">
-                            <td className="px-4 py-2 text-sky-200">{h.name}</td>
-                            <td className="px-4 py-2 break-all text-gray-200">{h.value}</td>
+                          <tr key={h.name} className="odd:bg-kali-dark/60">
+                            <td className="px-4 py-2 text-kali-terminal">{h.name}</td>
+                            <td className="px-4 py-2 break-all text-kali-terminal/80">{h.value}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -303,14 +310,20 @@ const NiktoPage: React.FC = () => {
             </div>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-300">Plugin Findings</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-kali-text/70">Plugin Findings</h3>
                 <div className="flex flex-wrap gap-2 text-xs">
-                  <span className="rounded-full border border-red-500/50 bg-red-500/10 px-3 py-1 text-red-200">High</span>
-                  <span className="rounded-full border border-amber-400/50 bg-amber-400/10 px-3 py-1 text-amber-100">Medium</span>
-                  <span className="rounded-full border border-sky-400/50 bg-sky-400/10 px-3 py-1 text-sky-100">Info</span>
+                  <span className="rounded-full border border-kali-severity-high/50 bg-kali-severity-high/15 px-3 py-1 text-kali-severity-high">
+                    High
+                  </span>
+                  <span className="rounded-full border border-kali-severity-medium/50 bg-kali-severity-medium/15 px-3 py-1 text-kali-severity-medium">
+                    Medium
+                  </span>
+                  <span className="rounded-full border border-kali-severity-low/50 bg-kali-severity-low/15 px-3 py-1 text-kali-severity-low">
+                    Info
+                  </span>
                 </div>
               </div>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-kali-text/60">
                 Toggle severity panels to explore remediation context and export the JSON payload for offline analysis.
               </p>
               {severityMeta
@@ -322,7 +335,7 @@ const NiktoPage: React.FC = () => {
                   return (
                     <section
                       key={sev.key}
-                      className={`space-y-3 rounded-2xl border ${sev.accent} bg-gray-950/70 p-4 shadow-lg backdrop-blur`}
+                      className={`space-y-3 rounded-2xl border ${sev.accent} bg-kali-dark/80 p-4 backdrop-blur`}
                     >
                       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                         <div className="flex items-start gap-3">
@@ -330,8 +343,8 @@ const NiktoPage: React.FC = () => {
                             {sev.icon}
                           </span>
                           <div>
-                            <p className="text-lg font-semibold text-white">{sev.key} Findings</p>
-                            <p className="text-xs text-gray-300">{sev.recommendation}</p>
+                            <p className="text-lg font-semibold text-kali-text">{sev.key} Findings</p>
+                            <p className="text-xs text-kali-text/70">{sev.recommendation}</p>
                           </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -341,14 +354,14 @@ const NiktoPage: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => copySection(list)}
-                            className="rounded-full border border-sky-500/60 bg-sky-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sky-100 transition-colors hover:bg-sky-500/30"
+                            className="rounded-full border border-kali-control/60 bg-kali-control/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-kali-text transition-colors hover:bg-kali-control/30"
                           >
                             Copy JSON
                           </button>
                           <button
                             type="button"
                             onClick={() => exportSection(list, sev.key)}
-                            className="rounded-full border border-sky-500/60 bg-sky-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-sky-100 transition-colors hover:bg-sky-500/30"
+                            className="rounded-full border border-kali-control/60 bg-kali-control/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-kali-text transition-colors hover:bg-kali-control/30"
                           >
                             Export JSON
                           </button>
@@ -362,43 +375,43 @@ const NiktoPage: React.FC = () => {
                                 [sev.key]: !open,
                               }))
                             }
-                            className="rounded-full border border-gray-700 bg-gray-800/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-200 transition-colors hover:bg-gray-700"
+                            className="rounded-full border border-kali-border/70 bg-kali-surface/70 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-kali-text/80 transition-colors hover:bg-kali-surface"
                           >
                             {open ? 'Hide' : 'Show'} details
                           </button>
                         </div>
                       </div>
                       {open && (
-                        <div id={panelId} className="space-y-3 rounded-2xl border border-gray-800/80 bg-gray-900/60 p-4">
-                          <header className="flex flex-col gap-1 border-b border-gray-800/80 pb-3 sm:flex-row sm:items-center sm:justify-between">
-                            <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-300">Detail View</h4>
-                            <p className="text-xs text-gray-400">Includes remediation hints tailored to each plugin.</p>
+                        <div id={panelId} className="space-y-3 rounded-2xl border border-kali-border/60 bg-kali-surface/80 p-4">
+                          <header className="flex flex-col gap-1 border-b border-kali-border/50 pb-3 sm:flex-row sm:items-center sm:justify-between">
+                            <h4 className="text-sm font-semibold uppercase tracking-wide text-kali-text/70">Detail View</h4>
+                            <p className="text-xs text-kali-text/60">Includes remediation hints tailored to each plugin.</p>
                           </header>
                           <ul className="space-y-3">
                             {list.map((f) => (
                               <li
                                 key={`${f.path}-${f.finding}`}
-                                className="space-y-3 rounded-2xl border border-gray-800 bg-gray-950/70 p-4 text-sm shadow-inner shadow-black/30"
+                                className="space-y-3 rounded-2xl border border-kali-border/60 bg-kali-dark/80 p-4 text-sm shadow-inner shadow-black/30"
                               >
                                 <div className="flex flex-col gap-1">
-                                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Path</span>
-                                  <span className="font-mono text-sky-200 break-all">{f.path}</span>
+                                  <span className="text-xs font-semibold uppercase tracking-wide text-kali-text/60">Path</span>
+                                  <span className="break-all font-mono text-kali-control">{f.path}</span>
                                 </div>
                                 <div className="space-y-1">
-                                  <p className="text-base font-semibold text-white">{f.finding}</p>
-                                  {f.details && <p className="leading-relaxed text-gray-200">{f.details}</p>}
+                                  <p className="text-base font-semibold text-kali-text">{f.finding}</p>
+                                  {f.details && <p className="leading-relaxed text-kali-text/80">{f.details}</p>}
                                 </div>
                                 {f.references?.length ? (
                                   <div className="space-y-1">
-                                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">References</span>
-                                    <p className="text-xs text-gray-300">{f.references.join(', ')}</p>
+                                    <span className="text-xs font-semibold uppercase tracking-wide text-kali-text/60">References</span>
+                                    <p className="text-xs text-kali-text/70">{f.references.join(', ')}</p>
                                   </div>
                                 ) : null}
-                                <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-100">
-                                  <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-emerald-300">
+                                <div className="rounded-2xl border border-kali-severity-low/40 bg-kali-severity-low/15 px-4 py-3 text-xs text-kali-text">
+                                  <span className="text-[0.65rem] font-semibold uppercase tracking-wide text-kali-severity-low">
                                     Recommended remediation
                                   </span>
-                                  <p className="mt-1 leading-relaxed text-emerald-100/90">{deriveRemediation(f)}</p>
+                                  <p className="mt-1 leading-relaxed text-kali-text/90">{deriveRemediation(f)}</p>
                                 </div>
                               </li>
                             ))}
@@ -412,24 +425,24 @@ const NiktoPage: React.FC = () => {
           </div>
         </section>
         {rawLog && (
-          <section className="space-y-4 rounded-3xl border border-gray-800/80 bg-gray-900/60 p-6 shadow-xl shadow-black/40">
+          <section className="space-y-4 rounded-3xl border border-kali-border/70 bg-kali-surface/85 p-6 shadow-kali-panel">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-xl font-semibold text-white">Scan Summary</h2>
+              <h2 className="text-xl font-semibold text-kali-text">Scan Summary</h2>
               <div className="flex flex-wrap gap-2 text-xs">
-                <span className="rounded-full border border-red-500/50 bg-red-500/10 px-3 py-1 font-semibold text-red-200">
+                <span className="rounded-full border border-kali-severity-high/50 bg-kali-severity-high/15 px-3 py-1 font-semibold text-kali-severity-high">
                   Critical {summary.critical}
                 </span>
-                <span className="rounded-full border border-amber-400/50 bg-amber-400/10 px-3 py-1 font-semibold text-amber-100">
+                <span className="rounded-full border border-kali-severity-medium/50 bg-kali-severity-medium/15 px-3 py-1 font-semibold text-kali-severity-medium">
                   Warning {summary.warning}
                 </span>
-                <span className="rounded-full border border-sky-400/50 bg-sky-400/10 px-3 py-1 font-semibold text-sky-100">
+                <span className="rounded-full border border-kali-severity-low/50 bg-kali-severity-low/15 px-3 py-1 font-semibold text-kali-severity-low">
                   Info {summary.info}
                 </span>
               </div>
             </div>
             <div className="space-y-3">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-300">Raw Log</h3>
-              <pre className="max-h-72 overflow-auto rounded-2xl border border-gray-800 bg-black/90 p-4 text-xs text-emerald-300">{rawLog}</pre>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-kali-text/70">Raw Log</h3>
+              <pre className="max-h-72 overflow-auto rounded-2xl border border-kali-terminal/40 bg-kali-dark/85 p-4 text-xs text-kali-terminal">{rawLog}</pre>
             </div>
           </section>
         )}
