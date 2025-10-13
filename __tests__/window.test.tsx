@@ -143,6 +143,57 @@ describe('Window lifecycle', () => {
   });
 });
 
+describe('Window titlebar interactions', () => {
+  it('invokes maximize and restore callbacks with remembered bounds on titlebar double click', () => {
+    const onMaximize = jest.fn();
+    const onRestore = jest.fn();
+
+    render(
+      <Window
+        id="double-click-window"
+        title="Double Click"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        onMaximize={onMaximize}
+        onRestore={onRestore}
+      />
+    );
+
+    const titlebar = screen.getByRole('button', { name: /double click/i });
+
+    act(() => {
+      fireEvent.doubleClick(titlebar);
+    });
+
+    expect(onMaximize).toHaveBeenCalledTimes(1);
+    const maximizeArgs = onMaximize.mock.calls[0];
+    expect(maximizeArgs[0]).toBe('double-click-window');
+    expect(maximizeArgs[1]).toMatchObject({
+      widthPercent: expect.any(Number),
+      heightPercent: expect.any(Number),
+      x: expect.any(Number),
+      y: expect.any(Number),
+    });
+
+    act(() => {
+      fireEvent.doubleClick(titlebar);
+    });
+
+    expect(onRestore).toHaveBeenCalledTimes(1);
+    const restoreArgs = onRestore.mock.calls[0];
+    expect(restoreArgs[0]).toBe('double-click-window');
+    expect(restoreArgs[1]).toMatchObject({
+      widthPercent: maximizeArgs[1].widthPercent,
+      heightPercent: maximizeArgs[1].heightPercent,
+      x: expect.any(Number),
+      y: expect.any(Number),
+    });
+  });
+});
+
 describe('Window snap grid configuration', () => {
   it('applies custom grid to draggable when snapping is enabled', () => {
     render(
