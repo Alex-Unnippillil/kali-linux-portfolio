@@ -209,22 +209,24 @@ export default class Ubuntu extends Component {
                 safeLocalStorage?.setItem('shut-down', false);
 	};
 
-	render() {
-        return (
-                <Layout id="monitor-screen">
+        render() {
+                return (
+                        <Layout id="monitor-screen" aria-label="Desktop shell" role="region">
                                 <LockScreen
                                         isLocked={this.state.screen_locked}
                                         bgImgName={this.state.bg_image_name}
                                         unLockScreen={this.unLockScreen}
                                 />
-				<BootingScreen
-					visible={this.state.booting_screen}
-					isShutDown={this.state.shutDownScreen}
-					turnOn={this.turnOn}
-				/>
-                                <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
+                                <BootingScreen
+                                        visible={this.state.booting_screen}
+                                        isShutDown={this.state.shutDownScreen}
+                                        turnOn={this.turnOn}
+                                />
+                                <header aria-label="Desktop status bar">
+                                        <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
+                                </header>
                                 <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
-                </Layout>
-        );
-	}
+                        </Layout>
+                );
+        }
 }

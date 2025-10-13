@@ -8,6 +8,7 @@ jest.mock('html-to-image', () => ({ toPng: jest.fn().mockResolvedValue('data:ima
 jest.mock('../components/util-components/background-image', () => () => <div data-testid="background" />);
 jest.mock('../components/base/window', () => () => <div data-testid="window" />);
 jest.mock('../components/base/ubuntu_app', () => () => <div data-testid="ubuntu-app" />);
+jest.mock('../components/base/SystemOverlayWindow', () => () => <div data-testid="system-overlay" />);
 jest.mock('../components/screen/all-applications', () => () => <div data-testid="all-apps" />);
 jest.mock('../components/screen/shortcut-selector', () => () => <div data-testid="shortcut-selector" />);
 jest.mock('../components/screen/window-switcher', () => () => <div data-testid="window-switcher" />);
@@ -60,7 +61,7 @@ describe('Desktop landmarks', () => {
     }
   });
 
-  it('renders a single main landmark for the desktop shell', () => {
+  it('exposes labelled desktop landmarks', () => {
     render(
       <Desktop
         clearSession={() => {}}
@@ -70,6 +71,9 @@ describe('Desktop landmarks', () => {
       />
     );
 
-    expect(screen.getAllByRole('main')).toHaveLength(1);
+    expect(screen.getByRole('main', { name: /desktop workspace/i })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: /desktop window surface/i })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: /desktop overlay menus/i })).toBeInTheDocument();
+    expect(screen.getByRole('contentinfo', { name: /desktop live updates/i })).toBeInTheDocument();
   });
 });
