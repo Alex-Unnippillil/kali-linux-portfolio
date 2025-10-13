@@ -2,7 +2,7 @@
   position: relative;
   border: 1px solid var(--color-window-border);
   border-radius: var(--radius-6);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-window);
   overflow: hidden;
   --window-motion-transform-duration: var(--window-motion-duration-restore);
   --window-motion-transform-easing: var(--window-motion-ease-restore);

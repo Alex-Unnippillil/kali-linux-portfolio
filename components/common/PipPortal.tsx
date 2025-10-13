@@ -274,7 +274,7 @@ const FallbackPipWindow: React.FC<FallbackPipWindowProps> = ({ children, onReque
         borderRadius: 12,
         overflow: 'hidden',
         background: 'rgba(12, 12, 14, 0.94)',
-        boxShadow: 'var(--shadow-2, 0 12px 32px rgba(0,0,0,0.4))',
+        boxShadow: 'var(--shadow-window, 0 12px 32px rgba(0,0,0,0.4))',
         backdropFilter: 'blur(8px)',
         display: 'flex',
         flexDirection: 'column',

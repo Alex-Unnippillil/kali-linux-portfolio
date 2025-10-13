@@ -4,10 +4,19 @@ module.exports = {
   darkMode: 'class',
   mode: 'jit',
   content: [
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
     './pages/**/*.{js,ts,jsx,tsx}',
     './components/**/*.{js,ts,jsx,tsx}',
     './apps/**/*.{js,ts,jsx,tsx}',
     './hooks/**/*.{js,ts,jsx,tsx}',
+    './lib/**/*.{js,ts,jsx,tsx}',
+    './modules/**/*.{js,ts,jsx,tsx}',
+    './services/**/*.{js,ts,jsx,tsx}',
+    './templates/**/*.{js,ts,jsx,tsx}',
+    './utils/**/*.{js,ts,jsx,tsx}',
+    './src/**/*.{js,ts,jsx,tsx}',
+    './games/**/*.{js,ts,jsx,tsx}',
+    './workers/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
     extend: {
@@ -74,7 +83,8 @@ module.exports = {
         },
       },
       boxShadow: {
-        'kali-panel': '0 6px 20px rgba(0,0,0,.35)',
+        'kali-panel': 'var(--shadow-panel)',
+        'kali-window': 'var(--shadow-window)',
       },
       fontFamily: {
         ubuntu: ['Rajdhani', 'Segoe UI', 'sans-serif'],
