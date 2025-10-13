@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Utilities (notifications)",
+    "directory": "utils/notifications",
+    "threshold": 90,
+    "extensions": ["ts", "tsx", "js", "jsx"]
+  },
+  {
+    "name": "ESLint plugin",
+    "directory": "eslint-plugin-no-top-level-window",
+    "threshold": 90,
+    "extensions": ["js"]
+  }
+]
