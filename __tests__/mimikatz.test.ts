@@ -23,6 +23,7 @@ describe('mimikatz api', () => {
     const data = res.json.mock.calls[0][0];
     expect(Array.isArray(data.modules)).toBe(true);
     expect(data.modules.length).toBeGreaterThan(0);
+    expect(data.modules.every((module: any) => typeof module.name === 'string')).toBe(true);
   });
 
   test('executes script template', async () => {
@@ -31,6 +32,15 @@ describe('mimikatz api', () => {
     await handler(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
     const data = res.json.mock.calls[0][0];
-    expect(data.output).toMatch(/Executed script/);
+    expect(data.output).toBe('Executed script: test');
+  });
+
+  test('executes ad-hoc command via query parameter', async () => {
+    const req: any = { method: 'GET', query: { command: 'token::elevate' } };
+    const res: Res = mockRes();
+    await handler(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    const data = res.json.mock.calls[0][0];
+    expect(data.output).toBe('Executed token::elevate');
   });
 });
