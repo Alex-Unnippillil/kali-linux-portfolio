@@ -123,16 +123,16 @@ const Firefox: React.FC = () => {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-ub-grey text-gray-100">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--kali-surface)] text-[color:var(--kali-text)]">
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col gap-3 border-b border-white/10 bg-black/40 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+        className="flex flex-col gap-3 border-b border-[color:var(--kali-border)] bg-[var(--kali-overlay)] px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
       >
         <label htmlFor="firefox-address" className="sr-only">
           Address
         </label>
         <div className="flex w-full flex-col gap-2 sm:flex-1">
-          <div className="flex min-w-0 items-center gap-3 rounded-md border border-white/10 bg-black/40 px-3 py-2 shadow-inner focus-within:border-ub-orange focus-within:ring-1 focus-within:ring-ub-orange">
+          <div className="flex min-w-0 items-center gap-3 rounded-md border border-[color:var(--kali-border)] bg-[var(--kali-control-surface)] px-3 py-2 shadow-[inset_0_1px_0_color-mix(in_srgb,var(--kali-text)_12%,transparent)] focus-within:border-[color:var(--color-primary)] focus-within:ring-1 focus-within:ring-[color:var(--color-primary)]">
             <input
               id="firefox-address"
               ref={inputRef}
@@ -140,7 +140,7 @@ const Firefox: React.FC = () => {
               onChange={(event) => setInputValue(event.target.value)}
               placeholder="Enter a URL"
               aria-label="Address bar"
-              className="flex-1 bg-transparent text-sm text-gray-100 placeholder-gray-400 focus:outline-none"
+              className="flex-1 bg-transparent text-sm text-[color:var(--kali-text)] placeholder:text-[color:color-mix(in_srgb,var(--kali-text)_60%,transparent)] focus:outline-none"
             />
             <div className="flex items-center" aria-live="polite">
               {isLoading ? (
@@ -149,21 +149,21 @@ const Firefox: React.FC = () => {
                   role="status"
                   aria-label="Loading address"
                 >
-                  <span className="h-4 w-4 animate-spin rounded-full border border-ub-orange border-t-transparent" />
+                  <span className="h-4 w-4 animate-spin rounded-full border border-[color:var(--color-primary)] border-t-transparent" />
                 </span>
               ) : (
-                <span className="text-xs font-medium text-ub-orange">Ready</span>
+                <span className="text-xs font-medium text-[color:var(--color-primary)]">Ready</span>
               )}
             </div>
           </div>
-          <div className="flex items-center justify-between gap-2 text-xs text-gray-300 sm:justify-start">
+          <div className="flex items-center justify-between gap-2 text-xs text-[color:color-mix(in_srgb,var(--kali-text)_86%,var(--kali-bg))] sm:justify-start">
             <div className="flex items-center gap-1 overflow-x-auto">
               {BOOKMARKS.slice(0, 5).map((bookmark) => (
                 <button
                   key={`quick-${bookmark.url}`}
                   type="button"
                   onClick={() => handleQuickFill(bookmark.url)}
-                  className="rounded-md border border-transparent bg-black/40 p-1 transition hover:border-ub-orange hover:bg-black/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
+                  className="rounded-md border border-transparent bg-[var(--kali-overlay)] p-1 transition hover:border-[color:var(--color-primary)] hover:bg-[color-mix(in_srgb,var(--kali-overlay)_85%,var(--kali-bg))] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)]"
                   aria-label={`Fill address with ${bookmark.label}`}
                 >
                   <img
@@ -175,19 +175,19 @@ const Firefox: React.FC = () => {
                 </button>
               ))}
             </div>
-            <kbd className="hidden rounded border border-white/10 bg-black/50 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-200 sm:block">
+            <kbd className="hidden rounded border border-[color:var(--kali-border)] bg-[var(--kali-overlay)] px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_94%,var(--kali-bg))] sm:block">
               Ctrl/⌘ + L
             </kbd>
           </div>
         </div>
         <button
           type="submit"
-          className="h-10 rounded-md bg-ub-orange px-4 text-sm font-semibold text-black shadow transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
+          className="h-10 rounded-md bg-[color:var(--color-primary)] px-4 text-sm font-semibold text-[color:var(--color-inverse)] shadow-[0_12px_32px_-12px_var(--kali-blue-glow)] transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)]"
         >
           Go
         </button>
       </form>
-      <nav className="border-b border-white/10 bg-black/30 px-2 py-2 text-xs sm:px-4" aria-label="Pinned sites">
+      <nav className="border-b border-[color:var(--kali-border)] bg-[var(--kali-overlay)] px-2 py-2 text-xs sm:px-4" aria-label="Pinned sites">
         <div className="flex gap-1 overflow-x-auto pb-1">
           {BOOKMARKS.map((bookmark) => {
             const normalizedBookmark = normaliseUrl(bookmark.url);
@@ -197,10 +197,10 @@ const Firefox: React.FC = () => {
                 key={bookmark.url}
                 type="button"
                 onClick={() => updateAddress(bookmark.url)}
-                className={`rounded-full px-3 py-1 font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange ${
+                className={`rounded-full px-3 py-1 font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)] ${
                   isActive
-                    ? 'bg-ub-orange text-black shadow-inner hover:brightness-110'
-                    : 'bg-black/40 text-gray-200 hover:bg-black/60'
+                    ? 'bg-[color:var(--color-primary)] text-[color:var(--color-inverse)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--kali-text)_16%,transparent)] hover:brightness-110'
+                    : 'bg-[var(--kali-overlay)] text-[color:color-mix(in_srgb,var(--kali-text)_88%,var(--kali-bg))] hover:bg-[color-mix(in_srgb,var(--kali-overlay)_85%,var(--kali-bg))]'
                 }`}
                 aria-current={isActive ? 'page' : undefined}
               >
@@ -210,11 +210,11 @@ const Firefox: React.FC = () => {
           })}
         </div>
       </nav>
-      <div className="relative flex-1 min-h-0 bg-black">
+      <div className="relative flex-1 min-h-0 bg-[var(--kali-bg)]">
         {!simulation && (
-          <aside className="pointer-events-auto absolute left-3 top-3 z-10 max-w-sm rounded-lg border border-ub-orange border-opacity-60 bg-black/80 p-4 text-xs text-gray-200 shadow-xl backdrop-blur">
-            <h2 className="text-sm font-semibold text-ub-orange">Sandboxed live preview</h2>
-            <p className="mt-2 text-gray-300">
+          <aside className="pointer-events-auto absolute left-3 top-3 z-10 max-w-sm rounded-lg border border-[color:color-mix(in_srgb,var(--color-primary)_70%,transparent)] bg-[color-mix(in_srgb,var(--kali-bg)_94%,transparent)] p-4 text-xs text-[color:color-mix(in_srgb,var(--kali-text)_92%,var(--kali-bg))] shadow-[0_24px_60px_-24px_var(--kali-blue-glow)] backdrop-blur">
+            <h2 className="text-sm font-semibold text-[color:var(--color-primary)]">Sandboxed live preview</h2>
+            <p className="mt-2 text-[color:color-mix(in_srgb,var(--kali-text)_88%,var(--kali-bg))]">
               This window loads external sites inside a sandboxed iframe for safety. Some sites may block embedding. Use the
               quick links below to open them directly in a new tab.
             </p>
@@ -225,7 +225,7 @@ const Firefox: React.FC = () => {
                   href={bookmark.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-2 rounded border border-white/10 bg-black/60 px-2 py-1 text-gray-200 transition hover:border-ub-orange hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
+                  className="flex items-center gap-2 rounded border border-[color:var(--kali-border)] bg-[color-mix(in_srgb,var(--kali-overlay)_90%,var(--kali-bg))] px-2 py-1 text-[color:color-mix(in_srgb,var(--kali-text)_92%,var(--kali-bg))] transition hover:border-[color:var(--color-primary)] hover:text-[color:var(--kali-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)]"
                 >
                   <img src={getFaviconUrl(bookmark.url)} alt="" className="h-4 w-4" />
                   <span>{bookmark.label}</span>
