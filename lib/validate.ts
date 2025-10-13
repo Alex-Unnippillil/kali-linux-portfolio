@@ -22,6 +22,12 @@ const serverEnvSchema = publicEnvSchema.extend({
   SUPABASE_URL: z.string().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   SUPABASE_ANON_KEY: z.string().optional(),
+  EMAIL_PROVIDER: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
+  POSTMARK_SERVER_TOKEN: z.string().optional(),
+  CONTACT_EMAIL_TO: z.string().optional(),
+  CONTACT_EMAIL_FROM: z.string().optional(),
+  CONTACT_EMAIL_SUBJECT: z.string().optional(),
 });
 
 export function validatePublicEnv(env: NodeJS.ProcessEnv) {

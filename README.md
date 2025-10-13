@@ -256,6 +256,12 @@ Copy `.env.local.example` to `.env.local` and populate the keys relevant to your
 | `FEATURE_HYDRA` | Additional toggle for `/api/hydra` demo route. |
 | `RECAPTCHA_SECRET` | Server-side verification for ReCAPTCHA. |
 | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_ANON_KEY` | Server-side Supabase credentials. |
+| `EMAIL_PROVIDER` | `resend`, `postmark`, `console` (default), or `test` to pick the mail transport. |
+| `CONTACT_EMAIL_TO` | Recipient mailbox for contact form submissions. Required to deliver email. |
+| `CONTACT_EMAIL_FROM` | Verified sender address used when dispatching contact emails. Defaults to `CONTACT_EMAIL_TO`. |
+| `CONTACT_EMAIL_SUBJECT` | Optional subject line for contact emails. |
+| `RESEND_API_KEY` | API key required when `EMAIL_PROVIDER=resend`. |
+| `POSTMARK_SERVER_TOKEN` | Server token required when `EMAIL_PROVIDER=postmark`. |
 | `ADMIN_READ_KEY` | Secret used by admin message APIs; configure in the hosting platform. |
 
 > Never commit secrets. Use local `.env.local`, CI secrets, or host-level configuration.
@@ -400,3 +406,11 @@ The calculator app supports a subset of math.js expressions:
 - The previous answer is accessible via `Ans`.
 
 Invalid syntax is highlighted in the calculator input, selecting the character where parsing failed.
+#### Contact email providers
+
+1. Pick a provider by setting `EMAIL_PROVIDER` to `resend`, `postmark`, or `console`. `console` disables outbound email but still records audit logs.
+2. Configure `CONTACT_EMAIL_TO` with the inbox that should receive submissions and, if needed, `CONTACT_EMAIL_FROM` with a verified sender address that matches your provider’s domain.
+3. Supply provider credentials (`RESEND_API_KEY` or `POSTMARK_SERVER_TOKEN`). Without them, the API will return `503` with `email_provider_error`.
+4. Optionally set `CONTACT_EMAIL_SUBJECT` to customise the subject line.
+5. For automated testing and CI, use `EMAIL_PROVIDER=test` to capture outbound messages in-memory without hitting external services.
+
