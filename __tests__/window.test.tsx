@@ -35,6 +35,10 @@ const computeSnappedHeightPercent = () => (computeAvailableHeightPx() / window.i
 
 const computeQuarterHeightPercent = () => computeSnappedHeightPercent() / 2;
 
+const computeQuarterHeightPx = () => computeAvailableHeightPx() / 2;
+
+const computeBottomQuarterTranslateTop = () => measureWindowTopOffset() + computeQuarterHeightPx();
+
 const computeLeftSnapTestTop = () => {
   const available = computeAvailableHeightPx();
   const offset = DESKTOP_TOP_PADDING;
@@ -340,12 +344,55 @@ describe('Window snapping preview', () => {
     expect(ref.current!.state.snapPosition).toBe('top-left');
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toHaveStyle(`width: ${window.innerWidth / 2}px`);
-    expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx() / 2}px`);
+    expect(preview).toHaveStyle(`height: ${computeQuarterHeightPx()}px`);
     expect(preview).toHaveAttribute('aria-label', 'Snap top-left quarter');
     expect(within(preview).getByText('Snap top-left quarter')).toBeInTheDocument();
   });
 
-  it('shows right-half preview when dragged near the bottom-right edge', () => {
+  it('shows corner preview when dragged near the top-right edge', () => {
+    setViewport(1600, 900);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 1490,
+      top: 6,
+      right: 1590,
+      bottom: 106,
+      width: 100,
+      height: 100,
+      x: 1490,
+      y: 6,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+
+    expect(ref.current!.state.snapPosition).toBe('top-right');
+    const preview = screen.getByTestId('snap-preview');
+    expect(preview).toHaveStyle(`left: ${window.innerWidth / 2}px`);
+    expect(preview).toHaveStyle(`top: ${measureWindowTopOffset()}px`);
+    expect(preview).toHaveStyle(`width: ${window.innerWidth / 2}px`);
+    expect(preview).toHaveStyle(`height: ${computeQuarterHeightPx()}px`);
+    expect(preview).toHaveAttribute('aria-label', 'Snap top-right quarter');
+    expect(within(preview).getByText('Snap top-right quarter')).toBeInTheDocument();
+  });
+
+  it('shows corner preview when dragged near the bottom-right edge', () => {
     setViewport(1600, 900);
     const ref = React.createRef<any>();
     render(
@@ -378,15 +425,13 @@ describe('Window snapping preview', () => {
       ref.current!.handleDrag();
     });
 
-    expect(ref.current!.state.snapPosition).toBe('right');
+    expect(ref.current!.state.snapPosition).toBe('bottom-right');
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toHaveStyle(`left: ${window.innerWidth / 2}px`);
-    expect(preview).toHaveStyle(
-      `top: ${measureWindowTopOffset()}px`
-    );
-    expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx()}px`);
-    expect(preview).toHaveAttribute('aria-label', 'Snap right half');
-    expect(within(preview).getByText('Snap right half')).toBeInTheDocument();
+    expect(preview).toHaveStyle(`top: ${computeBottomQuarterTranslateTop()}px`);
+    expect(preview).toHaveStyle(`height: ${computeQuarterHeightPx()}px`);
+    expect(preview).toHaveAttribute('aria-label', 'Snap bottom-right quarter');
+    expect(within(preview).getByText('Snap bottom-right quarter')).toBeInTheDocument();
   });
 });
 
@@ -480,6 +525,174 @@ describe('Window snapping finalize and release', () => {
     expect(winEl.style.transform).toBe(`translate(${window.innerWidth / 2}px, ${rightSnapTop}px)`);
   });
 
+  it('snaps window on drag stop near the top-left corner', () => {
+    setViewport(1600, 900);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 6,
+      top: 8,
+      right: 106,
+      bottom: 108,
+      width: 100,
+      height: 100,
+      x: 6,
+      y: 8,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(ref.current!.state.snapped).toBe('top-left');
+    expect(ref.current!.state.width).toBeCloseTo(50);
+    expect(ref.current!.state.height).toBeCloseTo(computeQuarterHeightPercent(), 5);
+    expect(winEl.style.transform).toBe(`translate(0px, ${getSnapTranslateTop()}px)`);
+  });
+
+  it('snaps window on drag stop near the top-right corner', () => {
+    setViewport(1600, 900);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 1494,
+      top: 8,
+      right: 1594,
+      bottom: 108,
+      width: 100,
+      height: 100,
+      x: 1494,
+      y: 8,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(ref.current!.state.snapped).toBe('top-right');
+    expect(ref.current!.state.width).toBeCloseTo(50);
+    expect(ref.current!.state.height).toBeCloseTo(computeQuarterHeightPercent(), 5);
+    expect(winEl.style.transform).toBe(`translate(${window.innerWidth / 2}px, ${getSnapTranslateTop()}px)`);
+  });
+
+  it('snaps window on drag stop near the bottom-left corner', () => {
+    setViewport(1600, 900);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 6,
+      top: 772,
+      right: 106,
+      bottom: 872,
+      width: 100,
+      height: 100,
+      x: 6,
+      y: 772,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(ref.current!.state.snapped).toBe('bottom-left');
+    expect(ref.current!.state.width).toBeCloseTo(50);
+    expect(ref.current!.state.height).toBeCloseTo(computeQuarterHeightPercent(), 5);
+    expect(winEl.style.transform).toBe(`translate(0px, ${computeBottomQuarterTranslateTop()}px)`);
+  });
+
+  it('snaps window on drag stop near the bottom-right corner', () => {
+    setViewport(1600, 900);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 1494,
+      top: 772,
+      right: 1594,
+      bottom: 872,
+      width: 100,
+      height: 100,
+      x: 1494,
+      y: 772,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(ref.current!.state.snapped).toBe('bottom-right');
+    expect(ref.current!.state.width).toBeCloseTo(50);
+    expect(ref.current!.state.height).toBeCloseTo(computeQuarterHeightPercent(), 5);
+    expect(winEl.style.transform).toBe(`translate(${window.innerWidth / 2}px, ${computeBottomQuarterTranslateTop()}px)`);
+  });
+
   it('snaps window on drag stop near top edge', () => {
     setViewport(1366, 768);
     const ref = React.createRef<any>();
@@ -521,94 +734,6 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.height).toBeCloseTo(computeSnappedHeightPercent(), 5);
     const topSnapTop = getSnapTranslateTop();
     expect(winEl.style.transform).toBe(`translate(0px, ${topSnapTop}px)`);
-  });
-
-  it('snaps window on drag stop near the top-left corner', () => {
-    setViewport(1440, 900);
-    const ref = React.createRef<any>();
-    render(
-      <Window
-        id="test-window"
-        title="Test"
-        screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
-        ref={ref}
-      />
-    );
-
-    const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 6,
-      top: 8,
-      right: 106,
-      bottom: 208,
-      width: 100,
-      height: 200,
-      x: 6,
-      y: 8,
-      toJSON: () => {}
-    });
-
-    act(() => {
-      ref.current!.handleDrag();
-    });
-    act(() => {
-      ref.current!.handleStop();
-    });
-
-    expect(ref.current!.state.snapped).toBe('top-left');
-    expect(ref.current!.state.width).toBeCloseTo(50, 2);
-    expect(ref.current!.state.height).toBeCloseTo(computeQuarterHeightPercent(), 5);
-    const snapTop = getSnapTranslateTop();
-    expect(winEl.style.transform).toBe(`translate(0px, ${snapTop}px)`);
-  });
-
-  it('snaps window on drag stop near the bottom-right corner', () => {
-    setViewport(1600, 900);
-    const ref = React.createRef<any>();
-    render(
-      <Window
-        id="test-window"
-        title="Test"
-        screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
-        ref={ref}
-      />
-    );
-
-    const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 1500,
-      top: 760,
-      right: 1600,
-      bottom: 860,
-      width: 100,
-      height: 100,
-      x: 1500,
-      y: 760,
-      toJSON: () => {}
-    });
-
-    act(() => {
-      ref.current!.handleDrag();
-    });
-    act(() => {
-      ref.current!.handleStop();
-    });
-
-    expect(ref.current!.state.snapped).toBe('right');
-    expect(ref.current!.state.width).toBeCloseTo(50, 2);
-    const expectedHeight = computeSnappedHeightPercent();
-    expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 5);
-    const expectedX = window.innerWidth / 2;
-    const expectedY = getSnapTranslateTop();
-    expect(winEl.style.transform).toBe(`translate(${expectedX}px, ${expectedY}px)`);
   });
 
   it('releases snap with Alt+ArrowDown restoring size', () => {

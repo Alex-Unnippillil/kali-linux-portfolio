@@ -46,12 +46,16 @@ const getSnapLabel = (position) => {
 
 const normalizeRightCornerSnap = (candidate, regions) => {
     if (!candidate) return null;
-    const { position } = candidate;
+    const { position, preview } = candidate;
     if (position === 'top-right' || position === 'bottom-right') {
+        if (preview && preview.width > 0 && preview.height > 0) {
+            return candidate;
+        }
         const rightRegion = regions?.right;
         if (rightRegion && rightRegion.width > 0 && rightRegion.height > 0) {
             return { position: 'right', preview: rightRegion };
         }
+        return null;
     }
     return candidate;
 };
@@ -457,9 +461,6 @@ export class Window extends Component {
     }
 
     snapWindow = (position) => {
-        const resolvedPosition = (position === 'top-right' || position === 'bottom-right')
-            ? 'right'
-            : position;
         this.setWinowsPosition();
         this.focusWindow();
         const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
@@ -468,8 +469,20 @@ export class Window extends Component {
         if (!viewportWidth || !viewportHeight) return;
         const snapBottomInset = measureSnapBottomInset();
         const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset, snapBottomInset);
-        const region = regions[resolvedPosition];
-        if (!region) return;
+        let region = regions[position];
+        let resolvedPosition = position;
+
+        if (!region || region.width <= 0 || region.height <= 0) {
+            if ((position === 'top-right' || position === 'bottom-right') && regions.right?.width > 0 && regions.right?.height > 0) {
+                resolvedPosition = 'right';
+                region = regions.right;
+            } else if ((position === 'top-left' || position === 'bottom-left') && regions.left?.width > 0 && regions.left?.height > 0) {
+                resolvedPosition = 'left';
+                region = regions.left;
+            } else {
+                return;
+            }
+        }
         const { width, height } = this.state;
         const node = this.getWindowNode();
         if (node) {
