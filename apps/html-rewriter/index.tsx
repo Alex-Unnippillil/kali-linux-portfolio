@@ -46,6 +46,9 @@ const applyRules = (html: string, rules: Rule[]): string => {
   return doc.body.innerHTML;
 };
 
+const focusRingClasses =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-bg-solid)]';
+
 const HtmlRewriterApp: React.FC = () => {
   const [ruleText, setRuleText] = useState(serialize(DEFAULT_RULES));
   const [html, setHtml] = useState(DEFAULT_HTML);
@@ -76,7 +79,7 @@ const HtmlRewriterApp: React.FC = () => {
   }, [ruleText, html]);
 
   return (
-    <div className="h-full w-full overflow-auto bg-[color:var(--kali-panel)] p-6 text-white space-y-6">
+    <div className="h-full w-full overflow-auto bg-[var(--kali-bg)] p-6 text-[var(--kali-text)] space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold">HTML Rewriter</h1>
@@ -87,7 +90,7 @@ const HtmlRewriterApp: React.FC = () => {
         </div>
         <button
           type="button"
-          className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_86%,rgba(15,148,210,0.18))] text-xl text-blue-300 transition hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_78%,rgba(15,148,210,0.24))] focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className={`ml-auto inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] text-xl text-[color:var(--color-ubt-blue)] transition hover:bg-[color:color-mix(in_srgb,_var(--kali-panel)_88%,_var(--color-ubt-blue)_12%)] focus-visible:border-[color:var(--color-focus-ring)] ${focusRingClasses}`}
           aria-label="Open rewrite help"
           title="Open rewrite help"
           onClick={() => {
@@ -98,90 +101,118 @@ const HtmlRewriterApp: React.FC = () => {
           <span aria-hidden="true">❓</span>
         </button>
       </div>
-      <section className="space-y-4 rounded-lg border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_94%,rgba(15,148,210,0.08))] p-6 text-[color:var(--kali-terminal-text)] shadow-kali-panel">
-        <h2 className="text-lg font-semibold text-[color:var(--kali-terminal-text)]">Quick start</h2>
-        <p className="text-sm text-[color:color-mix(in_srgb,var(--kali-terminal-text)_68%,transparent)] max-w-3xl">
+      <section className="space-y-4 rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] p-6 shadow-lg">
+        <h2 className="text-lg font-semibold text-[color:var(--kali-text)]">Quick start</h2>
+        <p className="text-sm text-gray-300 max-w-3xl">
           Try the default rules below to remove inline scripts and overwrite headings before
           experimenting with your own selectors.
         </p>
         <div className="grid gap-6 md:grid-cols-3">
           <div>
-            <h3 className="text-sm font-semibold text-[color:var(--kali-terminal-text)]">Rules</h3>
-            <pre className="mt-2 whitespace-pre-wrap rounded-md border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,rgba(9,15,23,0.35))] p-3 text-xs text-[color:var(--kali-terminal-text)] shadow-inner">{serialize(DEFAULT_RULES)}</pre>
+            <h3 className="text-sm font-semibold text-gray-200">Rules</h3>
+            <pre
+              tabIndex={0}
+              className={`mt-2 whitespace-pre-wrap rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] p-3 text-xs text-[color:var(--kali-text)] shadow-inner ${focusRingClasses}`}
+            >
+              {serialize(DEFAULT_RULES)}
+            </pre>
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-[color:var(--kali-terminal-text)]">Original HTML</h3>
-            <pre className="mt-2 whitespace-pre-wrap rounded-md border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,rgba(9,15,23,0.35))] p-3 text-xs text-[color:var(--kali-terminal-text)] shadow-inner">{DEFAULT_HTML}</pre>
+            <h3 className="text-sm font-semibold text-gray-200">Original HTML</h3>
+            <pre
+              tabIndex={0}
+              className={`mt-2 whitespace-pre-wrap rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] p-3 text-xs text-[color:var(--kali-text)] shadow-inner ${focusRingClasses}`}
+            >
+              {DEFAULT_HTML}
+            </pre>
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-[color:var(--kali-terminal-text)]">Rewritten HTML</h3>
-            <pre className="mt-2 whitespace-pre-wrap rounded-md border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,rgba(9,15,23,0.35))] p-3 text-xs text-[color:var(--kali-terminal-text)] shadow-inner">{quickStartOutput}</pre>
+            <h3 className="text-sm font-semibold text-gray-200">Rewritten HTML</h3>
+            <pre
+              tabIndex={0}
+              className={`mt-2 whitespace-pre-wrap rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] p-3 text-xs text-[color:var(--kali-text)] shadow-inner ${focusRingClasses}`}
+            >
+              {quickStartOutput}
+            </pre>
           </div>
         </div>
       </section>
       <section className="space-y-3">
-        <details className="rounded-lg border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent)] p-4 text-[color:var(--kali-terminal-text)] shadow">
-          <summary className="cursor-pointer text-sm font-semibold text-[color:var(--kali-terminal-text)]">
+        <details className="rounded-lg border border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,_var(--kali-panel)_92%,_transparent)] p-4 shadow">
+          <summary className="cursor-pointer text-sm font-semibold text-gray-100">
             Remove elements
           </summary>
           <div className="mt-2 space-y-2 text-sm text-[color:color-mix(in_srgb,var(--kali-terminal-text)_72%,transparent)]">
             <p>
-              Use the <code className="rounded bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,rgba(9,15,23,0.45))] px-1 py-0.5 text-[color:var(--kali-terminal-text)]">remove</code> action to strip matching nodes
+              Use the <code className="rounded bg-[color:var(--kali-panel-highlight)] px-1 py-0.5 text-[color:var(--kali-text)]">remove</code> action to strip matching nodes
               from the document entirely.
             </p>
-            <pre className="whitespace-pre-wrap rounded-md border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,rgba(9,15,23,0.35))] p-3 text-xs text-[color:var(--kali-terminal-text)] shadow-inner">{`{
+            <pre
+              tabIndex={0}
+              className={`whitespace-pre-wrap rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] p-3 text-xs text-[color:var(--kali-text)] shadow-inner ${focusRingClasses}`}
+            >
+              {`{
   "selector": "script",
   "action": "remove"
-}`}</pre>
+}`}
+            </pre>
           </div>
         </details>
-        <details className="rounded-lg border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent)] p-4 text-[color:var(--kali-terminal-text)] shadow">
-          <summary className="cursor-pointer text-sm font-semibold text-[color:var(--kali-terminal-text)]">
+        <details className="rounded-lg border border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,_var(--kali-panel)_92%,_transparent)] p-4 shadow">
+          <summary className="cursor-pointer text-sm font-semibold text-gray-100">
             Replace text content
           </summary>
           <div className="mt-2 space-y-2 text-sm text-[color:color-mix(in_srgb,var(--kali-terminal-text)_72%,transparent)]">
             <p>
-              Swap the text content of the selected elements by providing a <code className="rounded bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,rgba(9,15,23,0.45))] px-1 py-0.5 text-[color:var(--kali-terminal-text)]">value</code>
-              alongside the <code className="rounded bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,rgba(9,15,23,0.45))] px-1 py-0.5 text-[color:var(--kali-terminal-text)]">replace</code> action.
+              Swap the text content of the selected elements by providing a <code className="rounded bg-[color:var(--kali-panel-highlight)] px-1 py-0.5 text-[color:var(--kali-text)]">value</code>
+              alongside the <code className="rounded bg-[color:var(--kali-panel-highlight)] px-1 py-0.5 text-[color:var(--kali-text)]">replace</code> action.
             </p>
-            <pre className="whitespace-pre-wrap rounded-md border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,rgba(9,15,23,0.35))] p-3 text-xs text-[color:var(--kali-terminal-text)] shadow-inner">{`{
+            <pre
+              tabIndex={0}
+              className={`whitespace-pre-wrap rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] p-3 text-xs text-[color:var(--kali-text)] shadow-inner ${focusRingClasses}`}
+            >
+              {`{
   "selector": "h1",
   "action": "replace",
   "value": "Rewritten Title"
-}`}</pre>
+}`}
+            </pre>
           </div>
         </details>
       </section>
       <div className="grid gap-6 md:grid-cols-2">
-          <div className="flex flex-col rounded-lg border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,rgba(15,148,210,0.06))] p-4 text-[color:var(--kali-terminal-text)] shadow-kali-panel">
-            <label className="mb-2 text-sm font-semibold text-[color:var(--kali-terminal-text)]" htmlFor="html-rewriter-rules">
+        <div className="flex flex-col rounded-lg border border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,_var(--kali-panel)_92%,_transparent)] p-4 shadow-lg">
+            <label className="mb-2 text-sm font-semibold text-gray-200" htmlFor="html-rewriter-rules">
               Rewrite Rules (JSON)
             </label>
             <textarea
               id="html-rewriter-rules"
-              className="flex-1 resize-y rounded-md border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,rgba(9,15,23,0.4))] p-3 font-mono text-sm text-[color:var(--kali-terminal-text)] shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`flex-1 resize-y rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] p-3 font-mono text-sm text-[color:var(--kali-text)] shadow-inner focus-visible:border-[color:var(--color-focus-ring)] ${focusRingClasses}`}
               value={ruleText}
               onChange={(e) => setRuleText(e.target.value)}
               aria-label="Rewrite rules in JSON"
             />
-            {error && <p className="mt-2 text-sm text-kali-severity-high">{error}</p>}
-          </div>
-          <div className="flex flex-col rounded-lg border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,rgba(15,148,210,0.06))] p-4 text-[color:var(--kali-terminal-text)] shadow-kali-panel">
-            <label className="mb-2 text-sm font-semibold text-[color:var(--kali-terminal-text)]" htmlFor="html-rewriter-sample">
+            {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
+        </div>
+        <div className="flex flex-col rounded-lg border border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,_var(--kali-panel)_92%,_transparent)] p-4 shadow-lg">
+            <label className="mb-2 text-sm font-semibold text-gray-200" htmlFor="html-rewriter-sample">
               Sample HTML
             </label>
             <textarea
               id="html-rewriter-sample"
-              className="flex-1 resize-y rounded-md border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,rgba(9,15,23,0.4))] p-3 font-mono text-sm text-[color:var(--kali-terminal-text)] shadow-inner focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`flex-1 resize-y rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] p-3 font-mono text-sm text-[color:var(--kali-text)] shadow-inner focus-visible:border-[color:var(--color-focus-ring)] ${focusRingClasses}`}
               value={html}
               onChange={(e) => setHtml(e.target.value)}
               aria-label="Sample HTML"
             />
         </div>
       </div>
-      <div className="space-y-3 rounded-lg border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,rgba(15,148,210,0.06))] p-4 text-[color:var(--kali-terminal-text)] shadow-kali-panel">
-        <h2 className="text-lg font-semibold text-[color:var(--kali-terminal-text)]">Diff</h2>
-        <pre className="whitespace-pre-wrap rounded-md border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,rgba(9,15,23,0.35))] p-3 text-sm leading-relaxed text-[color:var(--kali-terminal-text)] shadow-inner overflow-auto">
+      <div className="space-y-3 rounded-lg border border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,_var(--kali-panel)_92%,_transparent)] p-4 shadow-lg">
+        <h2 className="text-lg font-semibold text-gray-100">Diff</h2>
+        <pre
+          tabIndex={0}
+          className={`whitespace-pre-wrap rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] p-3 text-sm leading-relaxed text-[color:var(--kali-text)] shadow-inner overflow-auto ${focusRingClasses}`}
+        >
           {diff.map((part: Change, i: number) => (
             <span
               key={i}
@@ -198,13 +229,18 @@ const HtmlRewriterApp: React.FC = () => {
           ))}
         </pre>
       </div>
-      <div className="space-y-3 rounded-lg border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,rgba(15,148,210,0.06))] p-4 text-[color:var(--kali-terminal-text)] shadow-kali-panel">
-        <h2 className="text-lg font-semibold text-[color:var(--kali-terminal-text)]">Rewritten HTML</h2>
-        <pre className="whitespace-pre-wrap rounded-md border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,rgba(9,15,23,0.35))] p-3 text-sm text-[color:var(--kali-terminal-text)] shadow-inner overflow-auto">{rewritten}</pre>
+      <div className="space-y-3 rounded-lg border border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,_var(--kali-panel)_92%,_transparent)] p-4 shadow-lg">
+        <h2 className="text-lg font-semibold text-gray-100">Rewritten HTML</h2>
+        <pre
+          tabIndex={0}
+          className={`whitespace-pre-wrap rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] p-3 text-sm text-[color:var(--kali-text)] shadow-inner overflow-auto ${focusRingClasses}`}
+        >
+          {rewritten}
+        </pre>
       </div>
       {showHelp && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,rgba(4,10,16,0.55))] p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(9,15,23,0.88)] p-4"
           role="presentation"
           onClick={() => setShowHelp(false)}
         >
@@ -213,7 +249,7 @@ const HtmlRewriterApp: React.FC = () => {
             aria-modal="true"
             aria-labelledby={modalTitleId}
             aria-describedby={modalDescriptionId}
-            className="relative w-full max-w-2xl space-y-4 rounded border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_95%,transparent)] p-6 text-left text-[color:var(--kali-terminal-text)] shadow-kali-panel"
+            className="relative w-full max-w-2xl space-y-4 rounded border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] p-6 text-left text-[color:var(--kali-text)] shadow-xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4">
@@ -228,7 +264,7 @@ const HtmlRewriterApp: React.FC = () => {
               <button
                 type="button"
                 aria-label="Close help"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_84%,rgba(15,148,210,0.18))] text-lg text-[color:var(--kali-terminal-text)] transition hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_78%,rgba(15,148,210,0.24))] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] text-lg text-[color:var(--kali-text)] transition hover:bg-[color:color-mix(in_srgb,_var(--kali-panel)_85%,_var(--color-ubt-blue)_15%)] focus-visible:border-[color:var(--color-focus-ring)] ${focusRingClasses}`}
                 onClick={() => setShowHelp(false)}
               >
                 <span aria-hidden="true">✕</span>
@@ -247,10 +283,10 @@ const HtmlRewriterApp: React.FC = () => {
                     aria-controls={tabPanelId}
                     aria-selected={isActive}
                     tabIndex={isActive ? 0 : -1}
-                    className={`rounded px-4 py-2 text-sm transition focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    className={`rounded border px-4 py-2 text-sm transition focus-visible:border-[color:var(--color-focus-ring)] ${focusRingClasses} ${
                       isActive
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,rgba(15,148,210,0.16))] text-[color:var(--kali-terminal-text)] hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_78%,rgba(15,148,210,0.24))]'
+                        ? 'border-[color:color-mix(in_srgb,_var(--color-ubt-blue)_55%,_var(--kali-border)_45%)] bg-[color:color-mix(in_srgb,_var(--color-ubt-blue)_28%,_var(--kali-panel)_72%)] text-[color:var(--kali-text)] shadow-[0_0_0_1px_color-mix(in_srgb,_var(--color-ubt-blue)_45%,_transparent)]'
+                        : 'border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,_var(--kali-panel)_94%,_transparent)] text-gray-200 hover:border-[color:color-mix(in_srgb,_var(--color-ubt-blue)_35%,_var(--kali-border)_65%)] hover:bg-[color:color-mix(in_srgb,_var(--kali-panel)_88%,_var(--color-ubt-blue)_12%)]'
                     }`}
                     onClick={() => setActiveHelpTab(tab.id)}
                     type="button"
@@ -260,7 +296,7 @@ const HtmlRewriterApp: React.FC = () => {
                 );
               })}
             </div>
-            <div className="rounded-lg border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,rgba(15,148,210,0.08))] p-4 text-[color:var(--kali-terminal-text)] shadow-inner" role="tabpanel" id={`html-rewriter-help-panel-${activeHelpTab}`}
+            <div className="rounded-lg border border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,_var(--kali-panel)_92%,_transparent)] p-4 shadow-inner" role="tabpanel" id={`html-rewriter-help-panel-${activeHelpTab}`}
               aria-labelledby={`html-rewriter-help-tab-${activeHelpTab}`}>
               {activeHelpTab === 'selectors' && (
                 <div className="space-y-2 text-sm text-[color:color-mix(in_srgb,var(--kali-terminal-text)_72%,transparent)]">
@@ -269,12 +305,12 @@ const HtmlRewriterApp: React.FC = () => {
                     to focus the rewrite.
                   </p>
                   <ul className="list-disc space-y-1 pl-5">
-                    <li><code className="rounded bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,rgba(9,15,23,0.45))] px-1 py-0.5 text-[color:var(--kali-terminal-text)]">p</code> selects every paragraph element.</li>
+                    <li><code className="rounded bg-[color:var(--kali-panel-highlight)] px-1 py-0.5 text-[color:var(--kali-text)]">p</code> selects every paragraph element.</li>
                     <li>
-                      <code className="rounded bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,rgba(9,15,23,0.45))] px-1 py-0.5 text-[color:var(--kali-terminal-text)]">main {'>'} h2</code> scopes to headings in the main area.
+                      <code className="rounded bg-[color:var(--kali-panel-highlight)] px-1 py-0.5 text-[color:var(--kali-text)]">main {'>'} h2</code> scopes to headings in the main area.
                     </li>
                     <li>
-                      <code className="rounded bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,rgba(9,15,23,0.45))] px-1 py-0.5 text-[color:var(--kali-terminal-text)]">[data-track=&quot;outbound&quot;]</code> matches links tagged for tracking.
+                      <code className="rounded bg-[color:var(--kali-panel-highlight)] px-1 py-0.5 text-[color:var(--kali-text)]">[data-track=&quot;outbound&quot;]</code> matches links tagged for tracking.
                     </li>
                   </ul>
                 </div>
@@ -282,13 +318,13 @@ const HtmlRewriterApp: React.FC = () => {
               {activeHelpTab === 'actions' && (
                 <div className="space-y-3 text-sm text-[color:color-mix(in_srgb,var(--kali-terminal-text)_72%,transparent)]">
                   <div>
-                    <h3 className="text-base font-semibold text-[color:var(--kali-terminal-text)]">remove</h3>
+                    <h3 className="text-base font-semibold text-[color:var(--kali-text)]">remove</h3>
                     <p>Delete the matched node entirely. Useful for scripts, ads, or injected banners.</p>
                   </div>
                   <div>
-                    <h3 className="text-base font-semibold text-[color:var(--kali-terminal-text)]">replace</h3>
+                    <h3 className="text-base font-semibold text-[color:var(--kali-text)]">replace</h3>
                     <p>
-                      Swap the text content of the target. Provide a <code className="rounded bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,rgba(9,15,23,0.45))] px-1 py-0.5 text-[color:var(--kali-terminal-text)]">value</code> string
+                      Swap the text content of the target. Provide a <code className="rounded bg-[color:var(--kali-panel-highlight)] px-1 py-0.5 text-[color:var(--kali-text)]">value</code> string
                       to use as the replacement.
                     </p>
                   </div>
@@ -297,7 +333,12 @@ const HtmlRewriterApp: React.FC = () => {
               {activeHelpTab === 'payloads' && (
                 <div className="space-y-3 text-sm text-[color:color-mix(in_srgb,var(--kali-terminal-text)_72%,transparent)]">
                   <p>Copy these starter rules to clean risky markup and annotate media placeholders.</p>
-                  <pre className="whitespace-pre-wrap rounded-md border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,rgba(9,15,23,0.35))] p-3 text-xs text-[color:var(--kali-terminal-text)] shadow-inner">{SAMPLE_PAYLOAD}</pre>
+                  <pre
+                    tabIndex={0}
+                    className={`whitespace-pre-wrap rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] p-3 text-xs text-[color:var(--kali-text)] shadow-inner ${focusRingClasses}`}
+                  >
+                    {SAMPLE_PAYLOAD}
+                  </pre>
                   <p>
                     Paste the JSON into the rule editor and adjust selectors or values to match your source HTML.
                   </p>
