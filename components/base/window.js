@@ -29,6 +29,49 @@ const percentOf = (value, total) => {
     return (value / total) * 100;
 };
 
+const TOUCH_LONG_PRESS_MS = 200;
+const TOUCH_DRAG_DISTANCE_THRESHOLD = 12;
+
+const getNow = () => {
+    if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+        return performance.now();
+    }
+    return Date.now();
+};
+
+const getNativeEvent = (event) => (event && event.nativeEvent) ? event.nativeEvent : event;
+
+const getPointerCoordinates = (event) => {
+    if (!event) {
+        return { clientX: 0, clientY: 0 };
+    }
+    if (event.touches && event.touches.length > 0) {
+        const touch = event.touches[0];
+        return { clientX: touch.clientX, clientY: touch.clientY };
+    }
+    if (event.changedTouches && event.changedTouches.length > 0) {
+        const touch = event.changedTouches[0];
+        return { clientX: touch.clientX, clientY: touch.clientY };
+    }
+    const { clientX = 0, clientY = 0 } = event;
+    return { clientX, clientY };
+};
+
+const normalizePointerType = (event) => {
+    if (!event) return 'mouse';
+    const { pointerType } = event;
+    if (typeof pointerType === 'string') {
+        if (pointerType === 'pen') return 'touch';
+        return pointerType;
+    }
+    if (event.touches || event.changedTouches) {
+        return 'touch';
+    }
+    return 'mouse';
+};
+
+const isTouchLikePointer = (pointerType) => pointerType === 'touch';
+
 const SNAP_LABELS = {
     left: 'Snap left half',
     right: 'Snap right half',
@@ -127,6 +170,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._dragPointerInfo = null;
     }
 
     notifySizeChange = () => {
@@ -359,6 +403,36 @@ export class Window extends Component {
         this.setState({ cursorType: "cursor-default", grabbed: false })
     }
 
+    initializePointerInfo = (event, overrides = {}) => {
+        const nativeEvent = getNativeEvent(event);
+        const pointerType = overrides.pointerType || normalizePointerType(nativeEvent);
+        const coordinates = getPointerCoordinates(nativeEvent);
+        const startTime = overrides.startTime ?? getNow();
+        const longPressActivated = overrides.longPressActivated ?? !isTouchLikePointer(pointerType);
+        this._dragPointerInfo = {
+            pointerType,
+            startTime,
+            startX: overrides.startX ?? coordinates.clientX,
+            startY: overrides.startY ?? coordinates.clientY,
+            longPressActivated,
+        };
+    }
+
+    handleTitleBarPointerDown = (event) => {
+        this.focusWindow();
+        this.initializePointerInfo(event);
+    }
+
+    handleTitleBarPointerUp = () => {
+        if (this.state.grabbed) return;
+        this._dragPointerInfo = null;
+    }
+
+    handleTitleBarPointerLeave = () => {
+        if (this.state.grabbed) return;
+        this._dragPointerInfo = null;
+    }
+
     getSnapGrid = () => {
         const fallback = [8, 8];
         if (!Array.isArray(this.props.snapGrid)) {
@@ -580,15 +654,61 @@ export class Window extends Component {
         node.style.transform = `translate(${x}px, ${y}px)`;
     }
 
-    handleDrag = (e, data) => {
+    handleDragStart = (event) => {
+        this.initializePointerInfo(event);
+        const pointerInfo = this._dragPointerInfo;
+        if (pointerInfo && !isTouchLikePointer(pointerInfo.pointerType) && !this.state.grabbed) {
+            this.changeCursorToMove();
+        }
+    }
+
+    handleDrag = (event, data) => {
+        const nativeEvent = getNativeEvent(event);
+        if (!this._dragPointerInfo) {
+            this.initializePointerInfo(nativeEvent);
+        }
+        let pointerInfo = this._dragPointerInfo;
+        const pointerType = pointerInfo?.pointerType || normalizePointerType(nativeEvent);
+
+        if (isTouchLikePointer(pointerType)) {
+            const now = getNow();
+            const { clientX, clientY } = getPointerCoordinates(nativeEvent);
+            const startTime = pointerInfo?.startTime ?? now;
+            const startX = pointerInfo?.startX ?? clientX;
+            const startY = pointerInfo?.startY ?? clientY;
+            const elapsed = now - startTime;
+            const distance = Math.hypot(clientX - startX, clientY - startY);
+
+            if (elapsed < TOUCH_LONG_PRESS_MS || distance < TOUCH_DRAG_DISTANCE_THRESHOLD) {
+                return false;
+            }
+
+            if (!pointerInfo?.longPressActivated) {
+                this.initializePointerInfo(nativeEvent, {
+                    pointerType,
+                    startTime,
+                    startX,
+                    startY,
+                    longPressActivated: true,
+                });
+                pointerInfo = this._dragPointerInfo;
+            }
+        }
+
+        if (!this.state.grabbed) {
+            this.changeCursorToMove();
+        }
+
         if (data && data.node) {
             this.applyEdgeResistance(data.node, data);
         }
         this.checkSnapPreview();
+        return true;
     }
 
     handleStop = () => {
         this.changeCursorToDefault();
+        this._dragPointerInfo = null;
         const snapPos = this.state.snapPosition;
         if (snapPos) {
             this.snapWindow(snapPos);
@@ -854,10 +974,11 @@ export class Window extends Component {
                     handle=".bg-ub-window-title"
                     grid={this.props.snapEnabled ? snapGrid : [1, 1]}
                     scale={1}
-                    onStart={this.changeCursorToMove}
+                    onStart={this.handleDragStart}
                     onStop={this.handleStop}
                     onDrag={this.handleDrag}
                     allowAnyClick={false}
+                    allowMobileScroll
                     defaultPosition={{ x: this.startX, y: this.startY }}
                     bounds={{
                         left: 0,
@@ -897,7 +1018,9 @@ export class Window extends Component {
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
-                            onPointerDown={this.focusWindow}
+                            onPointerDown={this.handleTitleBarPointerDown}
+                            onPointerUp={this.handleTitleBarPointerUp}
+                            onPointerLeave={this.handleTitleBarPointerLeave}
                             onDoubleClick={this.handleTitleBarDoubleClick}
                         />
                         <WindowEditButtons
@@ -925,7 +1048,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onPointerUp, onPointerLeave, onDoubleClick }) {
     return (
         <div
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
@@ -935,6 +1058,8 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
             onKeyDown={onKeyDown}
             onBlur={onBlur}
             onPointerDown={onPointerDown}
+            onPointerUp={onPointerUp}
+            onPointerLeave={onPointerLeave}
             onDoubleClick={onDoubleClick}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
