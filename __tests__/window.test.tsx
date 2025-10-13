@@ -669,9 +669,113 @@ describe('Window snapping finalize and release', () => {
 
     });
 
+    // console.log('after second down left', ref.current!.state.snapped);
     expect(ref.current!.state.snapped).toBeNull();
     expect(ref.current!.state.width).toBe(60);
     expect(ref.current!.state.height).toBe(85);
+  });
+
+  it('cycles between half and third with Ctrl+ArrowLeft', () => {
+    setViewport(1440, 900);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="ctrl-left-window"
+        title="Ctrl Left"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const keyboardEvent = {
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+      ctrlKey: true,
+      metaKey: false,
+    } as unknown as KeyboardEvent;
+
+    act(() => {
+      ref.current!.handleKeyDown({ ...keyboardEvent, key: 'ArrowLeft' });
+    });
+    expect(ref.current!.state.snapped).toBe('left');
+
+    act(() => {
+      ref.current!.handleKeyDown({ ...keyboardEvent, key: 'ArrowLeft' });
+    });
+    expect(ref.current!.state.snapped).toBe('left-third');
+
+    act(() => {
+      ref.current!.handleKeyDown({ ...keyboardEvent, key: 'ArrowLeft' });
+    });
+    expect(ref.current!.state.snapped).toBe('left');
+  });
+
+  it('navigates quadrants with Ctrl+ArrowUp and Ctrl+ArrowDown', async () => {
+    setViewport(1440, 900);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="ctrl-up-window"
+        title="Ctrl Up"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const windowInstance = ref.current;
+    expect(windowInstance).toBeTruthy();
+
+    const createCtrlEvent = (key: string) => ({
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+      ctrlKey: true,
+      metaKey: false,
+      key,
+    } as unknown as KeyboardEvent);
+
+    act(() => {
+      windowInstance!.handleKeyDown(createCtrlEvent('ArrowLeft'));
+    });
+    expect(ref.current!.state.snapped).toBe('left');
+
+    act(() => {
+      windowInstance!.handleKeyDown(createCtrlEvent('ArrowUp'));
+    });
+    expect(ref.current!.state.snapped).toBe('top-left');
+
+    act(() => {
+      windowInstance!.handleKeyDown(createCtrlEvent('ArrowDown'));
+    });
+    expect(ref.current!.state.snapped).toBe('bottom-left');
+
+    await act(async () => {
+      windowInstance!.handleKeyDown(createCtrlEvent('ArrowDown'));
+      await Promise.resolve();
+    });
+    expect(ref.current!.state.snapped).toBeNull();
+
+    act(() => {
+      windowInstance!.handleKeyDown(createCtrlEvent('ArrowRight'));
+    });
+    expect(ref.current!.state.snapped).toBe('right');
+
+    act(() => {
+      windowInstance!.handleKeyDown(createCtrlEvent('ArrowUp'));
+    });
+    expect(ref.current!.state.snapped).toBe('right');
+
+    act(() => {
+      windowInstance!.handleKeyDown(createCtrlEvent('ArrowDown'));
+    });
+    expect(ref.current!.state.snapped).toBe('right');
   });
 
   it('releases snap when starting drag', () => {

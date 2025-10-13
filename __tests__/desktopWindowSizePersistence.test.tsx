@@ -124,4 +124,67 @@ describe('Desktop window size persistence', () => {
     expect(reopenedProps?.defaultWidth).toBe(72);
     expect(reopenedProps?.defaultHeight).toBe(64);
   });
+
+  it('persists snapped positions across multiple windows', async () => {
+    const desktopRef = React.createRef<Desktop>();
+    await act(async () => {
+      render(
+        <Desktop
+          ref={desktopRef}
+          clearSession={() => {}}
+          changeBackgroundImage={() => {}}
+          bg_image_name="aurora"
+          snapEnabled
+        />
+      );
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    act(() => {
+      desktopRef.current?.openApp('terminal');
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(200);
+      await Promise.resolve();
+    });
+
+    act(() => {
+      desktopRef.current?.openApp('nmap-nse');
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(200);
+      await Promise.resolve();
+    });
+
+    const terminalProps = windowPropsById.get('terminal');
+    const nmapProps = windowPropsById.get('nmap-nse');
+    expect(Array.from(windowPropsById.keys())).toEqual(
+      expect.arrayContaining(['terminal', 'nmap-nse'])
+    );
+    expect(terminalProps).toBeDefined();
+    expect(nmapProps).toBeDefined();
+
+    await act(async () => {
+      terminalProps.onSnapChange?.('left');
+      nmapProps.onSnapChange?.('right-third');
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(desktopRef.current?.state.window_positions.terminal.snapped).toBe('left');
+    expect(desktopRef.current?.state.window_positions['nmap-nse'].snapped).toBe('right-third');
+
+    act(() => {
+      terminalProps.onSnapChange?.(null);
+    });
+
+    expect(desktopRef.current?.state.window_positions.terminal.snapped).toBeUndefined();
+  });
 });
