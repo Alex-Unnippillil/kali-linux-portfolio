@@ -20,11 +20,11 @@ const RangeUpgradeTree = ({ tower }: RangeUpgradeTreeProps) => {
     const h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
-    const levels = TOWER_TYPES.single.map((t) => t.range);
+    const levels = Array.from(TOWER_TYPES.single.rangeLevels);
     const maxRange = Math.max(...levels, 1);
 
     levels.forEach((range, idx) => {
-      ctx.strokeStyle = idx + 1 <= tower.level ? '#ffff00' : '#555555';
+      ctx.strokeStyle = idx <= tower.rangeLevel ? '#ffff00' : '#555555';
       const radius = (range / maxRange) * (w / 2 - 5);
       ctx.beginPath();
       ctx.arc(w / 2, h / 2, radius, 0, Math.PI * 2);

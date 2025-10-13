@@ -3,10 +3,8 @@
 import { useEffect, useRef } from 'react';
 import { Tower, getTowerDPS, TowerType } from '..';
 
-
 interface DpsChartsProps {
-  towers: (Tower & { type?: TowerType })[];
-
+  towers: Tower[];
 }
 
 const DpsCharts = ({ towers }: DpsChartsProps) => {
@@ -20,9 +18,8 @@ const DpsCharts = ({ towers }: DpsChartsProps) => {
 
     const dpsMap: Partial<Record<TowerType, number>> = {};
     towers.forEach((t) => {
-      const type = ((t as any).type || 'single') as TowerType;
-
-      dpsMap[type] = (dpsMap[type] || 0) + getTowerDPS(type, t.level);
+      const type = (t.type || 'single') as TowerType;
+      dpsMap[type] = (dpsMap[type] || 0) + getTowerDPS(t);
     });
 
     const entries = Object.entries(dpsMap) as [TowerType, number][];
