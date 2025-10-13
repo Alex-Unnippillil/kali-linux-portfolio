@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { importSpriteStrip } from '../utils/spriteStrip';
+import { useWindowLifecycle } from './desktop/Window';
 
 interface SpriteStripPreviewProps {
   /** path to the sprite strip image */
@@ -27,6 +28,9 @@ const SpriteStripPreview: React.FC<SpriteStripPreviewProps> = ({
   fps = 12,
 }) => {
   const [frame, setFrame] = useState(0);
+  const rafRef = useRef<number | null>(null);
+  const lastRef = useRef<number>(0);
+  const { isForeground } = useWindowLifecycle();
 
   // Preload and cache the sprite strip
   useEffect(() => {
@@ -35,12 +39,37 @@ const SpriteStripPreview: React.FC<SpriteStripPreviewProps> = ({
 
   // Cycle through frames
   useEffect(() => {
-    const id = window.setInterval(
-      () => setFrame((f) => (f + 1) % frames),
-      1000 / fps,
-    );
-    return () => window.clearInterval(id);
-  }, [frames, fps]);
+    if (!isForeground) {
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      lastRef.current = 0;
+      return undefined;
+    }
+    let cancelled = false;
+    const step = 1000 / Math.max(fps, 1);
+    const advance = (now: number) => {
+      if (cancelled) return;
+      if (lastRef.current === 0) {
+        lastRef.current = now;
+      }
+      if (now - lastRef.current >= step) {
+        lastRef.current = now;
+        setFrame((f) => (f + 1) % frames);
+      }
+      rafRef.current = requestAnimationFrame(advance);
+    };
+    rafRef.current = requestAnimationFrame(advance);
+    return () => {
+      cancelled = true;
+      if (rafRef.current !== null) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+      lastRef.current = 0;
+    };
+  }, [frames, fps, isForeground]);
 
   const style: React.CSSProperties = {
     width: frameWidth,

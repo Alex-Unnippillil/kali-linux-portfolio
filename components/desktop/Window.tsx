@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import BaseWindow from "../base/window";
 import {
   clampWindowPositionWithinViewport,
@@ -11,6 +17,62 @@ type BaseWindowProps = React.ComponentProps<typeof BaseWindow>;
 type BaseWindowInstance = InstanceType<typeof BaseWindow> | null;
 
 type MutableRef<T> = React.MutableRefObject<T>;
+
+export type WindowLifecycleState = {
+  /** Whether the desktop considers this window focused. */
+  isFocused: boolean;
+  /** Whether the window is minimized to the dock. */
+  isMinimized: boolean;
+  /** Whether the document is currently visible. */
+  isDocumentVisible: boolean;
+  /** Convenience flag for running work only while foregrounded. */
+  isForeground: boolean;
+};
+
+type WindowLifecycleListener = (state: WindowLifecycleState) => void;
+
+export type WindowLifecycleValue = WindowLifecycleState & {
+  /**
+   * Subscribe to lifecycle updates. Useful for non-React consumers such as
+   * canvas render loops.
+   */
+  subscribe: (listener: WindowLifecycleListener) => () => void;
+};
+
+const getDocumentVisibility = () =>
+  typeof document === "undefined" || document.visibilityState !== "hidden";
+
+const computeLifecycleState = (state: Partial<WindowLifecycleState>) => {
+  const isFocused = Boolean(state.isFocused);
+  const isMinimized = Boolean(state.isMinimized);
+  const isDocumentVisible =
+    typeof state.isDocumentVisible === "boolean"
+      ? state.isDocumentVisible
+      : getDocumentVisibility();
+
+  return {
+    isFocused,
+    isMinimized,
+    isDocumentVisible,
+    isForeground: isFocused && !isMinimized && isDocumentVisible,
+  } satisfies WindowLifecycleState;
+};
+
+const defaultLifecycleState: WindowLifecycleState = computeLifecycleState({
+  isFocused: true,
+  isMinimized: false,
+  isDocumentVisible: getDocumentVisibility(),
+});
+
+export const WindowLifecycleContext = React.createContext<WindowLifecycleValue>(
+  {
+    ...defaultLifecycleState,
+    subscribe: () => () => undefined,
+  },
+);
+
+export const useWindowLifecycle = () =>
+  React.useContext(WindowLifecycleContext);
 
 const parsePx = (value?: string | null): number | null => {
   if (typeof value !== "string") return null;
@@ -47,9 +109,28 @@ const readNodePosition = (node: HTMLElement): { x: number; y: number } | null =>
   return null;
 };
 
+const lifecycleEqual = (
+  a: WindowLifecycleState,
+  b: WindowLifecycleState,
+) =>
+  a.isFocused === b.isFocused &&
+  a.isMinimized === b.isMinimized &&
+  a.isDocumentVisible === b.isDocumentVisible &&
+  a.isForeground === b.isForeground;
+
 const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
   (props, forwardedRef) => {
     const innerRef = useRef<BaseWindowInstance>(null);
+    const listenersRef = useRef<Set<WindowLifecycleListener>>(new Set());
+    const [lifecycle, setLifecycle] = useState<WindowLifecycleState>(() =>
+      computeLifecycleState({
+        isFocused: Boolean(props.isFocused),
+        isMinimized: Boolean(props.minimized),
+        isDocumentVisible: getDocumentVisibility(),
+      }),
+    );
+    const lifecycleRef = useRef(lifecycle);
+    const { initialX, initialY, onPositionChange } = props;
 
     const assignRef = useCallback(
       (instance: BaseWindowInstance) => {
@@ -64,6 +145,86 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       [forwardedRef],
     );
 
+    useEffect(() => {
+      lifecycleRef.current = lifecycle;
+    }, [lifecycle]);
+
+    const updateLifecycle = useCallback(
+      (partial: Partial<WindowLifecycleState>) => {
+        setLifecycle((prev) => {
+          const next = computeLifecycleState({ ...prev, ...partial });
+          if (lifecycleEqual(prev, next)) {
+            return prev;
+          }
+          lifecycleRef.current = next;
+          listenersRef.current.forEach((listener) => {
+            try {
+              listener(next);
+            } catch (err) {
+              // Swallow listener errors to avoid breaking window updates.
+              if (process.env.NODE_ENV !== "production") {
+                console.error("Window lifecycle listener failed", err);
+              }
+            }
+          });
+          return next;
+        });
+      },
+      [],
+    );
+
+    const subscribe = useCallback((listener: WindowLifecycleListener) => {
+      listenersRef.current.add(listener);
+      listener(lifecycleRef.current);
+      return () => {
+        listenersRef.current.delete(listener);
+      };
+    }, []);
+
+    useEffect(() => {
+      updateLifecycle({ isFocused: Boolean(props.isFocused) });
+    }, [props.isFocused, updateLifecycle]);
+
+    useEffect(() => {
+      updateLifecycle({ isMinimized: Boolean(props.minimized) });
+    }, [props.minimized, updateLifecycle]);
+
+    useEffect(() => {
+      if (typeof document === "undefined") return undefined;
+      const handler = () =>
+        updateLifecycle({ isDocumentVisible: getDocumentVisibility() });
+      document.addEventListener("visibilitychange", handler);
+      return () => {
+        document.removeEventListener("visibilitychange", handler);
+      };
+    }, [updateLifecycle]);
+
+    useEffect(() => {
+      const instance = innerRef.current;
+      const node =
+        instance && typeof instance.getWindowNode === "function"
+          ? instance.getWindowNode()
+          : null;
+      if (!node) return undefined;
+
+      const handleFocus = () => updateLifecycle({ isFocused: true });
+      const handleBlur = () => updateLifecycle({ isFocused: false });
+      node.addEventListener("focus", handleFocus);
+      node.addEventListener("blur", handleBlur);
+      return () => {
+        node.removeEventListener("focus", handleFocus);
+        node.removeEventListener("blur", handleBlur);
+      };
+    }, [updateLifecycle, props.id]);
+
+    const lifecycleValue = useMemo<WindowLifecycleValue>(
+      () => ({
+        ...lifecycle,
+        subscribe,
+      }),
+      [lifecycle, subscribe],
+    );
+
     const clampToViewport = useCallback(() => {
       if (typeof window === "undefined") return;
       const instance = innerRef.current;
@@ -76,8 +237,8 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       const topOffset = measureWindowTopOffset();
       const storedPosition = readNodePosition(node);
       const fallbackPosition = {
-        x: typeof props.initialX === "number" ? props.initialX : 0,
-        y: clampWindowTopPosition(props.initialY, topOffset),
+        x: typeof initialX === "number" ? initialX : 0,
+        y: clampWindowTopPosition(initialY, topOffset),
       };
       const currentPosition = storedPosition || fallbackPosition;
       const clamped = clampWindowPositionWithinViewport(currentPosition, rect, {
@@ -99,10 +260,10 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
         (node.style as unknown as Record<string, string>)["--window-transform-y"] = `${clamped.y}px`;
       }
 
-      if (typeof props.onPositionChange === "function") {
-        props.onPositionChange(clamped.x, clamped.y);
+      if (typeof onPositionChange === "function") {
+        onPositionChange(clamped.x, clamped.y);
       }
-    }, [props.initialX, props.initialY, props.onPositionChange]);
+    }, [initialX, initialY, onPositionChange]);
 
     useEffect(() => {
       if (typeof window === "undefined") return undefined;
@@ -113,7 +274,11 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       };
     }, [clampToViewport]);
 
-    return <BaseWindow ref={assignRef} {...props} />;
+    return (
+      <WindowLifecycleContext.Provider value={lifecycleValue}>
+        <BaseWindow ref={assignRef} {...props} />
+      </WindowLifecycleContext.Provider>
+    );
   },
 );
 

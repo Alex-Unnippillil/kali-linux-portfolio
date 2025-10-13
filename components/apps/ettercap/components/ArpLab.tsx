@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useWindowLifecycle } from '../../../desktop/Window';
 
 type Node = 'Victim' | 'Attacker' | 'Gateway';
 
@@ -45,6 +46,7 @@ const ArpLab = () => {
   const [progress, setProgress] = useState(0);
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number | null>(null);
+  const { isForeground } = useWindowLifecycle();
 
   useEffect(() => {
     if (!playing) {
@@ -69,6 +71,18 @@ const ArpLab = () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [playing, step]);
+
+  useEffect(() => {
+    if (!isForeground && playing) {
+      setPlaying(false);
+      setProgress(0);
+      startRef.current = null;
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    }
+  }, [isForeground, playing]);
 
   const handlePlay = () => setPlaying(true);
   const handleReset = () => {

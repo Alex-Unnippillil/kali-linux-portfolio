@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useWindowLifecycle } from '../../../desktop/Window';
 
 /**
  * Simple game loop helper that provides frame-time delta in seconds to the
@@ -10,9 +11,10 @@ export default function useGameLoop(
 ) {
   const cb = useRef(callback);
   cb.current = callback;
+  const { isForeground } = useWindowLifecycle();
 
   useEffect(() => {
-    if (!running) return undefined;
+    if (!running || !isForeground) return undefined;
     let raf: number;
     let last = performance.now();
     const loop = (now: number) => {
@@ -23,5 +25,5 @@ export default function useGameLoop(
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [running]);
+  }, [running, isForeground]);
 }
