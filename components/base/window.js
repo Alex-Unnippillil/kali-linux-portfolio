@@ -7,6 +7,7 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import {
+    clampWindowPositionWithinViewport,
     clampWindowTopPosition,
     DEFAULT_WINDOW_TOP_OFFSET,
     measureSafeAreaInset,
@@ -122,6 +123,7 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            keyboardFocusVisible: false,
         }
         this.windowRef = React.createRef();
         this._usageTimeout = null;
@@ -413,18 +415,168 @@ export class Window extends Component {
         if (!node) return;
         const rect = node.getBoundingClientRect();
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
-        const snappedX = this.snapToGrid(rect.x, 'x');
-        const relativeY = rect.y - topInset;
+        const fallbackPosition = this.getCurrentWindowPosition();
+        const hasRectSize = rect && (Number.isFinite(rect.width) || Number.isFinite(rect.height))
+            ? ((rect.width && rect.width > 0) || (rect.height && rect.height > 0))
+            : false;
+        const measuredX = hasRectSize && typeof rect.x === 'number'
+            ? (rect.x || fallbackPosition.x)
+            : fallbackPosition.x;
+        const measuredY = hasRectSize && typeof rect.y === 'number'
+            ? (rect.y || fallbackPosition.y)
+            : fallbackPosition.y;
+        const snappedX = this.snapToGrid(measuredX, 'x');
+        const relativeY = measuredY - topInset;
         const snappedRelativeY = this.snapToGrid(relativeY, 'y');
         const absoluteY = clampWindowTopPosition(snappedRelativeY + topInset, topInset);
-        node.style.setProperty('--window-transform-x', `${snappedX.toFixed(1)}px`);
-        node.style.setProperty('--window-transform-y', `${absoluteY.toFixed(1)}px`);
+        const clamped = clampWindowPositionWithinViewport(
+            { x: snappedX, y: absoluteY },
+            rect,
+            { topOffset: topInset },
+        );
+        const nextX = clamped ? clamped.x : snappedX;
+        const nextY = clamped ? clamped.y : absoluteY;
+
+        node.style.setProperty('--window-transform-x', `${nextX.toFixed(1)}px`);
+        node.style.setProperty('--window-transform-y', `${nextY.toFixed(1)}px`);
+        node.style.transform = `translate(${nextX}px, ${nextY}px)`;
 
         if (this.props.onPositionChange) {
-            this.props.onPositionChange(snappedX, absoluteY);
+            this.props.onPositionChange(nextX, nextY);
         }
 
         this.notifySizeChange();
+    }
+
+    setKeyboardFocusVisible = (visible) => {
+        if (this.state.keyboardFocusVisible === visible) return;
+        this.setState({ keyboardFocusVisible: visible });
+    }
+
+    getCurrentWindowPosition = () => {
+        const node = this.getWindowNode();
+        const fallbackTop = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        if (!node) {
+            return { x: 0, y: fallbackTop };
+        }
+
+        const readCssVariable = (property) => {
+            if (typeof node.style.getPropertyValue === 'function') {
+                const raw = node.style.getPropertyValue(property);
+                const parsed = parseFloat(raw);
+                if (Number.isFinite(parsed)) {
+                    return parsed;
+                }
+            }
+            const fallback = node.style[property];
+            if (typeof fallback === 'string') {
+                const parsed = parseFloat(fallback);
+                if (Number.isFinite(parsed)) {
+                    return parsed;
+                }
+            }
+            return null;
+        };
+
+        let x = readCssVariable('--window-transform-x');
+        let y = readCssVariable('--window-transform-y');
+
+        if ((x === null || y === null) && typeof node.style.transform === 'string') {
+            const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
+            if (match) {
+                const parsedX = parseFloat(match[1]);
+                const parsedY = parseFloat(match[2]);
+                if (x === null && Number.isFinite(parsedX)) {
+                    x = parsedX;
+                }
+                if (y === null && Number.isFinite(parsedY)) {
+                    y = parsedY;
+                }
+            }
+        }
+
+        return {
+            x: Number.isFinite(x) ? x : 0,
+            y: Number.isFinite(y) ? y : fallbackTop,
+        };
+    }
+
+    nudgeWindowPosition = (dx, dy) => {
+        if (!dx && !dy) return;
+        if (this.state.maximized) return;
+        const node = this.getWindowNode();
+        if (!node) return;
+
+        if (this.state.snapped) {
+            this.unsnapWindow();
+        }
+
+        const rect = typeof node.getBoundingClientRect === 'function'
+            ? node.getBoundingClientRect()
+            : null;
+        const current = this.getCurrentWindowPosition();
+        const next = { x: current.x + dx, y: current.y + dy };
+        const clamped = clampWindowPositionWithinViewport(
+            next,
+            rect,
+            { topOffset: this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET },
+        );
+        const targetX = clamped ? clamped.x : next.x;
+        const targetY = clamped ? clamped.y : clampWindowTopPosition(next.y, this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET);
+
+        node.style.transform = `translate(${targetX}px, ${targetY}px)`;
+        node.style.setProperty('--window-transform-x', `${targetX}px`);
+        node.style.setProperty('--window-transform-y', `${targetY}px`);
+
+        if (typeof this.props.onPositionChange === 'function') {
+            this.props.onPositionChange(targetX, targetY);
+        }
+    }
+
+    adjustWindowSizeWithKeyboard = (key, step = 2) => {
+        if (this.props.resizable === false) return;
+        if (this.state.maximized) return;
+
+        if (this.state.snapped) {
+            this.unsnapWindow();
+        }
+
+        const applySizeChange = (updater) => {
+            this.setState((prev) => {
+                const next = updater(prev);
+                if (!next) return null;
+                return { ...next, preMaximizeSize: null };
+            }, () => {
+                this.resizeBoundries();
+                this.notifySizeChange();
+            });
+        };
+
+        if (key === 'ArrowLeft') {
+            applySizeChange((prev) => {
+                const nextWidth = Math.max(prev.width - step, 20);
+                if (nextWidth === prev.width) return null;
+                return { width: nextWidth };
+            });
+        } else if (key === 'ArrowRight') {
+            applySizeChange((prev) => {
+                const nextWidth = Math.min(prev.width + step, 100);
+                if (nextWidth === prev.width) return null;
+                return { width: nextWidth };
+            });
+        } else if (key === 'ArrowUp') {
+            applySizeChange((prev) => {
+                const nextHeight = Math.max(prev.height - step, 20);
+                if (nextHeight === prev.height) return null;
+                return { height: nextHeight };
+            });
+        } else if (key === 'ArrowDown') {
+            applySizeChange((prev) => {
+                const nextHeight = Math.min(prev.height + step, 100);
+                if (nextHeight === prev.height) return null;
+                return { height: nextHeight };
+            });
+        }
     }
 
     unsnapWindow = () => {
@@ -597,7 +749,16 @@ export class Window extends Component {
         }
     }
 
-    focusWindow = () => {
+    focusWindow = (event) => {
+        const isPointerEvent = event && typeof event.type === 'string' && (
+            event.type.startsWith('pointer') ||
+            event.type === 'mousedown' ||
+            event.type === 'touchstart'
+        );
+        if (isPointerEvent) {
+            this.setKeyboardFocusVisible(false);
+        }
+
         this.props.focus(this.id);
         const node = this.getWindowNode();
         if (!node || typeof node.focus !== 'function') return;
@@ -704,6 +865,7 @@ export class Window extends Component {
     }
 
     handleTitleBarKeyDown = (e) => {
+        this.setKeyboardFocusVisible(true);
         if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
             e.preventDefault();
             e.stopPropagation();
@@ -746,46 +908,58 @@ export class Window extends Component {
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
             this.closeWindow();
-        } else if (e.key === 'Tab') {
-            this.focusWindow();
-        } else if (e.altKey) {
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.unsnapWindow();
-            } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('left');
-            } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('right');
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('top');
+            return;
+        }
+
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            if (this.state.maximized) {
+                this.restoreWindow();
+            } else {
+                this.maximizeWindow();
             }
+            this.setKeyboardFocusVisible(true);
+            return;
+        }
+
+        if (e.key === 'Tab') {
+            this.setKeyboardFocusVisible(true);
             this.focusWindow();
-        } else if (e.shiftKey) {
-            const step = 1;
-            if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ width: Math.max(prev.width - step, 20), preMaximizeSize: null }), this.resizeBoundries);
-            } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ width: Math.min(prev.width + step, 100), preMaximizeSize: null }), this.resizeBoundries);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ height: Math.max(prev.height - step, 20), preMaximizeSize: null }), this.resizeBoundries);
-            } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ height: Math.min(prev.height + step, 100), preMaximizeSize: null }), this.resizeBoundries);
-            }
+            return;
+        }
+
+        const arrowKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+        if (!arrowKeys.includes(e.key)) {
+            return;
+        }
+
+        if (e.altKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            const sizeStep = e.shiftKey ? 4 : 2;
+            this.adjustWindowSizeWithKeyboard(e.key, sizeStep);
+            this.setKeyboardFocusVisible(true);
+            return;
+        }
+
+        if (e.metaKey || e.ctrlKey) {
+            return;
+        }
+
+        const step = e.shiftKey ? 40 : 10;
+        let dx = 0;
+        let dy = 0;
+        if (e.key === 'ArrowLeft') dx = -step;
+        else if (e.key === 'ArrowRight') dx = step;
+        else if (e.key === 'ArrowUp') dy = -step;
+        else if (e.key === 'ArrowDown') dy = step;
+
+        if (dx !== 0 || dy !== 0) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.nudgeWindowPosition(dx, dy);
+            this.setKeyboardFocusVisible(true);
             this.focusWindow();
         }
     }
@@ -878,6 +1052,7 @@ export class Window extends Component {
                             'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',
                             styles.windowFrame,
                             this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
+                            this.state.keyboardFocusVisible ? styles.windowFrameKeyboardFocus : '',
                             this.state.maximized ? styles.windowFrameMaximized : '',
                         ].filter(Boolean).join(' ')}
                         id={this.id}
