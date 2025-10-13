@@ -34,17 +34,17 @@ const MetasploitPost = () => {
 
   return (
     <div
-      className="h-full w-full overflow-auto rounded-xl border border-white/10 bg-[var(--kali-panel)]/95 p-4 text-white shadow-kali-panel focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-panel)]"
+      className="h-full w-full overflow-auto rounded-xl border border-kali-border/60 bg-[var(--kali-panel)]/95 p-4 text-kali-text shadow-kali-panel focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-kali-focus focus-visible:outline-offset-2"
       tabIndex={0}
       aria-label="Metasploit post-exploitation timeline"
     >
-      <h2 className="mb-4 text-lg font-semibold text-white">Post-Exploitation Timeline</h2>
+      <h2 className="mb-4 text-lg font-semibold text-kali-text">Post-Exploitation Timeline</h2>
       <ul className="relative space-y-4 border-l border-kali-primary/40 pl-6">
         {events.map((e) => (
-          <li key={e.time} className="relative pl-6 text-sm text-white/90">
-            <span className="absolute left-0 top-2 flex h-3 w-3 -translate-x-1/2 items-center justify-center rounded-full bg-kali-primary shadow-[0_0_0_3px_rgba(15,118,110,0.35)]" />
-            <time className="block text-xs uppercase tracking-wide text-white/60">{e.time}</time>
-            <p className="mt-1 text-white/90">{e.message}</p>
+          <li key={e.time} className="relative pl-6 text-sm text-kali-text/90">
+            <span className="absolute left-0 top-2 flex h-3 w-3 -translate-x-1/2 items-center justify-center rounded-full bg-kali-primary ring-2 ring-kali-primary/40 ring-offset-2 ring-offset-[var(--kali-panel)]" />
+            <time className="block text-xs uppercase tracking-wide text-kali-text/60">{e.time}</time>
+            <p className="mt-1 text-kali-text/90">{e.message}</p>
           </li>
         ))}
       </ul>
