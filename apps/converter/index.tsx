@@ -75,9 +75,15 @@ export default function Converter() {
   });
 
   const cardClass =
-    "rounded-xl border border-white/10 bg-kali-surface/80 shadow-kali-panel backdrop-blur-md";
+    "rounded-xl border border-[color:var(--kali-border)] bg-[var(--kali-panel)] shadow-kali-panel backdrop-blur-md";
   const sectionTitleClass =
     "text-xs font-semibold uppercase tracking-wide text-kali-muted";
+  const tabBaseClass =
+    "flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus";
+  const activeTabClass =
+    "border border-[color:color-mix(in_srgb,var(--kali-control)_45%,transparent)] bg-[color:var(--kali-control)] text-[color:var(--color-inverse)] shadow-[0_10px_22px_-10px_color-mix(in_srgb,var(--kali-control)_55%,transparent)]";
+  const inactiveTabClass =
+    "border border-[color:color-mix(in_srgb,var(--kali-border)_70%,transparent)] bg-[var(--kali-panel)] text-[color:color-mix(in_srgb,var(--kali-text)_82%,transparent)] hover:bg-[color-mix(in_srgb,var(--kali-panel)_92%,transparent)] hover:text-[color:var(--kali-text)]";
 
   useEffect(() => {
     const saved = localStorage.getItem(HISTORY_KEY);
@@ -209,13 +215,18 @@ export default function Converter() {
                     focusTabByIndex(index - 1);
                   }
                 }}
-                className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus ${
-                  isActive
-                    ? "bg-kali-primary text-kali-inverse shadow"
-                    : "border border-white/5 bg-kali-surface/70 text-white/80 hover:bg-kali-surface/90"
+                className={`${tabBaseClass} ${
+                  isActive ? activeTabClass : inactiveTabClass
                 }`}
               >
-                <span className="text-xl" aria-hidden>
+                <span
+                  className={`text-xl ${
+                    isActive
+                      ? "text-[color:var(--color-inverse)]"
+                      : "text-[color:color-mix(in_srgb,var(--kali-control)_70%,var(--kali-text))]"
+                  }`}
+                  aria-hidden
+                >
                   {icons[c]}
                 </span>
                 <span className="capitalize">{c}</span>
@@ -234,7 +245,7 @@ export default function Converter() {
           </span>
           <select
             id="converter-notation"
-            className="rounded-md border border-white/20 bg-kali-surface/70 px-2 py-1 text-white focus:border-kali-focus focus:outline-none focus:ring-2 focus:ring-kali-focus/70"
+            className="rounded-md border border-[color:color-mix(in_srgb,var(--kali-border)_75%,transparent)] bg-[var(--kali-panel)] px-2 py-1 text-[color:var(--kali-text)] focus:border-kali-focus focus:outline-none focus:ring-2 focus:ring-kali-focus/70"
             value={notation}
             onChange={(e) => setNotation(e.target.value as Notation)}
           >
@@ -242,7 +253,7 @@ export default function Converter() {
             <option value="engineering">Engineering</option>
             <option value="scientific">Scientific</option>
           </select>
-          <small className="text-[11px] leading-relaxed text-white/70">
+          <small className="text-[11px] leading-relaxed text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)]">
             Controls how formatted previews display large or small numbers.
           </small>
         </label>
@@ -250,7 +261,7 @@ export default function Converter() {
           <span className={sectionTitleClass}>Trailing zeros</span>
           <label
             htmlFor="converter-trailing-zeros"
-            className="flex items-center gap-2 rounded-md border border-white/10 bg-kali-surface/70 px-3 py-2 transition hover:bg-kali-surface/90 focus-within:border-kali-focus"
+            className="flex items-center gap-2 rounded-md border border-[color:color-mix(in_srgb,var(--kali-border)_65%,transparent)] bg-[var(--kali-panel)] px-3 py-2 transition hover:bg-[color-mix(in_srgb,var(--kali-panel)_94%,transparent)] focus-within:border-kali-focus"
           >
             <input
               id="converter-trailing-zeros"
@@ -258,11 +269,11 @@ export default function Converter() {
               checked={trailingZeros}
               onChange={(e) => setTrailingZeros(e.target.checked)}
               aria-label="Include trailing zeros"
-              className="h-4 w-4 rounded border-white/30 bg-transparent text-kali-accent focus:ring-kali-focus/80"
+              className="h-4 w-4 rounded border-[color:color-mix(in_srgb,var(--kali-border)_55%,transparent)] bg-transparent text-kali-accent focus:ring-kali-focus/80"
             />
             <span>Include up to ten decimal places</span>
           </label>
-          <small className="text-[11px] leading-relaxed text-white/70">
+          <small className="text-[11px] leading-relaxed text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)]">
             Pads previews with zeros for consistent length when comparing results.
           </small>
         </div>
@@ -283,7 +294,7 @@ export default function Converter() {
                 </label>
                 <input
                   type="number"
-                  className={`w-full rounded-md border border-white/20 bg-kali-surface/80 px-3 py-2 font-mono text-base text-white shadow-inner shadow-black/40 focus:border-kali-focus focus:outline-none focus:ring-2 focus:ring-kali-focus/70 ${
+                  className={`w-full rounded-md border border-[color:color-mix(in_srgb,var(--kali-border)_75%,transparent)] bg-[var(--kali-panel)] px-3 py-2 font-mono text-base text-[color:var(--kali-text)] shadow-inner shadow-black/40 focus:border-kali-focus focus:outline-none focus:ring-2 focus:ring-kali-focus/70 ${
                     focused === "from" ? "text-2xl" : "text-base"
                   }`}
                   value={fromValue}
@@ -293,12 +304,12 @@ export default function Converter() {
                   aria-label="from value"
                 />
               </div>
-              <span className="block min-h-[1.25rem] text-sm font-mono text-white/80">
+              <span className="block min-h-[1.25rem] text-sm font-mono text-[color:color-mix(in_srgb,var(--kali-text)_80%,transparent)]">
                 {formatNumber(fromValue, notation, trailingZeros)}
               </span>
               <div className="flex flex-wrap items-center gap-2">
                 <select
-                  className="min-w-[7rem] flex-1 rounded-md border border-white/20 bg-kali-surface/70 px-2 py-1 text-white focus:border-kali-focus focus:outline-none focus:ring-2 focus:ring-kali-focus/70"
+                  className="min-w-[7rem] flex-1 rounded-md border border-[color:color-mix(in_srgb,var(--kali-border)_75%,transparent)] bg-[var(--kali-panel)] px-2 py-1 text-[color:var(--kali-text)] focus:border-kali-focus focus:outline-none focus:ring-2 focus:ring-kali-focus/70"
                   value={fromUnit}
                   onChange={(e) => {
                     setFromUnit(e.target.value);
@@ -335,7 +346,7 @@ export default function Converter() {
                 </label>
                 <input
                   type="number"
-                  className={`w-full rounded-md border border-white/20 bg-kali-surface/80 px-3 py-2 font-mono text-base text-white shadow-inner shadow-black/40 focus:border-kali-focus focus:outline-none focus:ring-2 focus:ring-kali-focus/70 ${
+                  className={`w-full rounded-md border border-[color:color-mix(in_srgb,var(--kali-border)_75%,transparent)] bg-[var(--kali-panel)] px-3 py-2 font-mono text-base text-[color:var(--kali-text)] shadow-inner shadow-black/40 focus:border-kali-focus focus:outline-none focus:ring-2 focus:ring-kali-focus/70 ${
                     focused === "to" ? "text-2xl" : "text-base"
                   }`}
                   value={toValue}
@@ -345,12 +356,12 @@ export default function Converter() {
                   aria-label="to value"
                 />
               </div>
-              <span className="block min-h-[1.25rem] text-sm font-mono text-white/80">
+              <span className="block min-h-[1.25rem] text-sm font-mono text-[color:color-mix(in_srgb,var(--kali-text)_80%,transparent)]">
                 {formatNumber(toValue, notation, trailingZeros)}
               </span>
               <div className="flex flex-wrap items-center gap-2">
                 <select
-                  className="min-w-[7rem] flex-1 rounded-md border border-white/20 bg-kali-surface/70 px-2 py-1 text-white focus:border-kali-focus focus:outline-none focus:ring-2 focus:ring-kali-focus/70"
+                  className="min-w-[7rem] flex-1 rounded-md border border-[color:color-mix(in_srgb,var(--kali-border)_75%,transparent)] bg-[var(--kali-panel)] px-2 py-1 text-[color:var(--kali-text)] focus:border-kali-focus focus:outline-none focus:ring-2 focus:ring-kali-focus/70"
                   value={toUnit}
                   onChange={(e) => {
                     setToUnit(e.target.value);
@@ -377,7 +388,7 @@ export default function Converter() {
           <section className={`${cardClass} overflow-hidden`}>
             <button
               type="button"
-              className="flex w-full items-center justify-between px-4 py-3 text-xs font-semibold uppercase tracking-wide text-white/80 transition hover:bg-kali-surface/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus"
+              className="flex w-full items-center justify-between bg-[var(--kali-panel)] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_80%,transparent)] transition hover:bg-[color-mix(in_srgb,var(--kali-panel)_94%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus"
               onClick={() => setHistoryOpen((open) => !open)}
               aria-expanded={historyOpen}
               aria-controls="converter-history-panel"
@@ -400,7 +411,7 @@ export default function Converter() {
                   return (
                     <div
                       key={`${h.fromUnit}-${h.toUnit}-${i}`}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-kali-surface/70 px-3 py-2 text-xs text-white/90"
+                      className="flex items-center justify-between gap-3 rounded-lg border border-[color:color-mix(in_srgb,var(--kali-border)_65%,transparent)] bg-[var(--kali-panel)] px-3 py-2 text-xs text-[color:color-mix(in_srgb,var(--kali-text)_90%,transparent)]"
                       data-testid="converter-history-entry"
                     >
                       <span className="font-mono leading-tight">
