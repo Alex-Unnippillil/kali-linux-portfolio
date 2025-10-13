@@ -8,9 +8,20 @@ jest.mock('../components/util-components/background-image', () => () => <div dat
 jest.mock('../components/base/window', () => ({
   __esModule: true,
   default: () => <div data-testid="window" />,
-  WindowTopBar: ({ title }: { title: string }) => (
-    <div data-testid="window-top-bar" role="presentation">
-      {title}
+  WindowTopBar: ({
+    title,
+    titleId = 'mock-title',
+    dragInstructionsId = 'mock-drag-instructions',
+  }: {
+    title: string;
+    titleId?: string;
+    dragInstructionsId?: string;
+  }) => (
+    <div data-testid="window-top-bar" role="presentation" aria-labelledby={titleId} aria-describedby={dragInstructionsId}>
+      <div id={titleId}>{title}</div>
+      <span id={dragInstructionsId} className="sr-only">
+        Mock drag instructions
+      </span>
     </div>
   ),
   WindowEditButtons: ({
