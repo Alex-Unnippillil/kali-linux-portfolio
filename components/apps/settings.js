@@ -57,7 +57,7 @@ export function Settings() {
     }, [accent, accentText, contrastRatio]);
 
     return (
-        <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-kali-surface text-kali-text"}>
+        <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-kali-surface text-kali-text">
             <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4 relative overflow-hidden rounded-lg shadow-inner">
                 {useKaliWallpaper ? (
                     <KaliWallpaper />
@@ -75,7 +75,7 @@ export function Settings() {
                     id="theme-select"
                     value={theme}
                     onChange={(e) => setTheme(e.target.value)}
-                    className="bg-kali-secondary/80 text-kali-text px-2 py-1 rounded-md border border-kali-border/60 transition-colors hover:border-kali-focus/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                    className="bg-kali-surface-muted text-kali-text px-2 py-1 rounded-md border border-kali-border/70 transition-colors hover:border-kali-focus/60 focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-surface"
                 >
                     <option value="default">Default</option>
                     <option value="dark">Dark</option>
@@ -122,7 +122,7 @@ export function Settings() {
                     id="density-select"
                     value={density}
                     onChange={(e) => setDensity(e.target.value)}
-                    className="bg-kali-secondary/80 text-kali-text px-2 py-1 rounded-md border border-kali-border/60 transition-colors hover:border-kali-focus/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                    className="bg-kali-surface-muted text-kali-text px-2 py-1 rounded-md border border-kali-border/70 transition-colors hover:border-kali-focus/60 focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-surface"
                 >
                     <option value="regular">Regular</option>
                     <option value="compact">Compact</option>
@@ -138,7 +138,7 @@ export function Settings() {
                     step="0.05"
                     value={fontScale}
                     onChange={(e) => setFontScale(parseFloat(e.target.value))}
-                    className="kali-slider focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                    className="kali-slider focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-surface"
                     aria-label="Adjust font scale"
                 />
             </div>
@@ -216,8 +216,7 @@ export function Settings() {
             </div>
             <div className="flex justify-center my-4">
                 <div
-                    className="p-4 rounded-lg border border-kali-border/60 bg-kali-secondary/80 text-kali-text transition-colors duration-300 motion-reduce:transition-none"
-                    style={{ backgroundColor: 'var(--color-dark)', color: 'var(--color-text)' }}
+                    className="p-4 rounded-lg border border-kali-border/60 bg-kali-surface-raised text-kali-text transition-colors duration-300 motion-reduce:transition-none"
                 >
                     <p className="mb-2 text-center">Preview</p>
                     <button
@@ -226,7 +225,7 @@ export function Settings() {
                     >
                         Accent
                     </button>
-                    <p className={`mt-2 text-sm text-center ${contrast >= 4.5 ? 'text-green-400' : 'text-red-400'}`}>
+                    <p className={`mt-2 text-sm text-center ${contrast >= 4.5 ? 'text-kali-primary' : 'text-kali-error'}`}>
                         {`Contrast ${contrast.toFixed(2)}:1 ${contrast >= 4.5 ? 'Pass' : 'Fail'}`}
                     </p>
                     <span ref={liveRegion} role="status" aria-live="polite" className="sr-only"></span>
@@ -250,7 +249,7 @@ export function Settings() {
                                 }
                             }}
                             data-path={name}
-                            className={`md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 rounded-lg transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${name === wallpaper ? 'border-kali-primary/80 shadow-[0_0_0_1px_rgba(15,148,210,0.45)]' : 'border-transparent hover:border-white/10'}`}
+                            className={`md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 rounded-lg transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${name === wallpaper ? 'border-kali-primary/80 ring-2 ring-kali-primary/40 ring-offset-2 ring-offset-kali-surface' : 'border-transparent hover:border-kali-focus/40'}`}
                             style={{ backgroundImage: `url(/wallpapers/${name}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
                         ></div>
                     ))
