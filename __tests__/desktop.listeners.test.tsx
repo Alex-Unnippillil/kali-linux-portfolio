@@ -104,7 +104,10 @@ jest.mock('../components/context-menus/taskbar-menu', () => {
   const MockTaskbarMenu = createMockComponent('taskbar-menu', 'MockTaskbarMenu');
   return { __esModule: true, default: MockTaskbarMenu };
 });
-jest.mock('../utils/recentStorage', () => ({ addRecentApp: jest.fn() }));
+jest.mock('../utils/recentStorage', () => ({
+  addRecentApp: jest.fn(),
+  recordRecentAppClose: jest.fn(),
+}));
 
 describe('Desktop event listeners', () => {
   let originalMatchMedia: typeof window.matchMedia | undefined;

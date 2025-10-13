@@ -1,14 +1,43 @@
 import React from 'react';
 import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import Navbar from '../components/screen/navbar';
+import { clearRecentAppHistory, getRecentAppHistory } from '../utils/recentStorage';
 
-jest.mock('../components/util-components/clock', () => () => <div data-testid="clock" />);
-jest.mock('../components/util-components/status', () => () => <div data-testid="status" />);
-jest.mock('../components/ui/QuickSettings', () => ({ open }: { open: boolean }) => (
-  <div data-testid="quick-settings">{open ? 'open' : 'closed'}</div>
-));
-jest.mock('../components/menu/WhiskerMenu', () => () => <button type="button">Menu</button>);
-jest.mock('../components/ui/PerformanceGraph', () => () => <div data-testid="performance" />);
+jest.mock('../components/util-components/clock', () => {
+  const MockClock = () => <div data-testid="clock" />;
+  MockClock.displayName = 'MockClock';
+  return MockClock;
+});
+jest.mock('../components/util-components/status', () => {
+  const MockStatus = () => <div data-testid="status" />;
+  MockStatus.displayName = 'MockStatus';
+  return MockStatus;
+});
+jest.mock('../components/ui/QuickSettings', () => {
+  const MockQuickSettings = ({ open }: { open: boolean }) => (
+    <div data-testid="quick-settings">{open ? 'open' : 'closed'}</div>
+  );
+  MockQuickSettings.displayName = 'MockQuickSettings';
+  return MockQuickSettings;
+});
+jest.mock('../components/menu/WhiskerMenu', () => {
+  const MockWhiskerMenu = () => <button type="button">Menu</button>;
+  MockWhiskerMenu.displayName = 'MockWhiskerMenu';
+  return MockWhiskerMenu;
+});
+jest.mock('../components/ui/PerformanceGraph', () => {
+  const MockPerformanceGraph = () => <div data-testid="performance" />;
+  MockPerformanceGraph.displayName = 'MockPerformanceGraph';
+  return MockPerformanceGraph;
+});
+jest.mock('../utils/recentStorage', () => {
+  const actual = jest.requireActual('../utils/recentStorage');
+  return {
+    ...actual,
+    getRecentAppHistory: jest.fn(),
+    clearRecentAppHistory: jest.fn(),
+  };
+});
 
 const workspaceEventDetail = {
   workspaces: [
@@ -80,6 +109,29 @@ const createDataTransfer = () => {
     },
   } as DataTransfer;
 };
+
+const mockedGetRecentAppHistory = getRecentAppHistory as jest.MockedFunction<typeof getRecentAppHistory>;
+const mockedClearRecentAppHistory = clearRecentAppHistory as jest.MockedFunction<typeof clearRecentAppHistory>;
+
+const formatTimestamp = (timestamp: number) => {
+  const date = new Date(timestamp);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+};
+
+beforeEach(() => {
+  mockedGetRecentAppHistory.mockReset();
+  mockedClearRecentAppHistory.mockReset();
+  mockedGetRecentAppHistory.mockReturnValue([]);
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('Navbar running apps tray', () => {
   let dispatchSpy: jest.SpyInstance;
@@ -193,5 +245,72 @@ describe('Navbar running apps tray', () => {
       action: 'reorder',
       order: ['app2', 'app3', 'app1'],
     });
+  });
+
+  it('shows recent history items and allows clearing them from the context menu', async () => {
+    const events = [
+      { type: 'open' as const, timestamp: Date.UTC(2024, 0, 2, 5, 10) },
+      { type: 'close' as const, timestamp: Date.UTC(2024, 0, 1, 3, 15) },
+    ];
+    mockedGetRecentAppHistory.mockReturnValue(events);
+
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('workspace-state', { detail: workspaceEventDetail }));
+    });
+
+    const button = screen.getByRole('button', { name: /app one/i });
+    fireEvent.contextMenu(button);
+
+    const menu = await screen.findByRole('menu');
+    const items = within(menu).getAllByRole('menuitem');
+    expect(items).toHaveLength(3);
+    expect(items[0]).toHaveTextContent(`Opened ${formatTimestamp(events[0].timestamp)}`);
+    expect(items[1]).toHaveTextContent(`Closed ${formatTimestamp(events[1].timestamp)}`);
+
+    dispatchSpy.mockClear();
+    fireEvent.click(items[0]);
+
+    const taskbarEventCall = dispatchSpy.mock.calls.find(([event]) => event.type === 'taskbar-command');
+    expect(taskbarEventCall).toBeTruthy();
+    expect(taskbarEventCall && taskbarEventCall[0].detail).toEqual({ appId: 'app1', action: 'open' });
+
+    fireEvent.contextMenu(button);
+    const menuAfter = await screen.findByRole('menu');
+    const itemsAfter = within(menuAfter).getAllByRole('menuitem');
+    const clearItem = itemsAfter[itemsAfter.length - 1];
+    fireEvent.click(clearItem);
+
+    expect(mockedClearRecentAppHistory).toHaveBeenCalledWith('app1');
+  });
+
+  it('opens the context menu on long press interactions', async () => {
+    jest.useFakeTimers();
+
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('workspace-state', { detail: workspaceEventDetail }));
+    });
+
+    const button = screen.getByRole('button', { name: /app one/i });
+    const contextSpy = jest.fn();
+    button.addEventListener('contextmenu', contextSpy);
+
+    act(() => {
+      fireEvent.pointerDown(button, { pointerType: 'touch', button: 0, clientX: 24, clientY: 36 });
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(650);
+    });
+
+    expect(contextSpy).toHaveBeenCalled();
+
+    act(() => {
+      fireEvent.pointerUp(button, { pointerType: 'touch' });
+    });
+    button.removeEventListener('contextmenu', contextSpy);
   });
 });

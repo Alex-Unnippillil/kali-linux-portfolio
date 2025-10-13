@@ -24,7 +24,10 @@ jest.mock('../components/context-menus/taskbar-menu', () => ({
   __esModule: true,
   default: () => null,
 }));
-jest.mock('../utils/recentStorage', () => ({ addRecentApp: jest.fn() }));
+jest.mock('../utils/recentStorage', () => ({
+  addRecentApp: jest.fn(),
+  recordRecentAppClose: jest.fn(),
+}));
 
 const createTestDesktop = () => {
   const desktop = new Desktop({

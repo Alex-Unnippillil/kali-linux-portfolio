@@ -24,7 +24,7 @@ import { MinimizedWindowShelf, ClosedWindowShelf } from '../desktop/WindowStateS
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
-import { addRecentApp } from '../../utils/recentStorage';
+import { addRecentApp, recordRecentAppClose } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
 import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
@@ -4306,6 +4306,8 @@ export class Desktop extends Component {
             this.closeOverlay(objId);
             return;
         }
+
+        recordRecentAppClose(objId);
 
         // capture window snapshot
         let image = null;
