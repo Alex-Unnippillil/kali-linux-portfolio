@@ -205,6 +205,8 @@ class AllApplications extends React.Component {
             favorites: [],
             recents: [],
         };
+        this.gridBindings = new Map();
+        this.rovingSyncScheduled = false;
     }
 
     componentDidMount() {
@@ -221,12 +223,36 @@ class AllApplications extends React.Component {
         persistIds(FAVORITES_KEY, favorites);
         persistIds(RECENTS_KEY, recents);
 
-        this.setState({
-            apps: sorted,
-            unfilteredApps: sorted,
-            favorites,
-            recents,
-        });
+        this.setState(
+            {
+                apps: sorted,
+                unfilteredApps: sorted,
+                favorites,
+                recents,
+            },
+            () => {
+                this.scheduleRovingSync();
+            }
+        );
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        if (
+            prevState.apps !== this.state.apps ||
+            prevState.favorites !== this.state.favorites ||
+            prevState.recents !== this.state.recents ||
+            prevState.query !== this.state.query
+        ) {
+            this.scheduleRovingSync();
+        }
+
+        if (prevProps.games !== this.props.games) {
+            this.scheduleRovingSync();
+        }
+    }
+
+    componentWillUnmount() {
+        this.clearGridBindings();
     }
 
     handleChange = (e) => {
@@ -240,20 +266,26 @@ class AllApplications extends React.Component {
                 : unfilteredApps.filter((app) =>
                       app.title.toLowerCase().includes(lower)
                   );
-        this.setState({ query, apps: sortAppsByTitle(filtered) });
+        this.setState({ query, apps: sortAppsByTitle(filtered) }, () => {
+            this.scheduleRovingSync();
+        });
     };
 
     openApp = (id) => {
-        this.setState((state) => {
-            const filtered = state.recents.filter((recentId) => recentId !== id);
-            const next = [id, ...filtered].slice(0, 10);
-            persistIds(RECENTS_KEY, next);
-            return { recents: next };
-        }, () => {
-            if (typeof this.props.openApp === 'function') {
-                this.props.openApp(id);
+        this.setState(
+            (state) => {
+                const filtered = state.recents.filter((recentId) => recentId !== id);
+                const next = [id, ...filtered].slice(0, 10);
+                persistIds(RECENTS_KEY, next);
+                return { recents: next };
+            },
+            () => {
+                this.scheduleRovingSync();
+                if (typeof this.props.openApp === 'function') {
+                    this.props.openApp(id);
+                }
             }
-        });
+        );
     };
 
     handleToggleFavorite = (event, id) => {
@@ -266,6 +298,167 @@ class AllApplications extends React.Component {
                 : [...state.favorites, id];
             persistIds(FAVORITES_KEY, favorites);
             return { favorites };
+        }, () => {
+            this.scheduleRovingSync();
+        });
+    };
+
+    getGridItems = (grid) => {
+        if (!grid) return [];
+        const candidates = Array.from(grid.querySelectorAll('[data-app-id]'));
+        return candidates.filter((item) => {
+            if (!(item instanceof HTMLElement)) return false;
+            if (item.closest('[data-app-grid="true"]') !== grid) return false;
+            return item.getAttribute('aria-disabled') !== 'true';
+        });
+    };
+
+    applyRovingState = (grid, items, index) => {
+        if (!grid || !items.length) return;
+        const clamped = Math.min(Math.max(index, 0), items.length - 1);
+        grid.setAttribute('data-roving-index', String(clamped));
+        items.forEach((item, i) => {
+            item.tabIndex = i === clamped ? 0 : -1;
+        });
+    };
+
+    handleGridFocusIn = (grid, event) => {
+        if (!grid) return;
+        const target = event.target instanceof HTMLElement ? event.target.closest('[data-app-id]') : null;
+        if (!target || !grid.contains(target)) return;
+        const items = this.getGridItems(grid);
+        const index = items.indexOf(target);
+        if (index === -1) return;
+        this.applyRovingState(grid, items, index);
+    };
+
+    getGridColumnCount = () => {
+        if (typeof window === 'undefined') return 1;
+        const width = window.innerWidth || 0;
+        if (width >= 1280) return 6;
+        if (width >= 1024) return 5;
+        if (width >= 768) return 4;
+        if (width >= 640) return 3;
+        return 2;
+    };
+
+    handleGridKeyDown = (grid, event) => {
+        if (!grid) return;
+        const keys = ['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+        if (!keys.includes(event.key)) return;
+        const target = event.target instanceof HTMLElement ? event.target.closest('[data-app-id]') : null;
+        if (!target || !grid.contains(target)) return;
+        const items = this.getGridItems(grid);
+        if (!items.length) return;
+        const currentIndex = items.indexOf(target);
+        if (currentIndex === -1) return;
+
+        const columns = Math.max(1, this.getGridColumnCount());
+        let nextIndex = currentIndex;
+
+        switch (event.key) {
+            case 'ArrowRight':
+                nextIndex = (currentIndex + 1) % items.length;
+                break;
+            case 'ArrowLeft':
+                nextIndex = (currentIndex - 1 + items.length) % items.length;
+                break;
+            case 'ArrowDown': {
+                const candidate = currentIndex + columns;
+                if (candidate >= items.length) {
+                    const remainder = currentIndex % columns;
+                    nextIndex = remainder < items.length ? remainder : items.length - 1;
+                } else {
+                    nextIndex = candidate;
+                }
+                break;
+            }
+            case 'ArrowUp': {
+                const candidate = currentIndex - columns;
+                if (candidate < 0) {
+                    const lastRowSize = items.length % columns || columns;
+                    const lastRowStart = items.length - lastRowSize;
+                    nextIndex = lastRowStart + (currentIndex % columns);
+                    if (nextIndex >= items.length) {
+                        nextIndex = items.length - 1;
+                    }
+                } else {
+                    nextIndex = candidate;
+                }
+                break;
+            }
+            case 'Home':
+                nextIndex = 0;
+                break;
+            case 'End':
+                nextIndex = items.length - 1;
+                break;
+            default:
+                return;
+        }
+
+        if (nextIndex !== currentIndex || event.key === 'Home' || event.key === 'End') {
+            event.preventDefault();
+            this.applyRovingState(grid, items, nextIndex);
+            items[nextIndex].focus();
+        }
+    };
+
+    setupGridNavigation = (grid) => {
+        if (!grid || this.gridBindings.has(grid)) return;
+        const focusHandler = (event) => this.handleGridFocusIn(grid, event);
+        const keydownHandler = (event) => this.handleGridKeyDown(grid, event);
+        grid.addEventListener('focusin', focusHandler);
+        grid.addEventListener('keydown', keydownHandler);
+        this.gridBindings.set(grid, { focusHandler, keydownHandler });
+    };
+
+    cleanupGridBindings = (activeGrids) => {
+        for (const [grid, handlers] of this.gridBindings.entries()) {
+            if (!activeGrids.has(grid)) {
+                grid.removeEventListener('focusin', handlers.focusHandler);
+                grid.removeEventListener('keydown', handlers.keydownHandler);
+                this.gridBindings.delete(grid);
+            }
+        }
+    };
+
+    clearGridBindings = () => {
+        for (const [grid, handlers] of this.gridBindings.entries()) {
+            grid.removeEventListener('focusin', handlers.focusHandler);
+            grid.removeEventListener('keydown', handlers.keydownHandler);
+        }
+        this.gridBindings.clear();
+        this.rovingSyncScheduled = false;
+    };
+
+    applyRovingTabState = () => {
+        if (typeof document === 'undefined') return;
+        const grids = Array.from(document.querySelectorAll('[data-app-grid="true"]'));
+        const activeSet = new Set(grids);
+        grids.forEach((grid) => {
+            this.setupGridNavigation(grid);
+            const items = this.getGridItems(grid);
+            if (!items.length) {
+                grid.removeAttribute('data-roving-index');
+                return;
+            }
+            const storedIndex = parseInt(grid.getAttribute('data-roving-index'), 10);
+            const index = Number.isInteger(storedIndex) && storedIndex >= 0 && storedIndex < items.length ? storedIndex : 0;
+            this.applyRovingState(grid, items, index);
+        });
+        this.cleanupGridBindings(activeSet);
+    };
+
+    scheduleRovingSync = () => {
+        if (typeof window === 'undefined' || this.rovingSyncScheduled) return;
+        this.rovingSyncScheduled = true;
+        const schedule = typeof window.requestAnimationFrame === 'function'
+            ? window.requestAnimationFrame.bind(window)
+            : (callback) => window.setTimeout(callback, 0);
+        schedule(() => {
+            this.rovingSyncScheduled = false;
+            this.applyRovingTabState();
         });
     };
 
@@ -323,7 +516,10 @@ class AllApplications extends React.Component {
                             {apps.length} {apps.length === 1 ? 'app' : 'apps'}
                         </span>
                     </div>
-                    <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                    <div
+                        className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+                        data-app-grid="true"
+                    >
                         {apps.map((app) => this.renderAppTile(app))}
                     </div>
                 </div>
@@ -372,7 +568,10 @@ class AllApplications extends React.Component {
                         {countLabel}
                     </span>
                 </summary>
-                <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                <div
+                    className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+                    data-app-grid="true"
+                >
                     {folder.items.map((app) => this.renderAppTile(app))}
                 </div>
             </details>
@@ -479,7 +678,10 @@ class AllApplications extends React.Component {
                         </div>
                     </div>
                 </header>
-                <div className="mt-10 flex w-full max-w-6xl flex-col items-stretch px-4 pb-12 sm:px-6 md:px-8">
+                <div
+                    id="app-grid"
+                    className="mt-10 flex w-full max-w-6xl flex-col items-stretch px-4 pb-12 sm:px-6 md:px-8"
+                >
                     {this.renderSection('Favorites', favoriteApps)}
                     {this.renderSection('Recent', recentApps)}
                     {folderSections.length ? (
