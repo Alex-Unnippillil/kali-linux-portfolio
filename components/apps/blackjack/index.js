@@ -327,7 +327,7 @@ const Blackjack = () => {
         {handValue(hand.cards)}
       </div>
       {overlay && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-dark)_92%,transparent)] px-2 text-xs text-kali-text shadow-[0_4px_14px_rgba(0,0,0,0.45)]">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded border border-[color:color-mix(in_srgb,var(--kali-control)_35%,var(--kali-border))] bg-[var(--kali-control-overlay)] px-2 text-xs font-semibold text-[color:var(--kali-control)] shadow-[0_6px_20px_rgba(9,15,23,0.55)]">
           {overlay.toUpperCase()}
         </div>
       )}
@@ -362,7 +362,7 @@ const Blackjack = () => {
           type="number"
           value={practiceGuess}
           onChange={(e) => setPracticeGuess(e.target.value)}
-          className="w-24 rounded px-2 py-1 text-center text-black"
+          className="w-24 rounded border border-[color:var(--kali-border)] bg-[var(--kali-surface)] px-2 py-1 text-center text-kali-text transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
           aria-label="Enter running count guess"
         />
         <div className="flex flex-wrap items-center justify-center gap-2">
@@ -503,7 +503,7 @@ const Blackjack = () => {
                   const val = parseInt(e.target.value, 10);
                   if (!Number.isNaN(val)) setHandCount(val);
                 }}
-                className="w-12 rounded px-1 text-black"
+                className="w-12 rounded border border-[color:var(--kali-border)] bg-[var(--kali-surface)] px-1 text-kali-text transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
                 aria-label="Hand count"
               />
             </label>
@@ -584,7 +584,7 @@ const Blackjack = () => {
       <div className="mt-2 text-center text-base sm:text-lg" aria-live="polite" role="status">
         {message}
       </div>
-      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-surface)_80%,transparent)] px-4 py-2 text-sm sm:text-base text-kali-text">
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 rounded border border-[color:color-mix(in_srgb,var(--kali-control)_35%,var(--kali-border))] bg-[var(--kali-control-overlay)] px-4 py-2 text-sm sm:text-base text-kali-text">
         <span>Wins: {stats.wins}</span>
         <span>Losses: {stats.losses}</span>
         <span>Pushes: {stats.pushes}</span>
