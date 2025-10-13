@@ -2,10 +2,10 @@
 
 import React, { Component } from 'react';
 import NextImage from 'next/image';
-import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import usePointerDrag from '../../hooks/usePointerDrag';
 import {
     clampWindowTopPosition,
     DEFAULT_WINDOW_TOP_OFFSET,
@@ -127,6 +127,21 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._dragState = null;
+    }
+
+    initializeTransform = () => {
+        const node = this.getWindowNode();
+        if (!node) return;
+        const initialX = typeof this.props.initialX === 'number'
+            ? this.props.initialX
+            : this.startX;
+        const initialY = typeof this.props.initialY === 'number'
+            ? clampWindowTopPosition(this.props.initialY, this.state.safeAreaTop)
+            : this.startY;
+        node.style.transform = `translate(${initialX}px, ${initialY}px)`;
+        node.style.setProperty('--window-transform-x', `${initialX}px`);
+        node.style.setProperty('--window-transform-y', `${initialY}px`);
     }
 
     notifySizeChange = () => {
@@ -139,6 +154,7 @@ export class Window extends Component {
     componentDidMount() {
         this.id = this.props.id;
         this.setDefaultWindowDimenstion();
+        this.initializeTransform();
 
         // google analytics
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
@@ -359,6 +375,92 @@ export class Window extends Component {
         this.setState({ cursorType: "cursor-default", grabbed: false })
     }
 
+    getWindowPosition = () => {
+        const node = this.getWindowNode();
+        if (!node) {
+            return { x: this.startX, y: this.startY };
+        }
+        const style = node.style;
+        if (style) {
+            const xVar = typeof style.getPropertyValue === 'function'
+                ? style.getPropertyValue('--window-transform-x')
+                : null;
+            const yVar = typeof style.getPropertyValue === 'function'
+                ? style.getPropertyValue('--window-transform-y')
+                : null;
+            const parsedX = xVar ? parseFloat(xVar) : NaN;
+            const parsedY = yVar ? parseFloat(yVar) : NaN;
+            if (Number.isFinite(parsedX) && Number.isFinite(parsedY)) {
+                return { x: parsedX, y: parsedY };
+            }
+            const match = typeof style.transform === 'string'
+                ? /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(style.transform)
+                : null;
+            if (match) {
+                const parsedTransformX = parseFloat(match[1]);
+                const parsedTransformY = parseFloat(match[2]);
+                if (Number.isFinite(parsedTransformX) && Number.isFinite(parsedTransformY)) {
+                    return { x: parsedTransformX, y: parsedTransformY };
+                }
+            }
+        }
+        const rect = typeof node.getBoundingClientRect === 'function'
+            ? node.getBoundingClientRect()
+            : null;
+        if (rect) {
+            return { x: rect.left, y: rect.top };
+        }
+        return { x: this.startX, y: this.startY };
+    }
+
+    handlePointerDragStart = (event, coordinates) => {
+        this.changeCursorToMove();
+        const node = this.getWindowNode();
+        if (!node) return;
+        const currentPosition = this.getWindowPosition();
+        this._dragState = {
+            node,
+            offsetX: coordinates.clientX - currentPosition.x,
+            offsetY: coordinates.clientY - currentPosition.y,
+        };
+    }
+
+    handlePointerDragMove = (event, coordinates) => {
+        if (!this._dragState || !this._dragState.node) return;
+        const { node, offsetX, offsetY } = this._dragState;
+        let x = coordinates.clientX - offsetX;
+        let y = coordinates.clientY - offsetY;
+        if (this.props.snapEnabled) {
+            x = this.snapToGrid(x, 'x');
+            y = this.snapToGrid(y, 'y');
+        }
+        const adjusted = this.applyEdgeResistance({ x, y });
+        node.style.transform = `translate(${adjusted.x}px, ${adjusted.y}px)`;
+        this._dragState.lastPosition = adjusted;
+        this.checkSnapPreview();
+    }
+
+    handlePointerDragEnd = (event, coordinates) => {
+        if (!this._dragState || !this._dragState.node) return;
+        const { node, offsetX, offsetY, lastPosition } = this._dragState;
+        let x = coordinates.clientX - offsetX;
+        let y = coordinates.clientY - offsetY;
+        if (lastPosition) {
+            x = lastPosition.x;
+            y = lastPosition.y;
+        } else if (this.props.snapEnabled) {
+            x = this.snapToGrid(x, 'x');
+            y = this.snapToGrid(y, 'y');
+        }
+        const adjusted = this.applyEdgeResistance({ x, y });
+        node.style.transform = `translate(${adjusted.x}px, ${adjusted.y}px)`;
+        this._dragState = null;
+    }
+
+    handlePointerCaptureEnd = () => {
+        this.releaseGrab();
+    }
+
     getSnapGrid = () => {
         const fallback = [8, 8];
         if (!Array.isArray(this.props.snapGrid)) {
@@ -558,11 +660,11 @@ export class Window extends Component {
         }
     }
 
-    applyEdgeResistance = (node, data) => {
-        if (!node || !data) return;
+    applyEdgeResistance = (coords) => {
+        if (!coords) return { x: 0, y: 0 };
         const threshold = 30;
         const resistance = 0.35; // how much to slow near edges
-        let { x, y } = data;
+        let { x, y } = coords;
         const topBound = this.state.safeAreaTop ?? 0;
         const maxX = this.state.parentSize.width;
         const maxY = topBound + this.state.parentSize.height;
@@ -573,18 +675,11 @@ export class Window extends Component {
             if (pos > max) return max;
             if (pos > max - threshold) return max - (max - pos) * resistance;
             return pos;
-        }
+        };
 
         x = resist(x, 0, maxX);
         y = resist(y, topBound, maxY);
-        node.style.transform = `translate(${x}px, ${y}px)`;
-    }
-
-    handleDrag = (e, data) => {
-        if (data && data.node) {
-            this.applyEdgeResistance(data.node, data);
-        }
-        this.checkSnapPreview();
+        return { x, y };
     }
 
     handleStop = () => {
@@ -593,7 +688,9 @@ export class Window extends Component {
         if (snapPos) {
             this.snapWindow(snapPos);
         } else {
-            this.setState({ snapPreview: null, snapPosition: null });
+            this.setState({ snapPreview: null, snapPosition: null }, () => {
+                this.setWinowsPosition();
+            });
         }
     }
 
@@ -814,7 +911,8 @@ export class Window extends Component {
             ? this.props.zIndex
             : (this.props.isFocused ? 30 : 20);
 
-        const snapGrid = this.getSnapGrid();
+        const transformX = `var(--window-transform-x, ${this.startX}px)`;
+        const transformY = `var(--window-transform-y, ${this.startY}px)`;
 
         const windowState = this.props.minimized
             ? 'minimized'
@@ -848,27 +946,9 @@ export class Window extends Component {
                         </span>
                     </div>
                 )}
-                <Draggable
-                    nodeRef={this.windowRef}
-                    axis="both"
-                    handle=".bg-ub-window-title"
-                    grid={this.props.snapEnabled ? snapGrid : [1, 1]}
-                    scale={1}
-                    onStart={this.changeCursorToMove}
-                    onStop={this.handleStop}
-                    onDrag={this.handleDrag}
-                    allowAnyClick={false}
-                    defaultPosition={{ x: this.startX, y: this.startY }}
-                    bounds={{
-                        left: 0,
-                        top: this.state.safeAreaTop,
-                        right: this.state.parentSize.width,
-                        bottom: this.state.safeAreaTop + this.state.parentSize.height,
-                    }}
-                >
-                    <div
-                        ref={this.windowRef}
-                        style={{ position: 'absolute', width: `${this.state.width}%`, height: `${this.state.height}%`, zIndex: computedZIndex }}
+                <div
+                    ref={this.windowRef}
+                    style={{ position: 'absolute', width: `${this.state.width}%`, height: `${this.state.height}%`, zIndex: computedZIndex, transform: `translate(${transformX}, ${transformY})` }}
                         className={[
                             this.state.cursorType,
                             this.state.closed ? 'closed-window' : '',
@@ -898,6 +978,10 @@ export class Window extends Component {
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
                             onPointerDown={this.focusWindow}
+                            onPointerCaptureEnd={this.handlePointerCaptureEnd}
+                            onDragStart={this.handlePointerDragStart}
+                            onDragMove={this.handlePointerDragMove}
+                            onDragEnd={this.handlePointerDragEnd}
                             onDoubleClick={this.handleTitleBarDoubleClick}
                         />
                         <WindowEditButtons
@@ -915,8 +999,7 @@ export class Window extends Component {
                                 addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
                                 openApp={this.props.openApp}
                                 context={this.props.context} />)}
-                    </div>
-                </Draggable >
+                </div>
             </>
         )
     }
@@ -925,7 +1008,28 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick }) {
+export function WindowTopBar({
+    title,
+    onKeyDown,
+    onBlur,
+    grabbed,
+    onPointerDown,
+    onPointerCaptureEnd,
+    onDragStart,
+    onDragMove,
+    onDragEnd,
+    onDoubleClick,
+}) {
+    const pointerHandlers = usePointerDrag({
+        pointerButton: 0,
+        onPointerDown,
+        onPointerCaptureEnd,
+        onStart: onDragStart,
+        onMove: onDragMove,
+        onEnd: onDragEnd,
+        onCancel: onDragEnd,
+    });
+
     return (
         <div
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
@@ -934,8 +1038,8 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
-            onPointerDown={onPointerDown}
             onDoubleClick={onDoubleClick}
+            {...pointerHandlers}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>

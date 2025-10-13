@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { DraggableEvent, DraggableData } from 'react-draggable';
-
 import SafeDraggable from './SafeDraggable';
+import type { PointerDragData } from '../../components/common/PointerDraggable';
 
 interface NodeData {
   x: number;
@@ -20,7 +19,7 @@ const initialNodes: Record<string, NodeData> = {
 export default function ArpDiagram() {
   const [nodes, setNodes] = useState<Record<string, NodeData>>(initialNodes);
 
-  const handleDrag = (key: string) => (_: DraggableEvent, data: DraggableData) => {
+  const handleDrag = (key: string) => (_: PointerEvent, data: PointerDragData) => {
     setNodes((n) => ({ ...n, [key]: { ...n[key], x: data.x, y: data.y } }));
   };
 
