@@ -21,16 +21,18 @@ type SectionProps = {
 };
 
 const Section = ({ title, description, children }: SectionProps) => (
-  <section className="border border-gray-900/80 rounded-xl overflow-hidden bg-ub-cool-grey/50 backdrop-blur-sm">
-    <header className="px-4 py-3 border-b border-gray-900/60 bg-ub-cool-grey/60">
-      <h2 className="text-xs font-semibold uppercase tracking-[0.25em] text-ubt-grey/80">
+  <section className="rounded-xl overflow-hidden border border-[var(--kali-panel-border)] bg-[var(--kali-panel)] shadow-kali-panel backdrop-blur-sm">
+    <header className="border-b border-[var(--kali-panel-border)] bg-[var(--kali-panel)] px-4 py-3">
+      <h2 className="text-xs font-semibold uppercase tracking-[0.25em] text-[var(--color-text)] opacity-70">
         {title}
       </h2>
       {description && (
-        <p className="mt-1 text-xs text-ubt-grey/60 leading-relaxed">{description}</p>
+        <p className="mt-1 text-xs leading-relaxed text-[var(--color-text)] opacity-60">
+          {description}
+        </p>
       )}
     </header>
-    <div className="divide-y divide-gray-900/60">{children}</div>
+    <div className="divide-y divide-[var(--kali-panel-border)]">{children}</div>
   </section>
 );
 
@@ -54,18 +56,25 @@ const SettingRow = ({ label, labelFor, children, helperText, align = "start" }: 
     <div className="px-4 py-4">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         {labelFor ? (
-          <label htmlFor={labelFor} className="text-sm font-medium text-ubt-grey md:w-56">
+          <label
+            htmlFor={labelFor}
+            className="text-sm font-medium text-[var(--color-text)] opacity-80 md:w-56"
+          >
             {label}
           </label>
         ) : (
-          <span className="text-sm font-medium text-ubt-grey md:w-56">{label}</span>
+          <span className="text-sm font-medium text-[var(--color-text)] opacity-80 md:w-56">
+            {label}
+          </span>
         )}
         <div className={`flex flex-1 items-center gap-3 justify-start ${alignmentClass}`}>
           {children}
         </div>
       </div>
       {helperText && (
-        <p className="mt-2 text-xs text-ubt-grey/70 leading-relaxed md:ml-56">{helperText}</p>
+        <p className="mt-2 text-xs leading-relaxed text-[var(--color-text)] opacity-70 md:ml-56">
+          {helperText}
+        </p>
       )}
     </div>
   );
@@ -167,8 +176,8 @@ export default function Settings() {
   const [showKeymap, setShowKeymap] = useState(false);
 
   return (
-    <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey">
-      <div className="flex justify-center border-b border-gray-900 bg-ub-cool-grey/80 backdrop-blur-sm">
+    <div className="windowMainScreen z-20 flex max-h-full w-full flex-grow select-none flex-col overflow-y-auto bg-[var(--kali-panel)]">
+      <div className="flex justify-center border-b border-[var(--kali-panel-border)] bg-[var(--kali-panel)] backdrop-blur-sm">
         <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
       </div>
       <div className="px-4 pb-10">
@@ -179,7 +188,7 @@ export default function Settings() {
               description="Check how your desktop updates as you tweak the appearance controls."
             >
               <div className="px-4 py-6">
-                <div className="relative mx-auto h-40 w-full max-w-xl overflow-hidden rounded-lg border border-gray-900/70 shadow-inner">
+                <div className="relative mx-auto h-40 w-full max-w-xl overflow-hidden rounded-lg border border-[var(--kali-panel-border)] shadow-inner">
                   {useKaliWallpaper ? (
                     <KaliWallpaper />
                   ) : (
@@ -198,7 +207,7 @@ export default function Settings() {
                 <select
                   value={theme}
                   onChange={(e) => setTheme(e.target.value)}
-                  className="bg-ub-cool-grey text-ubt-grey px-3 py-2 rounded border border-ubt-cool-grey focus:border-ubt-grey focus:outline-none"
+                  className="rounded border border-[var(--kali-panel-border)] bg-[var(--kali-panel)] px-3 py-2 text-[var(--color-text)] focus:border-kali-control focus:outline-none"
                 >
                   <option value="default">Default</option>
                   <option value="dark">Dark</option>
@@ -216,8 +225,10 @@ export default function Settings() {
                       role="radio"
                       aria-checked={accent === c}
                       onClick={() => setAccent(c)}
-                      className={`h-8 w-8 rounded-full border-2 transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${
-                        accent === c ? "border-white shadow-[0_0_0_2px_rgba(255,255,255,0.35)]" : "border-transparent"
+                      className={`h-8 w-8 rounded-full border-2 transition-shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-control/70 ${
+                        accent === c
+                          ? "border-kali-control shadow-[0_0_0_3px_rgba(15,148,210,0.35)]"
+                          : "border-transparent"
                       }`}
                       style={{ backgroundColor: c }}
                     />
@@ -232,7 +243,7 @@ export default function Settings() {
                 <select
                   value={density}
                   onChange={(e) => setDensity(e.target.value as any)}
-                  className="bg-ub-cool-grey text-ubt-grey px-3 py-2 rounded border border-ubt-cool-grey focus:border-ubt-grey focus:outline-none"
+                  className="rounded border border-[var(--kali-panel-border)] bg-[var(--kali-panel)] px-3 py-2 text-[var(--color-text)] focus:border-kali-control focus:outline-none"
                 >
                   <option value="regular">Regular</option>
                   <option value="compact">Compact</option>
@@ -242,12 +253,12 @@ export default function Settings() {
 
             <Section title="Wallpaper" description="Pick a static wallpaper or let the Kali gradient take over.">
               <SettingRow label="Kali Gradient" helperText="Your previous wallpaper is saved when the gradient is active.">
-                <label className="inline-flex items-center gap-3 text-ubt-grey">
+                <label className="inline-flex items-center gap-3 text-[var(--color-text)] opacity-80">
                   <input
                     type="checkbox"
                     checked={useKaliWallpaper}
                     onChange={(e) => setUseKaliWallpaper(e.target.checked)}
-                    className="h-4 w-4 accent-ub-orange"
+                    className="h-4 w-4 accent-[var(--kali-control)]"
                     aria-label="Enable gradient wallpaper"
                   />
                   Enable gradient wallpaper
@@ -294,11 +305,11 @@ export default function Settings() {
                         changeBackground(name);
                       }
                     }}
-                    className={`${
+                    className={`relative flex h-32 w-full items-center justify-center overflow-hidden rounded-lg border-4 border-opacity-80 outline-none transition-transform focus-visible:scale-[1.02] focus-visible:border-kali-control ${
                       name === wallpaper
-                        ? "border-yellow-700 shadow-[0_0_0_2px_rgba(255,214,0,0.35)]"
+                        ? "border-kali-control shadow-[0_0_0_4px_rgba(15,148,210,0.28)]"
                         : "border-transparent"
-                    } relative flex h-32 w-full items-center justify-center overflow-hidden rounded-lg border-4 border-opacity-80 outline-none transition-transform focus-visible:scale-[1.02] focus-visible:border-white`}
+                    }`}
                     style={{
                       backgroundImage: `url(/wallpapers/${name}.webp)`,
                       backgroundSize: "cover",
@@ -313,12 +324,12 @@ export default function Settings() {
             <Section title="Desktop Actions">
               <div className="px-4 py-4">
                 <div className="flex flex-col items-stretch gap-3 md:flex-row md:items-center md:justify-between">
-                  <p className="text-sm text-ubt-grey/80">
+                  <p className="text-sm text-[var(--color-text)] opacity-75">
                     Restore the default wallpaper, theme, and layout preferences.
                   </p>
                   <button
                     onClick={handleReset}
-                    className="inline-flex items-center justify-center rounded bg-ub-orange px-4 py-2 text-sm font-semibold text-white shadow transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                    className="inline-flex items-center justify-center rounded border border-[var(--kali-panel-border)] bg-kali-control px-4 py-2 text-sm font-semibold text-black shadow transition hover:bg-kali-control/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-control/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
                   >
                     Reset Desktop
                   </button>
@@ -373,12 +384,12 @@ export default function Settings() {
             <Section title="Keyboard Shortcuts" description="Customize or review the desktop keymap.">
               <div className="px-4 py-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <p className="text-sm text-ubt-grey/80">
+                  <p className="text-sm text-[var(--color-text)] opacity-75">
                     Quickly open the keymap overlay to remap or review shortcuts.
                   </p>
                   <button
                     onClick={() => setShowKeymap(true)}
-                    className="inline-flex items-center justify-center rounded bg-ub-orange px-4 py-2 text-sm font-semibold text-white shadow transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                    className="inline-flex items-center justify-center rounded border border-[var(--kali-panel-border)] bg-kali-control px-4 py-2 text-sm font-semibold text-black shadow transition hover:bg-kali-control/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-control/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
                   >
                     Edit Shortcuts
                   </button>
@@ -393,19 +404,19 @@ export default function Settings() {
             <Section title="Data">
               <div className="px-4 py-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <p className="text-sm text-ubt-grey/80">
+                  <p className="text-sm text-[var(--color-text)] opacity-75">
                     Export a backup of your settings or import one you saved earlier.
                   </p>
                   <div className="flex flex-col gap-3 md:flex-row md:items-center">
                     <button
                       onClick={handleExport}
-                      className="inline-flex items-center justify-center rounded bg-ub-orange px-4 py-2 text-sm font-semibold text-white shadow transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                      className="inline-flex items-center justify-center rounded border border-[var(--kali-panel-border)] bg-kali-control px-4 py-2 text-sm font-semibold text-black shadow transition hover:bg-kali-control/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-control/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
                     >
                       Export Settings
                     </button>
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="inline-flex items-center justify-center rounded bg-ub-orange px-4 py-2 text-sm font-semibold text-white shadow transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                      className="inline-flex items-center justify-center rounded border border-[var(--kali-panel-border)] bg-kali-control px-4 py-2 text-sm font-semibold text-black shadow transition hover:bg-kali-control/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-control/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
                     >
                       Import Settings
                     </button>
