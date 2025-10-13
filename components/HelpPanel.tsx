@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 
@@ -9,14 +9,35 @@ interface HelpPanelProps {
   docPath?: string;
 }
 
+export type HelpEntry = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  docPath: string;
+  keywords?: string[];
+  icon?: string;
+};
+
+export const HELP_ENTRIES: HelpEntry[] = [
+  {
+    id: 'terminal',
+    title: 'Terminal Help',
+    subtitle: 'Keyboard shortcuts and command list for the simulated shell.',
+    docPath: '/docs/apps/terminal.md',
+    keywords: ['shell', 'command line', 'history', 'keyboard', 'help'],
+  },
+];
+
 export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
   const [open, setOpen] = useState(false);
   const [html, setHtml] = useState("<p>Loading...</p>");
 
+  const helpEntry = useMemo(() => HELP_ENTRIES.find((entry) => entry.id === appId), [appId]);
+  const resolvedDocPath = docPath || helpEntry?.docPath || `/docs/apps/${appId}.md`;
+
   useEffect(() => {
     if (!open) return;
-    const path = docPath || `/docs/apps/${appId}.md`;
-    fetch(path)
+    fetch(resolvedDocPath)
       .then((res) => (res.ok ? res.text() : ""))
       .then((md) => {
         if (!md) {
@@ -27,7 +48,7 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
         setHtml(rendered);
       })
       .catch(() => setHtml("<p>No help available.</p>"));
-  }, [open, appId, docPath]);
+  }, [open, resolvedDocPath]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -54,8 +75,10 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
         type="button"
         aria-label="Help"
         aria-expanded={open}
+        aria-keyshortcuts="?"
         onClick={toggle}
         className="fixed top-2 right-2 z-40 bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
+        title="Toggle help (?)"
       >
         ?
       </button>

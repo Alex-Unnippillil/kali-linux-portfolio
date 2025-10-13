@@ -8,6 +8,25 @@ if (typeof global.structuredClone !== 'function') {
 require('fake-indexeddb/auto');
 import '@testing-library/jest-dom';
 
+jest.mock('marked', () => ({
+  marked: {
+    parse: (value: string) =>
+      value
+        .split('\n')
+        .map((line) => {
+          const headingMatch = /^#\s+(.*)$/.exec(line);
+          if (headingMatch) {
+            return `<h1>${headingMatch[1]}</h1>`;
+          }
+          if (!line.trim()) {
+            return '';
+          }
+          return `<p>${line}</p>`;
+        })
+        .join(''),
+  },
+}));
+
 // Provide TextEncoder/TextDecoder for libraries that expect them in the test environment
 // @ts-ignore
 global.TextEncoder = TextEncoder;
