@@ -8,12 +8,25 @@
 </head>
 <body>
   <main>
-    <h1>Offline</h1>
-    <p>You appear to be offline. Please check your connection.</p>
-    <button id="retry">Retry</button>
-    <section>
-      <h2>Cached Apps</h2>
-      <ul id="apps"></ul>
+    <header>
+      <p class="status-kicker" id="offline-status">Offline mode</p>
+      <h1>Connection lost</h1>
+      <p class="lead">
+        The desktop is running from local cache. Reconnect to sync live data or keep working with the saved apps below.
+      </p>
+      <button id="retry" type="button">Retry connection</button>
+    </header>
+
+    <section aria-labelledby="cached-apps-heading" class="card">
+      <h2 id="cached-apps-heading">Cached apps</h2>
+      <p class="section-summary">These experiences were stored on this device and remain ready to launch.</p>
+      <ul id="apps" class="cached-apps" role="list"></ul>
+    </section>
+
+    <section aria-labelledby="suggestions-heading" class="card" id="suggestions">
+      <h2 id="suggestions-heading">Suggested next steps</h2>
+      <p class="section-summary">Pick an activity that fits what you were doing before the connection dropped.</p>
+      <div id="suggestion-groups" class="suggestion-groups" role="list"></div>
     </section>
   </main>
   <script src="/offline.js" defer></script>
