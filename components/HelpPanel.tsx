@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import DOMPurify from 'dompurify';
-import { marked } from 'marked';
+
+import { normalizeDocSlug } from '../lib/docs/slug';
 
 interface HelpPanelProps {
   appId: string;
@@ -15,15 +16,25 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
 
   useEffect(() => {
     if (!open) return;
-    const path = docPath || `/docs/apps/${appId}.md`;
-    fetch(path)
-      .then((res) => (res.ok ? res.text() : ""))
-      .then((md) => {
-        if (!md) {
+    const slug = normalizeDocSlug(
+      docPath ? docPath.replace(/^\/+/, '') : [`apps`, appId]
+    );
+
+    if (!slug) {
+      setHtml("<p>No help available.</p>");
+      return;
+    }
+
+    const url = `/api/docs/${slug}?version=latest`;
+
+    fetch(url)
+      .then((res) => (res.ok ? res.json() : undefined))
+      .then((data) => {
+        if (!data?.html) {
           setHtml("<p>No help available.</p>");
           return;
         }
-        const rendered = DOMPurify.sanitize(marked.parse(md) as string);
+        const rendered = DOMPurify.sanitize(data.html as string);
         setHtml(rendered);
       })
       .catch(() => setHtml("<p>No help available.</p>"));
