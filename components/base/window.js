@@ -435,7 +435,7 @@ export class Window extends Component {
             const x = node.style.getPropertyValue('--window-transform-x');
             const y = node.style.getPropertyValue('--window-transform-y');
             if (x && y) {
-                node.style.transform = `translate(${x},${y})`;
+                node.style.transform = `translate3d(${x}, ${y}, 0)`;
             }
         }
         if (this.state.lastSize) {
@@ -474,7 +474,7 @@ export class Window extends Component {
         const node = this.getWindowNode();
         if (node) {
             this.setTransformMotionPreset(node, 'snap');
-            node.style.transform = `translate(${region.left}px, ${region.top}px)`;
+            node.style.transform = `translate3d(${region.left}px, ${region.top}px, 0)`;
         }
         this.setState({
             snapPreview: null,
@@ -577,7 +577,7 @@ export class Window extends Component {
 
         x = resist(x, 0, maxX);
         y = resist(y, topBound, maxY);
-        node.style.transform = `translate(${x}px, ${y}px)`;
+        node.style.transform = `translate3d(${x}px, ${y}px, 0)`;
     }
 
     handleDrag = (e, data) => {
@@ -648,7 +648,7 @@ export class Window extends Component {
         // get previous position
         const posx = node.style.getPropertyValue("--window-transform-x") || `${this.startX}px`;
         const posy = node.style.getPropertyValue("--window-transform-y") || `${this.startY}px`;
-        const endTransform = `translate(${posx},${posy})`;
+        const endTransform = `translate3d(${posx}, ${posy}, 0)`;
         const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         this.setTransformMotionPreset(node, 'restore');
@@ -682,7 +682,7 @@ export class Window extends Component {
             if (node) {
                 this.setTransformMotionPreset(node, 'maximize');
                 const translateYOffset = topOffset - DESKTOP_TOP_PADDING;
-                node.style.transform = `translate(-1pt, ${translateYOffset}px)`;
+                node.style.transform = `translate3d(-1pt, ${translateYOffset}px, 0)`;
             }
             this.setState({ maximized: true, height: heightPercent, width: 100.2, preMaximizeSize: currentSize }, () => {
                 this.notifySizeChange();
@@ -724,12 +724,12 @@ export class Window extends Component {
                 e.stopPropagation();
                 const node = this.getWindowNode();
                 if (node) {
-                    const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
+                    const match = /translate(?:3d)?\(\s*([-\d.]+)(?:px|pt),\s*([-\d.]+)px(?:,\s*(?:0|0px)\s*)?\)/.exec(node.style.transform);
                     let x = match ? parseFloat(match[1]) : 0;
                     let y = match ? parseFloat(match[2]) : 0;
                     x += dx;
                     y += dy;
-                    node.style.transform = `translate(${x}px, ${y}px)`;
+                    node.style.transform = `translate3d(${x}px, ${y}px, 0)`;
                     this.checkSnapPreview();
                     this.setWinowsPosition();
                 }
