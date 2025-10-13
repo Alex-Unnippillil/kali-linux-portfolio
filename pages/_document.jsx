@@ -15,10 +15,15 @@ class MyDocument extends Document {
     return (
       <Html lang="en" data-csp-nonce={nonce}>
         <Head>
+          <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
+          <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          {/* eslint-disable-next-line @next/next/google-font-preconnect */}
+          <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
           <link rel="icon" href="/favicon.ico" />
           <link rel="manifest" href="/manifest.webmanifest" />
           <meta name="theme-color" content="#0f1317" />
-          <script nonce={nonce} src="/theme.js" />
+          <script nonce={nonce} src="/theme.js" defer />
         </Head>
         <body>
           <Main />

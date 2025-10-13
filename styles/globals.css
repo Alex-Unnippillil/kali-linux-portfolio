@@ -48,6 +48,13 @@
 body {
   background: var(--kali-bg);
   color: var(--kali-text);
+  font-family: var(
+    --font-family-base,
+    'Rajdhani',
+    'Segoe UI',
+    sans-serif
+  );
+  font-display: swap;
 }
 
 /* Dark theme */

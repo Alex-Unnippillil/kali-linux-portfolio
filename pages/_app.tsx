@@ -79,6 +79,7 @@ type AnalyticsEventWithMetadata = BeforeSendEvent & {
 const kaliSans = Rajdhani({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
+  display: 'swap',
 });
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
