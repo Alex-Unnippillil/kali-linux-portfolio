@@ -2852,11 +2852,15 @@ export class Desktop extends Component {
                 const positions = {};
                 if (session.windows && session.windows.length) {
                     const safeTopOffset = measureWindowTopOffset();
-                    session.windows.forEach(({ id, x, y }) => {
-                        positions[id] = {
+                    session.windows.forEach(({ id, x, y, snapped }) => {
+                        const entry = {
                             x,
                             y: clampWindowTopPosition(y, safeTopOffset),
                         };
+                        if (typeof snapped === 'string') {
+                            entry.snapped = snapped;
+                        }
+                        positions[id] = entry;
                     });
                     this.setWorkspaceState({ window_positions: positions }, () => {
                         session.windows.forEach(({ id }) => this.openApp(id));
@@ -3895,8 +3899,10 @@ export class Desktop extends Component {
                 defaultHeight,
                 initialX: pos ? pos.x : undefined,
                 initialY: pos ? clampWindowTopPosition(pos.y, safeTopOffset) : safeTopOffset,
+                initialSnapPosition: typeof pos?.snapped === 'string' ? pos.snapped : undefined,
                 onPositionChange: (x, y) => this.updateWindowPosition(id, x, y),
                 onSizeChange: (width, height) => this.updateWindowSize(id, width, height),
+                onSnapChange: (snap) => this.updateWindowSnapState(id, snap),
                 snapEnabled: this.props.snapEnabled,
                 snapGrid,
                 context: this.state.window_context[id],
@@ -4021,12 +4027,31 @@ export class Desktop extends Component {
         const safeTopOffset = measureWindowTopOffset();
         const nextX = snapValue(x, gridX);
         const nextY = clampWindowTopPosition(snapValue(y, gridY), safeTopOffset);
-        this.setWorkspaceState(prev => ({
-            window_positions: { ...prev.window_positions, [id]: { x: nextX, y: nextY } }
-        }), () => {
+        this.setWorkspaceState(prev => {
+            const prevEntry = prev.window_positions?.[id] || {};
+            const nextEntry = { ...prevEntry, x: nextX, y: nextY };
+            return {
+                window_positions: { ...prev.window_positions, [id]: nextEntry }
+            };
+        }, () => {
             this.persistWindowSizes(this.state.window_sizes || {});
             this.saveSession();
         });
+    }
+
+    updateWindowSnapState = (id, snapPosition) => {
+        this.setWorkspaceState((prev) => {
+            const prevEntry = prev.window_positions?.[id] || {};
+            const nextEntry = { ...prevEntry };
+            if (snapPosition) {
+                nextEntry.snapped = snapPosition;
+            } else if ('snapped' in nextEntry) {
+                delete nextEntry.snapped;
+            }
+            return {
+                window_positions: { ...prev.window_positions, [id]: nextEntry },
+            };
+        }, this.saveSession);
     }
 
     updateWindowSize = (id, width, height) => {
@@ -4072,7 +4097,11 @@ export class Desktop extends Component {
             const position = this.state.window_positions[id] || {};
             const nextX = typeof position.x === 'number' ? position.x : 60;
             const nextY = clampWindowTopPosition(position.y, safeTopOffset);
-            return { id, x: nextX, y: nextY };
+            const entry = { id, x: nextX, y: nextY };
+            if (typeof position.snapped === 'string') {
+                entry.snapped = position.snapped;
+            }
+            return entry;
         });
 
         const nextSession = { ...this.props.session, windows };

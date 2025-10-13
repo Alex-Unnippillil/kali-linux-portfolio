@@ -8,10 +8,14 @@ import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import {
     clampWindowTopPosition,
+    computeExtendedSnapRegions,
+    computeSnapRegions,
     DEFAULT_WINDOW_TOP_OFFSET,
+    getSnapPreviewLabel,
     measureSafeAreaInset,
     measureSnapBottomInset,
     measureWindowTopOffset,
+    resolveDirectionalSnap,
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET } from '../../utils/uiConstants';
@@ -29,21 +33,6 @@ const percentOf = (value, total) => {
     return (value / total) * 100;
 };
 
-const SNAP_LABELS = {
-    left: 'Snap left half',
-    right: 'Snap right half',
-    top: 'Snap full screen',
-    'top-left': 'Snap top-left quarter',
-    'top-right': 'Snap top-right quarter',
-    'bottom-left': 'Snap bottom-left quarter',
-    'bottom-right': 'Snap bottom-right quarter',
-};
-
-const getSnapLabel = (position) => {
-    if (!position) return 'Snap window';
-    return SNAP_LABELS[position] || 'Snap window';
-};
-
 const normalizeRightCornerSnap = (candidate, regions) => {
     if (!candidate) return null;
     const { position } = candidate;
@@ -54,37 +43,6 @@ const normalizeRightCornerSnap = (candidate, regions) => {
         }
     }
     return candidate;
-};
-
-const computeSnapRegions = (
-    viewportWidth,
-    viewportHeight,
-    topInset = DEFAULT_WINDOW_TOP_OFFSET,
-    bottomInset,
-) => {
-    const normalizedTopInset = typeof topInset === 'number'
-        ? Math.max(topInset, DESKTOP_TOP_PADDING)
-        : DEFAULT_WINDOW_TOP_OFFSET;
-    const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
-    const snapBottomInset = typeof bottomInset === 'number' && Number.isFinite(bottomInset)
-        ? Math.max(bottomInset, 0)
-        : measureSnapBottomInset();
-    const availableHeight = Math.max(0, viewportHeight - normalizedTopInset - snapBottomInset - safeBottom);
-    const halfWidth = Math.max(viewportWidth / 2, 0);
-    const halfHeight = Math.max(availableHeight / 2, 0);
-    const rightStart = Math.max(viewportWidth - halfWidth, 0);
-    const bottomStart = normalizedTopInset + halfHeight;
-
-    return {
-        left: { left: 0, top: normalizedTopInset, width: halfWidth, height: availableHeight },
-        right: { left: rightStart, top: normalizedTopInset, width: halfWidth, height: availableHeight },
-        top: { left: 0, top: normalizedTopInset, width: viewportWidth, height: availableHeight },
-        'top-left': { left: 0, top: normalizedTopInset, width: halfWidth, height: halfHeight },
-        'top-right': { left: rightStart, top: normalizedTopInset, width: halfWidth, height: halfHeight },
-        'bottom-left': { left: 0, top: bottomStart, width: halfWidth, height: halfHeight },
-        'bottom-right': { left: rightStart, top: bottomStart, width: halfWidth, height: halfHeight },
-
-    };
 };
 
 export class Window extends Component {
@@ -127,6 +85,8 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._dragContext = null;
+        this._pendingInitialSnap = props.initialSnapPosition || null;
     }
 
     notifySizeChange = () => {
@@ -155,6 +115,18 @@ export class Window extends Component {
         }
         if (this.props.isFocused) {
             this.focusWindow();
+        }
+        if (this._pendingInitialSnap && this.props.snapEnabled !== false) {
+            const target = this._pendingInitialSnap;
+            this._pendingInitialSnap = null;
+            const applyInitialSnap = () => {
+                this.snapWindow(target);
+            };
+            if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(applyInitialSnap);
+            } else {
+                setTimeout(applyInitialSnap, 0);
+            }
         }
     }
 
@@ -352,7 +324,22 @@ export class Window extends Component {
         if (this.state.snapped) {
             this.unsnapWindow();
         }
-        this.setState({ cursorType: "cursor-move", grabbed: true })
+        this.setState({ cursorType: "cursor-move", grabbed: true }, () => {
+            const context = this.getSnapContext();
+            const regions = computeExtendedSnapRegions(
+                context.viewportWidth,
+                context.viewportHeight,
+                context.topInset,
+                context.snapBottomInset,
+            );
+            this._dragContext = { ...context, regions };
+            if (typeof this.props.onDragStateChange === 'function') {
+                this.props.onDragStateChange(true, { ...this._dragContext });
+            }
+            if (typeof this.props.onSnapPreviewChange === 'function') {
+                this.props.onSnapPreviewChange(null, null, { ...this._dragContext });
+            }
+        })
     }
 
     changeCursorToDefault = () => {
@@ -438,6 +425,11 @@ export class Window extends Component {
                 node.style.transform = `translate(${x},${y})`;
             }
         }
+        const notify = () => {
+            if (typeof this.props.onSnapStateChange === 'function') {
+                this.props.onSnapStateChange(null, null);
+            }
+        };
         if (this.state.lastSize) {
             this.setState({
                 width: this.state.lastSize.width,
@@ -447,11 +439,13 @@ export class Window extends Component {
             }, () => {
                 this.resizeBoundries();
                 this.notifySizeChange();
+                notify();
             });
         } else {
             this.setState({ snapped: null, preMaximizeSize: null }, () => {
                 this.resizeBoundries();
                 this.notifySizeChange();
+                notify();
             });
         }
     }
@@ -467,7 +461,14 @@ export class Window extends Component {
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         if (!viewportWidth || !viewportHeight) return;
         const snapBottomInset = measureSnapBottomInset();
-        const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset, snapBottomInset);
+        const baseRegions = computeSnapRegions(viewportWidth, viewportHeight, topInset, snapBottomInset);
+        const regions = computeExtendedSnapRegions(
+            viewportWidth,
+            viewportHeight,
+            topInset,
+            snapBottomInset,
+            baseRegions,
+        );
         const region = regions[resolvedPosition];
         if (!region) return;
         const { width, height } = this.state;
@@ -476,6 +477,13 @@ export class Window extends Component {
             this.setTransformMotionPreset(node, 'snap');
             node.style.transform = `translate(${region.left}px, ${region.top}px)`;
         }
+        this._dragContext = {
+            viewportWidth,
+            viewportHeight,
+            topInset,
+            snapBottomInset,
+            regions,
+        };
         this.setState({
             snapPreview: null,
             snapPosition: null,
@@ -487,6 +495,16 @@ export class Window extends Component {
         }, () => {
             this.resizeBoundries();
             this.notifySizeChange();
+            if (typeof this.props.onSnapStateChange === 'function') {
+                const announcementRegion = {
+                    ...region,
+                    viewportWidth,
+                    viewportHeight,
+                    topInset,
+                    snapBottomInset,
+                };
+                this.props.onSnapStateChange(resolvedPosition, announcementRegion);
+            }
         });
     }
 
@@ -504,6 +522,19 @@ export class Window extends Component {
         }
     }
 
+    getSnapContext = () => {
+        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const snapBottomInset = measureSnapBottomInset();
+        return {
+            viewportWidth,
+            viewportHeight,
+            topInset,
+            snapBottomInset,
+        };
+    }
+
     checkSnapPreview = () => {
         const node = this.getWindowNode();
         if (!node) return;
@@ -516,7 +547,15 @@ export class Window extends Component {
         const verticalThreshold = computeEdgeThreshold(viewportHeight);
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         const snapBottomInset = measureSnapBottomInset();
-        const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset, snapBottomInset);
+        const baseRegions = computeSnapRegions(viewportWidth, viewportHeight, topInset, snapBottomInset);
+        const regions = computeExtendedSnapRegions(viewportWidth, viewportHeight, topInset, snapBottomInset, baseRegions);
+        this._dragContext = {
+            viewportWidth,
+            viewportHeight,
+            topInset,
+            snapBottomInset,
+            regions,
+        };
 
         const nearTop = rect.top <= topInset + verticalThreshold;
         const nearBottom = viewportHeight - rect.bottom <= verticalThreshold;
@@ -551,10 +590,22 @@ export class Window extends Component {
                 this.state.snapPreview.width === preview.width &&
                 this.state.snapPreview.height === preview.height;
             if (!samePosition || !samePreview) {
-                this.setState({ snapPreview: preview, snapPosition: position });
+                this.setState({ snapPreview: preview, snapPosition: position }, () => {
+                    if (typeof this.props.onSnapPreviewChange === 'function') {
+                        this.props.onSnapPreviewChange(position, preview, { ...this._dragContext });
+                    }
+                });
+            } else if (typeof this.props.onSnapPreviewChange === 'function') {
+                this.props.onSnapPreviewChange(position, preview, { ...this._dragContext });
             }
         } else if (this.state.snapPreview) {
-            this.setState({ snapPreview: null, snapPosition: null });
+            this.setState({ snapPreview: null, snapPosition: null }, () => {
+                if (typeof this.props.onSnapPreviewChange === 'function') {
+                    this.props.onSnapPreviewChange(null, null, { ...this._dragContext });
+                }
+            });
+        } else if (typeof this.props.onSnapPreviewChange === 'function') {
+            this.props.onSnapPreviewChange(null, null, { ...this._dragContext });
         }
     }
 
@@ -594,7 +645,34 @@ export class Window extends Component {
             this.snapWindow(snapPos);
         } else {
             this.setState({ snapPreview: null, snapPosition: null });
+            if (!this._dragContext) {
+                const context = this.getSnapContext();
+                const regions = computeExtendedSnapRegions(
+                    context.viewportWidth,
+                    context.viewportHeight,
+                    context.topInset,
+                    context.snapBottomInset,
+                );
+                this._dragContext = { ...context, regions };
+            }
+            if (typeof this.props.onSnapPreviewChange === 'function') {
+                this.props.onSnapPreviewChange(null, null, { ...this._dragContext });
+            }
         }
+        if (!this._dragContext) {
+            const context = this.getSnapContext();
+            const regions = computeExtendedSnapRegions(
+                context.viewportWidth,
+                context.viewportHeight,
+                context.topInset,
+                context.snapBottomInset,
+            );
+            this._dragContext = { ...context, regions };
+        }
+        if (typeof this.props.onDragStateChange === 'function') {
+            this.props.onDragStateChange(false, { ...this._dragContext });
+        }
+        this._dragContext = null;
     }
 
     focusWindow = () => {
@@ -748,6 +826,19 @@ export class Window extends Component {
             this.closeWindow();
         } else if (e.key === 'Tab') {
             this.focusWindow();
+        } else if (e.ctrlKey || e.metaKey) {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                e.stopPropagation();
+                const next = resolveDirectionalSnap(this.state.snapped, e.key);
+                if (next === undefined) return;
+                if (next === null) {
+                    this.unsnapWindow();
+                } else if (next) {
+                    this.snapWindow(next);
+                }
+                this.focusWindow();
+            }
         } else if (e.altKey) {
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
@@ -840,11 +931,11 @@ export class Window extends Component {
 
                         }}
                         aria-live="polite"
-                        aria-label={getSnapLabel(this.state.snapPosition)}
+                        aria-label={getSnapPreviewLabel(this.state.snapPosition)}
                         role="status"
                     >
                         <span className={styles.snapPreviewLabel} aria-hidden="true">
-                            {getSnapLabel(this.state.snapPosition)}
+                            {getSnapPreviewLabel(this.state.snapPosition)}
                         </span>
                     </div>
                 )}
