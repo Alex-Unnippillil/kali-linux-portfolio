@@ -8,13 +8,24 @@ const FeedStatusCard = () => {
     docs: 'https://docs.greenbone.net/'
   };
   return (
-    <div className="p-4 bg-gray-800 rounded mb-4">
-      <h3 className="text-md font-bold mb-2">VT Feed Status</h3>
-      <p className="text-sm">Source: {feed.source}</p>
-      <p className="text-sm">VTs: {feed.vtCount.toLocaleString()}</p>
-      <p className="text-sm">Last Update: {feed.lastUpdate}</p>
-      <p className="text-xs text-gray-400 mt-2">
-        Data based on <a href={feed.docs} className="underline" target="_blank" rel="noreferrer">Greenbone docs</a> (canned demo)
+    <div className="mb-4 rounded-xl border border-white/10 bg-kali-surface-muted/80 p-4 text-white shadow-kali-panel backdrop-blur">
+      <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-kali-control">
+        VT Feed Status
+      </h3>
+      <p className="text-sm text-white/80">Source: {feed.source}</p>
+      <p className="text-sm text-white/80">VTs: {feed.vtCount.toLocaleString()}</p>
+      <p className="text-sm text-white/80">Last Update: {feed.lastUpdate}</p>
+      <p className="mt-2 text-xs text-white/60">
+        Data based on{' '}
+        <a
+          href={feed.docs}
+          className="text-kali-info underline hover:text-kali-info/80"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Greenbone docs
+        </a>{' '}
+        (canned demo)
       </p>
     </div>
   );

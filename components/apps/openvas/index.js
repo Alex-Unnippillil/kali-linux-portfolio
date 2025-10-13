@@ -44,18 +44,27 @@ const escapeHtml = (str = '') =>
 
 const severityKeys = ['low', 'medium', 'high', 'critical'];
 
-const severityVisuals = {
-  low: { bg: 'bg-kali-severity-low', fill: 'fill-kali-severity-low' },
-  medium: { bg: 'bg-kali-severity-medium', fill: 'fill-kali-severity-medium' },
-  high: { bg: 'bg-kali-severity-high', fill: 'fill-kali-severity-high' },
-  critical: { bg: 'bg-kali-severity-critical', fill: 'fill-kali-severity-critical' },
-};
-
-const severityText = {
-  low: 'text-white',
-  medium: 'text-kali-inverse',
-  high: 'text-white',
-  critical: 'text-white',
+const severityStyles = {
+  low: {
+    surface: 'bg-kali-severity-low',
+    chart: 'fill-kali-severity-low',
+    text: 'text-white',
+  },
+  medium: {
+    surface: 'bg-kali-severity-medium',
+    chart: 'fill-kali-severity-medium',
+    text: 'text-kali-inverse',
+  },
+  high: {
+    surface: 'bg-kali-severity-high',
+    chart: 'fill-kali-severity-high',
+    text: 'text-white',
+  },
+  critical: {
+    surface: 'bg-kali-severity-critical',
+    chart: 'fill-kali-severity-critical',
+    text: 'text-white',
+  },
 };
 
 const SeverityChart = ({ data, selected, onSelect }) => {
@@ -87,7 +96,7 @@ const SeverityChart = ({ data, selected, onSelect }) => {
               y={y}
               width="20"
               height={height}
-              className={`${severityVisuals[level].fill} ${
+              className={`${severityStyles[level]?.chart ?? ''} ${
                 onSelect ? 'cursor-pointer transition-transform' : ''
               } ${isSelected ? 'stroke-white stroke-2' : ''}`}
               role={onSelect ? 'button' : undefined}
@@ -353,32 +362,35 @@ const OpenVASApp = () => {
       <PolicySettings policy={templates[profile]} />
       {hostReports.length > 0 && (
         <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 mb-4">
-          {hostReports.map((h) => (
-            <button
-              key={h.host}
-              type="button"
-              onClick={() => setActiveHost(h)}
-              className="rounded-lg border border-white/10 bg-kali-surface p-4 text-left transition hover:bg-kali-surface-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
-            >
-              <div className="font-bold mb-1">{h.host}</div>
-              <div className="mb-1">
-                <span
-                  className={`rounded px-2 py-1 text-xs font-semibold text-white ${
-                    severityVisuals[h.risk.toLowerCase()]?.bg ?? ''
-                  }`}
-                >
-                  {h.risk}
-                </span>
-              </div>
-              <div className="text-xs text-white/70">
-                {Object.entries(h.summary).map(([sev, count]) => (
-                  <span key={sev} className="mr-2 capitalize">
-                    {sev}: {count}
+          {hostReports.map((h) => {
+            const riskTheme = severityStyles[h.risk.toLowerCase()] ?? {};
+            return (
+              <button
+                key={h.host}
+                type="button"
+                onClick={() => setActiveHost(h)}
+                className="rounded-lg border border-white/10 bg-kali-surface p-4 text-left transition hover:bg-kali-surface-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+              >
+                <div className="font-bold mb-1">{h.host}</div>
+                <div className="mb-1">
+                  <span
+                    className={`rounded px-2 py-1 text-xs font-semibold ${
+                      riskTheme.surface ?? ''
+                    } ${riskTheme.text ?? 'text-white'}`}
+                  >
+                    {h.risk}
                   </span>
-                ))}
-              </div>
-            </button>
-          ))}
+                </div>
+                <div className="text-xs text-white/70">
+                  {Object.entries(h.summary).map(([sev, count]) => (
+                    <span key={sev} className="mr-2 capitalize">
+                      {sev}: {count}
+                    </span>
+                  ))}
+                </div>
+              </button>
+            );
+          })}
         </div>
       )}
       <h2 className="mb-2 text-lg font-semibold">OpenVAS Scanner</h2>
@@ -429,7 +441,7 @@ const OpenVASApp = () => {
         <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-kali-surface-muted">
           <div
             style={{ width: `${progress}%` }}
-            className="h-full bg-kali-severity-low transition-all"
+            className={`h-full transition-all ${severityStyles.low?.surface ?? ''}`}
           />
         </div>
       )}
@@ -462,8 +474,9 @@ const OpenVASApp = () => {
                   const cell = matrix[i][j];
                   const count = cell.length;
                   const severityKey = matrixSeverity(i, j);
-                  const bgClass = severityVisuals[severityKey]?.bg ?? '';
-                  const textClass = severityText[severityKey] ?? 'text-white';
+                  const severityTheme = severityStyles[severityKey] ?? {};
+                  const bgClass = severityTheme.surface ?? '';
+                  const textClass = severityTheme.text ?? 'text-white';
                   return (
                     <button
                       key={`${likelihood}-${impact}`}
@@ -515,7 +528,7 @@ const OpenVASApp = () => {
                 <div key={level} className="flex items-center">
                   <span
                     className={`mr-1 h-3 w-3 rounded-sm ${
-                      severityVisuals[level.toLowerCase()]?.bg ?? ''
+                      severityStyles[level.toLowerCase()]?.surface ?? ''
                     }`}
                   />
                   {level}
@@ -531,8 +544,8 @@ const OpenVASApp = () => {
               key={idx}
               role="listitem"
               className={`rounded-lg p-2 shadow-sm ${
-                severityVisuals[f.severity]?.bg ?? ''
-              } ${severityText[f.severity] ?? 'text-white'}`}
+                severityStyles[f.severity]?.surface ?? ''
+              } ${severityStyles[f.severity]?.text ?? 'text-white'}`}
             >
               <button
                 type="button"
