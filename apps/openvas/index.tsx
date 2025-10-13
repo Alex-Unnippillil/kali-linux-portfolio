@@ -28,14 +28,14 @@ interface HostReport {
   vulns: Vulnerability[];
 }
 
-const riskColors: Record<HostReport['risk'], string> = {
-  Low: 'bg-green-700',
-  Medium: 'bg-yellow-700',
-  High: 'bg-orange-700',
-  Critical: 'bg-red-700',
-};
-
 const severityOrder: HostReport['risk'][] = ['Critical', 'High', 'Medium', 'Low'];
+
+const severityPalette: Record<HostReport['risk'], string> = {
+  Low: 'var(--color-severity-low)',
+  Medium: 'var(--color-severity-medium)',
+  High: 'var(--color-severity-high)',
+  Critical: 'var(--color-severity-critical)',
+};
 
 const sampleData: HostReport[] = [
   {
@@ -98,11 +98,17 @@ const sampleData: HostReport[] = [
 ];
 
 const cvssColor = (score: number) => {
-  if (score >= 9) return 'bg-red-700';
-  if (score >= 7) return 'bg-orange-700';
-  if (score >= 4) return 'bg-yellow-700';
-  return 'bg-green-700';
+  if (score >= 9) return severityPalette.Critical;
+  if (score >= 7) return severityPalette.High;
+  if (score >= 4) return severityPalette.Medium;
+  return severityPalette.Low;
 };
+
+const severityBadgeStyle = (severity: HostReport['risk']) => ({
+  background: `color-mix(in srgb, ${severityPalette[severity]} 32%, var(--kali-panel))`,
+  borderColor: `color-mix(in srgb, ${severityPalette[severity]} 55%, transparent)`,
+  color: 'var(--kali-terminal-text)',
+});
 
 const OpenVASReport: React.FC = () => {
   const findings = useMemo(
@@ -252,7 +258,7 @@ const OpenVASReport: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4 space-y-6">
+    <div className="min-h-screen bg-[color:var(--kali-bg-solid)] p-4 text-[color:var(--kali-terminal-text)] space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold">OpenVAS Report</h1>
@@ -280,18 +286,26 @@ const OpenVASReport: React.FC = () => {
 
       <section>
         <h2 className="mb-3 text-xl font-semibold">Scan Overview</h2>
-        <div className="rounded-xl border border-gray-800 bg-gray-900/80 p-4 shadow-inner">
+        <div className="rounded-xl border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel)] p-4 shadow-inner">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {prioritizedRisks.map(({ severity, count }) => {
               const highlight = severity === prioritizedRisks[0]?.severity;
+              const severityColor = severityPalette[severity];
+              const panelStyle: React.CSSProperties = highlight
+                ? {
+                    background: `color-mix(in srgb, ${severityColor} 18%, var(--kali-panel))`,
+                    borderColor: `color-mix(in srgb, ${severityColor} 45%, transparent)`,
+                    boxShadow: `0 12px 35px color-mix(in srgb, ${severityColor} 15%, transparent)`,
+                  }
+                : {
+                    background: 'var(--kali-panel)',
+                    borderColor: 'var(--kali-panel-border)',
+                  };
               return (
                 <div
                   key={severity}
-                  className={`flex flex-col gap-1 rounded-lg border p-4 transition ${
-                    highlight
-                      ? 'border-red-400/60 bg-red-900/30 shadow-lg shadow-red-900/30'
-                      : 'border-gray-800 bg-gray-900/60'
-                  }`}
+                  className="flex flex-col gap-1 rounded-lg border p-4 transition"
+                  style={panelStyle}
                 >
                   <p className="text-xs font-semibold uppercase tracking-wide text-gray-300">
                     {severity}
@@ -312,9 +326,9 @@ const OpenVASReport: React.FC = () => {
             <svg
               width={trendWidth}
               height={trendHeight}
-              className="rounded bg-gray-800/80"
+              className="rounded bg-[color:var(--kali-panel-highlight)]"
             >
-              <path d={trendPath} stroke="#38bdf8" strokeWidth={2} fill="none" />
+              <path d={trendPath} stroke="var(--kali-terminal-green)" strokeWidth={2} fill="none" />
             </svg>
           </div>
         </div>
@@ -322,31 +336,50 @@ const OpenVASReport: React.FC = () => {
 
       <section>
         <h2 className="mb-3 text-xl font-semibold">Findings</h2>
-        <div className="mb-4 space-y-4 rounded-xl border border-gray-800 bg-gray-900/70 p-4">
+        <div className="mb-4 space-y-4 rounded-xl border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel)] p-4">
           <div>
             <p className="text-xs uppercase tracking-wide text-gray-400">
               Severity
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
-              {severityOrder.map((severity) => (
-                <button
-                  key={severity}
-                  type="button"
-                  aria-pressed={severityFilters[severity]}
-                  aria-label={`${severity} severity filter (${severityCounts[severity]} findings)`}
-                  onClick={() => toggleSeverity(severity)}
-                  className={`flex items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold uppercase tracking-wide transition ${
-                    severityFilters[severity]
-                      ? 'border-transparent bg-sky-500/20 text-sky-200 ring-1 ring-sky-400/60'
-                      : 'border-gray-800 bg-gray-900 text-gray-500 hover:border-sky-700/40'
-                  }`}
-                >
-                  <span>{severity}</span>
-                  <span className="rounded-full bg-gray-800 px-2 py-0.5 text-[10px] text-gray-300">
-                    {severityCounts[severity] ?? 0}
-                  </span>
-                </button>
-              ))}
+              {severityOrder.map((severity) => {
+                const isActive = severityFilters[severity];
+                const severityColor = severityPalette[severity];
+                const buttonStyle: React.CSSProperties = isActive
+                  ? {
+                      background: `color-mix(in srgb, ${severityColor} 24%, var(--kali-panel))`,
+                      borderColor: `color-mix(in srgb, ${severityColor} 40%, transparent)`,
+                      color: 'var(--kali-terminal-text)',
+                      boxShadow: `0 0 0 1px color-mix(in srgb, ${severityColor} 30%, transparent)`,
+                    }
+                  : {
+                      background: 'var(--kali-panel)',
+                      borderColor: 'var(--kali-panel-border)',
+                      color: 'color-mix(in srgb, var(--kali-terminal-text) 45%, transparent)',
+                    };
+                return (
+                  <button
+                    key={severity}
+                    type="button"
+                    aria-pressed={isActive}
+                    aria-label={`${severity} severity filter (${severityCounts[severity]} findings)`}
+                    onClick={() => toggleSeverity(severity)}
+                    className="flex items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold uppercase tracking-wide transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-blue)]"
+                    style={buttonStyle}
+                  >
+                    <span>{severity}</span>
+                    <span
+                      className="rounded-full px-2 py-0.5 text-[10px]"
+                      style={{
+                        background: 'color-mix(in srgb, var(--kali-panel-highlight) 70%, transparent)',
+                        color: 'var(--kali-terminal-text)',
+                      }}
+                    >
+                      {severityCounts[severity] ?? 0}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
           <div>
@@ -354,6 +387,18 @@ const OpenVASReport: React.FC = () => {
             <div className="mt-2 flex flex-wrap gap-2">
               {Object.keys(typeCounts).map((type) => {
                 const isActive = typeFilters[type] ?? true;
+                const buttonStyle: React.CSSProperties = isActive
+                  ? {
+                      background: 'color-mix(in srgb, var(--kali-terminal-green) 20%, var(--kali-panel))',
+                      borderColor: 'color-mix(in srgb, var(--kali-terminal-green) 40%, transparent)',
+                      color: 'var(--kali-terminal-text)',
+                      boxShadow: '0 0 0 1px color-mix(in srgb, var(--kali-terminal-green) 25%, transparent)',
+                    }
+                  : {
+                      background: 'var(--kali-panel)',
+                      borderColor: 'var(--kali-panel-border)',
+                      color: 'color-mix(in srgb, var(--kali-terminal-text) 45%, transparent)',
+                    };
                 return (
                   <button
                     key={type}
@@ -361,14 +406,17 @@ const OpenVASReport: React.FC = () => {
                     aria-pressed={isActive}
                     aria-label={`${type} type filter (${typeCounts[type]} findings)`}
                     onClick={() => toggleType(type)}
-                    className={`flex items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold uppercase tracking-wide transition ${
-                      isActive
-                        ? 'border-transparent bg-emerald-500/20 text-emerald-200 ring-1 ring-emerald-400/60'
-                        : 'border-gray-800 bg-gray-900 text-gray-500 hover:border-emerald-700/40'
-                    }`}
+                    className="flex items-center gap-2 rounded-full border px-4 py-1 text-xs font-semibold uppercase tracking-wide transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-blue)]"
+                    style={buttonStyle}
                   >
                     <span className="font-medium">{type}</span>
-                    <span className="rounded-full bg-gray-800 px-2 py-0.5 text-[10px] text-gray-300">
+                    <span
+                      className="rounded-full px-2 py-0.5 text-[10px]"
+                      style={{
+                        background: 'color-mix(in srgb, var(--kali-panel-highlight) 70%, transparent)',
+                        color: 'var(--kali-terminal-text)',
+                      }}
+                    >
                       {typeCounts[type] ?? 0}
                     </span>
                   </button>
@@ -377,11 +425,11 @@ const OpenVASReport: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="overflow-hidden rounded-xl border border-gray-800 bg-gray-900/70 shadow-inner">
-          <div role="table" aria-label="OpenVAS findings" className="divide-y divide-gray-800 text-sm text-gray-200">
+        <div className="overflow-hidden rounded-xl border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel)] shadow-inner">
+          <div role="table" aria-label="OpenVAS findings" className="divide-y divide-[color:var(--kali-panel-border)] text-sm text-gray-200">
             <div
               role="row"
-              className="grid grid-cols-[minmax(140px,1fr)_minmax(0,2fr)_minmax(120px,1fr)] gap-4 bg-gray-900/90 px-4 py-3 text-xs uppercase tracking-wide text-gray-400"
+              className="grid grid-cols-[minmax(140px,1fr)_minmax(0,2fr)_minmax(120px,1fr)] gap-4 bg-[color:var(--kali-panel)] px-4 py-3 text-xs uppercase tracking-wide text-gray-400"
             >
               <span role="columnheader">Host</span>
               <span role="columnheader">Vulnerability</span>
@@ -394,24 +442,36 @@ const OpenVASReport: React.FC = () => {
             )}
             {filteredFindings.map((f) => {
               const key = `${f.host}-${f.id}`;
-              const outlineClass =
+              const severityColor = severityPalette[f.severity];
+              const rowStyle: React.CSSProperties =
                 f.severity === 'Critical'
-                  ? 'ring-2 ring-red-500/60'
+                  ? {
+                      boxShadow: `0 0 0 1px color-mix(in srgb, ${severityColor} 32%, transparent), 0 0 18px color-mix(in srgb, ${severityColor} 22%, transparent)`,
+                    }
                   : f.severity === 'High'
-                  ? 'ring-1 ring-orange-500/50'
-                  : '';
+                  ? {
+                      boxShadow: `0 0 0 1px color-mix(in srgb, ${severityColor} 28%, transparent)`,
+                    }
+                  : {};
               return (
-                <div key={key} role="rowgroup" className="divide-y divide-gray-900/70">
+                <div key={key} role="rowgroup" className="divide-y divide-[color:var(--kali-panel-border)]">
                   <button
                     type="button"
                     onClick={() => toggleRow(key)}
-                    className={`grid w-full grid-cols-[minmax(140px,1fr)_minmax(0,2fr)_minmax(120px,1fr)] items-stretch gap-4 px-4 py-4 text-left transition hover:bg-gray-800/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${outlineClass}`}
+                    className="grid w-full grid-cols-[minmax(140px,1fr)_minmax(0,2fr)_minmax(120px,1fr)] items-stretch gap-4 bg-[color:var(--kali-panel)] px-4 py-4 text-left transition hover:bg-[color:var(--kali-panel-highlight)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-blue)]"
                     aria-expanded={!!expanded[key]}
                     aria-label="Toggle vulnerability details"
+                    style={rowStyle}
                   >
                     <span className="flex flex-col gap-1 text-sm">
                       <span className="font-mono text-xs text-gray-400">{f.host}</span>
-                      <span className="w-fit rounded-full bg-gray-800 px-2 py-0.5 text-[10px] uppercase tracking-wide text-gray-300">
+                      <span
+                        className="w-fit rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide"
+                        style={{
+                          background: 'color-mix(in srgb, var(--kali-panel-highlight) 75%, transparent)',
+                          color: 'var(--kali-terminal-text)',
+                        }}
+                      >
                         {f.type}
                       </span>
                     </span>
@@ -420,11 +480,18 @@ const OpenVASReport: React.FC = () => {
                       <span className="text-xs text-gray-400">{f.id}</span>
                       <span className="flex flex-wrap items-center gap-2 text-[11px]">
                         <span
-                          className={`rounded-full px-3 py-0.5 font-semibold uppercase tracking-wide ${riskColors[f.severity]}`}
+                          className="rounded-full border px-3 py-0.5 font-semibold uppercase tracking-wide"
+                          style={severityBadgeStyle(f.severity)}
                         >
                           {f.severity}
                         </span>
-                        <span className="rounded-full bg-gray-800/80 px-2 py-0.5 text-gray-300">
+                        <span
+                          className="rounded-full px-2 py-0.5"
+                          style={{
+                            background: 'color-mix(in srgb, var(--kali-panel-highlight) 65%, transparent)',
+                            color: 'var(--kali-terminal-text)',
+                          }}
+                        >
                           EPSS {(f.epss * 100).toFixed(0)}%
                         </span>
                       </span>
@@ -434,16 +501,20 @@ const OpenVASReport: React.FC = () => {
                         <span>{f.cvss.toFixed(1)}</span>
                         <span>of 10</span>
                       </span>
-                      <span className="relative block h-2.5 w-full rounded-full bg-gray-800">
+                      <span className="relative block h-2.5 w-full rounded-full bg-[color:var(--kali-panel-highlight)]">
                         <span
-                          className={`${cvssColor(f.cvss)} absolute inset-y-0 left-0 rounded-full`}
-                          style={{ width: `${(f.cvss / 10) * 100}%` }}
+                          className="absolute inset-y-0 left-0 rounded-full"
+                          style={{
+                            width: `${(f.cvss / 10) * 100}%`,
+                            background: `color-mix(in srgb, ${cvssColor(f.cvss)} 70%, transparent)`,
+                            boxShadow: `0 0 0 1px color-mix(in srgb, ${cvssColor(f.cvss)} 35%, transparent) inset`,
+                          }}
                         />
                       </span>
                     </span>
                   </button>
                   {expanded[key] && (
-                    <div className="space-y-4 bg-gray-900/80 px-6 py-4 text-sm">
+                    <div className="space-y-4 bg-[color:var(--kali-panel)] px-6 py-4 text-sm">
                       <div>
                         <p className="text-xs uppercase tracking-wide text-gray-400">Description</p>
                         <p className="text-sm text-gray-200">{f.description}</p>
@@ -458,7 +529,10 @@ const OpenVASReport: React.FC = () => {
                           {f.timeline.map((event) => (
                             <li
                               key={`${f.id}-${event.date}-${event.event}`}
-                              className="flex gap-3 rounded-lg bg-gray-900/70 px-3 py-2"
+                              className="flex gap-3 rounded-lg px-3 py-2"
+                              style={{
+                                background: 'color-mix(in srgb, var(--kali-panel-highlight) 85%, transparent)',
+                              }}
                             >
                               <span className="w-24 text-gray-400">{event.date}</span>
                               <span className="flex-1">{event.event}</span>
@@ -481,7 +555,12 @@ const OpenVASReport: React.FC = () => {
           <span
             key={tag}
             role="listitem"
-            className="rounded-full border border-emerald-500/40 bg-emerald-600/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-200"
+            className="rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide"
+            style={{
+              borderColor: 'color-mix(in srgb, var(--kali-terminal-green) 45%, transparent)',
+              background: 'color-mix(in srgb, var(--kali-terminal-green) 18%, var(--kali-panel))',
+              color: 'var(--kali-terminal-text)',
+            }}
           >
             {tag}
           </span>
