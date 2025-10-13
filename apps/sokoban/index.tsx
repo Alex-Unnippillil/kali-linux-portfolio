@@ -29,7 +29,7 @@ const LevelThumb: React.FC<{ level: string[] }> = ({ level }) => {
   const tileStyle = { width: LEVEL_THUMB_CELL, height: LEVEL_THUMB_CELL } as React.CSSProperties;
   return (
     <div
-      className="relative bg-gray-700 shadow-md"
+      className="relative overflow-hidden rounded border border-white/10 bg-kali-surface/80 shadow-kali-panel"
       style={{ width: width * LEVEL_THUMB_CELL, height: height * LEVEL_THUMB_CELL }}
     >
       {level.map((row, y) =>
@@ -40,8 +40,14 @@ const LevelThumb: React.FC<{ level: string[] }> = ({ level }) => {
           return (
             <div
               key={`t-${k}`}
-              className={`absolute ${isWall ? 'bg-gray-800' : 'bg-gray-600'} ${
-                isTarget ? 'ring-1 ring-yellow-400' : ''
+              className={`absolute ${
+                isWall
+                  ? 'bg-[color:color-mix(in_srgb,var(--color-surface)_95%,black_5%)]'
+                  : 'bg-[color:var(--color-surface-muted)]'
+              } ${
+                isTarget
+                  ? 'bg-[color:color-mix(in_srgb,var(--color-primary)_24%,var(--color-surface)_76%)] ring-1 ring-[color:color-mix(in_srgb,var(--color-primary)_65%,transparent)]'
+                  : ''
               } shadow-inner`}
               style={{ ...tileStyle, left: x * LEVEL_THUMB_CELL, top: y * LEVEL_THUMB_CELL }}
             />
@@ -55,7 +61,7 @@ const LevelThumb: React.FC<{ level: string[] }> = ({ level }) => {
             return (
               <div
                 key={`b-${k}`}
-                className="absolute bg-orange-400"
+                className="absolute bg-[color:color-mix(in_srgb,var(--color-primary)_35%,#fb923c_65%)]"
                 style={{ ...tileStyle, left: x * LEVEL_THUMB_CELL, top: y * LEVEL_THUMB_CELL }}
               />
             );
@@ -64,7 +70,7 @@ const LevelThumb: React.FC<{ level: string[] }> = ({ level }) => {
             return (
               <div
                 key={`p-${k}`}
-                className="absolute bg-blue-400"
+                className="absolute bg-kali-primary"
                 style={{ ...tileStyle, left: x * LEVEL_THUMB_CELL, top: y * LEVEL_THUMB_CELL }}
               />
             );
@@ -582,7 +588,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
         <div className="mx-auto flex justify-center">
           <div className="relative" style={{ width: scaledBoardWidth, height: scaledBoardHeight }}>
             <div
-              className="relative rounded-md bg-gray-800 shadow-lg"
+              className="relative rounded-md border border-white/10 bg-kali-surface/95 shadow-kali-panel"
               style={{
                 width: baseBoardWidth,
                 height: baseBoardHeight,
@@ -602,13 +608,15 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
                   const inSolution = solutionPath.has(k);
                   const tileClasses = [
                     'absolute shadow-inner transition-colors duration-150',
-                    isWall ? 'bg-gray-900' : 'bg-gray-700/90',
+                    isWall
+                      ? 'bg-[color:color-mix(in_srgb,var(--color-surface)_95%,black_5%)]'
+                      : 'bg-[color:var(--color-surface-muted)]',
                   ];
                   if (isTarget) {
                     tileClasses.push(
                       isBoxOnTarget
-                        ? 'bg-emerald-400/25 ring-2 ring-emerald-300'
-                        : 'bg-amber-300/25 ring-2 ring-amber-300'
+                        ? 'bg-[color:color-mix(in_srgb,var(--color-primary)_38%,var(--color-surface)_62%)] ring-2 ring-[color:color-mix(in_srgb,var(--color-primary)_85%,transparent)]'
+                        : 'bg-[color:color-mix(in_srgb,var(--color-primary)_22%,var(--color-surface)_78%)] ring-2 ring-[color:color-mix(in_srgb,var(--color-primary)_65%,transparent)]'
                     );
                   }
                   return (
@@ -620,19 +628,19 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
                       />
                       {isReach && !isWall && (
                         <div
-                          className="absolute bg-sky-400/25"
+                          className="absolute bg-kali-primary/15"
                           style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
                         />
                       )}
                       {inGhost && (
                         <div
-                          className="absolute bg-blue-300/40"
+                          className="absolute bg-kali-primary/35"
                           style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
                         />
                       )}
                       {inSolution && (
                         <div
-                          className="absolute bg-purple-300/40"
+                          className="absolute bg-kali-info/40"
                           style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
                         />
                       )}
@@ -649,10 +657,10 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
                     key={b}
                     className={`absolute transition-transform duration-100 ${
                       dead
-                        ? 'bg-red-500'
+                        ? 'bg-[color:color-mix(in_srgb,#ef4444_85%,var(--color-surface)_15%)]'
                         : onTarget
-                        ? 'bg-emerald-400 ring-2 ring-emerald-200'
-                        : 'bg-orange-400'
+                        ? 'bg-[color:color-mix(in_srgb,var(--color-primary)_55%,#34d399_45%)] ring-2 ring-[color:color-mix(in_srgb,var(--color-primary)_80%,transparent)]'
+                        : 'bg-[color:color-mix(in_srgb,var(--color-primary)_35%,#fb923c_65%)]'
                     } shadow-lg`}
                     style={{
                       ...cellStyle,
@@ -664,12 +672,12 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
               {puffs.map((p) => (
                 <div
                   key={p.id}
-                  className="absolute pointer-events-none w-4 h-4 rounded-full bg-gray-200 opacity-70 animate-ping"
+                  className="absolute pointer-events-none h-4 w-4 rounded-full bg-kali-primary/60 opacity-70 animate-ping"
                   style={{ left: p.x * CELL + CELL / 2 - 8, top: p.y * CELL + CELL / 2 - 8 }}
                 />
               ))}
               <div
-                className="absolute bg-blue-400 transition-transform duration-100"
+                className="absolute rounded-sm bg-kali-primary shadow-[0_0_0_1px_rgba(15,148,210,0.45)] transition-transform duration-100"
                 style={{
                   ...cellStyle,
                   transform: `translate(${state.player.x * CELL}px, ${state.player.y * CELL}px)`,
@@ -710,21 +718,23 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       </div>
       {showStats && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex"
+          className="fixed inset-0 flex items-center justify-center bg-kali-backdrop/80 backdrop-blur-sm"
           onClick={() => setShowStats(false)}
         >
           <div
-            className="bg-white p-4 space-y-2"
+            className="w-full max-w-xs space-y-3 rounded-lg border border-white/10 bg-kali-surface-raised/95 p-4 text-[color:var(--color-text)] shadow-kali-panel"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="font-bold">Level Complete!</div>
-            <div>Moves: {stats.moves}</div>
-            <div>Pushes: {stats.pushes}</div>
-            {minPushes !== null && <div>Minimal pushes: {minPushes}</div>}
+            <div className="text-base font-semibold">Level Complete!</div>
+            <div className="space-y-1 text-sm text-white/80">
+              <div>Moves: {stats.moves}</div>
+              <div>Pushes: {stats.pushes}</div>
+              {minPushes !== null && <div>Minimal pushes: {minPushes}</div>}
+            </div>
             <button
               type="button"
               onClick={() => setShowStats(false)}
-              className="px-2 py-1 bg-gray-300 rounded"
+              className="rounded-md bg-kali-primary px-3 py-1 text-sm font-medium text-kali-inverse shadow hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             >
               Close
             </button>
@@ -733,42 +743,42 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       )}
       {showLevels && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex"
+          className="fixed inset-0 flex items-center justify-center bg-kali-backdrop/80 backdrop-blur-sm"
           onClick={() => setShowLevels(false)}
         >
           <div
-            className="w-[640px] max-w-full space-y-4 rounded bg-white p-4 shadow-xl"
+            className="w-[640px] max-w-full space-y-4 rounded-xl border border-white/10 bg-kali-surface-raised/95 p-4 text-[color:var(--color-text)] shadow-kali-panel backdrop-blur"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Choose a level</h2>
-              <div className="text-sm text-gray-500">
-                Pack: <span className="font-medium text-gray-700">{packs[packIndex].name}</span>
+              <h2 className="text-lg font-semibold">Choose a level</h2>
+              <div className="text-sm text-white/70">
+                Pack: <span className="font-medium text-white">{packs[packIndex].name}</span>
               </div>
             </div>
             <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
               <div className="sm:w-1/3">
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Packs</h3>
-                <div className="max-h-80 overflow-y-auto rounded border border-gray-200">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/60">Packs</h3>
+                <div className="max-h-80 overflow-y-auto rounded border border-white/10 bg-kali-surface-muted/40">
                   {packs.map((p, i) => (
                     <button
                       key={p.name}
                       type="button"
                       className={`flex w-full justify-between gap-2 px-3 py-2 text-left text-sm ${
                         i === packIndex
-                          ? 'bg-amber-100 font-semibold text-gray-900'
-                          : 'bg-white text-gray-600 hover:bg-gray-100'
+                          ? 'bg-kali-primary/15 font-semibold text-white'
+                          : 'bg-transparent text-white/70 hover:bg-kali-surface-muted/70'
                       }`}
                       onClick={() => selectPack(i)}
                     >
                       <span>{p.name}</span>
-                      <span className="text-xs uppercase tracking-wide text-gray-400">{p.difficulty}</span>
+                      <span className="text-xs uppercase tracking-wide text-white/40">{p.difficulty}</span>
                     </button>
                   ))}
                 </div>
               </div>
               <div className="flex-1">
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/60">
                   Levels in {packs[packIndex].name}
                 </h3>
                 <div className="max-h-80 overflow-y-auto">
@@ -778,7 +788,9 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
                         key={i}
                         type="button"
                         className={`flex flex-col items-center gap-2 rounded border px-2 py-2 transition-colors ${
-                          i === index ? 'border-amber-500 bg-amber-50' : 'border-transparent bg-white hover:border-amber-200'
+                          i === index
+                            ? 'border-kali-primary/70 bg-kali-primary/15'
+                            : 'border-transparent bg-kali-surface-muted/50 hover:border-kali-primary/60 hover:bg-kali-surface-muted/80'
                         }`}
                         onClick={() => {
                           selectLevel(i);
@@ -786,7 +798,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
                         }}
                       >
                         <LevelThumb level={lvl} />
-                        <span className="text-xs font-medium text-gray-600">Level {i + 1}</span>
+                        <span className="text-xs font-medium text-white/70">Level {i + 1}</span>
                       </button>
                     ))}
                   </div>
