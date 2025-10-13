@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import * as chrono from 'chrono-node';
+import { casual as chronoCasual } from 'chrono-node/en';
 import { RRule } from 'rrule';
 import { parseRecurring } from '../../apps/todoist/utils/recurringParser';
 
@@ -290,7 +290,7 @@ export default function Todoist() {
       }
     }
     if (!task.recurring) return task.due;
-    const next = chrono.parseDate(`next ${task.recurring}`, base);
+    const next = chronoCasual.parseDate(`next ${task.recurring}`, base);
     return next ? next.toISOString().split('T')[0] : task.due;
   };
 
@@ -344,7 +344,7 @@ export default function Todoist() {
     if (!quick.trim()) return;
     let due;
     try {
-      const date = chrono.parseDate(quick);
+      const date = chronoCasual.parseDate(quick);
       if (date) {
         due = date.toISOString().split('T')[0];
       }
@@ -358,7 +358,7 @@ export default function Todoist() {
     const priority = priorityMatch ? priorityMap[priorityMatch[1]] : 'medium';
     let title = quick;
     if (due) {
-      const parsed = chrono.parse(quick)[0];
+      const parsed = chronoCasual.parse(quick)[0];
       if (parsed) {
         title = title.replace(parsed.text, '').trim();
       }

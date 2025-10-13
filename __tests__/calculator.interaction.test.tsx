@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { all, create } from 'mathjs';
+import { all, create } from 'mathjs/number';
 import Calculator from '../apps/calculator';
 
 const math = create(all);

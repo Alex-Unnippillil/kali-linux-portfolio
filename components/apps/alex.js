@@ -5,7 +5,7 @@ import GitHubStars from '../GitHubStars';
 import Certs from './certs';
 import data from './alex/data.json';
 import resumeData from './alex/resume.json';
-import ActivityCalendar from 'react-activity-calendar';
+import ActivityCalendar from 'react-activity-calendar/build/index.js';
 
 export class AboutAlex extends Component {
 
