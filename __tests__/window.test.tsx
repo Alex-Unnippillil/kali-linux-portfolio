@@ -724,6 +724,223 @@ describe('Window snapping finalize and release', () => {
   });
 });
 
+describe('Window drag physics', () => {
+  it('ignores jitter-sized movement for touch drags', () => {
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="touch-noise"
+        title="Touch Noise"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('touch-noise')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 12,
+      top: 160,
+      right: 132,
+      bottom: 280,
+      width: 120,
+      height: 120,
+      x: 12,
+      y: 160,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag(
+        { pointerType: 'touch', type: 'pointermove' } as any,
+        {
+          node: winEl,
+          deltaX: 0.4,
+          deltaY: 0.3,
+          x: 12.4,
+          y: 160.3,
+        }
+      );
+    });
+
+    expect(ref.current!.state.snapPreview).toBeNull();
+  });
+
+  it('magnetically aligns with nearby windows when released', () => {
+    const onPositionChange = jest.fn();
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="magnet-window"
+        title="Magnet"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        onPositionChange={onPositionChange}
+        dragOptions={{ snapStrength: { windowNeighbor: 64 } }}
+        defaultHeight={40}
+        defaultWidth={40}
+        ref={ref}
+      />
+    );
+
+    const neighbor = document.createElement('div');
+    neighbor.className = 'opened-window';
+    neighbor.getBoundingClientRect = () => ({
+      left: 160,
+      top: 160,
+      right: 280,
+      bottom: 280,
+      width: 120,
+      height: 120,
+      x: 160,
+      y: 160,
+      toJSON: () => {}
+    });
+    document.body.appendChild(neighbor);
+
+    const winEl = document.getElementById('magnet-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 300,
+      top: 160,
+      right: 420,
+      bottom: 280,
+      width: 120,
+      height: 120,
+      x: 300,
+      y: 160,
+      toJSON: () => {}
+    });
+
+    try {
+      act(() => {
+        ref.current!.handleDrag(
+          { pointerType: 'mouse', type: 'pointermove' } as any,
+          {
+            node: winEl,
+            deltaX: -12,
+            deltaY: 0,
+            x: 288,
+            y: 160,
+          }
+        );
+        ref.current!.handleStop();
+      });
+
+      expect(onPositionChange).toHaveBeenLastCalledWith(280, 160);
+      expect(winEl.style.transform).toBe('translate(280px, 160px)');
+    } finally {
+      document.body.removeChild(neighbor);
+    }
+  });
+
+  it('applies inertia to quick flicks and clamps to bounds', () => {
+    jest.useFakeTimers();
+    const originalRaf = window.requestAnimationFrame;
+    const originalCaf = window.cancelAnimationFrame;
+    (window as any).requestAnimationFrame = jest.fn((cb: FrameRequestCallback) => {
+      return setTimeout(() => {
+        cb(performance.now() + 16);
+      }, 0);
+    });
+    (window as any).cancelAnimationFrame = jest.fn((handle: number) => {
+      clearTimeout(handle);
+    });
+
+    const nowSpy = jest.spyOn(performance, 'now');
+    const timeSequence = [0, 16, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192];
+    nowSpy.mockImplementation(() => {
+      const next = timeSequence.shift();
+      return typeof next === 'number' ? next : timeSequence.length ? timeSequence[0] : 200;
+    });
+
+    const onPositionChange = jest.fn();
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="inertia-window"
+        title="Inertia"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        onPositionChange={onPositionChange}
+        dragOptions={{ inertia: { minVelocity: 100, friction: 0.82, stopVelocity: 12, maxDuration: 120 } }}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('inertia-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 520,
+      top: 200,
+      right: 640,
+      bottom: 320,
+      width: 120,
+      height: 120,
+      x: 520,
+      y: 200,
+      toJSON: () => {}
+    });
+
+    try {
+      act(() => {
+        ref.current!.handleDrag(
+          { pointerType: 'pen', type: 'pointermove' } as any,
+          {
+            node: winEl,
+            deltaX: 40,
+            deltaY: -8,
+            x: 560,
+            y: 192,
+          }
+        );
+        ref.current!.handleDrag(
+          { pointerType: 'pen', type: 'pointermove' } as any,
+          {
+            node: winEl,
+            deltaX: 140,
+            deltaY: -16,
+            x: 700,
+            y: 176,
+          }
+        );
+        ref.current!.handleStop();
+      });
+
+      expect(window.requestAnimationFrame).toHaveBeenCalled();
+
+      act(() => {
+        jest.runOnlyPendingTimers();
+      });
+
+      expect(onPositionChange).toHaveBeenCalled();
+      const transform = winEl.style.transform;
+      const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(transform);
+      expect(match).not.toBeNull();
+      if (match) {
+        const x = parseFloat(match[1]);
+        const y = parseFloat(match[2]);
+        expect(x).toBeGreaterThanOrEqual(0);
+        expect(x).toBeLessThanOrEqual(ref.current!.state.parentSize.width);
+        expect(y).toBeGreaterThanOrEqual(ref.current!.state.safeAreaTop);
+        expect(y).toBeLessThanOrEqual(ref.current!.state.safeAreaTop + ref.current!.state.parentSize.height);
+      }
+    } finally {
+      (window as any).requestAnimationFrame = originalRaf;
+      (window as any).cancelAnimationFrame = originalCaf;
+      nowSpy.mockRestore();
+      jest.useRealTimers();
+    }
+  });
+});
+
 describe('Window maximize behavior', () => {
   it('respects safe-area aware top offset when maximizing', () => {
     const safeTop = DESKTOP_TOP_PADDING + 48;
@@ -769,7 +986,7 @@ describe('Window keyboard dragging', () => {
     fireEvent.keyDown(handle, { key: 'ArrowRight' });
 
     const winEl = document.getElementById('test-window')!;
-    expect(winEl.style.transform).toBe('translate(10px, 0px)');
+    expect(winEl.style.transform).toBe(`translate(10px, ${DESKTOP_TOP_PADDING}px)`);
     expect(handle).toHaveAttribute('aria-grabbed', 'true');
 
     fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
