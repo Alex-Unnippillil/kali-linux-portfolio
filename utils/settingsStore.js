@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  theme: 'default',
 };
 
 let hasLoggedStorageWarning = false;
@@ -47,11 +48,21 @@ export async function setAccent(accent) {
 
 export async function getWallpaper() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.wallpaper;
-  return (await get('bg-image')) || DEFAULT_SETTINGS.wallpaper;
+  const storage = getLocalStorage();
+  const stored = storage?.getItem('bg-image');
+  if (stored) return stored;
+  const idbValue = await get('bg-image');
+  if (idbValue) {
+    storage?.setItem('bg-image', idbValue);
+    return idbValue;
+  }
+  return DEFAULT_SETTINGS.wallpaper;
 }
 
 export async function setWallpaper(wallpaper) {
   if (typeof window === 'undefined') return;
+  const storage = getLocalStorage();
+  storage?.setItem('bg-image', wallpaper);
   await set('bg-image', wallpaper);
 }
 
@@ -192,6 +203,8 @@ export async function resetSettings() {
   storage.removeItem('allow-network');
   storage.removeItem('haptics');
   storage.removeItem('use-kali-wallpaper');
+  storage.removeItem('bg-image');
+  storage.removeItem('app:theme');
 }
 
 export async function exportSettings() {

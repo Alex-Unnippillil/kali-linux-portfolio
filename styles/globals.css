@@ -43,6 +43,23 @@
   --kali-control-surface: color-mix(in srgb, var(--kali-control) 18%, var(--kali-surface));
   --kali-control-overlay: color-mix(in srgb, var(--kali-control) 24%, var(--kali-overlay));
   accent-color: var(--color-control-accent);
+  --desktop-accent: var(--color-primary);
+  --desktop-accent-soft: color-mix(in srgb, var(--desktop-accent) 68%, transparent 32%);
+  --desktop-accent-strong: color-mix(in srgb, var(--desktop-accent) 82%, #02060a 18%);
+  --desktop-surface-strong: color-mix(in srgb, var(--color-surface) 94%, rgba(4, 10, 18, 0.82));
+  --desktop-surface-muted: color-mix(in srgb, var(--color-surface) 85%, rgba(6, 14, 26, 0.55));
+  --desktop-surface-border: color-mix(in srgb, rgba(148, 163, 184, 0.18) 60%, transparent);
+  --desktop-navbar-bg: color-mix(in srgb, var(--desktop-surface-strong) 92%, rgba(9, 20, 36, 0.45));
+  --desktop-navbar-border: color-mix(in srgb, rgba(148, 163, 184, 0.22) 80%, transparent);
+  --desktop-navbar-text: rgba(241, 245, 249, 0.72);
+  --desktop-boot-bg: #030712;
+  --desktop-boot-overlay: linear-gradient(to bottom, rgba(15, 23, 42, 0.6), rgba(3, 7, 18, 0.92));
+  --desktop-card-surface: color-mix(in srgb, var(--desktop-surface-strong) 88%, rgba(6, 14, 26, 0.32));
+  --desktop-card-muted: color-mix(in srgb, var(--desktop-surface-muted) 92%, transparent);
+  --desktop-wallpaper-image: none;
+  --desktop-wallpaper-fallback: none;
+  --desktop-wallpaper-overlay: none;
+  --desktop-wallpaper-mode: custom;
 }
 
 body {
@@ -73,6 +90,9 @@ html[data-theme='dark'] {
   --color-severity-medium: #eab308;
   --color-severity-high: #f97316;
   --color-severity-critical: #f87171;
+  --desktop-navbar-bg: color-mix(in srgb, rgba(12, 18, 28, 0.88) 85%, rgba(9, 9, 9, 0.45));
+  --desktop-surface-border: rgba(148, 163, 184, 0.28);
+  --desktop-card-surface: color-mix(in srgb, rgba(19, 26, 36, 0.92) 88%, rgba(0, 0, 0, 0.35));
 }
 
 /* Neon theme */
@@ -98,6 +118,9 @@ html[data-theme='neon'] {
   --color-severity-medium: #ca8a04;
   --color-severity-high: #ea580c;
   --color-severity-critical: #ef4444;
+  --desktop-navbar-bg: color-mix(in srgb, rgba(7, 12, 24, 0.9) 88%, rgba(54, 0, 68, 0.28));
+  --desktop-surface-border: rgba(244, 114, 182, 0.32);
+  --desktop-card-surface: color-mix(in srgb, rgba(9, 14, 28, 0.92) 86%, rgba(62, 0, 96, 0.25));
 }
 
 /* Matrix theme */
@@ -123,7 +146,9 @@ html[data-theme='matrix'] {
   --color-severity-medium: #ca8a04;
   --color-severity-high: #ea580c;
   --color-severity-critical: #ef4444;
-
+  --desktop-navbar-bg: color-mix(in srgb, rgba(0, 24, 10, 0.92) 85%, rgba(2, 80, 34, 0.22));
+  --desktop-surface-border: rgba(34, 197, 94, 0.26);
+  --desktop-card-surface: color-mix(in srgb, rgba(0, 30, 12, 0.92) 88%, rgba(0, 96, 48, 0.26));
 }
 
 ::selection {

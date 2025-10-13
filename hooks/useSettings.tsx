@@ -180,6 +180,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       '--color-focus-ring': accent,
       '--color-selection': accent,
       '--color-control-accent': accent,
+      '--desktop-accent': accent,
+      '--desktop-accent-soft': shadeColor(accent, 0.35),
+      '--desktop-accent-strong': shadeColor(accent, -0.25),
     };
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
@@ -311,6 +314,24 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       }),
     [theme, accent, wallpaper, bgImageName, useKaliWallpaper],
   );
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!root) return;
+
+    const wallpaperValue = desktopTheme.wallpaperUrl
+      ? `url("${desktopTheme.wallpaperUrl}")`
+      : 'none';
+    const fallbackValue = desktopTheme.fallbackWallpaperUrl
+      ? `url("${desktopTheme.fallbackWallpaperUrl}")`
+      : 'none';
+    const overlayValue = desktopTheme.overlay ?? 'none';
+
+    root.style.setProperty('--desktop-wallpaper-image', wallpaperValue);
+    root.style.setProperty('--desktop-wallpaper-fallback', fallbackValue);
+    root.style.setProperty('--desktop-wallpaper-overlay', overlayValue);
+    root.style.setProperty('--desktop-wallpaper-mode', desktopTheme.useKaliWallpaper ? 'kali' : 'custom');
+  }, [desktopTheme]);
 
   useEffect(() => {
     const previousTheme = previousThemeRef.current;

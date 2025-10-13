@@ -114,11 +114,16 @@ export default class Navbar extends PureComponent {
                 return (
                         <ul
                                 ref={this.taskbarListRef}
-                                className="flex max-w-[40vw] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
+                                className="flex max-w-[40vw] items-center gap-2 overflow-x-auto rounded-md border px-2 py-1"
                                 role="list"
                                 aria-label="Open applications"
                                 onDragOver={this.handleTaskbarDragOver}
                                 onDrop={this.handleTaskbarDrop}
+                                style={{
+                                        backgroundColor: 'var(--desktop-navbar-bg)',
+                                        borderColor: 'var(--desktop-navbar-border)',
+                                        color: 'var(--desktop-navbar-text)',
+                                }}
                         >
                                 {runningApps.map((app) => this.renderRunningAppItem(app))}
                         </ul>
@@ -155,8 +160,8 @@ export default class Navbar extends PureComponent {
                                 data-active={isActive ? 'true' : 'false'}
                                 onClick={() => this.handleAppButtonClick(app)}
                                 onKeyDown={(event) => this.handleAppButtonKeyDown(event, app)}
-                                className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
-                        >
+                                className={`${isFocused ? 'bg-[color:var(--desktop-accent-soft)]' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-[color:var(--desktop-navbar-text)] transition-colors hover:bg-[color:var(--desktop-accent-soft)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
+                                >
                                 <span className="relative inline-flex items-center justify-center">
                                         <Image
                                                 src={app.icon}
@@ -173,7 +178,7 @@ export default class Navbar extends PureComponent {
                                                 />
                                         )}
                                 </span>
-                                <span className="hidden whitespace-nowrap text-white md:inline">{app.title}</span>
+                                <span className="hidden whitespace-nowrap text-[color:var(--desktop-navbar-text)] md:inline">{app.title}</span>
                         </button>
                 );
         };
