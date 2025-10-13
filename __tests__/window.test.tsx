@@ -65,6 +65,30 @@ const setVisualViewport = (width?: number, height?: number) => {
   delete (window as any).visualViewport;
 };
 
+let pendingAnimationFrameCallbacks: Array<FrameRequestCallback | null> = [];
+let rafSpy: jest.SpyInstance<number, [FrameRequestCallback]> | undefined;
+let cancelRafSpy: jest.SpyInstance<void, [number]> | undefined;
+
+const flushAnimationFrame = () => {
+  const callbacks = pendingAnimationFrameCallbacks;
+  pendingAnimationFrameCallbacks = [];
+  const timestamp = typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now();
+  callbacks.forEach((callback) => {
+    if (callback) {
+      callback(timestamp);
+    }
+  });
+};
+
+const runDragFrame = (ref: React.RefObject<any>, data?: any) => {
+  act(() => {
+    ref.current!.handleDrag(undefined, data);
+    flushAnimationFrame();
+  });
+};
+
 beforeEach(() => {
   setViewport(1440, 900);
   measureSafeAreaInsetMock.mockReturnValue(0);
@@ -74,6 +98,32 @@ beforeEach(() => {
 
 afterEach(() => {
   setVisualViewport();
+});
+
+beforeEach(() => {
+  pendingAnimationFrameCallbacks = [];
+  rafSpy = jest.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
+    pendingAnimationFrameCallbacks.push(cb);
+    return pendingAnimationFrameCallbacks.length - 1;
+  });
+  cancelRafSpy = jest.spyOn(window, 'cancelAnimationFrame').mockImplementation((handle: number) => {
+    if (handle >= 0 && handle < pendingAnimationFrameCallbacks.length) {
+      pendingAnimationFrameCallbacks[handle] = null;
+    }
+  });
+});
+
+afterEach(() => {
+  pendingAnimationFrameCallbacks = [];
+  if (rafSpy) {
+    rafSpy.mockRestore();
+    rafSpy = undefined;
+  }
+  if (cancelRafSpy) {
+    cancelRafSpy.mockRestore();
+    cancelRafSpy = undefined;
+  }
+  jest.useRealTimers();
 });
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
@@ -216,9 +266,7 @@ describe('Window snapping preview', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag();
-    });
+    runDragFrame(ref);
 
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toBeInTheDocument();
@@ -257,9 +305,7 @@ describe('Window snapping preview', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag();
-    });
+    runDragFrame(ref);
 
     expect(screen.queryByTestId('snap-preview')).toBeNull();
   });
@@ -293,9 +339,7 @@ describe('Window snapping preview', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag();
-    });
+    runDragFrame(ref);
 
     expect(ref.current!.state.snapPosition).toBe('top');
     const preview = screen.getByTestId('snap-preview');
@@ -333,9 +377,7 @@ describe('Window snapping preview', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag();
-    });
+    runDragFrame(ref);
 
     expect(ref.current!.state.snapPosition).toBe('top-left');
     const preview = screen.getByTestId('snap-preview');
@@ -374,9 +416,7 @@ describe('Window snapping preview', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag();
-    });
+    runDragFrame(ref);
 
     expect(ref.current!.state.snapPosition).toBe('right');
     const preview = screen.getByTestId('snap-preview');
@@ -421,9 +461,7 @@ describe('Window snapping finalize and release', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag();
-    });
+    runDragFrame(ref);
     act(() => {
       ref.current!.handleStop();
     });
@@ -465,9 +503,7 @@ describe('Window snapping finalize and release', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag();
-    });
+    runDragFrame(ref);
     act(() => {
       ref.current!.handleStop();
     });
@@ -509,9 +545,7 @@ describe('Window snapping finalize and release', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag();
-    });
+    runDragFrame(ref);
     act(() => {
       ref.current!.handleStop();
     });
@@ -552,9 +586,7 @@ describe('Window snapping finalize and release', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag();
-    });
+    runDragFrame(ref);
     act(() => {
       ref.current!.handleStop();
     });
@@ -595,9 +627,7 @@ describe('Window snapping finalize and release', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag();
-    });
+    runDragFrame(ref);
     act(() => {
       ref.current!.handleStop();
     });
@@ -641,9 +671,7 @@ describe('Window snapping finalize and release', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag();
-    });
+    runDragFrame(ref);
     act(() => {
       ref.current!.handleStop();
     });
@@ -703,9 +731,7 @@ describe('Window snapping finalize and release', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag();
-    });
+    runDragFrame(ref);
     act(() => {
       ref.current!.handleStop();
     });
@@ -806,12 +832,63 @@ describe('Edge resistance', () => {
       toJSON: () => {}
     });
 
-    act(() => {
-      ref.current!.handleDrag({}, { node: winEl, x: -100, y: -50 } as any);
-    });
+    runDragFrame(ref, { node: winEl, x: -100, y: -50 } as any);
 
     const expectedTop = ref.current!.state.safeAreaTop ?? 0;
     expect(winEl.style.transform).toBe(`translate(0px, ${expectedTop}px)`);
+  });
+});
+
+describe('Drag scheduling', () => {
+  it('coalesces drag updates into a single animation frame', () => {
+    setViewport(1600, 900);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 5,
+      top: 150,
+      right: 105,
+      bottom: 250,
+      width: 100,
+      height: 100,
+      x: 5,
+      y: 150,
+      toJSON: () => {}
+    });
+
+    const previewSpy = jest.spyOn(ref.current!, 'checkSnapPreview');
+    const resistanceSpy = jest.spyOn(ref.current!, 'applyEdgeResistance');
+
+    act(() => {
+      ref.current!.handleDrag(undefined, { node: winEl, x: 10, y: 15 } as any);
+      ref.current!.handleDrag(undefined, { node: winEl, x: 30, y: 25 } as any);
+    });
+
+    expect(rafSpy).toBeDefined();
+    expect(rafSpy!.mock.calls.length).toBe(1);
+
+    act(() => {
+      flushAnimationFrame();
+    });
+
+    expect(previewSpy).toHaveBeenCalledTimes(1);
+    expect(resistanceSpy).toHaveBeenCalledTimes(1);
+    expect(resistanceSpy.mock.calls[0][1]).toMatchObject({ x: 30, y: 25 });
+    expect(ref.current!.state.snapPreview).not.toBeNull();
+    expect(screen.getByTestId('snap-preview')).toBeInTheDocument();
   });
 });
 
