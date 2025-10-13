@@ -33,7 +33,10 @@
   --color-severity-medium: #ca8a04;
   --color-severity-high: #ea580c;
   --color-severity-critical: #ef4444;
-  --kali-text: #f5f5f5;
+  --kali-text: var(--color-text);
+  --kali-text-muted: color-mix(in srgb, var(--color-text) 82%, var(--color-bg) 18%);
+  --kali-text-subtle: color-mix(in srgb, var(--color-text) 68%, var(--color-bg) 32%);
+  --kali-text-faint: color-mix(in srgb, var(--color-text) 58%, var(--color-bg) 42%);
   --kali-surface: color-mix(in srgb, var(--color-surface) 92%, transparent);
   --kali-overlay: color-mix(in srgb, var(--color-surface) 82%, rgba(255, 255, 255, 0.08));
   --kali-control: var(--color-control-accent);
