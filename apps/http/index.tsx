@@ -211,7 +211,7 @@ export const HTTPBuilder: React.FC = () => {
           HTTP Toolkit
         </span>
         <h1 className="text-2xl font-semibold">HTTP Request Builder</h1>
-        <p className="text-sm text-gray-300">
+        <p className="text-sm text-kali-text text-opacity-70">
           Build and study curl commands without sending live traffic. Learn more at{' '}
           <a
             href="https://curl.se/"
@@ -225,7 +225,7 @@ export const HTTPBuilder: React.FC = () => {
         </p>
       </header>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-        <section className="rounded-2xl border border-kali-primary/30 bg-kali-surface/80 shadow-lg">
+        <section className="rounded-2xl border border-kali-primary/30 bg-[var(--kali-panel)] shadow-lg">
           <div className="flex items-center justify-between gap-3 border-b border-kali-primary/20 px-6 py-4">
             <div className="flex items-center gap-3">
               <span className="inline-flex items-center rounded-full border border-kali-primary/40 bg-kali-primary/10 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.28em] text-kali-primary">
@@ -244,13 +244,13 @@ export const HTTPBuilder: React.FC = () => {
                 <label
                   id="http-preset-label"
                   htmlFor="http-preset"
-                  className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-300"
+                  className="text-xs font-semibold uppercase tracking-[0.18em] text-kali-text text-opacity-70"
                 >
                   Preset selection
                 </label>
                 <select
                   id="http-preset"
-                  className="w-full rounded-lg border border-kali-primary/30 bg-kali-dark/60 p-2 text-sm text-kali-text focus:border-kali-primary focus:outline-none focus:ring-2 focus:ring-kali-primary/40"
+                  className="w-full rounded-lg border border-kali-primary/30 bg-kali-surface-muted p-2 text-sm text-kali-text focus:border-kali-primary focus:outline-none focus:ring-2 focus:ring-kali-primary/40"
                   value={selectedPreset}
                   onChange={(event) => handlePresetChange(event.target.value)}
                   aria-labelledby="http-preset-label"
@@ -267,13 +267,13 @@ export const HTTPBuilder: React.FC = () => {
                   <label
                     id="http-method-label"
                     htmlFor="http-method"
-                    className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-300"
+                    className="text-xs font-semibold uppercase tracking-[0.18em] text-kali-text text-opacity-70"
                   >
                     Method
                   </label>
                   <select
                     id="http-method"
-                    className="w-full rounded-lg border border-kali-primary/30 bg-kali-dark/60 p-2 text-sm text-kali-text focus:border-kali-primary focus:outline-none focus:ring-2 focus:ring-kali-primary/40"
+                    className="w-full rounded-lg border border-kali-primary/30 bg-kali-surface-muted p-2 text-sm text-kali-text focus:border-kali-primary focus:outline-none focus:ring-2 focus:ring-kali-primary/40"
                     value={method}
                     onChange={(event) => {
                       markCustom();
@@ -293,14 +293,14 @@ export const HTTPBuilder: React.FC = () => {
                   <label
                     id="http-url-label"
                     htmlFor="http-url"
-                    className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-300"
+                    className="text-xs font-semibold uppercase tracking-[0.18em] text-kali-text text-opacity-70"
                   >
                     URL
                   </label>
                   <input
                     id="http-url"
                     type="text"
-                    className="w-full rounded-lg border border-kali-primary/30 bg-kali-dark/60 p-2 text-sm text-kali-text focus:border-kali-primary focus:outline-none focus:ring-2 focus:ring-kali-primary/40"
+                    className="w-full rounded-lg border border-kali-primary/30 bg-kali-surface-muted p-2 text-sm text-kali-text focus:border-kali-primary focus:outline-none focus:ring-2 focus:ring-kali-primary/40"
                     value={url}
                     onChange={(event) => {
                       markCustom();
@@ -312,7 +312,7 @@ export const HTTPBuilder: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="rounded-xl border border-kali-primary/25 bg-kali-dark/50">
+            <div className="rounded-xl border border-kali-primary/25 bg-kali-overlay-soft">
               <button
                 type="button"
                 className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-medium text-kali-primary transition hover:bg-kali-primary/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-primary"
@@ -335,12 +335,12 @@ export const HTTPBuilder: React.FC = () => {
               {isHeadersOpen && (
                 <div
                   id="http-headers-section"
-                  className="space-y-4 border-t border-kali-primary/20 bg-kali-dark/60 px-4 py-5"
+                  className="space-y-4 border-t border-kali-primary/20 bg-kali-overlay px-4 py-5"
                 >
                   {headers.map((header, index) => (
                     <div
                       key={header.id}
-                      className="rounded-lg border border-kali-primary/20 bg-kali-surface/80 p-4"
+                      className="rounded-lg border border-kali-primary/20 bg-[color:var(--kali-panel-highlight)] p-4"
                     >
                       <p className="mb-3 text-xs uppercase tracking-[0.26em] text-kali-primary text-opacity-70">
                         Header #{index + 1}
@@ -350,7 +350,7 @@ export const HTTPBuilder: React.FC = () => {
                           <label
                             id={`header-name-${header.id}-label`}
                             htmlFor={`header-name-${header.id}`}
-                            className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-gray-300"
+                            className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-kali-text text-opacity-70"
                           >
                             Header name
                           </label>
@@ -358,7 +358,7 @@ export const HTTPBuilder: React.FC = () => {
                             id={`header-name-${header.id}`}
                             type="text"
                             placeholder="Authorization"
-                            className="w-full rounded-lg border border-kali-primary/25 bg-kali-dark/60 p-2 text-sm text-kali-text focus:border-kali-primary focus:outline-none focus:ring-2 focus:ring-kali-primary/40"
+                            className="w-full rounded-lg border border-kali-primary/25 bg-kali-surface-muted p-2 text-sm text-kali-text focus:border-kali-primary focus:outline-none focus:ring-2 focus:ring-kali-primary/40"
                             value={header.name}
                             onChange={(event) =>
                               updateHeaderRow(header.id, 'name', event.target.value)
@@ -370,7 +370,7 @@ export const HTTPBuilder: React.FC = () => {
                           <label
                             id={`header-value-${header.id}-label`}
                             htmlFor={`header-value-${header.id}`}
-                            className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-gray-300"
+                            className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-kali-text text-opacity-70"
                           >
                             Header value
                           </label>
@@ -378,7 +378,7 @@ export const HTTPBuilder: React.FC = () => {
                             id={`header-value-${header.id}`}
                             type="text"
                             placeholder="Bearer token"
-                            className="w-full rounded-lg border border-kali-primary/25 bg-kali-dark/60 p-2 text-sm text-kali-text focus:border-kali-primary focus:outline-none focus:ring-2 focus:ring-kali-primary/40"
+                            className="w-full rounded-lg border border-kali-primary/25 bg-kali-surface-muted p-2 text-sm text-kali-text focus:border-kali-primary focus:outline-none focus:ring-2 focus:ring-kali-primary/40"
                             value={header.value}
                             onChange={(event) =>
                               updateHeaderRow(header.id, 'value', event.target.value)
@@ -388,7 +388,7 @@ export const HTTPBuilder: React.FC = () => {
                         </div>
                         <button
                           type="button"
-                          className="h-10 rounded-lg border border-red-400/40 px-3 text-xs font-semibold uppercase tracking-[0.18em] text-red-200 transition hover:bg-red-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-400"
+                          className="h-10 rounded-lg border border-kali-severity-high/40 px-3 text-xs font-semibold uppercase tracking-[0.18em] text-kali-severity-high transition hover:bg-kali-severity-high/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-severity-high"
                           onClick={() => removeHeaderRow(header.id)}
                           aria-label="Remove header"
                         >
@@ -407,7 +407,7 @@ export const HTTPBuilder: React.FC = () => {
                 </div>
               )}
             </div>
-            <div className="rounded-xl border border-kali-primary/25 bg-kali-dark/50">
+            <div className="rounded-xl border border-kali-primary/25 bg-kali-overlay-soft">
               <button
                 type="button"
                 className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm font-medium text-kali-primary transition hover:bg-kali-primary/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-primary"
@@ -430,19 +430,19 @@ export const HTTPBuilder: React.FC = () => {
               {isBodyOpen && (
                 <div
                   id="http-body-section"
-                  className="space-y-3 border-t border-kali-primary/20 bg-kali-dark/60 px-4 py-5"
+                  className="space-y-3 border-t border-kali-primary/20 bg-kali-overlay px-4 py-5"
                 >
                   <label
                     id="http-body-label"
                     htmlFor="http-body"
-                    className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-gray-300"
+                    className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-kali-text text-opacity-70"
                   >
                     Request payload
                   </label>
                   <textarea
                     id="http-body"
                     rows={6}
-                    className="w-full rounded-lg border border-kali-primary/25 bg-kali-dark/60 p-3 font-mono text-sm text-kali-text focus:border-kali-primary focus:outline-none focus:ring-2 focus:ring-kali-primary/40"
+                    className="w-full rounded-lg border border-kali-primary/25 bg-kali-surface-muted p-3 font-mono text-sm text-kali-text focus:border-kali-primary focus:outline-none focus:ring-2 focus:ring-kali-primary/40"
                     placeholder='{"example": "value"}'
                     value={body}
                     onChange={(event) => {
@@ -459,7 +459,7 @@ export const HTTPBuilder: React.FC = () => {
             </div>
           </form>
         </section>
-        <section className="rounded-2xl border border-kali-terminal/40 bg-kali-surface/80 shadow-lg">
+        <section className="rounded-2xl border border-kali-terminal/40 bg-[var(--kali-panel)] shadow-lg">
           <div className="flex items-center justify-between gap-3 border-b border-kali-terminal/30 px-6 py-4">
             <div className="flex items-center gap-3">
               <span className="inline-flex items-center rounded-full border border-kali-terminal/40 bg-kali-terminal/15 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.28em] text-kali-terminal">
@@ -481,7 +481,7 @@ export const HTTPBuilder: React.FC = () => {
             </p>
             <pre
               data-testid="command-preview"
-              className="max-h-80 overflow-auto rounded-xl border border-kali-terminal/25 bg-kali-dark/70 p-4 font-mono text-sm text-kali-terminal shadow-inner"
+              className="max-h-80 overflow-auto rounded-xl border border-kali-terminal/25 bg-kali-overlay p-4 font-mono text-sm text-kali-terminal shadow-inner"
             >
               <code>
                 {commandParts.map((part, index) => (
@@ -490,7 +490,7 @@ export const HTTPBuilder: React.FC = () => {
                     <span
                       className={
                         part === URL_PLACEHOLDER
-                          ? 'rounded-sm bg-yellow-700 px-1 text-yellow-100'
+                          ? 'rounded-sm bg-kali-severity-medium/30 px-1 text-kali-severity-medium'
                           : undefined
                       }
                     >
@@ -508,7 +508,7 @@ export const HTTPBuilder: React.FC = () => {
                 {timelineSteps.map((step, index) => (
                   <li
                     key={step.id}
-                    className="flex items-start gap-3 rounded-xl border border-kali-terminal/25 bg-kali-dark/60 p-3"
+                    className="flex items-start gap-3 rounded-xl border border-kali-terminal/25 bg-kali-overlay p-3"
                   >
                     <span className="mt-0.5 inline-flex h-6 min-w-[1.5rem] items-center justify-center rounded-full border border-kali-terminal/35 bg-kali-terminal/15 text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-kali-terminal">
                       {index + 1}
