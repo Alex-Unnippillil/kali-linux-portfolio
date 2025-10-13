@@ -128,6 +128,7 @@ playwright/           # Playwright helpers for end-to-end testing
 - **Window Controls** – Windows are draggable, resizable, and keyboard focusable. Header controls hook into desktop state to minimize, maximize, or close.
 - **Context Menus** – Right-click menus are powered by `components/context-menus/desktopContextMenu.tsx` and adjust options based on selection (wallpapers, new notes, etc.).
 - **Dock & Favorites** – Dock entries and “All Applications” tiles are sourced from `apps.config.js`. Favorites persist through `usePersistentState`.
+- **Theme modes** – Quick Settings exposes Kali, Dark, and High Contrast palettes. The `[data-theme="hc"]` tokens ship with forced-colors fallbacks so Windows high-contrast users inherit usable colors even without toggling the in-app switch.
 - **Terminal** – `/apps/terminal` emulates a shell with commands like `help`, `clear`, `whoami`, and canned security tool outputs.
 - **Gamepad Support** – `utils/gamepad.ts` polls `navigator.getGamepads()` and normalizes input. Games may expose haptic feedback via `gamepad.vibrationActuator` where available.
 
