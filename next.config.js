@@ -3,6 +3,7 @@
 // Update README (section "CSP External Domains") when editing domains below.
 
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+const { createCustomRuntimeCaching } = require('./lib/pwa/runtimeCaching.js');
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -126,6 +127,10 @@ const startUrlRuntimeCaching = {
 
 const runtimeCaching = [
   startUrlRuntimeCaching,
+  ...createCustomRuntimeCaching({
+    buildAwareCacheName,
+    normalizedBasePath,
+  }),
   ...defaultRuntimeCaching.map((entry) => ({
     ...entry,
     ...(entry.options
