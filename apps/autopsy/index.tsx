@@ -112,16 +112,16 @@ const AutopsyPage: React.FC = () => {
               tabIndex={isSelected ? 0 : -1}
               onClick={() => setView(tab.id)}
               onKeyDown={(event) => handleKeyDown(event, index)}
-              className={`flex min-w-[12rem] flex-1 flex-col gap-1 rounded-md border px-4 py-3 text-left shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-ubt-blue focus-visible:ring-offset-2 focus-visible:ring-offset-ub-cool-grey ${
+              className={`flex min-w-[12rem] flex-1 flex-col gap-1 rounded-md border px-4 py-3 text-left shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-panel)] ${
                 isSelected
-                  ? 'border-ub-border-orange bg-ub-cool-grey text-white shadow-md'
-                  : 'border-transparent bg-ub-lite-abrgn/50 text-ubt-grey hover:bg-ub-lite-abrgn/70'
+                  ? 'border-[color:var(--kali-control)] bg-[color:color-mix(in_srgb,var(--kali-control)_20%,var(--kali-panel)_80%)] text-[color:var(--color-text)] shadow-[0_18px_42px_rgba(15,148,210,0.25)]'
+                  : 'border-[color:color-mix(in_srgb,var(--kali-border)_50%,transparent)] bg-[var(--kali-panel)]/70 text-white/80 hover:border-[color:var(--kali-border)] hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,rgba(15,148,210,0.1))]'
               }`}
             >
               <span className="text-sm font-semibold uppercase tracking-wide">
                 {tab.label}
               </span>
-              <span className="text-sm leading-snug text-ubt-grey">
+              <span className="text-sm leading-snug text-white/80">
                 {tab.description}
               </span>
             </button>
@@ -132,9 +132,9 @@ const AutopsyPage: React.FC = () => {
         id="mode-description"
         role="note"
         aria-live="polite"
-        className="space-y-1 rounded-lg border border-ub-border-orange/40 bg-ub-cool-grey/70 p-4 text-sm text-ubt-grey shadow-inner"
+        className="space-y-1 rounded-lg border border-[color:color-mix(in_srgb,var(--kali-border)_65%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,rgba(15,148,210,0.08))] p-4 text-sm text-white/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
       >
-        <p className="text-base font-semibold text-white">
+        <p className="text-base font-semibold text-[color:var(--color-text)]">
           {currentTab.label} mode
         </p>
         <p className="leading-relaxed">{currentTab.callout}</p>
@@ -150,7 +150,7 @@ const AutopsyPage: React.FC = () => {
               aria-labelledby={`tab-${tab.id}`}
               aria-describedby="mode-description"
               hidden={!isActive}
-              className={`min-h-[22rem] rounded-lg border border-ub-border-orange/30 bg-ub-cool-grey/80 p-4 shadow-sm transition-all duration-200 ${
+              className={`min-h-[22rem] rounded-lg border border-[color:color-mix(in_srgb,var(--kali-border)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_94%,rgba(15,148,210,0.12))] p-4 text-[color:var(--color-text)] shadow-kali-panel transition-all duration-200 ${
                 isActive ? 'opacity-100' : 'opacity-0'
               }`}
             >
