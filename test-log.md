@@ -37,3 +37,8 @@ Attempted to load each route under `/apps` in Chromium, Firefox, and WebKit. All
 
 - Development middleware now appends `'unsafe-eval'` to `script-src` when `NODE_ENV !== 'production'` so the Next.js dev bundle can run inside headless browsers (e.g., Playwright) and capture screenshots.
 - Removed the manual note that explained screenshots were unavailable due to the stricter dev CSP; the automation workaround is no longer needed.
+
+## Open Graph edge endpoint coverage (2025-11-05)
+
+- Added unit coverage for the OG helper utilities that normalize locales, slugs, and badge lists.
+- Added Node-based tests that call `/api/og` for dark and light themes with different locales to verify a cached image payload is generated.

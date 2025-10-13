@@ -60,7 +60,18 @@ const DnsDiagram = () => (
 
 const SpoofingOverview = () => (
   <>
-    <Meta />
+    <Meta
+      title="ARP & DNS Spoofing Lab — Alex Unnippillil"
+      description="Hands-on simulations that explain ARP poisoning and DNS spoofing workflows with Kali-inspired visuals and documentation links."
+      canonicalPath="/spoofing"
+      og={{
+        title: 'ARP & DNS Spoofing Lab',
+        subtitle: 'Step-by-step scenarios with sanitized network flows',
+        badges: ['ARP poisoning', 'DNS manipulation', 'Simulation-first'],
+        project: 'spoofing-lab',
+        image: '/images/logos/logo_1200.png',
+      }}
+    />
     <main className="p-4 grid gap-4 md:grid-cols-2 bg-ub-cool-grey min-h-screen">
       <ToolTile title="arpspoof" link="https://manpages.debian.org/unstable/dsniff/arpspoof.8.en.html">
         <ArpDiagram />

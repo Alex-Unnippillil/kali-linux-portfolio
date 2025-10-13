@@ -57,6 +57,8 @@ const securityHeaders = [
   },
 ];
 
+const OG_IMAGE_CACHE_CONTROL = 'public, s-maxage=86400, stale-while-revalidate=604800';
+
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
 });
@@ -238,6 +240,23 @@ module.exports = withBundleAnalyzer(
               {
                 source: '/(.*)',
                 headers: securityHeaders,
+              },
+              {
+                source: '/api/og',
+                headers: [
+                  {
+                    key: 'Cache-Control',
+                    value: OG_IMAGE_CACHE_CONTROL,
+                  },
+                  {
+                    key: 'CDN-Cache-Control',
+                    value: OG_IMAGE_CACHE_CONTROL,
+                  },
+                  {
+                    key: 'Vary',
+                    value: 'Accept, Accept-Language',
+                  },
+                ],
               },
               {
                 source: '/fonts/(.*)',
