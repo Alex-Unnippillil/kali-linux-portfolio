@@ -175,6 +175,7 @@ export class Desktop extends Component {
             'minimized_windows',
             'window_positions',
             'window_sizes',
+            'window_restore_bounds',
         ]);
         this.windowSizeStorageKey = 'desktop_window_sizes';
         this.defaultThemeConfig = {
@@ -238,6 +239,7 @@ export class Desktop extends Component {
             minimized_windows: { ...initialOverlayMinimized },
             window_positions: {},
             window_sizes: initialWindowSizes,
+            window_restore_bounds: {},
             desktop_apps: [],
             desktop_icon_positions: {},
             folder_contents: storedFolderContents,
@@ -276,6 +278,7 @@ export class Desktop extends Component {
             minimized_windows: {},
             window_positions: {},
             window_sizes: { ...initialWindowSizes },
+            window_restore_bounds: {},
         }));
 
         this.desktopRef = React.createRef();
@@ -341,6 +344,7 @@ export class Desktop extends Component {
         minimized_windows: createOverlayFlagMap(false),
         window_positions: {},
         window_sizes: {},
+        window_restore_bounds: {},
     });
 
     cloneWorkspaceState = (state) => ({
@@ -349,6 +353,7 @@ export class Desktop extends Component {
         minimized_windows: { ...state.minimized_windows },
         window_positions: { ...state.window_positions },
         window_sizes: { ...(state.window_sizes || {}) },
+        window_restore_bounds: { ...(state.window_restore_bounds || {}) },
     });
 
     getActiveUserId = () => {
@@ -958,6 +963,11 @@ export class Desktop extends Component {
                 minimized_windows: this.mergeWorkspaceMaps(existing.minimized_windows, baseState.minimized_windows, validKeys),
                 window_positions: this.mergeWorkspaceMaps(existing.window_positions, baseState.window_positions, validKeys),
                 window_sizes: this.mergeWorkspaceMaps(existing.window_sizes, baseState.window_sizes, validKeys),
+                window_restore_bounds: this.mergeWorkspaceMaps(
+                    existing.window_restore_bounds,
+                    baseState.window_restore_bounds,
+                    validKeys,
+                ),
             };
         });
     };
@@ -3897,6 +3907,8 @@ export class Desktop extends Component {
                 initialY: pos ? clampWindowTopPosition(pos.y, safeTopOffset) : safeTopOffset,
                 onPositionChange: (x, y) => this.updateWindowPosition(id, x, y),
                 onSizeChange: (width, height) => this.updateWindowSize(id, width, height),
+                onBoundsCommit: (nextBounds, prevBounds, meta) =>
+                    this.handleWindowBoundsCommit(id, nextBounds, prevBounds, meta),
                 snapEnabled: this.props.snapEnabled,
                 snapGrid,
                 context: this.state.window_context[id],
@@ -4045,6 +4057,60 @@ export class Desktop extends Component {
         }, () => {
             this.persistWindowSizes(this.state.window_sizes || {});
         });
+    }
+
+    handleWindowBoundsCommit = (id, bounds, prevBounds, meta = {}) => {
+        if (!id || !bounds) return;
+
+        const topOffset = measureWindowTopOffset();
+        const normalizeCoord = (value, fallback = 0) => {
+            if (typeof value !== 'number' || !Number.isFinite(value)) {
+                return fallback;
+            }
+            return Math.round(value);
+        };
+
+        const normalizedX = normalizeCoord(bounds.x, 0);
+        const normalizedY = clampWindowTopPosition(normalizeCoord(bounds.y, topOffset), topOffset);
+        const normalizedWidth = Math.max(0, normalizeCoord(bounds.width, 0));
+        const normalizedHeight = Math.max(0, normalizeCoord(bounds.height, 0));
+
+        const resolvedPrev = prevBounds && typeof prevBounds === 'object'
+            ? {
+                x: normalizeCoord(prevBounds.x ?? prevBounds.left, normalizedX),
+                y: normalizeCoord(prevBounds.y ?? prevBounds.top, normalizedY),
+                width: Math.max(0, normalizeCoord(prevBounds.width, normalizedWidth)),
+                height: Math.max(0, normalizeCoord(prevBounds.height, normalizedHeight)),
+            }
+            : null;
+
+        this.setWorkspaceState((prev) => {
+            const nextPositions = { ...(prev.window_positions || {}) };
+            const nextSizes = { ...(prev.window_sizes || {}) };
+            const nextRestore = { ...(prev.window_restore_bounds || {}) };
+
+            nextPositions[id] = { x: normalizedX, y: normalizedY };
+            nextSizes[id] = { width: normalizedWidth, height: normalizedHeight };
+
+            if (resolvedPrev) {
+                nextRestore[id] = resolvedPrev;
+            } else if (Object.prototype.hasOwnProperty.call(nextRestore, id)) {
+                delete nextRestore[id];
+            }
+
+            return {
+                window_positions: nextPositions,
+                window_sizes: nextSizes,
+                window_restore_bounds: nextRestore,
+            };
+        }, () => {
+            this.persistWindowSizes(this.state.window_sizes || {});
+            this.saveSession();
+        });
+
+        if (meta && typeof meta === 'object' && meta.snap) {
+            this.broadcastWorkspaceState();
+        }
     }
 
     getSnapGrid = () => {

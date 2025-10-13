@@ -12,7 +12,9 @@ import {
     measureSafeAreaInset,
     measureSnapBottomInset,
     measureWindowTopOffset,
+    getSnapBounds,
 } from '../../utils/windowLayout';
+import SnapEngine from '../../utils/snapEngine';
 import styles from './window.module.css';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET } from '../../utils/uiConstants';
 
@@ -587,11 +589,65 @@ export class Window extends Component {
         this.checkSnapPreview();
     }
 
-    handleStop = () => {
+    handleStop = (event, data) => {
         this.changeCursorToDefault();
-        const snapPos = this.state.snapPosition;
-        if (snapPos) {
-            this.snapWindow(snapPos);
+
+        const node = this.getWindowNode();
+        const rect = node && typeof node.getBoundingClientRect === 'function'
+            ? node.getBoundingClientRect()
+            : null;
+
+        const viewport = typeof window !== 'undefined'
+            ? {
+                width: typeof window.innerWidth === 'number' ? window.innerWidth : 0,
+                height: typeof window.innerHeight === 'number' ? window.innerHeight : 0,
+                topInset: this.state.safeAreaTop ?? measureWindowTopOffset(),
+                bottomInset: measureSnapBottomInset(),
+                safeAreaBottom: Math.max(0, measureSafeAreaInset('bottom')),
+            }
+            : null;
+
+        const previewCandidate = this.state.snapPreview
+            ? { ...this.state.snapPreview, position: this.state.snapPosition }
+            : null;
+
+        const resolvedSnap = SnapEngine.resolve({
+            event,
+            data,
+            preview: previewCandidate,
+            snap: this.state.snapPosition,
+            viewport,
+        });
+
+        const finalSnap = resolvedSnap || this.state.snapPosition;
+        const prevBounds = rect
+            ? {
+                x: rect.left,
+                y: rect.top,
+                width: rect.width,
+                height: rect.height,
+            }
+            : null;
+        const nextBounds = finalSnap && viewport ? getSnapBounds(viewport, finalSnap) : null;
+
+        if (finalSnap && nextBounds && prevBounds && typeof this.props.onBoundsCommit === 'function') {
+            this.props.onBoundsCommit(nextBounds, prevBounds, { snap: finalSnap });
+        }
+
+        if (finalSnap && typeof this.props.onSnap === 'function') {
+            try {
+                this.props.onSnap({
+                    snap: finalSnap,
+                    bounds: nextBounds || null,
+                    prevBounds,
+                });
+            } catch (e) {
+                // ignore listener errors
+            }
+        }
+
+        if (finalSnap) {
+            this.snapWindow(finalSnap);
         } else {
             this.setState({ snapPreview: null, snapPosition: null });
         }
