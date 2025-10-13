@@ -14,6 +14,7 @@ import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext } from './commands';
 import TerminalContainer from './components/Terminal';
 import { createSessionManager } from './utils/sessionManager';
+import { registerContextMenuItems } from '../../components/context-menus/registry';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -240,6 +241,36 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   contextRef.current.files = filesRef.current;
   contextRef.current.history = historyRef.current;
   contextRef.current.aliases = aliasesRef.current;
+
+  useEffect(() => {
+    // Example: expose a default context menu shortcut for launching the terminal
+    // without coupling the desktop menu to this app's implementation details.
+    const unregister = registerContextMenuItems('default', () => {
+      if (!openApp) {
+        return null;
+      }
+      return {
+        id: 'default-launch-terminal',
+        order: 20,
+        render: (menuContext) => (
+          <button
+            type="button"
+            role="menuitem"
+            aria-label="Launch Terminal"
+            className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            onClick={() => {
+              openApp('terminal');
+              menuContext.onClose?.();
+            }}
+          >
+            <span className="ml-5">Launch Terminal</span>
+          </button>
+        ),
+      };
+    });
+
+    return unregister;
+  }, [openApp]);
 
   useEffect(() => {
     if (typeof Worker === 'function') {
