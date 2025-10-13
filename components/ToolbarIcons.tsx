@@ -7,6 +7,7 @@ export function CloseIcon() {
       alt="Close"
       width={16}
       height={16}
+      fetchPriority="high"
     />
   );
 }
@@ -18,6 +19,7 @@ export function MinimizeIcon() {
       alt="Minimize"
       width={16}
       height={16}
+      fetchPriority="high"
     />
   );
 }
@@ -29,6 +31,7 @@ export function MaximizeIcon() {
       alt="Maximize"
       width={16}
       height={16}
+      fetchPriority="high"
     />
   );
 }
@@ -40,6 +43,7 @@ export function RestoreIcon() {
       alt="Restore"
       width={16}
       height={16}
+      fetchPriority="high"
     />
   );
 }
@@ -51,6 +55,7 @@ export function PinIcon() {
       alt="Pin"
       width={16}
       height={16}
+      fetchPriority="high"
     />
   );
 }

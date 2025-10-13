@@ -58,6 +58,8 @@ export class UbuntuApp extends Component {
             isSelected = false,
             isHovered = false,
             accentVariables = {},
+            imagePriority = false,
+            imageFetchPriority,
         } = this.props;
 
         const dragging = this.state.dragging || isBeingDragged;
@@ -158,6 +160,8 @@ export class UbuntuApp extends Component {
                     src={this.props.icon.replace('./', '/')}
                     alt={"Kali " + this.props.name}
                     sizes="(max-width: 768px) 48px, 64px"
+                    priority={imagePriority}
+                    fetchPriority={imageFetchPriority}
                 />
                 <span
                     className={"leading-tight " + (isSelected ? "font-semibold" : "font-normal")}

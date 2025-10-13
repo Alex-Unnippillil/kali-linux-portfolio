@@ -164,6 +164,7 @@ export default class Navbar extends PureComponent {
                                                 width={28}
                                                 height={28}
                                                 className="h-6 w-6"
+                                                fetchPriority={isFocused ? 'high' : 'auto'}
                                         />
                                         {isActive && (
                                                 <span

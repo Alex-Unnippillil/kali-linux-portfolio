@@ -1004,6 +1004,7 @@ export function WindowEditButtons(props) {
                         width={16}
                         height={16}
                         sizes="16px"
+                        fetchPriority="high"
                     />
                 </button>
             )}
@@ -1020,6 +1021,7 @@ export function WindowEditButtons(props) {
                     width={16}
                     height={16}
                     sizes="16px"
+                    fetchPriority="high"
                 />
             </button>
             {props.allowMaximize && (
@@ -1038,6 +1040,7 @@ export function WindowEditButtons(props) {
                                 width={16}
                                 height={16}
                                 sizes="16px"
+                                fetchPriority="high"
                             />
                         </button>
                     ) : (
@@ -1054,6 +1057,7 @@ export function WindowEditButtons(props) {
                                 width={16}
                                 height={16}
                                 sizes="16px"
+                                fetchPriority="high"
                             />
                         </button>
                     )
@@ -1072,6 +1076,7 @@ export function WindowEditButtons(props) {
                     width={16}
                     height={16}
                     sizes="16px"
+                    fetchPriority="high"
                 />
             </button>
         </div>
