@@ -127,6 +127,8 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._focusTrapCleanup = null;
+        this._overlayActive = false;
     }
 
     notifySizeChange = () => {
@@ -154,8 +156,9 @@ export class Window extends Component {
             this.scheduleUsageCheck();
         }
         if (this.props.isFocused) {
-            this.focusWindow();
+            this.focusWindowNode();
         }
+        this.updateFocusTrap();
     }
 
     componentWillUnmount() {
@@ -168,6 +171,20 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+        this.disableFocusTrap();
+    }
+
+    componentDidUpdate(prevProps) {
+        if (!prevProps.isFocused && this.props.isFocused && !this.props.minimized) {
+            this.focusWindowNode();
+        }
+        if (
+            prevProps.trapFocus !== this.props.trapFocus ||
+            prevProps.minimized !== this.props.minimized ||
+            prevProps.isFocused !== this.props.isFocused
+        ) {
+            this.updateFocusTrap();
         }
     }
 
@@ -330,7 +347,11 @@ export class Window extends Component {
         if (root) {
             root.setAttribute('inert', '');
         }
-        this._menuOpener = document.activeElement;
+        if (typeof document !== 'undefined') {
+            this._menuOpener = document.activeElement;
+        }
+        this._overlayActive = true;
+        this.updateFocusTrap();
     }
 
     deactivateOverlay = () => {
@@ -342,6 +363,8 @@ export class Window extends Component {
             this._menuOpener.focus();
         }
         this._menuOpener = null;
+        this._overlayActive = false;
+        this.updateFocusTrap();
     }
 
     changeCursorToMove = () => {
@@ -597,13 +620,148 @@ export class Window extends Component {
         }
     }
 
-    focusWindow = () => {
-        this.props.focus(this.id);
+    focusWindowNode = () => {
         const node = this.getWindowNode();
         if (!node || typeof node.focus !== 'function') return;
-        const alreadyFocused = typeof document !== 'undefined' && document.activeElement === node;
-        if (!alreadyFocused) {
+        const activeElement = typeof document !== 'undefined' ? document.activeElement : null;
+        if (activeElement === node) return;
+        try {
+            node.focus({ preventScroll: true });
+        } catch (error) {
             node.focus();
+        }
+    }
+
+    focusWindow = () => {
+        this.props.focus(this.id);
+        this.focusWindowNode();
+    }
+
+    getFocusableElements = (root) => {
+        if (!root || typeof root.querySelectorAll !== 'function') return [];
+        const selectors = [
+            'a[href]:not([tabindex="-1"])',
+            'button:not([disabled]):not([tabindex="-1"])',
+            'input:not([disabled]):not([type="hidden"]):not([tabindex="-1"])',
+            'select:not([disabled]):not([tabindex="-1"])',
+            'textarea:not([disabled]):not([tabindex="-1"])',
+            '[tabindex]:not([tabindex="-1"])',
+            '[contenteditable="true"]',
+        ];
+        const candidates = Array.from(root.querySelectorAll(selectors.join(',')));
+        return candidates.filter((element) => {
+            if (!(element instanceof HTMLElement)) return false;
+            if (element.hasAttribute('disabled')) return false;
+            if (element.getAttribute('aria-hidden') === 'true') return false;
+            if (element.tabIndex < 0) return false;
+            const rects = element.getClientRects();
+            if (rects.length === 0) return false;
+            const style = typeof window !== 'undefined' && window.getComputedStyle
+                ? window.getComputedStyle(element)
+                : null;
+            if (style && (style.visibility === 'hidden' || style.display === 'none')) return false;
+            return true;
+        });
+    }
+
+    ensureFocusWithinWindow = () => {
+        const node = this.getWindowNode();
+        if (!node) return;
+        const focusable = this.getFocusableElements(node);
+        const target = focusable.length > 0 ? focusable[0] : node;
+        if (typeof target.focus === 'function') {
+            try {
+                target.focus({ preventScroll: true });
+            } catch (error) {
+                target.focus();
+            }
+        }
+    }
+
+    enableFocusTrap = () => {
+        if (typeof document === 'undefined') return;
+        if (this._focusTrapCleanup || this.props.minimized) return;
+        const node = this.getWindowNode();
+        if (!node) return;
+        const getFocusable = () => this.getFocusableElements(node);
+
+        const handleKeyDown = (event) => {
+            if (event.key !== 'Tab') return;
+            const focusable = getFocusable();
+            if (focusable.length === 0) {
+                event.preventDefault();
+                this.focusWindowNode();
+                return;
+            }
+            const active = document.activeElement;
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            const containsActive = active && node.contains(active);
+            if (event.shiftKey) {
+                if (!containsActive || active === first) {
+                    event.preventDefault();
+                    if (typeof last.focus === 'function') {
+                        last.focus();
+                    }
+                }
+            } else {
+                if (!containsActive || active === last) {
+                    event.preventDefault();
+                    if (typeof first.focus === 'function') {
+                        first.focus();
+                    }
+                }
+            }
+        };
+
+        const handleFocusIn = (event) => {
+            if (!event || !event.target) return;
+            if (node.contains(event.target)) return;
+            const focusable = getFocusable();
+            const fallback = focusable[0] || node;
+            const schedule = typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function'
+                ? window.requestAnimationFrame
+                : (cb) => setTimeout(cb, 0);
+            schedule(() => {
+                if (typeof fallback.focus === 'function') {
+                    try {
+                        fallback.focus({ preventScroll: true });
+                    } catch (error) {
+                        fallback.focus();
+                    }
+                }
+            });
+        };
+
+        document.addEventListener('keydown', handleKeyDown, true);
+        document.addEventListener('focusin', handleFocusIn, true);
+
+        this._focusTrapCleanup = () => {
+            document.removeEventListener('keydown', handleKeyDown, true);
+            document.removeEventListener('focusin', handleFocusIn, true);
+            this._focusTrapCleanup = null;
+        };
+
+        this.ensureFocusWithinWindow();
+    }
+
+    disableFocusTrap = () => {
+        if (this._focusTrapCleanup) {
+            this._focusTrapCleanup();
+            this._focusTrapCleanup = null;
+        }
+    }
+
+    shouldTrapFocus = () => {
+        if (this.props.minimized) return false;
+        return Boolean(this.props.trapFocus) || this._overlayActive;
+    }
+
+    updateFocusTrap = () => {
+        if (this.shouldTrapFocus()) {
+            this.enableFocusTrap();
+        } else {
+            this.disableFocusTrap();
         }
     }
 
@@ -824,6 +982,12 @@ export class Window extends Component {
                     ? `snapped-${this.state.snapped}`
                     : 'active'));
 
+        const windowNodeId = this.id || this.props.id;
+        const titleId = windowNodeId ? `${windowNodeId}-title` : undefined;
+        const accessibilityProps = titleId
+            ? { 'aria-labelledby': titleId }
+            : { 'aria-label': this.props.title };
+
         return (
             <>
                 {this.state.snapPreview && (
@@ -880,20 +1044,21 @@ export class Window extends Component {
                             this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
                             this.state.maximized ? styles.windowFrameMaximized : '',
                         ].filter(Boolean).join(' ')}
-                        id={this.id}
+                        id={windowNodeId}
                         role="dialog"
                         data-window-state={windowState}
                         aria-hidden={this.props.minimized ? true : false}
-                        aria-label={this.props.title}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                         onPointerDown={this.focusWindow}
                         onFocus={this.focusWindow}
+                        {...accessibilityProps}
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
                         <WindowTopBar
                             title={this.props.title}
+                            titleId={titleId}
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
@@ -925,7 +1090,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick }) {
+export function WindowTopBar({ title, titleId, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick }) {
     return (
         <div
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
@@ -937,7 +1102,9 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
             onPointerDown={onPointerDown}
             onDoubleClick={onDoubleClick}
         >
-            <div className="flex justify-center w-full text-sm font-bold">{title}</div>
+            <div id={titleId} className="flex justify-center w-full text-sm font-bold">
+                {title}
+            </div>
         </div>
     )
 }
