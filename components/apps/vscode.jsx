@@ -63,11 +63,11 @@ export default function VsCodeWrapper({ openApp }) {
     <div className="relative h-full w-full">
       <VsCode />
       {visible && (
-        <div className="absolute inset-0 flex items-start justify-center pt-24 bg-black/50">
-          <div className="bg-gray-800 text-white w-11/12 max-w-md rounded shadow-lg p-2">
+        <div className="absolute inset-0 flex items-start justify-center pt-24 bg-kali-backdrop backdrop-blur-sm">
+          <div className="w-11/12 max-w-md rounded-xl border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel)] p-3 text-[color:var(--kali-terminal-text)] shadow-kali-panel">
             <input
               autoFocus
-              className="w-full p-2 mb-2 bg-gray-700 rounded outline-none"
+              className="mb-2 w-full rounded-lg border border-transparent bg-[color:var(--kali-panel-highlight)] px-3 py-2 text-[color:var(--kali-terminal-text)] placeholder:text-[color:rgba(248,250,252,0.55)] focus-visible:border-kali-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-panel)]"
               placeholder="Search apps or files"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -77,14 +77,14 @@ export default function VsCodeWrapper({ openApp }) {
                 <li key={`${item.type}-${item.id}`}>
                   <button
                     onClick={() => selectItem(item)}
-                    className="w-full text-left px-2 py-1 rounded hover:bg-gray-700"
+                    className="w-full rounded-md px-2 py-1 text-left text-[color:var(--kali-terminal-text)] transition hover:bg-[color:var(--kali-panel-highlight)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-panel)]"
                   >
                     {item.title}
                   </button>
                 </li>
               ))}
               {items.length === 0 && (
-                <li className="px-2 py-1 text-sm text-gray-400">No results</li>
+                <li className="px-2 py-1 text-sm text-[color:rgba(248,250,252,0.65)]">No results</li>
               )}
             </ul>
           </div>
