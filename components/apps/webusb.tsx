@@ -30,8 +30,20 @@ interface USBDevice {
   addEventListener(type: 'disconnect', listener: () => void): void;
 }
 
+interface USBDeviceFilter {
+  vendorId?: number;
+  productId?: number;
+  classCode?: number;
+  subclassCode?: number;
+  protocolCode?: number;
+}
+
+interface USBRequestOptions {
+  filters: USBDeviceFilter[];
+}
+
 interface USB {
-  requestDevice(options: { filters: any[] }): Promise<USBDevice>;
+  requestDevice(options: USBRequestOptions): Promise<USBDevice>;
 }
 
 type NavigatorUSB = Navigator & { usb: USB };
@@ -137,6 +149,7 @@ const WebUSBApp: React.FC = () => {
         <button
           onClick={connected ? handleDisconnect : handleConnect}
           className="rounded bg-blue-600 px-3 py-1 disabled:opacity-50"
+          aria-label={connected ? 'Disconnect from USB device' : 'Connect to USB device'}
         >
           {connected ? 'Disconnect' : 'Connect'}
         </button>
@@ -146,6 +159,7 @@ const WebUSBApp: React.FC = () => {
             checked={useMock}
             onChange={toggleMock}
             disabled={!supported}
+            aria-label="Toggle WebUSB mock device"
           />
           Use Mock
         </label>
@@ -162,11 +176,13 @@ const WebUSBApp: React.FC = () => {
           placeholder="Message"
           disabled={!connected}
           className="flex-1 rounded bg-gray-800 p-2 text-white disabled:opacity-50"
+          aria-label="USB message payload"
         />
         <button
           onClick={sendMessage}
           disabled={!connected || !message}
           className="rounded bg-green-600 px-3 py-1 disabled:opacity-50"
+          aria-label="Send message to connected USB device"
         >
           Send
         </button>

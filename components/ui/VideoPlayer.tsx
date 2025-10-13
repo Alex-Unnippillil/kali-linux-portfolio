@@ -7,12 +7,14 @@ interface VideoPlayerProps {
   src: string;
   poster?: string;
   className?: string;
+  ariaLabel?: string;
 }
 
 const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   src,
   poster,
   className = "",
+  ariaLabel = "Video player",
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { open, close } = usePipPortal();
@@ -30,7 +32,7 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
     );
     setDocPipSupported(
       typeof window !== "undefined" &&
-        !!(window as any).documentPictureInPicture
+        Boolean(window.documentPictureInPicture)
     );
 
     const handleLeave = () => setIsPip(false);
@@ -62,7 +64,14 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
 
   // Listen for messages from the Doc-PiP window
   useEffect(() => {
-    const handler = (e: MessageEvent) => {
+    type DocPipEvent = {
+      source: "doc-pip";
+      type: "toggle" | "seek" | "volume";
+      delta?: number;
+      value?: number;
+    };
+
+    const handler = (e: MessageEvent<DocPipEvent>) => {
       if (!videoRef.current || e.data?.source !== "doc-pip") return;
       const video = videoRef.current;
       switch (e.data.type) {
@@ -89,9 +98,14 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   const openDocPip = async () => {
     if (!docPipSupported) return;
     const initialVolume = videoRef.current?.volume ?? 1;
+    type DocPipControlMessage =
+      | { type: "toggle" }
+      | { type: "seek"; delta: number }
+      | { type: "volume"; value: number };
+
     const DocPipControls: React.FC<{ initialVolume: number }> = ({ initialVolume }) => {
       const [vol, setVol] = useState(initialVolume);
-      const send = (msg: any) =>
+      const send = (msg: DocPipControlMessage) =>
         window.opener?.postMessage({ source: "doc-pip", ...msg }, "*");
       return (
         <div
@@ -119,6 +133,7 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
               setVol(v);
               send({ type: "volume", value: v });
             }}
+            aria-label="Adjust document PiP volume"
           />
         </div>
       );
@@ -129,7 +144,14 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
 
   return (
     <div className={`relative ${className}`.trim()}>
-      <video ref={videoRef} src={src} poster={poster} controls className="w-full h-auto" />
+      <video
+        ref={videoRef}
+        src={src}
+        poster={poster}
+        controls
+        className="w-full h-auto"
+        aria-label={ariaLabel}
+      />
       {pipSupported && (
         <button
           type="button"

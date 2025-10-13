@@ -38,8 +38,11 @@ export function onFetchProxy(
 ) {
   const event = `fetchproxy-${type}`;
   if (typeof window !== 'undefined') {
-    window.addEventListener(event, handler as EventListener);
-    return () => window.removeEventListener(event, handler as EventListener);
+    const listener = (evt: Event) => {
+      if (evt instanceof CustomEvent) handler(evt as CustomEvent<FetchLog>);
+    };
+    window.addEventListener(event, listener);
+    return () => window.removeEventListener(event, listener);
   }
   return () => {};
 }
@@ -50,9 +53,13 @@ function notify(type: 'start' | 'end', record: FetchLog) {
   }
 }
 
-if (typeof globalThis.fetch === 'function' && !(globalThis as any).__fetchProxyInstalled) {
+declare global {
+  var __fetchProxyInstalled: boolean | undefined;
+}
+
+if (typeof globalThis.fetch === 'function' && !globalThis.__fetchProxyInstalled) {
   const originalFetch = globalThis.fetch.bind(globalThis);
-  (globalThis as any).__fetchProxyInstalled = true;
+  globalThis.__fetchProxyInstalled = true;
 
   globalThis.fetch = async (
     input: RequestInfo | URL,
@@ -80,7 +87,7 @@ if (typeof globalThis.fetch === 'function' && !(globalThis as any).__fetchProxyI
     notify('start', record);
 
     try {
-      const response = await originalFetch(input as any, init);
+      const response = await originalFetch(input, init);
       const end = now();
       record.endTime = end;
       record.duration = end - record.startTime;
@@ -100,10 +107,7 @@ if (typeof globalThis.fetch === 'function' && !(globalThis as any).__fetchProxyI
       const contentLength = response.headers.get('content-length');
       if (contentLength) {
         finalize(Number(contentLength));
-      } else if (
-        typeof (response as any).clone === 'function' &&
-        typeof (response as any).arrayBuffer === 'function'
-      ) {
+      } else if (typeof response.clone === 'function' && typeof response.arrayBuffer === 'function') {
         try {
           response
             .clone()
