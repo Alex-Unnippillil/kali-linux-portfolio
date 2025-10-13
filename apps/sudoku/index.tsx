@@ -1,55 +1,89 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { generateSudoku, isValidPlacement } from '../../apps/games/sudoku';
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import type { KeyboardEvent } from 'react';
+import { generateSudoku, isValidPlacement, SIZE, type Difficulty } from './generator';
 import { getHint } from '../../workers/sudokuSolver';
 import {
+  type Cell,
   createCell,
   cloneCell,
   toggleCandidate,
   cellsToBoard,
-} from '../../apps/games/sudoku/cell';
+} from './cell';
 
-const SIZE = 9;
-const range = (n) => Array.from({ length: n }, (_, i) => i);
+const range = (n: number): number[] => Array.from({ length: n }, (_, i) => i);
 
-const dailySeed = () => {
+const dailySeed = (): number => {
   const str = new Date().toISOString().slice(0, 10);
   let hash = 0;
   for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) >>> 0;
   return hash;
 };
 
-const Sudoku = () => {
-  const [difficulty, setDifficulty] = useState('easy');
+type Coordinates = { r: number; c: number };
+
+const hasConflict = (board: Cell[][], r: number, c: number, val: number): boolean => {
+  if (val === 0) return false;
+  for (let i = 0; i < SIZE; i++) {
+    if (i !== c && board[r][i].value === val) return true;
+    if (i !== r && board[i][c].value === val) return true;
+  }
+  const boxRow = Math.floor(r / 3) * 3;
+  const boxCol = Math.floor(c / 3) * 3;
+  for (let rr = 0; rr < 3; rr++) {
+    for (let cc = 0; cc < 3; cc++) {
+      const cell = board[boxRow + rr][boxCol + cc];
+      if ((boxRow + rr !== r || boxCol + cc !== c) && cell.value === val) return true;
+    }
+  }
+  return false;
+};
+
+const isBoardComplete = (board: Cell[][]): boolean => {
+  for (let r = 0; r < SIZE; r++) {
+    const row = board[r].map((c) => c.value);
+    if (row.includes(0) || new Set(row).size !== SIZE) return false;
+  }
+  for (let c = 0; c < SIZE; c++) {
+    const col: number[] = [];
+    for (let r = 0; r < SIZE; r++) col.push(board[r][c].value);
+    if (col.includes(0) || new Set(col).size !== SIZE) return false;
+  }
+  for (let br = 0; br < 3; br++) {
+    for (let bc = 0; bc < 3; bc++) {
+      const box: number[] = [];
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          box.push(board[br * 3 + r][bc * 3 + c].value);
+        }
+      }
+      if (box.includes(0) || new Set(box).size !== SIZE) return false;
+    }
+  }
+  return true;
+};
+
+const Sudoku = (): JSX.Element => {
+  const [difficulty, setDifficulty] = useState<Difficulty>('easy');
   const [useDaily, setUseDaily] = useState(true);
-  const [puzzle, setPuzzle] = useState([]);
-  const [board, setBoard] = useState([]); // Cell[][]
-  const [solution, setSolution] = useState([]);
+  const [puzzle, setPuzzle] = useState<number[][]>([]);
+  const [board, setBoard] = useState<Cell[][]>([]);
+  const [solution, setSolution] = useState<number[][]>([]);
   const [pencilMode, setPencilMode] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [time, setTime] = useState(0);
   const [hint, setHint] = useState('');
-  const [hintCells, setHintCells] = useState([]);
+  const [hintCells, setHintCells] = useState<Coordinates[]>([]);
   const [ariaMessage, setAriaMessage] = useState('');
-  const [selectedCell, setSelectedCell] = useState(null);
-  const timerRef = useRef(null);
+  const [selectedCell, setSelectedCell] = useState<Coordinates | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const inputRefs = useRef<(HTMLInputElement | null)[][]>(
+    Array.from({ length: SIZE }, () => Array(SIZE).fill(null)),
+  );
 
-  useEffect(() => {
-    startGame(useDaily ? dailySeed() : Date.now());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (completed) {
-      clearInterval(timerRef.current);
-    } else {
-      clearInterval(timerRef.current);
-      timerRef.current = setInterval(() => setTime((t) => t + 1), 1000);
-    }
-    return () => clearInterval(timerRef.current);
-  }, [completed]);
-
-  const startGame = (seed) => {
-    const { puzzle, solution } = generateSudoku(difficulty, seed);
+  const startGame = (seed: number, level: Difficulty = difficulty) => {
+    const { puzzle, solution } = generateSudoku(level, seed);
     setPuzzle(puzzle);
     setBoard(puzzle.map((row) => row.map((v) => createCell(v))));
     setSolution(solution);
@@ -58,9 +92,27 @@ const Sudoku = () => {
     setHintCells([]);
     setSelectedCell(null);
     setTime(0);
+    setAriaMessage('');
   };
 
-  const handleValue = (r, c, value, forcePencil = false) => {
+  useEffect(() => {
+    startGame(useDaily ? dailySeed() : Date.now());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (completed) {
+      if (timerRef.current) clearInterval(timerRef.current);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => setTime((t) => t + 1), 1000);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [completed, puzzle]);
+
+  const handleValue = (r: number, c: number, value: string, forcePencil = false) => {
     if (puzzle[r][c] !== 0) return;
     const v = parseInt(value, 10);
     const newBoard = board.map((row) => row.map((cell) => cloneCell(cell)));
@@ -68,7 +120,7 @@ const Sudoku = () => {
     if (pencilMode || forcePencil) {
       if (v >= 1 && v <= 9) toggleCandidate(cell, v);
     } else {
-      const val = !v || v < 1 || v > 9 ? 0 : v;
+      const val = Number.isNaN(v) || v < 1 || v > 9 ? 0 : v;
       if (val !== 0 && !isValidPlacement(cellsToBoard(newBoard), r, c, val)) {
         setAriaMessage(`Move at row ${r + 1}, column ${c + 1} invalid`);
         return;
@@ -77,12 +129,10 @@ const Sudoku = () => {
       cell.candidates = [];
       if (hasConflict(newBoard, r, c, cell.value)) {
         setAriaMessage(`Conflict at row ${r + 1}, column ${c + 1}`);
-      } else if (
-        solution.length > 0 &&
-        cell.value !== 0 &&
-        cell.value !== solution[r][c]
-      ) {
+      } else if (solution.length > 0 && cell.value !== 0 && cell.value !== solution[r][c]) {
         setAriaMessage(`Incorrect value at row ${r + 1}, column ${c + 1}`);
+      } else {
+        setAriaMessage('');
       }
       if (isBoardComplete(newBoard)) {
         setCompleted(true);
@@ -92,7 +142,11 @@ const Sudoku = () => {
     setBoard(newBoard);
   };
 
-  const handleKeyDown = (e, r, c) => {
+  const handleKeyDown = (
+    e: KeyboardEvent<HTMLInputElement>,
+    r: number,
+    c: number,
+  ) => {
     if (e.key >= '1' && e.key <= '9') {
       if (pencilMode || e.shiftKey) {
         e.preventDefault();
@@ -100,12 +154,7 @@ const Sudoku = () => {
       }
       return;
     }
-    if (
-      e.key === 'ArrowUp' ||
-      e.key === 'ArrowDown' ||
-      e.key === 'ArrowLeft' ||
-      e.key === 'ArrowRight'
-    ) {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
       let nr = r;
       let nc = c;
@@ -114,74 +163,33 @@ const Sudoku = () => {
       if (e.key === 'ArrowLeft') nc = c > 0 ? c - 1 : c;
       if (e.key === 'ArrowRight') nc = c < SIZE - 1 ? c + 1 : c;
       inputRefs.current[nr][nc]?.focus();
+      return;
+    }
+    if (e.key === 'Backspace' || e.key === 'Delete') {
+      e.preventDefault();
+      handleValue(r, c, '0');
     }
   };
 
   const getHintHandler = () => {
-    const h = getHint(cellsToBoard(board));
-    if (h) {
-      if (h.type === 'pair') {
+    const hintResult = getHint(cellsToBoard(board));
+    if (hintResult) {
+      if (hintResult.type === 'pair') {
         setHint(
-          `Cells (${h.cells[0].r + 1},${h.cells[0].c + 1}) and (${h.cells[1].r + 1},${h.cells[1].c + 1}) form ${h.values.join(", ")}`,
+          `Cells (${hintResult.cells[0].r + 1},${hintResult.cells[0].c + 1}) and (${hintResult.cells[1].r + 1},${hintResult.cells[1].c + 1}) form ${hintResult.values.join(', ')}`,
         );
-        setHintCells(h.cells);
+        setHintCells(hintResult.cells);
         setAriaMessage('Pair hint available');
       } else {
-        setHint(`Cell (${h.r + 1},${h.c + 1}) must be ${h.value}`);
-        setHintCells([{ r: h.r, c: h.c }]);
-        setAriaMessage(`Hint: row ${h.r + 1} column ${h.c + 1} is ${h.value}`);
+        setHint(`Cell (${hintResult.r + 1},${hintResult.c + 1}) must be ${hintResult.value}`);
+        setHintCells([{ r: hintResult.r, c: hintResult.c }]);
+        setAriaMessage(`Hint: row ${hintResult.r + 1} column ${hintResult.c + 1} is ${hintResult.value}`);
       }
     } else {
       setHint('No hints available');
       setHintCells([]);
       setAriaMessage('No hints available');
     }
-  };
-
-  const inputRefs = useRef(
-    Array.from({ length: SIZE }, () => Array(SIZE).fill(null))
-  );
-
-  const hasConflict = (b, r, c, val) => {
-    if (val === 0) return false;
-    for (let i = 0; i < SIZE; i++) {
-      if (i !== c && b[r][i].value === val) return true;
-      if (i !== r && b[i][c].value === val) return true;
-    }
-    const boxRow = Math.floor(r / 3) * 3;
-    const boxCol = Math.floor(c / 3) * 3;
-    for (let rr = 0; rr < 3; rr++) {
-      for (let cc = 0; cc < 3; cc++) {
-        const nr = boxRow + rr;
-        const nc = boxCol + cc;
-        if ((nr !== r || nc !== c) && b[nr][nc].value === val) return true;
-      }
-    }
-    return false;
-  };
-
-  const isBoardComplete = (b) => {
-    for (let r = 0; r < SIZE; r++) {
-      const row = b[r].map((c) => c.value);
-      if (row.includes(0) || new Set(row).size !== SIZE) return false;
-    }
-    for (let c = 0; c < SIZE; c++) {
-      const col = [];
-      for (let r = 0; r < SIZE; r++) col.push(b[r][c].value);
-      if (col.includes(0) || new Set(col).size !== SIZE) return false;
-    }
-    for (let br = 0; br < 3; br++) {
-      for (let bc = 0; bc < 3; bc++) {
-        const box = [];
-        for (let r = 0; r < 3; r++) {
-          for (let c = 0; c < 3; c++) {
-            box.push(b[br * 3 + r][bc * 3 + c].value);
-          }
-        }
-        if (box.includes(0) || new Set(box).size !== SIZE) return false;
-      }
-    }
-    return true;
   };
 
   if (board.length === 0)
@@ -193,14 +201,17 @@ const Sudoku = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 select-none overflow-y-auto">
-      <div className="sr-only" aria-live="polite">{ariaMessage}</div>
-      <div className="mb-2 flex space-x-2">
+      <div className="sr-only" aria-live="polite">
+        {ariaMessage}
+      </div>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
         <select
           className="text-black p-1"
           value={difficulty}
           onChange={(e) => {
-            setDifficulty(e.target.value);
-            startGame(useDaily ? dailySeed() : Date.now());
+            const nextDifficulty = e.target.value as Difficulty;
+            setDifficulty(nextDifficulty);
+            startGame(useDaily ? dailySeed() : Date.now(), nextDifficulty);
           }}
         >
           <option value="easy">Easy</option>
@@ -208,7 +219,12 @@ const Sudoku = () => {
           <option value="hard">Hard</option>
         </select>
         <label className="flex items-center space-x-1">
-          <input type="checkbox" checked={pencilMode} onChange={(e) => setPencilMode(e.target.checked)} />
+          <input
+            type="checkbox"
+            checked={pencilMode}
+            aria-label="Toggle pencil mode"
+            onChange={(e) => setPencilMode(e.target.checked)}
+          />
           <span>Pencil</span>
         </label>
         <button className="px-2 py-1 bg-gray-700 rounded" onClick={getHintHandler}>
@@ -223,8 +239,11 @@ const Sudoku = () => {
         <button
           className="px-2 py-1 bg-gray-700 rounded"
           onClick={() => {
-            setUseDaily(!useDaily);
-            startGame(!useDaily ? dailySeed() : Date.now());
+            setUseDaily((prev) => {
+              const next = !prev;
+              startGame(next ? dailySeed() : Date.now());
+              return next;
+            });
           }}
         >
           {useDaily ? 'Daily' : 'Random'}
@@ -251,28 +270,26 @@ const Sudoku = () => {
               board[selectedCell.r][selectedCell.c].value !== 0 &&
               board[selectedCell.r][selectedCell.c].value === val;
             const conflict = hasConflict(board, r, c, val);
-            const wrong =
-              !original && solution.length > 0 && val !== 0 && val !== solution[r][c];
+            const wrong = !original && solution.length > 0 && val !== 0 && val !== solution[r][c];
             return (
               <div
                 key={`${r}-${c}`}
                 className={`relative overflow-hidden w-8 h-8 sm:w-10 sm:h-10 focus-within:ring-2 focus-within:ring-blue-500 ${
                   original ? 'bg-gray-300' : 'bg-white'
-                } ${inHighlight ? 'bg-yellow-100' : ''} ${
-                  isSelected ? 'bg-yellow-200' : ''
-                } ${sameDigit ? 'match-glow' : ''} ${
-                  conflict
-                    ? 'bg-red-700 error-pulse'
-                    : wrong
-                    ? 'bg-red-600'
-                    : ''
+                } ${inHighlight ? 'bg-yellow-100' : ''} ${isSelected ? 'bg-yellow-200' : ''} ${
+                  sameDigit ? 'match-glow' : ''
+                } ${
+                  conflict ? 'bg-red-700 error-pulse' : wrong ? 'bg-red-600' : ''
                 } ${isHint ? 'ring-2 ring-yellow-400' : ''}`}
               >
                 <input
                   className={`w-full h-full text-center bg-transparent outline-none focus:outline-none ${
                     conflict || wrong ? 'text-white' : 'text-black'
                   }`}
-                  ref={(el) => (inputRefs.current[r][c] = el)}
+                  ref={(el) => {
+                    if (!inputRefs.current[r]) inputRefs.current[r] = [];
+                    inputRefs.current[r][c] = el;
+                  }}
                   onKeyDown={(e) => handleKeyDown(e, r, c)}
                   aria-label={`Row ${r + 1} Column ${c + 1}`}
                   value={val === 0 ? '' : val}
@@ -286,10 +303,7 @@ const Sudoku = () => {
                 {cell.candidates.length > 0 && val === 0 && (
                   <div className="absolute inset-0 grid grid-cols-3 text-[8px] leading-3 pointer-events-none">
                     {range(9).map((n) => (
-                      <div
-                        key={n}
-                        className="flex items-center justify-center text-gray-700"
-                      >
+                      <div key={n} className="flex items-center justify-center text-gray-700">
                         {cell.candidates.includes(n + 1) ? n + 1 : ''}
                       </div>
                     ))}
@@ -297,7 +311,7 @@ const Sudoku = () => {
                 )}
               </div>
             );
-          })
+          }),
         )}
       </div>
       {completed && <div className="mt-2">Completed!</div>}
