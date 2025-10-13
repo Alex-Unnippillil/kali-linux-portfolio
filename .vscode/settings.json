@@ -1,8 +1,13 @@
 {
-    "conventionalCommits.scopes": [
-        "StatusCard"
-    ],
-    "kiroAgent.configureMCP": "Disabled",
-    "editor.experimental.treeSitterTelemetry": true,
-    "redhat.telemetry.enabled": true
+  "conventionalCommits.scopes": [
+    "StatusCard"
+  ],
+  "kiroAgent.configureMCP": "Disabled",
+  "editor.experimental.treeSitterTelemetry": true,
+  "redhat.telemetry.enabled": true,
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "typescript.tsdk": "node_modules/typescript/lib"
 }
