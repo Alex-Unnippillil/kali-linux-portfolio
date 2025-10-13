@@ -165,7 +165,7 @@ export class Desktop extends Component {
         snapGrid: [8, 8],
     };
 
-    constructor(props) {
+    constructor(props = {}) {
         super(props);
         this.workspaceCount = 4;
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
@@ -4097,6 +4097,7 @@ export class Desktop extends Component {
             return {
                 minimized_windows,
                 focused_windows,
+                minimizedShelfOpen: true,
             };
         }, () => {
             this.giveFocusToLastApp();
@@ -4154,7 +4155,11 @@ export class Desktop extends Component {
             const closed_windows = { ...current };
             delete closed_windows[id];
             this.commitWorkspacePartial({ closed_windows }, prev.activeWorkspace);
-            return { closed_windows };
+            const hasClosedEntries = Object.values(closed_windows).some(Boolean);
+            return {
+                closed_windows,
+                closedShelfOpen: hasClosedEntries ? prev.closedShelfOpen : false,
+            };
         }, () => {
             if (this.isOverlayId(id)) {
                 this.recentlyClosedOverlays.delete(id);
@@ -4228,11 +4233,16 @@ export class Desktop extends Component {
             // if it's minimised, restore its last position
             if (this.state.minimized_windows[objId]) {
                 this.focus(objId);
-                var r = document.querySelector("#" + objId);
-                r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                let minimized_windows = this.state.minimized_windows;
+                const r = document.querySelector("#" + objId);
+                if (r && r.style) {
+                    const storedX = r.style.getPropertyValue("--window-transform-x") || "0px";
+                    const storedY = r.style.getPropertyValue("--window-transform-y") || "0px";
+                    r.style.transform = `translate(${storedX},${storedY}) scale(1)`;
+                }
+                let minimized_windows = { ...this.state.minimized_windows };
                 minimized_windows[objId] = false;
                 this.setWorkspaceState({ minimized_windows }, this.saveSession);
+                this.setState({ minimizedShelfOpen: false });
 
             }
 
@@ -4240,11 +4250,15 @@ export class Desktop extends Component {
                 // if it's minimised, restore its last position
                 if (this.state.minimized_windows[objId]) {
                     this.focus(objId);
-                    var r = document.querySelector("#" + objId);
-                    r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                    let minimized_windows = this.state.minimized_windows;
+                    const r = document.querySelector("#" + objId);
+                    if (r && r.style) {
+                        const storedX = r.style.getPropertyValue("--window-transform-x") || "0px";
+                        const storedY = r.style.getPropertyValue("--window-transform-y") || "0px";
+                        r.style.transform = `translate(${storedX},${storedY}) scale(1)`;
+                    }
+                    let minimized_windows = { ...this.state.minimized_windows };
                     minimized_windows[objId] = false;
-                    this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                    this.setState({ minimized_windows: minimized_windows, minimizedShelfOpen: false }, this.saveSession);
                 } else {
                     this.focus(objId);
                     this.saveSession();
@@ -4291,7 +4305,7 @@ export class Desktop extends Component {
                 const favourite_apps = { ...this.state.favourite_apps, [objId]: true }; // adds opened app to sideBar
                 const minimized_windows = { ...this.state.minimized_windows, [objId]: false };
                 this.setWorkspaceState({ closed_windows, minimized_windows }, () => {
-                    const nextState = { closed_windows, favourite_apps, minimized_windows };
+                    const nextState = { closed_windows, favourite_apps, minimized_windows, closedShelfOpen: false };
                     if (context) {
                         nextState.window_context = { ...this.state.window_context, [objId]: context };
                     }
@@ -4360,6 +4374,7 @@ export class Desktop extends Component {
             if (prevState.focused_windows?.[objId]) {
                 partial.focused_windows = { ...prevState.focused_windows, [objId]: false };
             }
+            partial.closedShelfOpen = true;
             return partial;
         }, this.saveSession);
 
@@ -4377,6 +4392,7 @@ export class Desktop extends Component {
                 favourite_apps,
                 minimized_windows,
                 window_context,
+                closedShelfOpen: true,
             };
             if (prevState.focused_windows?.[objId]) {
                 nextState.focused_windows = { ...prevState.focused_windows, [objId]: false };
