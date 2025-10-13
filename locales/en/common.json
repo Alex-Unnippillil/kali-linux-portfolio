@@ -1,0 +1,9 @@
+{
+  "app": {
+    "title": "Kali Linux Portfolio",
+    "description": "A desktop-style showcase of tools, games, and utilities."
+  },
+  "navigation": {
+    "skipToContent": "Skip to app grid"
+  }
+}
