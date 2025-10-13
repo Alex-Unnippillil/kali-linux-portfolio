@@ -13,6 +13,7 @@ import {
     measureSnapBottomInset,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
+import { getMotionDuration, isReducedMotionEnabled } from '../../utils/motionPreferences';
 import styles from './window.module.css';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET } from '../../utils/uiConstants';
 
@@ -307,8 +308,20 @@ export class Window extends Component {
         return null;
     }
 
-    setTransformMotionPreset = (node, preset) => {
+    setTransformMotionPreset = (node, preset, reducedMotionOverride) => {
         if (!node) return;
+        const reduceMotion = typeof reducedMotionOverride === 'boolean'
+            ? reducedMotionOverride
+            : isReducedMotionEnabled();
+
+        if (reduceMotion) {
+            node.style.setProperty('--window-motion-transform-duration', '0ms');
+            node.style.setProperty('--window-motion-transform-easing', 'linear');
+            node.style.setProperty('--window-motion-opacity-duration', '0ms');
+            node.style.setProperty('--window-motion-opacity-easing', 'linear');
+            return;
+        }
+
         const durationVars = {
             maximize: '--window-motion-duration-maximize',
             restore: '--window-motion-duration-restore',
@@ -323,6 +336,8 @@ export class Window extends Component {
         const easing = easingVars[preset] || easingVars.restore;
         node.style.setProperty('--window-motion-transform-duration', `var(${duration})`);
         node.style.setProperty('--window-motion-transform-easing', `var(${easing})`);
+        node.style.setProperty('--window-motion-opacity-duration', 'var(--window-motion-duration-minimize)');
+        node.style.setProperty('--window-motion-opacity-easing', 'var(--window-motion-ease-minimize)');
     }
 
     activateOverlay = () => {
@@ -649,15 +664,13 @@ export class Window extends Component {
         const posx = node.style.getPropertyValue("--window-transform-x") || `${this.startX}px`;
         const posy = node.style.getPropertyValue("--window-transform-y") || `${this.startY}px`;
         const endTransform = `translate(${posx},${posy})`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const reduceMotion = isReducedMotionEnabled();
 
-        this.setTransformMotionPreset(node, 'restore');
-        if (prefersReducedMotion) {
-            node.style.transform = endTransform;
+        this.setTransformMotionPreset(node, 'restore', reduceMotion);
+        node.style.transform = endTransform;
+        if (reduceMotion) {
             return;
         }
-
-        node.style.transform = endTransform;
     }
 
     maximizeWindow = () => {
@@ -694,12 +707,18 @@ export class Window extends Component {
         this.setWinowsPosition();
         this.setState({ closed: true, preMaximizeSize: null }, () => {
             this.deactivateOverlay();
-            setTimeout(() => {
+            const finalizeClose = () => {
                 const targetId = this.id ?? this.props.id;
                 if (typeof this.props.closed === 'function' && targetId) {
                     this.props.closed(targetId);
                 }
-            }, 300); // after 300ms this window will be unmounted from parent (Desktop)
+            };
+            const delay = getMotionDuration(300);
+            if (delay > 0) {
+                setTimeout(finalizeClose, delay);
+            } else {
+                finalizeClose();
+            }
         });
     }
 
