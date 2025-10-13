@@ -1,17 +1,30 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import FormError from '../components/ui/FormError';
 
 const STORAGE_KEY = 'dummy-form-draft';
+
+type FormField = 'name' | 'email' | 'message';
+type FormErrors = Partial<Record<FormField, string>>;
 
 const DummyForm: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [recovered, setRecovered] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  const summaryRef = useRef<HTMLDivElement>(null);
+
+  const errorOrder: FormField[] = useMemo(() => ['name', 'email', 'message'], []);
+
+  const errorMessages: Record<FormField, string> = {
+    name: 'Name is required',
+    email: 'Email is required',
+    message: 'Message is required',
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -55,18 +68,55 @@ const DummyForm: React.FC = () => {
     return () => clearTimeout(handle);
   }, [name, email, message]);
 
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      summaryRef.current?.focus();
+    }
+  }, [errors]);
+
+  const clearFieldError = (field: FormField) => {
+    setErrors((prev) => {
+      if (!prev[field]) {
+        return prev;
+      }
+      const { [field]: _omit, ...rest } = prev;
+      return rest;
+    });
+  };
+
+  const handleErrorLinkClick = (field: FormField) => (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    const target = document.getElementById(field);
+    target?.focus();
+    target?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!name || !email || !message) {
-      setError('All fields are required');
+    const newErrors: FormErrors = {};
+
+    if (!name.trim()) {
+      newErrors.name = errorMessages.name;
+    }
+
+    if (!email.trim()) {
+      newErrors.email = errorMessages.email;
+    } else if (!emailRegex.test(email.trim())) {
+      newErrors.email = 'Please enter a valid email';
+    }
+
+    if (!message.trim()) {
+      newErrors.message = errorMessages.message;
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setSuccess(false);
       return;
     }
-    if (!emailRegex.test(email)) {
-      setError('Please enter a valid email');
-      return;
-    }
-    setError('');
+
+    setErrors({});
     setSuccess(false);
     if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
       await fetch('/api/dummy', {
@@ -87,34 +137,82 @@ const DummyForm: React.FC = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <form onSubmit={handleSubmit} className="w-full max-w-md rounded bg-white p-6 shadow-md">
+      <form onSubmit={handleSubmit} noValidate className="w-full max-w-md rounded bg-white p-6 shadow-md">
         <h1 className="mb-4 text-xl font-bold">Contact Us</h1>
         {recovered && <p className="mb-4 text-sm text-blue-600">Recovered draft</p>}
-        {error && <FormError className="mb-4 mt-0">{error}</FormError>}
+        {Object.keys(errors).length > 0 && (
+          <div
+            ref={summaryRef}
+            tabIndex={-1}
+            role="alert"
+            aria-labelledby="form-error-summary-title"
+            className="mb-4 mt-0 rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+          >
+            <p id="form-error-summary-title" className="font-semibold">
+              Please fix the following errors:
+            </p>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              {errorOrder
+                .filter((field) => errors[field])
+                .map((field) => (
+                  <li key={field}>
+                    <a
+                      className="underline"
+                      href={`#${field}`}
+                      onClick={handleErrorLinkClick(field)}
+                    >
+                      {errors[field]}
+                    </a>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        )}
         {success && <p className="mb-4 text-sm text-green-600">Form submitted successfully!</p>}
-        <label className="mb-2 block text-sm font-medium" htmlFor="name">Name</label>
+        <label id="name-label" className="mb-2 block text-sm font-medium" htmlFor="name">Name</label>
         <input
           id="name"
           className="mb-4 w-full rounded border p-2"
           type="text"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value);
+            clearFieldError('name');
+          }}
+          aria-invalid={errors.name ? 'true' : undefined}
+          aria-describedby={errors.name ? 'name-error' : undefined}
+          aria-labelledby="name-label"
         />
-        <label className="mb-2 block text-sm font-medium" htmlFor="email">Email</label>
+        {errors.name && <FormError id="name-error">{errors.name}</FormError>}
+        <label id="email-label" className="mb-2 block text-sm font-medium" htmlFor="email">Email</label>
         <input
           id="email"
           className="mb-4 w-full rounded border p-2"
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            clearFieldError('email');
+          }}
+          aria-invalid={errors.email ? 'true' : undefined}
+          aria-describedby={errors.email ? 'email-error' : undefined}
+          aria-labelledby="email-label"
         />
-        <label className="mb-2 block text-sm font-medium" htmlFor="message">Message</label>
+        {errors.email && <FormError id="email-error">{errors.email}</FormError>}
+        <label id="message-label" className="mb-2 block text-sm font-medium" htmlFor="message">Message</label>
         <textarea
           id="message"
           className="mb-4 w-full rounded border p-2"
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={(e) => {
+            setMessage(e.target.value);
+            clearFieldError('message');
+          }}
+          aria-invalid={errors.message ? 'true' : undefined}
+          aria-describedby={errors.message ? 'message-error' : undefined}
+          aria-labelledby="message-label"
         />
+        {errors.message && <FormError id="message-error">{errors.message}</FormError>}
         <button type="submit" className="w-full rounded bg-blue-600 p-2 text-white">Submit</button>
         <p className="mt-4 text-xs text-gray-500">
           This form posts to a dummy endpoint. No data is stored. By submitting, you consent to this temporary processing of your information.
