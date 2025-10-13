@@ -122,6 +122,7 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            motionDisabled: false,
         }
         this.windowRef = React.createRef();
         this._usageTimeout = null;
@@ -352,11 +353,11 @@ export class Window extends Component {
         if (this.state.snapped) {
             this.unsnapWindow();
         }
-        this.setState({ cursorType: "cursor-move", grabbed: true })
+        this.setState({ cursorType: "cursor-move", grabbed: true, motionDisabled: true })
     }
 
     changeCursorToDefault = () => {
-        this.setState({ cursorType: "cursor-default", grabbed: false })
+        this.setState({ cursorType: "cursor-default", grabbed: false, motionDisabled: false })
     }
 
     getSnapGrid = () => {
@@ -406,6 +407,18 @@ export class Window extends Component {
             this.resizeBoundries();
             this.notifySizeChange();
         });
+    }
+
+    handleResizeStart = () => {
+        if (!this.state.motionDisabled) {
+            this.setState({ motionDisabled: true });
+        }
+    }
+
+    handleResizeEnd = () => {
+        if (this.state.motionDisabled) {
+            this.setState({ motionDisabled: false });
+        }
     }
 
     setWinowsPosition = () => {
@@ -631,33 +644,55 @@ export class Window extends Component {
         const storedSize = this.state.preMaximizeSize;
         const hasStoredSize = storedSize && typeof storedSize.width === 'number' && typeof storedSize.height === 'number';
 
-        if (hasStoredSize) {
-            this.setState({
-                width: storedSize.width,
-                height: storedSize.height,
-                maximized: false,
-                preMaximizeSize: null,
-            }, () => {
-                this.resizeBoundries();
-                this.notifySizeChange();
-            });
-        } else {
-            this.setDefaultWindowDimenstion();
-            this.setState({ maximized: false, preMaximizeSize: null });
-        }
-        // get previous position
         const posx = node.style.getPropertyValue("--window-transform-x") || `${this.startX}px`;
         const posy = node.style.getPropertyValue("--window-transform-y") || `${this.startY}px`;
         const endTransform = `translate(${posx},${posy})`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const hasWindow = typeof window !== 'undefined';
+        const prefersReducedMotion = hasWindow
+            && typeof window.matchMedia === 'function'
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        const applyStoredBounds = () => {
+            if (hasStoredSize) {
+                this.setState({
+                    width: storedSize.width,
+                    height: storedSize.height,
+                    maximized: false,
+                    preMaximizeSize: null,
+                }, () => {
+                    this.resizeBoundries();
+                    this.notifySizeChange();
+                });
+            } else {
+                this.setDefaultWindowDimenstion();
+                this.setState({ maximized: false, preMaximizeSize: null });
+            }
+            if (typeof node.style.setProperty === 'function') {
+                node.style.setProperty('--window-transform-x', posx);
+                node.style.setProperty('--window-transform-y', posy);
+            }
+            node.style.transform = endTransform;
+        };
 
         this.setTransformMotionPreset(node, 'restore');
-        if (prefersReducedMotion) {
-            node.style.transform = endTransform;
+
+        if (!hasWindow || prefersReducedMotion) {
+            applyStoredBounds();
             return;
         }
 
-        node.style.transform = endTransform;
+        const topOffset = measureWindowTopOffset();
+        const translateYOffset = topOffset - DESKTOP_TOP_PADDING;
+        const schedule = typeof window.requestAnimationFrame === 'function'
+            ? window.requestAnimationFrame.bind(window)
+            : (cb) => window.setTimeout(cb, 0);
+
+        node.style.transform = `translate(-1pt, ${translateYOffset}px)`;
+        node.getBoundingClientRect();
+
+        schedule(() => {
+            schedule(applyStoredBounds);
+        });
     }
 
     maximizeWindow = () => {
@@ -877,6 +912,7 @@ export class Window extends Component {
                             this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
                             'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',
                             styles.windowFrame,
+                            this.state.motionDisabled ? styles.windowFrameMotionDisabled : '',
                             this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
                             this.state.maximized ? styles.windowFrameMaximized : '',
                         ].filter(Boolean).join(' ')}
@@ -890,8 +926,20 @@ export class Window extends Component {
                         onPointerDown={this.focusWindow}
                         onFocus={this.focusWindow}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && (
+                            <WindowYBorder
+                                resize={this.handleHorizontalResize}
+                                onResizeStart={this.handleResizeStart}
+                                onResizeEnd={this.handleResizeEnd}
+                            />
+                        )}
+                        {this.props.resizable !== false && (
+                            <WindowXBorder
+                                resize={this.handleVerticleResize}
+                                onResizeStart={this.handleResizeStart}
+                                onResizeEnd={this.handleResizeEnd}
+                            />
+                        )}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -953,15 +1001,25 @@ export class WindowYBorder extends Component {
         this.trpImg.style.opacity = 0;
     }
     render() {
-            return (
-                <div
-                    className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    draggable
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
-        }
+        return (
+            <div
+                className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
+                draggable
+                onDragStart={(e) => {
+                    e.dataTransfer.setDragImage(this.trpImg, 0, 0);
+                    if (typeof this.props.onResizeStart === 'function') {
+                        this.props.onResizeStart();
+                    }
+                }}
+                onDrag={this.props.resize}
+                onDragEnd={(event) => {
+                    if (typeof this.props.onResizeEnd === 'function') {
+                        this.props.onResizeEnd(event);
+                    }
+                }}
+            ></div>
+        )
+    }
     }
 
 export class WindowXBorder extends Component {
@@ -973,15 +1031,25 @@ export class WindowXBorder extends Component {
         this.trpImg.style.opacity = 0;
     }
     render() {
-            return (
-                <div
-                    className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    draggable
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
-        }
+        return (
+            <div
+                className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
+                draggable
+                onDragStart={(e) => {
+                    e.dataTransfer.setDragImage(this.trpImg, 0, 0);
+                    if (typeof this.props.onResizeStart === 'function') {
+                        this.props.onResizeStart();
+                    }
+                }}
+                onDrag={this.props.resize}
+                onDragEnd={(event) => {
+                    if (typeof this.props.onResizeEnd === 'function') {
+                        this.props.onResizeEnd(event);
+                    }
+                }}
+            ></div>
+        )
+    }
     }
 
 // Window's Edit Buttons
