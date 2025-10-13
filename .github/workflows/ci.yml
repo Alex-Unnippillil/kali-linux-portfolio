@@ -15,6 +15,7 @@ jobs:
       - run: yarn install --immutable --immutable-cache
       - run: yarn dedupe --check
       - run: npm run lint
+      - run: yarn markdown:lint
 
   typecheck:
     runs-on: ubuntu-latest
