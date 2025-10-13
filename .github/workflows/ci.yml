@@ -52,6 +52,20 @@ jobs:
       - run: yarn dedupe --check
       - run: yarn npm audit
 
+  bundle-budget:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: yarn dedupe --check
+      - run: yarn analyze:budget
+        env:
+          MAIN_BUNDLE_BUDGET_KB: 275
+
   vercel-preview:
     runs-on: ubuntu-latest
     env:

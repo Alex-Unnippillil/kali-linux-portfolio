@@ -327,6 +327,7 @@ Add any additional variables required by your configuration (ReCAPTCHA, Supabase
 | `yarn lint` | ESLint (configured via `eslint.config.mjs`). |
 | `yarn test` | Jest unit tests (jsdom environment; see `jest.setup.ts`). |
 | `yarn test:watch` | Watch mode for Jest. |
+| `yarn analyze:budget` | Runs the bundle analyzer in JSON mode and enforces the 275&nbsp;kB shared bundle budget. |
 | `yarn smoke` | Manual smoke runner that opens each `/apps/*` route in a headless browser. |
 | `npx playwright test` | Playwright end-to-end suite (optional locally, required in E2E CI runs). |
 
@@ -337,6 +338,15 @@ Additional guidance:
 - For major UI updates, capture screenshots or short clips for reviewers.
 
 Accessibility and performance checks using Lighthouse or Pa11y (`pa11yci.json`) are encouraged for desktop shell changes.
+
+### Bundle budget
+
+- The CI job `bundle-budget` runs `yarn analyze:budget` and fails if the combined gzip size of the shared `main` and `_app` entrypoints exceeds **275&nbsp;kB**.
+- When the budget is exceeded:
+  - Split heavy libraries into lazy-loaded chunks (for example, dynamic imports in app launchers).
+  - Remove unused exports or trim static demo datasets before bundling.
+  - Consider deferring rarely used simulators to background prefetch hooks instead of initial load.
+- Re-run `yarn analyze:budget` locally to verify fixes before pushing.
 
 ---
 
