@@ -165,33 +165,33 @@ const Nessus: React.FC = () => {
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-6 text-slate-100 sm:px-8 sm:py-10">
+    <main className="min-h-screen bg-[color:color-mix(in_srgb,var(--kali-bg)_70%,var(--kali-panel)_30%)] px-4 py-6 text-[color:var(--color-text)] sm:px-8 sm:py-10">
       <div className="mx-auto flex max-w-6xl flex-col gap-10">
         <header className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-sky-400">
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[color:var(--color-accent)]">
             Simulated vulnerability scanner
           </p>
-          <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+          <h1 className="text-3xl font-bold tracking-tight text-[color:var(--color-text)] sm:text-4xl">
             Nessus Dashboard
           </h1>
-          <p className="max-w-2xl text-sm text-slate-400">
+          <p className="max-w-2xl text-sm text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
             Explore curated scan data, triage actions, and remediation guidance in a focused analyst workspace.
           </p>
         </header>
 
         <section className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-semibold text-white">Plugin feed</h2>
+            <h2 className="text-xl font-semibold text-[color:var(--color-text)]">Plugin feed</h2>
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-700/70 bg-slate-900/70 px-4 py-2 text-sm font-semibold uppercase tracking-wide text-slate-200 transition hover:border-sky-400/70 hover:bg-slate-900 hover:text-sky-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+              className="inline-flex items-center gap-2 rounded-full border border-[color:color-mix(in_srgb,var(--kali-panel-border)_85%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent)] px-4 py-2 text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_92%,transparent)] transition hover:border-[color:var(--color-accent)] hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,var(--color-accent)_18%)] hover:text-[color:var(--color-text)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-panel)]"
             >
-              <span className="h-2.5 w-2.5 rounded-full bg-sky-400/80" aria-hidden />
+              <span className="h-2.5 w-2.5 rounded-full bg-[color:color-mix(in_srgb,var(--color-accent)_85%,transparent)]" aria-hidden />
               Filters
             </button>
           </div>
-          <div className="rounded-2xl border border-slate-800/60 bg-slate-900/60 shadow-[0_25px_60px_rgba(2,6,23,0.55)]">
+          <div className="rounded-2xl border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] shadow-[0_25px_60px_rgba(2,6,23,0.55)]">
             <ul
               ref={listRef}
               onScroll={handleScroll}
@@ -205,32 +205,39 @@ const Nessus: React.FC = () => {
               ))}
             </ul>
             {visibleCount < filtered.length && (
-              <div className="border-t border-slate-800/60 px-6 py-3 text-center text-xs uppercase tracking-wider text-slate-500">
+              <div className="border-t border-[color:var(--kali-panel-border)] px-6 py-3 text-center text-xs uppercase tracking-wider text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
                 Scroll to load more findings
               </div>
             )}
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-800/60 bg-slate-900/70 p-6 shadow-[0_25px_60px_rgba(2,6,23,0.55)]">
+        <section className="rounded-2xl border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] p-6 shadow-[0_25px_60px_rgba(2,6,23,0.55)]">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-semibold text-white">Scan comparison</h2>
-            <p className="text-xs uppercase tracking-wide text-slate-400">
+            <h2 className="text-xl font-semibold text-[color:var(--color-text)]">Scan comparison</h2>
+            <p className="text-xs uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
               Latest import vs. baseline
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {diff.changed.length > 0 && (
-              <div className="rounded-xl border border-amber-400/40 bg-amber-500/5 p-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-200">
+              <div
+                style={{ '--severity-color': 'var(--color-severity-medium)' } as React.CSSProperties}
+                className="rounded-xl border border-[color:color-mix(in_srgb,var(--severity-color)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,var(--severity-color)_12%)] p-4 shadow-[0_25px_60px_rgba(2,6,23,0.45)]"
+              >
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--severity-color)_68%,var(--color-text)_32%)]">
                   Severity shifts
                 </h3>
-                <ul className="mt-2 space-y-2 text-sm text-amber-100">
+                <ul className="mt-2 space-y-2 text-sm text-[color:color-mix(in_srgb,var(--severity-color)_55%,var(--color-text)_45%)]">
                   {diff.changed.map((c) => (
-                    <li key={c.plugin} className="flex items-center justify-between gap-3 rounded-lg bg-amber-500/10 px-3 py-2">
-                      <span className="font-mono text-xs text-amber-200">#{c.plugin}</span>
-                      <span className="text-right text-xs">
-                        {c.from} → <span className="font-semibold text-amber-100">{c.to}</span>
+                    <li
+                      key={c.plugin}
+                      className="flex items-center justify-between gap-3 rounded-lg bg-[color:color-mix(in_srgb,var(--severity-color)_24%,var(--kali-panel))] px-3 py-2"
+                    >
+                      <span className="font-mono text-xs text-[color:color-mix(in_srgb,var(--severity-color)_72%,var(--color-text)_28%)]">#{c.plugin}</span>
+                      <span className="text-right text-xs text-[color:color-mix(in_srgb,var(--color-text)_85%,transparent)]">
+                        {c.from} →{' '}
+                        <span className="font-semibold text-[color:color-mix(in_srgb,var(--severity-color)_65%,var(--color-text)_35%)]">{c.to}</span>
                       </span>
                     </li>
                   ))}
@@ -238,37 +245,49 @@ const Nessus: React.FC = () => {
               </div>
             )}
             {diff.added.length > 0 && (
-              <div className="rounded-xl border border-rose-500/40 bg-rose-500/5 p-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-rose-200">
+              <div
+                style={{ '--severity-color': 'var(--color-severity-high)' } as React.CSSProperties}
+                className="rounded-xl border border-[color:color-mix(in_srgb,var(--severity-color)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,var(--severity-color)_12%)] p-4 shadow-[0_25px_60px_rgba(2,6,23,0.45)]"
+              >
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--severity-color)_70%,var(--color-text)_30%)]">
                   Newly detected
                 </h3>
-                <ul className="mt-2 space-y-2 text-sm text-rose-100">
+                <ul className="mt-2 space-y-2 text-sm text-[color:color-mix(in_srgb,var(--severity-color)_55%,var(--color-text)_45%)]">
                   {diff.added.map((f) => (
-                    <li key={f.plugin} className="flex items-center justify-between gap-3 rounded-lg bg-rose-500/10 px-3 py-2">
-                      <span className="font-mono text-xs text-rose-200">#{f.plugin}</span>
-                      <span className="text-right text-xs font-semibold text-rose-100">{f.severity}</span>
+                    <li
+                      key={f.plugin}
+                      className="flex items-center justify-between gap-3 rounded-lg bg-[color:color-mix(in_srgb,var(--severity-color)_24%,var(--kali-panel))] px-3 py-2"
+                    >
+                      <span className="font-mono text-xs text-[color:color-mix(in_srgb,var(--severity-color)_72%,var(--color-text)_28%)]">#{f.plugin}</span>
+                      <span className="text-right text-xs font-semibold text-[color:color-mix(in_srgb,var(--severity-color)_68%,var(--color-text)_32%)]">{f.severity}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             )}
             {diff.removed.length > 0 && (
-              <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-4">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-200">
+              <div
+                style={{ '--severity-color': 'var(--color-severity-low)' } as React.CSSProperties}
+                className="rounded-xl border border-[color:color-mix(in_srgb,var(--severity-color)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,var(--severity-color)_12%)] p-4 shadow-[0_25px_60px_rgba(2,6,23,0.45)]"
+              >
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--severity-color)_68%,var(--color-text)_32%)]">
                   Resolved findings
                 </h3>
-                <ul className="mt-2 space-y-2 text-sm text-emerald-100">
+                <ul className="mt-2 space-y-2 text-sm text-[color:color-mix(in_srgb,var(--severity-color)_55%,var(--color-text)_45%)]">
                   {diff.removed.map((f) => (
-                    <li key={f.plugin} className="flex items-center justify-between gap-3 rounded-lg bg-emerald-500/10 px-3 py-2">
-                      <span className="font-mono text-xs text-emerald-200">#{f.plugin}</span>
-                      <span className="text-right text-xs font-semibold text-emerald-100">Cleared</span>
+                    <li
+                      key={f.plugin}
+                      className="flex items-center justify-between gap-3 rounded-lg bg-[color:color-mix(in_srgb,var(--severity-color)_20%,var(--kali-panel))] px-3 py-2"
+                    >
+                      <span className="font-mono text-xs text-[color:color-mix(in_srgb,var(--severity-color)_72%,var(--color-text)_28%)]">#{f.plugin}</span>
+                      <span className="text-right text-xs font-semibold text-[color:color-mix(in_srgb,var(--severity-color)_60%,var(--color-text)_40%)]">Cleared</span>
                     </li>
                   ))}
                 </ul>
               </div>
             )}
             {diff.changed.length === 0 && diff.added.length === 0 && diff.removed.length === 0 && (
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
                 No differences detected between the two reference scans.
               </p>
             )}
@@ -277,24 +296,24 @@ const Nessus: React.FC = () => {
 
         <section className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-semibold text-white">Executive summary</h2>
+            <h2 className="text-xl font-semibold text-[color:var(--color-text)]">Executive summary</h2>
             <button
               type="button"
               onClick={exportChart}
-              className="inline-flex items-center gap-2 rounded-full border border-sky-500/60 bg-sky-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-sky-200 transition hover:border-sky-400 hover:bg-sky-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+              className="inline-flex items-center gap-2 rounded-full border border-[color:color-mix(in_srgb,var(--color-accent)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,var(--color-accent)_18%)] px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_90%,transparent)] transition hover:border-[color:var(--color-accent)] hover:bg-[color:color-mix(in_srgb,var(--color-accent)_65%,var(--kali-panel)_35%)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-panel)]"
             >
-              <span className="h-2.5 w-2.5 rounded-full bg-sky-400" aria-hidden />
+              <span className="h-2.5 w-2.5 rounded-full bg-[color:var(--color-accent)]" aria-hidden />
               Export dashboard
             </button>
           </div>
-          <div ref={chartRef} className="rounded-2xl border border-slate-800/60 bg-slate-900/70 p-6 shadow-[0_25px_60px_rgba(2,6,23,0.55)]">
+          <div ref={chartRef} className="rounded-2xl border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] p-6 shadow-[0_25px_60px_rgba(2,6,23,0.55)]">
             <SummaryDashboard summary={summary} trend={trend} />
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-800/60 bg-slate-900/70 p-6 shadow-[0_25px_60px_rgba(2,6,23,0.55)]">
-          <h2 className="text-xl font-semibold text-white">Trends</h2>
-          <p className="mt-1 text-xs uppercase tracking-wide text-slate-400">
+        <section className="rounded-2xl border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] p-6 shadow-[0_25px_60px_rgba(2,6,23,0.55)]">
+          <h2 className="text-xl font-semibold text-[color:var(--color-text)]">Trends</h2>
+          <p className="mt-1 text-xs uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
             Upload custom history exports to extend the dataset
           </p>
           <div className="mt-4">
