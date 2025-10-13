@@ -119,9 +119,19 @@
 .windowYBorder {
   height: calc(100% - 10px);
   width: calc(100% + 10px);
+  touch-action: none;
 }
 
 .windowXBorder {
   height: calc(100% + 10px);
   width: calc(100% - 10px);
+  touch-action: none;
+}
+
+:where(
+    [class*='windowDiagonalHandle'],
+    [class*='windowCornerHandle'],
+    [class*='windowResizeHandle']
+) {
+  touch-action: none;
 }
