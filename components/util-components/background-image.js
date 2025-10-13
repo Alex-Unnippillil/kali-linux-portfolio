@@ -25,7 +25,6 @@ export default function BackgroundImage({ theme }) {
     const wallpaperUrl = theme?.useKaliWallpaper ? null : theme?.wallpaperUrl || null;
     const fallbackUrl = theme?.fallbackWallpaperUrl || null;
     const effectiveUrl = (!imageError && wallpaperUrl) || fallbackUrl;
-    const blurAmount = typeof theme?.blur === 'number' ? theme.blur : 0;
     const prefersReducedMotion = usePrefersReducedMotion();
     const shouldAnimate = !prefersReducedMotion;
 
@@ -154,7 +153,6 @@ export default function BackgroundImage({ theme }) {
                     alt=""
                     className="h-full w-full object-cover"
                     style={{
-                        filter: blurAmount ? `blur(${Math.max(blurAmount - 6, 0)}px)` : undefined,
                         transform: 'scale(1.05)',
                     }}
                     onError={handleImageError}
@@ -208,15 +206,6 @@ export default function BackgroundImage({ theme }) {
                     animation: shouldAnimate ? 'ambientNoisePulse 6s ease-in-out infinite alternate' : undefined,
                 }}
             />
-            {blurAmount > 0 && (
-                <div
-                    className="pointer-events-none absolute inset-0"
-                    style={{
-                        backdropFilter: `blur(${blurAmount}px)`,
-                        WebkitBackdropFilter: `blur(${blurAmount}px)`,
-                    }}
-                />
-            )}
         </div>
     );
 }
