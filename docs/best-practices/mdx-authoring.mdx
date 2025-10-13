@@ -1,0 +1,67 @@
+---
+title: Authoring MDX docs
+description: Workflow for adding new documentation pages that render in the DocLayout experience.
+order: 1
+updated: 2025-02-14
+---
+
+# Authoring MDX docs
+
+Use this checklist when you add or update files under the `docs/` directory so the documentation navigation and table of contents stay healthy.
+
+## 1. Create the file
+
+1. Pick a folder that matches the topic. Use nested folders for categories (for example `docs/best-practices/` or `docs/reviews/weekly/`).
+2. Name the file with lowercase words separated by hyphens. Use the `.mdx` extension when you need JSX components; `.md` still works for plain Markdown.
+3. Add the front matter block shown below at the top of the file.
+
+```mdx
+---
+title: Your doc title
+description: Short summary for the sidebar and SEO
+order: 5
+updated: 2025-02-14
+---
+```
+
+* **`title`** appears in the sidebar and document header.
+* **`description`** is optional but recommended for context and meta descriptions.
+* **`order`** lets you change the sorting inside a group. Lower numbers appear earlier.
+* **`updated`** accepts any ISO date. The layout renders it as “Last updated …”.
+
+## 2. Structure the content
+
+- Use a single `#` heading for the page title. It is usually the same as the front-matter title.
+- Break sections into `##` and `###` headings. These populate the table of contents automatically.
+- Keep headings descriptive—unique phrasing avoids duplicate anchor IDs.
+- Short paragraphs, ordered lists, and tables stay readable in the desktop-style layout.
+
+### Embedding JSX
+
+Because the docs compile through MDX you can use React components inline. Import from the repo with relative paths at the top of the file and render them just like JSX:
+
+```mdx
+import { WarningBanner } from '@/components/WarningBanner';
+
+<WarningBanner>MDX lets you use any shared UI component.</WarningBanner>
+```
+
+Avoid heavy, client-only components unless they degrade gracefully when prerendered.
+
+## 3. Link responsibly
+
+- Link to other docs with root-relative URLs such as `/docs/getting-started` so navigation works locally and in static exports.
+- External links should include the protocol (`https://`) and, when appropriate, `rel="noreferrer"` for security.
+- To reference assets, prefer files under `public/` and relative paths (`/images/docs/...`).
+
+## 4. Run validation
+
+1. `yarn lint` — catches import issues and MDX syntax mistakes.
+2. `yarn test` — keep the regression suite healthy if you touched logic files.
+3. `yarn dev` — load the page at `http://localhost:3000/docs/...` and confirm the sidebar highlight, keyboard navigation, and table of contents links.
+
+## 5. Submit the change
+
+- Commit the doc alongside code updates that reference it.
+- Mention the new or updated doc in your PR summary so reviewers know to skim it.
+- Include screenshots when you tweak styles or add interactive embeds.
