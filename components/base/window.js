@@ -127,6 +127,9 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._frameTasks = new Map();
+        this._scheduledFrame = null;
+        this._latestDragData = null;
     }
 
     notifySizeChange = () => {
@@ -148,6 +151,8 @@ export class Window extends Component {
         // Listen for context menu events to toggle inert background
         window.addEventListener('context-menu-open', this.setInertBackground);
         window.addEventListener('context-menu-close', this.removeInertBackground);
+        window.addEventListener('pointerup', this.handlePointerRelease);
+        window.addEventListener('pointercancel', this.handlePointerRelease);
         const root = this.getWindowNode();
         root?.addEventListener('super-arrow', this.handleSuperArrow);
         if (this._uiExperiments) {
@@ -164,11 +169,56 @@ export class Window extends Component {
         window.removeEventListener('resize', this.resizeBoundries);
         window.removeEventListener('context-menu-open', this.setInertBackground);
         window.removeEventListener('context-menu-close', this.removeInertBackground);
+        window.removeEventListener('pointerup', this.handlePointerRelease);
+        window.removeEventListener('pointercancel', this.handlePointerRelease);
         const root = this.getWindowNode();
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.cancelAnimationTask();
+    }
+
+    scheduleAnimationTask = (key, callback) => {
+        if (typeof callback !== 'function') return;
+        if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+            callback();
+            return;
+        }
+
+        this._frameTasks.set(key, callback);
+        if (this._scheduledFrame != null) return;
+
+        this._scheduledFrame = window.requestAnimationFrame(() => {
+            this._scheduledFrame = null;
+            const tasks = Array.from(this._frameTasks.values());
+            this._frameTasks.clear();
+            tasks.forEach((task) => {
+                if (typeof task === 'function') {
+                    task();
+                }
+            });
+        });
+    }
+
+    cancelAnimationTask = (key) => {
+        if (typeof key !== 'undefined') {
+            this._frameTasks.delete(key);
+        } else {
+            this._frameTasks.clear();
+        }
+
+        if (this._frameTasks.size === 0 && this._scheduledFrame != null) {
+            if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+                window.cancelAnimationFrame(this._scheduledFrame);
+            }
+            this._scheduledFrame = null;
+        }
+    }
+
+    handlePointerRelease = () => {
+        this._latestDragData = null;
+        this.cancelAnimationTask('drag');
     }
 
     setDefaultWindowDimenstion = () => {
@@ -582,12 +632,24 @@ export class Window extends Component {
 
     handleDrag = (e, data) => {
         if (data && data.node) {
-            this.applyEdgeResistance(data.node, data);
+            this._latestDragData = { node: data.node, data };
+        } else {
+            this._latestDragData = null;
         }
-        this.checkSnapPreview();
+
+        this.scheduleAnimationTask('drag', () => {
+            const dragData = this._latestDragData;
+            this._latestDragData = null;
+            if (dragData && dragData.node) {
+                this.applyEdgeResistance(dragData.node, dragData.data);
+            }
+            this.checkSnapPreview();
+        });
     }
 
     handleStop = () => {
+        this._latestDragData = null;
+        this.cancelAnimationTask('drag');
         this.changeCursorToDefault();
         const snapPos = this.state.snapPosition;
         if (snapPos) {
