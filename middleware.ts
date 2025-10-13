@@ -1,5 +1,31 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+const PERMISSIONS_POLICY_BASE = {
+  camera: '()',
+  microphone: '()',
+  geolocation: '()',
+  'interest-cohort': '()',
+} as const;
+
+type PermissionDirective = keyof typeof PERMISSIONS_POLICY_BASE;
+
+function serializePermissionsPolicy(
+  overrides: Partial<Record<PermissionDirective, string>> = {},
+): string {
+  return (Object.keys(PERMISSIONS_POLICY_BASE) as PermissionDirective[])
+    .map((directive) => {
+      const value = overrides[directive] ?? PERMISSIONS_POLICY_BASE[directive];
+      return `${directive}=${value}`;
+    })
+    .join(', ');
+}
+
+export const DEFAULT_PERMISSIONS_POLICY = serializePermissionsPolicy();
+
+export const CAMERA_ENABLED_PERMISSIONS_POLICY = serializePermissionsPolicy({
+  camera: '(self)',
+});
+
 function nonce() {
   const arr = new Uint8Array(16);
   crypto.getRandomValues(arr);
@@ -43,5 +69,11 @@ export function middleware(req: NextRequest) {
   const res = NextResponse.next();
   res.headers.set('x-csp-nonce', n);
   res.headers.set('Content-Security-Policy', csp);
+  const pathname = req.nextUrl.pathname;
+  const allowCamera = pathname === '/qr' || pathname.startsWith('/qr/');
+  res.headers.set(
+    'Permissions-Policy',
+    allowCamera ? CAMERA_ENABLED_PERMISSIONS_POLICY : DEFAULT_PERMISSIONS_POLICY,
+  );
   return res;
 }
