@@ -122,6 +122,7 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            dragAnnouncement: '',
         }
         this.windowRef = React.createRef();
         this._usageTimeout = null;
@@ -352,11 +353,25 @@ export class Window extends Component {
         if (this.state.snapped) {
             this.unsnapWindow();
         }
-        this.setState({ cursorType: "cursor-move", grabbed: true })
+        const title = typeof this.props.title === 'string' && this.props.title.trim().length > 0
+            ? this.props.title
+            : 'Window';
+        this.setState({
+            cursorType: "cursor-move",
+            grabbed: true,
+            dragAnnouncement: `${title} grabbed`,
+        })
     }
 
     changeCursorToDefault = () => {
-        this.setState({ cursorType: "cursor-default", grabbed: false })
+        const title = typeof this.props.title === 'string' && this.props.title.trim().length > 0
+            ? this.props.title
+            : 'Window';
+        this.setState({
+            cursorType: "cursor-default",
+            grabbed: false,
+            dragAnnouncement: `${title} released`,
+        })
     }
 
     getSnapGrid = () => {
@@ -896,9 +911,9 @@ export class Window extends Component {
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
-                            grabbed={this.state.grabbed}
                             onPointerDown={this.focusWindow}
                             onDoubleClick={this.handleTitleBarDoubleClick}
+                            dragAnnouncement={this.state.dragAnnouncement}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -925,19 +940,21 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, onPointerDown, onDoubleClick, dragAnnouncement }) {
     return (
         <div
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
             tabIndex={0}
             role="button"
-            aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
             onPointerDown={onPointerDown}
             onDoubleClick={onDoubleClick}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
+            <div className="sr-only" aria-live="polite" aria-atomic="true" role="status">
+                {dragAnnouncement}
+            </div>
         </div>
     )
 }
