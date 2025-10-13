@@ -24,11 +24,23 @@ export interface TabDefinition {
   onClose?: () => void;
 }
 
+export interface TabbedWindowClassNames {
+  tabBar?: string;
+  tab?: string;
+  tabActive?: string;
+  tabInactive?: string;
+  tabButton?: string;
+  closeButton?: string;
+  moreMenu?: string;
+  moreMenuItem?: string;
+}
+
 interface TabbedWindowProps {
   initialTabs: TabDefinition[];
   onNewTab?: () => TabDefinition;
   onTabsChange?: (tabs: TabDefinition[]) => void;
   className?: string;
+  classNames?: TabbedWindowClassNames;
 }
 
 interface TabContextValue {
@@ -45,6 +57,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   onNewTab,
   onTabsChange,
   className = '',
+  classNames,
 }) => {
   const [tabs, setTabs] = useState<TabDefinition[]>(initialTabs);
   const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id || '');
@@ -58,6 +71,24 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  const {
+    tabBar: tabBarClassName =
+      'border-b border-white/10 bg-kali-surface/80 text-white/80 backdrop-blur',
+    tab: tabClassName = 'backdrop-blur-sm',
+    tabActive: activeTabClassName =
+      'border-[color:color-mix(in_srgb,var(--kali-blue)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-blue)_18%,var(--kali-surface))] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]',
+    tabInactive: inactiveTabClassName =
+      'border-transparent text-white/70 hover:border-[color:color-mix(in_srgb,var(--kali-blue)_35%,transparent)] hover:bg-[color:color-mix(in_srgb,var(--kali-blue)_12%,transparent)] hover:text-white',
+    tabButton: tabButtonClassName =
+      'rounded-md px-2 py-1 text-white/70 leading-none transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-surface)]',
+    closeButton: closeButtonClassName =
+      'rounded-sm p-1 text-xs text-white/70 transition-colors hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-surface)]',
+    moreMenu: moreMenuClassName =
+      'absolute right-0 z-10 mt-1 w-48 rounded border border-white/10 bg-kali-surface/95 py-1 text-sm text-white/80 shadow-xl backdrop-blur',
+    moreMenuItem: moreMenuItemClassName =
+      'flex w-full items-center justify-between px-3 py-1 text-left text-white/80 transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-surface)]',
+  } = classNames ?? {};
 
   useEffect(() => {
     if (prevActive.current !== activeId) {
@@ -308,11 +339,11 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      <div className="flex flex-shrink-0 items-center gap-1 border-b border-gray-800 bg-black/60 px-1 text-sm text-gray-200">
+      <div className={`flex flex-shrink-0 items-center gap-1 px-1 text-sm ${tabBarClassName}`}>
         {canScrollLeft && (
           <button
             type="button"
-            className="h-full rounded px-2 py-1 transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
+            className={`h-full ${tabButtonClassName}`}
             onClick={() => scrollByAmount('left')}
             aria-label="Scroll tabs left"
           >
@@ -339,10 +370,8 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
                     tabRefs.current.delete(t.id);
                   }
                 }}
-                className={`group flex flex-shrink-0 cursor-pointer select-none items-center gap-2 rounded-md border px-3 py-1.5 text-gray-200 transition-colors focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange ${
-                  t.id === activeId
-                    ? 'border-ub-orange/60 bg-white/20 text-white shadow-inner'
-                    : 'border-transparent hover:bg-white/10 hover:text-white'
+                className={`group flex flex-shrink-0 cursor-pointer select-none items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-surface)] ${tabClassName} ${
+                  t.id === activeId ? activeTabClassName : inactiveTabClassName
                 }`}
                 draggable
                 onDragStart={handleDragStart(i)}
@@ -359,7 +388,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
                 <span className="max-w-[150px] whitespace-nowrap">{middleEllipsis(t.title)}</span>
                 {t.closable !== false && tabs.length > 1 && (
                   <button
-                    className="rounded-sm p-1 text-xs text-gray-300 transition-colors hover:bg-white/20 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
+                    className={closeButtonClassName}
                     onClick={(e) => {
                       e.stopPropagation();
                       closeTab(t.id);
@@ -376,7 +405,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         {canScrollRight && (
           <button
             type="button"
-            className="h-full rounded px-2 py-1 transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
+            className={`h-full ${tabButtonClassName}`}
             onClick={() => scrollByAmount('right')}
             aria-label="Scroll tabs right"
           >
@@ -388,7 +417,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             <button
               type="button"
               ref={moreButtonRef}
-              className="rounded px-2 py-1 transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
+              className={tabButtonClassName}
               onClick={() => setMoreMenuOpen((open) => !open)}
               aria-haspopup="menu"
               aria-expanded={moreMenuOpen}
@@ -399,18 +428,18 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
               <div
                 ref={moreMenuRef}
                 role="menu"
-                className="absolute right-0 z-10 mt-1 w-48 rounded border border-gray-700 bg-gray-900 py-1 shadow-lg"
+                className={moreMenuClassName}
               >
                 {overflowTabs.map((tab) => (
                   <button
                     key={tab.id}
                     type="button"
                     role="menuitem"
-                    className="flex w-full items-center justify-between px-3 py-1 text-left text-gray-200 transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
+                    className={moreMenuItemClassName}
                     onClick={() => handleMoreSelect(tab.id)}
                   >
                     <span className="truncate">{tab.title}</span>
-                    {tab.id === activeId && <span className="ml-2 text-xs text-ub-orange">Active</span>}
+                    {tab.id === activeId && <span className="ml-2 text-xs text-kali-primary">Active</span>}
                   </button>
                 ))}
               </div>
@@ -419,7 +448,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         )}
         {onNewTab && (
           <button
-            className="rounded px-2 py-1 transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
+            className={`${tabButtonClassName} text-lg`}
             onClick={addTab}
             aria-label="New Tab"
           >
