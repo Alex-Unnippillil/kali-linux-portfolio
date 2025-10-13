@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import copyToClipboard from "../../utils/clipboard";
+import { formatNumber as formatNumberWithLocale } from "@/lib/intl";
 
 type Rates = Record<string, number>;
 const initialRates = {
@@ -19,7 +20,7 @@ const icons: Record<Domain, string> = {
 
 type Notation = "fixed" | "engineering" | "scientific";
 
-const formatNumber = (
+const formatNumericValue = (
   val: string,
   notation: Notation,
   trailingZeros: boolean,
@@ -31,7 +32,8 @@ const formatNumber = (
     maximumFractionDigits: 10,
   };
   if (trailingZeros) opts.minimumFractionDigits = 10;
-  return n.toLocaleString(undefined, opts);
+  const formatted = formatNumberWithLocale(n, opts);
+  return formatted === "NaN" ? "" : formatted;
 };
 
 function CopyButton({ value, label = "Copy value" }: { value: string; label?: string }) {
@@ -305,7 +307,7 @@ export default function Converter() {
                 />
               </div>
               <span className="block min-h-[1.25rem] text-sm font-mono text-[color:color-mix(in_srgb,var(--kali-text)_80%,transparent)]">
-                {formatNumber(fromValue, notation, trailingZeros)}
+                {formatNumericValue(fromValue, notation, trailingZeros)}
               </span>
               <div className="flex flex-wrap items-center gap-2">
                 <select
@@ -324,7 +326,7 @@ export default function Converter() {
                 </select>
                 <CopyButton
                   value={
-                    formatNumber(fromValue, notation, trailingZeros) || fromValue
+                    formatNumericValue(fromValue, notation, trailingZeros) || fromValue
                   }
                   label="Copy value"
                 />
@@ -357,7 +359,7 @@ export default function Converter() {
                 />
               </div>
               <span className="block min-h-[1.25rem] text-sm font-mono text-[color:color-mix(in_srgb,var(--kali-text)_80%,transparent)]">
-                {formatNumber(toValue, notation, trailingZeros)}
+                {formatNumericValue(toValue, notation, trailingZeros)}
               </span>
               <div className="flex flex-wrap items-center gap-2">
                 <select
@@ -376,7 +378,7 @@ export default function Converter() {
                 </select>
                 <CopyButton
                   value={
-                    formatNumber(toValue, notation, trailingZeros) || toValue
+                    formatNumericValue(toValue, notation, trailingZeros) || toValue
                   }
                   label="Copy value"
                 />
@@ -407,7 +409,7 @@ export default function Converter() {
                 className="max-h-48 space-y-2 overflow-y-auto px-4 pb-4"
               >
                 {history.slice(0, HISTORY_PREVIEW_COUNT).map((h, i) => {
-                  const formatted = `${formatNumber(h.fromValue, notation, trailingZeros)} ${h.fromUnit} = ${formatNumber(h.toValue, notation, trailingZeros)} ${h.toUnit}`;
+                  const formatted = `${formatNumericValue(h.fromValue, notation, trailingZeros)} ${h.fromUnit} = ${formatNumericValue(h.toValue, notation, trailingZeros)} ${h.toUnit}`;
                   return (
                     <div
                       key={`${h.fromUnit}-${h.toUnit}-${i}`}

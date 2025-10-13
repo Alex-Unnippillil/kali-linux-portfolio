@@ -3,6 +3,7 @@
 import QRCode from "qrcode";
 import type { FC, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { formatDate } from "@/lib/intl";
 
 import usePersistentState from "../../hooks/usePersistentState";
 
@@ -674,7 +675,7 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
                     .reverse()
                     .map((entry, index) => (
                       <li key={`${entry.timestamp}-${index}`} className="leading-snug">
-                        <span className="text-gray-400">{new Date(entry.timestamp).toLocaleString()}</span>
+                        <span className="text-gray-400">{formatDate(entry.timestamp, { dateStyle: "medium", timeStyle: "short" })}</span>
                         <span className="ml-1 text-white">[{entry.networkId}]</span> {entry.action}
                         {entry.provider && <span className="ml-1 text-gray-300">via {entry.provider}</span>}
                         {entry.details && <span className="ml-1 text-gray-300">— {entry.details}</span>}

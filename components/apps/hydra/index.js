@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import { formatNumber } from '../../../lib/intl';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -372,7 +373,7 @@ const HydraApp = () => {
       `Passwords: ${passCount}`,
       `Charset: ${charset} (${charset.length})`,
       `Rule: ${rule}`,
-      `Estimated candidate space: ${candidateSpace.toLocaleString()}`,
+      `Estimated candidate space: ${formatNumber(candidateSpace)}`,
       'Dry run only - no network requests made.',
     ].join('\n');
     setOutput(report);
@@ -575,7 +576,7 @@ const HydraApp = () => {
             placeholder="1:3"
           />
           <p className="mt-1 text-sm">
-            Candidate space: {candidateSpace.toLocaleString()}
+            Candidate space: {formatNumber(candidateSpace)}
           </p>
           <canvas
             ref={canvasRef}

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import caseData from '../data/case.json';
+import { formatDate } from '@/lib/intl';
 
 interface TimelineEntry {
   timestamp: string;
@@ -58,7 +59,7 @@ const CaseWalkthrough: React.FC = () => {
             <li key={idx} className="flex items-center text-sm">
               <img src={item.thumbnail} alt="" className="w-6 h-6 mr-2" />
               <span>
-                {new Date(item.timestamp).toLocaleString()} – {item.event}
+                {formatDate(item.timestamp, { dateStyle: 'medium', timeStyle: 'short' })} – {item.event}
               </span>
             </li>
           ))}

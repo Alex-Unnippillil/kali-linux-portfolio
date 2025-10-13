@@ -10,6 +10,7 @@ import React, {
 } from 'react';
 import { demoYouTubeVideos } from '../../../data/youtube/demoVideos';
 import usePersistentState from '../../../hooks/usePersistentState';
+import { formatDate as formatDateWithLocale } from '@/lib/intl';
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
@@ -135,15 +136,14 @@ function filterDemoVideos(query: string): VideoResult[] {
   });
 }
 
-function formatDate(value?: string) {
+function formatPublishedDate(value?: string) {
   if (!value) return 'Unknown';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Unknown';
-  return new Intl.DateTimeFormat(undefined, {
+  const formatted = formatDateWithLocale(value, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  }).format(date);
+  });
+  return formatted === 'Invalid Date' ? 'Unknown' : formatted;
 }
 
 export default function YouTubeApp({ initialResults }: Props) {
@@ -404,7 +404,7 @@ export default function YouTubeApp({ initialResults }: Props) {
                 {selectedVideo.title}
               </h3>
               <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                {selectedVideo.channelTitle} • Published {formatDate(selectedVideo.publishedAt)}
+                {selectedVideo.channelTitle} • Published {formatPublishedDate(selectedVideo.publishedAt)}
               </p>
               {selectedVideo.description && (
                 <p className="text-sm leading-relaxed text-[color:color-mix(in_srgb,var(--color-text)_72%,transparent)]">
@@ -522,7 +522,7 @@ export default function YouTubeApp({ initialResults }: Props) {
                       {video.description || 'No description available.'}
                     </p>
                     <p className="mt-auto text-[11px] uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                      {formatDate(video.publishedAt)}
+                      {formatPublishedDate(video.publishedAt)}
                     </p>
                   </div>
                 </button>

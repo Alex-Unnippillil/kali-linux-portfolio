@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatNumber, formatDate } from '../../../lib/intl';
 
 const FeedStatusCard = () => {
   const feed = {
@@ -13,8 +14,8 @@ const FeedStatusCard = () => {
         VT Feed Status
       </h3>
       <p className="text-sm text-white/80">Source: {feed.source}</p>
-      <p className="text-sm text-white/80">VTs: {feed.vtCount.toLocaleString()}</p>
-      <p className="text-sm text-white/80">Last Update: {feed.lastUpdate}</p>
+      <p className="text-sm text-white/80">VTs: {formatNumber(feed.vtCount)}</p>
+      <p className="text-sm text-white/80">Last Update: {formatDate(feed.lastUpdate, { dateStyle: 'medium' })}</p>
       <p className="mt-2 text-xs text-white/60">
         Data based on{' '}
         <a

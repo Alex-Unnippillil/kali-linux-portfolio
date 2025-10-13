@@ -6,6 +6,7 @@ import {
   isValueWithinRange,
   listUnits,
 } from './units';
+import { formatNumber } from '../../../lib/intl';
 
 const TemperatureConverter = () => {
   const category = 'temperature';
@@ -84,12 +85,12 @@ const TemperatureConverter = () => {
 
   const format = (value, unit) => {
     const def = getUnitDefinition(category, unit);
-    return new Intl.NumberFormat(undefined, {
+    return formatNumber(Number(value), {
       style: 'unit',
       unit,
       unitDisplay: 'long',
       maximumFractionDigits: def?.precision ?? getDefaultPrecision(category, unit),
-    }).format(Number(value));
+    });
   };
 
   return (

@@ -9,6 +9,7 @@ import {
 import FormError from '../../ui/FormError';
 import StatsChart from '../../StatsChart';
 import johnPlaceholders from './placeholders';
+import { formatNumber } from '../../../lib/intl';
 
 // Enhanced John the Ripper interface that supports rule uploads,
 // basic hash analysis and mock distribution of cracking tasks.
@@ -409,7 +410,7 @@ const JohnApp = () => {
                 </ul>
               </>
             )}
-            <p className="mt-2">{`Total: ${stats.count.toLocaleString()}`}</p>
+            <p className="mt-2">{`Total: ${formatNumber(stats.count)}`}</p>
             <p>{`Estimated @1M/s: ${formatTime(stats.time)}`}</p>
             <StatsChart count={stats.count} time={stats.time} />
           </div>
