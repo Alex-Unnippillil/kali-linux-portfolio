@@ -1,12 +1,34 @@
 import handler, { rateLimit, RATE_LIMIT_WINDOW_MS } from '../pages/api/contact';
 import { createMocks } from 'node-mocks-http';
 
+const originalNodeEnv = process.env.NODE_ENV;
+
 describe('contact api', () => {
   afterEach(() => {
     rateLimit.clear();
     jest.restoreAllMocks();
     delete (global as any).fetch;
     delete process.env.RECAPTCHA_SECRET;
+    process.env.NODE_ENV = originalNodeEnv;
+  });
+
+  test('issues secure csrf cookie when running in production', async () => {
+    process.env.NODE_ENV = 'production';
+    process.env.RECAPTCHA_SECRET = 'secret';
+
+    const { req, res } = createMocks({
+      method: 'GET',
+    });
+
+    await handler(req as any, res as any);
+
+    const setCookie =
+      res.getHeader('Set-Cookie') ??
+      res.getHeader('set-cookie') ??
+      res._getHeaders()['set-cookie'];
+    expect(setCookie).toBeTruthy();
+    const cookieValue = Array.isArray(setCookie) ? setCookie[0] : setCookie;
+    expect(cookieValue).toContain('Secure');
   });
 
   test('returns 200 when inputs pass', async () => {

@@ -318,16 +318,16 @@ export default function QuoteApp() {
   const isFav = current ? favorites.includes(keyOf(current)) : false;
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 overflow-auto">
+    <div className="h-full w-full flex flex-col items-center justify-start bg-[var(--kali-bg)] text-[var(--color-text)] p-4 overflow-auto">
       {dailyQuote && (
         <div
-          className="mb-6 w-full max-w-2xl rounded-lg border border-white/10 bg-white/5 p-4 text-left shadow-lg backdrop-blur"
+          className="mb-6 w-full max-w-2xl rounded-lg p-4 text-left shadow-lg backdrop-blur kali-panel"
           id="daily-quote"
         >
-          <p className="text-base font-medium italic leading-relaxed text-white/90">
+          <p className="text-base font-medium italic leading-relaxed daily-quote-text">
             &ldquo;{dailyQuote.content}&rdquo;
           </p>
-          <p className="mt-2 text-sm font-semibold uppercase tracking-wide text-white/60">
+          <p className="mt-2 text-sm font-semibold uppercase tracking-wide daily-quote-author">
             {dailyQuote.author}
           </p>
         </div>
@@ -336,33 +336,33 @@ export default function QuoteApp() {
         <div
           ref={cardRef}
           id="quote-card"
-          className="group relative w-full overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[var(--color-primary)]/40 via-[var(--color-primary)]/10 to-[var(--color-secondary)]/30 p-8 text-center text-white shadow-xl backdrop-blur"
+          className="group relative w-full overflow-hidden rounded-2xl p-8 text-center shadow-xl backdrop-blur kali-gradient-card"
         >
           {current ? (
             <div key={keyOf(current)} className="animate-quote">
               <span
-                className="pointer-events-none absolute -top-6 left-6 text-[96px] font-serif text-white/15"
+                className="pointer-events-none absolute -top-6 left-6 text-[96px] font-serif quote-card-glyph"
                 aria-hidden="true"
               >
                 &ldquo;
               </span>
-              <p className="mb-6 text-xl font-medium leading-8 tracking-tight text-white sm:text-2xl sm:leading-9">
+              <p className="mb-6 text-xl font-medium leading-8 tracking-tight quote-card-content sm:text-2xl sm:leading-9">
                 {current.content}
               </p>
-              <p className="text-right text-base font-semibold uppercase tracking-[0.35em] text-white/70">
+              <p className="text-right text-base font-semibold uppercase tracking-[0.35em] quote-card-author">
                 {current.author}
               </p>
               <div className="absolute top-3 right-3 flex gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
                 <button
                   onClick={copyQuote}
-                  className="rounded-full border border-white/20 bg-black/30 p-1.5 text-white transition hover:bg-black/50"
+                  className="rounded-full p-1.5 transition kali-icon-button"
                   aria-label="Copy quote"
                 >
                   <CopyIcon className="w-6 h-6" />
                 </button>
                 <button
                   onClick={tweetQuote}
-                  className="rounded-full border border-white/20 bg-black/30 p-1.5 text-white transition hover:bg-black/50"
+                  className="rounded-full p-1.5 transition kali-icon-button"
                   aria-label="Tweet quote"
                 >
                   <TwitterIcon className="w-6 h-6" />
@@ -371,22 +371,22 @@ export default function QuoteApp() {
               <div className="absolute left-4 top-1/2 flex -translate-y-1/2 flex-col items-center gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
                 <button
                   onClick={prevQuote}
-                  className="rounded-full border border-white/20 bg-black/30 p-2 text-lg font-semibold transition hover:bg-black/50"
+                  className="rounded-full p-2 text-lg font-semibold transition kali-icon-button"
                   aria-label="Previous quote"
                 >
                   ←
                 </button>
-                <kbd className="text-[10px] font-semibold tracking-widest text-white/60">←</kbd>
+                <kbd className="text-[10px] font-semibold tracking-widest kbd-hint">←</kbd>
               </div>
               <div className="absolute right-4 top-1/2 flex -translate-y-1/2 flex-col items-center gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
                 <button
                   onClick={nextQuote}
-                  className="rounded-full border border-white/20 bg-black/30 p-2 text-lg font-semibold transition hover:bg-black/50"
+                  className="rounded-full p-2 text-lg font-semibold transition kali-icon-button"
                   aria-label="Next quote"
                 >
                   →
                 </button>
-                <kbd className="text-[10px] font-semibold tracking-widest text-white/60">→</kbd>
+                <kbd className="text-[10px] font-semibold tracking-widest kbd-hint">→</kbd>
               </div>
             </div>
           ) : (
@@ -395,41 +395,47 @@ export default function QuoteApp() {
         </div>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <button
-            className="rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-white/20"
+            className="px-5 py-2 text-sm font-semibold uppercase tracking-wide transition kali-chip-button kali-chip-button--accent"
             onClick={changeQuote}
             disabled={playing}
           >
             New Quote
           </button>
           <button
-            className="rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-white/20"
+            className="px-5 py-2 text-sm font-semibold uppercase tracking-wide transition kali-chip-button"
             onClick={toggleFavorite}
           >
             {isFav ? 'Unfavorite' : 'Favorite'}
           </button>
           <button
-            className="rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-white/20"
+            className="px-5 py-2 text-sm font-semibold uppercase tracking-wide transition kali-chip-button"
             onClick={shareCard}
           >
             Share as Card
           </button>
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className={`px-5 py-2 text-sm font-semibold uppercase tracking-wide transition kali-chip-button ${posterize ? 'kali-chip-button--active' : ''}`}
             onClick={() => setPosterize((p) => !p)}
           >
             {posterize ? 'Close Posterizer' : 'Posterize'}
           </button>
           {canShare() && (
             <button
-              className="rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-white/20"
+              className="px-5 py-2 text-sm font-semibold uppercase tracking-wide transition kali-chip-button"
               onClick={shareQuote}
             >
               Share
             </button>
           )}
-          <label className="cursor-pointer rounded-full border border-dashed border-white/20 bg-white/5 px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-white/15">
+          <label className="cursor-pointer px-5 py-2 text-sm font-semibold uppercase tracking-wide transition kali-chip-button kali-chip-button--dashed">
             Import
-            <input type="file" accept="application/json" className="hidden" onChange={importQuotes} />
+            <input
+              type="file"
+              accept="application/json"
+              className="hidden"
+              aria-label="Import custom quotes"
+              onChange={importQuotes}
+            />
           </label>
         </div>
         {posterize && (
@@ -442,18 +448,21 @@ export default function QuoteApp() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search"
-            className="w-full rounded-lg border border-white/10 bg-white/90 px-3 py-2 text-sm text-gray-900 shadow"
+            className="w-full rounded-lg px-3 py-2 text-sm shadow kali-input"
+            aria-label="Search quotes"
           />
           <input
             value={authorFilter}
             onChange={(e) => setAuthorFilter(e.target.value)}
             placeholder="Author"
-            className="w-full rounded-lg border border-white/10 bg-white/90 px-3 py-2 text-sm text-gray-900 shadow"
+            className="w-full rounded-lg px-3 py-2 text-sm shadow kali-input"
+            aria-label="Filter by author"
           />
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-white/90 px-3 py-2 text-sm text-gray-900 shadow"
+            className="w-full rounded-lg px-3 py-2 text-sm shadow kali-input"
+            aria-label="Filter by category"
           >
             <option value="">All Categories</option>
             {categories.map((cat) => (
@@ -466,40 +475,163 @@ export default function QuoteApp() {
         <PlaylistBuilder quotes={quotes} playlist={playlist} setPlaylist={setPlaylist} />
         <div className="mt-4 flex flex-wrap justify-center gap-3">
           <button
-            className="rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/50"
+            className="px-5 py-2 text-sm font-semibold uppercase tracking-wide transition kali-chip-button"
             onClick={startPlaylist}
             disabled={!playlist.length || playing}
           >
             Play Playlist
           </button>
           <button
-            className="rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/50"
+            className="px-5 py-2 text-sm font-semibold uppercase tracking-wide transition kali-chip-button"
             onClick={stopPlaylist}
             disabled={!playing}
           >
             Stop
           </button>
-          <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/80">
+          <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider kali-toggle-label">
             <input
               type="checkbox"
               checked={loop}
               onChange={(e) => setLoop(e.target.checked)}
-              className="h-4 w-4 rounded border border-white/40 bg-white/10 text-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/60"
+              className="h-4 w-4 rounded kali-checkbox"
+              aria-label="Loop playlist"
             />
             <span>Loop</span>
           </label>
-          <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/80">
+          <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider kali-toggle-label">
             <input
               type="checkbox"
               checked={shuffle}
               onChange={(e) => setShuffle(e.target.checked)}
-              className="h-4 w-4 rounded border border-white/40 bg-white/10 text-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/60"
+              className="h-4 w-4 rounded kali-checkbox"
+              aria-label="Shuffle playlist"
             />
             <span>Shuffle</span>
           </label>
         </div>
       </div>
       <style jsx>{`
+        .kali-panel {
+          background: color-mix(in srgb, var(--kali-surface) 85%, transparent);
+          border: 1px solid color-mix(in srgb, var(--kali-border) 70%, transparent);
+          color: var(--kali-text);
+        }
+        .daily-quote-text {
+          color: color-mix(in srgb, var(--kali-text) 92%, transparent);
+        }
+        .daily-quote-author {
+          color: color-mix(in srgb, var(--kali-text) 68%, transparent);
+        }
+        .kali-gradient-card {
+          border: 1px solid color-mix(in srgb, var(--kali-border) 55%, transparent);
+          background: linear-gradient(
+            135deg,
+            color-mix(in srgb, var(--kali-blue) 38%, transparent) 0%,
+            color-mix(in srgb, var(--kali-blue) 20%, var(--kali-surface)) 42%,
+            color-mix(in srgb, var(--kali-control) 70%, transparent) 100%
+          );
+          color: var(--kali-text);
+        }
+        .quote-card-glyph {
+          color: color-mix(in srgb, var(--color-text) 12%, transparent);
+        }
+        .quote-card-content {
+          color: color-mix(in srgb, var(--color-text) 98%, transparent);
+        }
+        .quote-card-author {
+          color: color-mix(in srgb, var(--color-text) 70%, transparent);
+        }
+        .kali-icon-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+          background: color-mix(in srgb, var(--color-dark) 65%, transparent);
+          color: color-mix(in srgb, var(--color-text) 92%, transparent);
+          box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-dark) 35%, transparent);
+          transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+        }
+        .kali-icon-button:hover {
+          background: color-mix(in srgb, var(--color-dark) 78%, transparent);
+          border-color: color-mix(in srgb, var(--color-border) 75%, transparent);
+        }
+        .kali-icon-button:focus-visible {
+          outline: 2px solid var(--color-focus-ring);
+          outline-offset: 2px;
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-focus-ring) 35%, transparent);
+        }
+        .kbd-hint {
+          color: color-mix(in srgb, var(--color-text) 55%, transparent);
+        }
+        .kali-chip-button {
+          border-radius: 9999px;
+          border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+          background: color-mix(in srgb, var(--color-surface) 55%, transparent);
+          color: color-mix(in srgb, var(--color-text) 92%, transparent);
+        }
+        .kali-chip-button:hover {
+          background: color-mix(in srgb, var(--color-surface) 70%, transparent);
+          border-color: color-mix(in srgb, var(--color-border) 75%, transparent);
+        }
+        .kali-chip-button:focus-visible {
+          outline: 2px solid var(--color-focus-ring);
+          outline-offset: 2px;
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-focus-ring) 30%, transparent);
+        }
+        .kali-chip-button:disabled {
+          cursor: not-allowed;
+          background: color-mix(in srgb, var(--color-surface) 35%, transparent);
+          border-color: color-mix(in srgb, var(--color-border) 45%, transparent);
+          color: color-mix(in srgb, var(--color-text) 45%, transparent);
+        }
+        .kali-chip-button--accent {
+          background: color-mix(in srgb, var(--color-primary) 35%, var(--color-dark));
+          border-color: color-mix(in srgb, var(--color-primary) 70%, var(--color-border));
+          color: color-mix(in srgb, var(--color-text) 98%, transparent);
+          box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-primary) 35%, transparent);
+        }
+        .kali-chip-button--accent:hover {
+          background: color-mix(in srgb, var(--color-primary) 45%, var(--color-dark));
+          border-color: color-mix(in srgb, var(--color-primary) 80%, var(--color-border));
+        }
+        .kali-chip-button--accent:focus-visible {
+          outline-color: var(--color-focus-ring);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-focus-ring) 35%, transparent);
+        }
+        .kali-chip-button--active {
+          background: color-mix(in srgb, var(--color-primary) 28%, var(--color-surface));
+          border-color: color-mix(in srgb, var(--color-primary) 55%, var(--color-border));
+        }
+        .kali-chip-button--dashed {
+          border-style: dashed;
+          background: color-mix(in srgb, var(--color-surface) 45%, transparent);
+        }
+        .kali-input {
+          border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+          background: color-mix(in srgb, var(--color-surface) 55%, var(--color-bg) 45%);
+          color: color-mix(in srgb, var(--color-text) 95%, transparent);
+        }
+        .kali-input::placeholder {
+          color: color-mix(in srgb, var(--color-text) 55%, transparent);
+        }
+        .kali-input:focus {
+          outline: 2px solid color-mix(in srgb, var(--color-focus-ring) 80%, transparent);
+          outline-offset: 2px;
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-focus-ring) 35%, transparent);
+        }
+        .kali-toggle-label {
+          color: color-mix(in srgb, var(--color-text) 70%, transparent);
+        }
+        .kali-checkbox {
+          border: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+          background: color-mix(in srgb, var(--color-dark) 65%, transparent);
+          accent-color: var(--color-control-accent);
+        }
+        .kali-checkbox:focus-visible {
+          outline: 2px solid var(--color-focus-ring);
+          outline-offset: 2px;
+          box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-focus-ring) 30%, transparent);
+        }
         .animate-quote {
           animation: fadeIn 150ms ease-in-out;
         }

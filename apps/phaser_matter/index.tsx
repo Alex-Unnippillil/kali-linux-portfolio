@@ -419,15 +419,15 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
       <div
         ref={containerRef}
-        className="relative flex-1 min-h-[420px] overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/90 shadow-lg focus:outline-none focus:ring-2 focus:ring-cyan-400/60"
+        className="relative flex-1 min-h-[420px] overflow-hidden rounded-2xl border border-kali-border/80 bg-kali-surface/95 shadow-lg backdrop-blur focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
         tabIndex={0}
       >
-        <div className="pointer-events-none absolute inset-0 rounded-2xl border border-slate-700/60" aria-hidden="true" />
+        <div className="pointer-events-none absolute inset-0 rounded-2xl border border-kali-border/60" aria-hidden="true" />
         <div className="absolute inset-x-6 bottom-6 flex items-center justify-between gap-4 pointer-events-none">
           <button
             type="button"
             aria-label="Move left"
-            className="pointer-events-auto rounded-full bg-slate-900/80 px-4 py-3 text-xl font-semibold text-slate-100 shadow transition hover:bg-slate-800"
+            className="pointer-events-auto rounded-full border border-[color:var(--kali-border)] bg-kali-surface/85 px-4 py-3 text-xl font-semibold text-[color:var(--kali-text)] shadow transition-colors hover:border-[color:var(--color-control-accent)] hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_22%,var(--kali-surface))] hover:text-[color:var(--color-inverse)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
             {...bind('left')}
           >
             ◀
@@ -435,7 +435,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           <button
             type="button"
             aria-label="Move right"
-            className="pointer-events-auto rounded-full bg-slate-900/80 px-4 py-3 text-xl font-semibold text-slate-100 shadow transition hover:bg-slate-800"
+            className="pointer-events-auto rounded-full border border-[color:var(--kali-border)] bg-kali-surface/85 px-4 py-3 text-xl font-semibold text-[color:var(--kali-text)] shadow transition-colors hover:border-[color:var(--color-control-accent)] hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_22%,var(--kali-surface))] hover:text-[color:var(--color-inverse)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
             {...bind('right')}
           >
             ▶
@@ -443,21 +443,21 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           <button
             type="button"
             aria-label="Jump"
-            className="pointer-events-auto rounded-full bg-slate-900/80 px-4 py-3 text-xl font-semibold text-slate-100 shadow transition hover:bg-slate-800"
+            className="pointer-events-auto rounded-full border border-[color:var(--kali-border)] bg-kali-surface/85 px-4 py-3 text-xl font-semibold text-[color:var(--kali-text)] shadow transition-colors hover:border-[color:var(--color-control-accent)] hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_22%,var(--kali-surface))] hover:text-[color:var(--color-inverse)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
             {...bind('jump')}
           >
             ⇧
           </button>
         </div>
       </div>
-      <aside className="w-full space-y-4 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-sm leading-relaxed text-slate-100 shadow-lg lg:w-72">
+      <aside className="w-full space-y-4 rounded-2xl border border-kali-border/80 bg-kali-surface/95 p-4 text-sm leading-relaxed text-white shadow-lg backdrop-blur lg:w-72">
         {waiting && (
-          <div className="rounded-lg bg-amber-500/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-amber-200">
+          <div className="rounded-lg border border-kali-control/50 bg-kali-control/10 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-kali-control">
             Press a {waiting.device === 'key' ? 'key' : 'button'}...
           </div>
         )}
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Keyboard</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-kali-control/80">Keyboard</h2>
           <div className="space-y-2">
             {actions.map((entry) => (
               <div key={`key-${entry.action}`} className="flex items-center justify-between gap-2">
@@ -465,7 +465,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
                 <button
                   type="button"
                   onClick={() => setWaiting({ device: 'key', action: entry.action })}
-                  className="rounded-md border border-slate-600/80 bg-slate-950/40 px-2 py-1 text-xs font-medium text-slate-100 transition hover:border-cyan-400 hover:text-cyan-200"
+                  className="rounded-md border border-kali-border/70 bg-kali-background/40 px-2 py-1 text-xs font-medium text-white transition hover:border-kali-control hover:text-kali-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                 >
                   {keyMap[entry.action]}
                 </button>
@@ -474,7 +474,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           </div>
         </section>
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Gamepad</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-kali-control/80">Gamepad</h2>
           <div className="space-y-2">
             {actions.map((entry) => (
               <div key={`pad-${entry.action}`} className="flex items-center justify-between gap-2">
@@ -482,7 +482,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
                 <button
                   type="button"
                   onClick={() => setWaiting({ device: 'pad', action: entry.action })}
-                  className="rounded-md border border-slate-600/80 bg-slate-950/40 px-2 py-1 text-xs font-medium text-slate-100 transition hover:border-cyan-400 hover:text-cyan-200"
+                  className="rounded-md border border-kali-border/70 bg-kali-background/40 px-2 py-1 text-xs font-medium text-white transition hover:border-kali-control hover:text-kali-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                 >
                   {padMap[entry.action]}
                 </button>
@@ -491,8 +491,8 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           </div>
         </section>
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Jump Buffer</h2>
-          <label htmlFor="jump-buffer" className="block space-y-2 text-xs text-slate-400">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-kali-control/80">Jump Buffer</h2>
+          <label htmlFor="jump-buffer" className="block space-y-2 text-xs text-white/70">
             <span>Control how long a jump input remains buffered after pressing the button.</span>
             <input
               id="jump-buffer"
@@ -502,10 +502,10 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
               value={bufferWindow}
               onChange={(e) => setBufferWindow(Number(e.target.value))}
               aria-label="Jump buffer window"
-              className="w-full accent-cyan-400"
+              className="w-full accent-kali-control"
             />
           </label>
-          <div className="text-right text-xs font-semibold text-cyan-200">{bufferWindow}ms</div>
+          <div className="text-right text-xs font-semibold text-kali-control">{bufferWindow}ms</div>
         </section>
       </aside>
     </div>

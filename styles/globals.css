@@ -9,6 +9,7 @@
   --color-primary: #0f94d2; /* kali blue accent */
   --color-secondary: #111b24; /* complementary dark */
   --color-accent: #0f94d2; /* accent matches primary */
+  --color-error: #ff4d6d; /* alert and error states */
   --kali-blue: var(--color-primary);
   /* Utility colors */
   --color-muted: #1a2533; /* muted surfaces */
@@ -16,11 +17,31 @@
   --color-inverse: #000000; /* inverse of text */
   --color-border: var(--kali-border); /* subtle borders */
   --color-terminal: var(--kali-terminal-green); /* terminal green */
+  --color-success: var(--color-terminal);
+  --color-warning: #f5b74d;
+  --color-danger: #f87272;
   --color-dark: #09121c; /* card back */
   --color-focus-ring: var(--color-accent);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
-  --kali-text: #f5f5f5;
+  --color-surface-muted: color-mix(in srgb, var(--color-surface) 82%, transparent 18%);
+  --color-surface-raised: color-mix(in srgb, var(--color-surface) 94%, var(--color-bg) 6%);
+  --color-overlay-strong: color-mix(in srgb, var(--kali-bg) 82%, transparent 18%);
+  --color-overlay-soft: color-mix(in srgb, var(--kali-bg) 65%, transparent 35%);
+  --color-info: #38bdf8;
+  --color-severity-low: #16a34a;
+  --color-severity-medium: #ca8a04;
+  --color-severity-high: #ea580c;
+  --color-severity-critical: #ef4444;
+  --kali-text: var(--color-text);
+  --kali-text-muted: color-mix(in srgb, var(--color-text) 82%, var(--color-bg) 18%);
+  --kali-text-subtle: color-mix(in srgb, var(--color-text) 68%, var(--color-bg) 32%);
+  --kali-text-faint: color-mix(in srgb, var(--color-text) 58%, var(--color-bg) 42%);
+  --kali-surface: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  --kali-overlay: color-mix(in srgb, var(--color-surface) 82%, rgba(255, 255, 255, 0.08));
+  --kali-control: var(--color-control-accent);
+  --kali-control-surface: color-mix(in srgb, var(--kali-control) 18%, var(--kali-surface));
+  --kali-control-overlay: color-mix(in srgb, var(--kali-control) 24%, var(--kali-overlay));
   accent-color: var(--color-control-accent);
 }
 
@@ -36,12 +57,22 @@ html[data-theme='dark'] {
   --color-primary: #1e88e5;
   --color-secondary: #121212;
   --color-accent: #bb86fc;
+  --color-error: #ff6b6b;
   --color-muted: #1f1f1f;
   --color-surface: #121212;
+  --color-surface-muted: color-mix(in srgb, var(--color-surface) 84%, transparent 16%);
+  --color-surface-raised: color-mix(in srgb, var(--color-surface) 92%, var(--color-bg) 8%);
   --color-inverse: #ffffff;
   --color-border: #333333;
   --color-terminal: #00ff00;
   --color-dark: #0a0a0a;
+  --color-overlay-strong: rgba(0, 0, 0, 0.8);
+  --color-overlay-soft: rgba(0, 0, 0, 0.55);
+  --color-info: #38bdf8;
+  --color-severity-low: #22c55e;
+  --color-severity-medium: #eab308;
+  --color-severity-high: #f97316;
+  --color-severity-critical: #f87171;
 }
 
 /* Neon theme */
@@ -51,12 +82,22 @@ html[data-theme='neon'] {
   --color-primary: #39ff14;
   --color-secondary: #1a1a1a;
   --color-accent: #ff00ff;
+  --color-error: #ff5cf4;
   --color-muted: #222222;
   --color-surface: #111111;
+  --color-surface-muted: color-mix(in srgb, var(--color-surface) 75%, transparent 25%);
+  --color-surface-raised: color-mix(in srgb, var(--color-surface) 88%, var(--color-bg) 12%);
   --color-inverse: #ffffff;
   --color-border: #333333;
   --color-terminal: #39ff14;
   --color-dark: #000000;
+  --color-overlay-strong: rgba(0, 0, 0, 0.85);
+  --color-overlay-soft: rgba(0, 0, 0, 0.6);
+  --color-info: #38bdf8;
+  --color-severity-low: #16a34a;
+  --color-severity-medium: #ca8a04;
+  --color-severity-high: #ea580c;
+  --color-severity-critical: #ef4444;
 }
 
 /* Matrix theme */
@@ -66,12 +107,22 @@ html[data-theme='matrix'] {
   --color-primary: #00ff00;
   --color-secondary: #001100;
   --color-accent: #00ff00;
+  --color-error: #ff4d4d;
   --color-muted: #003300;
   --color-surface: #001100;
+  --color-surface-muted: color-mix(in srgb, var(--color-surface) 70%, transparent 30%);
+  --color-surface-raised: color-mix(in srgb, var(--color-surface) 88%, var(--color-bg) 12%);
   --color-inverse: #ffffff;
   --color-border: #003300;
   --color-terminal: #00ff00;
   --color-dark: #000000;
+  --color-overlay-strong: rgba(0, 0, 0, 0.85);
+  --color-overlay-soft: rgba(0, 0, 0, 0.6);
+  --color-info: #38bdf8;
+  --color-severity-low: #16a34a;
+  --color-severity-medium: #ca8a04;
+  --color-severity-high: #ea580c;
+  --color-severity-critical: #ef4444;
 
 }
 

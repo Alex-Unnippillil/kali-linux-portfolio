@@ -42,8 +42,14 @@ module.exports = {
           primary: 'var(--color-primary)',
           secondary: 'var(--color-secondary)',
           accent: 'var(--color-accent)',
+          success: 'var(--color-success)',
+          error: 'var(--color-error)',
           muted: 'var(--color-muted)',
-          surface: 'var(--color-surface)',
+          surface: {
+            DEFAULT: 'var(--color-surface)',
+            muted: 'var(--color-surface-muted)',
+            raised: 'var(--color-surface-raised)',
+          },
           inverse: 'var(--color-inverse)',
           border: 'var(--color-border)',
           terminal: 'var(--color-terminal)',
@@ -56,6 +62,15 @@ module.exports = {
           'panel-light':
             'color-mix(in srgb, var(--kali-panel) 55%, rgba(255,255,255,0.18))',
           error: 'var(--game-color-danger)',
+          overlay: 'var(--color-overlay-strong)',
+          'overlay-soft': 'var(--color-overlay-soft)',
+          info: 'var(--color-info)',
+          severity: {
+            low: 'var(--color-severity-low)',
+            medium: 'var(--color-severity-medium)',
+            high: 'var(--color-severity-high)',
+            critical: 'var(--color-severity-critical)',
+          },
         },
       },
       boxShadow: {

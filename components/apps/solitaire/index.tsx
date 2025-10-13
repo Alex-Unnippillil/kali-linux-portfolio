@@ -39,16 +39,22 @@ type AnimatedCard = Card & {
   finalAngle?: number;
 };
 
+const controlButtonClasses =
+  'rounded border border-kali-border/60 bg-kali-dark px-2 py-1 text-sm font-medium text-kali-text transition-colors duration-150 hover:bg-[color:color-mix(in_srgb,var(--color-surface)_70%,rgba(15,148,210,0.18)_30%)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus';
+
 const renderCard = (card: Card) => (
-  <div className="w-16 h-24 min-w-[24px] min-h-[24px] rounded border border-black bg-white flex items-center justify-center transition-transform duration-300 shadow-[0_1px_0_rgba(0,0,0,0.5)]">
-    <span className={card.color === 'red' ? 'text-red-600' : ''}>
+  <div className="w-16 h-24 min-w-[24px] min-h-[24px] rounded border border-black/80 bg-white flex items-center justify-center transition-transform duration-300 shadow-[0_1px_0_rgba(0,0,0,0.5)]">
+    <span className={card.color === 'red' ? 'text-red-500' : 'text-slate-900'}>
       {valueToString(card.value)}{card.suit}
     </span>
   </div>
 );
 
 const renderFaceDown = () => (
-  <div className="w-16 h-24 min-w-[24px] min-h-[24px] rounded border border-black bg-blue-800 shadow-[0_1px_0_rgba(0,0,0,0.5)]" />
+  <div className="relative w-16 h-24 min-w-[24px] min-h-[24px] overflow-hidden rounded border border-kali-accent/70 shadow-[0_1px_0_rgba(0,0,0,0.5)]">
+    <div className="pointer-events-none absolute inset-0 rounded bg-[radial-gradient(circle_at_30%_30%,rgba(15,148,210,0.28),rgba(6,18,30,0.65) 70%,rgba(4,10,18,0.85))]" />
+    <div className="pointer-events-none absolute inset-[4px] rounded border border-kali-accent/30" />
+  </div>
 );
 
 const Solitaire = () => {
@@ -627,22 +633,23 @@ const Solitaire = () => {
   ]);
   if (variant !== 'klondike') {
     return (
-      <div className="h-full w-full bg-green-700 text-white select-none p-2">
+      <div className="h-full w-full select-none p-2 text-kali-text bg-[color:color-mix(in_srgb,var(--color-surface-muted)_88%,rgba(8,16,24,0.88)_12%)]">
         <div className="flex justify-end mb-2">
           <select
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-            value={variant}
-            onChange={(e) => {
-              const v = e.target.value as Variant;
-              setVariant(v);
-            }}
+          className={`${controlButtonClasses} px-2 py-1`}
+          aria-label="Change solitaire variant"
+          value={variant}
+          onChange={(e) => {
+            const v = e.target.value as Variant;
+            setVariant(v);
+          }}
           >
             <option value="klondike">Klondike</option>
             <option value="spider">Spider</option>
             <option value="freecell">FreeCell</option>
           </select>
         </div>
-        <div className="flex items-center justify-center h-full text-xl">
+        <div className="flex items-center justify-center h-full text-xl text-kali-accent">
           {`${variant.charAt(0).toUpperCase() + variant.slice(1)} coming soon!`}
         </div>
       </div>
@@ -652,26 +659,30 @@ const Solitaire = () => {
   return (
     <div
       ref={rootRef}
-      className="h-full w-full bg-green-700 text-white select-none p-2 pt-8 relative overflow-hidden"
+      className="h-full w-full select-none p-2 pt-8 text-kali-text relative overflow-hidden bg-[color:color-mix(in_srgb,var(--color-surface-muted)_85%,rgba(6,12,20,0.92)_15%)]"
       style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
     >
-      <div className="absolute top-0 left-0 right-0 flex justify-between px-2 text-sm pointer-events-none">
-        <span>Moves: {moves}</span>
-        <span>Time: {time}s</span>
+      <div className="absolute top-0 left-0 right-0 flex justify-between px-2 text-xs sm:text-sm pointer-events-none">
+        <span className="rounded bg-black/30 px-2 py-1 font-semibold text-kali-accent shadow-sm">
+          Moves: {moves}
+        </span>
+        <span className="rounded bg-black/30 px-2 py-1 font-semibold text-kali-accent shadow-sm">
+          Time: {time}s
+        </span>
       </div>
       <div aria-live="polite" className="sr-only">
         {ariaMessage}
       </div>
       {paused && (
         <div
-          className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
+          className="absolute inset-0 z-50 flex items-center justify-center bg-kali-overlay/90 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
         >
           <button
             type="button"
             onClick={resume}
-            className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            className="rounded border border-kali-border/60 bg-kali-dark px-4 py-2 text-sm font-semibold text-kali-text shadow transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-surface)_70%,rgba(15,148,210,0.2)_30%)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             autoFocus
           >
             Resume
@@ -702,7 +713,7 @@ const Solitaire = () => {
         ))}
       {won && (
         <div
-          className={`absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 text-2xl ${
+          className={`absolute inset-0 flex items-center justify-center bg-kali-overlay/95 text-2xl font-semibold text-kali-accent ${
             !prefersReducedMotion ? 'animate-pulse' : ''
           }`}
           role="alert"
@@ -710,20 +721,31 @@ const Solitaire = () => {
           You win!
         </div>
       )}
-      <div className="flex justify-between mb-2 flex-wrap gap-2">
-        <div>Score: {vegasScore}</div>
-        <div>Bankroll: {bankroll}</div>
-        <div>Redeals: {game.redeals === Infinity ? '∞' : game.redeals}</div>
-        <div>Mode: {winnableOnly ? 'Winnable' : 'Random'}</div>
-        <div>
-          Best: {stats.bestScore ? `${stats.bestScore} (${stats.bestTime}s)` : 'N/A'}
+      <div className="flex justify-between mb-2 flex-wrap gap-2 text-xs sm:text-sm font-semibold">
+        <div className="rounded bg-black/30 px-2 py-1 shadow-inner shadow-black/40">
+          Score: <span className="text-kali-accent">{vegasScore}</span>
         </div>
-        <div>
-          Wins: {stats.gamesWon}/{stats.gamesPlayed}
+        <div className="rounded bg-black/30 px-2 py-1 shadow-inner shadow-black/40">
+          Bankroll: <span className="text-kali-accent">{bankroll}</span>
         </div>
-        <div>Daily Streak: {stats.dailyStreak}</div>
+        <div className="rounded bg-black/30 px-2 py-1 shadow-inner shadow-black/40">
+          Redeals: <span className="text-kali-accent">{game.redeals === Infinity ? '∞' : game.redeals}</span>
+        </div>
+        <div className="rounded bg-black/30 px-2 py-1 shadow-inner shadow-black/40">
+          Mode: <span className="text-kali-accent">{winnableOnly ? 'Winnable' : 'Random'}</span>
+        </div>
+        <div className="rounded bg-black/30 px-2 py-1 shadow-inner shadow-black/40">
+          Best: <span className="text-kali-accent">{stats.bestScore ? `${stats.bestScore} (${stats.bestTime}s)` : 'N/A'}</span>
+        </div>
+        <div className="rounded bg-black/30 px-2 py-1 shadow-inner shadow-black/40">
+          Wins: <span className="text-kali-accent">{stats.gamesWon}/{stats.gamesPlayed}</span>
+        </div>
+        <div className="rounded bg-black/30 px-2 py-1 shadow-inner shadow-black/40">
+          Daily Streak: <span className="text-kali-accent">{stats.dailyStreak}</span>
+        </div>
         <select
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className={`${controlButtonClasses} px-2 py-1`}
+          aria-label="Set solitaire variant"
           value={variant}
           onChange={(e) => {
             const v = e.target.value as Variant;
@@ -736,25 +758,25 @@ const Solitaire = () => {
           <option value="freecell">FreeCell</option>
         </select>
         <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className={controlButtonClasses}
           onClick={() => start(drawMode, variant, true)}
         >
           Daily Deal
         </button>
         <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className={controlButtonClasses}
           onClick={showHint}
         >
           Hint
         </button>
         <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className={controlButtonClasses}
           onClick={runSolver}
         >
           Solve
         </button>
         <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className={controlButtonClasses}
           onClick={() => {
             const mode = drawMode === 1 ? 3 : 1;
             ReactGA.event({
@@ -768,7 +790,7 @@ const Solitaire = () => {
           Draw {drawMode === 1 ? '1' : '3'}
         </button>
         <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className={controlButtonClasses}
           onClick={() => {
             const opts = [3, 1, Infinity];
             const next = opts[(opts.indexOf(passLimit) + 1) % opts.length];
@@ -782,11 +804,12 @@ const Solitaire = () => {
         >
           Passes {passLimit === Infinity ? '∞' : passLimit}
         </button>
-        <label className="flex items-center space-x-1">
+        <label className="flex items-center space-x-1 text-kali-text">
           <input
             type="checkbox"
             checked={winnableOnly}
             onChange={(e) => setWinnableOnly(e.target.checked)}
+            aria-label="Toggle winnable deals only"
           />
           <span className="select-none">Winnable Only</span>
         </label>
@@ -828,7 +851,7 @@ const Solitaire = () => {
             }}
           >
             {pile.length ? renderCard(pile[pile.length - 1]) : (
-              <div className="w-16 h-24 min-w-[24px] min-h-[24px] border border-dashed border-white rounded" />
+              <div className="w-16 h-24 min-w-[24px] min-h-[24px] rounded border border-dashed border-kali-accent/50 bg-black/20" />
             )}
           </div>
         ))}
@@ -837,7 +860,7 @@ const Solitaire = () => {
         {game.tableau.map((pile, i) => (
           <div
             key={`t-${i}`}
-            className="relative w-16 h-96 min-w-[24px] border border-black"
+            className="relative w-16 h-96 min-w-[24px] rounded border border-kali-accent/40 bg-black/20 shadow-inner shadow-black/60"
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => dropToTableau(i)}
               ref={(el) => {
@@ -878,7 +901,7 @@ const Solitaire = () => {
       </div>
       <div className="mt-4">
         <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          className="rounded border border-kali-border/60 bg-kali-dark px-4 py-2 text-sm font-semibold text-kali-text shadow transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-surface)_70%,rgba(15,148,210,0.2)_30%)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
           onClick={() => start(drawMode, variant, isDaily)}
         >
           Restart

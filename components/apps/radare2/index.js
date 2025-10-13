@@ -60,13 +60,63 @@ const Radare2 = ({ initialData = {} }) => {
   const [activeHeuristic, setActiveHeuristic] = useState(null);
   const disasmRef = useRef(null);
   const { theme } = useTheme();
+  const themeTokens = useMemo(() => {
+    const themeMarker = theme ?? "default";
+    if (typeof window === "undefined") {
+      return {
+        bg: "var(--kali-bg)",
+        panel: "var(--kali-panel)",
+        border: "var(--kali-border)",
+        accent: "var(--kali-blue)",
+        text: "var(--kali-text)",
+        highlight: "var(--kali-panel-highlight)",
+        muted: "var(--kali-panel-border)",
+        accentForeground:
+          themeMarker === "light" ? "var(--kali-bg)" : "var(--kali-bg-solid)",
+      };
+    }
+
+    const style = getComputedStyle(document.documentElement);
+    const readToken = (token, fallback) => {
+      const value = style.getPropertyValue(token).trim();
+      return value || fallback;
+    };
+
+    return {
+      bg: readToken("--kali-bg", "rgba(9, 15, 23, 0.9)"),
+      panel: readToken("--kali-panel", "rgba(17, 27, 36, 0.92)"),
+      border: readToken("--kali-border", "rgba(15, 148, 210, 0.18)"),
+      accent: readToken("--kali-blue", "#0f94d2"),
+      text: readToken("--kali-text", "#f5faff"),
+      highlight: readToken("--kali-panel-highlight", "rgba(15, 148, 210, 0.06)"),
+      muted: readToken("--kali-panel-border", "rgba(148, 163, 184, 0.65)"),
+      accentForeground:
+        themeMarker === "light"
+          ? readToken("--kali-bg", "rgba(9, 15, 23, 0.9)")
+          : readToken("--kali-bg-solid", "#0b121a"),
+    };
+  }, [theme]);
+
+  const warningPalette = useMemo(() => {
+    const borderColor = themeTokens.border;
+    const panelColor = themeTokens.panel;
+    const accentColor = themeTokens.accent;
+
+    return {
+      border: `color-mix(in srgb, ${accentColor} 35%, ${borderColor})`,
+      surface: `color-mix(in srgb, ${borderColor} 35%, ${panelColor})`,
+      overlay: `color-mix(in srgb, ${accentColor} 18%, transparent)`,
+      badge: `color-mix(in srgb, ${accentColor} 24%, ${panelColor})`,
+    };
+  }, [themeTokens.accent, themeTokens.border, themeTokens.panel]);
+
   const cardSurfaceStyle = useMemo(
     () => ({
-      backgroundColor: "var(--r2-surface)",
-      border: "1px solid var(--r2-border)",
-      boxShadow: "0 18px 45px -30px rgba(0,0,0,0.65)",
+      backgroundColor: themeTokens.panel,
+      border: `1px solid ${themeTokens.border}`,
+      boxShadow: `0 18px 45px -30px color-mix(in srgb, ${themeTokens.border} 65%, transparent)`,
     }),
-    [],
+    [themeTokens.border, themeTokens.panel],
   );
 
   const heuristicMatches = useMemo(
@@ -255,7 +305,7 @@ const Radare2 = ({ initialData = {} }) => {
           <div className="flex justify-between gap-2">
             <dt
               className="text-xs uppercase"
-              style={{ color: "var(--r2-muted, #888)" }}
+              style={{ color: themeTokens.muted }}
             >
               Process
             </dt>
@@ -266,7 +316,7 @@ const Radare2 = ({ initialData = {} }) => {
           <div className="flex justify-between gap-2">
             <dt
               className="text-xs uppercase"
-              style={{ color: "var(--r2-muted, #888)" }}
+              style={{ color: themeTokens.muted }}
             >
               Bookmarks
             </dt>
@@ -277,7 +327,7 @@ const Radare2 = ({ initialData = {} }) => {
           <div className="flex justify-between gap-2">
             <dt
               className="text-xs uppercase"
-              style={{ color: "var(--r2-muted, #888)" }}
+              style={{ color: themeTokens.muted }}
             >
               Active Filter
             </dt>
@@ -290,7 +340,7 @@ const Radare2 = ({ initialData = {} }) => {
           <div className="flex justify-between gap-2">
             <dt
               className="text-xs uppercase"
-              style={{ color: "var(--r2-muted, #888)" }}
+              style={{ color: themeTokens.muted }}
             >
               Selected Addr
             </dt>
@@ -302,7 +352,7 @@ const Radare2 = ({ initialData = {} }) => {
         <div className="space-y-2">
           <p
             className="text-xs uppercase"
-            style={{ color: "var(--r2-muted, #888)" }}
+            style={{ color: themeTokens.muted }}
           >
             Quick filters
           </p>
@@ -318,13 +368,15 @@ const Radare2 = ({ initialData = {} }) => {
                     isActive ? "font-semibold" : ""
                   } ${hasMatches ? "shadow-sm" : ""}`}
                   style={{
-                    borderColor: "var(--r2-border)",
+                    borderColor: themeTokens.border,
                     backgroundColor: isActive
-                      ? "var(--r2-accent)"
+                      ? themeTokens.accent
                       : hasMatches
-                      ? "rgba(251, 191, 36, 0.18)"
-                      : "var(--r2-surface)",
-                    color: isActive ? "#000" : "var(--r2-text)",
+                      ? warningPalette.surface
+                      : themeTokens.panel,
+                    color: isActive
+                      ? themeTokens.accentForeground
+                      : themeTokens.text,
                   }}
                   aria-pressed={isActive}
                   title={`${heuristic.label} – ${heuristic.description}`}
@@ -347,7 +399,7 @@ const Radare2 = ({ initialData = {} }) => {
   return (
     <div
       className="h-full w-full p-6 overflow-auto"
-      style={{ backgroundColor: "var(--r2-bg)", color: "var(--r2-text)" }}
+      style={{ backgroundColor: themeTokens.bg, color: themeTokens.text }}
     >
       {showGuide && <GuideOverlay onClose={() => setShowGuide(false)} />}
       <div className="flex gap-2 mb-4 flex-wrap items-center">
@@ -363,17 +415,18 @@ const Radare2 = ({ initialData = {} }) => {
           className="px-2 py-1 rounded"
           aria-label="Seek to address"
           style={{
-            backgroundColor: "var(--r2-surface)",
-            color: "var(--r2-text)",
-            border: "1px solid var(--r2-border)",
+            backgroundColor: themeTokens.panel,
+            color: themeTokens.text,
+            border: `1px solid ${themeTokens.border}`,
           }}
         />
         <button
           onClick={handleSeek}
           className="px-3 py-1 rounded"
           style={{
-            backgroundColor: "var(--r2-surface)",
-            border: "1px solid var(--r2-border)",
+            backgroundColor: themeTokens.panel,
+            color: themeTokens.text,
+            border: `1px solid ${themeTokens.border}`,
           }}
           title="Seek to address (Alt+S)"
         >
@@ -386,17 +439,18 @@ const Radare2 = ({ initialData = {} }) => {
           className="px-2 py-1 rounded"
           aria-label="Find instruction"
           style={{
-            backgroundColor: "var(--r2-surface)",
-            color: "var(--r2-text)",
-            border: "1px solid var(--r2-border)",
+            backgroundColor: themeTokens.panel,
+            color: themeTokens.text,
+            border: `1px solid ${themeTokens.border}`,
           }}
         />
         <button
           onClick={handleFind}
           className="px-3 py-1 rounded"
           style={{
-            backgroundColor: "var(--r2-surface)",
-            border: "1px solid var(--r2-border)",
+            backgroundColor: themeTokens.panel,
+            color: themeTokens.text,
+            border: `1px solid ${themeTokens.border}`,
           }}
           title="Find next match (Alt+F)"
         >
@@ -406,8 +460,9 @@ const Radare2 = ({ initialData = {} }) => {
           onClick={() => setMode((m) => (m === "code" ? "graph" : "code"))}
           className="px-3 py-1 rounded"
           style={{
-            backgroundColor: "var(--r2-surface)",
-            border: "1px solid var(--r2-border)",
+            backgroundColor: themeTokens.panel,
+            color: themeTokens.text,
+            border: `1px solid ${themeTokens.border}`,
           }}
         >
           {mode === "code" ? "Graph" : "Code"}
@@ -416,8 +471,9 @@ const Radare2 = ({ initialData = {} }) => {
           onClick={() => setShowGuide(true)}
           className="px-3 py-1 rounded"
           style={{
-            backgroundColor: "var(--r2-surface)",
-            border: "1px solid var(--r2-border)",
+            backgroundColor: themeTokens.panel,
+            color: themeTokens.text,
+            border: `1px solid ${themeTokens.border}`,
           }}
         >
           Help
@@ -455,8 +511,8 @@ const Radare2 = ({ initialData = {} }) => {
                   <span
                     className="text-xs px-2 py-1 rounded-full font-mono"
                     style={{
-                      backgroundColor: "rgba(96, 165, 250, 0.15)",
-                      color: "var(--r2-text)",
+                      backgroundColor: `color-mix(in srgb, ${themeTokens.accent} 35%, transparent)`,
+                      color: themeTokens.text,
                     }}
                   >
                     Active: {currentAddr}
@@ -467,8 +523,8 @@ const Radare2 = ({ initialData = {} }) => {
                 ref={disasmRef}
                 className="overflow-auto rounded-lg border"
                 style={{
-                  borderColor: "var(--r2-border)",
-                  backgroundColor: "rgba(17, 24, 39, 0.35)",
+                  borderColor: themeTokens.border,
+                  backgroundColor: themeTokens.highlight,
                   maxHeight: "20rem",
                 }}
               >
@@ -491,16 +547,18 @@ const Radare2 = ({ initialData = {} }) => {
                         role="option"
                         style={{
                           borderColor: isSelected
-                            ? "var(--r2-border)"
+                            ? themeTokens.border
                             : hasWarning
-                            ? "rgba(251, 191, 36, 0.4)"
+                            ? warningPalette.border
                             : "transparent",
                           backgroundColor: isSelected
-                            ? "var(--r2-accent)"
+                            ? themeTokens.accent
                             : hasWarning
-                            ? "rgba(251, 191, 36, 0.12)"
+                            ? warningPalette.overlay
                             : "transparent",
-                          color: isSelected ? "#000" : "var(--r2-text)",
+                          color: isSelected
+                            ? themeTokens.accentForeground
+                            : themeTokens.text,
                         }}
                         onClick={() => setCurrentAddr(line.addr)}
                         aria-selected={isSelected}
@@ -536,8 +594,8 @@ const Radare2 = ({ initialData = {} }) => {
                                   key={`${line.addr}-${heuristic.id}`}
                                   className="px-1.5 py-0.5 rounded-full"
                                   style={{
-                                    backgroundColor: "rgba(251, 191, 36, 0.25)",
-                                    color: "var(--r2-text)",
+                                    backgroundColor: warningPalette.badge,
+                                    color: themeTokens.text,
                                   }}
                                 >
                                   {heuristic.label}
@@ -571,7 +629,7 @@ const Radare2 = ({ initialData = {} }) => {
             <h2 className="text-sm font-semibold uppercase tracking-wide">
               Console Output
             </h2>
-            <span className="text-[10px] uppercase" style={{ color: "var(--r2-muted, #888)" }}>
+            <span className="text-[10px] uppercase" style={{ color: themeTokens.muted }}>
               Simulated
             </span>
           </header>
@@ -590,18 +648,20 @@ const Radare2 = ({ initialData = {} }) => {
                   }`}
                   style={{
                     borderColor: isActive
-                      ? "var(--r2-accent)"
+                      ? themeTokens.accent
                       : isWarning
-                      ? "rgba(251, 191, 36, 0.35)"
+                      ? warningPalette.border
                       : "transparent",
                     backgroundColor: isActive
-                      ? "var(--r2-accent)"
+                      ? themeTokens.accent
                       : isWarning
-                      ? "rgba(251, 191, 36, 0.15)"
+                      ? warningPalette.surface
                       : isMuted
-                      ? "rgba(148, 163, 184, 0.1)"
-                      : "rgba(15, 23, 42, 0.3)",
-                    color: isActive ? "#000" : "var(--r2-text)",
+                      ? `color-mix(in srgb, ${themeTokens.muted} 45%, transparent)`
+                      : themeTokens.highlight,
+                    color: isActive
+                      ? themeTokens.accentForeground
+                      : themeTokens.text,
                   }}
                 >
                   {message.label}
@@ -620,7 +680,7 @@ const Radare2 = ({ initialData = {} }) => {
               <h2 className="text-sm font-semibold uppercase tracking-wide">
                 Strings
               </h2>
-              <span className="text-xs" style={{ color: "var(--r2-muted, #888)" }}>
+              <span className="text-xs" style={{ color: themeTokens.muted }}>
                 Click to jump
               </span>
             </header>
@@ -661,17 +721,18 @@ const Radare2 = ({ initialData = {} }) => {
                 className="w-full p-2 rounded"
                 aria-label={`Add note for ${currentAddr}`}
                 style={{
-                  backgroundColor: "var(--r2-surface)",
-                  color: "var(--r2-text)",
-                  border: "1px solid var(--r2-border)",
+                  backgroundColor: themeTokens.panel,
+                  color: themeTokens.text,
+                  border: `1px solid ${themeTokens.border}`,
                 }}
               />
               <button
                 onClick={handleAddNote}
                 className="px-3 py-1 rounded self-end"
                 style={{
-                  backgroundColor: "var(--r2-surface)",
-                  border: "1px solid var(--r2-border)",
+                  backgroundColor: themeTokens.panel,
+                  color: themeTokens.text,
+                  border: `1px solid ${themeTokens.border}`,
                 }}
               >
                 Save Note
