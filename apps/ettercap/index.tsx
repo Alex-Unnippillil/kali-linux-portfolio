@@ -14,6 +14,11 @@ const MODE_DESCRIPTIONS: Record<(typeof MODES)[number], string> = {
 };
 
 type TimelineStatus = 'done' | 'current' | 'pending';
+type TimelineStep = {
+  title: string;
+  description: string;
+  status: TimelineStatus;
+};
 type StatusTone = 'success' | 'warning' | 'error';
 
 const STATUS_TONE_MAP: Record<TimelineStatus, StatusTone> = {
@@ -70,12 +75,12 @@ export default function EttercapPage() {
   const hasLogs = logs.length > 0;
   const logMilestoneReached = logs.length >= 4;
 
-  const timeline = useMemo(
+  const timeline = useMemo<TimelineStep[]>(
     () => [
       {
         title: 'Select operation mode',
         description: MODE_DESCRIPTIONS[mode],
-        status: 'done' as const,
+        status: 'done',
       },
       {
         title: 'Initiate MITM workflow',
