@@ -34,6 +34,7 @@ import {
     getSafeAreaInsets,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
+import { NotificationsContext } from '../common/NotificationCenter';
 
 const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
 const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
@@ -165,6 +166,8 @@ export class Desktop extends Component {
         snapGrid: [8, 8],
     };
 
+    static contextType = NotificationsContext;
+
     constructor(props) {
         super(props);
         this.workspaceCount = 4;
@@ -190,6 +193,7 @@ export class Desktop extends Component {
         this.workspaceThemes = Array.from({ length: this.workspaceCount }, () => ({ ...initialTheme }));
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.suppressedMoveAnnouncements = new Set();
 
         this.iconSizePresetKey = 'desktop_icon_size_preset';
         this.iconSizePresets = {
@@ -2403,6 +2407,88 @@ export class Desktop extends Component {
         }, 75);
     };
 
+    queueWindowAnnouncement = (message) => {
+        if (!message) return;
+        const ctx = this.context;
+        if (!ctx || typeof ctx.announce !== 'function') return;
+        ctx.announce(message);
+    };
+
+    suppressNextMoveAnnouncement = (id) => {
+        if (!id || this.isOverlayId(id)) return;
+        this.suppressedMoveAnnouncements.add(id);
+    };
+
+    describeWindowPosition = (x, y) => {
+        if (typeof window === 'undefined') return '';
+        const width = Number(window.innerWidth || 0);
+        const height = Number(window.innerHeight || 0);
+        if (!width || !height) return '';
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return '';
+        const horizontal = x <= width / 3
+            ? 'left'
+            : x >= (width * 2) / 3
+                ? 'right'
+                : 'center';
+        const vertical = y <= height / 3
+            ? 'top'
+            : y >= (height * 2) / 3
+                ? 'bottom'
+                : 'center';
+        if (horizontal === 'center' && vertical === 'center') {
+            return 'to the center';
+        }
+        const parts = [];
+        if (vertical !== 'center') parts.push(vertical);
+        if (horizontal !== 'center') parts.push(horizontal);
+        if (!parts.length) return '';
+        return `to the ${parts.join(' ')}`;
+    };
+
+    announceWindowMoved = (id, x, y) => {
+        if (!id || this.isOverlayId(id)) return;
+        if (this.suppressedMoveAnnouncements.has(id)) {
+            this.suppressedMoveAnnouncements.delete(id);
+            return;
+        }
+        const app = this.getAppById(id);
+        const title = (app && (app.title || app.name)) || 'Window';
+        const location = this.describeWindowPosition(x, y);
+        const suffix = location ? ` ${location}.` : '.';
+        this.queueWindowAnnouncement(`${title} window moved${suffix}`);
+    };
+
+    announceWindowSnap = (id, position) => {
+        if (!id || !position || this.isOverlayId(id)) return;
+        const app = this.getAppById(id);
+        const title = (app && (app.title || app.name)) || 'Window';
+        const descriptions = {
+            left: 'left half',
+            right: 'right half',
+            top: 'full screen',
+            'top-left': 'top-left quarter',
+            'top-right': 'top-right quarter',
+            'bottom-left': 'bottom-left quarter',
+            'bottom-right': 'bottom-right quarter',
+        };
+        const detail = descriptions[position];
+        if (!detail) {
+            this.queueWindowAnnouncement(`${title} window snapped.`);
+            return;
+        }
+        const message = position === 'top'
+            ? `${title} window snapped to ${detail}.`
+            : `${title} window snapped to the ${detail}.`;
+        this.queueWindowAnnouncement(message);
+    };
+
+    announceWindowMinimized = (id) => {
+        if (!id || this.isOverlayId(id)) return;
+        const app = this.getAppById(id);
+        const title = (app && (app.title || app.name)) || 'Window';
+        this.queueWindowAnnouncement(`${title} window minimized.`);
+    };
+
     announceKeyboardMoveStart = (appId, position) => {
         const app = this.getAppById(appId);
         if (!app) return;
@@ -3901,6 +3987,8 @@ export class Desktop extends Component {
                 snapGrid,
                 context: this.state.window_context[id],
                 zIndex: 200 + index,
+                onSnap: (position) => this.announceWindowSnap(id, position),
+                onWillMinimize: () => this.suppressNextMoveAnnouncement(id),
             };
 
             return <Window key={id} {...props} />;
@@ -4021,11 +4109,16 @@ export class Desktop extends Component {
         const safeTopOffset = measureWindowTopOffset();
         const nextX = snapValue(x, gridX);
         const nextY = clampWindowTopPosition(snapValue(y, gridY), safeTopOffset);
+        const previous = this.state.window_positions?.[id];
+        const changed = !previous || previous.x !== nextX || previous.y !== nextY;
         this.setWorkspaceState(prev => ({
             window_positions: { ...prev.window_positions, [id]: { x: nextX, y: nextY } }
         }), () => {
             this.persistWindowSizes(this.state.window_sizes || {});
             this.saveSession();
+            if (changed) {
+                this.announceWindowMoved(id, nextX, nextY);
+            }
         });
     }
 
@@ -4097,6 +4190,7 @@ export class Desktop extends Component {
             };
         }, () => {
             this.giveFocusToLastApp();
+            this.announceWindowMinimized(objId);
         });
     }
 

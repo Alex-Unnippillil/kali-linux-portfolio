@@ -3,6 +3,7 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import {
@@ -47,6 +48,7 @@ interface NotificationsContextValue {
   dismissNotification: (appId: string, id: string) => void;
   clearNotifications: (appId?: string) => void;
   markAllRead: (appId?: string) => void;
+  announce: (message: string) => void;
 }
 
 export const NotificationsContext = createContext<NotificationsContextValue | null>(null);
@@ -60,10 +62,65 @@ const PRIORITY_WEIGHT: Record<NotificationPriority, number> = {
   low: 3,
 };
 
+export const ANNOUNCEMENT_MIN_SPACING_MS = 900;
+export const ANNOUNCEMENT_RESET_DELAY_MS = 80;
+
 export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const [notificationsByApp, setNotificationsByApp] = useState<
     Record<string, AppNotification[]>
   >({});
+  const [announcementQueue, setAnnouncementQueue] = useState<string[]>([]);
+  const [liveAnnouncement, setLiveAnnouncement] = useState('');
+  const lastAnnouncedRef = useRef(0);
+  const processingRef = useRef(false);
+  const startTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearAnnouncementTimers = useCallback(() => {
+    if (startTimerRef.current) {
+      clearTimeout(startTimerRef.current);
+      startTimerRef.current = null;
+    }
+    if (flushTimerRef.current) {
+      clearTimeout(flushTimerRef.current);
+      flushTimerRef.current = null;
+    }
+    processingRef.current = false;
+  }, []);
+
+  useEffect(() => () => clearAnnouncementTimers(), [clearAnnouncementTimers]);
+
+  useEffect(() => {
+    if (!announcementQueue.length) return;
+    if (processingRef.current) return;
+
+    const nextMessage = announcementQueue[0];
+    processingRef.current = true;
+    const now = Date.now();
+    const spacingDelay = Math.max(
+      0,
+      ANNOUNCEMENT_MIN_SPACING_MS - (now - lastAnnouncedRef.current),
+    );
+
+    startTimerRef.current = setTimeout(() => {
+      setLiveAnnouncement('');
+      startTimerRef.current = null;
+      flushTimerRef.current = setTimeout(() => {
+        setLiveAnnouncement(nextMessage);
+        lastAnnouncedRef.current = Date.now();
+        processingRef.current = false;
+        flushTimerRef.current = null;
+        setAnnouncementQueue(prev => prev.slice(1));
+      }, ANNOUNCEMENT_RESET_DELAY_MS);
+    }, spacingDelay);
+  }, [announcementQueue]);
+
+  const announce = useCallback((message: string) => {
+    if (typeof message !== 'string') return;
+    const normalized = message.trim();
+    if (!normalized) return;
+    setAnnouncementQueue(prev => [...prev, normalized]);
+  }, []);
 
   const pushNotification = useCallback((input: PushNotificationInput) => {
     const id = createId();
@@ -184,8 +241,17 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
         dismissNotification,
         clearNotifications,
         markAllRead,
+        announce,
       }}
     >
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {liveAnnouncement}
+      </div>
       {children}
     </NotificationsContext.Provider>
   );
