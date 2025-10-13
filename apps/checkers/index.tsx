@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import clsx from 'clsx';
 import { pointerHandlers } from '../../utils/pointer';
 import usePersistentState from '../../hooks/usePersistentState';
 import {
@@ -303,8 +304,25 @@ export default function CheckersPage() {
     const badgeBase =
       'inline-flex items-center gap-2 rounded-full border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel-highlight)] px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-widest text-[color:var(--kali-control)]';
 
+    const panelWrapperClasses = clsx(
+      'flex flex-col gap-4 text-xs',
+      variant === 'mobile' && 'h-full',
+    );
+
+    const configurationClasses = clsx(
+      'flex flex-col gap-3',
+      variant === 'desktop' && 'md:flex-row md:flex-wrap md:items-end',
+    );
+
+    const moveLogSectionClasses = clsx(
+      'space-y-2 rounded-md bg-[color:var(--kali-panel-highlight)] p-2',
+      variant === 'mobile'
+        ? 'flex-1 overflow-y-auto'
+        : 'max-h-[28rem] overflow-y-auto',
+    );
+
     return (
-      <div className={`flex flex-col gap-4 ${variant === 'mobile' ? 'h-full' : ''} text-xs`}>
+      <div className={panelWrapperClasses}>
         <section className="space-y-2">
           <h3 className="text-[0.65rem] font-semibold uppercase tracking-widest text-[color:var(--kali-control)]">
             Match telemetry
@@ -335,11 +353,7 @@ export default function CheckersPage() {
           <h3 className="text-[0.65rem] font-semibold uppercase tracking-widest text-[color:var(--kali-control)]">
             Configuration
           </h3>
-          <div
-            className={`flex flex-col gap-3 ${
-              variant === 'desktop' ? 'md:flex-row md:flex-wrap md:items-end' : ''
-            }`}
-          >
+          <div className={configurationClasses}>
             <label className="flex flex-col gap-1 text-xs md:flex-auto">
               <span className="uppercase tracking-wide text-[0.65rem] text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)]">Rules</span>
               <select
@@ -409,9 +423,7 @@ export default function CheckersPage() {
         </section>
 
         <section
-          className={`space-y-2 rounded-md bg-[color:var(--kali-panel-highlight)] p-2 ${
-            variant === 'mobile' ? 'flex-1 overflow-y-auto' : 'max-h-[28rem] overflow-y-auto'
-          }`}
+          className={moveLogSectionClasses}
           aria-label="Move log"
           aria-live="polite"
         >
@@ -426,23 +438,24 @@ export default function CheckersPage() {
               {moveLog.map((entry, idx) => {
                 const moveNumber = Math.floor(idx / 2) + 1;
                 const prefix = idx % 2 === 0 ? `${moveNumber}.` : `${moveNumber}...`;
+                const moveItemClasses = clsx(
+                  'grid grid-cols-[auto_auto_1fr] items-center gap-2 rounded px-2 py-1',
+                  idx % 2 === 0
+                    ? 'bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,transparent)]'
+                    : 'bg-[color:color-mix(in_srgb,var(--kali-control)_18%,var(--kali-panel))]'
+                );
+
+                const playerLabelClasses = clsx(
+                  'text-xs font-semibold capitalize',
+                  entry.player === 'red'
+                    ? 'text-[color:color-mix(in_srgb,var(--color-severity-high)_75%,var(--kali-control))]'
+                    : 'text-[color:color-mix(in_srgb,var(--kali-text)_85%,transparent)]'
+                );
+
                 return (
-                  <li
-                    key={`${entry.notation}-${idx}`}
-                    className={`grid grid-cols-[auto_auto_1fr] items-center gap-2 rounded px-2 py-1 ${
-                      idx % 2 === 0
-                        ? 'bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,transparent)]'
-                        : 'bg-[color:color-mix(in_srgb,var(--kali-control)_18%,var(--kali-panel))]'
-                    }`}
-                  >
+                  <li key={`${entry.notation}-${idx}`} className={moveItemClasses}>
                     <span className="font-mono text-xs text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)]">{prefix}</span>
-                    <span
-                      className={`text-xs font-semibold capitalize ${
-                        entry.player === 'red'
-                          ? 'text-[color:color-mix(in_srgb,var(--color-severity-high)_75%,var(--kali-control))]'
-                          : 'text-[color:color-mix(in_srgb,var(--kali-text)_85%,transparent)]'
-                      }`}
-                    >
+                    <span className={playerLabelClasses}>
                       {entry.player}
                     </span>
                     <span className="font-mono text-sm text-[color:var(--kali-text)]">{entry.notation}</span>
@@ -527,34 +540,36 @@ export default function CheckersPage() {
                     : 'Empty square';
                   const activateSquare = () =>
                     selected ? tryMove(r, c) : selectPiece(r, c);
-                  const squareClasses = [
+                  const squareClasses = clsx(
                     'board-square',
                     isDark
                       ? 'bg-slate-700/90 text-white shadow-[inset_0_2px_6px_rgba(15,23,42,0.65)]'
                       : 'bg-slate-200/90 text-slate-900 shadow-[inset_0_2px_6px_rgba(148,163,184,0.6)]',
-                  ];
-                  if (isLastMoveSquare) squareClasses.push('last-move-square');
-                  if (isLastMoveStart) squareClasses.push('last-move-start');
-                  if (isLastMoveEnd) squareClasses.push('last-move-end');
-                  if (isMove) squareClasses.push('move-square');
-                  if (isHint || isHintDest) squareClasses.push('hint-square');
-                  if (isSelected) squareClasses.push('selected-square');
+                    isLastMoveSquare && 'last-move-square',
+                    isLastMoveStart && 'last-move-start',
+                    isLastMoveEnd && 'last-move-end',
+                    isMove && 'move-square',
+                    (isHint || isHintDest) && 'hint-square',
+                    isSelected && 'selected-square'
+                  );
                   return (
                     <button
                       key={`${r}-${c}`}
                       type="button"
                       {...pointerHandlers(activateSquare)}
-                      className={squareClasses.join(' ')}
+                      className={squareClasses}
                       aria-label={`${notation}: ${occupantLabel}`}
                       aria-pressed={isSelected}
                     >
                       {cell && (
                         <div
-                          className={`flex h-[70%] w-[70%] items-center justify-center rounded-full shadow-lg shadow-black/60 ${
+                          className={clsx(
+                            'flex h-[70%] w-[70%] items-center justify-center rounded-full shadow-lg shadow-black/60',
                             cell.king
                               ? 'ring-4 ring-offset-2 ring-offset-black/60 ring-yellow-300'
-                              : 'ring-2 ring-offset-2 ring-offset-black/60 ring-black/30'
-                          } ${isCrowned ? 'motion-safe:animate-flourish' : ''}`}
+                              : 'ring-2 ring-offset-2 ring-offset-black/60 ring-black/30',
+                            isCrowned && 'motion-safe:animate-flourish'
+                          )}
                           style={{
                             background: cell.color === 'red' ? pieceSurfaces.red : pieceSurfaces.black,
                             color: 'var(--kali-text)',

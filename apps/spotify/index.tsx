@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import clsx from "clsx";
 import usePersistentState from "../../hooks/usePersistentState";
 import CrossfadePlayer from "./utils/crossfade";
 import Visualizer from "./Visualizer";
@@ -148,11 +149,19 @@ const SpotifyApp = () => {
   const controlButtonClass =
     "w-10 h-10 flex items-center justify-center rounded-full border border-[color:var(--kali-border)] bg-[var(--kali-panel)] text-[color:var(--color-text)] shadow-sm shadow-kali-panel transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-panel)] hover:bg-[color:color-mix(in_srgb,var(--kali-control)_18%,var(--kali-panel))] disabled:cursor-not-allowed disabled:opacity-40";
 
+  const containerClasses = clsx(
+    "h-full w-full bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col gap-4",
+    mini ? "p-2" : "p-5",
+  );
+
+  const contentLayoutClasses = clsx(
+    "flex-1 flex flex-col gap-4",
+    !mini && "lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-start",
+  );
+
   return (
     <div
-      className={`h-full w-full bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col gap-4 ${
-        mini ? "p-2" : "p-5"
-      }`}
+      className={containerClasses}
       tabIndex={0}
       onKeyDown={handleKey}
     >
@@ -170,7 +179,7 @@ const SpotifyApp = () => {
             onClick={togglePlay}
             title="Play/Pause"
             disabled={!queue.length}
-            className={`${controlButtonClass} text-lg`}
+            className={clsx(controlButtonClass, "text-lg")}
           >
             ⏯
           </button>
@@ -240,11 +249,7 @@ const SpotifyApp = () => {
           </div>
         </div>
       )}
-      <div
-        className={`flex-1 flex flex-col gap-4 ${
-          mini ? "" : "lg:grid lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-start"
-        }`}
-      >
+      <div className={contentLayoutClasses}>
         {currentTrack && (
           <section className="relative overflow-hidden rounded-3xl border border-[color:var(--kali-border)] bg-[var(--kali-panel)] p-4 shadow-lg shadow-kali-panel">
             <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
@@ -309,19 +314,21 @@ const SpotifyApp = () => {
                   {queue.map((t, i) => (
                     <li key={t.url}>
                       <button
-                        className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-panel)] ${
+                        className={clsx(
+                          "group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-panel)]",
                           i === current
                             ? "border border-[color:var(--kali-control)] bg-kali-control/20 text-slate-50 shadow shadow-kali-panel"
                             : "border border-transparent bg-white/5 text-slate-100/80 hover:border-[color:var(--kali-border)] hover:bg-[color:color-mix(in_srgb,var(--kali-control)_12%,var(--kali-panel))]"
-                        }`}
+                        )}
                         onClick={() => setCurrent(i)}
                       >
                         <span
-                          className={`h-2 w-2 rounded-full transition ${
+                          className={clsx(
+                            "h-2 w-2 rounded-full transition",
                             i === current
                               ? "bg-kali-control shadow shadow-kali-panel"
                               : "bg-slate-500/60 group-hover:bg-kali-control"
-                          }`}
+                          )}
                         />
                         <span className="truncate">{t.title || t.url}</span>
                       </button>

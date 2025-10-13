@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import clsx from 'clsx';
 import * as chrono from 'chrono-node';
 import { RRule } from 'rrule';
 import { parseRecurring } from '../../apps/todoist/utils/recurringParser';
@@ -602,14 +603,16 @@ export default function Todoist() {
           <div className="flex-1">
             <div className="flex items-center">
               <span
-                className={`w-2 h-2 rounded-full mr-2 ${PRIORITY_COLORS[task.priority]}`}
+                className={clsx('w-2 h-2 rounded-full mr-2', PRIORITY_COLORS[task.priority])}
                 aria-label={`priority ${task.priority}`}
               />
-              <div className={`font-medium ${task.completed ? 'line-through text-gray-500' : ''}`}>{task.title}</div>
+              <div className={clsx('font-medium', task.completed && 'line-through text-gray-500')}>
+                {task.title}
+              </div>
             </div>
             <div className="flex flex-wrap gap-2 text-xs text-gray-500">
               {task.due && (
-                <span className={`inline-flex items-center gap-1 px-2 py-[2px] rounded-full ${chipColor}`}>
+                <span className={clsx('inline-flex items-center gap-1 px-2 py-[2px] rounded-full', chipColor)}>
                   <span aria-hidden>📅</span>
                   {task.due}
                 </span>
@@ -627,7 +630,10 @@ export default function Todoist() {
           </button>
         </div>
         <div
-          className={`transition-[max-height] duration-300 overflow-hidden px-2 ${isEditing ? 'max-h-20' : 'max-h-0'}`}
+          className={clsx(
+            'transition-[max-height] duration-300 overflow-hidden px-2',
+            isEditing ? 'max-h-20' : 'max-h-0'
+          )}
         >
           {isEditing && (
             <input
@@ -654,9 +660,11 @@ export default function Todoist() {
       if (!bySection[sec]) bySection[sec] = [];
       bySection[sec].push(t);
     });
-    const groupClass = `flex-1 px-2 py-1.5 border-r last:border-r-0 border-gray-300 overflow-y-auto ${
-      !prefersReducedMotion.current ? 'transition-colors' : ''
-    } ${animating === name ? 'bg-blue-200' : ''}`;
+    const groupClass = clsx(
+      'flex-1 px-2 py-1.5 border-r last:border-r-0 border-gray-300 overflow-y-auto',
+      !prefersReducedMotion.current && 'transition-colors',
+      animating === name && 'bg-blue-200'
+    );
     return (
       <div
         key={name}
@@ -796,11 +804,12 @@ export default function Todoist() {
       <aside className="w-40 border-r p-1 space-y-1">
         <button
           onClick={() => setActiveProject('all')}
-          className={`w-full text-left px-2 py-1 rounded-full transition-colors ${
+          className={clsx(
+            'w-full text-left px-2 py-1 rounded-full transition-colors',
             activeProject === 'all'
               ? 'bg-gray-800 text-white'
               : 'text-gray-700 hover:bg-gray-200'
-          }`}
+          )}
         >
           All Projects
         </button>
@@ -808,11 +817,12 @@ export default function Todoist() {
           <button
             key={name}
             onClick={() => setActiveProject(name)}
-            className={`w-full text-left px-2 py-1 rounded-full transition-colors ${
+            className={clsx(
+              'w-full text-left px-2 py-1 rounded-full transition-colors',
               activeProject === name
                 ? 'bg-gray-800 text-white'
                 : 'text-gray-700 hover:bg-gray-200'
-            }`}
+            )}
           >
             {name}
           </button>

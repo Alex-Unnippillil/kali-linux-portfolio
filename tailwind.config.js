@@ -4,10 +4,13 @@ module.exports = {
   darkMode: 'class',
   mode: 'jit',
   content: [
+    './app/**/*.{js,ts,jsx,tsx}',
     './pages/**/*.{js,ts,jsx,tsx}',
     './components/**/*.{js,ts,jsx,tsx}',
     './apps/**/*.{js,ts,jsx,tsx}',
-    './hooks/**/*.{js,ts,jsx,tsx}',
+    './games/pacman/components/**/*.{jsx,tsx}',
+    './games/word-search/components/**/*.{jsx,tsx}',
+    './utils/createDynamicApp.{js,ts,jsx,tsx}',
   ],
   theme: {
     extend: {
