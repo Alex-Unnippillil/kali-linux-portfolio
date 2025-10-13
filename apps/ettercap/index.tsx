@@ -27,29 +27,29 @@ const STATUS_STYLE: Record<StatusTone, { dot: string; card: string; heading: str
     dot: 'bg-[color:var(--color-success)] shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-success)_35%,transparent)]',
     card:
       'border-[color:color-mix(in_srgb,var(--color-success)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--color-success)_12%,transparent)]',
-    heading: 'text-white',
-    description: 'text-[color:color-mix(in_srgb,var(--color-success)_70%,white)]',
+    heading: 'text-[color:var(--kali-text)]',
+    description: 'text-[color:color-mix(in_srgb,var(--color-success)_70%,var(--kali-text))]',
   },
   warning: {
     dot: 'bg-[color:var(--color-warning)] shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-warning)_40%,transparent)]',
     card:
       'border-[color:color-mix(in_srgb,var(--color-warning)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--color-warning)_15%,transparent)]',
-    heading: 'text-white',
-    description: 'text-[color:color-mix(in_srgb,var(--color-warning)_75%,white)]',
+    heading: 'text-[color:var(--kali-text)]',
+    description: 'text-[color:color-mix(in_srgb,var(--color-warning)_75%,var(--kali-text))]',
   },
   error: {
     dot: 'bg-[color:var(--color-danger)] shadow-[0_0_0_2px_color-mix(in_srgb,var(--color-danger)_40%,transparent)]',
     card:
       'border-[color:color-mix(in_srgb,var(--color-danger)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--color-danger)_12%,transparent)]',
-    heading: 'text-white',
-    description: 'text-[color:color-mix(in_srgb,var(--color-danger)_75%,white)]',
+    heading: 'text-[color:var(--kali-text)]',
+    description: 'text-[color:color-mix(in_srgb,var(--color-danger)_75%,var(--kali-text))]',
   },
 };
 
 const METRIC_BADGE_CLASS =
-  'rounded-full border border-[color:color-mix(in_srgb,var(--color-primary)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary)_10%,transparent)] px-3 py-1 font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-primary)_80%,white)]';
+  'rounded-full border border-[color:color-mix(in_srgb,var(--color-primary)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary)_10%,transparent)] px-3 py-1 font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-primary)_80%,var(--kali-text))]';
 
-const ACCENT_SUBHEADING_TEXT = 'text-[color:color-mix(in_srgb,var(--color-primary)_70%,white)]';
+const ACCENT_SUBHEADING_TEXT = 'text-[color:color-mix(in_srgb,var(--color-primary)_70%,var(--kali-text))]';
 
 export default function EttercapPage() {
   const [mode, setMode] = useState<(typeof MODES)[number]>('Unified');
@@ -124,7 +124,7 @@ export default function EttercapPage() {
       <header className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold text-white">Ettercap Simulation Console</h1>
+            <h1 className="text-2xl font-semibold text-[color:var(--kali-text)]">Ettercap Simulation Console</h1>
             <p className={`mt-1 text-sm ${ACCENT_SUBHEADING_TEXT}`}>
               Walk through a safe, local‑only reenactment of Ettercap workflows while keeping real infrastructure untouched.
             </p>
@@ -136,10 +136,10 @@ export default function EttercapPage() {
                 type="button"
                 onClick={() => setMode(m)}
                 title={MODE_DESCRIPTIONS[m]}
-                className={`px-3 py-1 rounded-full border text-xs font-semibold uppercase tracking-wide transition ${
+                className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-bg)] ${
                   mode === m
-                    ? 'border-[color:color-mix(in_srgb,var(--color-primary)_55%,transparent)] bg-[color:var(--color-primary)] text-white shadow-[0_0_12px_color-mix(in_srgb,var(--color-primary)_35%,transparent)]'
-                    : 'border-[color:color-mix(in_srgb,var(--color-primary)_20%,transparent)] bg-gray-900/80 text-[color:color-mix(in_srgb,var(--color-primary)_70%,white)] hover:border-[color:color-mix(in_srgb,var(--color-primary)_35%,transparent)]'
+                    ? 'border-[color:color-mix(in_srgb,var(--color-primary)_55%,transparent)] bg-[color:var(--color-primary)] text-[color:var(--kali-text)] shadow-[0_0_12px_color-mix(in_srgb,var(--color-primary)_35%,transparent)]'
+                    : 'border-[color:color-mix(in_srgb,var(--color-primary)_20%,transparent)] bg-[color:var(--kali-panel)] text-[color:color-mix(in_srgb,var(--color-primary)_70%,var(--kali-text))] hover:border-[color:color-mix(in_srgb,var(--color-primary)_35%,transparent)] hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,var(--color-primary)_12%)]'
                 }`}
               >
                 {m}
@@ -148,13 +148,13 @@ export default function EttercapPage() {
           </div>
         </div>
         <div
-          className="flex flex-col gap-3 rounded-lg border border-[color:color-mix(in_srgb,var(--color-warning)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--color-warning)_18%,transparent)] p-3 text-sm text-white"
+          className="flex flex-col gap-3 rounded-lg border border-[color:color-mix(in_srgb,var(--color-warning)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--color-warning)_18%,var(--kali-panel))] p-3 text-sm text-[color:color-mix(in_srgb,var(--color-warning)_45%,var(--kali-text))]"
           role="note"
         >
-          <p className="font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-warning)_80%,white)]">
+          <p className="font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-warning)_80%,var(--kali-text))]">
             Simulation only
           </p>
-          <p className="text-white/90">
+          <p className="text-[color:color-mix(in_srgb,var(--color-warning)_35%,var(--kali-text))]">
             No live packets leave this sandbox. Use the controls below to rehearse attack paths and mitigation steps before
             applying them to lab networks.
           </p>
@@ -163,7 +163,7 @@ export default function EttercapPage() {
           <div className="flex gap-2">
             <button
               type="button"
-              className="px-4 py-2 rounded bg-[color:var(--color-primary)] text-white hover:bg-[color:var(--kali-blue-dark)] disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded bg-[color:var(--color-primary)] px-4 py-2 text-[color:var(--kali-text)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-bg)] hover:bg-[color:color-mix(in_srgb,var(--color-primary)_92%,var(--kali-panel))] disabled:cursor-not-allowed disabled:opacity-70"
               onClick={() => setStarted(true)}
               disabled={started}
             >
@@ -171,7 +171,7 @@ export default function EttercapPage() {
             </button>
             <button
               type="button"
-              className="px-4 py-2 rounded border border-[color:color-mix(in_srgb,var(--color-danger)_70%,transparent)] text-[color:color-mix(in_srgb,var(--color-danger)_90%,white)] hover:bg-[color:color-mix(in_srgb,var(--color-danger)_18%,transparent)] disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded border border-[color:color-mix(in_srgb,var(--color-danger)_70%,transparent)] px-4 py-2 text-[color:color-mix(in_srgb,var(--color-danger)_85%,var(--kali-text))] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-danger)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-bg)] hover:bg-[color:color-mix(in_srgb,var(--color-danger)_18%,var(--kali-panel))] disabled:cursor-not-allowed disabled:opacity-70"
               onClick={() => setStarted(false)}
               disabled={!started}
             >
@@ -191,7 +191,7 @@ export default function EttercapPage() {
               className={METRIC_BADGE_CLASS}
             >
               {badge.label}:{' '}
-              <span className="ml-1 capitalize text-white">{badge.value}</span>
+              <span className="ml-1 capitalize text-[color:var(--kali-text)]">{badge.value}</span>
             </span>
           ))}
         </div>
@@ -228,15 +228,15 @@ export default function EttercapPage() {
       {started && <ArpDiagram />}
 
       <h1 className="text-xl font-bold">Ettercap Filter Editor</h1>
-      <div className="mb-4 rounded-lg border border-[color:color-mix(in_srgb,var(--color-primary)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary)_12%,transparent)] p-4 text-sm text-white">
-        <h2 className="text-base font-semibold text-[color:color-mix(in_srgb,var(--color-primary)_80%,white)]">Need a refresher?</h2>
-        <p className="mt-2 text-white/85">
+      <div className="mb-4 rounded-lg border border-[color:color-mix(in_srgb,var(--color-primary)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--color-primary)_12%,var(--kali-panel))] p-4 text-sm text-[color:color-mix(in_srgb,var(--color-primary)_35%,var(--kali-text))]">
+        <h2 className="text-base font-semibold text-[color:color-mix(in_srgb,var(--color-primary)_80%,var(--kali-text))]">Need a refresher?</h2>
+        <p className="mt-2 text-[color:color-mix(in_srgb,var(--color-primary)_25%,var(--kali-text))]">
           Ettercap filters let you drop or rewrite packets using simple commands like
-          <code className="mx-1 rounded bg-[color:color-mix(in_srgb,var(--color-primary)_20%,transparent)] px-1 py-0.5 text-xs text-white">
+          <code className="mx-1 rounded bg-[color:color-mix(in_srgb,var(--color-primary)_24%,var(--kali-panel))] px-1 py-0.5 text-xs text-[color:var(--kali-text)]">
             drop
           </code>
           and
-          <code className="mx-1 rounded bg-[color:color-mix(in_srgb,var(--color-primary)_20%,transparent)] px-1 py-0.5 text-xs text-white">
+          <code className="mx-1 rounded bg-[color:color-mix(in_srgb,var(--color-primary)_24%,var(--kali-panel))] px-1 py-0.5 text-xs text-[color:var(--kali-text)]">
             replace
           </code>
           Combine them with patterns to experiment safely in this simulation before
@@ -246,7 +246,7 @@ export default function EttercapPage() {
           href="https://www.ettercap-project.org/documentation/etterfilter/"
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 inline-flex items-center text-[color:color-mix(in_srgb,var(--color-primary)_80%,white)] underline hover:text-white"
+          className="mt-3 inline-flex items-center text-[color:color-mix(in_srgb,var(--color-primary)_78%,var(--kali-text))] underline transition hover:text-[color:var(--kali-text)]"
         >
           Read the Etterfilter guide
         </a>
