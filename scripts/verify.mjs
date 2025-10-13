@@ -74,6 +74,7 @@ const runStage = async (label, fn) => {
     );
     await runStage('Lint', () => runYarnScript('lint'));
     await runStage('Typecheck', () => runYarnScript('typecheck', { fallbackArgs: ['tsc', '--noEmit'] }));
+    await runStage('I18n audit', () => runYarnScript('i18n:audit', { env: { CI: '1' } }));
     await runStage('Unit tests', () => runYarnScript('test', { env: { CI: '1' } }));
     await runStage('Build', () => runYarnScript('build'));
 

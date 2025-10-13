@@ -23,6 +23,7 @@
     "analyze": "ANALYZE=true yarn build",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
     "verify:all": "node scripts/verify.mjs",
+    "i18n:audit": "node scripts/i18n-audit.mjs",
     "dedupe:fix": "yarn dedupe"
   },
   "engines": {
