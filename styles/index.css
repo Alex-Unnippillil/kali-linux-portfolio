@@ -3,6 +3,15 @@
 
 html {
     font-size: clamp(12px, calc(16px * var(--font-multiplier)), 24px);
+    scroll-padding-top: var(--app-shell-safe-top, 4.5rem);
+    scroll-padding-bottom: var(--app-shell-safe-bottom, 5rem);
+}
+
+@supports (scroll-padding-top: env(safe-area-inset-top)) {
+    html {
+        scroll-padding-top: calc(var(--app-shell-safe-top, 4.5rem) + env(safe-area-inset-top));
+        scroll-padding-bottom: calc(var(--app-shell-safe-bottom, 5rem) + env(safe-area-inset-bottom));
+    }
 }
 
 body{
@@ -22,6 +31,8 @@ body{
     --stack-space-4: var(--space-4);
     --stack-space-6: var(--space-5);
     --stack-space-8: var(--space-6);
+    --app-shell-safe-top: clamp(3.5rem, 5vw, 4.75rem);
+    --app-shell-safe-bottom: clamp(4rem, 6vw, 5.5rem);
 }
 
 .space-y-0\.5 > :not([hidden]) ~ :not([hidden]) {
