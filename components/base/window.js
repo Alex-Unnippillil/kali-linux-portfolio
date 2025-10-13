@@ -24,6 +24,24 @@ const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 const computeEdgeThreshold = (size) => clamp(size * EDGE_THRESHOLD_RATIO, EDGE_THRESHOLD_MIN, EDGE_THRESHOLD_MAX);
 
+const parsePxValue = (value) => {
+    if (typeof value !== 'string') return null;
+    const parsed = parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : null;
+};
+
+const parseTranslate = (transformValue) => {
+    if (typeof transformValue !== 'string' || transformValue.length === 0) {
+        return null;
+    }
+    const match = /translate\(([-\d.]+)[a-z%]*,\s*([-\d.]+)[a-z%]*\)/i.exec(transformValue);
+    if (!match) return null;
+    const x = parseFloat(match[1]);
+    const y = parseFloat(match[2]);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    return { x, y };
+};
+
 const percentOf = (value, total) => {
     if (!total) return 0;
     return (value / total) * 100;
@@ -127,6 +145,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this.prevBounds = null;
     }
 
     notifySizeChange = () => {
@@ -613,11 +632,66 @@ export class Window extends Component {
             event.stopPropagation();
         }
         if (this.props.allowMaximize === false) return;
+        const windowId = this.id || this.props.id;
+        const { onMaximize, onRestore } = this.props;
         if (this.state.maximized) {
+            const prevBounds = this.prevBounds || this.getCurrentBounds();
+            if (windowId && typeof onRestore === 'function') {
+                onRestore(windowId, prevBounds);
+            } else if (windowId && typeof onMaximize === 'function') {
+                onMaximize(windowId, prevBounds);
+            }
             this.restoreWindow();
         } else {
             this.maximizeWindow();
+            if (windowId && typeof onMaximize === 'function') {
+                onMaximize(windowId, this.prevBounds || this.getCurrentBounds());
+            }
         }
+    }
+
+    getCurrentBounds = () => {
+        const node = this.getWindowNode();
+        if (!node || typeof node.getBoundingClientRect !== 'function') {
+            return null;
+        }
+        const rect = node.getBoundingClientRect();
+        const style = node.style || {};
+        const getStyleValue = (prop) => {
+            if (style && typeof style.getPropertyValue === 'function') {
+                const value = style.getPropertyValue(prop);
+                if (value) {
+                    return value;
+                }
+            }
+            if (prop in style) {
+                return style[prop];
+            }
+            return null;
+        };
+
+        let x = parsePxValue(getStyleValue('--window-transform-x'));
+        let y = parsePxValue(getStyleValue('--window-transform-y'));
+
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+            const fallback = parseTranslate(style.transform);
+            if (fallback) {
+                if (!Number.isFinite(x)) x = fallback.x;
+                if (!Number.isFinite(y)) y = fallback.y;
+            }
+        }
+
+        const resolvedX = Number.isFinite(x) ? x : rect.left;
+        const resolvedY = Number.isFinite(y) ? y : rect.top;
+
+        return {
+            x: resolvedX,
+            y: resolvedY,
+            width: rect.width,
+            height: rect.height,
+            widthPercent: this.state.width,
+            heightPercent: this.state.height,
+        };
     }
 
     minimizeWindow = () => {
@@ -630,11 +704,22 @@ export class Window extends Component {
         if (!node) return;
         const storedSize = this.state.preMaximizeSize;
         const hasStoredSize = storedSize && typeof storedSize.width === 'number' && typeof storedSize.height === 'number';
+        const rememberedBounds = this.prevBounds;
+        const widthPercent = rememberedBounds && typeof rememberedBounds.widthPercent === 'number'
+            ? rememberedBounds.widthPercent
+            : hasStoredSize
+                ? storedSize.width
+                : null;
+        const heightPercent = rememberedBounds && typeof rememberedBounds.heightPercent === 'number'
+            ? rememberedBounds.heightPercent
+            : hasStoredSize
+                ? storedSize.height
+                : null;
 
-        if (hasStoredSize) {
+        if (typeof widthPercent === 'number' && typeof heightPercent === 'number') {
             this.setState({
-                width: storedSize.width,
-                height: storedSize.height,
+                width: widthPercent,
+                height: heightPercent,
                 maximized: false,
                 preMaximizeSize: null,
             }, () => {
@@ -646,8 +731,18 @@ export class Window extends Component {
             this.setState({ maximized: false, preMaximizeSize: null });
         }
         // get previous position
-        const posx = node.style.getPropertyValue("--window-transform-x") || `${this.startX}px`;
-        const posy = node.style.getPropertyValue("--window-transform-y") || `${this.startY}px`;
+        const storedX = rememberedBounds && Number.isFinite(rememberedBounds.x)
+            ? `${rememberedBounds.x}px`
+            : null;
+        const storedY = rememberedBounds && Number.isFinite(rememberedBounds.y)
+            ? `${rememberedBounds.y}px`
+            : null;
+        const posx = storedX
+            || node.style.getPropertyValue("--window-transform-x")
+            || `${this.startX}px`;
+        const posy = storedY
+            || node.style.getPropertyValue("--window-transform-y")
+            || `${this.startY}px`;
         const endTransform = `translate(${posx},${posy})`;
         const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -658,6 +753,11 @@ export class Window extends Component {
         }
 
         node.style.transform = endTransform;
+        if (typeof node.style.setProperty === 'function') {
+            node.style.setProperty('--window-transform-x', posx);
+            node.style.setProperty('--window-transform-y', posy);
+        }
+        this.prevBounds = null;
     }
 
     maximizeWindow = () => {
@@ -669,6 +769,10 @@ export class Window extends Component {
             this.focusWindow();
             const node = this.getWindowNode();
             this.setWinowsPosition();
+            const bounds = this.getCurrentBounds();
+            if (bounds) {
+                this.prevBounds = bounds;
+            }
             // translate window to maximize position
             const viewportHeight = window.innerHeight;
             const topOffset = measureWindowTopOffset();
