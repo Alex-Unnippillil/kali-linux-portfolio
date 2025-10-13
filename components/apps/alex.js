@@ -311,12 +311,15 @@ const SkillSection = ({ title, badges }) => {
       />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map(badge => (
-          <img
+          <Image
             key={badge.alt}
             className="m-1 cursor-pointer"
             src={badge.src}
             alt={badge.alt}
             title={badge.description}
+            width={badge.width ?? 64}
+            height={badge.height ?? 64}
+            decoding="async"
             onClick={() => setSelected(badge)}
           />
         ))}
@@ -374,11 +377,16 @@ function Skills({ skills }) {
       <div className="w-full md:w-10/12 flex flex-col items-center mt-8">
         <div className="font-bold text-sm md:text-base mb-2 text-center">GitHub Contributions</div>
         <div className="bg-ub-gedit-light bg-opacity-20 p-1 md:p-2 rounded-md shadow-md">
-          <img
-            src="https://ghchart.rshah.org/Alex-Unnippillil"
-            alt="Alex Unnippillil's GitHub contribution graph"
-            className="w-full rounded"
-          />
+          <div className="relative w-full" style={{ minHeight: '160px' }}>
+            <Image
+              src="https://ghchart.rshah.org/Alex-Unnippillil"
+              alt="Alex Unnippillil's GitHub contribution graph"
+              fill
+              className="rounded object-contain"
+              sizes="100vw"
+              priority
+            />
+          </div>
         </div>
       </div>
 

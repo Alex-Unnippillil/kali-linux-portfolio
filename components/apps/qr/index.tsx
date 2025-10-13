@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 
@@ -164,11 +165,18 @@ const QRScanner: React.FC = () => {
       {result && (
         <div className="flex w-full max-w-sm items-center gap-3 rounded-xl border border-kali-primary/60 bg-kali-surface/90 p-3 text-kali-text shadow-[0_12px_35px_rgba(15,148,210,0.16)]">
           {preview && (
-            <img
-              src={preview}
-              alt="QR preview"
-              className="h-32 w-32 rounded-lg border border-kali-border/70 bg-kali-surface/80 p-1"
-            />
+            <div className="h-32 w-32 rounded-lg border border-kali-border/70 bg-kali-surface/80 p-1">
+              <div className="relative h-full w-full">
+                <Image
+                  src={preview}
+                  alt="QR preview"
+                  fill
+                  className="rounded-lg object-contain"
+                  sizes="128px"
+                  decoding="async"
+                />
+              </div>
+            </div>
           )}
           <div className="flex-1 min-w-0">
             <p className="break-all text-sm text-[color:color-mix(in_srgb,var(--color-text)_90%,transparent)]">{result}</p>

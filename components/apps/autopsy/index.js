@@ -1,5 +1,6 @@
 "use client";
 
+import Image from 'next/image';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
@@ -281,15 +282,16 @@ function Timeline({ events, onSelect }) {
             className="w-full"
             aria-label="Timeline scrub bar"
           />
-          <datalist id="timeline-day-markers">
-            {dayMarkers.map((m) => (
-              <option
-                key={m.day}
-                value={m.idx}
-                label={new Date(m.day).toLocaleDateString()}
-              />
-            ))}
-          </datalist>
+            <datalist id="timeline-day-markers">
+              {dayMarkers.map((m) => (
+                <option
+                  key={m.day}
+                  value={m.idx}
+                  label={new Date(m.day).toLocaleDateString()}
+                  aria-label={`Timeline marker for ${new Date(m.day).toLocaleDateString()}`}
+                />
+              ))}
+            </datalist>
           {hoverIndex !== null && sorted[hoverIndex] && (
             <div
               className="absolute -top-10 rounded border border-kali-border/70 bg-kali-dark/95 px-2 py-1 text-xs text-kali-text shadow-lg"
@@ -592,14 +594,15 @@ function Autopsy({ initialArtifacts = null }) {
         className="sr-only"
         dangerouslySetInnerHTML={{ __html: announcement }}
       />
-      <div className="flex space-x-2">
-        <input
-          type="text"
-          value={caseName}
-          onChange={(e) => setCaseName(e.target.value)}
-          placeholder="Case name"
-          className="flex-grow rounded border border-kali-border/60 bg-kali-dark px-2 py-1 text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus/80"
-        />
+        <div className="flex space-x-2">
+          <input
+            type="text"
+            value={caseName}
+            onChange={(e) => setCaseName(e.target.value)}
+            placeholder="Case name"
+            className="flex-grow rounded border border-kali-border/60 bg-kali-dark px-2 py-1 text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus/80"
+            aria-label="Case name"
+          />
         <button
           onClick={createCase}
           className="rounded border border-kali-accent/80 bg-kali-accent px-3 py-1 font-semibold text-kali-text shadow-sm transition hover:bg-kali-accent/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus"
@@ -618,12 +621,13 @@ function Autopsy({ initialArtifacts = null }) {
       {currentCase && (
         <div className="space-y-2">
           <div className="text-sm">Current case: {currentCase}</div>
-          <div className="flex space-x-2 items-center">
-            <select
-              value={selectedPlugin}
-              onChange={(e) => setSelectedPlugin(e.target.value)}
-              className="rounded border border-kali-border/60 bg-kali-dark px-2 py-1 text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus/80"
-            >
+            <div className="flex space-x-2 items-center">
+              <select
+                value={selectedPlugin}
+                onChange={(e) => setSelectedPlugin(e.target.value)}
+                className="rounded border border-kali-border/60 bg-kali-dark px-2 py-1 text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus/80"
+                aria-label="Select analysis plugin"
+              >
               <option value="">Select Plugin</option>
               {plugins.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -640,12 +644,13 @@ function Autopsy({ initialArtifacts = null }) {
           </div>
         </div>
       )}
-      {analysis && (
-        <textarea
-          readOnly
-          value={analysis}
-          className="resize-none rounded border border-kali-border/60 bg-kali-dark p-2 text-xs text-kali-text"
-        />
+        {analysis && (
+          <textarea
+            readOnly
+            value={analysis}
+            className="resize-none rounded border border-kali-border/60 bg-kali-dark p-2 text-xs text-kali-text"
+            aria-label="Analysis log"
+          />
       )}
       {artifacts.length > 0 && (
         <div className="space-y-2">
@@ -773,11 +778,16 @@ function Autopsy({ initialArtifacts = null }) {
                     </pre>
                   )}
                   {previewTab === 'image' && selectedFile.imageUrl && (
-                    <img
-                      src={selectedFile.imageUrl}
-                      alt={selectedFile.name}
-                      className="max-w-full h-auto"
-                    />
+                    <div className="max-w-full">
+                      <Image
+                        src={selectedFile.imageUrl}
+                        alt={selectedFile.name}
+                        width={800}
+                        height={600}
+                        className="h-auto w-full"
+                        decoding="async"
+                      />
+                    </div>
                   )}
                 </div>
               )}

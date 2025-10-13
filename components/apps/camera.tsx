@@ -1,11 +1,12 @@
 "use client";
 
+import Image from 'next/image';
 import React, { useEffect, useRef, useState } from 'react';
 
 const CameraApp: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
-  const [snapshot, setSnapshot] = useState<string>('');
+  const [snapshot, setSnapshot] = useState<{ src: string; width: number; height: number } | null>(null);
   const [drawing, setDrawing] = useState(false);
 
   useEffect(() => {
@@ -85,7 +86,7 @@ const CameraApp: React.FC = () => {
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     ctx.drawImage(overlay, 0, 0, canvas.width, canvas.height);
-    setSnapshot(canvas.toDataURL('image/png'));
+    setSnapshot({ src: canvas.toDataURL('image/png'), width: canvas.width, height: canvas.height });
   };
 
   return (
@@ -97,6 +98,7 @@ const CameraApp: React.FC = () => {
           onLoadedMetadata={handleLoaded}
           autoPlay
           playsInline
+          aria-label="Camera preview"
         />
         <canvas
           ref={overlayRef}
@@ -105,6 +107,7 @@ const CameraApp: React.FC = () => {
           onMouseMove={draw}
           onMouseUp={stopDrawing}
           onMouseLeave={stopDrawing}
+          aria-label="Snapshot annotations overlay"
         />
       </div>
       <div className="space-x-2">
@@ -124,11 +127,16 @@ const CameraApp: React.FC = () => {
         </button>
       </div>
       {snapshot && (
-        <img
-          src={snapshot}
-          alt="Snapshot"
-          className="max-w-full border border-gray-700 rounded"
-        />
+        <div className="max-w-full">
+          <Image
+            src={snapshot.src}
+            alt="Snapshot"
+            width={snapshot.width || 640}
+            height={snapshot.height || 480}
+            className="h-auto w-full rounded border border-gray-700"
+            decoding="async"
+          />
+        </div>
       )}
     </div>
   );

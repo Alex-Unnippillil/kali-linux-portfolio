@@ -1,5 +1,6 @@
 "use client";
 
+import Image from 'next/image';
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
@@ -216,12 +217,16 @@ export default function YouTubePlayer({ videoId }) {
               onClick={loadPlayer}
               className="relative w-full h-full flex items-center justify-center"
             >
-              <img
-                src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
-                alt="YouTube video thumbnail"
-                loading="lazy"
-                className="absolute inset-0 w-full h-full object-cover"
-              />
+              <div className="absolute inset-0">
+                <Image
+                  src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
+                  alt="YouTube video thumbnail"
+                  fill
+                  className="object-cover"
+                  priority
+                  sizes="(min-width: 768px) 720px, 100vw"
+                />
+              </div>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="68"
@@ -300,15 +305,16 @@ export default function YouTubePlayer({ videoId }) {
             >
               ✕
             </button>
-            {supported ? (
-              <>
-                <input
-                  type="search"
-                  placeholder="Search notes"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="mb-2 bg-black/80 border border-white/20 p-1"
-                />
+              {supported ? (
+                <>
+                  <input
+                    type="search"
+                    placeholder="Search notes"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="mb-2 bg-black/80 border border-white/20 p-1"
+                    aria-label="Search saved notes"
+                  />
                 {search && results.length > 0 && (
                   <ul className="mb-2 overflow-auto max-h-24 border border-white/20 p-1">
                     {results.map((r) => (
@@ -318,12 +324,13 @@ export default function YouTubePlayer({ videoId }) {
                     ))}
                   </ul>
                 )}
-                <textarea
-                  value={notes}
-                  onChange={handleNoteChange}
-                  className="flex-1 bg-black/80 border border-white/20 p-1"
-                  placeholder="Write notes…"
-                />
+                  <textarea
+                    value={notes}
+                    onChange={handleNoteChange}
+                    className="flex-1 bg-black/80 border border-white/20 p-1"
+                    placeholder="Write notes…"
+                    aria-label="Notes editor"
+                  />
               </>
             ) : (
               <p className="pr-4">OPFS not supported.</p>

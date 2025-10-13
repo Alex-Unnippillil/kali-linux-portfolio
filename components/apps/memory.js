@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import GameLayout from './GameLayout';
 import { createDeck, PATTERN_THEMES, fisherYatesShuffle } from './memory_utils';
@@ -329,7 +330,16 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
                     } ${reduceMotion.current ? '' : 'transition-colors duration-300'}`}
                   >
                     {card.image ? (
-                      <img src={card.image} alt="" className="w-3/4 h-3/4 object-contain" />
+                      <div className="relative h-3/4 w-3/4">
+                        <Image
+                          src={card.image}
+                          alt=""
+                          fill
+                          className="object-contain"
+                          sizes="96px"
+                          decoding="async"
+                        />
+                      </div>
                     ) : (
                       <span className={`text-4xl ${card.color || ''}`}>{card.value}</span>
                     )}
@@ -444,16 +454,17 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
           <label htmlFor={`preview-time-${player}`} className="text-sm">
             Preview {previewTime}s
           </label>
-          <input
-            id={`preview-time-${player}`}
-            type="range"
-            min="0"
-            max="10"
-            step="1"
-            value={previewTime}
-            onChange={(e) => setPreviewTime(Number(e.target.value))}
-            className="w-24"
-          />
+            <input
+              id={`preview-time-${player}`}
+              type="range"
+              min="0"
+              max="10"
+              step="1"
+              value={previewTime}
+              onChange={(e) => setPreviewTime(Number(e.target.value))}
+              className="w-24"
+              aria-label="Preview time"
+            />
         </div>
       </div>
     </div>
