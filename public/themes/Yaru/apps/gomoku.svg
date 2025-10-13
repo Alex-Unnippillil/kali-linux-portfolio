@@ -1,4 +1,6 @@
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+<svg role="img" aria-labelledby="icon-gomokusvg-title" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <title id="icon-gomokusvg-title">Gomoku</title>
+
   <rect width="64" height="64" fill="#2e3436"/>
   <rect x="8" y="8" width="48" height="48" fill="#d8b574"/>
   <g stroke="#8b5a2b" stroke-width="2">

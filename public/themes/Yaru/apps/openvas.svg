@@ -1,4 +1,6 @@
-<svg version="1.1" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<svg role="img" aria-labelledby="icon-openvassvg-title" version="1.1" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <title id="icon-openvassvg-title">Openvas</title>
+
 <defs>
 <linearGradient id="a"><stop stop-color="#fff" offset="0"/><stop stop-color="#54bd8e" offset="1"/></linearGradient>
 <radialGradient id="c" cx="204.74" cy="90.459" r="82.386" gradientTransform="matrix(1.4078 -.10461 .075405 1.0148 6.7602 65.86)" gradientUnits="userSpaceOnUse" xlink:href="#a"/>

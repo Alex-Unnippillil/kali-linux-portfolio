@@ -1,4 +1,6 @@
-<svg width="512" height="512" version="1.1" viewBox="0 0 384 384" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<svg role="img" aria-labelledby="icon-blackjacksvg-title" width="512" height="512" version="1.1" viewBox="0 0 384 384" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <title id="icon-blackjacksvg-title">Blackjack</title>
+
   <defs>
     <linearGradient id="a" x1="289.9" x2="254.32" y1="389.49" y2="246.72" gradientUnits="userSpaceOnUse">
       <stop stop-color="#d41919" offset="0" />

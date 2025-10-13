@@ -1,4 +1,6 @@
-<svg version="1" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+<svg role="img" aria-labelledby="icon-color-pickersvg-title" version="1" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <title id="icon-color-pickersvg-title">Color Picker</title>
+
   <ellipse
     cx="255.98"
     cy="256"

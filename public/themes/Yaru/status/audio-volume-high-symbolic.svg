@@ -1,4 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+<svg role="img" aria-labelledby="icon-audio-volume-high-symbolicsvg-title" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+  <title id="icon-audio-volume-high-symbolicsvg-title">Audio Volume High Symbolic</title>
+
   <g fill="#fff">
     <path d="M8 1.333L4.5 5H1.87S1 5.893 1 8.001C1 10.11 1.87 11 1.87 11H4.5L8 14.667z" />
     <path

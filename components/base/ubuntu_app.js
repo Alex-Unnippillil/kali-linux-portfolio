@@ -107,10 +107,13 @@ export class UbuntuApp extends Component {
             ...style,
         };
 
+        const labelId = `app-${this.props.id}-label`;
+
         return (
             <div
                 role="button"
                 aria-label={this.props.name}
+                aria-labelledby={labelId}
                 aria-disabled={this.props.disabled}
                 aria-pressed={isSelected ? 'true' : 'false'}
                 data-context="app"
@@ -156,12 +159,13 @@ export class UbuntuApp extends Component {
                         maxHeight: 'var(--desktop-icon-image, 2.5rem)'
                     }}
                     src={this.props.icon.replace('./', '/')}
-                    alt={"Kali " + this.props.name}
+                    alt={`${this.props.name} icon`}
                     sizes="(max-width: 768px) 48px, 64px"
                 />
                 <span
                     className={"leading-tight " + (isSelected ? "font-semibold" : "font-normal")}
                     style={labelStyle}
+                    id={labelId}
                 >
                     {this.props.displayName || this.props.name}
                 </span>

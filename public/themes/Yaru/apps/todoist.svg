@@ -1,0 +1,13 @@
+<svg role="img" aria-labelledby="icon-todoist-title" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <title id="icon-todoist-title">Todoist</title>
+  <defs>
+    <linearGradient id="todoist-bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f05b4f" />
+      <stop offset="100%" stop-color="#c73c2e" />
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="48" height="48" rx="12" fill="url(#todoist-bg)" />
+  <path d="M18 26l8 5 20-12" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M18 34l8 5 20-12" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.85" />
+  <path d="M18 42l8 5 20-12" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.7" />
+</svg>

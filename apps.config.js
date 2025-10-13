@@ -214,7 +214,7 @@ const utilityList = [
   {
     id: 'ascii-art',
     title: 'ASCII Art',
-    icon: '/themes/Yaru/apps/gedit.png',
+    icon: '/themes/Yaru/apps/gedit.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: true,
@@ -232,7 +232,7 @@ const utilityList = [
   {
     id: 'figlet',
     title: 'Figlet',
-    icon: '/themes/Yaru/apps/gedit.png',
+    icon: '/themes/Yaru/apps/gedit.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: true,
@@ -604,7 +604,7 @@ export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
 const folderApps = DEFAULT_DESKTOP_FOLDERS.map((folder) => ({
   id: folder.id,
   title: folder.title,
-  icon: folder.icon || '/themes/Yaru/system/folder.png',
+  icon: folder.icon || '/themes/Yaru/system/folder.svg',
   disabled: false,
   favourite: false,
   desktop_shortcut: true,
@@ -654,7 +654,7 @@ const apps = [
     // VSCode app uses a Stack iframe, so no editor dependencies are required
     id: 'vscode',
     title: 'Visual Studio Code',
-    icon: '/themes/Yaru/apps/vscode.png',
+    icon: '/themes/Yaru/apps/vscode.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: true,
@@ -665,7 +665,7 @@ const apps = [
   {
     id: 'x',
     title: 'X',
-    icon: '/themes/Yaru/apps/x.png',
+    icon: '/themes/Yaru/apps/x.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: true,
@@ -701,7 +701,7 @@ const apps = [
   {
     id: 'about',
     title: 'About Alex',
-    icon: '/themes/Yaru/system/user-home.png',
+    icon: '/themes/Yaru/system/user-home.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: true,
@@ -719,7 +719,7 @@ const apps = [
   {
     id: 'files',
     title: 'Files',
-    icon: '/themes/Yaru/system/folder.png',
+    icon: '/themes/Yaru/system/folder.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: true,
@@ -782,7 +782,7 @@ const apps = [
   {
     id: 'todoist',
     title: 'Todoist',
-    icon: '/themes/Yaru/apps/todoist.png',
+    icon: '/themes/Yaru/apps/todoist.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: true,
@@ -809,7 +809,7 @@ const apps = [
   {
     id: 'gedit',
     title: 'Contact Me',
-    icon: '/themes/Yaru/apps/gedit.png',
+    icon: '/themes/Yaru/apps/gedit.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: true,

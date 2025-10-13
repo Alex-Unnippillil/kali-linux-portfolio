@@ -1,4 +1,6 @@
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+<svg role="img" aria-labelledby="icon-chesssvg-title" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <title id="icon-chesssvg-title">Chess</title>
+
   <rect width="64" height="64" fill="#2e3436"/>
   <!-- Simple chess rook icon -->
   <rect x="24" y="12" width="16" height="8" fill="#ffffff"/>
