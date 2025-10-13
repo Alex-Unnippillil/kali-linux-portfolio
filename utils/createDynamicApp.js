@@ -6,18 +6,18 @@ export const createDynamicApp = (id, title) =>
   dynamic(
     async () => {
       try {
-        const mod = await import(
-          /* webpackPrefetch: true */ `../components/apps/${id}`
-        );
+        const mod = await import(`../components/apps/${id}`);
         logEvent({ category: 'Application', action: `Loaded ${title}` });
         return mod.default;
       } catch (err) {
         console.error(`Failed to load ${title}`, err);
-        return () => (
+        const FallbackComponent = () => (
           <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
             {`Unable to load ${title}`}
           </div>
         );
+        FallbackComponent.displayName = `${title}LoadError`;
+        return FallbackComponent;
       }
     },
     {
