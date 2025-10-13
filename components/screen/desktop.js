@@ -168,6 +168,7 @@ export class Desktop extends Component {
     constructor(props) {
         super(props);
         this.workspaceCount = 4;
+        this.skipNextSessionSync = false;
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
         this.workspaceKeys = new Set([
             'focused_windows',
@@ -2848,20 +2849,8 @@ export class Desktop extends Component {
         this.savedIconPositions = this.loadDesktopIconPositions();
         this.initializeDefaultFolders(() => {
             this.fetchAppsData(() => {
-                const session = this.props.session || {};
-                const positions = {};
-                if (session.windows && session.windows.length) {
-                    const safeTopOffset = measureWindowTopOffset();
-                    session.windows.forEach(({ id, x, y }) => {
-                        positions[id] = {
-                            x,
-                            y: clampWindowTopPosition(y, safeTopOffset),
-                        };
-                    });
-                    this.setWorkspaceState({ window_positions: positions }, () => {
-                        session.windows.forEach(({ id }) => this.openApp(id));
-                    });
-                } else {
+                const restored = this.restoreSessionWindows(this.props.session);
+                if (!restored) {
                     this.openApp('about');
                 }
             });
@@ -2880,6 +2869,86 @@ export class Desktop extends Component {
         this.setupGestureListeners();
     }
 
+    syncWindowDomPositions = (positions, topOffset) => {
+        if (typeof document === 'undefined') return;
+        Object.entries(positions || {}).forEach(([id, position]) => {
+            if (!id || !position) return;
+            const node = document.getElementById(id);
+            if (!node || !node.style) return;
+            const x = typeof position.x === 'number' && Number.isFinite(position.x)
+                ? position.x
+                : 0;
+            const y = clampWindowTopPosition(position.y, topOffset);
+            if (typeof node.style.setProperty === 'function') {
+                node.style.setProperty('--window-transform-x', `${x}px`);
+                node.style.setProperty('--window-transform-y', `${y}px`);
+            } else {
+                node.style['--window-transform-x'] = `${x}px`;
+                node.style['--window-transform-y'] = `${y}px`;
+            }
+            node.style.transform = `translate(${x}px, ${y}px)`;
+        });
+    };
+
+    restoreSessionWindows = (session, options = {}) => {
+        const snapshot = session && typeof session === 'object' ? session : {};
+        const windows = Array.isArray(snapshot.windows) ? snapshot.windows : [];
+        if (!windows.length) {
+            return false;
+        }
+
+        const safeTopOffset = measureWindowTopOffset();
+        const normalizedPositions = {};
+        windows.forEach(({ id, x, y }) => {
+            if (!id) return;
+            const safeX = typeof x === 'number' && Number.isFinite(x) ? x : 60;
+            const safeY = typeof y === 'number' && Number.isFinite(y)
+                ? clampWindowTopPosition(y, safeTopOffset)
+                : safeTopOffset;
+            normalizedPositions[id] = { x: safeX, y: safeY };
+        });
+
+        const hasPositions = Object.keys(normalizedPositions).length > 0;
+        if (!hasPositions) {
+            return false;
+        }
+
+        this.setWorkspaceState((prevState) => {
+            const current = prevState.window_positions || {};
+            const nextPositions = { ...current };
+            Object.keys(nextPositions).forEach((key) => {
+                if (!Object.prototype.hasOwnProperty.call(normalizedPositions, key)) {
+                    delete nextPositions[key];
+                }
+            });
+            Object.entries(normalizedPositions).forEach(([key, value]) => {
+                nextPositions[key] = value;
+            });
+            return { window_positions: nextPositions };
+        }, () => {
+            if (options.openWindows !== false) {
+                windows.forEach(({ id }) => {
+                    if (!id || this.isOverlayId(id)) return;
+                    const isOpen = this.state.closed_windows?.[id] === false;
+                    if (!isOpen && this.validAppIds.has(id)) {
+                        this.openApp(id);
+                    }
+                });
+            }
+
+            if (typeof window !== 'undefined') {
+                const sync = () => this.syncWindowDomPositions(normalizedPositions, safeTopOffset);
+                if (typeof window.requestAnimationFrame === 'function') {
+                    window.requestAnimationFrame(sync);
+                } else {
+                    sync();
+                }
+            }
+        });
+
+        return true;
+    };
+
     componentDidUpdate(prevProps, prevState) {
         if (
             prevProps?.density !== this.props.density ||
@@ -2889,6 +2958,13 @@ export class Desktop extends Component {
             const layoutChanged = this.applyIconLayoutFromSettings(this.props);
             if (layoutChanged) {
                 this.realignIconPositions();
+            }
+        }
+        if (prevProps.session !== this.props.session) {
+            if (this.skipNextSessionSync) {
+                this.skipNextSessionSync = false;
+            } else {
+                this.restoreSessionWindows(this.props.session);
             }
         }
         const prevLauncher = prevState.overlayWindows?.[LAUNCHER_OVERLAY_ID];
@@ -4079,6 +4155,7 @@ export class Desktop extends Component {
         if ('dock' in nextSession) {
             delete nextSession.dock;
         }
+        this.skipNextSessionSync = true;
         this.props.setSession(nextSession);
     }
 
