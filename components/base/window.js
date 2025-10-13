@@ -2,7 +2,6 @@
 
 import React, { Component } from 'react';
 import NextImage from 'next/image';
-import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
@@ -15,6 +14,8 @@ import {
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET } from '../../utils/uiConstants';
+import WindowFrame from './window-frame';
+import { shellStore } from '../../hooks/useShellStore';
 
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
@@ -29,14 +30,71 @@ const percentOf = (value, total) => {
     return (value / total) * 100;
 };
 
-const SNAP_LABELS = {
-    left: 'Snap left half',
-    right: 'Snap right half',
-    top: 'Snap full screen',
-    'top-left': 'Snap top-left quarter',
-    'top-right': 'Snap top-right quarter',
-    'bottom-left': 'Snap bottom-left quarter',
-    'bottom-right': 'Snap bottom-right quarter',
+const SNAP_POSITION_ALIASES = Object.freeze({
+    top: 'fullscreen',
+});
+
+const createSnapZone = (id, label, resolver) => Object.freeze({ id, label, resolver });
+
+const SNAP_ZONE_DEFINITIONS = Object.freeze([
+    createSnapZone('fullscreen', 'Snap full screen', (metrics) => ({
+        left: 0,
+        top: metrics.topInset,
+        width: metrics.viewportWidth,
+        height: metrics.availableHeight,
+    })),
+    createSnapZone('left', 'Snap left half', (metrics) => ({
+        left: 0,
+        top: metrics.topInset,
+        width: metrics.halfWidth,
+        height: metrics.availableHeight,
+    })),
+    createSnapZone('right', 'Snap right half', (metrics) => ({
+        left: metrics.rightStart,
+        top: metrics.topInset,
+        width: metrics.halfWidth,
+        height: metrics.availableHeight,
+    })),
+    createSnapZone('bottom', 'Snap bottom half', (metrics) => ({
+        left: 0,
+        top: metrics.bottomStart,
+        width: metrics.viewportWidth,
+        height: metrics.halfHeight,
+    })),
+    createSnapZone('top-left', 'Snap top-left quarter', (metrics) => ({
+        left: 0,
+        top: metrics.topInset,
+        width: metrics.halfWidth,
+        height: metrics.halfHeight,
+    })),
+    createSnapZone('top-right', 'Snap top-right quarter', (metrics) => ({
+        left: metrics.rightStart,
+        top: metrics.topInset,
+        width: metrics.halfWidth,
+        height: metrics.halfHeight,
+    })),
+    createSnapZone('bottom-left', 'Snap bottom-left quarter', (metrics) => ({
+        left: 0,
+        top: metrics.bottomStart,
+        width: metrics.halfWidth,
+        height: metrics.halfHeight,
+    })),
+    createSnapZone('bottom-right', 'Snap bottom-right quarter', (metrics) => ({
+        left: metrics.rightStart,
+        top: metrics.bottomStart,
+        width: metrics.halfWidth,
+        height: metrics.halfHeight,
+    })),
+]);
+
+const SNAP_LABELS = SNAP_ZONE_DEFINITIONS.reduce((map, zone) => {
+    map[zone.id] = zone.label;
+    return map;
+}, { top: 'Snap full screen' });
+
+const normalizeSnapPositionId = (position) => {
+    if (!position) return null;
+    return SNAP_POSITION_ALIASES[position] || position;
 };
 
 const getSnapLabel = (position) => {
@@ -46,14 +104,14 @@ const getSnapLabel = (position) => {
 
 const normalizeRightCornerSnap = (candidate, regions) => {
     if (!candidate) return null;
-    const { position } = candidate;
-    if (position === 'top-right' || position === 'bottom-right') {
+    const resolvedPosition = normalizeSnapPositionId(candidate.position);
+    if (resolvedPosition === 'top-right' || resolvedPosition === 'bottom-right') {
         const rightRegion = regions?.right;
         if (rightRegion && rightRegion.width > 0 && rightRegion.height > 0) {
             return { position: 'right', preview: rightRegion };
         }
     }
-    return candidate;
+    return { position: resolvedPosition, preview: candidate.preview };
 };
 
 const computeSnapRegions = (
@@ -75,16 +133,32 @@ const computeSnapRegions = (
     const rightStart = Math.max(viewportWidth - halfWidth, 0);
     const bottomStart = normalizedTopInset + halfHeight;
 
-    return {
-        left: { left: 0, top: normalizedTopInset, width: halfWidth, height: availableHeight },
-        right: { left: rightStart, top: normalizedTopInset, width: halfWidth, height: availableHeight },
-        top: { left: 0, top: normalizedTopInset, width: viewportWidth, height: availableHeight },
-        'top-left': { left: 0, top: normalizedTopInset, width: halfWidth, height: halfHeight },
-        'top-right': { left: rightStart, top: normalizedTopInset, width: halfWidth, height: halfHeight },
-        'bottom-left': { left: 0, top: bottomStart, width: halfWidth, height: halfHeight },
-        'bottom-right': { left: rightStart, top: bottomStart, width: halfWidth, height: halfHeight },
-
+    const metrics = {
+        viewportWidth,
+        topInset: normalizedTopInset,
+        availableHeight,
+        halfWidth,
+        halfHeight,
+        rightStart,
+        bottomStart,
     };
+
+    const regions = {};
+    SNAP_ZONE_DEFINITIONS.forEach((zone) => {
+        const rect = zone.resolver(metrics);
+        regions[zone.id] = {
+            left: rect.left,
+            top: rect.top,
+            width: Math.max(rect.width, 0),
+            height: Math.max(rect.height, 0),
+        };
+    });
+
+    if (!regions.top && regions.fullscreen) {
+        regions.top = regions.fullscreen;
+    }
+
+    return regions;
 };
 
 export class Window extends Component {
@@ -123,6 +197,23 @@ export class Window extends Component {
             lastSize: null,
             grabbed: false,
         }
+        this._storedLayout = shellStore?.getWindowLayout?.(props.id || '') || null;
+        const storedSize = this._storedLayout?.originalSize;
+        const hasStoredSize = storedSize
+            && typeof storedSize.width === 'number'
+            && Number.isFinite(storedSize.width)
+            && typeof storedSize.height === 'number'
+            && Number.isFinite(storedSize.height);
+        if (hasStoredSize) {
+            this.state.width = storedSize.width;
+            this.state.height = storedSize.height;
+            this.state.lastSize = { width: storedSize.width, height: storedSize.height };
+        }
+        if (this._storedLayout?.snapped) {
+            this.state.snapped = normalizeSnapPositionId(this._storedLayout.snapped);
+        }
+        this._hasStoredSize = Boolean(hasStoredSize);
+        this._shouldRestoreSnap = Boolean(this._storedLayout?.snapped);
         this.windowRef = React.createRef();
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -136,9 +227,29 @@ export class Window extends Component {
         }
     }
 
+    persistWindowLayout = (snapped, size) => {
+        const id = this.props.id;
+        if (!id || typeof shellStore?.setWindowLayout !== 'function') return;
+        if (snapped) {
+            const normalized = normalizeSnapPositionId(snapped);
+            if (!normalized) return;
+            const width = size && typeof size.width === 'number' && Number.isFinite(size.width) ? size.width : null;
+            const height = size && typeof size.height === 'number' && Number.isFinite(size.height) ? size.height : null;
+            const originalSize = width !== null && height !== null ? { width, height } : null;
+            shellStore.setWindowLayout(id, { snapped: normalized, originalSize });
+        } else {
+            shellStore.setWindowLayout(id, null);
+        }
+    }
+
     componentDidMount() {
         this.id = this.props.id;
-        this.setDefaultWindowDimenstion();
+        if (this._hasStoredSize) {
+            this.resizeBoundries();
+            this.notifySizeChange();
+        } else {
+            this.setDefaultWindowDimenstion();
+        }
 
         // google analytics
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
@@ -155,6 +266,11 @@ export class Window extends Component {
         }
         if (this.props.isFocused) {
             this.focusWindow();
+        }
+        if (this._shouldRestoreSnap && this._storedLayout?.snapped) {
+            requestAnimationFrame(() => {
+                this.snapWindow(this._storedLayout?.snapped);
+            });
         }
     }
 
@@ -447,19 +563,23 @@ export class Window extends Component {
             }, () => {
                 this.resizeBoundries();
                 this.notifySizeChange();
+                this.persistWindowLayout(null);
             });
         } else {
             this.setState({ snapped: null, preMaximizeSize: null }, () => {
                 this.resizeBoundries();
                 this.notifySizeChange();
+                this.persistWindowLayout(null);
             });
         }
     }
 
     snapWindow = (position) => {
-        const resolvedPosition = (position === 'top-right' || position === 'bottom-right')
+        const normalizedPosition = normalizeSnapPositionId(position);
+        const resolvedPosition = (normalizedPosition === 'top-right' || normalizedPosition === 'bottom-right')
             ? 'right'
-            : position;
+            : normalizedPosition;
+        if (!resolvedPosition) return;
         this.setWinowsPosition();
         this.focusWindow();
         const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
@@ -487,6 +607,7 @@ export class Window extends Component {
         }, () => {
             this.resizeBoundries();
             this.notifySizeChange();
+            this.persistWindowLayout(resolvedPosition, { width, height });
         });
     }
 
@@ -532,8 +653,10 @@ export class Window extends Component {
             candidate = { position: 'bottom-left', preview: regions['bottom-left'] };
         } else if (nearBottom && nearRight && regions['bottom-right'].width > 0 && regions['bottom-right'].height > 0) {
             candidate = { position: 'bottom-right', preview: regions['bottom-right'] };
-        } else if (nearTop && regions.top.height > 0) {
-            candidate = { position: 'top', preview: regions.top };
+        } else if (nearTop && regions.fullscreen && regions.fullscreen.height > 0) {
+            candidate = { position: 'fullscreen', preview: regions.fullscreen };
+        } else if (nearBottom && regions.bottom && regions.bottom.height > 0) {
+            candidate = { position: 'bottom', preview: regions.bottom };
         } else if (nearLeft && regions.left.width > 0) {
             candidate = { position: 'left', preview: regions.left };
         } else if (nearRight && regions.right.width > 0) {
@@ -640,6 +763,7 @@ export class Window extends Component {
             }, () => {
                 this.resizeBoundries();
                 this.notifySizeChange();
+                this.persistWindowLayout(null);
             });
         } else {
             this.setDefaultWindowDimenstion();
@@ -654,10 +778,12 @@ export class Window extends Component {
         this.setTransformMotionPreset(node, 'restore');
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
+            this.persistWindowLayout(null);
             return;
         }
 
         node.style.transform = endTransform;
+        this.persistWindowLayout(null);
     }
 
     maximizeWindow = () => {
@@ -686,6 +812,7 @@ export class Window extends Component {
             }
             this.setState({ maximized: true, height: heightPercent, width: 100.2, preMaximizeSize: currentSize }, () => {
                 this.notifySizeChange();
+                this.persistWindowLayout(null);
             });
         }
     }
@@ -764,7 +891,7 @@ export class Window extends Component {
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 e.stopPropagation();
-                this.snapWindow('top');
+                this.snapWindow('fullscreen');
             }
             this.focusWindow();
         } else if (e.shiftKey) {
@@ -824,102 +951,75 @@ export class Window extends Component {
                     ? `snapped-${this.state.snapped}`
                     : 'active'));
 
-        return (
-            <>
-                {this.state.snapPreview && (
-                    <div
-                        data-testid="snap-preview"
-                        className={`fixed pointer-events-none z-40 transition-opacity ${styles.snapPreview} ${styles.snapPreviewGlass}`}
-                        style={{
-                            left: `${this.state.snapPreview.left}px`,
-                            top: `${this.state.snapPreview.top}px`,
-                            width: `${this.state.snapPreview.width}px`,
-                            height: `${this.state.snapPreview.height}px`,
-                            backdropFilter: 'brightness(1.1) saturate(1.2)',
-                            WebkitBackdropFilter: 'brightness(1.1) saturate(1.2)'
+        const bounds = {
+            left: 0,
+            top: this.state.safeAreaTop,
+            right: this.state.parentSize.width,
+            bottom: this.state.safeAreaTop + this.state.parentSize.height,
+        };
 
-                        }}
-                        aria-live="polite"
-                        aria-label={getSnapLabel(this.state.snapPosition)}
-                        role="status"
-                    >
-                        <span className={styles.snapPreviewLabel} aria-hidden="true">
-                            {getSnapLabel(this.state.snapPosition)}
-                        </span>
-                    </div>
-                )}
-                <Draggable
-                    nodeRef={this.windowRef}
-                    axis="both"
-                    handle=".bg-ub-window-title"
-                    grid={this.props.snapEnabled ? snapGrid : [1, 1]}
-                    scale={1}
-                    onStart={this.changeCursorToMove}
-                    onStop={this.handleStop}
-                    onDrag={this.handleDrag}
-                    allowAnyClick={false}
-                    defaultPosition={{ x: this.startX, y: this.startY }}
-                    bounds={{
-                        left: 0,
-                        top: this.state.safeAreaTop,
-                        right: this.state.parentSize.width,
-                        bottom: this.state.safeAreaTop + this.state.parentSize.height,
-                    }}
-                >
-                    <div
-                        ref={this.windowRef}
-                        style={{ position: 'absolute', width: `${this.state.width}%`, height: `${this.state.height}%`, zIndex: computedZIndex }}
-                        className={[
-                            this.state.cursorType,
-                            this.state.closed ? 'closed-window' : '',
-                            this.props.minimized ? styles.windowFrameMinimized : '',
-                            this.state.grabbed ? 'opacity-70' : '',
-                            this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
-                            'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',
-                            styles.windowFrame,
-                            this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
-                            this.state.maximized ? styles.windowFrameMaximized : '',
-                        ].filter(Boolean).join(' ')}
-                        id={this.id}
-                        role="dialog"
-                        data-window-state={windowState}
-                        aria-hidden={this.props.minimized ? true : false}
-                        aria-label={this.props.title}
-                        tabIndex={0}
-                        onKeyDown={this.handleKeyDown}
-                        onPointerDown={this.focusWindow}
-                        onFocus={this.focusWindow}
-                    >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
-                        <WindowTopBar
-                            title={this.props.title}
-                            onKeyDown={this.handleTitleBarKeyDown}
-                            onBlur={this.releaseGrab}
-                            grabbed={this.state.grabbed}
-                            onPointerDown={this.focusWindow}
-                            onDoubleClick={this.handleTitleBarDoubleClick}
-                        />
-                        <WindowEditButtons
-                            minimize={this.minimizeWindow}
-                            maximize={this.maximizeWindow}
-                            isMaximised={this.state.maximized}
-                            close={this.closeWindow}
-                            id={this.id}
-                            allowMaximize={this.props.allowMaximize !== false}
-                            pip={() => this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
-                        />
-                        {(this.id === "settings"
-                            ? <Settings />
-                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
-                                addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp}
-                                context={this.props.context} />)}
-                    </div>
-                </Draggable >
-            </>
-        )
+        return (
+            <WindowFrame
+                ref={this.windowRef}
+                id={this.id}
+                title={this.props.title}
+                windowState={windowState}
+                widthPercent={this.state.width}
+                heightPercent={this.state.height}
+                zIndex={computedZIndex}
+                cursorType={this.state.cursorType}
+                isClosed={this.state.closed}
+                minimized={this.props.minimized}
+                isFocused={this.props.isFocused}
+                maximized={this.state.maximized}
+                grabbed={this.state.grabbed}
+                snapEnabled={this.props.snapEnabled}
+                snapGrid={snapGrid}
+                snapPreview={this.state.snapPreview}
+                snapLabel={getSnapLabel(this.state.snapPosition)}
+                startX={this.startX}
+                startY={this.startY}
+                bounds={bounds}
+                onDragStart={this.changeCursorToMove}
+                onDrag={this.handleDrag}
+                onDragStop={this.handleStop}
+                onPointerDown={this.focusWindow}
+                onFocus={this.focusWindow}
+                onKeyDown={this.handleKeyDown}
+                ariaHidden={Boolean(this.props.minimized)}
+            >
+                {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
+                {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                <WindowTopBar
+                    title={this.props.title}
+                    onKeyDown={this.handleTitleBarKeyDown}
+                    onBlur={this.releaseGrab}
+                    grabbed={this.state.grabbed}
+                    onPointerDown={this.focusWindow}
+                    onDoubleClick={this.handleTitleBarDoubleClick}
+                />
+                <WindowEditButtons
+                    minimize={this.minimizeWindow}
+                    maximize={this.maximizeWindow}
+                    isMaximised={this.state.maximized}
+                    close={this.closeWindow}
+                    id={this.id}
+                    allowMaximize={this.props.allowMaximize !== false}
+                    pip={() => this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
+                />
+                {(this.id === "settings"
+                    ? <Settings />
+                    : <WindowMainScreen
+                        screen={this.props.screen}
+                        title={this.props.title}
+                        addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
+                        openApp={this.props.openApp}
+                        context={this.props.context}
+                    />)}
+            </WindowFrame>
+        );
     }
+
 }
 
 export default Window

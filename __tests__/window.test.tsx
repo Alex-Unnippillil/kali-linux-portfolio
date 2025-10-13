@@ -9,6 +9,7 @@ import {
   measureSnapBottomInset,
   measureWindowTopOffset,
 } from '../utils/windowLayout';
+import { shellStore } from '../hooks/useShellStore';
 
 jest.mock('../utils/windowLayout', () => {
   const actual = jest.requireActual('../utils/windowLayout');
@@ -70,6 +71,8 @@ beforeEach(() => {
   measureSafeAreaInsetMock.mockReturnValue(0);
   measureWindowTopOffsetMock.mockReturnValue(DESKTOP_TOP_PADDING);
   measureSnapBottomInsetMock.mockReturnValue(DEFAULT_SNAP_BOTTOM_INSET);
+  shellStore.setState({ windowLayouts: {} });
+  window.localStorage.clear();
 });
 
 afterEach(() => {
@@ -223,7 +226,6 @@ describe('Window snapping preview', () => {
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toBeInTheDocument();
     expect(preview).toHaveClass(windowStyles.snapPreviewGlass);
-    expect((preview as HTMLElement).style.backdropFilter).toBe('brightness(1.1) saturate(1.2)');
     expect(preview).toHaveAttribute('aria-label', 'Snap left half');
     expect(within(preview).getByText('Snap left half')).toBeInTheDocument();
   });
@@ -297,11 +299,80 @@ describe('Window snapping preview', () => {
       ref.current!.handleDrag();
     });
 
-    expect(ref.current!.state.snapPosition).toBe('top');
+    expect(ref.current!.state.snapPosition).toBe('fullscreen');
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx()}px`);
     expect(preview).toHaveAttribute('aria-label', 'Snap full screen');
     expect(within(preview).getByText('Snap full screen')).toBeInTheDocument();
+  });
+
+  it('shows bottom preview when dragged near bottom edge', () => {
+    setViewport(1280, 720);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 400,
+      top: window.innerHeight - 120,
+      right: 500,
+      bottom: window.innerHeight - 20,
+      width: 100,
+      height: 100,
+      x: 400,
+      y: window.innerHeight - 120,
+      toJSON: () => {},
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+
+    expect(ref.current!.state.snapPosition).toBe('bottom');
+    const preview = screen.getByTestId('snap-preview');
+    expect(preview).toHaveAttribute('aria-label', 'Snap bottom half');
+    expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx() / 2}px`);
+  });
+
+  it('persists snapped layout to the shell store', () => {
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    act(() => {
+      ref.current!.snapWindow('left');
+    });
+
+    const layout = shellStore.getWindowLayout('test-window');
+    expect(layout?.snapped).toBe('left');
+    expect(layout?.originalSize).toEqual(ref.current!.state.lastSize);
+
+    act(() => {
+      ref.current!.unsnapWindow();
+    });
+
+    expect(shellStore.getWindowLayout('test-window')).toBeNull();
   });
 
   it('shows corner preview when dragged near the top-left edge', () => {
@@ -516,7 +587,7 @@ describe('Window snapping finalize and release', () => {
       ref.current!.handleStop();
     });
 
-    expect(ref.current!.state.snapped).toBe('top');
+    expect(ref.current!.state.snapped).toBe('fullscreen');
     expect(ref.current!.state.width).toBeCloseTo(100, 2);
     expect(ref.current!.state.height).toBeCloseTo(computeSnappedHeightPercent(), 5);
     const topSnapTop = getSnapTranslateTop();
