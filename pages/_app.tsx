@@ -16,6 +16,7 @@ import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
+import { OverlayManagerProvider } from '../components/common/OverlayManager';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 import { Rajdhani } from 'next/font/google';
@@ -213,25 +214,27 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
           Skip to app grid
         </a>
         <SettingsProvider>
-          <NotificationCenter>
-            <PipPortalProvider>
-              <div aria-live="polite" id="live-region" />
-              <Component {...pageProps} />
-              <ShortcutOverlay />
-              <Analytics
-                beforeSend={(event) => {
-                  if (event.url.includes('/admin') || event.url.includes('/private')) return null;
-                  const evt = event as AnalyticsEventWithMetadata;
-                  if (evt.metadata && 'email' in evt.metadata) {
-                    delete evt.metadata.email;
-                  }
-                  return evt;
-                }}
-              />
+          <OverlayManagerProvider>
+            <NotificationCenter>
+              <PipPortalProvider>
+                <div aria-live="polite" id="live-region" />
+                <Component {...pageProps} />
+                <ShortcutOverlay />
+                <Analytics
+                  beforeSend={(event) => {
+                    if (event.url.includes('/admin') || event.url.includes('/private')) return null;
+                    const evt = event as AnalyticsEventWithMetadata;
+                    if (evt.metadata && 'email' in evt.metadata) {
+                      delete evt.metadata.email;
+                    }
+                    return evt;
+                  }}
+                />
 
-              {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
-            </PipPortalProvider>
-          </NotificationCenter>
+                {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+              </PipPortalProvider>
+            </NotificationCenter>
+          </OverlayManagerProvider>
         </SettingsProvider>
       </div>
     </ErrorBoundary>
