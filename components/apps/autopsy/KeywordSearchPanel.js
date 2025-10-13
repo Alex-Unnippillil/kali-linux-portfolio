@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { trustedHtml } from '../../../utils/security/trusted-types';
+
 const escapeHtml = (str = '') =>
   str
     .replace(/&/g, '&amp;')
@@ -50,6 +52,7 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
           onChange={(e) => setKeyword(e.target.value)}
           placeholder="Keyword search"
           className="flex-grow rounded border border-kali-border/60 bg-kali-dark px-2 py-1 text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus/80"
+          aria-label="Keyword search"
         />
         <button
           onClick={exportHits}
@@ -70,9 +73,7 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
               <span className="mr-1" aria-hidden="true">
                 {typeIcons[a.type] || '📁'}
               </span>
-              <span
-                dangerouslySetInnerHTML={{ __html: highlight(a.name) }}
-              />
+              <span dangerouslySetInnerHTML={trustedHtml(highlight(a.name))} />
             </div>
             <div className="text-kali-text/60">{a.type}</div>
             <div className="text-xs">
@@ -81,12 +82,12 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
             {a.user && (
               <div
                 className="text-xs"
-                dangerouslySetInnerHTML={{ __html: `User: ${highlight(a.user)}` }}
+                dangerouslySetInnerHTML={trustedHtml(`User: ${highlight(a.user)}`)}
               />
             )}
             <div
               className="text-xs"
-              dangerouslySetInnerHTML={{ __html: highlight(a.description) }}
+              dangerouslySetInnerHTML={trustedHtml(highlight(a.description))}
             />
           </button>
         ))}
