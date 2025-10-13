@@ -1,6 +1,8 @@
 'use client';
 import { useEffect } from 'react';
 
+import './styles.css';
+
 export default function StickyNotes() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -9,7 +11,7 @@ export default function StickyNotes() {
   }, []);
 
   return (
-    <div>
+    <div className="sticky-notes-app">
       <button id="add-note">Add Note</button>
       <div id="notes" />
     </div>
