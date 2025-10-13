@@ -3524,11 +3524,67 @@ export class Desktop extends Component {
         this.closeOverlay(SWITCHER_OVERLAY_ID);
     }
 
+    shouldReplaceOverlappingWindows = () => {
+        if (this.currentPointerIsCoarse) {
+            return true;
+        }
+        if (typeof window === 'undefined') {
+            return false;
+        }
+        try {
+            return window.innerWidth <= 900;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    replaceOverlappingWindows = (activeId) => {
+        if (!activeId || !this.shouldReplaceOverlappingWindows()) {
+            return;
+        }
+        const closed = this.state.closed_windows || {};
+        const minimized = this.state.minimized_windows || {};
+        const stack = this.getActiveStack();
+        const nextMinimized = { ...minimized };
+        let changed = false;
+        stack.forEach((id) => {
+            if (closed[id]) return;
+            if (id === activeId) {
+                if (nextMinimized[id]) {
+                    nextMinimized[id] = false;
+                    changed = true;
+                }
+            } else if (!nextMinimized[id]) {
+                nextMinimized[id] = true;
+                changed = true;
+            }
+        });
+        if (!changed) {
+            return;
+        }
+        this.setWorkspaceState({ minimized_windows: nextMinimized }, this.saveSession);
+    }
+
     selectWindow = (id) => {
+        this.replaceOverlappingWindows(id);
         this.setState({ switcherWindows: [] }, () => {
             this.closeOverlay(SWITCHER_OVERLAY_ID);
             this.openApp(id);
         });
+    }
+
+    dismissWindowFromSwitcher = (id) => {
+        if (!id) return;
+        this.setState((prevState) => {
+            const current = prevState.switcherWindows || [];
+            const next = current.filter((entry) => entry?.id !== id);
+            return { switcherWindows: next };
+        }, () => {
+            if (!this.state.switcherWindows?.length) {
+                this.closeOverlay(SWITCHER_OVERLAY_ID);
+            }
+        });
+        this.closeApp(id);
     }
 
     checkContextMenu = (e) => {
@@ -3974,6 +4030,7 @@ export class Desktop extends Component {
                     windows={this.state.switcherWindows}
                     onSelect={this.selectWindow}
                     onClose={this.closeWindowSwitcher}
+                    onDismissWindow={this.dismissWindowFromSwitcher}
                 />
             );
         }
