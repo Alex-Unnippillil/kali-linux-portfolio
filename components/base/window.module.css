@@ -17,6 +17,16 @@
   transition-delay: 0s, 0s, 0s, 0s, 0s;
 }
 
+.windowFrame:focus {
+  outline: none;
+}
+
+.windowFrame:focus-visible {
+  outline: 2px solid var(--color-window-accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(64, 145, 255, 0.35);
+}
+
 .windowFrame::before {
   content: '';
   position: absolute;
