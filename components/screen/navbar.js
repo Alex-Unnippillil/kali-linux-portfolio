@@ -6,7 +6,12 @@ import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
+import ContextMenu from '../common/ContextMenu';
+import { clearRecentAppHistory, getRecentAppHistory, RECENT_APP_EVENT } from '../../utils/recentStorage';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
+
+const MAX_MENU_RECENT_EVENTS = 5;
+const LONG_PRESS_DURATION = 600;
 
 const areWorkspacesEqual = (next, prev) => {
         if (next.length !== prev.length) return false;
@@ -37,6 +42,34 @@ const areRunningAppsEqual = (next = [], prev = []) => {
         return true;
 };
 
+const areRecentEventsEqual = (next = [], prev = []) => {
+        if (next.length !== prev.length) return false;
+        for (let index = 0; index < next.length; index += 1) {
+                const a = next[index] || {};
+                const b = prev[index] || {};
+                if (a.type !== b.type || a.timestamp !== b.timestamp) {
+                        return false;
+                }
+        }
+        return true;
+};
+
+const areRecentHistoriesEqual = (next = {}, prev = {}) => {
+        const nextKeys = Object.keys(next || {});
+        const prevKeys = Object.keys(prev || {});
+        if (nextKeys.length !== prevKeys.length) return false;
+        for (let index = 0; index < nextKeys.length; index += 1) {
+                const key = nextKeys[index];
+                if (!Object.prototype.hasOwnProperty.call(prev, key)) {
+                        return false;
+                }
+                if (!areRecentEventsEqual(next[key], prev[key])) {
+                        return false;
+                }
+        }
+        return true;
+};
+
 export default class Navbar extends PureComponent {
         constructor() {
                 super();
@@ -46,16 +79,22 @@ export default class Navbar extends PureComponent {
                         placesMenuOpen: false,
                         workspaces: [],
                         activeWorkspace: 0,
-                        runningApps: []
+                        runningApps: [],
+                        recentHistory: {}
                 };
                 this.taskbarListRef = React.createRef();
                 this.draggingAppId = null;
                 this.pendingReorder = null;
+                this.taskbarButtonRefs = new Map();
+                this.longPressTimer = null;
+                this.longPressPoint = null;
+                this.longPressTarget = null;
         }
 
         componentDidMount() {
                 if (typeof window !== 'undefined') {
                         window.addEventListener('workspace-state', this.handleWorkspaceStateUpdate);
+                        window.addEventListener(RECENT_APP_EVENT, this.handleRecentHistoryEvent);
                         window.dispatchEvent(new CustomEvent('workspace-request'));
                 }
         }
@@ -63,7 +102,9 @@ export default class Navbar extends PureComponent {
         componentWillUnmount() {
                 if (typeof window !== 'undefined') {
                         window.removeEventListener('workspace-state', this.handleWorkspaceStateUpdate);
+                        window.removeEventListener(RECENT_APP_EVENT, this.handleRecentHistoryEvent);
                 }
+                this.cancelLongPress();
         }
 
         handleWorkspaceStateUpdate = (event) => {
@@ -73,21 +114,220 @@ export default class Navbar extends PureComponent {
                 const nextActiveWorkspace = typeof activeWorkspace === 'number' ? activeWorkspace : 0;
                 const nextRunningApps = Array.isArray(detail.runningApps) ? detail.runningApps : [];
 
+                this.pruneTaskbarButtonRefs(nextRunningApps);
+
                 this.setState((previousState) => {
                         const workspacesChanged = !areWorkspacesEqual(nextWorkspaces, previousState.workspaces);
                         const activeChanged = previousState.activeWorkspace !== nextActiveWorkspace;
                         const runningAppsChanged = !areRunningAppsEqual(nextRunningApps, previousState.runningApps);
+                        let nextRecentHistory = previousState.recentHistory;
+                        let historyChanged = false;
 
-                        if (!workspacesChanged && !activeChanged && !runningAppsChanged) {
+                        if (runningAppsChanged) {
+                                const builtHistory = this.buildRecentHistoryMap(nextRunningApps);
+                                if (!areRecentHistoriesEqual(builtHistory, previousState.recentHistory)) {
+                                        nextRecentHistory = builtHistory;
+                                        historyChanged = true;
+                                } else if (!areRecentHistoriesEqual(builtHistory, nextRecentHistory)) {
+                                        nextRecentHistory = builtHistory;
+                                }
+                        }
+
+                        if (!workspacesChanged && !activeChanged && !runningAppsChanged && !historyChanged) {
                                 return null;
                         }
 
-                        return {
+                        const nextState = {
                                 workspaces: workspacesChanged ? nextWorkspaces : previousState.workspaces,
                                 activeWorkspace: nextActiveWorkspace,
                                 runningApps: runningAppsChanged ? nextRunningApps : previousState.runningApps
                         };
+                        if (historyChanged) {
+                                nextState.recentHistory = nextRecentHistory;
+                        }
+                        return nextState;
                 });
+        };
+
+        getTaskbarButtonRef = (appId) => {
+                if (!appId) return null;
+                if (!this.taskbarButtonRefs.has(appId)) {
+                        this.taskbarButtonRefs.set(appId, React.createRef());
+                }
+                return this.taskbarButtonRefs.get(appId);
+        };
+
+        pruneTaskbarButtonRefs = (apps = []) => {
+                const validIds = new Set((apps || []).map((app) => app && app.id).filter(Boolean));
+                Array.from(this.taskbarButtonRefs.keys()).forEach((id) => {
+                        if (!validIds.has(id)) {
+                                this.taskbarButtonRefs.delete(id);
+                        }
+                });
+        };
+
+        buildRecentHistoryMap = (apps = []) => {
+                const history = {};
+                (apps || []).forEach((app) => {
+                        if (!app || !app.id) return;
+                        history[app.id] = getRecentAppHistory(app.id, MAX_MENU_RECENT_EVENTS);
+                });
+                return history;
+        };
+
+        handleRecentHistoryEvent = (event) => {
+                const appId = event?.detail?.id;
+                if (!appId) return;
+                const isRunning = this.state.runningApps.some((app) => app.id === appId);
+                if (!isRunning) return;
+                this.updateRecentHistoryForId(appId);
+        };
+
+        updateRecentHistoryForId = (appId) => {
+                if (!appId) return;
+                const events = getRecentAppHistory(appId, MAX_MENU_RECENT_EVENTS);
+                this.setState((previousState) => {
+                        const previous = previousState.recentHistory || {};
+                        const currentEvents = previous[appId] || [];
+                        if (events.length === 0 && currentEvents.length === 0) {
+                                return null;
+                        }
+                        if (areRecentEventsEqual(events, currentEvents)) {
+                                return null;
+                        }
+                        const nextHistory = { ...previous };
+                        if (events.length === 0) {
+                                delete nextHistory[appId];
+                        } else {
+                                nextHistory[appId] = events;
+                        }
+                        return { recentHistory: nextHistory };
+                });
+        };
+
+        formatTimestamp = (timestamp) => {
+                if (typeof timestamp !== 'number' || !Number.isFinite(timestamp)) return '';
+                const date = new Date(timestamp);
+                if (Number.isNaN(date.getTime())) return '';
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${year}-${month}-${day} ${hours}:${minutes}`;
+        };
+
+        formatRecentEvent = (event) => {
+                if (!event || typeof event !== 'object') return 'Recent activity';
+                const prefix = event.type === 'close' ? 'Closed' : 'Opened';
+                const timestamp = this.formatTimestamp(event.timestamp);
+                return timestamp ? `${prefix} ${timestamp}` : prefix;
+        };
+
+        handleRecentItemSelect = (appId) => {
+                if (!appId) return;
+                this.dispatchTaskbarCommand({ appId, action: 'open' });
+        };
+
+        handleClearRecentHistory = (appId) => {
+                if (!appId) return;
+                clearRecentAppHistory(appId);
+                this.setState((previousState) => {
+                        const previous = previousState.recentHistory || {};
+                        if (!previous[appId]) return null;
+                        const nextHistory = { ...previous };
+                        delete nextHistory[appId];
+                        return { recentHistory: nextHistory };
+                });
+        };
+
+        buildContextMenuItems = (app) => {
+                const history = (this.state.recentHistory && this.state.recentHistory[app.id]) || [];
+                const items = [];
+
+                if (history.length > 0) {
+                        history.forEach((event) => {
+                                items.push({
+                                        label: (
+                                                <span className="flex flex-col text-left">
+                                                        <span className="text-[0.65rem] uppercase tracking-wide text-white/60">Recent</span>
+                                                        <span>{this.formatRecentEvent(event)}</span>
+                                                </span>
+                                        ),
+                                        onSelect: () => this.handleRecentItemSelect(app.id),
+                                });
+                        });
+                } else {
+                        items.push({
+                                label: <span className="text-white/60">No recent activity</span>,
+                                onSelect: () => {},
+                        });
+                }
+
+                items.push({
+                        label: <span className="text-red-300">Clear recent history</span>,
+                        onSelect: () => this.handleClearRecentHistory(app.id),
+                });
+
+                return items;
+        };
+
+        handleAppPointerDown = (event) => {
+                this.cancelLongPress();
+                const pointerType = event.pointerType;
+                if (pointerType === 'mouse') return;
+                if (typeof event.button === 'number' && event.button > 0) return;
+
+                this.longPressTarget = event.currentTarget;
+                this.longPressPoint = {
+                        clientX: typeof event.clientX === 'number' ? event.clientX : undefined,
+                        clientY: typeof event.clientY === 'number' ? event.clientY : undefined,
+                };
+
+                this.longPressTimer = window.setTimeout(() => {
+                        this.longPressTimer = null;
+                        if (!this.longPressTarget) return;
+                        this.openContextMenuForButton(this.longPressTarget, this.longPressPoint);
+                }, LONG_PRESS_DURATION);
+        };
+
+        handleAppPointerEnd = () => {
+                this.cancelLongPress();
+        };
+
+        cancelLongPress = () => {
+                if (this.longPressTimer) {
+                        clearTimeout(this.longPressTimer);
+                        this.longPressTimer = null;
+                }
+                this.longPressTarget = null;
+                this.longPressPoint = null;
+        };
+
+        openContextMenuForButton = (target, point) => {
+                if (!target || typeof target.dispatchEvent !== 'function') return;
+                const rect = target.getBoundingClientRect ? target.getBoundingClientRect() : { left: 0, top: 0, width: 0, height: 0 };
+                const clientX = point?.clientX ?? rect.left + rect.width / 2;
+                const clientY = point?.clientY ?? rect.top + rect.height / 2;
+                const pageX = clientX + (typeof window !== 'undefined' ? window.scrollX || 0 : 0);
+                const pageY = clientY + (typeof window !== 'undefined' ? window.scrollY || 0 : 0);
+
+                const contextEvent = new MouseEvent('contextmenu', {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window,
+                        button: 2,
+                        buttons: 2,
+                        clientX,
+                        clientY,
+                        screenX: clientX,
+                        screenY: clientY,
+                });
+
+                Object.defineProperty(contextEvent, 'pageX', { get: () => pageX, configurable: true });
+                Object.defineProperty(contextEvent, 'pageY', { get: () => pageY, configurable: true });
+
+                target.dispatchEvent(contextEvent);
         };
 
         dispatchTaskbarCommand = (detail) => {
@@ -125,23 +365,28 @@ export default class Navbar extends PureComponent {
                 );
         };
 
-        renderRunningAppItem = (app) => (
-                <li
-                        key={app.id}
-                        className="flex"
-                        draggable
-                        data-app-id={app.id}
-                        role="listitem"
-                        onDragStart={(event) => this.handleAppDragStart(event, app)}
-                        onDragOver={this.handleAppDragOver}
-                        onDrop={(event) => this.handleAppDrop(event, app.id)}
-                        onDragEnd={this.handleAppDragEnd}
-                >
-                        {this.renderRunningAppButton(app)}
-                </li>
-        );
+        renderRunningAppItem = (app) => {
+                const buttonRef = this.getTaskbarButtonRef(app.id);
+                const menuItems = this.buildContextMenuItems(app);
+                return (
+                        <li
+                                key={app.id}
+                                className="flex"
+                                draggable
+                                data-app-id={app.id}
+                                role="listitem"
+                                onDragStart={(event) => this.handleAppDragStart(event, app)}
+                                onDragOver={this.handleAppDragOver}
+                                onDrop={(event) => this.handleAppDrop(event, app.id)}
+                                onDragEnd={this.handleAppDragEnd}
+                        >
+                                {this.renderRunningAppButton(app, buttonRef)}
+                                <ContextMenu targetRef={buttonRef} items={menuItems} />
+                        </li>
+                );
+        };
 
-        renderRunningAppButton = (app) => {
+        renderRunningAppButton = (app, buttonRef) => {
                 const isActive = !app.isMinimized;
                 const isFocused = app.isFocused && isActive;
 
@@ -155,6 +400,11 @@ export default class Navbar extends PureComponent {
                                 data-active={isActive ? 'true' : 'false'}
                                 onClick={() => this.handleAppButtonClick(app)}
                                 onKeyDown={(event) => this.handleAppButtonKeyDown(event, app)}
+                                onPointerDown={this.handleAppPointerDown}
+                                onPointerUp={this.handleAppPointerEnd}
+                                onPointerCancel={this.handleAppPointerEnd}
+                                onPointerLeave={this.handleAppPointerEnd}
+                                ref={buttonRef}
                                 className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
                         >
                                 <span className="relative inline-flex items-center justify-center">
