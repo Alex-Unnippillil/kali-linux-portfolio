@@ -26,28 +26,41 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   const [selected, setSelected] = useState<number | null>(null);
 
   useEffect(() => {
-    const purgeDays = parseInt(localStorage.getItem('trash-purge-days') || '30', 10);
+    if (typeof window === 'undefined') return;
+
+    const storage = window.localStorage;
+    const purgeDays = parseInt(storage.getItem('trash-purge-days') || '30', 10);
     const ms = purgeDays * 24 * 60 * 60 * 1000;
     const now = Date.now();
     let data: TrashItem[] = [];
     try {
-      data = JSON.parse(localStorage.getItem('window-trash') || '[]');
+      data = JSON.parse(storage.getItem('window-trash') || '[]');
     } catch {
       data = [];
     }
     data = data.filter((item) => now - item.closedAt <= ms);
-    localStorage.setItem('window-trash', JSON.stringify(data));
+    try {
+      storage.setItem('window-trash', JSON.stringify(data));
+    } catch {
+      // ignore persistence failures
+    }
     setItems(data);
   }, []);
 
   const persist = (next: TrashItem[]) => {
     setItems(next);
-    localStorage.setItem('window-trash', JSON.stringify(next));
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem('window-trash', JSON.stringify(next));
+    } catch {
+      // ignore persistence failures
+    }
   };
 
   const restore = useCallback(() => {
     if (selected === null) return;
     const item = items[selected];
+    if (typeof window === 'undefined') return;
     if (!window.confirm(`Restore ${item.title}?`)) return;
     openApp(item.id);
     const next = items.filter((_, i) => i !== selected);
@@ -58,6 +71,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   const remove = useCallback(() => {
     if (selected === null) return;
     const item = items[selected];
+    if (typeof window === 'undefined') return;
     if (!window.confirm(`Delete ${item.title}?`)) return;
     const next = items.filter((_, i) => i !== selected);
     persist(next);
@@ -66,6 +80,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
 
   const restoreAll = () => {
     if (items.length === 0) return;
+    if (typeof window === 'undefined') return;
     if (!window.confirm('Restore all windows?')) return;
     items.forEach((item) => openApp(item.id));
     persist([]);
@@ -74,6 +89,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
 
   const empty = () => {
     if (items.length === 0) return;
+    if (typeof window === 'undefined') return;
     if (!window.confirm('Empty trash?')) return;
     persist([]);
     setSelected(null);
