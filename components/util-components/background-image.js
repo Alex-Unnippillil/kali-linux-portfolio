@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import KaliWallpaper from './kali-wallpaper';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 const FALLBACK_OVERLAY = 'linear-gradient(180deg, rgba(6, 12, 20, 0.65) 0%, rgba(3, 8, 16, 0.88) 92%)';
 
@@ -25,6 +26,8 @@ export default function BackgroundImage({ theme }) {
     const fallbackUrl = theme?.fallbackWallpaperUrl || null;
     const effectiveUrl = (!imageError && wallpaperUrl) || fallbackUrl;
     const blurAmount = typeof theme?.blur === 'number' ? theme.blur : 0;
+    const prefersReducedMotion = usePrefersReducedMotion();
+    const shouldAnimate = !prefersReducedMotion;
 
     useEffect(() => {
         setImageError(false);
@@ -90,10 +93,42 @@ export default function BackgroundImage({ theme }) {
     }, [effectiveUrl, theme?.useKaliWallpaper, theme?.overlay]);
 
     const accentGlow = useMemo(() => {
-        const inner = hexToRgba(accent, 0.24);
-        const outer = hexToRgba(accent, 0.05);
-        return `radial-gradient(circle at 22% 18%, ${inner} 0%, ${outer} 45%, rgba(0,0,0,0) 70%)`;
+        const strong = hexToRgba(accent, 0.38);
+        const medium = hexToRgba(accent, 0.16);
+        const soft = hexToRgba(accent, 0.08);
+        return [
+            `radial-gradient(circle at 18% 24%, ${strong} 0%, ${medium} 32%, rgba(0,0,0,0) 68%)`,
+            'radial-gradient(circle at 82% 22%, rgba(56, 189, 248, 0.32) 0%, rgba(6, 20, 33, 0.08) 44%, rgba(0,0,0,0) 76%)',
+            `radial-gradient(circle at 78% 76%, ${medium} 0%, ${soft} 42%, rgba(0,0,0,0) 74%)`,
+        ].join(', ');
     }, [accent]);
+
+    const accentBloom = useMemo(() => {
+        const highlight = hexToRgba(accent, 0.28);
+        const shimmer = hexToRgba(accent, 0.12);
+        return [
+            `radial-gradient(120% 120% at 12% 20%, ${highlight} 0%, rgba(6, 18, 30, 0.5) 48%, rgba(0,0,0,0) 74%)`,
+            `radial-gradient(120% 120% at 88% 18%, rgba(94, 234, 212, 0.28) 0%, rgba(8, 47, 73, 0.16) 44%, rgba(0,0,0,0) 78%)`,
+            `radial-gradient(120% 160% at 60% 100%, ${shimmer} 0%, rgba(4, 16, 28, 0.42) 36%, rgba(0,0,0,0) 76%)`,
+        ].join(', ');
+    }, [accent]);
+
+    const gridTexture = useMemo(
+        () =>
+            'linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(15, 148, 210, 0.08) 1px, transparent 1px)',
+        [],
+    );
+
+    const grainTexture = useMemo(
+        () =>
+            'repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0, rgba(255, 255, 255, 0.04) 1px, transparent 1px, transparent 6px), repeating-linear-gradient(90deg, rgba(15, 148, 210, 0.03) 0, rgba(15, 148, 210, 0.03) 1px, transparent 1px, transparent 5px)',
+        [],
+    );
+
+    const horizonOverlay = useMemo(
+        () => 'linear-gradient(180deg, rgba(2, 10, 19, 0) 0%, rgba(4, 14, 26, 0.32) 52%, rgba(2, 8, 18, 0.82) 100%)',
+        [],
+    );
 
     const overlayBackground = theme?.overlay || (needsOverlay ? FALLBACK_OVERLAY : null);
 
@@ -131,9 +166,47 @@ export default function BackgroundImage({ theme }) {
                     style={{ background: overlayBackground }}
                 />
             )}
+            <div className="pointer-events-none absolute inset-0 mix-blend-screen">
+                <div className="absolute inset-0 opacity-75" style={{ background: accentGlow }} />
+                <div
+                    className="absolute"
+                    style={{
+                        top: '-32%',
+                        left: '-32%',
+                        right: '-32%',
+                        bottom: '-32%',
+                        background: accentBloom,
+                        opacity: 0.55,
+                        filter: 'blur(60px)',
+                        transform: 'rotate(0deg) scale(1)',
+                        animation: shouldAnimate ? 'ambientGlowDrift 42s ease-in-out infinite alternate' : undefined,
+                    }}
+                />
+            </div>
             <div
-                className="pointer-events-none absolute inset-0 mix-blend-screen opacity-70"
-                style={{ background: accentGlow }}
+                className="pointer-events-none absolute inset-0 mix-blend-soft-light"
+                style={{
+                    backgroundImage: gridTexture,
+                    backgroundSize: '120px 120px, 120px 120px',
+                    backgroundPosition: '0px 0px, 0px 0px',
+                    opacity: 0.28,
+                    animation: shouldAnimate ? 'ambientGridPan 48s linear infinite' : undefined,
+                }}
+            />
+            <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                    background: horizonOverlay,
+                }}
+            />
+            <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                    backgroundImage: grainTexture,
+                    backgroundSize: '6px 6px, 5px 5px',
+                    opacity: 0.14,
+                    animation: shouldAnimate ? 'ambientNoisePulse 6s ease-in-out infinite alternate' : undefined,
+                }}
             />
             {blurAmount > 0 && (
                 <div
