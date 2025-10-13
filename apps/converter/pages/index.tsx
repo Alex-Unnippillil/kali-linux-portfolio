@@ -13,7 +13,7 @@ export default function ConverterPage() {
         <title>{title}</title>
         <meta name="description" content={description} />
       </Head>
-      <main className="min-h-screen bg-ub-dark text-white py-10 px-4">
+      <main className="min-h-screen bg-[var(--kali-bg)] text-[color:var(--kali-text)] py-10 px-4">
         <div className="mx-auto w-full max-w-4xl">
           <Converter />
         </div>

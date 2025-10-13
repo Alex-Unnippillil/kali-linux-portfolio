@@ -405,11 +405,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   return (
     <div className="relative h-full w-full">
       {paletteOpen && (
-        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-start justify-center z-10">
-          <div className="mt-10 w-80 bg-gray-800 p-4 rounded">
+        <div className="absolute inset-0 z-10 flex items-start justify-center bg-[color:var(--kali-overlay)] backdrop-blur-sm">
+          <div className="mt-10 w-80 rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] p-4 shadow-lg shadow-[rgba(8,13,18,0.6)]">
             <input
               autoFocus
-              className="w-full mb-2 bg-black text-white p-2"
+              className="mb-2 w-full rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-overlay)] p-2 text-[color:var(--kali-text)] placeholder:text-[color:color-mix(in_srgb,var(--kali-text)_60%,_transparent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-accent)]"
               value={paletteInput}
               onChange={(e) => setPaletteInput(e.target.value)}
               aria-label="Command palette input"
@@ -425,11 +425,31 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
                 }
               }}
             />
-            <ul className="max-h-40 overflow-y-auto">
+            <ul className="max-h-40 overflow-y-auto rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-overlay)]" role="menu">
               {Object.keys(registryRef.current)
                 .filter((c) => c.startsWith(paletteInput))
                 .map((c) => (
-                  <li key={c} className="text-white">
+                  <li
+                    key={c}
+                    tabIndex={0}
+                    role="menuitem"
+                    className="cursor-pointer px-2 py-1 text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-control-overlay)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-accent)]"
+                    onClick={() => {
+                      sessionManager.runCommand(c);
+                      setPaletteInput('');
+                      setPaletteOpen(false);
+                      termRef.current?.focus();
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        sessionManager.runCommand(c);
+                        setPaletteInput('');
+                        setPaletteOpen(false);
+                        termRef.current?.focus();
+                      }
+                    }}
+                  >
                     {c}
                   </li>
                 ))}
@@ -438,8 +458,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         </div>
       )}
       {settingsOpen && (
-        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10">
-          <div className="bg-gray-900 p-4 rounded space-y-4">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-[color:var(--kali-overlay)] backdrop-blur-sm">
+          <div className="space-y-4 rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] p-4 shadow-lg shadow-[rgba(8,13,18,0.6)]">
             <div className="grid grid-cols-8 gap-2">
               {ansiColors.map((c, i) => (
                 <div key={i} className="h-4 w-4 rounded" style={{ backgroundColor: c }} />
@@ -448,11 +468,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             <pre className="text-sm leading-snug">
               <span className="text-blue-400">bin</span>{' '}
               <span className="text-green-400">script.sh</span>{' '}
-              <span className="text-gray-300">README.md</span>
+              <span className="text-[color:color-mix(in_srgb,var(--kali-text)_70%,_transparent)]">README.md</span>
             </pre>
             <div className="flex justify-end gap-2">
               <button
-                className="px-2 py-1 bg-gray-700 rounded"
+                className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-overlay)] px-2 py-1 text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-control-overlay)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-accent)]"
                 onClick={() => {
                   setSettingsOpen(false);
                   termRef.current?.focus();
@@ -461,7 +481,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
                 Cancel
               </button>
               <button
-                className="px-2 py-1 bg-blue-600 rounded"
+                className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--color-accent)] px-2 py-1 font-medium text-[color:var(--color-inverse)] transition hover:bg-[color:color-mix(in_srgb,var(--color-accent)_85%,_#000000)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-accent)]"
                 onClick={() => {
                   setSettingsOpen(false);
                   termRef.current?.focus();
@@ -475,28 +495,28 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       )}
       <div className="flex h-full flex-col">
         <div
-          className="flex flex-wrap items-center gap-2 border-b border-slate-700/70 bg-slate-900/80 p-2 text-slate-100 shadow-inner backdrop-blur"
+          className="flex flex-wrap items-center gap-2 border-b border-[color:var(--kali-border)] bg-[color:var(--kali-overlay)] p-2 text-[color:var(--kali-text)] shadow-inner backdrop-blur"
           role="toolbar"
           aria-label="Terminal controls"
         >
           <button
             onClick={handleCopy}
             aria-label="Copy"
-            className="inline-flex items-center rounded-md border border-slate-700/60 bg-slate-800/70 p-1 text-slate-200 transition hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+            className="inline-flex items-center rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] p-1 text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-control-overlay)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-accent)]"
           >
             <CopyIcon />
           </button>
           <button
             onClick={handlePaste}
             aria-label="Paste"
-            className="inline-flex items-center rounded-md border border-slate-700/60 bg-slate-800/70 p-1 text-slate-200 transition hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+            className="inline-flex items-center rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] p-1 text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-control-overlay)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-accent)]"
           >
             <PasteIcon />
           </button>
           <button
             onClick={() => setSettingsOpen(true)}
             aria-label="Settings"
-            className="inline-flex items-center rounded-md border border-slate-700/60 bg-slate-800/70 p-1 text-slate-200 transition hover:bg-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+            className="inline-flex items-center rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] p-1 text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-control-overlay)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-accent)]"
           >
             <SettingsIcon />
           </button>

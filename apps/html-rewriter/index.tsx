@@ -83,7 +83,7 @@ const HtmlRewriterApp: React.FC = () => {
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold">HTML Rewriter</h1>
-          <p className="text-sm text-gray-300 max-w-3xl">
+          <p className="text-sm text-[color:color-mix(in_srgb,var(--kali-terminal-text)_70%,transparent)] max-w-3xl">
             Transform markup with CSS selectors and simple rule actions. Edit the rule JSON and
             watch the rewritten output update instantly.
           </p>
@@ -142,7 +142,7 @@ const HtmlRewriterApp: React.FC = () => {
           <summary className="cursor-pointer text-sm font-semibold text-gray-100">
             Remove elements
           </summary>
-          <div className="mt-2 space-y-2 text-sm text-gray-300">
+          <div className="mt-2 space-y-2 text-sm text-[color:color-mix(in_srgb,var(--kali-terminal-text)_72%,transparent)]">
             <p>
               Use the <code className="rounded bg-[color:var(--kali-panel-highlight)] px-1 py-0.5 text-[color:var(--kali-text)]">remove</code> action to strip matching nodes
               from the document entirely.
@@ -162,7 +162,7 @@ const HtmlRewriterApp: React.FC = () => {
           <summary className="cursor-pointer text-sm font-semibold text-gray-100">
             Replace text content
           </summary>
-          <div className="mt-2 space-y-2 text-sm text-gray-300">
+          <div className="mt-2 space-y-2 text-sm text-[color:color-mix(in_srgb,var(--kali-terminal-text)_72%,transparent)]">
             <p>
               Swap the text content of the selected elements by providing a <code className="rounded bg-[color:var(--kali-panel-highlight)] px-1 py-0.5 text-[color:var(--kali-text)]">value</code>
               alongside the <code className="rounded bg-[color:var(--kali-panel-highlight)] px-1 py-0.5 text-[color:var(--kali-text)]">replace</code> action.
@@ -218,10 +218,10 @@ const HtmlRewriterApp: React.FC = () => {
               key={i}
               className={
                 part.added
-                  ? 'rounded-sm bg-green-900/80 px-1 text-green-100'
+                  ? 'rounded-sm bg-kali-severity-low/20 px-1 text-kali-severity-low'
                   : part.removed
-                  ? 'rounded-sm bg-red-900/70 px-1 text-red-100 line-through'
-                  : 'text-gray-200'
+                  ? 'rounded-sm bg-kali-severity-high/15 px-1 text-kali-severity-high line-through'
+                  : 'text-[color:color-mix(in_srgb,var(--kali-terminal-text)_80%,transparent)]'
               }
             >
               {part.value}
@@ -254,10 +254,10 @@ const HtmlRewriterApp: React.FC = () => {
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 id={modalTitleId} className="text-xl font-semibold">
+                <h2 id={modalTitleId} className="text-xl font-semibold text-[color:var(--kali-terminal-text)]">
                   HTML Rewriter help
                 </h2>
-                <p id={modalDescriptionId} className="text-sm text-gray-300">
+                <p id={modalDescriptionId} className="text-sm text-[color:color-mix(in_srgb,var(--kali-terminal-text)_70%,transparent)]">
                   Learn which selectors and actions are supported, plus copy a ready-to-use rule set.
                 </p>
               </div>
@@ -299,7 +299,7 @@ const HtmlRewriterApp: React.FC = () => {
             <div className="rounded-lg border border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,_var(--kali-panel)_92%,_transparent)] p-4 shadow-inner" role="tabpanel" id={`html-rewriter-help-panel-${activeHelpTab}`}
               aria-labelledby={`html-rewriter-help-tab-${activeHelpTab}`}>
               {activeHelpTab === 'selectors' && (
-                <div className="space-y-2 text-sm text-gray-300">
+                <div className="space-y-2 text-sm text-[color:color-mix(in_srgb,var(--kali-terminal-text)_72%,transparent)]">
                   <p>
                     Target elements with any valid CSS selector. Combine class, id, or attribute selectors
                     to focus the rewrite.
@@ -316,7 +316,7 @@ const HtmlRewriterApp: React.FC = () => {
                 </div>
               )}
               {activeHelpTab === 'actions' && (
-                <div className="space-y-3 text-sm text-gray-300">
+                <div className="space-y-3 text-sm text-[color:color-mix(in_srgb,var(--kali-terminal-text)_72%,transparent)]">
                   <div>
                     <h3 className="text-base font-semibold text-[color:var(--kali-text)]">remove</h3>
                     <p>Delete the matched node entirely. Useful for scripts, ads, or injected banners.</p>
@@ -331,7 +331,7 @@ const HtmlRewriterApp: React.FC = () => {
                 </div>
               )}
               {activeHelpTab === 'payloads' && (
-                <div className="space-y-3 text-sm text-gray-300">
+                <div className="space-y-3 text-sm text-[color:color-mix(in_srgb,var(--kali-terminal-text)_72%,transparent)]">
                   <p>Copy these starter rules to clean risky markup and annotate media placeholders.</p>
                   <pre
                     tabIndex={0}

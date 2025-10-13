@@ -18,7 +18,7 @@ const ReaverStepper = () => {
   return (
     <div
       id="reaver-stepper"
-      className="p-4 bg-ub-cool-grey text-white h-full overflow-y-auto"
+      className="p-4 h-full overflow-y-auto bg-kali-surface text-kali-text"
     >
       <h1 className="text-2xl mb-4">EAPOL Handshake Explorer</h1>
 
@@ -73,7 +73,7 @@ const ReaverStepper = () => {
         </div>
       )}
 
-      <div className="mt-4 bg-black text-green-400 font-mono text-xs p-2 h-32 overflow-y-auto">
+      <div className="mt-4 h-32 overflow-y-auto rounded border border-white/10 bg-kali-dark/90 font-mono text-xs text-kali-terminal shadow-inner">
         {logMessages.map((m) => (
           <div key={m.step}>
             [{m.step}] {m.from} ➜ {m.to}
@@ -85,21 +85,21 @@ const ReaverStepper = () => {
         <button
           onClick={prev}
           disabled={current === 0}
-          className="px-4 py-2 bg-gray-700 rounded disabled:opacity-50"
+          className="px-4 py-2 rounded border border-white/10 bg-kali-surface-muted text-kali-text transition hover:bg-kali-surface-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus disabled:cursor-not-allowed disabled:opacity-50"
         >
           Previous
         </button>
         {isSummary ? (
           <button
             onClick={restart}
-            className="px-4 py-2 bg-ub-green text-black rounded"
+            className="px-4 py-2 rounded bg-kali-control text-slate-900 font-semibold shadow-[0_0_0_1px_rgba(255,255,255,0.12)] transition hover:bg-kali-control/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
           >
             Restart
           </button>
         ) : (
           <button
             onClick={next}
-            className="px-4 py-2 bg-ub-green text-black rounded"
+            className="px-4 py-2 rounded bg-kali-control text-slate-900 font-semibold shadow-[0_0_0_1px_rgba(255,255,255,0.12)] transition hover:bg-kali-control/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
           >
             Next
           </button>

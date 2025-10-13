@@ -113,16 +113,32 @@ const QRScanner: React.FC = () => {
     setFacing((f) => (f === 'environment' ? 'user' : 'environment'));
   };
 
+  const hasError = Boolean(error);
+
   return (
-    <div className="p-4 space-y-4 text-white bg-ub-cool-grey h-full flex flex-col items-center">
+    <div className="flex h-full flex-col items-center space-y-4 bg-kali-surface/95 p-4 text-kali-text">
       <div className="relative w-full max-w-sm">
-        <video ref={videoRef} className="w-full rounded-md border-2 border-white bg-black" />
-        <div className="absolute top-2 right-2 flex gap-2">
+        <video
+          ref={videoRef}
+          aria-label="QR scanner preview"
+          className="w-full rounded-xl border border-kali-border/70 bg-kali-surface/80 shadow-kali-panel"
+        />
+        <div
+          className={`absolute top-2 right-2 flex gap-2 rounded-xl border p-1.5 shadow-lg backdrop-blur-sm transition ${
+            hasError
+              ? 'border-kali-error/60 bg-kali-error/10'
+              : 'border-kali-border/70 bg-kali-surface/80'
+          }`}
+        >
           <button
             type="button"
             onClick={toggleTorch}
             aria-label="Toggle flashlight"
-            className="p-1 bg-black/50 rounded"
+            className={`rounded-lg border p-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] ${
+              hasError
+                ? 'border-kali-error/70 bg-kali-error/15 text-kali-error'
+                : 'border-kali-primary/50 bg-kali-primary/15 text-kali-primary'
+            }`}
           >
             <FlashIcon className="w-6 h-6" />
           </button>
@@ -130,30 +146,38 @@ const QRScanner: React.FC = () => {
             type="button"
             onClick={switchCamera}
             aria-label="Switch camera"
-            className="p-1 bg-black/50 rounded"
+            className={`rounded-lg border p-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] ${
+              hasError
+                ? 'border-kali-error/70 bg-kali-error/15 text-kali-error'
+                : 'border-kali-primary/50 bg-kali-primary/15 text-kali-primary'
+            }`}
           >
             <SwitchCameraIcon className="w-6 h-6" />
           </button>
         </div>
       </div>
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && (
+        <p className="rounded-lg border border-kali-error/60 bg-kali-error/10 px-3 py-2 text-sm text-kali-error shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-error)_55%,transparent)]">
+          {error}
+        </p>
+      )}
       {result && (
-        <div className="flex items-center gap-2 p-2 bg-white text-black rounded-md w-full max-w-sm">
+        <div className="flex w-full max-w-sm items-center gap-3 rounded-xl border border-kali-primary/60 bg-kali-surface/90 p-3 text-kali-text shadow-[0_12px_35px_rgba(15,148,210,0.16)]">
           {preview && (
             <img
               src={preview}
               alt="QR preview"
-              className="w-32 h-32 rounded-md border"
+              className="h-32 w-32 rounded-lg border border-kali-border/70 bg-kali-surface/80 p-1"
             />
           )}
           <div className="flex-1 min-w-0">
-            <p className="break-all text-sm">{result}</p>
+            <p className="break-all text-sm text-[color:color-mix(in_srgb,var(--color-text)_90%,transparent)]">{result}</p>
           </div>
           <button
             type="button"
             onClick={copyResult}
             aria-label="Copy result"
-            className="p-1"
+            className="rounded-lg border border-transparent p-1.5 text-kali-primary transition hover:border-kali-primary/60 hover:bg-kali-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
           >
             <CopyIcon className="w-6 h-6" />
           </button>

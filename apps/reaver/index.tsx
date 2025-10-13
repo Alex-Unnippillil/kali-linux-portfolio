@@ -185,26 +185,26 @@ const ReaverPanel: React.FC = () => {
     return 'pending';
   };
 
-  const stripColor = (level: LogEntry['level']) => {
+  const severityColor = (level: LogEntry['level']) => {
     switch (level) {
       case 'warn':
-        return 'bg-yellow-500';
+        return 'var(--color-warning)';
       case 'success':
-        return 'bg-green-500';
+        return 'var(--color-success)';
       case 'error':
-        return 'bg-red-500';
+        return 'var(--color-error)';
       case 'info':
       default:
-        return 'bg-blue-500';
+        return 'var(--color-info)';
     }
   };
 
   const timeRemaining = (TOTAL_PINS - attempts) / rate + lockRemaining;
 
   return (
-    <div className="p-4 bg-gray-900 text-white h-full overflow-y-auto">
+    <div className="p-4 h-full overflow-y-auto text-white" style={{ background: 'var(--kali-panel)' }}>
       <h1 className="text-2xl mb-4">Reaver WPS Simulator</h1>
-      <p className="text-sm text-yellow-300 mb-4">
+      <p className="text-sm mb-4" style={{ color: 'var(--color-warning)' }}>
         Educational simulation. No real Wi-Fi traffic is generated.
       </p>
 
@@ -220,16 +220,16 @@ const ReaverPanel: React.FC = () => {
             const status = stageStatus(i);
             const color =
               status === 'completed'
-                ? 'bg-green-500'
+                ? 'var(--color-success)'
                 : status === 'running'
-                ? 'bg-yellow-500'
-                : 'bg-gray-600';
+                ? 'var(--color-warning)'
+                : 'color-mix(in srgb, var(--kali-panel) 70%, transparent)';
             return (
               <div
                 key={s.title}
                 className="flex-1 flex flex-col items-center mr-2 last:mr-0"
               >
-                <div className={`w-full h-2 ${color}`} />
+                <div className="w-full h-2 rounded-full" style={{ background: color }} />
                 <span className="mt-1 text-xs text-center">{s.title}</span>
               </div>
             );
@@ -258,14 +258,22 @@ const ReaverPanel: React.FC = () => {
               min="1"
               value={rate}
               onChange={(e) => setRate(Number(e.target.value) || 1)}
-              className="w-20 p-1 bg-gray-800 rounded text-white"
+              className="w-20 p-1 rounded border text-white"
+              aria-label="Attempts per second"
+              style={{
+                background: 'var(--kali-panel-highlight)',
+                borderColor: 'var(--kali-panel-border)',
+              }}
             />
             <button
               type="button"
               onClick={running ? stop : start}
-              className={`w-12 h-12 flex items-center justify-center rounded disabled:opacity-50 ${
-                running ? 'bg-red-700' : 'bg-green-700'
-              }`}
+              className="w-12 h-12 flex items-center justify-center rounded border disabled:opacity-50"
+              style={{
+                background: running ? 'var(--color-error)' : 'var(--kali-control)',
+                borderColor: 'var(--kali-panel-border)',
+                color: running ? 'var(--kali-text)' : 'var(--color-inverse)',
+              }}
               aria-label={running ? 'Stop attack' : 'Start attack'}
             >
               {running ? (
@@ -280,14 +288,23 @@ const ReaverPanel: React.FC = () => {
         <div className="text-sm mb-1">
           Attempts: {attempts} / {TOTAL_PINS}
         </div>
-        <div className="w-full bg-gray-700 h-2 mb-1" aria-hidden="true">
+        <div
+          className="w-full h-2 mb-1 rounded-full"
+          aria-hidden="true"
+          style={{
+            background: 'color-mix(in srgb, var(--kali-panel) 65%, transparent)',
+          }}
+        >
           <div
-            className="bg-green-500 h-2"
-            style={{ width: `${(attempts / TOTAL_PINS) * 100}%` }}
+            className="h-full rounded-full"
+            style={{
+              width: `${(attempts / TOTAL_PINS) * 100}%`,
+              background: 'var(--kali-control)',
+            }}
           />
         </div>
         {lockRemaining > 0 && (
-          <div className="text-sm text-red-400 mb-1">
+          <div className="text-sm mb-1" style={{ color: 'var(--color-error)' }}>
             WPS locked. Resuming in {lockRemaining}s
           </div>
         )}
@@ -296,12 +313,17 @@ const ReaverPanel: React.FC = () => {
         </div>
         <div
           ref={logRef}
-          className="h-32 bg-gray-800 rounded p-2 overflow-y-auto text-xs font-mono mb-4"
+          className="h-32 rounded p-2 overflow-y-auto text-xs font-mono mb-4 border"
+          style={{
+            background: 'var(--kali-panel)',
+            borderColor: 'var(--kali-panel-border)',
+          }}
         >
           {logs.map((log, i) => (
             <div key={i} className="flex items-start">
               <span
-                className={`w-1 h-4 mr-2 rounded ${stripColor(log.level)}`}
+                className="w-1 h-4 mr-2 rounded"
+                style={{ background: severityColor(log.level) }}
                 aria-hidden="true"
               />
               <span>{log.text}</span>
@@ -309,15 +331,27 @@ const ReaverPanel: React.FC = () => {
           ))}
         </div>
         {stageIdx === stages.length && (
-          <div className="mt-4 p-4 bg-gray-800 rounded">
+          <div
+            className="mt-4 rounded border p-4"
+            style={{
+              background: 'var(--kali-panel)',
+              borderColor: 'var(--kali-panel-border)',
+            }}
+          >
             <h3 className="text-lg mb-2">Attack Summary</h3>
             <p className="mb-2">
-              WPS PIN: <code className="text-green-400">{FOUND_PIN}</code>
+              WPS PIN:{' '}
+              <code style={{ color: 'var(--color-success)' }}>{FOUND_PIN}</code>
             </p>
             <button
               type="button"
               onClick={() => navigator.clipboard.writeText(FOUND_PIN)}
-              className="px-2 py-1 bg-blue-600 rounded"
+              className="px-2 py-1 rounded border"
+              style={{
+                background: 'var(--kali-control)',
+                borderColor: 'var(--kali-panel-border)',
+                color: 'var(--color-inverse)',
+              }}
             >
               Copy PIN
             </button>
@@ -329,8 +363,16 @@ const ReaverPanel: React.FC = () => {
         <h2 className="text-lg mb-2">Router Metadata</h2>
         {routers.length > 0 ? (
           <>
+            <label htmlFor="router-select" className="sr-only">
+              Router metadata profile
+            </label>
             <select
-              className="mb-2 p-2 rounded bg-gray-800 text-white"
+              id="router-select"
+              className="mb-2 p-2 rounded border text-white"
+              style={{
+                background: 'var(--kali-panel-highlight)',
+                borderColor: 'var(--kali-panel-border)',
+              }}
               value={routerIdx}
               onChange={(e) => setRouterIdx(Number(e.target.value))}
             >
@@ -364,7 +406,7 @@ const ReaverPage: React.FC = () => {
 
   return (
     <TabbedWindow
-      className="min-h-screen bg-gray-900 text-white"
+      className="min-h-screen text-white bg-[var(--kali-panel)]"
       initialTabs={[createTab()]}
       onNewTab={createTab}
     />

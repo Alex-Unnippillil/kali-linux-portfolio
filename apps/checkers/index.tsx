@@ -281,32 +281,50 @@ export default function CheckersPage() {
     [],
   );
 
+  const boardSurfaceStyle = useMemo<React.CSSProperties>(
+    () => ({
+      background:
+        'linear-gradient(145deg, color-mix(in srgb, var(--kali-panel) 92%, transparent), color-mix(in srgb, var(--kali-control) 22%, var(--kali-panel)))',
+    }),
+    [],
+  );
+
+  const pieceSurfaces = useMemo(
+    () => ({
+      red:
+        'radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--color-severity-high) 65%, var(--kali-control)), color-mix(in srgb, var(--kali-panel) 82%, transparent))',
+      black:
+        'radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--kali-panel) 88%, transparent), color-mix(in srgb, var(--kali-control) 15%, var(--kali-panel)))',
+    }),
+    [],
+  );
+
   const PanelContent = ({ variant }: { variant: 'mobile' | 'desktop' }) => {
     const badgeBase =
-      'inline-flex items-center gap-2 rounded-full border border-ub-orange/40 bg-ub-orange/10 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-widest text-ub-orange';
+      'inline-flex items-center gap-2 rounded-full border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel-highlight)] px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-widest text-[color:var(--kali-control)]';
 
     return (
       <div className={`flex flex-col gap-4 ${variant === 'mobile' ? 'h-full' : ''} text-xs`}>
         <section className="space-y-2">
-          <h3 className="text-[0.65rem] font-semibold uppercase tracking-widest text-ub-orange">
+          <h3 className="text-[0.65rem] font-semibold uppercase tracking-widest text-[color:var(--kali-control)]">
             Match telemetry
           </h3>
           <div className="flex flex-wrap gap-2">
             <span className={badgeBase}>
               Captures left
-              <span className="rounded bg-black/40 px-2 py-0.5 font-mono text-[0.7rem] text-white">
+              <span className="rounded bg-[color:color-mix(in_srgb,var(--kali-control)_25%,var(--kali-panel))] px-2 py-0.5 font-mono text-[0.7rem] text-[color:var(--kali-text)]">
                 {captureOpportunities}
               </span>
             </span>
             <span className={badgeBase}>
               Moves to draw
-              <span className="rounded bg-black/40 px-2 py-0.5 font-mono text-[0.7rem] text-white">
+              <span className="rounded bg-[color:color-mix(in_srgb,var(--kali-control)_25%,var(--kali-panel))] px-2 py-0.5 font-mono text-[0.7rem] text-[color:var(--kali-text)]">
                 {movesUntilDraw}
               </span>
             </span>
             <span className={badgeBase}>
               Pieces
-              <span className="rounded bg-black/40 px-2 py-0.5 font-mono text-[0.7rem] text-white">
+              <span className="rounded bg-[color:color-mix(in_srgb,var(--kali-control)_25%,var(--kali-panel))] px-2 py-0.5 font-mono text-[0.7rem] text-[color:var(--kali-text)]">
                 {pieceCounts.red}/{pieceCounts.black}
               </span>
             </span>
@@ -314,7 +332,7 @@ export default function CheckersPage() {
         </section>
 
         <section className="space-y-3">
-          <h3 className="text-[0.65rem] font-semibold uppercase tracking-widest text-ub-orange">
+          <h3 className="text-[0.65rem] font-semibold uppercase tracking-widest text-[color:var(--kali-control)]">
             Configuration
           </h3>
           <div
@@ -323,9 +341,9 @@ export default function CheckersPage() {
             }`}
           >
             <label className="flex flex-col gap-1 text-xs md:flex-auto">
-              <span className="uppercase tracking-wide text-[0.65rem] text-gray-300">Rules</span>
+              <span className="uppercase tracking-wide text-[0.65rem] text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)]">Rules</span>
               <select
-                className="rounded bg-gray-800 px-2 py-1 text-sm"
+                className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel)] px-2 py-1 text-sm text-[color:var(--kali-text)]"
                 value={rule}
                 onChange={(e) => setRule(e.target.value as 'forced' | 'relaxed')}
               >
@@ -334,9 +352,9 @@ export default function CheckersPage() {
               </select>
             </label>
             <label className="flex flex-col gap-1 text-xs md:flex-auto">
-              <span className="uppercase tracking-wide text-[0.65rem] text-gray-300">AI</span>
+              <span className="uppercase tracking-wide text-[0.65rem] text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)]">AI</span>
               <select
-                className="rounded bg-gray-800 px-2 py-1 text-sm"
+                className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel)] px-2 py-1 text-sm text-[color:var(--kali-text)]"
                 value={algorithm}
                 onChange={(e) => setAlgorithm(e.target.value as 'alphabeta' | 'mcts')}
               >
@@ -345,7 +363,7 @@ export default function CheckersPage() {
               </select>
             </label>
             <label className="flex flex-col gap-2 text-xs md:flex-[1_1_100%]">
-              <span className="uppercase tracking-wide text-[0.65rem] text-gray-300">Difficulty</span>
+              <span className="uppercase tracking-wide text-[0.65rem] text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)]">Difficulty</span>
               <div className="flex items-center gap-2">
                 <input
                   type="range"
@@ -356,32 +374,32 @@ export default function CheckersPage() {
                   aria-label="Difficulty"
                   className="h-2 flex-1 accent-amber-400"
                 />
-                <span className="tabular-nums text-sm text-gray-200">{difficulty}</span>
+                <span className="tabular-nums text-sm text-[color:color-mix(in_srgb,var(--kali-text)_85%,transparent)]">{difficulty}</span>
               </div>
             </label>
           </div>
         </section>
 
         <section className="space-y-3">
-          <h3 className="text-[0.65rem] font-semibold uppercase tracking-widest text-ub-orange">
+          <h3 className="text-[0.65rem] font-semibold uppercase tracking-widest text-[color:var(--kali-control)]">
             Actions
           </h3>
           <div className="flex flex-wrap gap-2">
             <button
-              className="rounded bg-gray-700 px-3 py-1 text-sm transition hover:bg-gray-600"
+              className="rounded border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent)] px-3 py-1 text-sm transition hover:bg-[color:color-mix(in_srgb,var(--kali-control)_20%,var(--kali-panel))]"
               onClick={reset}
             >
               Reset
             </button>
             <button
-              className="rounded bg-gray-700 px-3 py-1 text-sm transition hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent)] px-3 py-1 text-sm transition hover:bg-[color:color-mix(in_srgb,var(--kali-control)_20%,var(--kali-panel))] disabled:cursor-not-allowed disabled:opacity-50"
               onClick={undo}
               disabled={!history.length}
             >
               Undo
             </button>
             <button
-              className="rounded bg-gray-700 px-3 py-1 text-sm transition hover:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent)] px-3 py-1 text-sm transition hover:bg-[color:color-mix(in_srgb,var(--kali-control)_20%,var(--kali-panel))] disabled:cursor-not-allowed disabled:opacity-50"
               onClick={hintMove}
               disabled={!!winner}
             >
@@ -391,15 +409,15 @@ export default function CheckersPage() {
         </section>
 
         <section
-          className={`space-y-2 rounded-md bg-black/30 p-2 ${
+          className={`space-y-2 rounded-md bg-[color:var(--kali-panel-highlight)] p-2 ${
             variant === 'mobile' ? 'flex-1 overflow-y-auto' : 'max-h-[28rem] overflow-y-auto'
           }`}
           aria-label="Move log"
           aria-live="polite"
         >
-          <div className="flex items-center justify-between text-[0.65rem] uppercase tracking-wide text-gray-300">
+          <div className="flex items-center justify-between text-[0.65rem] uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)]">
             <span>Moves</span>
-            <span className="capitalize text-gray-200">
+            <span className="capitalize text-[color:var(--kali-text)]">
               {winner ? (winner === 'Draw' ? 'Draw' : `${winner} wins`) : `Turn: ${turn}`}
             </span>
           </div>
@@ -411,23 +429,29 @@ export default function CheckersPage() {
                 return (
                   <li
                     key={`${entry.notation}-${idx}`}
-                    className="grid grid-cols-[auto_auto_1fr] items-center gap-2 rounded bg-white/5 px-2 py-1"
+                    className={`grid grid-cols-[auto_auto_1fr] items-center gap-2 rounded px-2 py-1 ${
+                      idx % 2 === 0
+                        ? 'bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,transparent)]'
+                        : 'bg-[color:color-mix(in_srgb,var(--kali-control)_18%,var(--kali-panel))]'
+                    }`}
                   >
-                    <span className="font-mono text-xs text-gray-300">{prefix}</span>
+                    <span className="font-mono text-xs text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)]">{prefix}</span>
                     <span
                       className={`text-xs font-semibold capitalize ${
-                        entry.player === 'red' ? 'text-red-300' : 'text-gray-200'
+                        entry.player === 'red'
+                          ? 'text-[color:color-mix(in_srgb,var(--color-severity-high)_75%,var(--kali-control))]'
+                          : 'text-[color:color-mix(in_srgb,var(--kali-text)_85%,transparent)]'
                       }`}
                     >
                       {entry.player}
                     </span>
-                    <span className="font-mono text-sm text-white">{entry.notation}</span>
+                    <span className="font-mono text-sm text-[color:var(--kali-text)]">{entry.notation}</span>
                   </li>
                 );
               })}
             </ol>
           ) : (
-            <p className="text-xs text-gray-400">Moves will appear once play begins.</p>
+            <p className="text-xs text-[color:color-mix(in_srgb,var(--kali-text)_60%,transparent)]">Moves will appear once play begins.</p>
           )}
         </section>
       </div>
@@ -444,12 +468,12 @@ export default function CheckersPage() {
         style={{ paddingBottom: 'var(--panel-height)' }}
       >
         <div className="w-[var(--board-size)] max-w-full">
-          <div className="mb-4 space-y-2 rounded-2xl border border-ub-orange/40 bg-black/40 px-4 py-3 text-[0.8rem] text-gray-100 shadow-lg shadow-black/40">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-ub-orange">
+          <div className="mb-4 space-y-2 rounded-2xl border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel-highlight)] px-4 py-3 text-[0.8rem] text-[color:var(--kali-text)] shadow-lg shadow-kali-panel">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-[color:var(--kali-control)]">
               Match briefing
             </p>
-            <p className="text-[0.75rem] leading-relaxed text-gray-200">
-              <span className="font-semibold text-white">
+            <p className="text-[0.75rem] leading-relaxed text-[color:color-mix(in_srgb,var(--kali-text)_85%,transparent)]">
+              <span className="font-semibold text-[color:var(--kali-text)]">
                 {winner
                   ? winner === 'Draw'
                     ? 'The match ends in a draw.'
@@ -459,21 +483,22 @@ export default function CheckersPage() {
               Use the board or the Tab key to focus a square, then press Enter to select a
               piece and complete moves.
             </p>
-            <p className="text-[0.75rem] leading-relaxed text-gray-200">
-              <span className="font-semibold text-ub-orange">Quick tip:</span>{' '}
+            <p className="text-[0.75rem] leading-relaxed text-[color:color-mix(in_srgb,var(--kali-text)_85%,transparent)]">
+              <span className="font-semibold text-[color:var(--kali-control)]">Quick tip:</span>{' '}
               {winner
                 ? 'Hints are disabled after the final move.'
                 : `Tap Hint to briefly light up a ${formatPlayer(turn)} move. Undo rewinds the last turn if you need a redo.`}
             </p>
-            <p className="text-[0.75rem] leading-relaxed text-gray-200">
-              <span className="font-semibold text-ub-orange">Rule set:</span>{' '}
+            <p className="text-[0.75rem] leading-relaxed text-[color:color-mix(in_srgb,var(--kali-text)_85%,transparent)]">
+              <span className="font-semibold text-[color:var(--kali-control)]">Rule set:</span>{' '}
               {rule === 'forced'
                 ? 'Forced capture is active — jumps must be taken when available.'
                 : 'Relaxed capture is active — jumps are optional if you prefer positioning.'}
             </p>
           </div>
           <div
-            className="relative h-[var(--board-size)] w-full rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/60 p-3 shadow-xl shadow-black/40"
+            className="relative h-[var(--board-size)] w-full rounded-3xl border border-white/10 p-3 shadow-xl shadow-kali-panel"
+            style={boardSurfaceStyle}
           >
             <div className="grid h-full w-full grid-cols-8 grid-rows-8 gap-[0.35rem]">
               {board.map((row, r) =>
@@ -526,14 +551,14 @@ export default function CheckersPage() {
                       {cell && (
                         <div
                           className={`flex h-[70%] w-[70%] items-center justify-center rounded-full shadow-lg shadow-black/60 ${
-                            cell.color === 'red'
-                              ? 'bg-gradient-to-b from-red-300 via-red-500 to-red-700 text-red-100'
-                              : 'bg-gradient-to-b from-slate-300 via-slate-600 to-slate-900 text-slate-100'
-                          } ${
                             cell.king
                               ? 'ring-4 ring-offset-2 ring-offset-black/60 ring-yellow-300'
                               : 'ring-2 ring-offset-2 ring-offset-black/60 ring-black/30'
                           } ${isCrowned ? 'motion-safe:animate-flourish' : ''}`}
+                          style={{
+                            background: cell.color === 'red' ? pieceSurfaces.red : pieceSurfaces.black,
+                            color: 'var(--kali-text)',
+                          }}
                         />
                       )}
                     </button>

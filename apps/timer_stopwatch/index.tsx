@@ -1,5 +1,11 @@
 'use client';
-import { useEffect, useState, useRef, RefObject } from 'react';
+import {
+  useEffect,
+  useState,
+  useRef,
+  type RefObject,
+  type CSSProperties,
+} from 'react';
 import useIntersection from '../../hooks/useIntersection';
 
 export default function TimerStopwatch() {
@@ -13,14 +19,19 @@ export default function TimerStopwatch() {
     }
   }, [isVisible]);
 
+  const terminalThemeVars = {
+    '--kali-terminal': 'var(--color-terminal)',
+  } as CSSProperties;
+
   const tabButtonBase =
     'flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus';
-  const tabInactiveStyles = 'bg-white/5 text-slate-300 hover:bg-white/10';
+  const tabInactiveStyles =
+    'bg-[color:color-mix(in_srgb,var(--color-accent)_14%,transparent)] text-[color:color-mix(in_srgb,var(--color-accent)_78%,white_22%)] hover:bg-[color:color-mix(in_srgb,var(--color-accent)_22%,transparent)] hover:text-[color:var(--color-accent)]';
   const tabActiveStyles =
-    'bg-kali-primary text-slate-900 shadow-lg shadow-[0_8px_24px_rgba(15,118,110,0.25)]';
+    'bg-kali-accent text-kali-dark shadow-lg shadow-[0_8px_24px_rgba(15,118,110,0.25)]';
 
   const panelWrapperStyles =
-    'flex flex-col gap-6 rounded-2xl border border-white/5 bg-[#111422]/80 p-6 shadow-inner backdrop-blur-sm';
+    'flex flex-col gap-6 rounded-2xl border border-[color:color-mix(in_srgb,var(--kali-panel-border)_65%,transparent_35%)] bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,transparent_8%)] p-6 shadow-inner backdrop-blur-sm';
   const inputWrapperStyles =
     'flex flex-wrap items-end justify-center gap-4 text-slate-200 sm:justify-start';
   const inputLabelStyles =
@@ -41,11 +52,12 @@ export default function TimerStopwatch() {
     <div
       ref={containerRef}
       className="mx-auto flex max-w-xl flex-col gap-6 text-slate-100"
+      style={terminalThemeVars}
     >
       <div
         role="tablist"
         aria-label="Timer or stopwatch modes"
-        className="flex rounded-2xl border border-white/5 bg-white/5 p-1 backdrop-blur"
+        className="flex rounded-2xl border border-[color:color-mix(in_srgb,var(--kali-panel-border)_60%,transparent_40%)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent_12%)] p-1 backdrop-blur"
       >
         <button
           id="modeTimer"
@@ -97,7 +109,7 @@ export default function TimerStopwatch() {
           </label>
           <span
             aria-hidden="true"
-            className="pb-2 text-3xl font-semibold leading-none text-kali-accent"
+            className="pb-2 text-3xl font-semibold leading-none text-[color:var(--kali-terminal)]"
           >
             :
           </span>
@@ -116,7 +128,7 @@ export default function TimerStopwatch() {
         </div>
 
         <div
-          className="display rounded-2xl border border-white/10 bg-black/60 px-6 py-4 text-center text-5xl font-mono font-semibold tracking-tight text-kali-accent shadow-lg"
+          className="display rounded-2xl border border-[color:color-mix(in_srgb,var(--kali-panel-border)_60%,transparent_40%)] bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,transparent_10%)] px-6 py-4 text-center text-5xl font-mono font-semibold tracking-tight text-[color:var(--kali-terminal)] shadow-lg"
           id="timerDisplay"
           aria-live="polite"
         >
@@ -145,7 +157,7 @@ export default function TimerStopwatch() {
         style={{ contentVisibility: 'auto' }}
       >
         <div
-          className="display rounded-2xl border border-white/10 bg-black/60 px-6 py-4 text-center text-5xl font-mono font-semibold tracking-tight text-kali-accent shadow-lg"
+          className="display rounded-2xl border border-[color:color-mix(in_srgb,var(--kali-panel-border)_60%,transparent_40%)] bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,transparent_10%)] px-6 py-4 text-center text-5xl font-mono font-semibold tracking-tight text-[color:var(--kali-terminal)] shadow-lg"
           id="stopwatchDisplay"
           aria-live="polite"
         >
@@ -169,7 +181,7 @@ export default function TimerStopwatch() {
 
         <ul
           id="laps"
-          className="mt-6 max-h-48 space-y-2 overflow-y-auto pr-1 text-sm text-slate-200 [&>li]:rounded-xl [&>li]:border [&>li]:border-white/10 [&>li]:bg-white/5 [&>li]:px-4 [&>li]:py-2 [&>li]:font-mono"
+          className="mt-6 max-h-48 space-y-2 overflow-y-auto pr-1 text-sm text-[color:var(--kali-terminal)] [&>li]:rounded-xl [&>li]:border [&>li]:border-[color:color-mix(in_srgb,var(--kali-panel-border)_55%,transparent_45%)] [&>li]:bg-[color:color-mix(in_srgb,var(--kali-panel)_86%,transparent_14%)] [&>li]:px-4 [&>li]:py-2 [&>li]:font-mono"
         />
       </div>
     </div>

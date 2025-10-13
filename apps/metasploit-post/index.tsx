@@ -54,9 +54,18 @@ interface QueueItem {
 }
 
 const queueStatusStyles: Record<QueueStatus, string> = {
-  pending: 'bg-yellow-500/20 text-yellow-200 border border-yellow-500/40',
-  running: 'bg-blue-500/20 text-blue-200 border border-blue-500/40',
-  done: 'bg-green-500/20 text-green-200 border border-green-500/40',
+  pending:
+    'border border-[color:color-mix(in_srgb,var(--color-severity-medium)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--color-severity-medium)_18%,transparent)] text-[color:var(--color-severity-medium)]',
+  running:
+    'border border-[color:color-mix(in_srgb,var(--color-severity-high)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--color-severity-high)_18%,transparent)] text-[color:var(--color-severity-high)]',
+  done:
+    'border border-[color:color-mix(in_srgb,var(--color-severity-low)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--color-severity-low)_18%,transparent)] text-[color:var(--color-severity-low)]',
+};
+
+const queueStatusTextStyles: Record<QueueStatus, string> = {
+  pending: 'text-[color:var(--color-severity-medium)]',
+  running: 'text-[color:var(--color-severity-high)]',
+  done: 'text-[color:var(--color-severity-low)]',
 };
 
 const queueStatusLabels: Record<QueueStatus, string> = {
@@ -181,7 +190,13 @@ const EvidenceVault: React.FC = () => {
           onChange={(e) => setTags(e.target.value)}
           aria-labelledby="metasploit-evidence-tags-label"
         />
-      <button onClick={addItem} className="px-3 py-1 bg-blue-600 rounded">Add</button>
+      <button
+        onClick={addItem}
+        className="rounded px-3 py-1 text-sm font-medium text-[color:var(--color-dark)] transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--kali-control)]"
+        style={{ background: 'var(--kali-control)' }}
+      >
+        Add
+      </button>
       <ul className="mt-4 list-disc pl-6">
         {items.map((i) => (
           <li key={i.id} className="mb-2">
@@ -377,7 +392,7 @@ const MetasploitPost: React.FC = () => {
   const hasMissingOptions = selectedMissingOptions.length > 0;
 
   return (
-    <div className="p-4 bg-gray-900 text-white min-h-screen">
+    <div className="min-h-screen bg-[var(--kali-panel)] p-4 text-[color:var(--color-text)]">
       <h1 className="text-xl mb-4">Metasploit Post Modules</h1>
       <div
         className="mb-4 rounded border border-gray-700 bg-gray-800 p-3"
@@ -386,7 +401,7 @@ const MetasploitPost: React.FC = () => {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Execution Queue</h2>
           {isQueueProcessing && (
-            <span className="text-xs uppercase text-blue-300">Processing</span>
+            <span className={`text-xs uppercase ${queueStatusTextStyles.running}`}>Processing</span>
           )}
         </div>
         {queue.length === 0 ? (
@@ -407,7 +422,10 @@ const MetasploitPost: React.FC = () => {
         )}
       </div>
       {statusMessage && (
-        <div className="mb-4 rounded border border-blue-500/40 bg-blue-900/30 p-3 text-sm" role="status">
+        <div
+          className="mb-4 rounded border border-[color:color-mix(in_srgb,var(--color-info)_32%,transparent)] bg-[color:color-mix(in_srgb,var(--color-info)_14%,transparent)] p-3 text-sm text-[color:var(--color-info)]"
+          role="status"
+        >
           {statusMessage}
         </div>
       )}
@@ -420,8 +438,10 @@ const MetasploitPost: React.FC = () => {
           >
             {t}
             <span
-              className={`ml-2 px-2 py-0.5 rounded text-xs ${
-                results[t].length ? 'bg-green-600' : 'bg-gray-600'
+              className={`ml-2 rounded px-2 py-0.5 text-xs ${
+                results[t].length
+                  ? 'bg-[color:color-mix(in_srgb,var(--color-severity-low)_22%,transparent)] text-[color:var(--color-severity-low)]'
+                  : 'bg-[color:color-mix(in_srgb,var(--color-severity-medium)_22%,transparent)] text-[color:var(--color-severity-medium)]'
               }`}
             >
               {results[t].length ? 'done' : 'pending'}
@@ -433,7 +453,11 @@ const MetasploitPost: React.FC = () => {
         {results[activeTab].map((r, i) => (
           <ResultCard key={i} title={r.title} output={r.output} />
         ))}
-        <button onClick={saveReport} className="mt-2 px-3 py-1 bg-blue-600 rounded">
+        <button
+          onClick={saveReport}
+          className="mt-2 rounded px-3 py-1 text-sm font-medium text-[color:var(--color-dark)] transition hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--kali-control)]"
+          style={{ background: 'var(--kali-control)' }}
+        >
           Save report
         </button>
       </div>
@@ -501,7 +525,9 @@ const MetasploitPost: React.FC = () => {
                 {queue.map((m) => (
                   <li key={m.module.path}>
                     {m.module.path}
-                    <span className="ml-2 text-xs text-gray-400">({queueStatusLabels[m.status]})</span>
+                    <span className={`ml-2 text-xs ${queueStatusTextStyles[m.status]}`}>
+                      ({queueStatusLabels[m.status]})
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -528,11 +554,17 @@ const MetasploitPost: React.FC = () => {
                   />
                 <button
                   onClick={saveSet}
-                  className={`px-3 py-1 rounded ${
+                  className={`rounded px-3 py-1 text-sm font-medium text-[color:var(--color-dark)] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--kali-control)] ${
                     queue.length === 0 || !setName.trim()
-                      ? 'bg-blue-600/40 cursor-not-allowed'
-                      : 'bg-blue-600'
+                      ? 'cursor-not-allowed opacity-70'
+                      : 'hover:opacity-90'
                   }`}
+                  style={{
+                    background:
+                      queue.length === 0 || !setName.trim()
+                        ? 'color-mix(in srgb, var(--kali-control) 35%, transparent)'
+                        : 'var(--kali-control)',
+                  }}
                   disabled={queue.length === 0 || !setName.trim()}
                 >
                   Save Set
@@ -565,15 +597,40 @@ const MetasploitPost: React.FC = () => {
           <svg width="220" height={steps.length * 80} className="mt-4">
             {steps.map((step, i) => (
               <g key={step.label} transform={`translate(20, ${i * 70 + 20})`}>
-                <circle cx="0" cy="0" r="20" fill={step.done ? '#22c55e' : '#6b7280'} />
+                <circle
+                  cx="0"
+                  cy="0"
+                  r="20"
+                  fill={
+                    step.done
+                      ? 'var(--color-severity-low)'
+                      : 'color-mix(in srgb, var(--color-text) 28%, transparent)'
+                  }
+                />
                 {step.done && (
                   <path d="M-8 0 l4 4 l8 -8" stroke="#fff" strokeWidth="2" fill="none" />
                 )}
-                <text x="40" y="5" fill={step.done ? '#22c55e' : '#d1d5db'} fontSize="14">
+                <text
+                  x="40"
+                  y="5"
+                  fill={
+                    step.done
+                      ? 'var(--color-severity-low)'
+                      : 'color-mix(in srgb, var(--color-text) 65%, transparent)'
+                  }
+                  fontSize="14"
+                >
                   {step.label}
                 </text>
                 {i < steps.length - 1 && (
-                  <line x1="0" y1="20" x2="0" y2="70" stroke="#6b7280" strokeWidth="2" />
+                  <line
+                    x1="0"
+                    y1="20"
+                    x2="0"
+                    y2="70"
+                    stroke="color-mix(in srgb, var(--color-text) 28%, transparent)"
+                    strokeWidth="2"
+                  />
                 )}
               </g>
             ))}

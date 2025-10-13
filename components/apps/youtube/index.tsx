@@ -327,10 +327,10 @@ export default function YouTubeApp({ initialResults }: Props) {
   }, [clearHistoryState]);
 
   return (
-    <div className="flex h-full flex-col bg-gradient-to-br from-[#0f172a] via-[#111827] to-[#020617] text-white">
-      <header className="border-b border-white/10 bg-black/30 px-6 py-6 shadow-sm">
+    <div className="flex h-full flex-col bg-[radial-gradient(circle_at_top_left,_color-mix(in_srgb,var(--kali-blue)_18%,var(--color-bg))_0%,_var(--color-bg)_45%,_var(--color-dark)_100%)] text-[var(--color-text)]">
+      <header className="border-b border-[var(--kali-panel-border)] bg-[var(--color-overlay-strong)] px-6 py-6 shadow-sm backdrop-blur">
         <h1 className="text-2xl font-semibold">YouTube Explorer</h1>
-        <p className="mt-2 max-w-3xl text-sm text-ubt-grey">
+        <p className="mt-2 max-w-3xl text-sm text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
           Search for security walkthroughs, development tutorials, and capture the flag recaps. Click any result to watch it and it will be remembered in your history.
         </p>
         <form
@@ -346,27 +346,27 @@ export default function YouTubeApp({ initialResults }: Props) {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={'Try "Wireshark", "OSINT workflow", or "Metasploit demo"'}
-            className="w-full rounded-md border border-white/10 bg-black/50 px-4 py-3 text-sm text-white placeholder:text-ubt-grey focus:border-ubt-green focus:outline-none focus:ring-2 focus:ring-ubt-green/40"
+            className="w-full rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[color:var(--color-text)] placeholder:text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)] focus:border-[var(--color-focus-ring)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)]"
           />
           <button
             type="submit"
-            className="rounded-md bg-ubt-green px-5 py-3 text-sm font-semibold text-black transition hover:bg-ubt-green/90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-md border border-[var(--kali-panel-border)] bg-kali-control px-5 py-3 text-sm font-semibold text-black shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:cursor-not-allowed disabled:opacity-60"
             disabled={loading}
           >
             {loading ? 'Searching…' : 'Search'}
           </button>
         </form>
         {!hasApiKey && (
-          <p className="mt-3 text-xs text-ubt-grey">
+          <p className="mt-3 text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
             Using the built-in demo library because
             {' '}
-            <code className="rounded bg-black/60 px-1">NEXT_PUBLIC_YOUTUBE_API_KEY</code>
+            <code className="rounded bg-[var(--kali-panel-highlight)] px-1">NEXT_PUBLIC_YOUTUBE_API_KEY</code>
             {' '}
             is not configured.
           </p>
         )}
         {lastSearchSource === 'demo' && hasApiKey && !error && (
-          <p className="mt-3 text-xs text-ubt-grey" role="status">
+          <p className="mt-3 text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]" role="status">
             Showing demo results while the YouTube API request completes.
           </p>
         )}
@@ -378,11 +378,11 @@ export default function YouTubeApp({ initialResults }: Props) {
       </header>
 
       <main className="flex flex-1 flex-col gap-6 px-6 py-6 lg:flex-row">
-        <section className="flex-1 rounded-lg border border-white/10 bg-black/40 p-5 shadow-sm">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-ubt-grey">
+        <section className="flex-1 rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface)] p-5 shadow-kali-panel">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
             Watch
           </h2>
-          <div className="mt-3 aspect-video overflow-hidden rounded-lg bg-black/60">
+          <div className="mt-3 aspect-video overflow-hidden rounded-lg bg-[var(--kali-panel-highlight)]">
             {selectedVideo ? (
               <iframe
                 key={selectedVideo.id}
@@ -393,21 +393,21 @@ export default function YouTubeApp({ initialResults }: Props) {
                 className="h-full w-full"
               />
             ) : (
-              <div className="flex h-full items-center justify-center text-sm text-ubt-grey">
+              <div className="flex h-full items-center justify-center text-sm text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
                 Search and choose a video to start watching.
               </div>
             )}
           </div>
           {selectedVideo && (
-            <div className="mt-4 space-y-2 text-sm text-ubt-grey">
-              <h3 className="text-lg font-semibold text-white">
+            <div className="mt-4 space-y-2 text-sm text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
+              <h3 className="text-lg font-semibold text-[var(--color-text)]">
                 {selectedVideo.title}
               </h3>
-              <p className="text-xs text-ubt-grey">
+              <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
                 {selectedVideo.channelTitle} • Published {formatDate(selectedVideo.publishedAt)}
               </p>
               {selectedVideo.description && (
-                <p className="text-sm leading-relaxed text-ubt-cool-grey">
+                <p className="text-sm leading-relaxed text-[color:color-mix(in_srgb,var(--color-text)_72%,transparent)]">
                   {selectedVideo.description}
                 </p>
               )}
@@ -416,15 +416,15 @@ export default function YouTubeApp({ initialResults }: Props) {
         </section>
 
         <aside className="lg:w-80">
-          <div className="rounded-lg border border-white/10 bg-black/40 p-5 shadow-sm">
+          <div className="rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface)] p-5 shadow-kali-panel">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-ubt-grey">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
                 Recently watched
               </h2>
               <button
                 type="button"
                 onClick={handleClearHistory}
-                className="text-xs font-semibold text-ubt-green transition hover:text-ubt-green/80 disabled:opacity-40"
+                className="text-xs font-semibold text-kali-control transition hover:text-kali-control/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:opacity-40"
                 disabled={!history.length}
               >
                 Clear history
@@ -437,7 +437,7 @@ export default function YouTubeApp({ initialResults }: Props) {
                     <button
                       type="button"
                       onClick={() => handleSelectVideo(video)}
-                      className="flex w-full items-center gap-3 rounded-md border border-white/10 bg-black/40 p-3 text-left transition hover:border-ubt-green/60 hover:text-ubt-green"
+                      className="flex w-full items-center gap-3 rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] p-3 text-left shadow-[0_6px_16px_rgba(8,15,26,0.32)] transition-colors hover:border-kali-control hover:text-kali-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
                       aria-label={`Watch ${video.title} again`}
                     >
                       {video.thumbnail ? (
@@ -447,15 +447,15 @@ export default function YouTubeApp({ initialResults }: Props) {
                           className="h-12 w-20 rounded object-cover"
                         />
                       ) : (
-                        <div className="flex h-12 w-20 items-center justify-center rounded bg-black/60 text-xs text-ubt-grey">
+                        <div className="flex h-12 w-20 items-center justify-center rounded bg-[var(--kali-panel-highlight)] text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
                           No preview
                         </div>
                       )}
                       <div className="flex-1">
-                        <p className="text-sm font-semibold text-white line-clamp-2">
+                        <p className="text-sm font-semibold text-[var(--color-text)] line-clamp-2">
                           {video.title}
                         </p>
-                        <p className="text-xs text-ubt-grey">
+                        <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
                           {video.channelTitle}
                         </p>
                       </div>
@@ -463,7 +463,7 @@ export default function YouTubeApp({ initialResults }: Props) {
                   </li>
                 ))
               ) : (
-                <li className="text-xs text-ubt-grey">
+                <li className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
                   Your history is empty. Watch a video to add it here.
                 </li>
               )}
@@ -472,14 +472,14 @@ export default function YouTubeApp({ initialResults }: Props) {
         </aside>
       </main>
 
-      <section className="border-t border-white/5 bg-black/40 px-6 py-6">
+      <section className="border-t border-[color:color-mix(in_srgb,var(--kali-panel-border)_65%,transparent)] bg-[var(--color-surface)] px-6 py-6 shadow-[0_-1px_0_rgba(15,148,210,0.08)]">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-ubt-grey">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
             Search results
           </h2>
           {loading && (
-            <span className="flex items-center gap-2 text-xs text-ubt-green">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-ubt-green" aria-hidden />
+            <span className="flex items-center gap-2 text-xs text-kali-control">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-kali-control" aria-hidden />
               Loading results…
             </span>
           )}
@@ -493,10 +493,10 @@ export default function YouTubeApp({ initialResults }: Props) {
                   key={video.id}
                   type="button"
                   onClick={() => handleSelectVideo(video)}
-                  className={`flex h-full flex-col overflow-hidden rounded-lg border bg-black/40 text-left transition focus:outline-none focus:ring-2 focus:ring-ubt-green/60 ${
+                  className={`flex h-full flex-col overflow-hidden rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] text-left shadow-[0_8px_22px_rgba(8,15,26,0.4)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-kali-control ${
                     isActive
-                      ? 'border-ubt-green/80 shadow-lg'
-                      : 'border-white/10 hover:border-ubt-green/50 hover:shadow-lg'
+                      ? 'border-kali-control shadow-[0_10px_30px_rgba(15,148,210,0.28)]'
+                      : 'hover:shadow-[0_10px_35px_rgba(2,6,23,0.45)]'
                   }`}
                   aria-label={`Watch ${video.title}`}
                 >
@@ -507,21 +507,21 @@ export default function YouTubeApp({ initialResults }: Props) {
                       className="h-40 w-full object-cover"
                     />
                   ) : (
-                    <div className="flex h-40 w-full items-center justify-center bg-black/60 text-xs text-ubt-grey">
+                    <div className="flex h-40 w-full items-center justify-center bg-[var(--kali-panel-highlight)] text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
                       No preview available
                     </div>
                   )}
                   <div className="flex flex-1 flex-col gap-2 p-4">
-                    <h3 className="text-base font-semibold text-white line-clamp-2">
+                    <h3 className="text-base font-semibold text-[var(--color-text)] line-clamp-2">
                       {video.title}
                     </h3>
-                    <p className="text-xs text-ubt-grey">
+                    <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
                       {video.channelTitle}
                     </p>
-                    <p className="line-clamp-3 text-xs text-ubt-cool-grey/80">
+                    <p className="line-clamp-3 text-xs text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
                       {video.description || 'No description available.'}
                     </p>
-                    <p className="mt-auto text-[11px] uppercase tracking-wide text-ubt-grey">
+                    <p className="mt-auto text-[11px] uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
                       {formatDate(video.publishedAt)}
                     </p>
                   </div>
@@ -530,7 +530,7 @@ export default function YouTubeApp({ initialResults }: Props) {
             })}
           </div>
         ) : (
-          <p className="text-sm text-ubt-grey">
+          <p className="text-sm text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
             {loading
               ? 'Fetching results…'
               : 'No matches yet. Try a different search term or clear the search box to see featured videos.'}

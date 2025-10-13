@@ -13,6 +13,21 @@ import {
   setDrawMode,
 } from '../games/solitaire/logic';
 
+const SUIT_COLOR_CLASSES: Record<Suit, string> = {
+  '♠': 'text-[color:var(--color-severity-low)]',
+  '♣': 'text-[color:var(--color-severity-medium)]',
+  '♥': 'text-[color:var(--color-severity-critical)]',
+  '♦': 'text-[color:var(--color-severity-high)]',
+};
+
+const FACE_DOWN_CLASS =
+  'text-[color:color-mix(in_srgb,var(--kali-text)_35%,transparent)]';
+
+const CONTROL_CLASSES =
+  'rounded border border-[color:var(--kali-border)] bg-[var(--kali-panel)] px-2 py-1 text-sm text-[color:var(--kali-text)] transition hover:border-[color:color-mix(in_srgb,var(--kali-control)_60%,var(--kali-border))] hover:bg-[color-mix(in_srgb,var(--kali-control)_14%,var(--kali-panel))] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus';
+
+const BUTTON_CLASSES = `${CONTROL_CLASSES} font-semibold`;
+
 const Solitaire = () => {
   const getStoredMode = (): 'draw1' | 'draw3' => {
     if (typeof window === 'undefined') return 'draw1';
@@ -44,22 +59,29 @@ const Solitaire = () => {
   };
 
   const renderPile = (pile: Card[], key: number) => (
-    <div key={key} className="min-w-[60px] rounded border p-1">
-      {pile.map((card, idx) => (
-        <div
-          key={idx}
-          className={card.faceDown ? 'text-gray-400' : ''}
-        >
-          {cardToString(card)}
-        </div>
-      ))}
+    <div
+      key={key}
+      className="min-w-[60px] rounded border border-[color:var(--kali-border)] bg-[var(--kali-panel)] p-1 text-[color:var(--kali-text)] shadow-inner shadow-black/30"
+    >
+      {pile.map((card, idx) => {
+        const textClass = card.faceDown
+          ? FACE_DOWN_CLASS
+          : SUIT_COLOR_CLASSES[card.suit];
+        return (
+          <div key={idx} className={textClass}>
+            {cardToString(card)}
+          </div>
+        );
+      })}
     </div>
   );
 
   return (
-    <div className="p-4">
-      <div className="mb-2 flex gap-2">
-        <label htmlFor="draw-mode">Draw:</label>
+    <div className="p-4 text-[color:var(--kali-text)]">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <label htmlFor="draw-mode" className="text-sm text-[color:var(--kali-text)]">
+          Draw:
+        </label>
         <select
           id="draw-mode"
           value={state.drawMode}
@@ -69,21 +91,21 @@ const Solitaire = () => {
             localStorage.setItem('solitaire-mode', mode);
             refresh();
           }}
-          className="rounded border p-1"
+          className={CONTROL_CLASSES}
         >
           <option value="draw1">1</option>
           <option value="draw3">3</option>
         </select>
-        <button type="button" onClick={onDraw} className="rounded border px-2">
+        <button type="button" onClick={onDraw} className={BUTTON_CLASSES}>
           Draw
         </button>
-        <button type="button" onClick={onAutoMove} className="rounded border px-2">
+        <button type="button" onClick={onAutoMove} className={BUTTON_CLASSES}>
           Auto Move
         </button>
-        <button type="button" onClick={onHint} className="rounded border px-2">
+        <button type="button" onClick={onHint} className={BUTTON_CLASSES}>
           Hint
         </button>
-        <button type="button" onClick={onReset} className="rounded border px-2">
+        <button type="button" onClick={onReset} className={BUTTON_CLASSES}>
           Reset
         </button>
       </div>

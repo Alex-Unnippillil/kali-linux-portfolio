@@ -225,10 +225,10 @@ function ProjectCard({
 
   return (
     <div className="relative h-full">
-      <div className="absolute inset-y-0 right-0 flex w-40 bg-blue-600 text-white sm:hidden">
+      <div className="absolute inset-y-0 right-0 flex w-40 bg-[var(--kali-control)] text-slate-900 shadow-[inset_1px_0_0_rgba(255,255,255,0.18)] sm:hidden">
         <button
           type="button"
-          className="w-1/2 px-3 text-sm font-medium border-r border-white/20"
+          className="w-1/2 border-r border-black/10 px-3 text-sm font-medium transition hover:bg-[color-mix(in_srgb,var(--kali-control)_82%,#000000)]"
           onClick={() => {
             onOpen(project);
             onSwipeClose();
@@ -238,7 +238,7 @@ function ProjectCard({
         </button>
         <button
           type="button"
-          className="w-1/2 px-3 text-sm font-medium"
+          className="w-1/2 px-3 text-sm font-medium transition hover:bg-[color-mix(in_srgb,var(--kali-control)_82%,#000000)]"
           onClick={() => {
             onCompare(project);
             onSwipeClose();
@@ -249,7 +249,7 @@ function ProjectCard({
         </button>
       </div>
       <div
-        className="flex h-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-transform duration-150 ease-out"
+        className="flex h-full flex-col overflow-hidden rounded-xl border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] shadow-kali-panel transition-transform duration-150 ease-out"
         style={{ transform: `translateX(${offset}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -258,46 +258,46 @@ function ProjectCard({
       >
         <div className="flex flex-col gap-4 p-5 sm:flex-row">
           <div className="sm:w-52 sm:flex-none">
-            <div className="aspect-[4/3] w-full overflow-hidden rounded-lg bg-gray-100">
+            <div className="aspect-[4/3] w-full overflow-hidden rounded-lg bg-[var(--kali-panel-highlight)]">
               <img src={project.thumbnail} alt={project.title} className="h-full w-full object-cover" />
             </div>
           </div>
           <div className="flex-1 space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="space-y-1">
-                <h3 className="text-lg font-semibold text-gray-900 sm:text-xl">{project.title}</h3>
-                <p className="text-sm text-gray-600 sm:text-base">{project.description}</p>
+                <h3 className="text-lg font-semibold text-white sm:text-xl">{project.title}</h3>
+                <p className="text-sm text-white/70 sm:text-base">{project.description}</p>
               </div>
               <button
                 type="button"
-                className="sm:hidden text-xs font-semibold text-blue-600"
+                className="text-xs font-semibold text-kali-control transition sm:hidden hover:text-white"
                 onClick={handleToggleActions}
                 aria-expanded={isActive}
               >
                 Actions
               </button>
             </div>
-            <dl className="grid grid-cols-1 gap-3 text-sm text-gray-600 sm:grid-cols-2">
+            <dl className="grid grid-cols-1 gap-3 text-sm text-white/70 sm:grid-cols-2">
               <div>
-                <dt className="font-semibold text-gray-800">Stack</dt>
+                <dt className="font-semibold text-white">Stack</dt>
                 <dd>{project.stack.join(', ')}</dd>
               </div>
               <div>
-                <dt className="font-semibold text-gray-800">Year</dt>
+                <dt className="font-semibold text-white">Year</dt>
                 <dd>{project.year}</dd>
               </div>
               <div>
-                <dt className="font-semibold text-gray-800">Type</dt>
+                <dt className="font-semibold text-white">Type</dt>
                 <dd className="capitalize">{project.type}</dd>
               </div>
               {project.tags.length > 0 && (
                 <div>
-                  <dt className="font-semibold text-gray-800">Tags</dt>
+                  <dt className="font-semibold text-white">Tags</dt>
                   <dd className="flex flex-wrap gap-2">
                     {project.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide text-gray-700"
+                        className="rounded-full bg-[var(--kali-panel-highlight)] px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide text-white/80"
                       >
                         {tag}
                       </span>
@@ -309,7 +309,7 @@ function ProjectCard({
             <div className="hidden gap-3 sm:flex">
               <button
                 type="button"
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+                className="rounded-md bg-[var(--kali-control)] px-4 py-2 text-sm font-semibold text-slate-900 shadow-[0_10px_30px_rgba(15,148,210,0.25)] transition hover:bg-[color-mix(in_srgb,var(--kali-control)_85%,#000000)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
                 onClick={() => onOpen(project)}
               >
                 Open
@@ -317,10 +317,10 @@ function ProjectCard({
               <button
                 type="button"
                 data-testid={`compare-${project.id}`}
-                className={`rounded-md border px-4 py-2 text-sm font-semibold transition ${
+                className={`rounded-md border px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] ${
                   isSelectedForCompare
-                    ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-inner'
-                    : 'border-blue-600 text-blue-600 hover:bg-blue-50'
+                    ? 'border-transparent bg-[var(--kali-control)] text-slate-900 shadow-[0_0_18px_rgba(15,148,210,0.35)]'
+                    : 'border-[color:var(--kali-panel-border)] text-kali-control hover:border-[color:var(--kali-control)] hover:bg-[var(--kali-control-surface)] hover:text-white'
                 }`}
                 onClick={() => onCompare(project)}
                 aria-pressed={isSelectedForCompare}
@@ -499,16 +499,16 @@ export default function ProjectGalleryPage() {
   };
 
   return (
-    <div className="relative text-black">
+    <div className="relative text-[var(--color-text)]">
       <div className="mx-auto flex max-w-6xl flex-col gap-6 p-4 pb-32 sm:p-6 lg:p-8">
-        <div className="sticky top-0 z-20 -mx-4 flex flex-col gap-3 border-b border-gray-200 bg-white/95 px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        <div className="sticky top-0 z-20 -mx-4 flex flex-col gap-3 border-b border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-sm font-semibold text-gray-700">Active filters</span>
+            <span className="text-sm font-semibold text-white/80">Active filters</span>
             {hasActiveFilters && (
               <button
                 type="button"
                 onClick={handleClearFilters}
-                className="text-sm font-semibold text-blue-600 transition hover:text-blue-700"
+                className="text-sm font-semibold text-kali-control transition hover:text-white"
               >
                 Clear all
               </button>
@@ -521,20 +521,20 @@ export default function ProjectGalleryPage() {
                   key={`${item.type}-${item.label}`}
                   type="button"
                   onClick={() => handleRemoveFilter(item)}
-                  className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
+                  className="inline-flex items-center gap-2 rounded-full border border-[color:var(--kali-panel-border)] bg-[var(--kali-control-surface)] px-3 py-1.5 text-xs font-semibold text-white transition hover:border-[color:var(--kali-control)] hover:bg-[var(--kali-control-overlay)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
                 >
-                  <span className="flex items-center gap-1.5 text-blue-600">
+                  <span className="flex items-center gap-1.5 text-kali-control">
                     {item.type === 'stack' && <StackIcon />}
                     {item.type === 'tag' && <TagIcon />}
                     {item.type === 'year' && <CalendarIcon />}
                     {item.type === 'type' && <TypeIcon />}
-                    <span className="text-blue-800">{item.label}</span>
+                    <span className="text-white">{item.label}</span>
                   </span>
                   <span className="sr-only">Remove filter</span>
                 </button>
               ))
             ) : (
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-white/70">
                 No filters selected. Use the chips below to add tags, stacks, or years.
               </p>
             )}
@@ -547,7 +547,7 @@ export default function ProjectGalleryPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Search projects"
-            className="w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 shadow-sm transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+            className="w-full max-w-xs rounded-lg border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel-highlight)] px-3 py-2 text-sm text-white shadow-sm transition placeholder:text-white/40 focus:border-[color:var(--kali-control)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--kali-control)_35%,transparent)]"
           />
           <FilterChip
             label="Playable"
@@ -607,12 +607,15 @@ export default function ProjectGalleryPage() {
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {loading
             ? Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="space-y-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-                  <div className="aspect-[4/3] w-full rounded-lg bg-gray-200" />
+                <div
+                  key={i}
+                  className="space-y-4 rounded-xl border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] p-5 shadow-kali-panel"
+                >
+                  <div className="aspect-[4/3] w-full rounded-lg bg-[var(--kali-panel-highlight)]" />
                   <div className="space-y-2">
-                    <div className="h-4 w-3/4 rounded bg-gray-200" />
-                    <div className="h-3 w-2/3 rounded bg-gray-200" />
-                    <div className="h-3 w-1/2 rounded bg-gray-200" />
+                    <div className="h-4 w-3/4 rounded bg-[var(--kali-panel-highlight)]" />
+                    <div className="h-3 w-2/3 rounded bg-[var(--kali-panel-highlight)]" />
+                    <div className="h-3 w-1/2 rounded bg-[var(--kali-panel-highlight)]" />
                   </div>
                 </div>
               ))
@@ -630,8 +633,8 @@ export default function ProjectGalleryPage() {
               ))}
         </div>
         {!loading && filtered.length === 0 && (
-          <div className="rounded-xl border border-dashed border-gray-300 bg-white/70 p-8 text-center text-sm text-gray-600 shadow-sm">
-            <p className="text-base font-semibold text-gray-800">No projects match your filters.</p>
+          <div className="rounded-xl border border-dashed border-[color:var(--kali-panel-border)] bg-[var(--kali-panel-highlight)] p-8 text-center text-sm text-white/70 shadow-kali-panel">
+            <p className="text-base font-semibold text-white">No projects match your filters.</p>
             <p className="mt-2 leading-relaxed">
               Use the filter chips above to add or remove stacks, tags, or years and rediscover the full catalog.
             </p>
@@ -642,12 +645,12 @@ export default function ProjectGalleryPage() {
         <div
           role="region"
           aria-label="Comparison tray"
-          className="fixed bottom-6 left-4 right-4 z-30 max-w-full rounded-xl border border-gray-200 bg-white/95 shadow-xl backdrop-blur sm:left-auto sm:right-6 sm:w-full sm:max-w-sm"
+          className="fixed bottom-6 left-4 right-4 z-30 max-w-full rounded-xl border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] text-[var(--color-text)] shadow-kali-panel backdrop-blur sm:left-auto sm:right-6 sm:w-full sm:max-w-sm"
         >
           <div className="flex items-start justify-between gap-3 px-5 py-4">
             <div>
-              <p className="text-sm font-semibold text-gray-900">Comparison tray</p>
-              <p className="mt-1 text-xs text-gray-600">
+              <p className="text-sm font-semibold text-white">Comparison tray</p>
+              <p className="mt-1 text-xs text-white/70">
                 {compareSelection.length === 2
                   ? 'Ready to compare your selected projects.'
                   : 'Select one more project to enable comparison.'}
@@ -657,33 +660,33 @@ export default function ProjectGalleryPage() {
               type="button"
               onClick={handleResetComparison}
               aria-label="Dismiss comparison tray"
-              className="rounded-full border border-gray-200 p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
+              className="rounded-full border border-[color:var(--kali-panel-border)] p-1.5 text-white/70 transition hover:border-[color:var(--kali-control)] hover:bg-[var(--kali-panel-highlight)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
             >
               <CloseIcon />
             </button>
           </div>
-          <ul className="divide-y divide-gray-200">
+          <ul className="divide-y divide-[color:var(--kali-panel-border)]">
             {compareSelection.map((project) => (
               <li
                 key={project.id}
-                className="flex items-center justify-between gap-2 px-5 py-2.5 text-sm text-gray-700"
+                className="flex items-center justify-between gap-2 px-5 py-2.5 text-sm text-white/80"
               >
-                <span className="font-medium text-gray-800">{project.title}</span>
+                <span className="font-medium text-white">{project.title}</span>
                 <button
                   type="button"
                   onClick={() => handleCompare(project)}
                   aria-label={`Remove ${project.title} from comparison`}
-                  className="rounded-full border border-transparent p-1.5 text-gray-400 transition hover:border-gray-200 hover:bg-gray-50 hover:text-gray-600"
+                  className="rounded-full border border-transparent p-1.5 text-white/60 transition hover:border-[color:var(--kali-control)] hover:bg-[var(--kali-panel-highlight)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
                 >
                   <CloseIcon />
                 </button>
               </li>
             ))}
           </ul>
-          <div className="flex gap-3 border-t border-gray-200 px-5 py-4">
+          <div className="flex gap-3 border-t border-[color:var(--kali-panel-border)] px-5 py-4">
             <button
               type="button"
-              className="flex-1 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+              className="flex-1 rounded-md bg-[var(--kali-control)] px-4 py-2.5 text-sm font-semibold text-slate-900 shadow-[0_10px_30px_rgba(15,148,210,0.25)] transition hover:bg-[color-mix(in_srgb,var(--kali-control)_85%,#000000)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:cursor-not-allowed disabled:bg-[var(--kali-control-surface)] disabled:text-white/50"
               onClick={handleStartCompare}
               disabled={compareSelection.length !== 2}
             >
@@ -691,7 +694,7 @@ export default function ProjectGalleryPage() {
             </button>
             <button
               type="button"
-              className="flex-1 rounded-md border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+              className="flex-1 rounded-md border border-[color:var(--kali-panel-border)] px-4 py-2.5 text-sm font-semibold text-white/80 transition hover:bg-[var(--kali-panel-highlight)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
               onClick={handleResetComparison}
             >
               Reset

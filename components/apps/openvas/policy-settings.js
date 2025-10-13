@@ -25,77 +25,79 @@ const PolicySettings = ({ policy }) => {
   };
 
   return (
-    <div className="p-4 bg-gray-800 rounded mb-4">
-      <h3 className="text-md font-bold mb-2">Policy Settings</h3>
-      <ul className="text-sm space-y-1">
+    <div className="mb-4 rounded-xl border border-white/10 bg-kali-surface-muted/80 p-4 text-white shadow-kali-panel backdrop-blur">
+      <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-kali-control">
+        Policy Settings
+      </h3>
+      <ul className="space-y-1 text-sm text-white/80">
         <li>
-          <span className="font-semibold">Name:</span> {config.name}
+          <span className="font-semibold text-white">Name:</span> {config.name}
         </li>
         <li>
-          <span className="font-semibold">Port List:</span> {config.portList}
+          <span className="font-semibold text-white">Port List:</span> {config.portList}
         </li>
         <li>
-          <span className="font-semibold">Max Hosts:</span> {config.maxHosts}
+          <span className="font-semibold text-white">Max Hosts:</span> {config.maxHosts}
         </li>
         <li>
-          <span className="font-semibold">QoD:</span> {config.qod}
+          <span className="font-semibold text-white">QoD:</span> {config.qod}
         </li>
       </ul>
-      <form className="mt-2 space-y-2">
-        <label className="block text-xs">
+      <form className="mt-3 space-y-3 text-xs">
+        <label className="block text-[0.7rem] font-semibold uppercase tracking-wide text-white/70">
           Policy Name
           <input
             aria-label="Policy Name"
-            className="w-full p-1 rounded text-black"
+            className="mt-1 w-full rounded-md border border-white/10 bg-kali-surface-raised/80 px-2 py-1 text-sm text-white placeholder-white/40 focus:border-kali-focus focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             value={config.name}
             onChange={handleChange('name')}
           />
         </label>
-        <label className="block text-xs">
+        <label className="block text-[0.7rem] font-semibold uppercase tracking-wide text-white/70">
           Port List
           <input
             aria-label="Port List"
-            className="w-full p-1 rounded text-black"
+            className="mt-1 w-full rounded-md border border-white/10 bg-kali-surface-raised/80 px-2 py-1 text-sm text-white placeholder-white/40 focus:border-kali-focus focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             value={config.portList}
             onChange={handleChange('portList')}
           />
         </label>
-        <label className="block text-xs">
+        <label className="block text-[0.7rem] font-semibold uppercase tracking-wide text-white/70">
           Max Hosts
           <input
             aria-label="Max Hosts"
-            className="w-full p-1 rounded text-black"
+            className="mt-1 w-full rounded-md border border-white/10 bg-kali-surface-raised/80 px-2 py-1 text-sm text-white placeholder-white/40 focus:border-kali-focus focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             value={config.maxHosts}
             onChange={handleChange('maxHosts')}
           />
         </label>
-        <label className="block text-xs">
+        <label className="block text-[0.7rem] font-semibold uppercase tracking-wide text-white/70">
           QoD
           <input
             aria-label="QoD"
-            className="w-full p-1 rounded text-black"
+            className="mt-1 w-full rounded-md border border-white/10 bg-kali-surface-raised/80 px-2 py-1 text-sm text-white placeholder-white/40 focus:border-kali-focus focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             value={config.qod}
             onChange={handleChange('qod')}
           />
         </label>
       </form>
-      <div className="flex gap-2 mt-2 text-xs">
+      <div className="mt-3 flex gap-2 text-xs font-semibold">
         <button
           type="button"
           onClick={savePolicy}
-          className="px-2 py-1 bg-blue-600 rounded"
+          className="rounded-md bg-kali-primary px-3 py-1.5 text-white transition hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
         >
           Save Policy
         </button>
         <button
           type="button"
           onClick={loadPolicy}
-          className="px-2 py-1 bg-green-600 rounded"
+          className="rounded-md bg-kali-control px-3 py-1.5 text-black transition hover:bg-kali-control/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
         >
           Load Policy
         </button>
       </div>
-      <p className="text-xs text-gray-400 mt-2">
+      <p className="mt-3 text-xs text-white/60">
         Sample configuration shown for demo purposes.
       </p>
     </div>

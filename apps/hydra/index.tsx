@@ -18,16 +18,16 @@ const HydraPreview: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen bg-[var(--kali-bg)] text-[color:var(--kali-text)]">
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-6 py-10">
         <header className="space-y-3">
-          <p className="text-sm font-semibold uppercase tracking-widest text-sky-300">
+          <p className="text-sm font-semibold uppercase tracking-widest text-[color:color-mix(in_srgb,var(--kali-control)_80%,var(--kali-text))]">
             Hydra Simulation Lab
           </p>
-          <h1 className="text-3xl font-semibold text-white sm:text-4xl">
+          <h1 className="text-3xl font-semibold text-[color:var(--kali-text)] sm:text-4xl">
             Credential Testing Workbench
           </h1>
-          <p className="max-w-3xl text-sm text-gray-300 sm:text-base">
+          <p className="max-w-3xl text-sm text-[color:color-mix(in_srgb,var(--kali-text)_82%,transparent)] sm:text-base">
             Explore password spraying strategies without touching a live target. Each run is a
             sandboxed recreation of the Hydra CLI so you can practice configuring services,
             wordlists, and lockout handling inside the desktop shell.
@@ -38,18 +38,18 @@ const HydraPreview: React.FC = () => {
             <TabbedWindow initialTabs={[createTab()]} onNewTab={createTab} />
             <div
               role="note"
-              className="rounded-lg border border-sky-500/30 bg-sky-900/40 p-4 text-sm text-sky-100"
+              className="rounded-lg border border-[color:color-mix(in_srgb,var(--kali-control)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-control)_18%,var(--kali-overlay))] p-4 text-sm text-[color:color-mix(in_srgb,var(--kali-text)_92%,transparent)] shadow-[0_12px_32px_rgba(15,148,210,0.08)]"
             >
-              <h2 className="text-xs font-semibold uppercase tracking-widest text-sky-200">
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-[color:color-mix(in_srgb,var(--kali-control)_85%,var(--kali-text))]">
                 Hydra run tabs
               </h2>
-              <p className="mt-2 text-sky-100/90">
+              <p className="mt-2 text-[color:color-mix(in_srgb,var(--kali-text)_88%,transparent)]">
                 Every tab spins up a simulated Hydra session with canned targets and output, giving
                 you a safe sandbox for experimenting with credential combinations and pause/resume
                 flows.
               </p>
               <a
-                className="mt-3 inline-flex items-center text-xs font-medium text-sky-200 underline hover:text-sky-100"
+                className="mt-3 inline-flex items-center text-xs font-medium text-[color:var(--kali-control)] underline decoration-[color:color-mix(in_srgb,var(--kali-control)_65%,transparent)] transition-colors hover:text-[color:color-mix(in_srgb,var(--kali-control)_85%,var(--kali-text))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
                 href="/docs/app-ecosystem-roadmap.md"
                 target="_blank"
                 rel="noreferrer"
@@ -62,18 +62,18 @@ const HydraPreview: React.FC = () => {
             <StrategyTrainer className="mt-0" />
             <div
               role="note"
-              className="rounded-lg border border-purple-500/30 bg-purple-900/40 p-4 text-sm text-purple-100"
+              className="rounded-lg border border-[color:color-mix(in_srgb,var(--kali-control)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-control)_14%,var(--kali-overlay))] p-4 text-sm text-[color:color-mix(in_srgb,var(--kali-text)_92%,transparent)] shadow-[0_12px_32px_rgba(15,148,210,0.08)]"
             >
-              <h2 className="text-xs font-semibold uppercase tracking-widest text-purple-200">
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-[color:color-mix(in_srgb,var(--kali-control)_85%,var(--kali-text))]">
                 Strategy trainer
               </h2>
-              <p className="mt-2 text-purple-100/90">
+              <p className="mt-2 text-[color:color-mix(in_srgb,var(--kali-text)_88%,transparent)]">
                 Adjust parallelism and lockout thresholds to see how defensive controls change your
                 odds of success over time. It models a simplified probability curve instead of
                 talking to real services.
               </p>
               <a
-                className="mt-3 inline-flex items-center text-xs font-medium text-purple-200 underline hover:text-purple-100"
+                className="mt-3 inline-flex items-center text-xs font-medium text-[color:var(--kali-control)] underline decoration-[color:color-mix(in_srgb,var(--kali-control)_65%,transparent)] transition-colors hover:text-[color:color-mix(in_srgb,var(--kali-control)_85%,var(--kali-text))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
                 href="/docs/tasks.md"
                 target="_blank"
                 rel="noreferrer"

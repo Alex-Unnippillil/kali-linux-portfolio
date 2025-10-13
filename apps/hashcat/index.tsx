@@ -169,8 +169,8 @@ const Hashcat: React.FC = () => {
   // progress and eta are displayed in a neutral banner
 
   return (
-    <div className="p-4 bg-gray-900 text-white min-h-screen space-y-4">
-      <h1 className="text-2xl">Hashcat Simulator</h1>
+    <div className="min-h-screen space-y-4 bg-[var(--kali-panel)] p-4 text-[color:var(--kali-text)]">
+      <h1 className="text-2xl font-semibold text-[color:var(--kali-text)]">Hashcat Simulator</h1>
 
       <div>
         <label className="block mb-1">Attack Mode</label>
@@ -180,8 +180,10 @@ const Hashcat: React.FC = () => {
               key={m.value}
               type="button"
               onClick={() => setAttackMode(m.value)}
-              className={`p-3 rounded-lg bg-gray-800 flex flex-col items-center gap-1 border ${
-                attackMode === m.value ? 'border-green-500' : 'border-transparent'
+              className={`flex flex-col items-center gap-1 rounded-lg border px-3 py-3 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
+                attackMode === m.value
+                  ? 'border-kali-control bg-[color:color-mix(in_srgb,var(--kali-control)_18%,var(--kali-panel))] shadow-[0_0_0_1px_color-mix(in_srgb,var(--kali-control)_35%,transparent)]'
+                  : 'border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel-highlight)] hover:border-kali-control/70 hover:bg-[color:color-mix(in_srgb,var(--kali-panel-highlight)_85%,var(--kali-control)_15%)]'
               }`}
             >
               <span className="text-2xl">{m.icon}</span>
@@ -191,26 +193,26 @@ const Hashcat: React.FC = () => {
         </div>
       </div>
 
-        {showMask && (
-          <div>
-            <label className="block mb-1" htmlFor="hashcat-mask-input">
-              Mask
-            </label>
-            <input
-              id="hashcat-mask-input"
-              type="text"
-              value={mask}
-              onChange={(e) => setMask(e.target.value)}
-              className="text-black p-1 w-full font-mono mb-2"
-              aria-label="Mask pattern"
-            />
+      {showMask && (
+      <div>
+          <label className="mb-1 block" htmlFor="hashcat-mask-input">
+            Mask
+          </label>
+          <input
+            id="hashcat-mask-input"
+            type="text"
+            value={mask}
+            onChange={(e) => setMask(e.target.value)}
+            className="mb-2 w-full rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel-highlight)] px-2 py-1 font-mono text-[color:var(--kali-text)] placeholder:text-[color:color-mix(in_srgb,var(--kali-text)_55%,transparent)] focus:border-kali-control focus:outline-none focus:ring-2 focus:ring-kali-control/40"
+            aria-label="Mask pattern"
+          />
           <div className="space-x-2">
             {['?l', '?u', '?d', '?s', '?a'].map((t) => (
               <button
                 key={t}
                 type="button"
                 onClick={() => appendMask(t)}
-                className="px-2 py-1 bg-blue-600 rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
+                className="rounded bg-kali-control px-2 py-1 text-sm font-semibold text-[color:var(--color-dark)] transition-colors hover:bg-kali-control/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               >
                 {t}
               </button>
@@ -228,7 +230,7 @@ const Hashcat: React.FC = () => {
         </div>
       )}
 
-        <div>
+      <div>
           <label className="block mb-1" htmlFor="hashcat-hash-input">
             Hash
           </label>
@@ -238,20 +240,20 @@ const Hashcat: React.FC = () => {
               type={showHash ? 'text' : 'password'}
               value={hashInput}
               onChange={(e) => setHashInput(e.target.value)}
-              className="text-black p-1 w-full font-mono"
+              className="w-full rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel-highlight)] px-2 py-1 font-mono text-[color:var(--kali-text)] placeholder:text-[color:color-mix(in_srgb,var(--kali-text)_55%,transparent)] focus:border-kali-control focus:outline-none focus:ring-2 focus:ring-kali-control/40"
               placeholder="Paste hash here"
               aria-label="Hash value"
             />
-          <button
-            type="button"
-            onClick={() => setShowHash((s) => !s)}
-            className="px-2 py-1 bg-gray-700 rounded"
-          >
-            {showHash ? 'Hide' : 'Show'}
-          </button>
+            <button
+              type="button"
+              onClick={() => setShowHash((s) => !s)}
+              className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel-highlight)] px-2 py-1 text-sm transition-colors hover:border-kali-control/70 hover:bg-[color:color-mix(in_srgb,var(--kali-panel-highlight)_85%,var(--kali-control)_15%)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+            >
+              {showHash ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          <div className="mt-1 text-sm">Detected: {hashType}</div>
         </div>
-        <div className="mt-1 text-sm">Detected: {hashType}</div>
-      </div>
 
         <div>
           <label className="block mb-1" htmlFor="hashcat-dictionary-input">
@@ -263,43 +265,43 @@ const Hashcat: React.FC = () => {
               type="text"
               value={dictInput}
               onChange={(e) => setDictInput(e.target.value)}
-              className="text-black p-1 flex-1"
+              className="flex-1 rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel-highlight)] px-2 py-1 text-[color:var(--kali-text)] placeholder:text-[color:color-mix(in_srgb,var(--kali-text)_55%,transparent)] focus:border-kali-control focus:outline-none focus:ring-2 focus:ring-kali-control/40"
               placeholder="rockyou.txt"
               aria-label="Dictionary path"
             />
-          <button
-            type="button"
-            onClick={addDictionary}
-            className="px-2 py-1 bg-blue-600 rounded"
-          >
-            Add
-          </button>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {dictionaries.map((d) => (
-            <span
-              key={d}
-              className="bg-gray-700 px-2 py-1 rounded-full text-sm flex items-center"
+            <button
+              type="button"
+              onClick={addDictionary}
+              className="rounded bg-kali-control px-2 py-1 text-sm font-semibold text-[color:var(--color-dark)] transition-colors hover:bg-kali-control/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             >
-              {d}
-              <button
-                type="button"
-                onClick={() => removeDictionary(d)}
-                className="ml-1"
+              Add
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {dictionaries.map((d) => (
+              <span
+                key={d}
+                className="flex items-center rounded-full border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel-highlight)] px-2 py-1 text-sm"
               >
-                ×
-              </button>
-            </span>
-          ))}
+                {d}
+                <button
+                  type="button"
+                  onClick={() => removeDictionary(d)}
+                  className="ml-1 text-lg leading-none text-[color:var(--kali-text)] transition-colors hover:text-kali-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
 
       <div>
-        <label className="block mb-1">Rule Set</label>
+        <label className="mb-1 block">Rule Set</label>
         <select
           value={ruleSet}
           onChange={(e) => setRuleSet(e.target.value)}
-          className="text-black p-1 rounded"
+          className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel-highlight)] px-2 py-1 text-[color:var(--kali-text)] focus:border-kali-control focus:outline-none focus:ring-2 focus:ring-kali-control/40"
         >
           {ruleOptions.map((r) => (
             <option key={r} value={r}>
@@ -307,7 +309,7 @@ const Hashcat: React.FC = () => {
             </option>
           ))}
         </select>
-        <pre className="bg-black text-green-400 p-2 mt-2 rounded overflow-auto h-32 font-mono leading-[1.2]">
+        <pre className="mt-2 h-32 overflow-auto rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--color-dark)] p-2 font-mono leading-[1.2] text-[color:var(--kali-terminal-green)] shadow-inner">
           {rulePreview || '(no rules)'}
         </pre>
       </div>
@@ -322,22 +324,26 @@ const Hashcat: React.FC = () => {
         <button
           type="button"
           onClick={running ? stop : start}
-          className="px-4 py-2 bg-green-600 rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-500"
+          className={`rounded px-4 py-2 text-sm font-semibold text-[color:var(--color-dark)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
+            running
+              ? 'bg-kali-severity-critical hover:bg-kali-severity-critical/90'
+              : 'bg-kali-severity-low hover:bg-kali-severity-low/90'
+          }`}
         >
           {running ? 'Stop' : 'Start'}
         </button>
       </div>
 
-      <div className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 p-2 rounded">
-        <div className="w-full bg-gray-400 dark:bg-gray-600 rounded h-2">
+      <div className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel-highlight)] p-3 text-[color:var(--kali-text)] shadow-inner">
+        <div className="h-2 w-full overflow-hidden rounded bg-[color:color-mix(in_srgb,var(--kali-panel)_65%,transparent)]">
           <div
-            className="h-2 bg-green-500 rounded"
+            className={`h-2 rounded ${running ? 'bg-kali-severity-medium' : 'bg-kali-severity-low'}`}
             style={{ width: `${progress}%` }}
           />
         </div>
         <div className="text-xs text-center mt-1">ETA: {eta}</div>
       </div>
-      <div className="bg-black text-green-400 p-2 h-32 overflow-auto font-mono text-xs">
+      <div className="h-32 overflow-auto rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--color-dark)] p-2 font-mono text-xs text-[color:var(--kali-terminal-green)] shadow-inner">
         {logs.map((l, i) => (
           <div key={i}>{l}</div>
         ))}
