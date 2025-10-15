@@ -1,60 +1,35 @@
 import React, { useEffect, useState } from 'react';
-
-export interface RouterProfile {
-  id: string;
-  label: string;
-  /**
-   * Number of failed attempts before the router locks WPS.
-   * Use Infinity for routers that never lock.
-   */
-  lockAttempts: number;
-  /**
-   * Lock duration in seconds once the threshold is hit.
-   */
-  lockDuration: number;
-}
-
-export const ROUTER_PROFILES: RouterProfile[] = [
-  {
-    id: 'generic',
-    label: 'Generic (no lockout)',
-    lockAttempts: Infinity,
-    lockDuration: 0,
-  },
-  {
-    id: 'netgear',
-    label: 'Netgear — lock after 5 attempts for 60s',
-    lockAttempts: 5,
-    lockDuration: 60,
-  },
-  {
-    id: 'tplink',
-    label: 'TP-Link — lock after 3 attempts for 300s',
-    lockAttempts: 3,
-    lockDuration: 300,
-  },
-];
+import {
+  ROUTER_PROFILES,
+  type RouterProfile,
+  type VendorProfile,
+} from '../utils/pinAlgorithms';
 
 interface RouterProfilesProps {
-  onChange: (profile: RouterProfile) => void;
+  onChange: (profile: VendorProfile) => void;
 }
 
 const STORAGE_KEY = 'reaver-router-profile';
 
 const RouterProfiles: React.FC<RouterProfilesProps> = ({ onChange }) => {
-  const [selected, setSelected] = useState<RouterProfile>(ROUTER_PROFILES[0]);
+  const [selected, setSelected] = useState<VendorProfile>(ROUTER_PROFILES[0]);
 
   // Load persisted profile on mount
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    const profile = ROUTER_PROFILES.find((p) => p.id === stored) || ROUTER_PROFILES[0];
+    const profile =
+      (ROUTER_PROFILES.find((p) => p.id === stored) as VendorProfile | undefined) ||
+      ROUTER_PROFILES[0];
     setSelected(profile);
     onChange(profile);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const profile = ROUTER_PROFILES.find((p) => p.id === e.target.value)!;
+    const profile = ROUTER_PROFILES.find(
+      (p) => p.id === e.target.value,
+    ) as VendorProfile | undefined;
+    if (!profile) return;
     setSelected(profile);
     window.localStorage.setItem(STORAGE_KEY, profile.id);
     onChange(profile);
@@ -85,9 +60,13 @@ const RouterProfiles: React.FC<RouterProfilesProps> = ({ onChange }) => {
       {selected.lockAttempts === Infinity && (
         <p className="text-xs text-gray-400 mt-1">No WPS lockout behaviour</p>
       )}
+      <p className="text-xs text-gray-400 mt-2">{selected.description}</p>
     </div>
   );
 };
 
 export default RouterProfiles;
+
+export { ROUTER_PROFILES } from '../utils/pinAlgorithms';
+export type { RouterProfile, VendorProfile } from '../utils/pinAlgorithms';
 
