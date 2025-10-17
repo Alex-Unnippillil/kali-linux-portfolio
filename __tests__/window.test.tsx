@@ -65,6 +65,21 @@ const setVisualViewport = (width?: number, height?: number) => {
   delete (window as any).visualViewport;
 };
 
+const flushRaf = async () => {
+  if (typeof requestAnimationFrame !== 'function') {
+    await act(async () => {
+      await Promise.resolve();
+    });
+    return;
+  }
+
+  await act(async () => {
+    await new Promise<void>(resolve => {
+      requestAnimationFrame(() => resolve());
+    });
+  });
+};
+
 beforeEach(() => {
   setViewport(1440, 900);
   measureSafeAreaInsetMock.mockReturnValue(0);
@@ -186,7 +201,7 @@ describe('Window snap grid configuration', () => {
 });
 
 describe('Window snapping preview', () => {
-  it('shows preview when dragged near left edge', () => {
+  it('shows preview when dragged near left edge', async () => {
     setViewport(1920, 1080);
     const ref = React.createRef<any>();
     render(
@@ -220,15 +235,20 @@ describe('Window snapping preview', () => {
       ref.current!.handleDrag();
     });
 
+    await flushRaf();
+
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toBeInTheDocument();
     expect(preview).toHaveClass(windowStyles.snapPreviewGlass);
     expect((preview as HTMLElement).style.backdropFilter).toBe('brightness(1.1) saturate(1.2)');
+    expect(preview.style.transform).toBe(`translate3d(0px, ${measureWindowTopOffset()}px, 0)`);
+    expect(preview).toHaveStyle(`width: ${window.innerWidth / 2}px`);
+    expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx()}px`);
     expect(preview).toHaveAttribute('aria-label', 'Snap left half');
     expect(within(preview).getByText('Snap left half')).toBeInTheDocument();
   });
 
-  it('hides preview when away from edge', () => {
+  it('hides preview when away from edge', async () => {
     const ref = React.createRef<any>();
     render(
       <Window
@@ -261,10 +281,12 @@ describe('Window snapping preview', () => {
       ref.current!.handleDrag();
     });
 
+    await flushRaf();
+
     expect(screen.queryByTestId('snap-preview')).toBeNull();
   });
 
-  it('shows top preview when dragged near top edge', () => {
+  it('shows top preview when dragged near top edge', async () => {
     setViewport(1280, 720);
     const ref = React.createRef<any>();
     render(
@@ -297,14 +319,17 @@ describe('Window snapping preview', () => {
       ref.current!.handleDrag();
     });
 
+    await flushRaf();
+
     expect(ref.current!.state.snapPosition).toBe('top');
     const preview = screen.getByTestId('snap-preview');
+    expect(preview.style.transform).toBe(`translate3d(0px, ${measureWindowTopOffset()}px, 0)`);
     expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx()}px`);
     expect(preview).toHaveAttribute('aria-label', 'Snap full screen');
     expect(within(preview).getByText('Snap full screen')).toBeInTheDocument();
   });
 
-  it('shows corner preview when dragged near the top-left edge', () => {
+  it('shows corner preview when dragged near the top-left edge', async () => {
     setViewport(1600, 900);
     const ref = React.createRef<any>();
     render(
@@ -337,15 +362,18 @@ describe('Window snapping preview', () => {
       ref.current!.handleDrag();
     });
 
+    await flushRaf();
+
     expect(ref.current!.state.snapPosition).toBe('top-left');
     const preview = screen.getByTestId('snap-preview');
+    expect(preview.style.transform).toBe(`translate3d(0px, ${measureWindowTopOffset()}px, 0)`);
     expect(preview).toHaveStyle(`width: ${window.innerWidth / 2}px`);
     expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx() / 2}px`);
     expect(preview).toHaveAttribute('aria-label', 'Snap top-left quarter');
     expect(within(preview).getByText('Snap top-left quarter')).toBeInTheDocument();
   });
 
-  it('shows right-half preview when dragged near the bottom-right edge', () => {
+  it('shows right-half preview when dragged near the bottom-right edge', async () => {
     setViewport(1600, 900);
     const ref = React.createRef<any>();
     render(
@@ -378,12 +406,11 @@ describe('Window snapping preview', () => {
       ref.current!.handleDrag();
     });
 
+    await flushRaf();
+
     expect(ref.current!.state.snapPosition).toBe('right');
     const preview = screen.getByTestId('snap-preview');
-    expect(preview).toHaveStyle(`left: ${window.innerWidth / 2}px`);
-    expect(preview).toHaveStyle(
-      `top: ${measureWindowTopOffset()}px`
-    );
+    expect(preview.style.transform).toBe(`translate3d(${window.innerWidth / 2}px, ${measureWindowTopOffset()}px, 0)`);
     expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx()}px`);
     expect(preview).toHaveAttribute('aria-label', 'Snap right half');
     expect(within(preview).getByText('Snap right half')).toBeInTheDocument();

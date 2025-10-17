@@ -127,6 +127,10 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._snapPreviewFrame = null;
+        this._snapPreviewPending = false;
+        this._lastSnapCandidate = null;
+        this._lastWindowRect = null;
     }
 
     notifySizeChange = () => {
@@ -169,6 +173,7 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.cancelSnapPreviewLoop();
     }
 
     setDefaultWindowDimenstion = () => {
@@ -476,6 +481,7 @@ export class Window extends Component {
             this.setTransformMotionPreset(node, 'snap');
             node.style.transform = `translate(${region.left}px, ${region.top}px)`;
         }
+        this._lastSnapCandidate = null;
         this.setState({
             snapPreview: null,
             snapPosition: null,
@@ -504,13 +510,49 @@ export class Window extends Component {
         }
     }
 
-    checkSnapPreview = () => {
+    cancelSnapPreviewLoop = () => {
+        if (this._snapPreviewFrame !== null) {
+            if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+                window.cancelAnimationFrame(this._snapPreviewFrame);
+            } else {
+                clearTimeout(this._snapPreviewFrame);
+            }
+        }
+        this._snapPreviewFrame = null;
+        this._snapPreviewPending = false;
+    }
+
+    flushSnapPreviewUpdate = () => {
+        const candidate = this.updateSnapPreviewFromBounds();
+        this.cancelSnapPreviewLoop();
+        return candidate;
+    }
+
+    updateSnapPreviewFromBounds = () => {
+        if (typeof window === 'undefined') {
+            return null;
+        }
+
         const node = this.getWindowNode();
-        if (!node) return;
+        if (!node) {
+            this._lastSnapCandidate = null;
+            if (this.state.snapPreview || this.state.snapPosition) {
+                this.setState({ snapPreview: null, snapPosition: null });
+            }
+            return null;
+        }
+
         const rect = node.getBoundingClientRect();
-        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
-        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
-        if (!viewportWidth || !viewportHeight) return;
+        this._lastWindowRect = rect;
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        if (!viewportWidth || !viewportHeight) {
+            this._lastSnapCandidate = null;
+            if (this.state.snapPreview || this.state.snapPosition) {
+                this.setState({ snapPreview: null, snapPosition: null });
+            }
+            return null;
+        }
 
         const horizontalThreshold = computeEdgeThreshold(viewportWidth);
         const verticalThreshold = computeEdgeThreshold(viewportHeight);
@@ -541,21 +583,49 @@ export class Window extends Component {
         }
 
         const resolvedCandidate = normalizeRightCornerSnap(candidate, regions);
+        this._lastSnapCandidate = resolvedCandidate;
+
         if (resolvedCandidate) {
             const { position, preview } = resolvedCandidate;
             const samePosition = this.state.snapPosition === position;
+            const currentPreview = this.state.snapPreview;
             const samePreview =
-                this.state.snapPreview &&
-                this.state.snapPreview.left === preview.left &&
-                this.state.snapPreview.top === preview.top &&
-                this.state.snapPreview.width === preview.width &&
-                this.state.snapPreview.height === preview.height;
+                currentPreview &&
+                currentPreview.left === preview.left &&
+                currentPreview.top === preview.top &&
+                currentPreview.width === preview.width &&
+                currentPreview.height === preview.height;
             if (!samePosition || !samePreview) {
                 this.setState({ snapPreview: preview, snapPosition: position });
             }
-        } else if (this.state.snapPreview) {
+        } else if (this.state.snapPreview || this.state.snapPosition) {
             this.setState({ snapPreview: null, snapPosition: null });
         }
+
+        return resolvedCandidate;
+    }
+
+    checkSnapPreview = () => {
+        if (typeof window === 'undefined') {
+            return this.updateSnapPreviewFromBounds();
+        }
+
+        if (this._snapPreviewPending) {
+            return this._lastSnapCandidate;
+        }
+
+        const schedule = typeof window.requestAnimationFrame === 'function'
+            ? window.requestAnimationFrame.bind(window)
+            : (callback) => window.setTimeout(callback, 16);
+
+        this._snapPreviewPending = true;
+        this._snapPreviewFrame = schedule(() => {
+            this._snapPreviewPending = false;
+            this._snapPreviewFrame = null;
+            this.updateSnapPreviewFromBounds();
+        });
+
+        return this._lastSnapCandidate;
     }
 
     applyEdgeResistance = (node, data) => {
@@ -589,10 +659,11 @@ export class Window extends Component {
 
     handleStop = () => {
         this.changeCursorToDefault();
-        const snapPos = this.state.snapPosition;
+        const candidate = this.flushSnapPreviewUpdate();
+        const snapPos = candidate?.position ?? this.state.snapPosition;
         if (snapPos) {
             this.snapWindow(snapPos);
-        } else {
+        } else if (this.state.snapPreview || this.state.snapPosition) {
             this.setState({ snapPreview: null, snapPosition: null });
         }
     }
@@ -824,27 +895,30 @@ export class Window extends Component {
                     ? `snapped-${this.state.snapped}`
                     : 'active'));
 
+        const { snapPreview, snapPosition } = this.state;
+        const snapPreviewStyle = snapPreview
+            ? {
+                transform: `translate3d(${snapPreview.left}px, ${snapPreview.top}px, 0)`,
+                width: `${snapPreview.width}px`,
+                height: `${snapPreview.height}px`,
+                backdropFilter: 'brightness(1.1) saturate(1.2)',
+                WebkitBackdropFilter: 'brightness(1.1) saturate(1.2)'
+            }
+            : undefined;
+
         return (
             <>
-                {this.state.snapPreview && (
+                {snapPreview && (
                     <div
                         data-testid="snap-preview"
                         className={`fixed pointer-events-none z-40 transition-opacity ${styles.snapPreview} ${styles.snapPreviewGlass}`}
-                        style={{
-                            left: `${this.state.snapPreview.left}px`,
-                            top: `${this.state.snapPreview.top}px`,
-                            width: `${this.state.snapPreview.width}px`,
-                            height: `${this.state.snapPreview.height}px`,
-                            backdropFilter: 'brightness(1.1) saturate(1.2)',
-                            WebkitBackdropFilter: 'brightness(1.1) saturate(1.2)'
-
-                        }}
+                        style={snapPreviewStyle}
                         aria-live="polite"
-                        aria-label={getSnapLabel(this.state.snapPosition)}
+                        aria-label={getSnapLabel(snapPosition)}
                         role="status"
                     >
                         <span className={styles.snapPreviewLabel} aria-hidden="true">
-                            {getSnapLabel(this.state.snapPosition)}
+                            {getSnapLabel(snapPosition)}
                         </span>
                     </div>
                 )}

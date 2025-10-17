@@ -59,7 +59,11 @@
 }
 
 .snapPreview {
-  transition: opacity var(--window-motion-duration-snap-preview) var(--window-motion-ease-snap-preview);
+  transition:
+    opacity var(--window-motion-duration-snap-preview) var(--window-motion-ease-snap-preview),
+    transform var(--window-motion-duration-snap-preview) var(--window-motion-ease-snap-preview);
+  will-change: transform, width, height;
+  transform-origin: top left;
 }
 
 .snapPreviewGlass {
