@@ -194,4 +194,46 @@ describe('Navbar running apps tray', () => {
       order: ['app2', 'app3', 'app1'],
     });
   });
+
+  it('shows an overflow menu when running apps exceed available space', () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('workspace-state', { detail: multiAppWorkspaceDetail }));
+    });
+
+    const list = screen.getByRole('list', { name: /open applications/i });
+
+    Object.defineProperty(list, 'clientWidth', { value: 180, configurable: true });
+    Object.defineProperty(list, 'scrollWidth', { value: 420, configurable: true });
+
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+
+    const overflowButton = screen.getByRole('button', { name: /show hidden applications/i });
+    fireEvent.click(overflowButton);
+
+    const menu = screen.getByRole('menu', { name: /hidden applications/i });
+    const menuItems = within(menu).getAllByRole('menuitem');
+
+    expect(menuItems.map((item) => item.getAttribute('data-app-id'))).toEqual([
+      'app1',
+      'app2',
+      'app3',
+    ]);
+
+    expect(menuItems[0]).toHaveFocus();
+
+    fireEvent.keyDown(menu, { key: 'ArrowDown' });
+    expect(menuItems[1]).toHaveFocus();
+
+    fireEvent.keyDown(menu, { key: 'End' });
+    expect(menuItems[menuItems.length - 1]).toHaveFocus();
+
+    fireEvent.keyDown(menu, { key: 'Escape' });
+
+    expect(screen.queryByRole('menu', { name: /hidden applications/i })).not.toBeInTheDocument();
+    expect(overflowButton).toHaveFocus();
+  });
 });
