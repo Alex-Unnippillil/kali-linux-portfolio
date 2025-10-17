@@ -242,6 +242,7 @@ export class Desktop extends Component {
             desktop_icon_positions: {},
             folder_contents: storedFolderContents,
             window_context: {},
+            window_states: {},
             context_menus: {
                 desktop: false,
                 default: false,
@@ -943,6 +944,43 @@ export class Desktop extends Component {
         const event = new CustomEvent('super-arrow', { detail: key, bubbles: true });
         node.dispatchEvent(event);
         return true;
+    };
+
+    handleWindowStateChange = (state) => {
+        if (!state || typeof state !== 'object') return;
+        const { id, maximized } = state;
+        if (!id) return;
+
+        this.setState((prevState) => {
+            const currentStates = prevState.window_states || {};
+            const previousEntry = currentStates[id] || {};
+            const nextEntry = { ...previousEntry };
+            let changed = false;
+
+            if (typeof maximized === 'boolean') {
+                if (maximized) {
+                    if (previousEntry.maximized !== true) {
+                        nextEntry.maximized = true;
+                        changed = true;
+                    }
+                } else if (previousEntry.maximized) {
+                    delete nextEntry.maximized;
+                    changed = true;
+                }
+            }
+
+            if (!changed) {
+                return null;
+            }
+
+            const window_states = { ...currentStates };
+            if (Object.keys(nextEntry).length === 0) {
+                delete window_states[id];
+            } else {
+                window_states[id] = nextEntry;
+            }
+            return { window_states };
+        });
     };
 
     updateWorkspaceSnapshots = (baseState) => {
@@ -3900,6 +3938,7 @@ export class Desktop extends Component {
                 snapEnabled: this.props.snapEnabled,
                 snapGrid,
                 context: this.state.window_context[id],
+                onWindowStateChange: this.handleWindowStateChange,
                 zIndex: 200 + index,
             };
 
@@ -4289,6 +4328,14 @@ export class Desktop extends Component {
                 const minimized_windows = { ...this.state.minimized_windows, [objId]: false };
                 this.setWorkspaceState({ closed_windows, minimized_windows }, () => {
                     const nextState = { closed_windows, favourite_apps, minimized_windows };
+                    let window_states = this.state.window_states;
+                    if (window_states?.[objId]) {
+                        window_states = {
+                            ...window_states,
+                            [objId]: { ...window_states[objId], maximized: false },
+                        };
+                        nextState.window_states = window_states;
+                    }
                     if (context) {
                         nextState.window_context = { ...this.state.window_context, [objId]: context };
                     }
@@ -4369,11 +4416,16 @@ export class Desktop extends Component {
             const minimized_windows = { ...prevState.minimized_windows, [objId]: false };
             const window_context = { ...prevState.window_context };
             delete window_context[objId];
+            const window_states = { ...prevState.window_states };
+            if (Object.prototype.hasOwnProperty.call(window_states, objId)) {
+                delete window_states[objId];
+            }
             const nextState = {
                 closed_windows,
                 favourite_apps,
                 minimized_windows,
                 window_context,
+                window_states,
             };
             if (prevState.focused_windows?.[objId]) {
                 nextState.focused_windows = { ...prevState.focused_windows, [objId]: false };
@@ -4605,6 +4657,13 @@ export class Desktop extends Component {
         const closedEntries = this.getClosedWindowEntries();
         const showMinimizedShelf = this.state.minimizedShelfOpen || minimizedEntries.length > 0;
         const showClosedShelf = this.state.closedShelfOpen || closedEntries.length > 0;
+        const contextAppId = this.state.context_app;
+        const contextIsOverlay = contextAppId ? this.isOverlayId(contextAppId) : false;
+        const contextAppMeta = contextAppId ? this.getAppById(contextAppId) : null;
+        const allowContextMaximize = contextIsOverlay ? false : contextAppMeta ? contextAppMeta.allowMaximize !== false : false;
+        const contextPinned = contextIsOverlay ? false : Boolean(this.state.favourite_apps?.[contextAppId]);
+        const contextMaximized = contextIsOverlay ? false : Boolean(this.state.window_states?.[contextAppId]?.maximized);
+        const allowContextPin = !contextIsOverlay && Boolean(contextAppMeta);
         return (
             <main
                 id="desktop"
@@ -4649,24 +4708,42 @@ export class Desktop extends Component {
                 />
                 <TaskbarMenu
                     active={this.state.context_menus.taskbar}
-                    minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
+                    minimized={contextAppId ? this.state.minimized_windows[contextAppId] : false}
+                    maximized={contextMaximized}
+                    allowMaximize={allowContextMaximize}
+                    pinned={contextPinned}
+                    allowPin={allowContextPin}
+                    onRestore={() => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        if (this.isOverlayId(id)) {
+                            this.openOverlay(id, { minimized: false, transitionState: 'entered' });
+                            return;
+                        }
+                        if (this.state.minimized_windows[id]) {
+                            this.openApp(id);
+                            return;
+                        }
+                        if (this.state.window_states?.[id]?.maximized) {
+                            this.dispatchWindowCommand(id, 'ArrowDown');
+                        }
+                    }}
                     onMinimize={() => {
                         const id = this.state.context_app;
                         if (!id) return;
                         const isOverlay = this.isOverlayId(id);
-                        if (this.state.minimized_windows[id]) {
-                            if (isOverlay) {
-                                this.openOverlay(id, { transitionState: 'entered' });
-                            } else {
-                                this.openApp(id);
-                            }
-                        } else {
-                            if (isOverlay) {
+                        if (isOverlay) {
+                            if (!this.state.minimized_windows[id]) {
                                 this.minimizeOverlay(id);
-                            } else {
-                                this.hasMinimised(id);
                             }
+                        } else if (!this.state.minimized_windows[id]) {
+                            this.hasMinimised(id);
                         }
+                    }}
+                    onMaximize={() => {
+                        const id = this.state.context_app;
+                        if (!id || this.isOverlayId(id)) return;
+                        this.dispatchWindowCommand(id, 'ArrowUp');
                     }}
                     onClose={() => {
                         const id = this.state.context_app;
@@ -4676,6 +4753,16 @@ export class Desktop extends Component {
                         } else {
                             this.closeApp(id);
                         }
+                    }}
+                    onPin={() => {
+                        const id = this.state.context_app;
+                        if (!id || this.isOverlayId(id)) return;
+                        this.pinApp(id);
+                    }}
+                    onUnpin={() => {
+                        const id = this.state.context_app;
+                        if (!id || this.isOverlayId(id)) return;
+                        this.unpinApp(id);
                     }}
                     onCloseMenu={this.hideAllContextMenu}
                 />

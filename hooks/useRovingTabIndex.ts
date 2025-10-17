@@ -15,30 +15,78 @@ export default function useRovingTabIndex(
     const node = ref.current;
     if (!node || !active) return;
 
-    const items = Array.from(
-      node.querySelectorAll<HTMLElement>(
-        '[role="tab"], [role="menuitem"], [role="option"]'
-      )
-    );
-    if (items.length === 0) return;
+    const selector = [
+      '[role="tab"]',
+      '[role="menuitem"]',
+      '[role="menuitemradio"]',
+      '[role="menuitemcheckbox"]',
+      '[role="option"]',
+      '[role="separator"]',
+      '[data-roving-focus="true"]',
+    ].join(', ');
 
-    let index = items.findIndex((el) => el.tabIndex === 0);
-    if (index === -1) index = 0;
-    items.forEach((el, i) => (el.tabIndex = i === index ? 0 : -1));
+    const entries = Array.from(
+      node.querySelectorAll<HTMLElement>(selector)
+    ).map((element) => {
+      const role = element.getAttribute('role');
+      const ariaDisabled = element.getAttribute('aria-disabled');
+      const disabledAttr = (element as HTMLButtonElement).disabled;
+      const inert = role === 'separator';
+      const disabled = inert || disabledAttr || ariaDisabled === 'true';
+      return { element, disabled, inert };
+    });
 
-    const handleKey = (e: KeyboardEvent) => {
-      const forward = orientation === 'horizontal' ? ['ArrowRight', 'ArrowDown'] : ['ArrowDown'];
-      const backward = orientation === 'horizontal' ? ['ArrowLeft', 'ArrowUp'] : ['ArrowUp'];
-      if (forward.includes(e.key)) {
-        e.preventDefault();
-        index = (index + 1) % items.length;
-        items.forEach((el, i) => (el.tabIndex = i === index ? 0 : -1));
-        items[index].focus();
-      } else if (backward.includes(e.key)) {
-        e.preventDefault();
-        index = (index - 1 + items.length) % items.length;
-        items.forEach((el, i) => (el.tabIndex = i === index ? 0 : -1));
-        items[index].focus();
+    if (entries.length === 0) return;
+
+    let focusIndex = entries.findIndex((entry) => !entry.disabled);
+    if (focusIndex === -1) {
+      // No enabled items. Ensure everything is unfocusable and bail.
+      entries.forEach((entry) => {
+        entry.element.tabIndex = -1;
+      });
+      return;
+    }
+
+    const setFocusIndex = (nextIndex: number) => {
+      focusIndex = nextIndex;
+      entries.forEach((entry, index) => {
+        entry.element.tabIndex = index === focusIndex ? 0 : -1;
+      });
+      entries[focusIndex].element.focus();
+    };
+
+    entries.forEach((entry, index) => {
+      entry.element.tabIndex = index === focusIndex ? 0 : -1;
+    });
+
+    const forwardKeys =
+      orientation === 'horizontal'
+        ? ['ArrowRight', 'ArrowDown']
+        : ['ArrowDown', 'ArrowRight'];
+    const backwardKeys =
+      orientation === 'horizontal'
+        ? ['ArrowLeft', 'ArrowUp']
+        : ['ArrowUp', 'ArrowLeft'];
+
+    const moveFocus = (direction: 1 | -1) => {
+      if (!entries.length) return;
+      let nextIndex = focusIndex;
+      for (let attempt = 0; attempt < entries.length; attempt += 1) {
+        nextIndex = (nextIndex + direction + entries.length) % entries.length;
+        if (!entries[nextIndex].disabled) {
+          setFocusIndex(nextIndex);
+          break;
+        }
+      }
+    };
+
+    const handleKey = (event: KeyboardEvent) => {
+      if (forwardKeys.includes(event.key)) {
+        event.preventDefault();
+        moveFocus(1);
+      } else if (backwardKeys.includes(event.key)) {
+        event.preventDefault();
+        moveFocus(-1);
       }
     };
 
