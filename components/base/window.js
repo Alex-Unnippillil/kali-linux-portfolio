@@ -127,6 +127,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this.resizeSession = null;
     }
 
     notifySizeChange = () => {
@@ -134,6 +135,13 @@ export class Window extends Component {
             const { width, height } = this.state;
             this.props.onSizeChange(width, height);
         }
+    }
+
+    teardownResizeListeners = () => {
+        if (typeof window === 'undefined') return;
+        window.removeEventListener('pointermove', this.handleResizeMove);
+        window.removeEventListener('pointerup', this.stopResize);
+        window.removeEventListener('pointercancel', this.stopResize);
     }
 
     componentDidMount() {
@@ -169,6 +177,7 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.teardownResizeListeners();
     }
 
     setDefaultWindowDimenstion = () => {
@@ -348,9 +357,11 @@ export class Window extends Component {
         this.focusWindow();
         if (this.state.maximized) {
             this.restoreWindow();
+            return;
         }
         if (this.state.snapped) {
             this.unsnapWindow();
+            return;
         }
         this.setState({ cursorType: "cursor-move", grabbed: true })
     }
@@ -386,26 +397,228 @@ export class Window extends Component {
         return Math.round(value / size) * size;
     }
 
-    handleVerticleResize = () => {
-        if (this.props.resizable === false) return;
-        const px = (this.state.height / 100) * window.innerHeight + 1;
-        const snapped = this.snapToGrid(px, 'y');
-        const heightPercent = snapped / window.innerHeight * 100;
-        this.setState({ height: heightPercent, preMaximizeSize: null }, () => {
-            this.resizeBoundries();
-            this.notifySizeChange();
-        });
+    getResizeCursor = (direction) => {
+        const cursors = {
+            n: 'cursor-[n-resize]',
+            s: 'cursor-[s-resize]',
+            e: 'cursor-[e-resize]',
+            w: 'cursor-[w-resize]',
+            ne: 'cursor-[ne-resize]',
+            nw: 'cursor-[nw-resize]',
+            se: 'cursor-[se-resize]',
+            sw: 'cursor-[sw-resize]',
+        };
+        return cursors[direction] || 'cursor-default';
     }
 
-    handleHorizontalResize = () => {
+    startResize = (direction, event) => {
         if (this.props.resizable === false) return;
-        const px = (this.state.width / 100) * window.innerWidth + 1;
-        const snapped = this.snapToGrid(px, 'x');
-        const widthPercent = snapped / window.innerWidth * 100;
-        this.setState({ width: widthPercent, preMaximizeSize: null }, () => {
-            this.resizeBoundries();
-            this.notifySizeChange();
-        });
+        if (event.pointerType === 'mouse' && event.button !== 0) return;
+        if (typeof window === 'undefined') return;
+
+        const node = this.getWindowNode();
+        if (!node) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        this.focusWindow();
+        if (this.state.maximized) {
+            this.restoreWindow();
+            return;
+        }
+        if (this.state.snapped) {
+            this.unsnapWindow();
+            return;
+        }
+
+        const rect = node.getBoundingClientRect();
+        const pointerId = typeof event.pointerId === 'number' ? event.pointerId : null;
+        const captureTarget = event.currentTarget && pointerId !== null ? event.currentTarget : null;
+        if (captureTarget && typeof captureTarget.setPointerCapture === 'function') {
+            try {
+                captureTarget.setPointerCapture(pointerId);
+            } catch (error) {
+                // Ignore capture errors
+            }
+        }
+
+        const topInset = this.state.safeAreaTop ?? measureWindowTopOffset();
+        this.resizeSession = {
+            direction,
+            pointerId,
+            startPointerX: event.clientX,
+            startPointerY: event.clientY,
+            startRect: rect,
+            viewportWidth: window.innerWidth,
+            viewportHeight: window.innerHeight,
+            topInset,
+            safeAreaBottom: Math.max(0, measureSafeAreaInset('bottom')),
+            snapBottomInset: measureSnapBottomInset(),
+            captureTarget,
+        };
+
+        this.setState({ cursorType: this.getResizeCursor(direction) });
+
+        window.addEventListener('pointermove', this.handleResizeMove);
+        window.addEventListener('pointerup', this.stopResize);
+        window.addEventListener('pointercancel', this.stopResize);
+    }
+
+    applyResizeTransform = (left, top) => {
+        const node = this.getWindowNode();
+        if (!node) return;
+        const x = Number.isFinite(left) ? left : 0;
+        const y = Number.isFinite(top) ? top : 0;
+        node.style.transform = `translate(${x}px, ${y}px)`;
+        node.style.setProperty('--window-transform-x', `${x.toFixed(1)}px`);
+        node.style.setProperty('--window-transform-y', `${y.toFixed(1)}px`);
+    }
+
+    handleResizeMove = (event) => {
+        if (!this.resizeSession) return;
+        if (this.props.resizable === false) return;
+        if (typeof event.pointerId === 'number' && this.resizeSession.pointerId !== null && event.pointerId !== this.resizeSession.pointerId) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const {
+            direction,
+            startPointerX,
+            startPointerY,
+            startRect,
+            viewportWidth,
+            viewportHeight,
+            topInset,
+            safeAreaBottom,
+            snapBottomInset,
+        } = this.resizeSession;
+
+        const dx = event.clientX - startPointerX;
+        const dy = event.clientY - startPointerY;
+        const startRight = startRect.right;
+        const startBottom = startRect.bottom;
+
+        const minWidthPercent = 20;
+        const minHeightPercent = 20;
+        const minWidthPx = (minWidthPercent / 100) * viewportWidth;
+        const minHeightPx = (minHeightPercent / 100) * viewportHeight;
+        const bottomLimit = Math.max(viewportHeight - safeAreaBottom - snapBottomInset, topInset + minHeightPx);
+
+        let newLeft = startRect.left;
+        let newTop = startRect.top;
+        let newWidth = startRect.width;
+        let newHeight = startRect.height;
+
+        if (direction.includes('e')) {
+            const maxWidth = Math.max(viewportWidth - startRect.left, minWidthPx);
+            newWidth = clamp(startRect.width + dx, minWidthPx, maxWidth);
+        }
+
+        if (direction.includes('w')) {
+            const maxWidth = Math.max(startRight, minWidthPx);
+            newWidth = clamp(startRect.width - dx, minWidthPx, maxWidth);
+            newLeft = startRight - newWidth;
+            if (newLeft < 0) {
+                newLeft = 0;
+                newWidth = startRight;
+            }
+        }
+
+        if (direction.includes('s')) {
+            const maxHeight = Math.max(bottomLimit - startRect.top, minHeightPx);
+            newHeight = clamp(startRect.height + dy, minHeightPx, maxHeight);
+        }
+
+        if (direction.includes('n')) {
+            const maxHeight = Math.max(startBottom - topInset, minHeightPx);
+            newHeight = clamp(startRect.height - dy, minHeightPx, maxHeight);
+            newTop = startBottom - newHeight;
+            if (newTop < topInset) {
+                newTop = topInset;
+                newHeight = startBottom - newTop;
+            }
+        }
+
+        if (direction.includes('e') || direction.includes('w')) {
+            const snappedWidth = this.snapToGrid(newWidth, 'x');
+            const maxWidth = direction.includes('w') ? startRight : Math.max(viewportWidth - newLeft, snappedWidth);
+            newWidth = clamp(snappedWidth, minWidthPx, maxWidth);
+            if (direction.includes('w')) {
+                newLeft = startRight - newWidth;
+                if (newLeft < 0) {
+                    newLeft = 0;
+                    newWidth = startRight;
+                }
+            }
+        }
+
+        if (direction.includes('n') || direction.includes('s')) {
+            const snappedHeight = this.snapToGrid(newHeight, 'y');
+            const maxHeight = direction.includes('n') ? startBottom - topInset : Math.max(bottomLimit - newTop, snappedHeight);
+            newHeight = clamp(snappedHeight, minHeightPx, maxHeight);
+            if (direction.includes('n')) {
+                newTop = startBottom - newHeight;
+                if (newTop < topInset) {
+                    newTop = topInset;
+                    newHeight = startBottom - newTop;
+                }
+            }
+        }
+
+        newLeft = clamp(newLeft, 0, Math.max(viewportWidth - newWidth, 0));
+        newTop = clamp(newTop, topInset, Math.max(bottomLimit - newHeight, topInset));
+
+        this.applyResizeTransform(newLeft, newTop);
+
+        const widthPercent = Math.min((newWidth / viewportWidth) * 100, 100);
+        const heightPercent = Math.min((newHeight / viewportHeight) * 100, 100);
+
+        const updates = { preMaximizeSize: null };
+        let shouldUpdate = false;
+
+        if (direction.includes('e') || direction.includes('w')) {
+            updates.width = widthPercent;
+            shouldUpdate = true;
+        }
+        if (direction.includes('n') || direction.includes('s')) {
+            updates.height = heightPercent;
+            shouldUpdate = true;
+        }
+
+        if (shouldUpdate) {
+            updates.maximized = false;
+            updates.snapped = null;
+            this.setState(updates, () => {
+                this.resizeBoundries();
+                this.notifySizeChange();
+            });
+        }
+
+    }
+
+    stopResize = (event) => {
+        if (!this.resizeSession) return;
+        if (event && typeof event.pointerId === 'number' && this.resizeSession.pointerId !== null && event.pointerId !== this.resizeSession.pointerId) {
+            return;
+        }
+
+        const { captureTarget, pointerId } = this.resizeSession;
+        if (captureTarget && typeof captureTarget.releasePointerCapture === 'function' && pointerId !== null) {
+            try {
+                captureTarget.releasePointerCapture(pointerId);
+            } catch (error) {
+                // Ignore release errors
+            }
+        }
+
+        this.teardownResizeListeners();
+        this.resizeSession = null;
+        this.setState({ cursorType: 'cursor-default' });
+        this.setWinowsPosition();
     }
 
     setWinowsPosition = () => {
@@ -890,8 +1103,9 @@ export class Window extends Component {
                         onPointerDown={this.focusWindow}
                         onFocus={this.focusWindow}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && (
+                            <WindowResizeHandles onResizeStart={this.startResize} />
+                        )}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -942,47 +1156,44 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
     )
 }
 
-// Window's Borders
-export class WindowYBorder extends Component {
-    componentDidMount() {
-        // Use the browser's Image constructor rather than the imported Next.js
-        // Image component to avoid runtime errors when running in tests.
+// Window resize handles
+export function WindowResizeHandles({ onResizeStart }) {
+    const directions = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'];
+    return (
+        <>
+            {directions.map((direction) => (
+                <WindowResizeHandle
+                    key={direction}
+                    direction={direction}
+                    onResizeStart={onResizeStart}
+                />
+            ))}
+        </>
+    );
+}
 
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
-    }
-    render() {
-            return (
-                <div
-                    className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    draggable
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
+export function WindowResizeHandle({ direction, onResizeStart }) {
+    const handlePointerDown = (event) => {
+        if (event.pointerType === 'mouse' && event.button !== 0) {
+            return;
         }
-    }
-
-export class WindowXBorder extends Component {
-    componentDidMount() {
-        // Use the global Image constructor instead of Next.js Image component
-
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
-    }
-    render() {
-            return (
-                <div
-                    className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    draggable
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof onResizeStart === 'function') {
+            onResizeStart(direction, event);
         }
-    }
+    };
+
+    return (
+        <div
+            role="presentation"
+            aria-hidden="true"
+            data-direction={direction}
+            className={`${styles.resizeHandle} ${styles[`resizeHandle${direction.toUpperCase()}`]}`}
+            onPointerDown={handlePointerDown}
+        />
+    );
+}
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {

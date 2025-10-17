@@ -103,6 +103,7 @@
 
 .windowControls {
   height: 28px;
+  z-index: 6;
 }
 
 .windowControlButton {
@@ -116,12 +117,76 @@
   box-shadow: 0 0 0 2px var(--color-window-accent);
 }
 
-.windowYBorder {
-  height: calc(100% - 10px);
-  width: calc(100% + 10px);
+.resizeHandle {
+  position: absolute;
+  touch-action: none;
+  pointer-events: auto;
+  z-index: 5;
 }
 
-.windowXBorder {
-  height: calc(100% + 10px);
-  width: calc(100% - 10px);
+.resizeHandleN,
+.resizeHandleS {
+  left: 16px;
+  right: 16px;
+  height: 12px;
+}
+
+.resizeHandleN {
+  top: 0;
+  right: calc(8.25rem + 16px);
+  cursor: n-resize;
+}
+
+.resizeHandleS {
+  bottom: 0;
+  cursor: s-resize;
+}
+
+.resizeHandleE,
+.resizeHandleW {
+  top: 16px;
+  bottom: 16px;
+  width: 12px;
+}
+
+.resizeHandleE {
+  right: 0;
+  cursor: e-resize;
+}
+
+.resizeHandleW {
+  left: 0;
+  cursor: w-resize;
+}
+
+.resizeHandleNE,
+.resizeHandleNW,
+.resizeHandleSE,
+.resizeHandleSW {
+  width: 16px;
+  height: 16px;
+}
+
+.resizeHandleNE {
+  top: 0;
+  right: 0;
+  cursor: ne-resize;
+}
+
+.resizeHandleNW {
+  top: 0;
+  left: 0;
+  cursor: nw-resize;
+}
+
+.resizeHandleSE {
+  right: 0;
+  bottom: 0;
+  cursor: se-resize;
+}
+
+.resizeHandleSW {
+  left: 0;
+  bottom: 0;
+  cursor: sw-resize;
 }
