@@ -39,16 +39,12 @@ export default function Status() {
   }, []);
 
   return (
-    <div className="flex justify-center items-center">
-      <NetworkIndicator
-        className="mx-1.5"
-        allowNetwork={allowNetwork}
-        online={online}
-      />
-      <VolumeControl className="mx-1.5" />
-      <BatteryIndicator className="mx-1.5" />
-      <span className="mx-1">
-        <SmallArrow angle="down" className=" status-symbol" />
+    <div className="status-cluster">
+      <NetworkIndicator allowNetwork={allowNetwork} online={online} />
+      <VolumeControl />
+      <BatteryIndicator />
+      <span className="status-chevron" aria-hidden="true">
+        <SmallArrow angle="down" />
       </span>
     </div>
   );
