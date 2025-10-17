@@ -323,7 +323,7 @@ dialog {
 .card {
     position: relative;
     transform-style: preserve-3d;
-    transition: transform 0.6s ease, opacity 0.3s ease;
+    transition: none;
 }
 
 .card-face {
@@ -388,7 +388,17 @@ dialog {
     border: 2px solid var(--color-inverse);
     position: absolute;
     inset-inline-start: 0;
-    transition: transform 0.3s;
+    transition: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .card {
+        transition: transform 0.6s ease, opacity 0.3s ease;
+    }
+
+    .chip {
+        transition: transform 0.3s;
+    }
 }
 
 .chip-pop {
