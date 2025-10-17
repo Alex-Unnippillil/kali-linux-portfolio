@@ -34,9 +34,18 @@ import {
     getSafeAreaInsets,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
+import {
+    computeIconGridMetrics,
+    getCellFromPosition,
+    getPositionFromCell,
+    snapCenterToGrid,
+    snapPositionToGrid,
+} from '../../utils/iconGrid';
 
 const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
 const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
+const ICON_POSITION_STORAGE_KEY = 'desktop_icon_positions';
+const ICON_POSITION_STORAGE_VERSION = 2;
 
 const sanitizeFolderItem = (item) => {
     if (!item) return null;
@@ -175,6 +184,7 @@ export class Desktop extends Component {
             'minimized_windows',
             'window_positions',
             'window_sizes',
+            'desktop_icon_positions',
         ]);
         this.windowSizeStorageKey = 'desktop_window_sizes';
         this.defaultThemeConfig = {
@@ -222,6 +232,7 @@ export class Desktop extends Component {
         this.iconDimensions = { ...this.baseIconDimensions };
         this.iconGridSpacing = { ...this.baseIconGridSpacing };
         this.desktopPadding = { ...this.baseDesktopPadding };
+        this.defaultIconDimensions = { ...this.baseIconDimensions };
 
         const initialOverlayClosed = createOverlayFlagMap(true);
         const initialOverlayMinimized = createOverlayFlagMap(false);
@@ -276,6 +287,7 @@ export class Desktop extends Component {
             minimized_windows: {},
             window_positions: {},
             window_sizes: { ...initialWindowSizes },
+            desktop_icon_positions: {},
         }));
 
         this.desktopRef = React.createRef();
@@ -285,7 +297,11 @@ export class Desktop extends Component {
         this.windowSwitcherContentRef = React.createRef();
         this.iconDragState = null;
         this.preventNextIconClick = false;
-        this.savedIconPositions = {};
+        this.iconLayoutStore = {
+            version: ICON_POSITION_STORAGE_VERSION,
+            density: null,
+            workspaces: {},
+        };
 
         this.gestureState = { pointer: null, overview: null };
 
@@ -341,6 +357,7 @@ export class Desktop extends Component {
         minimized_windows: createOverlayFlagMap(false),
         window_positions: {},
         window_sizes: {},
+        desktop_icon_positions: {},
     });
 
     cloneWorkspaceState = (state) => ({
@@ -349,6 +366,7 @@ export class Desktop extends Component {
         minimized_windows: { ...state.minimized_windows },
         window_positions: { ...state.window_positions },
         window_sizes: { ...(state.window_sizes || {}) },
+        desktop_icon_positions: { ...(state.desktop_icon_positions || {}) },
     });
 
     getActiveUserId = () => {
@@ -608,6 +626,7 @@ export class Desktop extends Component {
         const layoutChanged = this.applyIconLayoutFromSettings(this.props);
         if (layoutChanged) {
             this.realignIconPositions();
+            this.resnapStoredIconPositions();
         }
     };
 
@@ -958,6 +977,9 @@ export class Desktop extends Component {
                 minimized_windows: this.mergeWorkspaceMaps(existing.minimized_windows, baseState.minimized_windows, validKeys),
                 window_positions: this.mergeWorkspaceMaps(existing.window_positions, baseState.window_positions, validKeys),
                 window_sizes: this.mergeWorkspaceMaps(existing.window_sizes, baseState.window_sizes, validKeys),
+                desktop_icon_positions: {
+                    ...(existing.desktop_icon_positions || this.getStoredPositionsForWorkspace(index) || {}),
+                },
             };
         });
     };
@@ -1041,6 +1063,7 @@ export class Desktop extends Component {
         if (normalized === this.state.iconSizePreset) {
             this.applyIconLayoutFromSettings(this.props);
             this.realignIconPositions();
+            this.resnapStoredIconPositions();
             this.broadcastIconSizePreset(normalized);
             this.broadcastWorkspaceState();
             return;
@@ -1049,30 +1072,149 @@ export class Desktop extends Component {
         this.setState({ iconSizePreset: normalized }, () => {
             this.applyIconLayoutFromSettings(this.props);
             this.realignIconPositions();
+            this.resnapStoredIconPositions();
             this.broadcastIconSizePreset(normalized);
             this.broadcastWorkspaceState();
         });
     };
 
+    normalizeIconLayoutStore = (store) => {
+        const normalized = {
+            version: ICON_POSITION_STORAGE_VERSION,
+            density: typeof store?.density === 'string' ? store.density : null,
+            workspaces: {},
+        };
+        const workspaces = store?.workspaces;
+        if (workspaces && typeof workspaces === 'object') {
+            Object.entries(workspaces).forEach(([workspaceId, value]) => {
+                const entry = value && typeof value === 'object' ? value : {};
+                const source = entry.positions && typeof entry.positions === 'object'
+                    ? entry.positions
+                    : entry;
+                const positions = {};
+                Object.entries(source || {}).forEach(([iconId, point]) => {
+                    if (!iconId || !point || typeof point !== 'object') return;
+                    const x = Number(point.x);
+                    const y = Number(point.y);
+                    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+                    positions[iconId] = { x, y };
+                });
+                normalized.workspaces[String(workspaceId)] = { positions };
+            });
+        }
+        return normalized;
+    };
+
     loadDesktopIconPositions = () => {
-        if (!safeLocalStorage) return {};
+        const emptyStore = {
+            version: ICON_POSITION_STORAGE_VERSION,
+            density: null,
+            workspaces: {},
+        };
+        if (!safeLocalStorage) return emptyStore;
         try {
-            const stored = safeLocalStorage.getItem('desktop_icon_positions');
-            return stored ? JSON.parse(stored) : {};
+            const stored = safeLocalStorage.getItem(ICON_POSITION_STORAGE_KEY);
+            if (!stored) {
+                return emptyStore;
+            }
+            const parsed = JSON.parse(stored);
+            if (parsed && typeof parsed === 'object' && parsed.version === ICON_POSITION_STORAGE_VERSION) {
+                return this.normalizeIconLayoutStore(parsed);
+            }
+            if (parsed && typeof parsed === 'object') {
+                return this.normalizeIconLayoutStore({
+                    version: ICON_POSITION_STORAGE_VERSION,
+                    density: parsed.density || null,
+                    workspaces: { 0: { positions: parsed } },
+                });
+            }
+            return emptyStore;
         } catch (e) {
-            return {};
+            return emptyStore;
         }
     };
 
-    persistIconPositions = () => {
-        if (!safeLocalStorage) return;
-        const positions = this.state.desktop_icon_positions || {};
-        try {
-            safeLocalStorage.setItem('desktop_icon_positions', JSON.stringify(positions));
-            this.savedIconPositions = { ...positions };
-        } catch (e) {
-            // ignore write errors (storage may be unavailable)
+    getStoredPositionsForWorkspace = (workspaceId = this.state?.activeWorkspace) => {
+        const key = String(typeof workspaceId === 'number' ? workspaceId : 0);
+        const workspaces = this.iconLayoutStore?.workspaces || {};
+        const entry = workspaces[key];
+        if (!entry || typeof entry !== 'object' || typeof entry.positions !== 'object') {
+            return {};
         }
+        return entry.positions;
+    };
+
+    saveIconLayoutStore = () => {
+        if (!safeLocalStorage) return;
+        try {
+            safeLocalStorage.setItem(ICON_POSITION_STORAGE_KEY, JSON.stringify(this.iconLayoutStore));
+        } catch (e) {
+            // ignore storage errors
+        }
+    };
+
+    resnapStoredIconPositions = (skipPersist = false) => {
+        const metrics = this.getIconGridMetrics();
+        const density = this.getIconDensitySignature();
+        const nextWorkspaces = {};
+        const workspaces = this.iconLayoutStore?.workspaces || {};
+        Object.entries(workspaces).forEach(([workspaceId, value]) => {
+            const positions = value?.positions || {};
+            const normalized = {};
+            Object.entries(positions).forEach(([iconId, point]) => {
+                if (!iconId || !point) return;
+                const snapped = snapPositionToGrid(point, metrics);
+                const clamped = this.clampIconPosition(snapped.x, snapped.y);
+                normalized[iconId] = clamped;
+            });
+            nextWorkspaces[String(workspaceId)] = { positions: normalized };
+        });
+        this.iconLayoutStore = {
+            version: ICON_POSITION_STORAGE_VERSION,
+            density,
+            workspaces: nextWorkspaces,
+        };
+        this.applyStoredIconPositionsToSnapshots();
+        if (!skipPersist) {
+            this.saveIconLayoutStore();
+        }
+    };
+
+    applyStoredIconPositionsToSnapshots = () => {
+        if (!Array.isArray(this.workspaceSnapshots)) return;
+        const workspaces = this.iconLayoutStore?.workspaces || {};
+        this.workspaceSnapshots = this.workspaceSnapshots.map((snapshot, index) => {
+            const base = snapshot || this.createEmptyWorkspaceState();
+            const stored = workspaces[String(index)]?.positions || {};
+            return {
+                ...base,
+                desktop_icon_positions: { ...stored },
+            };
+        });
+    };
+
+    persistIconPositions = (positionsOverride) => {
+        const workspaceId = String(this.state?.activeWorkspace ?? 0);
+        const currentPositions = positionsOverride || this.state.desktop_icon_positions || {};
+        const metrics = this.getIconGridMetrics();
+        const normalized = {};
+        Object.entries(currentPositions).forEach(([iconId, point]) => {
+            if (!iconId || !point) return;
+            const snapped = snapPositionToGrid(point, metrics);
+            const clamped = this.clampIconPosition(snapped.x, snapped.y);
+            normalized[iconId] = clamped;
+        });
+        const existingWorkspaces = this.iconLayoutStore?.workspaces || {};
+        this.iconLayoutStore = {
+            version: ICON_POSITION_STORAGE_VERSION,
+            density: this.getIconDensitySignature(),
+            workspaces: {
+                ...existingWorkspaces,
+                [workspaceId]: { positions: normalized },
+            },
+        };
+        this.saveIconLayoutStore();
+        this.commitWorkspacePartial({ desktop_icon_positions: normalized }, this.state.activeWorkspace);
     };
 
     persistFolderContents = (contents) => {
@@ -1290,29 +1432,46 @@ export class Desktop extends Component {
         return { width: 1280, height: 720 };
     };
 
-    computeGridMetrics = () => {
-        const { width, height } = this.getDesktopBounds();
-        const usableHeight = Math.max(
-            this.iconDimensions.height,
-            height - (this.desktopPadding.top + this.desktopPadding.bottom)
-        );
-        const iconsPerColumn = Math.max(1, Math.floor(usableHeight / this.iconGridSpacing.row));
-        return {
-            iconsPerColumn,
-            offsetX: this.desktopPadding.left,
-            offsetY: this.desktopPadding.top,
-            columnSpacing: this.iconGridSpacing.column,
-            rowSpacing: this.iconGridSpacing.row,
-        };
+    getIconDensitySignature = () => {
+        const padding = this.desktopPadding || {};
+        const iconDimensions = this.iconDimensions || this.defaultIconDimensions || {};
+        const spacing = this.iconGridSpacing || this.baseIconGridSpacing || {};
+        const values = [
+            Number.isFinite(iconDimensions.width) ? iconDimensions.width : 0,
+            Number.isFinite(iconDimensions.height) ? iconDimensions.height : 0,
+            Number.isFinite(spacing.column) ? spacing.column : 0,
+            Number.isFinite(spacing.row) ? spacing.row : 0,
+            Number.isFinite(padding.top) ? padding.top : 0,
+            Number.isFinite(padding.right) ? padding.right : 0,
+            Number.isFinite(padding.bottom) ? padding.bottom : 0,
+            Number.isFinite(padding.left) ? padding.left : 0,
+        ];
+        return values.map((value) => Math.round(value)).join(':');
+    };
+
+    getIconGridMetrics = () => {
+        const bounds = this.getDesktopBounds();
+        const iconDimensions = this.iconDimensions || this.defaultIconDimensions || { width: 96, height: 88 };
+        const spacing = this.iconGridSpacing
+            || this.baseIconGridSpacing
+            || this.iconSizePresets?.medium?.spacing
+            || { column: 128, row: 112 };
+        const padding = this.desktopPadding || { top: 0, right: 0, bottom: 0, left: 0 };
+        return computeIconGridMetrics({
+            bounds,
+            iconDimensions,
+            gridSpacing: spacing,
+            padding,
+        });
     };
 
     computeGridPosition = (index = 0) => {
-        const { iconsPerColumn, offsetX, offsetY, columnSpacing, rowSpacing } = this.computeGridMetrics();
+        const metrics = this.getIconGridMetrics();
+        const iconsPerColumn = Math.max(1, metrics.iconsPerColumn || 1);
         const column = Math.floor(index / iconsPerColumn);
         const row = index % iconsPerColumn;
-        const x = offsetX + column * columnSpacing;
-        const y = offsetY + row * rowSpacing;
-        return this.clampIconPosition(x, y);
+        const position = getPositionFromCell({ column, row }, metrics);
+        return this.clampIconPosition(position.x, position.y);
     };
 
     refreshAppRegistry() {
@@ -1867,11 +2026,10 @@ export class Desktop extends Component {
         if (!this.isValidIconPosition(position)) {
             return { column: null, row: null };
         }
-        const metrics = this.computeGridMetrics();
-        const columnSpacing = Math.max(metrics.columnSpacing || 0, 1);
-        const rowSpacing = Math.max(metrics.rowSpacing || 0, 1);
-        const column = Math.max(1, Math.round((position.x - metrics.offsetX) / columnSpacing) + 1);
-        const row = Math.max(1, Math.round((position.y - metrics.offsetY) / rowSpacing) + 1);
+        const metrics = this.getIconGridMetrics();
+        const cell = getCellFromPosition(position, metrics);
+        const column = Math.max(1, (cell.column ?? 0) + 1);
+        const row = Math.max(1, (cell.row ?? 0) + 1);
         return { column, row };
     };
 
@@ -2140,16 +2298,16 @@ export class Desktop extends Component {
             return fallback;
         };
 
+        const activeWorkspace = this.state?.activeWorkspace ?? 0;
+        const savedPositions = clampOnly ? {} : this.getStoredPositionsForWorkspace(activeWorkspace);
+
         desktopApps.forEach((id, orderIndex) => {
             const candidates = [];
             if (current[id]) {
                 candidates.push(current[id]);
             }
-            if (!clampOnly) {
-                const saved = this.savedIconPositions?.[id];
-                if (saved) {
-                    candidates.push(saved);
-                }
+            if (!clampOnly && savedPositions && savedPositions[id]) {
+                candidates.push(savedPositions[id]);
             }
 
             let assigned = null;
@@ -2182,34 +2340,32 @@ export class Desktop extends Component {
         return { x: Math.round(clampedX), y: Math.round(clampedY) };
     };
 
-    snapIconPosition = (x, y) => {
-        const metrics = this.computeGridMetrics();
-        const snapAxis = (value, offset, spacing) => {
-            if (!Number.isFinite(value) || !Number.isFinite(offset) || !Number.isFinite(spacing) || spacing <= 0) {
-                return value;
-            }
-            const relative = value - offset;
-            const snappedRelative = Math.round(relative / spacing) * spacing;
-            return offset + snappedRelative;
-        };
+    snapIconPosition = (x, y, metrics = this.getIconGridMetrics()) => {
+        return snapPositionToGrid({ x, y }, metrics);
+    };
 
-        const snappedX = snapAxis(x, metrics.offsetX, metrics.columnSpacing);
-        const snappedY = snapAxis(y, metrics.offsetY, metrics.rowSpacing);
-
-        return { x: snappedX, y: snappedY };
+    snapIconCenterPosition = (x, y, metrics = this.getIconGridMetrics()) => {
+        return snapCenterToGrid({ x, y }, metrics);
     };
 
     calculateIconPosition = (clientX, clientY, dragState = this.iconDragState) => {
         if (!dragState) return { x: 0, y: 0 };
+        const metrics = this.getIconGridMetrics();
         const rect = this.getDesktopRect();
-        if (!rect) {
-            const snapped = this.snapIconPosition(clientX - dragState.offsetX, clientY - dragState.offsetY);
-            return this.clampIconPosition(snapped.x, snapped.y);
-        }
-        const x = clientX - rect.left - dragState.offsetX;
-        const y = clientY - rect.top - dragState.offsetY;
-        const snapped = this.snapIconPosition(x, y);
-        return this.clampIconPosition(snapped.x, snapped.y);
+        const relativeX = clientX - (rect ? rect.left : 0);
+        const relativeY = clientY - (rect ? rect.top : 0);
+        const offsetCenterX = dragState.pointerOffsetFromCenterX ?? 0;
+        const offsetCenterY = dragState.pointerOffsetFromCenterY ?? 0;
+        const centerX = relativeX - offsetCenterX;
+        const centerY = relativeY - offsetCenterY;
+        const snappedCenter = this.snapIconCenterPosition(centerX, centerY, metrics);
+        const halfWidth = metrics.iconHalfWidth ?? (this.iconDimensions?.width || 0) / 2;
+        const halfHeight = metrics.iconHalfHeight ?? (this.iconDimensions?.height || 0) / 2;
+        const position = {
+            x: snappedCenter.x - halfWidth,
+            y: snappedCenter.y - halfHeight,
+        };
+        return this.clampIconPosition(position.x, position.y);
     };
 
     updateIconPosition = (id, x, y, persist = false) => {
@@ -2267,9 +2423,9 @@ export class Desktop extends Component {
     };
 
     moveIconWithKeyboard = (appId, deltaX, deltaY) => {
-        const metrics = this.computeGridMetrics();
-        const stepX = (deltaX || 0) * (metrics.columnSpacing || 0);
-        const stepY = (deltaY || 0) * (metrics.rowSpacing || 0);
+        const metrics = this.getIconGridMetrics();
+        const stepX = (deltaX || 0) * (metrics.spacing?.column || 0);
+        const stepY = (deltaY || 0) * (metrics.spacing?.row || 0);
         if (stepX === 0 && stepY === 0) return;
         this.setState((prevState) => {
             const moveState = prevState.keyboardMoveState;
@@ -2588,6 +2744,11 @@ export class Desktop extends Component {
         const offsetY = event.clientY - rect.top;
         container.setPointerCapture?.(event.pointerId);
         this.preventNextIconClick = false;
+        const metrics = this.getIconGridMetrics();
+        const halfWidth = metrics.iconHalfWidth ?? (this.iconDimensions?.width || 0) / 2;
+        const halfHeight = metrics.iconHalfHeight ?? (this.iconDimensions?.height || 0) / 2;
+        const pointerOffsetFromCenterX = offsetX - halfWidth;
+        const pointerOffsetFromCenterY = offsetY - halfHeight;
         const modifiers = {
             multi: event.metaKey || event.ctrlKey,
             range: event.shiftKey,
@@ -2623,6 +2784,8 @@ export class Desktop extends Component {
             pointerId: event.pointerId,
             offsetX,
             offsetY,
+            pointerOffsetFromCenterX,
+            pointerOffsetFromCenterY,
             startX: event.clientX,
             startY: event.clientY,
             moved: false,
@@ -2721,6 +2884,10 @@ export class Desktop extends Component {
         if (workspaceId < 0 || workspaceId >= this.state.workspaces.length) return;
         const snapshot = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
         const nextTheme = this.getWorkspaceTheme(workspaceId);
+        const storedPositions = this.getStoredPositionsForWorkspace(workspaceId);
+        const snapshotPositions = snapshot.desktop_icon_positions && typeof snapshot.desktop_icon_positions === 'object'
+            ? snapshot.desktop_icon_positions
+            : storedPositions;
         this.closeOverlay('windowSwitcher');
         this.setState({
             activeWorkspace: workspaceId,
@@ -2728,9 +2895,11 @@ export class Desktop extends Component {
             closed_windows: { ...snapshot.closed_windows },
             minimized_windows: { ...snapshot.minimized_windows },
             window_positions: { ...snapshot.window_positions },
+            desktop_icon_positions: { ...(snapshotPositions || {}) },
             switcherWindows: [],
             currentTheme: nextTheme,
         }, () => {
+            this.ensureIconPositions(this.state.desktop_apps);
             this.broadcastWorkspaceState();
             this.giveFocusToLastApp();
             if (this.isOverlayOpen(SWITCHER_OVERLAY_ID)) {
@@ -2845,7 +3014,8 @@ export class Desktop extends Component {
             this.broadcastIconSizePreset(this.state.iconSizePreset);
         }
 
-        this.savedIconPositions = this.loadDesktopIconPositions();
+        this.iconLayoutStore = this.loadDesktopIconPositions();
+        this.resnapStoredIconPositions(true);
         this.initializeDefaultFolders(() => {
             this.fetchAppsData(() => {
                 const session = this.props.session || {};
@@ -2889,6 +3059,7 @@ export class Desktop extends Component {
             const layoutChanged = this.applyIconLayoutFromSettings(this.props);
             if (layoutChanged) {
                 this.realignIconPositions();
+                this.resnapStoredIconPositions();
             }
         }
         const prevLauncher = prevState.overlayWindows?.[LAUNCHER_OVERLAY_ID];
@@ -3677,6 +3848,7 @@ export class Desktop extends Component {
             minimized_windows,
             window_positions: this.state.window_positions || {},
             window_sizes: this.state.window_sizes || {},
+            desktop_icon_positions: this.state.desktop_icon_positions || this.getStoredPositionsForWorkspace(this.state.activeWorkspace) || {},
         };
         this.updateWorkspaceSnapshots(workspaceState);
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
@@ -3718,6 +3890,7 @@ export class Desktop extends Component {
             minimized_windows,
             window_positions: this.state.window_positions || {},
             window_sizes: this.state.window_sizes || {},
+            desktop_icon_positions: this.state.desktop_icon_positions || this.getStoredPositionsForWorkspace(this.state.activeWorkspace) || {},
         };
         this.updateWorkspaceSnapshots(workspaceState);
         this.setWorkspaceState({
