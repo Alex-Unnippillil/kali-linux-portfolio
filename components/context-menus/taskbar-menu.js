@@ -7,6 +7,8 @@ function TaskbarMenu(props) {
     useFocusTrap(menuRef, props.active);
     useRovingTabIndex(menuRef, props.active, 'vertical');
 
+    const hasMultipleInstances = (props.instanceCount || 0) > 1;
+
     const handleKeyDown = (e) => {
         if (e.key === 'Escape') {
             props.onCloseMenu && props.onCloseMenu();
@@ -20,6 +22,11 @@ function TaskbarMenu(props) {
 
     const handleClose = () => {
         props.onClose && props.onClose();
+        props.onCloseMenu && props.onCloseMenu();
+    };
+
+    const handleCloseAll = () => {
+        props.onCloseAll && props.onCloseAll();
         props.onCloseMenu && props.onCloseMenu();
     };
 
@@ -50,6 +57,17 @@ function TaskbarMenu(props) {
             >
                 <span className="ml-5">Close</span>
             </button>
+            {hasMultipleInstances ? (
+                <button
+                    type="button"
+                    onClick={handleCloseAll}
+                    role="menuitem"
+                    aria-label="Close all windows"
+                    className="w-full text-left cursor-default py-0.5 hover:bg-gray-700"
+                >
+                    <span className="ml-5">Close all windows</span>
+                </button>
+            ) : null}
         </div>
     );
 }

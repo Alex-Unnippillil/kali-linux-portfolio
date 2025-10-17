@@ -981,11 +981,57 @@ export class Desktop extends Component {
             focused_windows = {},
             overlayWindows = {},
         } = this.state;
+
         const summaries = [];
+        const appMeta = new Map(apps.map((app) => [app.id, app]));
+
+        const resolveFlag = (flags, windowId, baseId) => {
+            if (flags && Object.prototype.hasOwnProperty.call(flags, windowId)) {
+                return Boolean(flags[windowId]);
+            }
+            if (windowId !== baseId && flags && Object.prototype.hasOwnProperty.call(flags, baseId)) {
+                return Boolean(flags[baseId]);
+            }
+            return false;
+        };
+
+        Object.keys(closed_windows).forEach((windowId) => {
+            if (this.isOverlayId(windowId)) {
+                return;
+            }
+            if (closed_windows[windowId] !== false) {
+                return;
+            }
+
+            const baseId = windowId.split('#')[0];
+            const app = appMeta.get(baseId);
+            if (!app) {
+                return;
+            }
+
+            const icon = typeof app.icon === 'string' ? app.icon.replace('./', '/') : undefined;
+            const title = app.title || app.name || baseId;
+            const isMinimized = resolveFlag(minimized_windows, windowId, baseId);
+            const isFocused = resolveFlag(focused_windows, windowId, baseId);
+
+            summaries.push({
+                id: baseId,
+                windowId,
+                title,
+                icon,
+                isFocused,
+                isMinimized,
+            });
+        });
+
         apps.forEach((app) => {
+            if (Object.prototype.hasOwnProperty.call(closed_windows, app.id)) {
+                return;
+            }
             if (closed_windows[app.id] === false) {
                 summaries.push({
                     id: app.id,
+                    windowId: app.id,
                     title: app.title,
                     icon: app.icon.replace('./', '/'),
                     isFocused: Boolean(focused_windows[app.id]),
@@ -993,6 +1039,7 @@ export class Desktop extends Component {
                 });
             }
         });
+
         OVERLAY_WINDOW_LIST.forEach((overlay) => {
             const state = overlayWindows?.[overlay.id] || {};
             const isOpen = state.open === true || closed_windows[overlay.id] === false;
@@ -1007,6 +1054,7 @@ export class Desktop extends Component {
                 : Boolean(focused_windows[overlay.id]);
             summaries.push({
                 id: overlay.id,
+                windowId: overlay.id,
                 title: overlay.title,
                 icon: overlay.icon,
                 isFocused,
@@ -1014,7 +1062,80 @@ export class Desktop extends Component {
                 isOverlay: true,
             });
         });
+
         return summaries;
+    };
+
+    getAppInstanceIds = (appId) => {
+        if (!appId) return [];
+        if (this.isOverlayId(appId)) {
+            const overlayState = this.state.overlayWindows?.[appId];
+            return overlayState?.open ? [appId] : [];
+        }
+        const { closed_windows = {} } = this.state;
+        return Object.keys(closed_windows).filter((windowId) => {
+            if (closed_windows[windowId] !== false) {
+                return false;
+            }
+            if (this.isOverlayId(windowId)) {
+                return false;
+            }
+            const baseId = windowId.split('#')[0];
+            return baseId === appId;
+        });
+    };
+
+    closeAllAppInstances = (appId) => {
+        if (!appId) return;
+        const ids = this.getAppInstanceIds(appId);
+        if (!ids.length) {
+            if (this.isOverlayId(appId)) {
+                this.closeOverlay(appId);
+            } else {
+                this.closeApp(appId);
+            }
+            return;
+        }
+        ids.forEach((windowId) => {
+            if (this.isOverlayId(windowId)) {
+                this.closeOverlay(windowId);
+            } else {
+                this.closeApp(windowId);
+            }
+        });
+    };
+
+    restoreWindowInstance = (windowId, fallbackAppId) => {
+        if (!windowId) {
+            if (fallbackAppId) {
+                this.openApp(fallbackAppId);
+            }
+            return;
+        }
+        const baseId = windowId.split('#')[0];
+        const targetAppId = fallbackAppId || baseId;
+        const minimizedState = this.state.minimized_windows || {};
+        if (minimizedState[windowId] !== true && minimizedState[targetAppId] !== true) {
+            this.focus(windowId);
+            return;
+        }
+        this.setWorkspaceState((prev) => {
+            const minimized_windows = { ...(prev.minimized_windows || {}) };
+            const focused_windows = { ...(prev.focused_windows || {}) };
+            if (minimized_windows[windowId]) {
+                minimized_windows[windowId] = false;
+                focused_windows[windowId] = true;
+            } else if (targetAppId && minimized_windows[targetAppId]) {
+                minimized_windows[targetAppId] = false;
+                focused_windows[targetAppId] = true;
+            }
+            return { minimized_windows, focused_windows };
+        }, () => {
+            if (targetAppId && this.state.closed_windows?.[targetAppId] !== false) {
+                this.openApp(targetAppId);
+            }
+            this.focus(windowId);
+        });
     };
 
     setWorkspaceState = (updater, callback) => {
@@ -2975,28 +3096,41 @@ export class Desktop extends Component {
             return;
         }
 
-        const appId = detail.appId;
-        if (!appId || !this.validAppIds.has(appId)) return;
+        const appId = typeof detail.appId === 'string' ? detail.appId : null;
+        const instanceId = typeof detail.instanceId === 'string'
+            ? detail.instanceId
+            : (typeof detail.windowId === 'string' ? detail.windowId : null);
+        const baseAppId = appId || (instanceId ? instanceId.split('#')[0] : null);
 
-        if (this.isOverlayId(appId)) {
+        if (baseAppId && !this.validAppIds.has(baseAppId) && !this.isOverlayId(baseAppId)) {
+            return;
+        }
+
+        const targetId = instanceId || appId || baseAppId;
+
+        if (this.isOverlayId(targetId)) {
             switch (action) {
                 case 'minimize':
-                    if (!this.state.minimized_windows[appId]) {
-                        this.minimizeOverlay(appId);
+                    if (!this.state.minimized_windows[targetId]) {
+                        this.minimizeOverlay(targetId);
                     }
+                    break;
+                case 'close-all':
+                case 'close':
+                    this.closeOverlay(targetId);
                     break;
                 case 'focus':
                 case 'open':
-                    this.openOverlay(appId, { transitionState: 'entered' });
+                    this.openOverlay(targetId, { transitionState: 'entered' });
                     break;
                 case 'toggle':
                 default:
-                    if (this.state.minimized_windows[appId]) {
-                        this.openOverlay(appId, { transitionState: 'entered' });
-                    } else if (this.state.focused_windows[appId]) {
-                        this.minimizeOverlay(appId);
+                    if (this.state.minimized_windows[targetId]) {
+                        this.openOverlay(targetId, { transitionState: 'entered' });
+                    } else if (this.state.focused_windows[targetId]) {
+                        this.minimizeOverlay(targetId);
                     } else {
-                        this.openOverlay(appId, { transitionState: 'entered' });
+                        this.openOverlay(targetId, { transitionState: 'entered' });
                     }
             }
             return;
@@ -3004,24 +3138,36 @@ export class Desktop extends Component {
 
         switch (action) {
             case 'minimize':
-                if (!this.state.minimized_windows[appId]) {
-                    this.hasMinimised(appId);
+                if (!this.state.minimized_windows[targetId]) {
+                    this.hasMinimised(targetId);
                 }
                 break;
+            case 'close-all':
+                this.closeAllAppInstances(baseAppId);
+                break;
             case 'focus':
-                this.focus(appId);
+                if (targetId) {
+                    this.restoreWindowInstance(targetId, baseAppId);
+                }
                 break;
             case 'open':
-                this.openApp(appId);
+                if (baseAppId) {
+                    this.openApp(baseAppId);
+                }
                 break;
             case 'toggle':
             default:
-                if (this.state.minimized_windows[appId]) {
-                    this.openApp(appId);
-                } else if (this.state.focused_windows[appId]) {
-                    this.hasMinimised(appId);
+                if (!targetId) return;
+                if (this.state.minimized_windows[targetId]) {
+                    this.restoreWindowInstance(targetId, baseAppId);
+                } else if (this.state.focused_windows[targetId]) {
+                    this.hasMinimised(targetId);
                 } else {
-                    this.openApp(appId);
+                    if (targetId !== baseAppId && this.state.minimized_windows[targetId] !== undefined) {
+                        this.focus(targetId);
+                    } else if (baseAppId) {
+                        this.openApp(baseAppId);
+                    }
                 }
         }
     };
@@ -4605,6 +4751,9 @@ export class Desktop extends Component {
         const closedEntries = this.getClosedWindowEntries();
         const showMinimizedShelf = this.state.minimizedShelfOpen || minimizedEntries.length > 0;
         const showClosedShelf = this.state.closedShelfOpen || closedEntries.length > 0;
+        const contextAppId = this.state.context_app;
+        const contextInstanceIds = contextAppId ? this.getAppInstanceIds(contextAppId) : [];
+        const contextInstanceCount = contextInstanceIds.length;
         return (
             <main
                 id="desktop"
@@ -4650,6 +4799,7 @@ export class Desktop extends Component {
                 <TaskbarMenu
                     active={this.state.context_menus.taskbar}
                     minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
+                    instanceCount={contextInstanceCount}
                     onMinimize={() => {
                         const id = this.state.context_app;
                         if (!id) return;
@@ -4676,6 +4826,11 @@ export class Desktop extends Component {
                         } else {
                             this.closeApp(id);
                         }
+                    }}
+                    onCloseAll={() => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        this.closeAllAppInstances(id);
                     }}
                     onCloseMenu={this.hideAllContextMenu}
                 />
