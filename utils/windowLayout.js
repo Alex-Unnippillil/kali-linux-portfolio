@@ -1,4 +1,5 @@
 import {
+  DESKTOP_TOP_PADDING,
   NAVBAR_HEIGHT,
   NAVBAR_VERTICAL_PADDING,
   SNAP_BOTTOM_INSET,
@@ -19,6 +20,22 @@ const TASKBAR_HEIGHT_PROPERTY = '--shell-taskbar-height';
 const DEFAULT_FONT_SIZE = 16;
 
 export const DEFAULT_SNAP_BOTTOM_INSET = SNAP_BOTTOM_INSET;
+
+const EDGE_THRESHOLD_MIN = 48;
+const EDGE_THRESHOLD_MAX = 160;
+const EDGE_THRESHOLD_RATIO = 0.05;
+
+const SNAP_LABELS = {
+  left: 'Snap left half',
+  right: 'Snap right half',
+  top: 'Snap full screen',
+  'top-left': 'Snap top-left quarter',
+  'top-right': 'Snap top-right quarter',
+  'bottom-left': 'Snap bottom-left quarter',
+  'bottom-right': 'Snap bottom-right quarter',
+};
+
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 const parseFontSize = (value) => {
   if (typeof value !== 'string') return DEFAULT_FONT_SIZE;
@@ -70,6 +87,31 @@ const parseSafeAreaValue = (value) => {
   if (!trimmed) return 0;
   const parsed = parseFloat(trimmed);
   return Number.isFinite(parsed) ? parsed : 0;
+};
+
+export const computeEdgeThreshold = (size) =>
+  clamp(size * EDGE_THRESHOLD_RATIO, EDGE_THRESHOLD_MIN, EDGE_THRESHOLD_MAX);
+
+export const percentOf = (value, total) => {
+  if (!total) return 0;
+  return (value / total) * 100;
+};
+
+export const getSnapLabel = (position) => {
+  if (!position) return 'Snap window';
+  return SNAP_LABELS[position] || 'Snap window';
+};
+
+export const normalizeRightCornerSnap = (candidate, regions) => {
+  if (!candidate) return null;
+  const { position } = candidate;
+  if (position === 'top-right' || position === 'bottom-right') {
+    const rightRegion = regions?.right;
+    if (rightRegion && rightRegion.width > 0 && rightRegion.height > 0) {
+      return { position: 'right', preview: rightRegion };
+    }
+  }
+  return candidate;
 };
 
 const readSafeAreaInset = (computed, property) => {
@@ -167,6 +209,39 @@ export const clampWindowTopPosition = (value, topOffset) => {
     return safeOffset;
   }
   return Math.max(value, safeOffset);
+};
+
+export const computeSnapRegions = (
+  viewportWidth,
+  viewportHeight,
+  topInset = DEFAULT_WINDOW_TOP_OFFSET,
+  bottomInset,
+) => {
+  const normalizedTopInset = typeof topInset === 'number'
+    ? Math.max(topInset, DESKTOP_TOP_PADDING)
+    : DEFAULT_WINDOW_TOP_OFFSET;
+  const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
+  const snapBottomInset = typeof bottomInset === 'number' && Number.isFinite(bottomInset)
+    ? Math.max(bottomInset, 0)
+    : measureSnapBottomInset();
+  const availableHeight = Math.max(
+    0,
+    viewportHeight - normalizedTopInset - snapBottomInset - safeBottom,
+  );
+  const halfWidth = Math.max(viewportWidth / 2, 0);
+  const halfHeight = Math.max(availableHeight / 2, 0);
+  const rightStart = Math.max(viewportWidth - halfWidth, 0);
+  const bottomStart = normalizedTopInset + halfHeight;
+
+  return {
+    left: { left: 0, top: normalizedTopInset, width: halfWidth, height: availableHeight },
+    right: { left: rightStart, top: normalizedTopInset, width: halfWidth, height: availableHeight },
+    top: { left: 0, top: normalizedTopInset, width: viewportWidth, height: availableHeight },
+    'top-left': { left: 0, top: normalizedTopInset, width: halfWidth, height: halfHeight },
+    'top-right': { left: rightStart, top: normalizedTopInset, width: halfWidth, height: halfHeight },
+    'bottom-left': { left: 0, top: bottomStart, width: halfWidth, height: halfHeight },
+    'bottom-right': { left: rightStart, top: bottomStart, width: halfWidth, height: halfHeight },
+  };
 };
 
 const parseDimension = (value) => {
