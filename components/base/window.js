@@ -129,6 +129,13 @@ export class Window extends Component {
         this._menuOpener = null;
     }
 
+    emitWindowStateChange = (changes = {}) => {
+        if (typeof this.props.onWindowStateChange !== 'function') return;
+        const id = this.id || this.props.id;
+        if (!id) return;
+        this.props.onWindowStateChange({ id, ...changes });
+    }
+
     notifySizeChange = () => {
         if (typeof this.props.onSizeChange === 'function') {
             const { width, height } = this.state;
@@ -623,6 +630,7 @@ export class Window extends Component {
     minimizeWindow = () => {
         this.setWinowsPosition();
         this.props.hasMinimised(this.id);
+        this.emitWindowStateChange({ minimized: true });
     }
 
     restoreWindow = () => {
@@ -658,6 +666,8 @@ export class Window extends Component {
         }
 
         node.style.transform = endTransform;
+
+        this.emitWindowStateChange({ maximized: false, minimized: false });
     }
 
     maximizeWindow = () => {
@@ -686,6 +696,7 @@ export class Window extends Component {
             }
             this.setState({ maximized: true, height: heightPercent, width: 100.2, preMaximizeSize: currentSize }, () => {
                 this.notifySizeChange();
+                this.emitWindowStateChange({ maximized: true, minimized: false });
             });
         }
     }
