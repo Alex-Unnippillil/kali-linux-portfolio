@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import { loadDesktopLayoutPresets } from '../../utils/desktopPresets';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
@@ -8,6 +9,10 @@ export function Settings() {
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
+    const [layoutPresets, setLayoutPresets] = useState([]);
+    const [presetName, setPresetName] = useState('');
+    const [presetStatus, setPresetStatus] = useState('');
+    const presetStatusTimeout = useRef(null);
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
 
@@ -15,6 +20,27 @@ export function Settings() {
         const name = e.currentTarget.dataset.path;
         setWallpaper(name);
     };
+
+    const handleSavePreset = useCallback(() => {
+        if (typeof window === 'undefined') return;
+        const trimmed = presetName.trim();
+        const detail = {};
+        if (trimmed) {
+            detail.name = trimmed;
+        }
+        window.dispatchEvent(new CustomEvent('desktop-layout-save-preset', { detail }));
+        setPresetName('');
+    }, [presetName]);
+
+    const handleApplyPreset = useCallback((id) => {
+        if (typeof window === 'undefined' || typeof id !== 'string' || !id) return;
+        window.dispatchEvent(new CustomEvent('desktop-layout-apply-preset', { detail: { id } }));
+    }, []);
+
+    const handleDeletePreset = useCallback((id) => {
+        if (typeof window === 'undefined' || typeof id !== 'string' || !id) return;
+        window.dispatchEvent(new CustomEvent('desktop-layout-delete-preset', { detail: { id } }));
+    }, []);
 
     let hexToRgb = (hex) => {
         hex = hex.replace('#', '');
@@ -55,6 +81,51 @@ export function Settings() {
         });
         return () => cancelAnimationFrame(raf);
     }, [accent, accentText, contrastRatio]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return undefined;
+        }
+        const refresh = () => {
+            setLayoutPresets(loadDesktopLayoutPresets());
+        };
+        const handleChange = (event) => {
+            refresh();
+            const operation = event?.detail?.operation;
+            if (operation && typeof operation === 'object') {
+                const name = operation.name || 'layout';
+                let message = '';
+                if (operation.type === 'saved') {
+                    message = `Saved layout "${name}".`;
+                } else if (operation.type === 'applied') {
+                    message = `Applied layout "${name}".`;
+                } else if (operation.type === 'deleted') {
+                    message = operation.name
+                        ? `Deleted layout "${operation.name}".`
+                        : 'Deleted layout.';
+                }
+                if (message) {
+                    if (presetStatusTimeout.current) {
+                        clearTimeout(presetStatusTimeout.current);
+                    }
+                    setPresetStatus(message);
+                    presetStatusTimeout.current = setTimeout(() => {
+                        setPresetStatus('');
+                        presetStatusTimeout.current = null;
+                    }, 4000);
+                }
+            }
+        };
+        refresh();
+        window.addEventListener('desktop-layout-presets-changed', handleChange);
+        return () => {
+            window.removeEventListener('desktop-layout-presets-changed', handleChange);
+            if (presetStatusTimeout.current) {
+                clearTimeout(presetStatusTimeout.current);
+                presetStatusTimeout.current = null;
+            }
+        };
+    }, []);
 
     return (
         <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-kali-surface text-kali-text">
@@ -230,6 +301,76 @@ export function Settings() {
                     </p>
                     <span ref={liveRegion} role="status" aria-live="polite" className="sr-only"></span>
                 </div>
+            </div>
+            <div className="border-t border-kali-border/60 mt-4 pt-4 px-6">
+                <h2 className="text-center text-sm font-semibold text-kali-text/80 uppercase tracking-wide mb-3">
+                    Workspace Layout Presets
+                </h2>
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        handleSavePreset();
+                    }}
+                    className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-center"
+                >
+                    <input
+                        type="text"
+                        value={presetName}
+                        onChange={(e) => setPresetName(e.target.value)}
+                        placeholder="Name this layout"
+                        aria-label="Layout name"
+                        autoComplete="off"
+                        className="w-full sm:w-64 bg-kali-surface-muted text-kali-text px-3 py-2 rounded-md border border-kali-border/70 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                    />
+                    <button
+                        type="submit"
+                        className="px-4 py-2 rounded-md bg-kali-primary text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                    >
+                        Save Current Layout
+                    </button>
+                </form>
+                {presetStatus && (
+                    <p className="mt-2 text-center text-xs text-kali-primary" role="status">
+                        {presetStatus}
+                    </p>
+                )}
+                <ul className="mt-4 space-y-2 max-h-64 overflow-y-auto">
+                    {layoutPresets.length === 0 ? (
+                        <li className="text-center text-sm text-kali-text/60">
+                            No saved layouts yet.
+                        </li>
+                    ) : (
+                        layoutPresets.map((preset) => (
+                            <li
+                                key={preset.id}
+                                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-3 py-2 rounded-md border border-kali-border/50 bg-kali-surface-muted/40"
+                            >
+                                <div className="text-left">
+                                    <p className="text-sm text-kali-text">{preset.name}</p>
+                                    <p className="text-xs text-kali-text/60">
+                                        Saved {new Date(preset.createdAt).toLocaleString()}
+                                    </p>
+                                </div>
+                                <div className="flex gap-2 justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleApplyPreset(preset.id)}
+                                        className="px-3 py-1 text-sm rounded-md bg-kali-primary text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                                    >
+                                        Apply
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDeletePreset(preset.id)}
+                                        className="px-3 py-1 text-sm rounded-md border border-kali-border/70 text-kali-text transition-colors hover:border-kali-error hover:text-kali-error focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            </li>
+                        ))
+                    )}
+                </ul>
             </div>
             <div className="flex flex-wrap justify-center items-center border-t border-kali-border/60">
                 {

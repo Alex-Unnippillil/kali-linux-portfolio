@@ -34,9 +34,50 @@ import {
     getSafeAreaInsets,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
+import {
+    deleteDesktopLayoutPreset,
+    loadDesktopLayoutPresets,
+    saveDesktopLayoutPreset,
+} from '../../utils/desktopPresets';
 
 const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
 const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
+
+const LAYOUT_PRESET_CHANGE_EVENT = 'desktop-layout-presets-changed';
+const SAVE_LAYOUT_PRESET_EVENT = 'desktop-layout-save-preset';
+const APPLY_LAYOUT_PRESET_EVENT = 'desktop-layout-apply-preset';
+const DELETE_LAYOUT_PRESET_EVENT = 'desktop-layout-delete-preset';
+
+const MIN_WINDOW_WIDTH = 200;
+const MIN_WINDOW_HEIGHT = 140;
+
+const cloneVectorMap = (source = {}) => {
+    const result = {};
+    if (!source || typeof source !== 'object') return result;
+    Object.entries(source).forEach(([key, value]) => {
+        if (!value || typeof value !== 'object') return;
+        const x = Number(value.x);
+        const y = Number(value.y);
+        if (Number.isFinite(x) && Number.isFinite(y)) {
+            result[key] = { x, y };
+        }
+    });
+    return result;
+};
+
+const cloneSizeMap = (source = {}) => {
+    const result = {};
+    if (!source || typeof source !== 'object') return result;
+    Object.entries(source).forEach(([key, value]) => {
+        if (!value || typeof value !== 'object') return;
+        const width = Number(value.width);
+        const height = Number(value.height);
+        if (Number.isFinite(width) && Number.isFinite(height)) {
+            result[key] = { width, height };
+        }
+    });
+    return result;
+};
 
 const sanitizeFolderItem = (item) => {
     if (!item) return null;
@@ -350,6 +391,226 @@ export class Desktop extends Component {
         window_positions: { ...state.window_positions },
         window_sizes: { ...(state.window_sizes || {}) },
     });
+
+    generateLayoutPresetId = () => {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+            return crypto.randomUUID();
+        }
+        return `layout-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    };
+
+    getLayoutPresetDefaultName = () => {
+        const presets = loadDesktopLayoutPresets();
+        const existingNames = new Set(presets.map((preset) => preset.name));
+        let counter = presets.length + 1;
+        let candidate = `Workspace Layout ${counter}`;
+        while (existingNames.has(candidate)) {
+            counter += 1;
+            candidate = `Workspace Layout ${counter}`;
+        }
+        return candidate;
+    };
+
+    captureDesktopLayoutSnapshot = () => {
+        const viewportWidth = typeof window !== 'undefined' && typeof window.innerWidth === 'number'
+            ? window.innerWidth
+            : null;
+        const viewportHeight = typeof window !== 'undefined' && typeof window.innerHeight === 'number'
+            ? window.innerHeight
+            : null;
+        const desktopApps = Array.isArray(this.state.desktop_apps)
+            ? [...this.state.desktop_apps]
+            : [];
+        const snapshot = {
+            version: 1,
+            capturedAt: Date.now(),
+            viewport: { width: viewportWidth, height: viewportHeight },
+            desktopApps,
+            desktopIconPositions: cloneVectorMap(this.state.desktop_icon_positions || {}),
+            iconSizePreset: this.state.iconSizePreset,
+            workspaces: [],
+        };
+
+        const workspaces = Array.isArray(this.state.workspaces) ? this.state.workspaces : [];
+        workspaces.forEach((workspace, index) => {
+            const workspaceId = typeof workspace?.id === 'number' ? workspace.id : index;
+            const stored = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
+            snapshot.workspaces.push({
+                id: workspaceId,
+                label: workspace?.label,
+                focused_windows: { ...stored.focused_windows },
+                closed_windows: { ...stored.closed_windows },
+                minimized_windows: { ...stored.minimized_windows },
+                window_positions: cloneVectorMap(stored.window_positions),
+                window_sizes: cloneSizeMap(stored.window_sizes),
+            });
+        });
+
+        return snapshot;
+    };
+
+    emitLayoutPresetChange = (detail = {}) => {
+        if (typeof window === 'undefined') return;
+        window.dispatchEvent(new CustomEvent(LAYOUT_PRESET_CHANGE_EVENT, { detail }));
+    };
+
+    handleSaveLayoutPreset = (event) => {
+        const requestedId = event?.detail && typeof event.detail.id === 'string' ? event.detail.id : null;
+        const requestedName = event?.detail && typeof event.detail.name === 'string' ? event.detail.name.trim() : '';
+        const snapshot = this.captureDesktopLayoutSnapshot();
+        if (!snapshot) return;
+        const preset = {
+            id: requestedId || this.generateLayoutPresetId(),
+            name: requestedName || this.getLayoutPresetDefaultName(),
+            createdAt: Date.now(),
+            layout: snapshot,
+        };
+        const presets = saveDesktopLayoutPreset(preset);
+        this.emitLayoutPresetChange({
+            presets,
+            operation: { type: 'saved', id: preset.id, name: preset.name },
+        });
+    };
+
+    handleApplyLayoutPreset = (event) => {
+        const id = event?.detail && typeof event.detail.id === 'string' ? event.detail.id : null;
+        if (!id) return;
+        const presets = loadDesktopLayoutPresets();
+        const preset = presets.find((entry) => entry.id === id);
+        if (!preset) return;
+        const applied = this.applyDesktopLayoutSnapshot(preset.layout);
+        if (applied) {
+            this.emitLayoutPresetChange({
+                presets,
+                operation: { type: 'applied', id: preset.id, name: preset.name },
+            });
+        }
+    };
+
+    handleDeleteLayoutPreset = (event) => {
+        const id = event?.detail && typeof event.detail.id === 'string' ? event.detail.id : null;
+        if (!id) return;
+        const current = loadDesktopLayoutPresets();
+        const preset = current.find((entry) => entry.id === id);
+        const presets = deleteDesktopLayoutPreset(id);
+        this.emitLayoutPresetChange({
+            presets,
+            operation: { type: 'deleted', id, name: preset?.name },
+        });
+    };
+
+    applyDesktopLayoutSnapshot = (snapshot) => {
+        if (!snapshot || typeof snapshot !== 'object') return false;
+
+        const viewportWidth = typeof window !== 'undefined' && typeof window.innerWidth === 'number'
+            ? window.innerWidth
+            : (snapshot.viewport && typeof snapshot.viewport.width === 'number' ? snapshot.viewport.width : 0);
+        const viewportHeight = typeof window !== 'undefined' && typeof window.innerHeight === 'number'
+            ? window.innerHeight
+            : (snapshot.viewport && typeof snapshot.viewport.height === 'number' ? snapshot.viewport.height : 0);
+
+        const baseWidth = snapshot.viewport && typeof snapshot.viewport.width === 'number'
+            ? snapshot.viewport.width
+            : viewportWidth;
+        const baseHeight = snapshot.viewport && typeof snapshot.viewport.height === 'number'
+            ? snapshot.viewport.height
+            : viewportHeight;
+
+        const scaleX = baseWidth && viewportWidth ? viewportWidth / baseWidth : 1;
+        const scaleY = baseHeight && viewportHeight ? viewportHeight / baseHeight : 1;
+        const topOffset = measureWindowTopOffset();
+
+        const desktopApps = Array.isArray(this.state.desktop_apps) ? this.state.desktop_apps : [];
+        const iconPositions = snapshot.desktopIconPositions || {};
+        const scaledIconPositions = {};
+        desktopApps.forEach((id) => {
+            const position = iconPositions[id];
+            if (!position || typeof position !== 'object') return;
+            const baseX = Number(position.x);
+            const baseY = Number(position.y);
+            if (!Number.isFinite(baseX) || !Number.isFinite(baseY)) return;
+            const scaledX = Math.round(baseX * scaleX);
+            const scaledY = Math.round(baseY * scaleY);
+            scaledIconPositions[id] = this.clampIconPosition(scaledX, scaledY);
+        });
+        const normalizedIconLayout = this.resolveIconLayout(desktopApps, scaledIconPositions, { clampOnly: true });
+
+        const storedWorkspaces = Array.isArray(snapshot.workspaces) ? snapshot.workspaces : [];
+        const nextWorkspaceSnapshots = [...this.workspaceSnapshots];
+        const viewportInfo = {
+            viewportWidth,
+            viewportHeight,
+            topOffset,
+        };
+
+        this.state.workspaces.forEach((workspace, index) => {
+            const workspaceId = typeof workspace?.id === 'number' ? workspace.id : index;
+            const stored = storedWorkspaces.find((entry) => entry && entry.id === workspaceId)
+                || storedWorkspaces[index]
+                || null;
+            if (!stored) {
+                nextWorkspaceSnapshots[workspaceId] = this.createEmptyWorkspaceState();
+                return;
+            }
+
+            const storedSizes = cloneSizeMap(stored.window_sizes);
+            const scaledSizes = {};
+            Object.entries(storedSizes).forEach(([windowId, size]) => {
+                const scaledWidth = Math.max(MIN_WINDOW_WIDTH, Math.round(size.width * scaleX));
+                const scaledHeight = Math.max(MIN_WINDOW_HEIGHT, Math.round(size.height * scaleY));
+                scaledSizes[windowId] = { width: scaledWidth, height: scaledHeight };
+            });
+
+            const storedPositions = cloneVectorMap(stored.window_positions);
+            const scaledPositions = {};
+            Object.entries(storedPositions).forEach(([windowId, position]) => {
+                const candidate = {
+                    x: Math.round(position.x * scaleX),
+                    y: Math.round(position.y * scaleY),
+                };
+                const size = scaledSizes[windowId] || null;
+                const clamped = clampWindowPositionWithinViewport(candidate, size, viewportInfo);
+                if (clamped) {
+                    scaledPositions[windowId] = {
+                        x: Math.round(clamped.x),
+                        y: Math.round(clamped.y),
+                    };
+                }
+            });
+
+            nextWorkspaceSnapshots[workspaceId] = {
+                focused_windows: { ...stored.focused_windows },
+                closed_windows: { ...stored.closed_windows },
+                minimized_windows: { ...stored.minimized_windows },
+                window_positions: scaledPositions,
+                window_sizes: scaledSizes,
+            };
+        });
+
+        this.workspaceSnapshots = nextWorkspaceSnapshots;
+        this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
+
+        const activeWorkspaceId = this.state.activeWorkspace;
+        const activeSnapshot = nextWorkspaceSnapshots[activeWorkspaceId] || this.createEmptyWorkspaceState();
+
+        this.setState({
+            desktop_icon_positions: normalizedIconLayout,
+            focused_windows: { ...activeSnapshot.focused_windows },
+            closed_windows: { ...activeSnapshot.closed_windows },
+            minimized_windows: { ...activeSnapshot.minimized_windows },
+            window_positions: { ...activeSnapshot.window_positions },
+            window_sizes: { ...activeSnapshot.window_sizes },
+            switcherWindows: [],
+        }, () => {
+            this.persistIconPositions();
+            this.persistWindowSizes(this.state.window_sizes || {});
+            this.broadcastWorkspaceState();
+            this.saveSession();
+            this.giveFocusToLastApp();
+        });
+
+        return true;
+    };
 
     getActiveUserId = () => {
         const { user } = this.props || {};
@@ -2841,6 +3102,9 @@ export class Desktop extends Component {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.addEventListener(SAVE_LAYOUT_PRESET_EVENT, this.handleSaveLayoutPreset);
+            window.addEventListener(APPLY_LAYOUT_PRESET_EVENT, this.handleApplyLayoutPreset);
+            window.addEventListener(DELETE_LAYOUT_PRESET_EVENT, this.handleDeleteLayoutPreset);
             this.broadcastWorkspaceState();
             this.broadcastIconSizePreset(this.state.iconSizePreset);
         }
@@ -2944,6 +3208,9 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.removeEventListener(SAVE_LAYOUT_PRESET_EVENT, this.handleSaveLayoutPreset);
+            window.removeEventListener(APPLY_LAYOUT_PRESET_EVENT, this.handleApplyLayoutPreset);
+            window.removeEventListener(DELETE_LAYOUT_PRESET_EVENT, this.handleDeleteLayoutPreset);
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
