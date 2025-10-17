@@ -23,7 +23,7 @@ const PRIORITY_COLORS = {
   low: 'bg-ubt-green',
 };
 
-export default function Todoist() {
+export default function Todoist({ context } = {}) {
   const [groups, setGroups] = useState(initialGroups);
   const [animating, setAnimating] = useState('');
   const [form, setForm] = useState({
@@ -55,6 +55,40 @@ export default function Todoist() {
     typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
+
+  const setTaskbarBadge =
+    context && typeof context.setTaskbarBadge === 'function'
+      ? context.setTaskbarBadge
+      : null;
+
+  useEffect(() => {
+    if (!setTaskbarBadge) return undefined;
+    const totals = Object.values(groups).reduce((sum, list) => {
+      if (!Array.isArray(list)) return sum;
+      return sum + list.length;
+    }, 0);
+
+    if (totals > 0) {
+      setTaskbarBadge({
+        variant: 'count',
+        value: totals,
+        max: 99,
+        tone: totals > 9 ? 'warning' : 'accent',
+        ariaLabel: `${totals} task${totals === 1 ? '' : 's'} remaining`,
+      });
+    } else {
+      setTaskbarBadge(null);
+    }
+
+    return undefined;
+  }, [groups, setTaskbarBadge]);
+
+  useEffect(() => {
+    if (!setTaskbarBadge) return undefined;
+    return () => {
+      setTaskbarBadge(null);
+    };
+  }, [setTaskbarBadge]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -638,6 +672,7 @@ export default function Todoist() {
               onBlur={saveEditing}
               onKeyDown={(e) => e.key === 'Enter' && saveEditing()}
               className="mt-1.5 w-full border p-1.5"
+              aria-label="Edit task title"
               autoFocus
             />
           )}
@@ -826,114 +861,144 @@ export default function Todoist() {
               ref={quickRef}
               value={quick}
               onChange={(e) => setQuick(e.target.value)}
-            placeholder="Quick add (e.g., 'Pay bills tomorrow !1')"
-            className="border p-1 flex-1"
-          />
-          <button
-            type="submit"
-            className="px-2 py-1 bg-blue-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            Add
-          </button>
-        </form>
-        <form onSubmit={handleAdd} className="flex flex-wrap gap-2">
-          <input
-            name="title"
-            value={form.title}
-            onChange={handleChange}
-            onKeyDown={(e) => e.key === 'Enter' && handleAdd(e)}
-            placeholder="Task"
-            className="border p-1"
-            required
-          />
-          <input
-            type="date"
-            name="due"
-            value={form.due}
-            onChange={handleChange}
-            className="border p-1"
-          />
-          <input
-            name="section"
-            value={form.section}
-            onChange={handleChange}
-            placeholder="Section"
-            className="border p-1"
-          />
-          <input
-            name="recurring"
-            value={form.recurring}
-            onChange={handleChange}
-            placeholder="Recurring (e.g., every mon)"
-            className="border p-1"
-          />
-          {recurringPreview.length > 0 && (
-            <div className="text-xs text-gray-500">
-              Next: {recurringPreview
-                .map((d) => d.toISOString().split('T')[0])
-                .join(', ')}
-            </div>
-          )}
-          <select
-            name="priority"
-            value={form.priority}
-            onChange={handleChange}
-            className="border p-1"
-          >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-          </select>
-          <button
-            type="submit"
-            className="px-2 py-1 bg-blue-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            Add
-          </button>
-        </form>
-        <div className="flex flex-wrap gap-2">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search"
-            className="border p-1 flex-1"
-          />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="border p-1"
-          >
-            <option value="all">All</option>
-            <option value="active">Active</option>
-            <option value="completed">Completed</option>
-          </select>
-          <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-            className="border p-1"
-          >
-            <option value="all">All priorities</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button className="px-2 py-1 border rounded" onClick={() => setView('all')}>All</button>
-          <button className="px-2 py-1 border rounded" onClick={() => setView('today')}>Today</button>
-          <button className="px-2 py-1 border rounded" onClick={() => setView('upcoming')}>Upcoming</button>
-          <button className="px-2 py-1 border rounded" onClick={() => setView('calendar')}>Calendar</button>
-          <button className="px-2 py-1 border rounded" onClick={handleExport}>Export</button>
-          <button className="px-2 py-1 border rounded" onClick={handleExportCsv}>Export CSV</button>
-          <label className="px-2 py-1 border rounded cursor-pointer">
-            Import
-            <input type="file" accept="application/json" onChange={handleImport} className="sr-only" />
-          </label>
-          <label className="px-2 py-1 border rounded cursor-pointer">
-            Import CSV
-            <input type="file" accept="text/csv" onChange={handleImportCsv} className="sr-only" />
-          </label>
-        </div>
+              placeholder="Quick add (e.g., 'Pay bills tomorrow !1')"
+              className="border p-1 flex-1"
+              aria-label="Quick add task"
+            />
+            <button
+              type="submit"
+              className="px-2 py-1 bg-blue-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Add
+            </button>
+          </form>
+          <form onSubmit={handleAdd} className="flex flex-wrap gap-2">
+            <input
+              name="title"
+              value={form.title}
+              onChange={handleChange}
+              onKeyDown={(e) => e.key === 'Enter' && handleAdd(e)}
+              placeholder="Task"
+              className="border p-1"
+              aria-label="Task title"
+              required
+            />
+            <input
+              type="date"
+              name="due"
+              value={form.due}
+              onChange={handleChange}
+              className="border p-1"
+              aria-label="Due date"
+            />
+            <input
+              name="section"
+              value={form.section}
+              onChange={handleChange}
+              placeholder="Section"
+              className="border p-1"
+              aria-label="Section name"
+            />
+            <input
+              name="recurring"
+              value={form.recurring}
+              onChange={handleChange}
+              placeholder="Recurring (e.g., every mon)"
+              className="border p-1"
+              aria-label="Recurring schedule"
+            />
+            {recurringPreview.length > 0 && (
+              <div className="text-xs text-gray-500">
+                Next: {recurringPreview
+                  .map((d) => d.toISOString().split('T')[0])
+                  .join(', ')}
+              </div>
+            )}
+            <select
+              name="priority"
+              value={form.priority}
+              onChange={handleChange}
+              className="border p-1"
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+            <button
+              type="submit"
+              className="px-2 py-1 bg-blue-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Add
+            </button>
+          </form>
+          <div className="flex flex-wrap gap-2">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search"
+              className="border p-1 flex-1"
+              aria-label="Search tasks"
+            />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="border p-1"
+            >
+              <option value="all">All</option>
+              <option value="active">Active</option>
+              <option value="completed">Completed</option>
+            </select>
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              className="border p-1"
+            >
+              <option value="all">All priorities</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button className="px-2 py-1 border rounded" onClick={() => setView('all')}>
+              All
+            </button>
+            <button className="px-2 py-1 border rounded" onClick={() => setView('today')}>
+              Today
+            </button>
+            <button className="px-2 py-1 border rounded" onClick={() => setView('upcoming')}>
+              Upcoming
+            </button>
+            <button className="px-2 py-1 border rounded" onClick={() => setView('calendar')}>
+              Calendar
+            </button>
+            <button className="px-2 py-1 border rounded" onClick={handleExport}>
+              Export
+            </button>
+            <button className="px-2 py-1 border rounded" onClick={handleExportCsv}>
+              Export CSV
+            </button>
+            <label className="px-2 py-1 border rounded cursor-pointer">
+              Import
+              <input
+                type="file"
+                accept="application/json"
+                onChange={handleImport}
+                className="sr-only"
+                aria-label="Import tasks from JSON"
+              />
+            </label>
+            <label className="px-2 py-1 border rounded cursor-pointer">
+              Import CSV
+              <input
+                type="file"
+                accept="text/csv"
+                onChange={handleImportCsv}
+                className="sr-only"
+                aria-label="Import tasks from CSV"
+              />
+            </label>
+          </div>
         <div className="flex flex-1">
           {view === 'all'
             ? (activeProject === 'all'
@@ -962,7 +1027,7 @@ export default function Todoist() {
   );
 }
 
-export const displayTodoist = () => {
-  return <Todoist />;
+export const displayTodoist = (addFolder, openApp, context) => {
+  return <Todoist context={context} />;
 };
 
