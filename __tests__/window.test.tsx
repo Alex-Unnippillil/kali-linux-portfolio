@@ -109,8 +109,11 @@ describe('Window lifecycle', () => {
       />
     );
 
-    const closeButton = screen.getByRole('button', { name: /window close/i });
-    fireEvent.click(closeButton);
+    const windowFrame = document.getElementById('test-window');
+    expect(windowFrame).not.toBeNull();
+    const closeButtons = within(windowFrame as HTMLElement).getAllByRole('button', { name: /window close/i });
+    expect(closeButtons.length).toBeGreaterThan(0);
+    fireEvent.click(closeButtons[closeButtons.length - 1]);
 
     act(() => {
       jest.advanceTimersByTime(300);
@@ -741,11 +744,13 @@ describe('Window maximize behavior', () => {
       />
     );
 
-    const maximizeButton = screen.getByRole('button', { name: /window maximize/i });
+    const winEl = document.getElementById('test-window');
+    expect(winEl).not.toBeNull();
+    const maximizeButton = within(winEl as HTMLElement).getByLabelText('Window maximize');
     fireEvent.click(maximizeButton);
 
-    const winEl = document.getElementById('test-window') as HTMLElement | null;
-    expect(winEl?.style.transform).toBe(`translate(-1pt, ${safeTop - DESKTOP_TOP_PADDING}px)`);
+    const winNode = winEl as HTMLElement | null;
+    expect(winNode?.style.transform).toBe(`translate(-1pt, ${safeTop - DESKTOP_TOP_PADDING}px)`);
   });
 });
 

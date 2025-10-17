@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { act } from 'react';
 import { Desktop } from '../components/screen/desktop';
 
@@ -24,17 +24,36 @@ function createMockComponent(testId: string, displayName: string) {
   return MockComponent;
 }
 
+const overlayControlRegistry = new Map<string, any>();
+
+const LAUNCHER_OVERLAY_ID = 'overlay-launcher';
+const SHORTCUT_OVERLAY_ID = 'overlay-shortcut-selector';
+const SWITCHER_OVERLAY_ID = 'overlay-window-switcher';
+
+async function waitForOverlayControls(overlayId: string) {
+  await waitFor(() => {
+    expect(overlayControlRegistry.has(overlayId)).toBe(true);
+  });
+  const controls = overlayControlRegistry.get(overlayId);
+  if (!controls) {
+    throw new Error(`Controls for overlay "${overlayId}" not found`);
+  }
+  return controls;
+}
+
 jest.mock('../components/base/window', () => {
   const MockWindow = createMockComponent('window', 'MockWindow');
-  function MockWindowTopBar({ title }: { title: string }) {
+  function MockWindowTopBar({ title, controls }: { title: string; controls?: React.ReactNode }) {
     return (
       <div data-testid="window-top-bar" role="presentation">
-        {title}
+        <span>{title}</span>
+        {controls || null}
       </div>
     );
   }
   MockWindowTopBar.displayName = 'MockWindowTopBar';
   function MockWindowEditButtons({ minimize, maximize, close, id, allowMaximize, isMaximised }: any) {
+    overlayControlRegistry.set(id, { minimize, maximize, close });
     return (
       <div data-testid={`window-controls-${id}`}>
         <button type="button" aria-label="Window minimize" onClick={minimize}>
@@ -221,10 +240,10 @@ describe('Desktop event listeners', () => {
 describe('Desktop overlay window controls', () => {
   beforeEach(() => {
     jest.useRealTimers();
+    overlayControlRegistry.clear();
   });
 
-  it('updates launcher overlay flags when window controls are used', () => {
-    jest.useFakeTimers();
+  it('updates launcher overlay flags when window controls are used', async () => {
     const desktopRef = React.createRef<Desktop>();
     render(
       <Desktop
@@ -241,29 +260,49 @@ describe('Desktop overlay window controls', () => {
       instance.openAllAppsOverlay();
     });
 
-    const minimizeButton = screen.getByLabelText('Window minimize');
-    fireEvent.click(minimizeButton);
-    expect(instance.state.overlayWindows.launcher.minimized).toBe(true);
-
-    fireEvent.click(minimizeButton);
-    expect(instance.state.overlayWindows.launcher.minimized).toBe(false);
-
-    const maximizeButton = screen.getByLabelText('Window maximize');
-    fireEvent.click(maximizeButton);
-    expect(instance.state.overlayWindows.launcher.maximized).toBe(true);
-
-    const closeButton = screen.getByLabelText('Window close');
-    fireEvent.click(closeButton);
-    expect(instance.state.overlayWindows.launcher.open).toBe(false);
+    const launcherControls = await waitForOverlayControls(LAUNCHER_OVERLAY_ID);
+    act(() => {
+      launcherControls.minimize();
+    });
+    await waitFor(() => {
+      const launcherStateAfterMinimize = instance.state.overlayWindows[LAUNCHER_OVERLAY_ID];
+      expect(launcherStateAfterMinimize).toBeDefined();
+      expect(launcherStateAfterMinimize!.minimized).toBe(true);
+    });
 
     act(() => {
-      jest.runAllTimers();
+      launcherControls.minimize();
     });
-    expect(instance.state.overlayWindows.launcher.transitionState).toBe('exited');
-    jest.useRealTimers();
+    await waitFor(() => {
+      const launcherStateAfterRestore = instance.state.overlayWindows[LAUNCHER_OVERLAY_ID];
+      expect(launcherStateAfterRestore).toBeDefined();
+      expect(launcherStateAfterRestore!.minimized).toBe(false);
+    });
+
+    act(() => {
+      launcherControls.maximize();
+    });
+    await waitFor(() => {
+      const launcherStateAfterMaximize = instance.state.overlayWindows[LAUNCHER_OVERLAY_ID];
+      expect(launcherStateAfterMaximize).toBeDefined();
+      expect(launcherStateAfterMaximize!.maximized).toBe(true);
+    });
+
+    act(() => {
+      launcherControls.close();
+    });
+    await waitFor(() => {
+      const launcherStateAfterClose = instance.state.overlayWindows[LAUNCHER_OVERLAY_ID];
+      expect(launcherStateAfterClose).toBeDefined();
+      expect(launcherStateAfterClose!.open).toBe(false);
+    });
+
+    await waitFor(() => {
+      expect(instance.state.overlayWindows[LAUNCHER_OVERLAY_ID]?.transitionState).toBe('exited');
+    });
   });
 
-  it('tracks shortcut selector overlay state changes from window controls', () => {
+  it('tracks shortcut selector overlay state changes from window controls', async () => {
     const desktopRef = React.createRef<Desktop>();
     render(
       <Desktop
@@ -280,19 +319,36 @@ describe('Desktop overlay window controls', () => {
       instance.openShortcutSelector();
     });
 
-    const minimizeButton = screen.getByLabelText('Window minimize');
-    fireEvent.click(minimizeButton);
-    expect(instance.state.overlayWindows.shortcutSelector.minimized).toBe(true);
+    const shortcutControls = await waitForOverlayControls(SHORTCUT_OVERLAY_ID);
+    act(() => {
+      shortcutControls.minimize();
+    });
+    await waitFor(() => {
+      const shortcutStateAfterMinimize = instance.state.overlayWindows[SHORTCUT_OVERLAY_ID];
+      expect(shortcutStateAfterMinimize).toBeDefined();
+      expect(shortcutStateAfterMinimize!.minimized).toBe(true);
+    });
 
-    fireEvent.click(minimizeButton);
-    expect(instance.state.overlayWindows.shortcutSelector.minimized).toBe(false);
+    act(() => {
+      shortcutControls.minimize();
+    });
+    await waitFor(() => {
+      const shortcutStateAfterRestore = instance.state.overlayWindows[SHORTCUT_OVERLAY_ID];
+      expect(shortcutStateAfterRestore).toBeDefined();
+      expect(shortcutStateAfterRestore!.minimized).toBe(false);
+    });
 
-    const closeButton = screen.getByLabelText('Window close');
-    fireEvent.click(closeButton);
-    expect(instance.state.overlayWindows.shortcutSelector.open).toBe(false);
+    act(() => {
+      shortcutControls.close();
+    });
+    await waitFor(() => {
+      const shortcutStateAfterClose = instance.state.overlayWindows[SHORTCUT_OVERLAY_ID];
+      expect(shortcutStateAfterClose).toBeDefined();
+      expect(shortcutStateAfterClose!.open).toBe(false);
+    });
   });
 
-  it('updates window switcher overlay flags through controls', () => {
+  it('updates window switcher overlay flags through controls', async () => {
     const desktopRef = React.createRef<Desktop>();
     render(
       <Desktop
@@ -306,19 +362,36 @@ describe('Desktop overlay window controls', () => {
 
     const instance = desktopRef.current!;
     act(() => {
-      instance.openOverlay('windowSwitcher');
+      instance.openOverlay(SWITCHER_OVERLAY_ID);
     });
 
-    const minimizeButton = screen.getByLabelText('Window minimize');
-    fireEvent.click(minimizeButton);
-    expect(instance.state.overlayWindows.windowSwitcher.minimized).toBe(true);
+    const switcherControls = await waitForOverlayControls(SWITCHER_OVERLAY_ID);
+    act(() => {
+      switcherControls.minimize();
+    });
+    await waitFor(() => {
+      const switcherStateAfterMinimize = instance.state.overlayWindows[SWITCHER_OVERLAY_ID];
+      expect(switcherStateAfterMinimize).toBeDefined();
+      expect(switcherStateAfterMinimize!.minimized).toBe(true);
+    });
 
-    fireEvent.click(minimizeButton);
-    expect(instance.state.overlayWindows.windowSwitcher.minimized).toBe(false);
+    act(() => {
+      switcherControls.minimize();
+    });
+    await waitFor(() => {
+      const switcherStateAfterRestore = instance.state.overlayWindows[SWITCHER_OVERLAY_ID];
+      expect(switcherStateAfterRestore).toBeDefined();
+      expect(switcherStateAfterRestore!.minimized).toBe(false);
+    });
 
-    const closeButton = screen.getByLabelText('Window close');
-    fireEvent.click(closeButton);
-    expect(instance.state.overlayWindows.windowSwitcher.open).toBe(false);
+    act(() => {
+      switcherControls.close();
+    });
+    await waitFor(() => {
+      const switcherStateAfterClose = instance.state.overlayWindows[SWITCHER_OVERLAY_ID];
+      expect(switcherStateAfterClose).toBeDefined();
+      expect(switcherStateAfterClose!.open).toBe(false);
+    });
   });
 });
 
