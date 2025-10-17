@@ -923,6 +923,88 @@ describe('Window viewport constraints', () => {
   });
 });
 
+describe('Keyboard move and resize accessibility', () => {
+  it('moves the window in 1px and 10px steps with Alt+Arrow keys', () => {
+    const announce = jest.fn();
+    const onPositionChange = jest.fn();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        onPositionChange={onPositionChange}
+        announce={announce}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 100,
+      top: 150,
+      right: 300,
+      bottom: 300,
+      width: 200,
+      height: 150,
+      x: 100,
+      y: 150,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      winEl.style.transform = 'translate(100px, 150px)';
+      winEl.style.setProperty('--window-transform-x', '100px');
+      winEl.style.setProperty('--window-transform-y', '150px');
+    });
+
+    fireEvent.keyDown(winEl, { key: 'ArrowRight', altKey: true });
+
+    expect(winEl.style.transform).toBe('translate(101px, 150px)');
+    expect(onPositionChange).toHaveBeenLastCalledWith(101, 150, expect.objectContaining({ source: 'keyboard' }));
+    expect(announce).toHaveBeenLastCalledWith('Test moved to 101px, 150px.');
+
+    fireEvent.keyDown(winEl, { key: 'ArrowRight', altKey: true, shiftKey: true });
+
+    expect(winEl.style.transform).toBe('translate(111px, 150px)');
+    expect(onPositionChange).toHaveBeenLastCalledWith(111, 150, expect.objectContaining({ source: 'keyboard' }));
+    expect(announce).toHaveBeenLastCalledWith('Test moved to 111px, 150px.');
+  });
+
+  it('resizes the window with Ctrl+Arrow keys and announces new size', () => {
+    const announce = jest.fn();
+    const onSizeChange = jest.fn();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        onSizeChange={onSizeChange}
+        announce={announce}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+
+    fireEvent.keyDown(winEl, { key: 'ArrowRight', ctrlKey: true });
+
+    expect(onSizeChange).toHaveBeenCalled();
+    expect(announce).toHaveBeenLastCalledWith('Test resized to 865px by 765px.');
+
+    fireEvent.keyDown(winEl, { key: 'ArrowDown', ctrlKey: true, shiftKey: true });
+
+    expect(announce).toHaveBeenLastCalledWith('Test resized to 865px by 775px.');
+  });
+});
+
 describe('Window overlay inert behaviour', () => {
   it('sets and removes inert on default __next root restoring focus', () => {
     const ref = React.createRef<any>();

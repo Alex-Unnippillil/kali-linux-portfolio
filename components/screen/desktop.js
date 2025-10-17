@@ -3895,12 +3895,13 @@ export class Desktop extends Component {
                 defaultHeight,
                 initialX: pos ? pos.x : undefined,
                 initialY: pos ? clampWindowTopPosition(pos.y, safeTopOffset) : safeTopOffset,
-                onPositionChange: (x, y) => this.updateWindowPosition(id, x, y),
+                onPositionChange: (x, y, options) => this.updateWindowPosition(id, x, y, options),
                 onSizeChange: (width, height) => this.updateWindowSize(id, width, height),
                 snapEnabled: this.props.snapEnabled,
                 snapGrid,
                 context: this.state.window_context[id],
                 zIndex: 200 + index,
+                announce: this.announce,
             };
 
             return <Window key={id} {...props} />;
@@ -4011,16 +4012,25 @@ export class Desktop extends Component {
         return elements;
     }
 
-    updateWindowPosition = (id, x, y) => {
+    updateWindowPosition = (id, x, y, options = {}) => {
+        if (!id) return;
+        const normalizedX = Number(x);
+        const normalizedY = Number(y);
+        if (!Number.isFinite(normalizedX) || !Number.isFinite(normalizedY)) {
+            return;
+        }
         const [gridX, gridY] = this.getSnapGrid();
         const snapValue = (value, size) => {
             if (!this.props.snapEnabled) return value;
             if (typeof size !== 'number' || !Number.isFinite(size) || size <= 0) return value;
             return Math.round(value / size) * size;
         };
+        const source = options && options.source;
+        const shouldSnap = this.props.snapEnabled && source !== 'keyboard';
         const safeTopOffset = measureWindowTopOffset();
-        const nextX = snapValue(x, gridX);
-        const nextY = clampWindowTopPosition(snapValue(y, gridY), safeTopOffset);
+        const nextX = shouldSnap ? snapValue(normalizedX, gridX) : Math.round(normalizedX);
+        const snappedY = shouldSnap ? snapValue(normalizedY, gridY) : Math.round(normalizedY);
+        const nextY = clampWindowTopPosition(snappedY, safeTopOffset);
         this.setWorkspaceState(prev => ({
             window_positions: { ...prev.window_positions, [id]: { x: nextX, y: nextY } }
         }), () => {
