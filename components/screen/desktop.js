@@ -124,9 +124,9 @@ const OVERLAY_WINDOWS = Object.freeze({
         icon: '/themes/Yaru/window/window-restore-symbolic.svg',
     },
     commandPalette: {
-         id: 'overlay-command-palette',
-         title: 'Command Palette',
-         icon: '/themes/Yaru/apps/word-search.svg',
+        id: 'overlay-command-palette',
+        title: 'Command Palette',
+        icon: '/themes/Yaru/apps/word-search.svg',
     },
 });
 
@@ -1604,6 +1604,17 @@ export class Desktop extends Component {
         const { closed, minimized, focused } = flags || {};
         let didUpdate = false;
 
+        const overlayUpdates = {};
+        if (typeof closed === 'boolean') {
+            overlayUpdates.open = !closed;
+        }
+        if (typeof minimized === 'boolean') {
+            overlayUpdates.minimized = minimized;
+        }
+        if (typeof focused === 'boolean') {
+            overlayUpdates.focused = focused;
+        }
+
         this.setState((prev) => {
             const partial = {};
 
@@ -1643,6 +1654,13 @@ export class Desktop extends Component {
             this.commitWorkspacePartial(workspacePartial, prev.activeWorkspace);
             return partial;
         }, () => {
+            if (id && Object.keys(overlayUpdates).length) {
+                this.updateOverlayState(id, (current = {}) => ({
+                    ...current,
+                    ...overlayUpdates,
+                }));
+            }
+
             if (typeof callback === 'function') {
                 callback();
             }
@@ -1701,6 +1719,34 @@ export class Desktop extends Component {
         } else {
             this.minimizeOverlay(id);
         }
+    };
+
+    toggleOverlayMaximize = (id) => {
+        if (!this.isOverlayId(id)) return;
+
+        this.updateOverlayState(
+            id,
+            (current = {}) => {
+                const nextMaximized = !current.maximized;
+                return {
+                    ...current,
+                    open: true,
+                    minimized: false,
+                    maximized: nextMaximized,
+                    transitionState: 'entered',
+                    focused: true,
+                };
+            },
+            () => {
+                this.syncOverlayWindowFlags(
+                    id,
+                    { closed: false, minimized: false, focused: true },
+                    () => {
+                        this.focus(id);
+                    },
+                );
+            },
+        );
     };
 
     minimizeOverlay = (id) => {
@@ -3882,6 +3928,7 @@ export class Desktop extends Component {
                 title: app.title,
                 id: app.id,
                 screen: app.screen,
+                icon: typeof app.icon === 'string' ? app.icon.replace('./', '/') : undefined,
                 addFolder: this.addToDesktop,
                 closed: this.closeApp,
                 openApp: this.openApp,
@@ -3911,81 +3958,119 @@ export class Desktop extends Component {
         const elements = [];
         const overlays = this.state.overlayWindows || {};
 
+        const launcherMeta = OVERLAY_WINDOWS.launcher;
         const launcherState = overlays[LAUNCHER_OVERLAY_ID];
         if (launcherState) {
             const transitionState = launcherState.transitionState || (launcherState.open ? 'entered' : 'exited');
-            const shouldRender = launcherState.open || ['entering', 'exiting'].includes(transitionState);
-            const overlayActive = launcherState.open && !launcherState.minimized;
+            const shouldRender =
+                launcherState.open
+                || launcherState.minimized
+                || launcherState.maximized
+                || ['entering', 'exiting'].includes(transitionState);
             if (shouldRender) {
-                const overlayClasses = [
-                    'fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto px-4 py-12 sm:py-16',
-                    'bg-slate-950/70 backdrop-blur-xl transition-opacity duration-200 ease-out',
-                    overlayActive ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
-                ].join(' ');
-                const panelClasses = [
-                    'w-full max-w-6xl transform transition-all duration-200 ease-out focus:outline-none',
-                    overlayActive ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 -translate-y-2',
-                ].join(' ');
+                const overlayActive = launcherState.open && !launcherState.minimized;
+                const frameActiveClasses = overlayActive
+                    ? 'scale-100 opacity-100 translate-y-0'
+                    : 'scale-95 opacity-0 -translate-y-2 pointer-events-none';
 
                 elements.push(
-                    <div
-                        key={LAUNCHER_OVERLAY_ID}
-                        ref={this.allAppsOverlayRef}
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="all-apps-overlay-title"
-                        aria-hidden={!overlayActive}
-                        tabIndex={-1}
-                        className={overlayClasses}
+                    <SystemOverlayWindow
+                        key={launcherMeta.id}
+                        id={launcherMeta.id}
+                        title={launcherMeta.title}
+                        icon={launcherMeta.icon}
+                        open={Boolean(launcherState.open)}
+                        minimized={Boolean(launcherState.minimized)}
+                        maximized={Boolean(launcherState.maximized)}
+                        onMinimize={() => this.toggleOverlayMinimize(LAUNCHER_OVERLAY_ID)}
+                        onMaximize={() => this.toggleOverlayMaximize(LAUNCHER_OVERLAY_ID)}
+                        onClose={this.closeAllAppsOverlay}
+                        overlayClassName="bg-slate-950/70 backdrop-blur-xl transition-opacity duration-200 ease-out"
+                        frameClassName={`w-full max-w-6xl transform transition-all duration-200 ease-out focus:outline-none ${frameActiveClasses}`.trim()}
+                        bodyClassName="bg-transparent p-0"
+                        contentRef={this.allAppsOverlayRef}
+                        ariaLabelledBy="all-apps-overlay-title"
                     >
-                        <div className={panelClasses}>
-                            <AllApplications
-                                apps={apps}
-                                games={games}
-                                recentApps={this.getActiveStack()}
-                                openApp={this.openApp}
-                                searchInputRef={this.allAppsSearchRef}
-                                headingId="all-apps-overlay-title"
-                            />
-                        </div>
-                    </div>
+                        <AllApplications
+                            apps={apps}
+                            games={games}
+                            recentApps={this.getActiveStack()}
+                            openApp={this.openApp}
+                            searchInputRef={this.allAppsSearchRef}
+                            headingId="all-apps-overlay-title"
+                        />
+                    </SystemOverlayWindow>
                 );
             }
         }
 
+        const shortcutMeta = OVERLAY_WINDOWS.shortcutSelector;
         const shortcutState = overlays[SHORTCUT_OVERLAY_ID];
-        if (shortcutState?.open && !shortcutState.minimized) {
+        if (shortcutState && (shortcutState.open || shortcutState.minimized || shortcutState.maximized)) {
             elements.push(
-                <ShortcutSelector
-                    key={SHORTCUT_OVERLAY_ID}
-                    apps={apps}
-                    games={games}
-                    onSelect={this.addShortcutToDesktop}
+                <SystemOverlayWindow
+                    key={shortcutMeta.id}
+                    id={shortcutMeta.id}
+                    title={shortcutMeta.title}
+                    icon={shortcutMeta.icon}
+                    open={Boolean(shortcutState.open)}
+                    minimized={Boolean(shortcutState.minimized)}
+                    maximized={Boolean(shortcutState.maximized)}
+                    onMinimize={() => this.toggleOverlayMinimize(SHORTCUT_OVERLAY_ID)}
                     onClose={() => this.closeOverlay(SHORTCUT_OVERLAY_ID)}
-                />
+                    allowMaximize={false}
+                    overlayClassName="bg-slate-950/70 backdrop-blur-xl transition-opacity duration-200 ease-out"
+                    frameClassName="w-full max-w-4xl"
+                    bodyClassName="bg-transparent p-0"
+                >
+                    <ShortcutSelector
+                        apps={apps}
+                        games={games}
+                        onSelect={this.addShortcutToDesktop}
+                        onClose={() => this.closeOverlay(SHORTCUT_OVERLAY_ID)}
+                    />
+                </SystemOverlayWindow>
             );
         }
 
+        const switcherMeta = OVERLAY_WINDOWS.windowSwitcher;
         const switcherState = overlays[SWITCHER_OVERLAY_ID];
-        if (switcherState?.open && !switcherState.minimized) {
+        if (switcherState && (switcherState.open || switcherState.minimized || switcherState.maximized)) {
             elements.push(
-                <WindowSwitcher
-                    key={SWITCHER_OVERLAY_ID}
-                    windows={this.state.switcherWindows}
-                    onSelect={this.selectWindow}
+                <SystemOverlayWindow
+                    key={switcherMeta.id}
+                    id={switcherMeta.id}
+                    title={switcherMeta.title}
+                    icon={switcherMeta.icon}
+                    open={Boolean(switcherState.open)}
+                    minimized={Boolean(switcherState.minimized)}
+                    maximized={Boolean(switcherState.maximized)}
+                    onMinimize={() => this.toggleOverlayMinimize(SWITCHER_OVERLAY_ID)}
                     onClose={this.closeWindowSwitcher}
-                />
+                    allowMaximize={false}
+                    overlayClassName="bg-slate-950/70 backdrop-blur-xl transition-opacity duration-200 ease-out"
+                    frameClassName="w-full max-w-3xl"
+                    bodyClassName="bg-transparent p-0"
+                >
+                    <WindowSwitcher
+                        windows={this.state.switcherWindows}
+                        onSelect={this.selectWindow}
+                        onClose={this.closeWindowSwitcher}
+                    />
+                </SystemOverlayWindow>
             );
         }
 
+        const commandPaletteMeta = OVERLAY_WINDOWS.commandPalette;
         const commandPaletteState = overlays[COMMAND_PALETTE_OVERLAY_ID];
-        if (commandPaletteState) {
+        if (commandPaletteState && (commandPaletteState.open || commandPaletteState.minimized || commandPaletteState.maximized)) {
             const paletteActive = commandPaletteState.open && !commandPaletteState.minimized;
             elements.push(
                 <SystemOverlayWindow
-                    key={COMMAND_PALETTE_OVERLAY_ID}
-                    id={COMMAND_PALETTE_OVERLAY_ID}
-                    title="Command Palette"
+                    key={commandPaletteMeta.id}
+                    id={commandPaletteMeta.id}
+                    title={commandPaletteMeta.title}
+                    icon={commandPaletteMeta.icon}
                     open={Boolean(commandPaletteState.open)}
                     minimized={Boolean(commandPaletteState.minimized)}
                     maximized={Boolean(commandPaletteState.maximized)}
@@ -4598,9 +4683,9 @@ export class Desktop extends Component {
             '--desktop-overlay': overlayValue,
         };
         const overlayWindows = this.state.overlayWindows || {};
-        const launcherOverlay = overlayWindows.launcher || { open: false, minimized: false, maximized: false, transitionState: 'exited' };
-        const shortcutOverlay = overlayWindows.shortcutSelector || { open: false, minimized: false, maximized: false };
-        const windowSwitcherOverlay = overlayWindows.windowSwitcher || { open: false, minimized: false, maximized: false };
+        const launcherOverlay = overlayWindows[LAUNCHER_OVERLAY_ID] || { open: false, minimized: false, maximized: false, transitionState: 'exited' };
+        const shortcutOverlay = overlayWindows[SHORTCUT_OVERLAY_ID] || { open: false, minimized: false, maximized: false };
+        const windowSwitcherOverlay = overlayWindows[SWITCHER_OVERLAY_ID] || { open: false, minimized: false, maximized: false };
         const minimizedEntries = this.getMinimizedWindowEntries();
         const closedEntries = this.getClosedWindowEntries();
         const showMinimizedShelf = this.state.minimizedShelfOpen || minimizedEntries.length > 0;

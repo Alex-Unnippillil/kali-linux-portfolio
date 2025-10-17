@@ -8,6 +8,7 @@ import { WindowEditButtons, WindowTopBar } from './window';
 type SystemOverlayWindowProps = {
     id: string;
     title: string;
+    icon?: string;
     open: boolean;
     minimized?: boolean;
     maximized?: boolean;
@@ -36,6 +37,7 @@ const defaultOverlayState = {
 export default function SystemOverlayWindow({
     id,
     title,
+    icon,
     open,
     minimized = defaultOverlayState.minimized,
     maximized = defaultOverlayState.maximized,
@@ -113,19 +115,22 @@ export default function SystemOverlayWindow({
             >
                 <WindowTopBar
                     title={title}
+                    icon={icon}
                     onKeyDown={undefined}
                     onBlur={undefined}
                     grabbed={false}
                     onPointerDown={undefined}
                     onDoubleClick={onMaximize ? handleMaximize : undefined}
-                />
-                <WindowEditButtons
-                    minimize={handleMinimize}
-                    maximize={handleMaximize}
-                    isMaximised={Boolean(maximized)}
-                    close={handleClose}
-                    id={id}
-                    allowMaximize={allowMaximize}
+                    controls={(
+                        <WindowEditButtons
+                            minimize={handleMinimize}
+                            maximize={handleMaximize}
+                            isMaximised={Boolean(maximized)}
+                            close={handleClose}
+                            id={id}
+                            allowMaximize={allowMaximize}
+                        />
+                    )}
                 />
                 <div className={bodyClasses}>{children}</div>
             </div>

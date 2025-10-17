@@ -93,22 +93,77 @@
   -webkit-backdrop-filter: blur(4px);
 }
 
+
 .windowTitlebar {
-  height: 28px;
-  border-top-left-radius: calc(var(--radius-6) - 1px);
-  border-top-right-radius: calc(var(--radius-6) - 1px);
   position: relative;
   z-index: 1;
+  border-top-left-radius: calc(var(--radius-6) - 1px);
+  border-top-right-radius: calc(var(--radius-6) - 1px);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.75rem;
+  --window-control-target: max(var(--shell-hit-target, 2.5rem), 2.5rem);
+  min-height: var(--window-control-target);
+}
+
+.windowTitleIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--shell-icon-size, 1.5rem);
+  height: var(--shell-icon-size, 1.5rem);
+  pointer-events: none;
+}
+
+.windowTitleIcon[data-empty='true'] {
+  visibility: hidden;
+}
+
+.windowTitle {
+  min-width: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  justify-self: center;
+}
+
+.windowTitleControls {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  min-width: calc(var(--window-control-target) * 3);
+}
+
+.windowTitleControls[data-empty='true'] {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .windowControls {
-  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 .windowControlButton {
   outline: none;
   box-shadow: none;
   transition: box-shadow var(--motion-fast) ease;
+  width: var(--window-control-target, 2.5rem);
+  height: var(--window-control-target, 2.5rem);
+  min-width: var(--window-control-target, 2.5rem);
+  min-height: var(--window-control-target, 2.5rem);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .windowControlButton:focus-visible {
