@@ -744,24 +744,56 @@ export class Window extends Component {
     }
 
     handleKeyDown = (e) => {
-        if (e.key === 'Escape') {
+        const key = typeof e.key === 'string' ? e.key : '';
+
+        if (e.altKey && key === 'F4') {
+            e.preventDefault();
+            e.stopPropagation();
             this.closeWindow();
-        } else if (e.key === 'Tab') {
+            return;
+        }
+
+        if (e.ctrlKey && !e.altKey) {
+            const normalizedKey = key.toLowerCase();
+            if (e.shiftKey && normalizedKey === 'm') {
+                e.preventDefault();
+                e.stopPropagation();
+                if (this.props.allowMaximize !== false) {
+                    if (this.state.maximized) {
+                        this.restoreWindow();
+                    } else {
+                        this.maximizeWindow();
+                    }
+                }
+                return;
+            }
+
+            if (!e.shiftKey && normalizedKey === 'm') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.minimizeWindow();
+                return;
+            }
+        }
+
+        if (key === 'Escape') {
+            this.closeWindow();
+        } else if (key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
-            if (e.key === 'ArrowDown') {
+            if (key === 'ArrowDown') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.unsnapWindow();
-            } else if (e.key === 'ArrowLeft') {
+            } else if (key === 'ArrowLeft') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.snapWindow('left');
-            } else if (e.key === 'ArrowRight') {
+            } else if (key === 'ArrowRight') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.snapWindow('right');
-            } else if (e.key === 'ArrowUp') {
+            } else if (key === 'ArrowUp') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.snapWindow('top');
@@ -769,19 +801,19 @@ export class Window extends Component {
             this.focusWindow();
         } else if (e.shiftKey) {
             const step = 1;
-            if (e.key === 'ArrowLeft') {
+            if (key === 'ArrowLeft') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.setState(prev => ({ width: Math.max(prev.width - step, 20), preMaximizeSize: null }), this.resizeBoundries);
-            } else if (e.key === 'ArrowRight') {
+            } else if (key === 'ArrowRight') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.setState(prev => ({ width: Math.min(prev.width + step, 100), preMaximizeSize: null }), this.resizeBoundries);
-            } else if (e.key === 'ArrowUp') {
+            } else if (key === 'ArrowUp') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.setState(prev => ({ height: Math.max(prev.height - step, 20), preMaximizeSize: null }), this.resizeBoundries);
-            } else if (e.key === 'ArrowDown') {
+            } else if (key === 'ArrowDown') {
                 e.preventDefault();
                 e.stopPropagation();
                 this.setState(prev => ({ height: Math.min(prev.height + step, 100), preMaximizeSize: null }), this.resizeBoundries);
@@ -932,6 +964,10 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
+            aria-keyshortcuts="Space Enter ArrowLeft ArrowRight ArrowUp ArrowDown"
+            title={grabbed
+                ? 'Release with Space or Enter. Use Arrow keys to move the window.'
+                : 'Press Space or Enter to grab. Use Arrow keys to move while grabbed.'}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
             onPointerDown={onPointerDown}
@@ -988,6 +1024,7 @@ export class WindowXBorder extends Component {
 export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
+    const maximizeShortcut = 'Ctrl+Shift+M';
     return (
         <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[8.25rem]`}>
             {pipSupported && props.pip && (
@@ -1010,6 +1047,8 @@ export function WindowEditButtons(props) {
             <button
                 type="button"
                 aria-label="Window minimize"
+                aria-keyshortcuts="Ctrl+M"
+                title="Minimize window (Ctrl+M)"
                 className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
                 onClick={props.minimize}
             >
@@ -1028,6 +1067,8 @@ export function WindowEditButtons(props) {
                         <button
                             type="button"
                             aria-label="Window restore"
+                            aria-keyshortcuts={maximizeShortcut}
+                            title={`Restore window (${maximizeShortcut})`}
                             className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
                             onClick={props.maximize}
                         >
@@ -1044,6 +1085,8 @@ export function WindowEditButtons(props) {
                         <button
                             type="button"
                             aria-label="Window maximize"
+                            aria-keyshortcuts={maximizeShortcut}
+                            title={`Maximize window (${maximizeShortcut})`}
                             className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
                             onClick={props.maximize}
                         >
@@ -1062,6 +1105,8 @@ export function WindowEditButtons(props) {
                 type="button"
                 id={`close-${props.id}`}
                 aria-label="Window close"
+                aria-keyshortcuts="Escape Alt+F4"
+                title="Close window (Escape or Alt+F4)"
                 className={`${styles.windowControlButton} mx-1 cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6`}
                 onClick={props.close}
             >
