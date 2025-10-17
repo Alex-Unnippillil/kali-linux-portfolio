@@ -2,13 +2,37 @@ import React from 'react';
 import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import Navbar from '../components/screen/navbar';
 
-jest.mock('../components/util-components/clock', () => () => <div data-testid="clock" />);
-jest.mock('../components/util-components/status', () => () => <div data-testid="status" />);
-jest.mock('../components/ui/QuickSettings', () => ({ open }: { open: boolean }) => (
-  <div data-testid="quick-settings">{open ? 'open' : 'closed'}</div>
-));
-jest.mock('../components/menu/WhiskerMenu', () => () => <button type="button">Menu</button>);
-jest.mock('../components/ui/PerformanceGraph', () => () => <div data-testid="performance" />);
+jest.mock('../components/util-components/clock', () => {
+  const MockClock = () => <div data-testid="clock" />;
+  MockClock.displayName = 'MockClock';
+  return MockClock;
+});
+
+jest.mock('../components/util-components/status', () => {
+  const MockStatus = () => <div data-testid="status" />;
+  MockStatus.displayName = 'MockStatus';
+  return MockStatus;
+});
+
+jest.mock('../components/ui/QuickSettings', () => {
+  const MockQuickSettings = ({ open }: { open: boolean }) => (
+    <div data-testid="quick-settings">{open ? 'open' : 'closed'}</div>
+  );
+  MockQuickSettings.displayName = 'MockQuickSettings';
+  return MockQuickSettings;
+});
+
+jest.mock('../components/menu/WhiskerMenu', () => {
+  const MockWhisker = () => <button type="button">Menu</button>;
+  MockWhisker.displayName = 'MockWhisker';
+  return MockWhisker;
+});
+
+jest.mock('../components/ui/PerformanceGraph', () => {
+  const MockPerformanceGraph = () => <div data-testid="performance" />;
+  MockPerformanceGraph.displayName = 'MockPerformanceGraph';
+  return MockPerformanceGraph;
+});
 
 const workspaceEventDetail = {
   workspaces: [
@@ -193,5 +217,99 @@ describe('Navbar running apps tray', () => {
       action: 'reorder',
       order: ['app2', 'app3', 'app1'],
     });
+  });
+
+  it('exposes hidden apps through the overflow menu when the tray overflows', () => {
+    jest.useFakeTimers();
+    try {
+      render(<Navbar />);
+
+      const overflowingDetail = {
+        ...workspaceEventDetail,
+        runningApps: [
+          { id: 'app1', title: 'App One', icon: '/icon.png', isFocused: true, isMinimized: false },
+          { id: 'app2', title: 'App Two', icon: '/icon.png', isFocused: false, isMinimized: false },
+          { id: 'app3', title: 'App Three', icon: '/icon.png', isFocused: false, isMinimized: false },
+          { id: 'app4', title: 'App Four', icon: '/icon.png', isFocused: false, isMinimized: false },
+        ],
+      };
+
+      act(() => {
+        window.dispatchEvent(new CustomEvent('workspace-state', { detail: overflowingDetail }));
+      });
+
+      const list = screen.getByRole('list', { name: /open applications/i });
+      Object.defineProperty(list, 'clientWidth', { configurable: true, value: 160 });
+      Object.defineProperty(list, 'scrollWidth', { configurable: true, value: 320 });
+      Object.defineProperty(list, 'scrollLeft', { configurable: true, value: 0, writable: true });
+
+      const items = within(list).getAllByRole('listitem');
+      items.forEach((item, index) => {
+        Object.defineProperty(item, 'offsetLeft', { configurable: true, value: index * 80 });
+        Object.defineProperty(item, 'offsetWidth', { configurable: true, value: 72 });
+      });
+
+      act(() => {
+        jest.runOnlyPendingTimers();
+      });
+
+      const overflowButton = screen.getByRole('button', { name: /show hidden applications/i });
+      expect(overflowButton).toBeInTheDocument();
+
+      fireEvent.click(overflowButton);
+
+      const menu = screen.getByRole('menu', { name: /hidden applications/i });
+      const menuItems = within(menu).getAllByRole('menuitem');
+      expect(menuItems.map((item) => item.textContent)).toEqual(['App Three', 'App Four']);
+
+      dispatchSpy.mockClear();
+
+      fireEvent.click(menuItems[0]);
+
+      const toggleEvent = dispatchSpy.mock.calls.find(([event]) => event.type === 'taskbar-command');
+      expect(toggleEvent && toggleEvent[0].detail).toEqual({ appId: 'app3', action: 'toggle' });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('converts vertical wheel scrolling into horizontal movement on the taskbar list', () => {
+    jest.useFakeTimers();
+    try {
+      render(<Navbar />);
+
+      act(() => {
+        window.dispatchEvent(new CustomEvent('workspace-state', { detail: multiAppWorkspaceDetail }));
+      });
+
+      const list = screen.getByRole('list', { name: /open applications/i });
+      Object.defineProperty(list, 'clientWidth', { configurable: true, value: 160 });
+      Object.defineProperty(list, 'scrollWidth', { configurable: true, value: 320 });
+      Object.defineProperty(list, 'scrollLeft', { configurable: true, value: 0, writable: true });
+
+      const items = within(list).getAllByRole('listitem');
+      items.forEach((item, index) => {
+        Object.defineProperty(item, 'offsetLeft', { configurable: true, value: index * 80 });
+        Object.defineProperty(item, 'offsetWidth', { configurable: true, value: 72 });
+      });
+
+      act(() => {
+        jest.runOnlyPendingTimers();
+      });
+
+      const wheelEvent = new Event('wheel');
+      Object.defineProperties(wheelEvent, {
+        deltaY: { value: 100 },
+        deltaX: { value: 0 },
+        preventDefault: { value: jest.fn(), writable: true },
+      });
+
+      list.dispatchEvent(wheelEvent);
+
+      expect(wheelEvent.preventDefault).toHaveBeenCalled();
+      expect(list.scrollLeft).toBe(100);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
