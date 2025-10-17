@@ -1,0 +1,11 @@
+.panelMotion {
+  transition-property: opacity, transform;
+  transition-duration: var(--motion-panel-enter-duration);
+  transition-timing-function: var(--motion-panel-enter-easing);
+  will-change: opacity, transform;
+}
+
+.panelMotion[data-motion-state='closing'] {
+  transition-duration: var(--motion-panel-exit-duration);
+  transition-timing-function: var(--motion-panel-exit-easing);
+}

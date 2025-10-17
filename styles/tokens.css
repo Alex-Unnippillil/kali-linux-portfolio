@@ -80,6 +80,10 @@
   --motion-fast: 150ms;
   --motion-medium: 300ms;
   --motion-slow: 500ms;
+  --motion-panel-enter-duration: 220ms;
+  --motion-panel-exit-duration: 160ms;
+  --motion-panel-enter-easing: cubic-bezier(0.26, 0.86, 0.44, 1);
+  --motion-panel-exit-easing: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* Fonts */
   --font-family-base: 'Rajdhani', 'Segoe UI', sans-serif;
@@ -124,6 +128,10 @@
   --motion-fast: 0ms;
   --motion-medium: 0ms;
   --motion-slow: 0ms;
+  --motion-panel-enter-duration: 0ms;
+  --motion-panel-exit-duration: 0ms;
+  --motion-panel-enter-easing: linear;
+  --motion-panel-exit-easing: linear;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -131,6 +139,10 @@
     --motion-fast: 0ms;
     --motion-medium: 0ms;
     --motion-slow: 0ms;
+    --motion-panel-enter-duration: 0ms;
+    --motion-panel-exit-duration: 0ms;
+    --motion-panel-enter-easing: linear;
+    --motion-panel-exit-easing: linear;
   }
 }
 
