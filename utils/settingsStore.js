@@ -19,6 +19,8 @@ const DEFAULT_SETTINGS = {
 
 let hasLoggedStorageWarning = false;
 
+const LAYOUT_PRESETS_KEY = 'desktop_layout_presets';
+
 function getLocalStorage() {
   if (typeof window === 'undefined') return null;
   try {
@@ -275,3 +277,65 @@ export async function importSettings(json) {
 }
 
 export const defaults = DEFAULT_SETTINGS;
+
+function parseLayoutPresetStorage(raw) {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return {};
+    return parsed;
+  } catch (error) {
+    console.error('Failed to parse layout presets', error);
+    return {};
+  }
+}
+
+function serializeLayoutPresets(presets) {
+  try {
+    return JSON.stringify(presets || {});
+  } catch (error) {
+    console.error('Failed to serialize layout presets', error);
+    return '{}';
+  }
+}
+
+export async function getLayoutPresets() {
+  const storage = getLocalStorage();
+  if (!storage) return {};
+  const raw = storage.getItem(LAYOUT_PRESETS_KEY);
+  return parseLayoutPresetStorage(raw);
+}
+
+export async function saveLayoutPreset(name, layout) {
+  const storage = getLocalStorage();
+  if (!storage || !name) return false;
+  const trimmed = String(name).trim();
+  if (!trimmed) return false;
+  const presets = await getLayoutPresets();
+  const next = { ...presets };
+  const snapshot = layout && typeof layout === 'object' ? { ...layout } : {};
+  snapshot.savedAt = Date.now();
+  next[trimmed] = snapshot;
+  storage.setItem(LAYOUT_PRESETS_KEY, serializeLayoutPresets(next));
+  return true;
+}
+
+export async function deleteLayoutPreset(name) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  const trimmed = typeof name === 'string' ? name.trim() : '';
+  if (!trimmed) return;
+  const presets = await getLayoutPresets();
+  if (!Object.prototype.hasOwnProperty.call(presets, trimmed)) {
+    return;
+  }
+  const next = { ...presets };
+  delete next[trimmed];
+  storage.setItem(LAYOUT_PRESETS_KEY, serializeLayoutPresets(next));
+}
+
+export async function clearLayoutPresets() {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.removeItem(LAYOUT_PRESETS_KEY);
+}

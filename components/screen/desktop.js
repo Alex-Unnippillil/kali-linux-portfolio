@@ -28,6 +28,7 @@ import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
 import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
+import { saveLayoutPreset, getLayoutPresets } from '../../utils/settingsStore';
 import {
     clampWindowPositionWithinViewport,
     clampWindowTopPosition,
@@ -37,6 +38,12 @@ import {
 
 const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
 const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
+
+const LAYOUT_SAVE_EVENT = 'desktop-layout-save';
+const LAYOUT_APPLY_EVENT = 'desktop-layout-apply';
+const LAYOUT_SAVED_EVENT = 'desktop-layout-saved';
+const LAYOUT_SAVE_ERROR_EVENT = 'desktop-layout-save-error';
+const LAYOUT_APPLIED_EVENT = 'desktop-layout-applied';
 
 const sanitizeFolderItem = (item) => {
     if (!item) return null;
@@ -49,6 +56,15 @@ const sanitizeFolderItem = (item) => {
         return { id: item.id, title, icon };
     }
     return null;
+};
+
+const normalizeWindowViewState = (state) => {
+    if (!state || typeof state !== 'object') {
+        return { maximized: false, snapped: null };
+    }
+    const maximized = Boolean(state.maximized);
+    const snapped = typeof state.snapped === 'string' && state.snapped.length ? state.snapped : null;
+    return { maximized, snapped };
 };
 
 const loadStoredFolderContents = () => {
@@ -175,6 +191,7 @@ export class Desktop extends Component {
             'minimized_windows',
             'window_positions',
             'window_sizes',
+            'window_states',
         ]);
         this.windowSizeStorageKey = 'desktop_window_sizes';
         this.defaultThemeConfig = {
@@ -238,6 +255,7 @@ export class Desktop extends Component {
             minimized_windows: { ...initialOverlayMinimized },
             window_positions: {},
             window_sizes: initialWindowSizes,
+            window_states: {},
             desktop_apps: [],
             desktop_icon_positions: {},
             folder_contents: storedFolderContents,
@@ -276,6 +294,7 @@ export class Desktop extends Component {
             minimized_windows: {},
             window_positions: {},
             window_sizes: { ...initialWindowSizes },
+            window_states: {},
         }));
 
         this.desktopRef = React.createRef();
@@ -341,6 +360,7 @@ export class Desktop extends Component {
         minimized_windows: createOverlayFlagMap(false),
         window_positions: {},
         window_sizes: {},
+        window_states: {},
     });
 
     cloneWorkspaceState = (state) => ({
@@ -349,6 +369,7 @@ export class Desktop extends Component {
         minimized_windows: { ...state.minimized_windows },
         window_positions: { ...state.window_positions },
         window_sizes: { ...(state.window_sizes || {}) },
+        window_states: { ...(state.window_states || {}) },
     });
 
     getActiveUserId = () => {
@@ -958,6 +979,7 @@ export class Desktop extends Component {
                 minimized_windows: this.mergeWorkspaceMaps(existing.minimized_windows, baseState.minimized_windows, validKeys),
                 window_positions: this.mergeWorkspaceMaps(existing.window_positions, baseState.window_positions, validKeys),
                 window_sizes: this.mergeWorkspaceMaps(existing.window_sizes, baseState.window_sizes, validKeys),
+                window_states: this.mergeWorkspaceMaps(existing.window_states, baseState.window_states, validKeys),
             };
         });
     };
@@ -2728,6 +2750,7 @@ export class Desktop extends Component {
             closed_windows: { ...snapshot.closed_windows },
             minimized_windows: { ...snapshot.minimized_windows },
             window_positions: { ...snapshot.window_positions },
+            window_states: { ...(snapshot.window_states || {}) },
             switcherWindows: [],
             currentTheme: nextTheme,
         }, () => {
@@ -2876,6 +2899,8 @@ export class Desktop extends Component {
         document.addEventListener('keydown', this.handleGlobalShortcut);
         document.addEventListener('keyup', this.handleGlobalShortcutKeyup);
         window.addEventListener('open-app', this.handleOpenAppEvent);
+        window.addEventListener(LAYOUT_SAVE_EVENT, this.handleLayoutSaveRequest);
+        window.addEventListener(LAYOUT_APPLY_EVENT, this.handleLayoutApplyRequest);
         this.setupPointerMediaWatcher();
         this.setupGestureListeners();
     }
@@ -2939,6 +2964,8 @@ export class Desktop extends Component {
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
         window.removeEventListener('resize', this.handleViewportResize);
+        window.removeEventListener(LAYOUT_SAVE_EVENT, this.handleLayoutSaveRequest);
+        window.removeEventListener(LAYOUT_APPLY_EVENT, this.handleLayoutApplyRequest);
         this.detachIconKeyboardListeners();
         if (typeof window !== 'undefined') {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
@@ -3876,6 +3903,7 @@ export class Desktop extends Component {
             if (!app) return null;
             const pos = this.state.window_positions[id];
             const size = this.state.window_sizes?.[id];
+            const viewState = this.state.window_states?.[id];
             const defaultWidth = size && typeof size.width === 'number' ? size.width : app.defaultWidth;
             const defaultHeight = size && typeof size.height === 'number' ? size.height : app.defaultHeight;
             const props = {
@@ -3901,6 +3929,8 @@ export class Desktop extends Component {
                 snapGrid,
                 context: this.state.window_context[id],
                 zIndex: 200 + index,
+                viewState,
+                onViewStateChange: (next) => this.handleWindowViewStateChange(id, next),
             };
 
             return <Window key={id} {...props} />;
@@ -4045,6 +4075,236 @@ export class Desktop extends Component {
         }, () => {
             this.persistWindowSizes(this.state.window_sizes || {});
         });
+    }
+
+    handleWindowViewStateChange = (id, viewState) => {
+        if (!id) return;
+        const normalized = normalizeWindowViewState(viewState);
+        this.setWorkspaceState((prev) => {
+            const existing = prev.window_states || {};
+            const current = existing[id] || { maximized: false, snapped: null };
+            const shouldRemove = !normalized.maximized && !normalized.snapped;
+            if (shouldRemove) {
+                if (!existing[id]) {
+                    return null;
+                }
+                const nextStates = { ...existing };
+                delete nextStates[id];
+                return { window_states: nextStates };
+            }
+            if (
+                current.maximized === normalized.maximized &&
+                current.snapped === normalized.snapped
+            ) {
+                return null;
+            }
+            return {
+                window_states: {
+                    ...existing,
+                    [id]: normalized,
+                },
+            };
+        });
+    }
+
+    getCurrentLayoutSnapshot = () => {
+        const closed = this.state.closed_windows || {};
+        const positions = this.state.window_positions || {};
+        const sizes = this.state.window_sizes || {};
+        const minimized = this.state.minimized_windows || {};
+        const viewStates = this.state.window_states || {};
+        const safeTopOffset = measureWindowTopOffset();
+        const openWindowIds = Object.keys(closed)
+            .filter((id) => closed[id] === false && !this.isOverlayId(id));
+        const windows = openWindowIds.map((id) => {
+            const position = positions[id] || {};
+            const size = sizes[id] || {};
+            const state = viewStates[id] || {};
+            const x = typeof position.x === 'number' ? position.x : 60;
+            const yRaw = typeof position.y === 'number' ? position.y : safeTopOffset;
+            const y = clampWindowTopPosition(yRaw, safeTopOffset);
+            const width = typeof size.width === 'number' ? size.width : null;
+            const height = typeof size.height === 'number' ? size.height : null;
+            return {
+                id,
+                x,
+                y,
+                width,
+                height,
+                minimized: Boolean(minimized[id]),
+                state: normalizeWindowViewState(state),
+            };
+        });
+        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : null;
+        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : null;
+        return {
+            windows,
+            viewport: {
+                width: viewportWidth,
+                height: viewportHeight,
+            },
+            savedAt: Date.now(),
+        };
+    }
+
+    handleLayoutSaveRequest = async (event) => {
+        const detail = event?.detail || {};
+        const name = typeof detail.name === 'string' ? detail.name.trim() : '';
+        if (!name) {
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent(LAYOUT_SAVE_ERROR_EVENT, {
+                    detail: { message: 'A layout name is required.' },
+                }));
+            }
+            return;
+        }
+        const snapshot = this.getCurrentLayoutSnapshot();
+        try {
+            await saveLayoutPreset(name, snapshot);
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent(LAYOUT_SAVED_EVENT, {
+                    detail: { name, windows: snapshot.windows.length },
+                }));
+            }
+        } catch (error) {
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent(LAYOUT_SAVE_ERROR_EVENT, {
+                    detail: { name, message: 'Failed to save layout.' },
+                }));
+            }
+        }
+    }
+
+    handleLayoutApplyRequest = async (event) => {
+        const detail = event?.detail || {};
+        const name = typeof detail.name === 'string' ? detail.name : '';
+        let preset = detail.preset;
+        if (!preset && name) {
+            try {
+                const presets = await getLayoutPresets();
+                preset = presets?.[name];
+            } catch (error) {
+                preset = null;
+            }
+        }
+        if (!preset || typeof preset !== 'object') {
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent(LAYOUT_SAVE_ERROR_EVENT, {
+                    detail: { name, message: 'Layout not found.' },
+                }));
+            }
+            return;
+        }
+        this.applyLayoutPreset(preset, name || preset?.name || null);
+    }
+
+    applyLayoutPreset = (preset, label = null) => {
+        const windows = Array.isArray(preset?.windows) ? preset.windows : [];
+        if (!windows.length) {
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent(LAYOUT_APPLIED_EVENT, {
+                    detail: { name: label, windows: 0 },
+                }));
+            }
+            return;
+        }
+        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : null;
+        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : null;
+        const savedWidth = typeof preset?.viewport?.width === 'number' && preset.viewport.width > 0
+            ? preset.viewport.width
+            : viewportWidth;
+        const savedHeight = typeof preset?.viewport?.height === 'number' && preset.viewport.height > 0
+            ? preset.viewport.height
+            : viewportHeight;
+        const scaleX = savedWidth && viewportWidth ? viewportWidth / savedWidth : 1;
+        const scaleY = savedHeight && viewportHeight ? viewportHeight / savedHeight : 1;
+        const safeTopOffset = measureWindowTopOffset();
+
+        const positionUpdates = {};
+        const sizeUpdates = {};
+        const minimizedUpdates = {};
+        const stateUpdates = {};
+        const stateRemovals = new Set();
+
+        windows.forEach((entry) => {
+            if (!entry || typeof entry !== 'object' || !entry.id) return;
+            const scaledX = typeof entry.x === 'number' ? Math.round(entry.x * scaleX) : 60;
+            const rawY = typeof entry.y === 'number' ? entry.y * scaleY : safeTopOffset;
+            const scaledY = clampWindowTopPosition(Math.round(rawY), safeTopOffset);
+            positionUpdates[entry.id] = { x: scaledX, y: scaledY };
+            if (typeof entry.width === 'number' && typeof entry.height === 'number') {
+                sizeUpdates[entry.id] = { width: entry.width, height: entry.height };
+            }
+            if (typeof entry.minimized === 'boolean') {
+                minimizedUpdates[entry.id] = entry.minimized;
+            }
+            const normalizedState = normalizeWindowViewState(entry.state);
+            if (normalizedState.maximized || normalizedState.snapped) {
+                stateUpdates[entry.id] = normalizedState;
+            } else {
+                stateRemovals.add(entry.id);
+            }
+        });
+
+        const partial = {};
+        if (Object.keys(positionUpdates).length) {
+            partial.window_positions = { ...(this.state.window_positions || {}), ...positionUpdates };
+        }
+        if (Object.keys(sizeUpdates).length) {
+            partial.window_sizes = { ...(this.state.window_sizes || {}), ...sizeUpdates };
+        }
+        if (Object.keys(minimizedUpdates).length) {
+            partial.minimized_windows = { ...(this.state.minimized_windows || {}), ...minimizedUpdates };
+        }
+        if (stateRemovals.size || Object.keys(stateUpdates).length) {
+            const nextStates = { ...(this.state.window_states || {}) };
+            let changed = false;
+            stateRemovals.forEach((id) => {
+                if (nextStates[id]) {
+                    delete nextStates[id];
+                    changed = true;
+                }
+            });
+            Object.entries(stateUpdates).forEach(([id, value]) => {
+                const current = nextStates[id];
+                if (!current || current.maximized !== value.maximized || current.snapped !== value.snapped) {
+                    nextStates[id] = value;
+                    changed = true;
+                }
+            });
+            if (changed) {
+                partial.window_states = nextStates;
+            }
+        }
+
+        const applyUpdates = () => {
+            windows.forEach((entry) => {
+                if (entry && entry.id) {
+                    this.openApp(entry.id);
+                }
+            });
+            const minimizedTargets = windows
+                .filter((entry) => entry && entry.id && entry.minimized)
+                .map((entry) => entry.id);
+            if (minimizedTargets.length) {
+                minimizedTargets.forEach((id) => {
+                    this.hasMinimised(id);
+                });
+            }
+            this.persistWindowSizes(this.state.window_sizes || {});
+            this.saveSession();
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent(LAYOUT_APPLIED_EVENT, {
+                    detail: { name: label, windows: windows.length },
+                }));
+            }
+        };
+
+        if (Object.keys(partial).length) {
+            this.setWorkspaceState(partial, applyUpdates);
+        } else {
+            applyUpdates();
+        }
     }
 
     getSnapGrid = () => {
@@ -4357,6 +4617,11 @@ export class Desktop extends Component {
             if (prevState.focused_windows?.[objId]) {
                 partial.focused_windows = { ...prevState.focused_windows, [objId]: false };
             }
+            if (prevState.window_states?.[objId]) {
+                const nextStates = { ...(prevState.window_states || {}) };
+                delete nextStates[objId];
+                partial.window_states = nextStates;
+            }
             return partial;
         }, this.saveSession);
 
@@ -4377,6 +4642,11 @@ export class Desktop extends Component {
             };
             if (prevState.focused_windows?.[objId]) {
                 nextState.focused_windows = { ...prevState.focused_windows, [objId]: false };
+            }
+            if (prevState.window_states?.[objId]) {
+                const nextStates = { ...prevState.window_states };
+                delete nextStates[objId];
+                nextState.window_states = nextStates;
             }
             return nextState;
         }, this.saveSession);

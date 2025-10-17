@@ -51,6 +51,8 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
   (props, forwardedRef) => {
     const innerRef = useRef<BaseWindowInstance>(null);
 
+    const { initialX, initialY, onPositionChange, ...restProps } = props;
+
     const assignRef = useCallback(
       (instance: BaseWindowInstance) => {
         innerRef.current = instance;
@@ -76,8 +78,8 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       const topOffset = measureWindowTopOffset();
       const storedPosition = readNodePosition(node);
       const fallbackPosition = {
-        x: typeof props.initialX === "number" ? props.initialX : 0,
-        y: clampWindowTopPosition(props.initialY, topOffset),
+        x: typeof initialX === "number" ? initialX : 0,
+        y: clampWindowTopPosition(initialY, topOffset),
       };
       const currentPosition = storedPosition || fallbackPosition;
       const clamped = clampWindowPositionWithinViewport(currentPosition, rect, {
@@ -99,10 +101,10 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
         (node.style as unknown as Record<string, string>)["--window-transform-y"] = `${clamped.y}px`;
       }
 
-      if (typeof props.onPositionChange === "function") {
-        props.onPositionChange(clamped.x, clamped.y);
+      if (typeof onPositionChange === "function") {
+        onPositionChange(clamped.x, clamped.y);
       }
-    }, [props.initialX, props.initialY, props.onPositionChange]);
+    }, [initialX, initialY, onPositionChange]);
 
     useEffect(() => {
       if (typeof window === "undefined") return undefined;
@@ -113,7 +115,41 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       };
     }, [clampToViewport]);
 
-    return <BaseWindow ref={assignRef} {...props} />;
+    useEffect(() => {
+      if (typeof window === "undefined") return;
+      if (typeof initialX !== "number" || typeof initialY !== "number") return;
+      const instance = innerRef.current;
+      const node = instance && typeof instance?.getWindowNode === "function"
+        ? instance.getWindowNode()
+        : null;
+      if (!node) return;
+      const topOffset = measureWindowTopOffset();
+      const clampedY = clampWindowTopPosition(initialY, topOffset);
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const rect = {
+        width: node.offsetWidth || 0,
+        height: node.offsetHeight || 0,
+      };
+      const clampedPosition = clampWindowPositionWithinViewport(
+        { x: initialX, y: clampedY },
+        rect,
+        { viewportWidth, viewportHeight, topOffset },
+      );
+      const targetX = clampedPosition ? clampedPosition.x : initialX;
+      const targetY = clampedPosition ? clampedPosition.y : clampedY;
+      const style = node.style as CSSStyleDeclaration | undefined;
+      if (style?.setProperty) {
+        style.setProperty("--window-transform-x", `${targetX}px`);
+        style.setProperty("--window-transform-y", `${targetY}px`);
+      } else if (style) {
+        (style as unknown as Record<string, string>)["--window-transform-x"] = `${targetX}px`;
+        (style as unknown as Record<string, string>)["--window-transform-y"] = `${targetY}px`;
+      }
+      node.style.transform = `translate(${targetX}px, ${targetY}px)`;
+    }, [initialX, initialY]);
+
+    return <BaseWindow ref={assignRef} {...restProps} initialX={initialX} initialY={initialY} onPositionChange={onPositionChange} />;
   },
 );
 
