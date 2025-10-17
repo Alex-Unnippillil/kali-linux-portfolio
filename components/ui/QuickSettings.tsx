@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useRef, useState } from 'react';
+import { useSettings } from '../../hooks/useSettings';
 import usePersistentState from '../../hooks/usePersistentState';
 
 interface Props {
@@ -27,10 +28,12 @@ const QuickSettings = ({ open }: Props) => {
     (value): value is number =>
       typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100,
   );
+  const { taskbarOpacity, setTaskbarOpacity, taskbarBlur, setTaskbarBlur } = useSettings();
   const panelRef = useRef<HTMLDivElement>(null);
   const [shouldRender, setShouldRender] = useState(open);
   const [isVisible, setIsVisible] = useState(open);
   const focusableTabIndex = open ? 0 : -1;
+  const maxTaskbarBlur = 24;
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -166,6 +169,10 @@ const QuickSettings = ({ open }: Props) => {
     unit?: string;
     ariaValueText?: string;
     disabled?: boolean;
+    min?: number;
+    max?: number;
+    step?: number;
+    displayValue?: string;
   }> = [
     {
       id: 'quick-settings-brightness',
@@ -191,6 +198,39 @@ const QuickSettings = ({ open }: Props) => {
       unit: '%',
       ariaValueText: sound ? `${volume}% volume` : 'Muted',
       disabled: !sound,
+    },
+    {
+      id: 'quick-settings-taskbar-opacity',
+      label: 'Taskbar opacity',
+      description: 'Control how translucent the taskbar appears.',
+      value: Math.round(taskbarOpacity * 100),
+      onChange: (value) => {
+        const normalized = Math.min(100, Math.max(0, value));
+        setTaskbarOpacity(normalized / 100);
+      },
+      icon: <OpacityIcon />,
+      accent: 'from-sky-400 via-sky-500 to-transparent',
+      unit: '%',
+      ariaValueText: `${Math.round(taskbarOpacity * 100)}% taskbar opacity`,
+      min: 0,
+      max: 100,
+    },
+    {
+      id: 'quick-settings-taskbar-blur',
+      label: 'Taskbar blur',
+      description: 'Adjust the glassmorphism blur strength.',
+      value: taskbarBlur,
+      onChange: (value) => {
+        const clamped = Math.min(maxTaskbarBlur, Math.max(0, value));
+        setTaskbarBlur(clamped);
+      },
+      icon: <BlurIcon />,
+      accent: 'from-indigo-400 via-indigo-500 to-transparent',
+      ariaValueText: `${taskbarBlur}px taskbar blur`,
+      min: 0,
+      max: maxTaskbarBlur,
+      step: 1,
+      displayValue: `${taskbarBlur}px`,
     },
   ];
 
@@ -298,9 +338,20 @@ const QuickSettings = ({ open }: Props) => {
               unit = '',
               ariaValueText,
               disabled,
+              min,
+              max,
+              step,
+              displayValue,
             }) => {
               const labelId = `${id}-label`;
               const descriptionId = `${id}-description`;
+              const sliderMin = min ?? 0;
+              const sliderMax = max ?? 100;
+              const sliderStep = step ?? 1;
+              const sliderRange = sliderMax - sliderMin || 1;
+              const progressPercent = ((value - sliderMin) / sliderRange) * 100;
+              const clampedProgress = Math.max(0, Math.min(100, progressPercent));
+              const display = displayValue ?? value;
               return (
                 <div
                   key={id}
@@ -327,8 +378,8 @@ const QuickSettings = ({ open }: Props) => {
                       <span id={descriptionId}>{description}</span>
                     </div>
                     <span className="font-semibold text-white/80">
-                      {value}
-                      {unit}
+                      {display}
+                      {displayValue === undefined ? unit : ''}
                     </span>
                   </div>
                   <div className="relative mt-3 h-2 w-full overflow-hidden rounded-full bg-white/[0.22]">
@@ -338,20 +389,21 @@ const QuickSettings = ({ open }: Props) => {
                           ? 'from-white/80 via-white/50 to-transparent'
                           : 'from-white via-white/80 to-transparent'
                       }`}
-                      style={{ width: `${value}%` }}
+                      style={{ width: `${clampedProgress}%` }}
                       aria-hidden
                     />
                     <input
                       id={id}
                       type="range"
-                      min={0}
-                      max={100}
+                      min={sliderMin}
+                      max={sliderMax}
+                      step={sliderStep}
                       value={value}
                       onChange={(event) => onChange(Number(event.target.value))}
                       className="relative h-2 w-full cursor-pointer appearance-none bg-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
                       tabIndex={focusableTabIndex}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
+                      aria-valuemin={sliderMin}
+                      aria-valuemax={sliderMax}
                       aria-valuenow={value}
                       aria-valuetext={ariaValueText}
                       aria-labelledby={labelId}
@@ -581,6 +633,68 @@ const VolumeIcon = ({ muted }: { muted: boolean }) => (
         strokeLinejoin="round"
       />
     )}
+  </svg>
+);
+
+const OpacityIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="text-white"
+  >
+    <path
+      d="M12 4.5c2.75 3.4 5.5 6.5 5.5 9a5.5 5.5 0 1 1-11 0c0-2.5 2.75-5.6 5.5-9Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M9 13.5h6"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      opacity="0.65"
+    />
+  </svg>
+);
+
+const BlurIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="text-white"
+  >
+    <path
+      d="M4 9.5h16"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      opacity="0.4"
+    />
+    <path
+      d="M2.5 12h19"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M4 14.5h16"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      opacity="0.65"
+    />
   </svg>
 );
 
