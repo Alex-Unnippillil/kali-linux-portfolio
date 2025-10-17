@@ -136,6 +136,34 @@ const SHORTCUT_OVERLAY_ID = OVERLAY_WINDOWS.shortcutSelector.id;
 const SWITCHER_OVERLAY_ID = OVERLAY_WINDOWS.windowSwitcher.id;
 const COMMAND_PALETTE_OVERLAY_ID = OVERLAY_WINDOWS.commandPalette.id;
 
+const BADGE_TONE_MAP = Object.freeze({
+    accent: 'accent',
+    primary: 'accent',
+    brand: 'accent',
+    info: 'info',
+    information: 'info',
+    success: 'success',
+    positive: 'success',
+    complete: 'success',
+    done: 'success',
+    warning: 'warning',
+    caution: 'warning',
+    danger: 'danger',
+    critical: 'danger',
+    error: 'danger',
+    alert: 'danger',
+    neutral: 'neutral',
+    muted: 'neutral',
+    default: 'accent',
+});
+
+const clamp = (value, min = 0, max = 1) => {
+    if (typeof value !== 'number' || Number.isNaN(value)) return min;
+    if (value < min) return min;
+    if (value > max) return max;
+    return value;
+};
+
 const createOverlayFlagMap = (value) => {
     const flags = {};
     OVERLAY_WINDOW_LIST.forEach(({ id }) => {
@@ -268,6 +296,7 @@ export class Desktop extends Component {
             overlayWindows: createOverlayStateMap(),
             minimizedShelfOpen: false,
             closedShelfOpen: false,
+            appBadges: {},
         };
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -980,17 +1009,23 @@ export class Desktop extends Component {
             minimized_windows = {},
             focused_windows = {},
             overlayWindows = {},
+            appBadges = {},
         } = this.state;
         const summaries = [];
         apps.forEach((app) => {
             if (closed_windows[app.id] === false) {
-                summaries.push({
+                const badge = appBadges[app.id];
+                const summary = {
                     id: app.id,
                     title: app.title,
                     icon: app.icon.replace('./', '/'),
                     isFocused: Boolean(focused_windows[app.id]),
                     isMinimized: Boolean(minimized_windows[app.id]),
-                });
+                };
+                if (badge) {
+                    summary.badge = { ...badge };
+                }
+                summaries.push(summary);
             }
         });
         OVERLAY_WINDOW_LIST.forEach((overlay) => {
@@ -1005,14 +1040,19 @@ export class Desktop extends Component {
             const isFocused = typeof state.focused === 'boolean'
                 ? state.focused
                 : Boolean(focused_windows[overlay.id]);
-            summaries.push({
+            const badge = appBadges[overlay.id];
+            const summary = {
                 id: overlay.id,
                 title: overlay.title,
                 icon: overlay.icon,
                 isFocused,
                 isMinimized,
                 isOverlay: true,
-            });
+            };
+            if (badge) {
+                summary.badge = { ...badge };
+            }
+            summaries.push(summary);
         });
         return summaries;
     };
@@ -1335,6 +1375,192 @@ export class Desktop extends Component {
         this.appMap = nextAppMap;
         this.validAppIds = nextValidAppIds;
     }
+
+    normalizeBadgeTone = (tone) => {
+        if (typeof tone !== 'string') {
+            return 'accent';
+        }
+        const normalized = tone.trim().toLowerCase();
+        return BADGE_TONE_MAP[normalized] || 'accent';
+    };
+
+    formatBadgeCount = (value, maxValue) => {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) {
+            return null;
+        }
+        const count = Math.max(0, Math.floor(numeric));
+        const max = Number.isFinite(maxValue) && maxValue > 0 ? Math.floor(maxValue) : 99;
+        const displayValue = count > max ? `${max}+` : `${count}`;
+        return { count, displayValue, max };
+    };
+
+    normalizeBadgeMetadata = (raw) => {
+        if (!raw || typeof raw !== 'object') {
+            return null;
+        }
+
+        const typeInput = typeof raw.type === 'string' ? raw.type.trim().toLowerCase() : null;
+        let type = typeInput;
+        if (!type) {
+            if (Number.isFinite(raw.count) || Number.isFinite(raw.value) || Number.isFinite(raw.total) || Number.isFinite(raw.notifications)) {
+                type = 'count';
+            } else if (Number.isFinite(raw.progress) || Number.isFinite(raw.current) || Number.isFinite(raw.done) || Number.isFinite(raw.completed)) {
+                type = 'ring';
+            } else {
+                type = 'dot';
+            }
+        }
+
+        if (type === 'progress') {
+            type = 'ring';
+        }
+
+        const tone = this.normalizeBadgeTone(raw.tone);
+        const persistOnFocus = Boolean(raw.persistOnFocus);
+        const pulseOverride = raw.pulse === undefined ? undefined : Boolean(raw.pulse);
+
+        if (type === 'count') {
+            const numericSource = raw.count ?? raw.value ?? raw.total ?? raw.notifications ?? raw.number;
+            const formatted = this.formatBadgeCount(numericSource, raw.max);
+            if (!formatted) {
+                return null;
+            }
+            const { count, displayValue, max } = formatted;
+            const label = typeof raw.label === 'string' && raw.label.trim()
+                ? raw.label.trim()
+                : (count === 1 ? '1 notification' : `${displayValue} notifications`);
+            const pulse = pulseOverride === undefined ? false : pulseOverride;
+            return {
+                type: 'count',
+                tone,
+                count,
+                displayValue,
+                max,
+                label,
+                pulse,
+                persistOnFocus,
+            };
+        }
+
+        if (type === 'ring') {
+            const rawValue = raw.progress ?? raw.value ?? raw.current ?? raw.done ?? raw.completed ?? 0;
+            if (!Number.isFinite(rawValue)) {
+                return null;
+            }
+            const rawMax = raw.max ?? raw.total ?? (rawValue > 1 ? 100 : 1);
+            let ratio;
+            if (Number.isFinite(rawMax) && rawMax > 0) {
+                ratio = rawValue / rawMax;
+            } else if (rawValue > 1) {
+                ratio = rawValue / 100;
+            } else {
+                ratio = rawValue;
+            }
+            const progress = clamp(Number(ratio), 0, 1);
+            const displayValue = typeof raw.displayValue === 'string' && raw.displayValue.trim()
+                ? raw.displayValue.trim()
+                : `${Math.round(progress * 100)}%`;
+            const label = typeof raw.label === 'string' && raw.label.trim()
+                ? raw.label.trim()
+                : `${displayValue} complete`;
+            const pulse = pulseOverride === undefined ? progress < 1 : pulseOverride;
+            return {
+                type: 'ring',
+                tone,
+                progress,
+                displayValue,
+                label,
+                pulse,
+                persistOnFocus,
+            };
+        }
+
+        const label = typeof raw.label === 'string' && raw.label.trim()
+            ? raw.label.trim()
+            : 'Attention needed';
+        const pulse = pulseOverride === undefined ? true : pulseOverride;
+        return {
+            type: 'dot',
+            tone,
+            label,
+            pulse,
+            persistOnFocus,
+        };
+    };
+
+    areAppBadgesEqual = (a, b) => {
+        if (a === b) return true;
+        if (!a || !b) return false;
+        if (a.type !== b.type) return false;
+        if (a.tone !== b.tone) return false;
+        if (Boolean(a.pulse) !== Boolean(b.pulse)) return false;
+        if (Boolean(a.persistOnFocus) !== Boolean(b.persistOnFocus)) return false;
+        if ((a.displayValue || b.displayValue) && a.displayValue !== b.displayValue) return false;
+        if ((a.label || b.label) && a.label !== b.label) return false;
+        if ((typeof a.count === 'number' || typeof b.count === 'number') && a.count !== b.count) return false;
+        if ((typeof a.max === 'number' || typeof b.max === 'number') && a.max !== b.max) return false;
+        if (typeof a.progress === 'number' || typeof b.progress === 'number') {
+            const progressA = typeof a.progress === 'number' ? a.progress : 0;
+            const progressB = typeof b.progress === 'number' ? b.progress : 0;
+            if (Math.abs(progressA - progressB) > 0.0005) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    clearAppBadge = (appId, options = {}) => {
+        if (!appId) return;
+        const force = Boolean(options.force);
+        this.setState((prev) => {
+            const current = prev.appBadges || {};
+            const existing = current[appId];
+            if (!existing) {
+                return null;
+            }
+            if (!force && existing.persistOnFocus) {
+                return null;
+            }
+            const next = { ...current };
+            delete next[appId];
+            return { appBadges: next };
+        });
+    };
+
+    handleAppBadgeEvent = (event) => {
+        const detail = event?.detail || {};
+        const appId = typeof detail.appId === 'string' ? detail.appId : '';
+        if (!appId || !this.validAppIds.has(appId)) {
+            return;
+        }
+
+        if (detail.clear === true) {
+            this.clearAppBadge(appId, { force: true });
+            return;
+        }
+
+        let rawBadge = detail.badge;
+        if (rawBadge === undefined) {
+            const { appId: _ignored, clear, ...rest } = detail || {};
+            rawBadge = rest;
+        }
+
+        const normalized = this.normalizeBadgeMetadata(rawBadge);
+        if (!normalized) {
+            this.clearAppBadge(appId, { force: true });
+            return;
+        }
+
+        this.setState((prev) => {
+            const current = prev.appBadges || {};
+            const existing = current[appId];
+            if (existing && this.areAppBadgesEqual(existing, normalized)) {
+                return null;
+            }
+            return { appBadges: { ...current, [appId]: normalized } };
+        });
+    };
 
     initializeDefaultFolders = (callback) => {
         const stored = this.state.folder_contents || {};
@@ -1776,6 +2002,8 @@ export class Desktop extends Component {
                 }
             },
         );
+
+        this.clearAppBadge(id, { force: true });
     };
 
     getAppById = (id) => {
@@ -2841,6 +3069,7 @@ export class Desktop extends Component {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.addEventListener('app-badge', this.handleAppBadgeEvent);
             this.broadcastWorkspaceState();
             this.broadcastIconSizePreset(this.state.iconSizePreset);
         }
@@ -2900,6 +3129,7 @@ export class Desktop extends Component {
             prevState.focused_windows !== this.state.focused_windows ||
             prevState.minimized_windows !== this.state.minimized_windows ||
             prevState.workspaces !== this.state.workspaces ||
+            prevState.appBadges !== this.state.appBadges ||
             prevLauncher?.open !== nextLauncher?.open ||
             prevLauncher?.transitionState !== nextLauncher?.transitionState
         ) {
@@ -2944,6 +3174,7 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.removeEventListener('app-badge', this.handleAppBadgeEvent);
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
@@ -4380,6 +4611,8 @@ export class Desktop extends Component {
             }
             return nextState;
         }, this.saveSession);
+
+        this.clearAppBadge(objId, { force: true });
     }
 
     pinApp = (id) => {
@@ -4437,6 +4670,8 @@ export class Desktop extends Component {
                 focused_windows: nextFocused,
                 overlayWindows,
             };
+        }, () => {
+            this.clearAppBadge(objId);
         });
     }
 
