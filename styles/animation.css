@@ -1,12 +1,2 @@
-:root {
-  --window-motion-duration-minimize: 200ms;
-  --window-motion-ease-minimize: cubic-bezier(0.4, 0, 0.2, 1);
-  --window-motion-duration-restore: 300ms;
-  --window-motion-ease-restore: cubic-bezier(0.2, 0.8, 0.4, 1);
-  --window-motion-duration-snap: 240ms;
-  --window-motion-ease-snap: cubic-bezier(0.2, 0.8, 0.4, 1);
-  --window-motion-duration-maximize: 320ms;
-  --window-motion-ease-maximize: cubic-bezier(0.2, 0.8, 0.4, 1);
-  --window-motion-duration-snap-preview: var(--window-motion-duration-snap);
-  --window-motion-ease-snap-preview: var(--window-motion-ease-snap);
-}
+/* Window motion tokens are defined alongside the window component in
+   components/base/window.module.css to keep animations centralized. */
