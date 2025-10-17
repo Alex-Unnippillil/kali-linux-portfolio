@@ -35,6 +35,8 @@ const computeSnappedHeightPercent = () => (computeAvailableHeightPx() / window.i
 
 const computeQuarterHeightPercent = () => computeSnappedHeightPercent() / 2;
 
+const getBottomSnapTranslateTop = () => measureWindowTopOffset() + computeAvailableHeightPx() / 2;
+
 const computeLeftSnapTestTop = () => {
   const available = computeAvailableHeightPx();
   const offset = DESKTOP_TOP_PADDING;
@@ -345,7 +347,7 @@ describe('Window snapping preview', () => {
     expect(within(preview).getByText('Snap top-left quarter')).toBeInTheDocument();
   });
 
-  it('shows right-half preview when dragged near the bottom-right edge', () => {
+  it('shows corner preview when dragged near the bottom-right edge', () => {
     setViewport(1600, 900);
     const ref = React.createRef<any>();
     render(
@@ -378,15 +380,15 @@ describe('Window snapping preview', () => {
       ref.current!.handleDrag();
     });
 
-    expect(ref.current!.state.snapPosition).toBe('right');
+    expect(ref.current!.state.snapPosition).toBe('bottom-right');
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toHaveStyle(`left: ${window.innerWidth / 2}px`);
     expect(preview).toHaveStyle(
-      `top: ${measureWindowTopOffset()}px`
+      `top: ${getBottomSnapTranslateTop()}px`
     );
-    expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx()}px`);
-    expect(preview).toHaveAttribute('aria-label', 'Snap right half');
-    expect(within(preview).getByText('Snap right half')).toBeInTheDocument();
+    expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx() / 2}px`);
+    expect(preview).toHaveAttribute('aria-label', 'Snap bottom-right quarter');
+    expect(within(preview).getByText('Snap bottom-right quarter')).toBeInTheDocument();
   });
 });
 
@@ -602,12 +604,12 @@ describe('Window snapping finalize and release', () => {
       ref.current!.handleStop();
     });
 
-    expect(ref.current!.state.snapped).toBe('right');
+    expect(ref.current!.state.snapped).toBe('bottom-right');
     expect(ref.current!.state.width).toBeCloseTo(50, 2);
-    const expectedHeight = computeSnappedHeightPercent();
+    const expectedHeight = computeQuarterHeightPercent();
     expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 5);
     const expectedX = window.innerWidth / 2;
-    const expectedY = getSnapTranslateTop();
+    const expectedY = getBottomSnapTranslateTop();
     expect(winEl.style.transform).toBe(`translate(${expectedX}px, ${expectedY}px)`);
   });
 
@@ -672,6 +674,146 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.snapped).toBeNull();
     expect(ref.current!.state.width).toBe(60);
     expect(ref.current!.state.height).toBe(85);
+  });
+
+  it('cycles left corner snaps with Alt+Shift+ArrowLeft', () => {
+    setViewport(1440, 900);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="corner-cycle-left"
+        title="Corners"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const makeEvent = () => ({
+      key: 'ArrowLeft',
+      altKey: true,
+      shiftKey: true,
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+    });
+
+    act(() => {
+      ref.current!.handleKeyDown(makeEvent() as any);
+    });
+    expect(ref.current!.state.snapped).toBe('top-left');
+
+    act(() => {
+      ref.current!.handleKeyDown(makeEvent() as any);
+    });
+    expect(ref.current!.state.snapped).toBe('bottom-left');
+  });
+
+  it('cycles right corner snaps with Alt+Shift+ArrowRight', () => {
+    setViewport(1440, 900);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="corner-cycle-right"
+        title="Corners"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const makeEvent = () => ({
+      key: 'ArrowRight',
+      altKey: true,
+      shiftKey: true,
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+    });
+
+    act(() => {
+      ref.current!.handleKeyDown(makeEvent() as any);
+    });
+    expect(ref.current!.state.snapped).toBe('top-right');
+
+    act(() => {
+      ref.current!.handleKeyDown(makeEvent() as any);
+    });
+    expect(ref.current!.state.snapped).toBe('bottom-right');
+  });
+
+  it('cycles top row snaps with Alt+Shift+ArrowUp', () => {
+    setViewport(1440, 900);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="corner-cycle-up"
+        title="Corners"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const makeEvent = () => ({
+      key: 'ArrowUp',
+      altKey: true,
+      shiftKey: true,
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+    });
+
+    act(() => {
+      ref.current!.handleKeyDown(makeEvent() as any);
+    });
+    expect(ref.current!.state.snapped).toBe('top-left');
+
+    act(() => {
+      ref.current!.handleKeyDown(makeEvent() as any);
+    });
+    expect(ref.current!.state.snapped).toBe('top-right');
+  });
+
+  it('cycles bottom row snaps with Alt+Shift+ArrowDown', () => {
+    setViewport(1440, 900);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="corner-cycle-down"
+        title="Corners"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const makeEvent = () => ({
+      key: 'ArrowDown',
+      altKey: true,
+      shiftKey: true,
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+    });
+
+    act(() => {
+      ref.current!.handleKeyDown(makeEvent() as any);
+    });
+    expect(ref.current!.state.snapped).toBe('bottom-left');
+
+    act(() => {
+      ref.current!.handleKeyDown(makeEvent() as any);
+    });
+    expect(ref.current!.state.snapped).toBe('bottom-right');
   });
 
   it('releases snap when starting drag', () => {

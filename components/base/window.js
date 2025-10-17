@@ -39,6 +39,17 @@ const SNAP_LABELS = {
     'bottom-right': 'Snap bottom-right quarter',
 };
 
+const SNAP_KEYBOARD_SHORTCUTS = [
+    'Alt+ArrowLeft',
+    'Alt+ArrowRight',
+    'Alt+ArrowUp',
+    'Alt+ArrowDown',
+    'Alt+Shift+ArrowLeft',
+    'Alt+Shift+ArrowRight',
+    'Alt+Shift+ArrowUp',
+    'Alt+Shift+ArrowDown',
+].join(' ');
+
 const getSnapLabel = (position) => {
     if (!position) return 'Snap window';
     return SNAP_LABELS[position] || 'Snap window';
@@ -46,11 +57,13 @@ const getSnapLabel = (position) => {
 
 const normalizeRightCornerSnap = (candidate, regions) => {
     if (!candidate) return null;
-    const { position } = candidate;
+    const { position, preview } = candidate;
     if (position === 'top-right' || position === 'bottom-right') {
-        const rightRegion = regions?.right;
-        if (rightRegion && rightRegion.width > 0 && rightRegion.height > 0) {
-            return { position: 'right', preview: rightRegion };
+        if (!(preview?.width > 0 && preview?.height > 0)) {
+            const rightRegion = regions?.right;
+            if (rightRegion && rightRegion.width > 0 && rightRegion.height > 0) {
+                return { position: 'right', preview: rightRegion };
+            }
         }
     }
     return candidate;
@@ -457,9 +470,6 @@ export class Window extends Component {
     }
 
     snapWindow = (position) => {
-        const resolvedPosition = (position === 'top-right' || position === 'bottom-right')
-            ? 'right'
-            : position;
         this.setWinowsPosition();
         this.focusWindow();
         const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
@@ -468,8 +478,20 @@ export class Window extends Component {
         if (!viewportWidth || !viewportHeight) return;
         const snapBottomInset = measureSnapBottomInset();
         const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset, snapBottomInset);
-        const region = regions[resolvedPosition];
-        if (!region) return;
+        let targetPosition = position;
+        let region = regions[targetPosition];
+        if (!(region && region.width > 0 && region.height > 0)) {
+            if ((position === 'top-right' || position === 'bottom-right') && regions.right && regions.right.width > 0 && regions.right.height > 0) {
+                targetPosition = 'right';
+                region = regions.right;
+            } else if ((position === 'top-left' || position === 'bottom-left') && regions.left && regions.left.width > 0 && regions.left.height > 0) {
+                targetPosition = 'left';
+                region = regions.left;
+            }
+        }
+        if (!(region && region.width > 0 && region.height > 0)) {
+            return;
+        }
         const { width, height } = this.state;
         const node = this.getWindowNode();
         if (node) {
@@ -479,7 +501,7 @@ export class Window extends Component {
         this.setState({
             snapPreview: null,
             snapPosition: null,
-            snapped: resolvedPosition,
+            snapped: targetPosition,
             lastSize: { width, height },
             width: percentOf(region.width, viewportWidth),
             height: percentOf(region.height, viewportHeight),
@@ -488,6 +510,17 @@ export class Window extends Component {
             this.resizeBoundries();
             this.notifySizeChange();
         });
+    }
+
+    cycleSnapTargets = (targets = []) => {
+        if (!Array.isArray(targets) || targets.length === 0) return;
+        const { snapped } = this.state;
+        const currentIndex = targets.indexOf(snapped);
+        const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % targets.length;
+        const nextTarget = targets[nextIndex];
+        if (nextTarget) {
+            this.snapWindow(nextTarget);
+        }
     }
 
     setInertBackground = () => {
@@ -749,24 +782,42 @@ export class Window extends Component {
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
-            if (e.key === 'ArrowDown') {
+            let handled = false;
+            const prevent = () => {
                 e.preventDefault();
                 e.stopPropagation();
+                handled = true;
+            };
+            if (e.shiftKey) {
+                if (e.key === 'ArrowLeft') {
+                    prevent();
+                    this.cycleSnapTargets(['top-left', 'bottom-left']);
+                } else if (e.key === 'ArrowRight') {
+                    prevent();
+                    this.cycleSnapTargets(['top-right', 'bottom-right']);
+                } else if (e.key === 'ArrowUp') {
+                    prevent();
+                    this.cycleSnapTargets(['top-left', 'top-right']);
+                } else if (e.key === 'ArrowDown') {
+                    prevent();
+                    this.cycleSnapTargets(['bottom-left', 'bottom-right']);
+                }
+            } else if (e.key === 'ArrowDown') {
+                prevent();
                 this.unsnapWindow();
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
+                prevent();
                 this.snapWindow('left');
             } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
+                prevent();
                 this.snapWindow('right');
             } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
+                prevent();
                 this.snapWindow('top');
             }
-            this.focusWindow();
+            if (handled) {
+                this.focusWindow();
+            }
         } else if (e.shiftKey) {
             const step = 1;
             if (e.key === 'ArrowLeft') {
@@ -793,10 +844,10 @@ export class Window extends Component {
     handleSuperArrow = (e) => {
         const key = e.detail;
         if (key === 'ArrowLeft') {
-            if (this.state.snapped === 'left') this.unsnapWindow();
+            if (['left', 'top-left', 'bottom-left'].includes(this.state.snapped)) this.unsnapWindow();
             else this.snapWindow('left');
         } else if (key === 'ArrowRight') {
-            if (this.state.snapped === 'right') this.unsnapWindow();
+            if (['right', 'top-right', 'bottom-right'].includes(this.state.snapped)) this.unsnapWindow();
             else this.snapWindow('right');
         } else if (key === 'ArrowUp') {
             this.maximizeWindow();
@@ -932,6 +983,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
+            aria-keyshortcuts={SNAP_KEYBOARD_SHORTCUTS}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
             onPointerDown={onPointerDown}
@@ -1028,6 +1080,7 @@ export function WindowEditButtons(props) {
                         <button
                             type="button"
                             aria-label="Window restore"
+                            aria-keyshortcuts={SNAP_KEYBOARD_SHORTCUTS}
                             className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
                             onClick={props.maximize}
                         >
@@ -1044,6 +1097,7 @@ export function WindowEditButtons(props) {
                         <button
                             type="button"
                             aria-label="Window maximize"
+                            aria-keyshortcuts={SNAP_KEYBOARD_SHORTCUTS}
                             className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
                             onClick={props.maximize}
                         >
