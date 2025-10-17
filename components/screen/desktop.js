@@ -191,7 +191,12 @@ export class Desktop extends Component {
         this.initFavourite = {};
         this.allWindowClosed = false;
 
-        this.iconSizePresetKey = 'desktop_icon_size_preset';
+        this.iconSizePresetStorageKey = 'desktop_icon_size_presets';
+        this.iconSizePresetLegacyKey = 'desktop_icon_size_preset';
+        this.iconSizePresetBuckets = [
+            { id: 'lt-1024', label: 'screens below 1024px', min: 0, max: 1024 },
+            { id: 'gte-1024', label: 'screens 1024px and above', min: 1024, max: Infinity },
+        ];
         this.iconSizePresets = {
             small: {
                 dimensions: { width: 84, height: 76 },
@@ -212,7 +217,12 @@ export class Desktop extends Component {
 
         this.taskbarOrderKeyBase = 'taskbar-order';
 
-        const initialIconSizePreset = this.getStoredIconSizePreset();
+        this.iconSizePresetMap = this.loadStoredIconPresetMap();
+
+        const initialViewportWidth =
+            typeof window !== 'undefined' && typeof window.innerWidth === 'number' ? window.innerWidth : 0;
+        const initialIconSizeBucket = this.getViewportBucketId(initialViewportWidth);
+        const initialIconSizePreset = this.getStoredIconSizePreset(initialIconSizeBucket);
         const initialPresetConfig = this.getIconSizePresetConfig(initialIconSizePreset);
 
         this.baseIconDimensions = { ...initialPresetConfig.dimensions };
@@ -222,6 +232,8 @@ export class Desktop extends Component {
         this.iconDimensions = { ...this.baseIconDimensions };
         this.iconGridSpacing = { ...this.baseIconGridSpacing };
         this.desktopPadding = { ...this.baseDesktopPadding };
+        this.latestViewportWidth = initialViewportWidth;
+        this.viewportResizeObserver = null;
 
         const initialOverlayClosed = createOverlayFlagMap(true);
         const initialOverlayMinimized = createOverlayFlagMap(false);
@@ -264,6 +276,7 @@ export class Desktop extends Component {
             marqueeSelection: null,
             hoveredIconId: null,
             currentTheme: initialTheme,
+            iconSizeBucket: initialIconSizeBucket,
             iconSizePreset: initialIconSizePreset,
             overlayWindows: createOverlayStateMap(),
             minimizedShelfOpen: false,
@@ -511,13 +524,59 @@ export class Desktop extends Component {
         };
     };
 
-    getStoredIconSizePreset = () => {
+    getViewportBucketId = (width) => {
+        const numeric = Number.isFinite(width) ? width : 0;
+        return numeric >= 1024 ? 'gte-1024' : 'lt-1024';
+    };
+
+    getViewportBucketLabel = (bucketId) => {
+        if (!this.iconSizePresetBuckets) return 'current display';
+        const bucket = this.iconSizePresetBuckets.find((entry) => entry.id === bucketId);
+        return bucket ? bucket.label : 'current display';
+    };
+
+    loadStoredIconPresetMap = () => {
+        const map = {};
+        if (!safeLocalStorage) return map;
+        try {
+            const raw = safeLocalStorage.getItem(this.iconSizePresetStorageKey);
+            if (!raw) return map;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') {
+                return map;
+            }
+            const buckets = Array.isArray(this.iconSizePresetBuckets) ? this.iconSizePresetBuckets : [];
+            buckets.forEach(({ id }) => {
+                if (!id) return;
+                const stored = parsed[id];
+                if (stored && this.iconSizePresets?.[stored]) {
+                    map[id] = stored;
+                }
+            });
+            return map;
+        } catch (e) {
+            return map;
+        }
+    };
+
+    getStoredIconSizePreset = (bucketId = this.state?.iconSizeBucket) => {
         const fallback = 'medium';
+        const targetBucket = bucketId || 'gte-1024';
+        if (this.iconSizePresetMap && this.iconSizePresetMap[targetBucket]) {
+            return this.iconSizePresetMap[targetBucket];
+        }
         if (!safeLocalStorage) return fallback;
         try {
-            const stored = safeLocalStorage.getItem(this.iconSizePresetKey);
-            if (stored && this.iconSizePresets?.[stored]) {
-                return stored;
+            const map = this.loadStoredIconPresetMap();
+            this.iconSizePresetMap = map;
+            if (map[targetBucket]) {
+                return map[targetBucket];
+            }
+            const legacy = safeLocalStorage.getItem(this.iconSizePresetLegacyKey);
+            if (legacy && this.iconSizePresets?.[legacy]) {
+                this.iconSizePresetMap = { ...(this.iconSizePresetMap || {}), [targetBucket]: legacy };
+                this.persistIconSizePreset(legacy, targetBucket);
+                return legacy;
             }
         } catch (e) {
             // ignore read errors
@@ -525,18 +584,86 @@ export class Desktop extends Component {
         return fallback;
     };
 
-    persistIconSizePreset = (preset) => {
+    persistIconSizePreset = (preset, bucketId = this.state?.iconSizeBucket) => {
         if (!safeLocalStorage) return;
+        const normalizedPreset = this.iconSizePresets?.[preset] ? preset : 'medium';
+        const targetBucket = bucketId || 'gte-1024';
+        const nextMap = { ...(this.iconSizePresetMap || {}) };
+        nextMap[targetBucket] = normalizedPreset;
         try {
-            safeLocalStorage.setItem(this.iconSizePresetKey, preset);
+            safeLocalStorage.setItem(this.iconSizePresetStorageKey, JSON.stringify(nextMap));
+            safeLocalStorage.removeItem(this.iconSizePresetLegacyKey);
+            this.iconSizePresetMap = nextMap;
         } catch (e) {
             // ignore write errors
         }
     };
 
-    broadcastIconSizePreset = (preset) => {
+    broadcastIconSizePreset = (preset, bucketId = this.state?.iconSizeBucket) => {
         if (typeof window === 'undefined') return;
-        window.dispatchEvent(new CustomEvent('desktop-icon-size', { detail: { preset } }));
+        window.dispatchEvent(new CustomEvent('desktop-icon-size', { detail: { preset, bucket: bucketId } }));
+    };
+
+    handleViewportBucketChange = (width, options = {}) => {
+        const { force = false } = options || {};
+        const numericWidth = Number.isFinite(width) ? width : 0;
+        this.latestViewportWidth = numericWidth;
+        const nextBucket = this.getViewportBucketId(numericWidth);
+        const currentBucket = this.state?.iconSizeBucket;
+        if (!force && nextBucket === currentBucket) {
+            return;
+        }
+        const storedPreset = this.getStoredIconSizePreset(nextBucket);
+        this.setIconSizePreset(storedPreset, { bucketId: nextBucket, persist: false });
+    };
+
+    setupViewportObserver = () => {
+        const node = this.desktopRef && this.desktopRef.current ? this.desktopRef.current : null;
+        const fallbackWidth = (() => {
+            if (node && typeof node.getBoundingClientRect === 'function') {
+                return node.getBoundingClientRect().width;
+            }
+            if (typeof window !== 'undefined' && typeof window.innerWidth === 'number') {
+                return window.innerWidth;
+            }
+            return 0;
+        })();
+
+        if (typeof ResizeObserver === 'undefined' || !node) {
+            this.handleViewportBucketChange(fallbackWidth, { force: true });
+            return;
+        }
+
+        if (this.viewportResizeObserver && typeof this.viewportResizeObserver.disconnect === 'function') {
+            this.viewportResizeObserver.disconnect();
+        }
+
+        const observer = new ResizeObserver((entries) => {
+            const entry = entries && entries.length ? entries[0] : null;
+            const widthFromEntry = entry?.contentRect?.width;
+            let nextWidth = Number.isFinite(widthFromEntry) ? widthFromEntry : null;
+            if (nextWidth === null) {
+                if (node && typeof node.getBoundingClientRect === 'function') {
+                    nextWidth = node.getBoundingClientRect().width;
+                } else if (typeof window !== 'undefined' && typeof window.innerWidth === 'number') {
+                    nextWidth = window.innerWidth;
+                } else {
+                    nextWidth = 0;
+                }
+            }
+            this.handleViewportBucketChange(nextWidth);
+        });
+
+        observer.observe(node);
+        this.viewportResizeObserver = observer;
+        this.handleViewportBucketChange(fallbackWidth, { force: true });
+    };
+
+    teardownViewportObserver = () => {
+        if (this.viewportResizeObserver && typeof this.viewportResizeObserver.disconnect === 'function') {
+            this.viewportResizeObserver.disconnect();
+        }
+        this.viewportResizeObserver = null;
     };
 
     commitWorkspacePartial = (partial, index) => {
@@ -634,9 +761,10 @@ export class Desktop extends Component {
         const spacingMultiplier = normalizedFont * densitySpacingMultiplier * hitAreaSpacingMultiplier * pointerMultiplier;
         const paddingMultiplier = normalizedFont * densityPaddingMultiplier * hitAreaSpacingMultiplier * pointerMultiplier;
 
-        const baseDimensions = this.baseIconDimensions || this.iconSizePresets.medium.dimensions;
-        const baseSpacing = this.baseIconGridSpacing || this.iconSizePresets.medium.spacing;
-        const basePaddingConfig = this.baseDesktopPadding || this.iconSizePresets.medium.padding;
+        const activePresetConfig = this.getIconSizePresetConfig(this.state.iconSizePreset);
+        const baseDimensions = this.baseIconDimensions || activePresetConfig.dimensions;
+        const baseSpacing = this.baseIconGridSpacing || activePresetConfig.spacing;
+        const basePaddingConfig = this.baseDesktopPadding || activePresetConfig.padding;
 
         const nextIconDimensions = {
             width: clamp(Math.round(baseDimensions.width * sizeMultiplier), 72, 192),
@@ -712,6 +840,7 @@ export class Desktop extends Component {
 
         const viewportWidth = typeof window.innerWidth === 'number' ? window.innerWidth : 0;
         const viewportHeight = typeof window.innerHeight === 'number' ? window.innerHeight : 0;
+        this.handleViewportBucketChange(viewportWidth);
         const topOffset = measureWindowTopOffset();
         const closedWindows = this.state.closed_windows || {};
         const storedPositions = this.state.window_positions || {};
@@ -1030,28 +1159,42 @@ export class Desktop extends Component {
         }
     };
 
-    setIconSizePreset = (preset) => {
-        const normalized = preset && this.iconSizePresets?.[preset] ? preset : 'medium';
-        const presetConfig = this.getIconSizePresetConfig(normalized);
+    setIconSizePreset = (preset, options = {}) => {
+        const { bucketId, persist = true, broadcast = true } = options || {};
+        const activeBucket = bucketId || this.state.iconSizeBucket;
+        const normalizedBucket = activeBucket || 'gte-1024';
+        const normalizedPreset = preset && this.iconSizePresets?.[preset] ? preset : 'medium';
+        const presetConfig = this.getIconSizePresetConfig(normalizedPreset);
         this.baseIconDimensions = { ...presetConfig.dimensions };
         this.baseIconGridSpacing = { ...presetConfig.spacing };
         this.baseDesktopPadding = { ...presetConfig.padding };
-        this.persistIconSizePreset(normalized);
+        if (persist) {
+            this.persistIconSizePreset(normalizedPreset, normalizedBucket);
+        }
 
-        if (normalized === this.state.iconSizePreset) {
-            this.applyIconLayoutFromSettings(this.props);
-            this.realignIconPositions();
-            this.broadcastIconSizePreset(normalized);
+        const applyLayout = () => {
+            const changed = this.applyIconLayoutFromSettings(this.props);
+            if (changed) {
+                this.realignIconPositions();
+            }
+            if (broadcast) {
+                this.broadcastIconSizePreset(normalizedPreset, normalizedBucket);
+            }
             this.broadcastWorkspaceState();
+        };
+
+        if (
+            normalizedPreset === this.state.iconSizePreset &&
+            normalizedBucket === this.state.iconSizeBucket
+        ) {
+            applyLayout();
             return;
         }
 
-        this.setState({ iconSizePreset: normalized }, () => {
-            this.applyIconLayoutFromSettings(this.props);
-            this.realignIconPositions();
-            this.broadcastIconSizePreset(normalized);
-            this.broadcastWorkspaceState();
-        });
+        this.setState(
+            { iconSizePreset: normalizedPreset, iconSizeBucket: normalizedBucket },
+            applyLayout
+        );
     };
 
     loadDesktopIconPositions = () => {
@@ -2846,6 +2989,7 @@ export class Desktop extends Component {
         }
 
         this.savedIconPositions = this.loadDesktopIconPositions();
+        this.setupViewportObserver();
         this.initializeDefaultFolders(() => {
             this.fetchAppsData(() => {
                 const session = this.props.session || {};
@@ -2947,6 +3091,7 @@ export class Desktop extends Component {
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
+        this.teardownViewportObserver();
         if (this.liveRegionTimeout) {
             clearTimeout(this.liveRegionTimeout);
             this.liveRegionTimeout = null;
@@ -4636,6 +4781,8 @@ export class Desktop extends Component {
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
                     iconSizePreset={this.state.iconSizePreset}
+                    iconSizeBucket={this.state.iconSizeBucket}
+                    iconSizeBucketLabel={this.getViewportBucketLabel(this.state.iconSizeBucket)}
                     setIconSizePreset={this.setIconSizePreset}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
