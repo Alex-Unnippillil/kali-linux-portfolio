@@ -29,6 +29,28 @@ const percentOf = (value, total) => {
     return (value / total) * 100;
 };
 
+const getViewportMetrics = () => {
+    if (typeof window === 'undefined') {
+        return { width: 0, height: 0, offsetTop: 0 };
+    }
+
+    const { visualViewport } = window;
+    const docElement = typeof document !== 'undefined' ? document.documentElement : null;
+    const fallbackWidth = typeof window.innerWidth === 'number' && window.innerWidth > 0
+        ? window.innerWidth
+        : (docElement?.clientWidth ?? 0);
+    const fallbackHeight = typeof window.innerHeight === 'number' && window.innerHeight > 0
+        ? window.innerHeight
+        : (docElement?.clientHeight ?? 0);
+    const toFiniteOr = (value, fallback) => (typeof value === 'number' && Number.isFinite(value) ? value : fallback);
+
+    const width = visualViewport ? toFiniteOr(visualViewport.width, fallbackWidth) : fallbackWidth;
+    const height = visualViewport ? toFiniteOr(visualViewport.height, fallbackHeight) : fallbackHeight;
+    const offsetTop = visualViewport ? Math.max(toFiniteOr(visualViewport.offsetTop, 0), 0) : 0;
+
+    return { width, height, offsetTop };
+};
+
 const SNAP_LABELS = {
     left: 'Snap left half',
     right: 'Snap right half',
@@ -56,12 +78,22 @@ const normalizeRightCornerSnap = (candidate, regions) => {
     return candidate;
 };
 
-const computeSnapRegions = (
+const computeSnapRegions = ({
     viewportWidth,
     viewportHeight,
     topInset = DEFAULT_WINDOW_TOP_OFFSET,
     bottomInset,
-) => {
+    viewportOffsetTop = 0,
+}) => {
+    const normalizedWidth = typeof viewportWidth === 'number' && Number.isFinite(viewportWidth)
+        ? Math.max(viewportWidth, 0)
+        : 0;
+    const normalizedHeight = typeof viewportHeight === 'number' && Number.isFinite(viewportHeight)
+        ? Math.max(viewportHeight, 0)
+        : 0;
+    const normalizedOffsetTop = typeof viewportOffsetTop === 'number' && Number.isFinite(viewportOffsetTop)
+        ? Math.max(viewportOffsetTop, 0)
+        : 0;
     const normalizedTopInset = typeof topInset === 'number'
         ? Math.max(topInset, DESKTOP_TOP_PADDING)
         : DEFAULT_WINDOW_TOP_OFFSET;
@@ -69,18 +101,19 @@ const computeSnapRegions = (
     const snapBottomInset = typeof bottomInset === 'number' && Number.isFinite(bottomInset)
         ? Math.max(bottomInset, 0)
         : measureSnapBottomInset();
-    const availableHeight = Math.max(0, viewportHeight - normalizedTopInset - snapBottomInset - safeBottom);
-    const halfWidth = Math.max(viewportWidth / 2, 0);
+    const availableHeight = Math.max(0, normalizedHeight - normalizedTopInset - snapBottomInset - safeBottom);
+    const halfWidth = Math.max(normalizedWidth / 2, 0);
     const halfHeight = Math.max(availableHeight / 2, 0);
-    const rightStart = Math.max(viewportWidth - halfWidth, 0);
-    const bottomStart = normalizedTopInset + halfHeight;
+    const rightStart = Math.max(normalizedWidth - halfWidth, 0);
+    const topStart = normalizedOffsetTop + normalizedTopInset;
+    const bottomStart = topStart + halfHeight;
 
     return {
-        left: { left: 0, top: normalizedTopInset, width: halfWidth, height: availableHeight },
-        right: { left: rightStart, top: normalizedTopInset, width: halfWidth, height: availableHeight },
-        top: { left: 0, top: normalizedTopInset, width: viewportWidth, height: availableHeight },
-        'top-left': { left: 0, top: normalizedTopInset, width: halfWidth, height: halfHeight },
-        'top-right': { left: rightStart, top: normalizedTopInset, width: halfWidth, height: halfHeight },
+        left: { left: 0, top: topStart, width: halfWidth, height: availableHeight },
+        right: { left: rightStart, top: topStart, width: halfWidth, height: availableHeight },
+        top: { left: 0, top: topStart, width: normalizedWidth, height: availableHeight },
+        'top-left': { left: 0, top: topStart, width: halfWidth, height: halfHeight },
+        'top-right': { left: rightStart, top: topStart, width: halfWidth, height: halfHeight },
         'bottom-left': { left: 0, top: bottomStart, width: halfWidth, height: halfHeight },
         'bottom-right': { left: rightStart, top: bottomStart, width: halfWidth, height: halfHeight },
 
@@ -462,12 +495,17 @@ export class Window extends Component {
             : position;
         this.setWinowsPosition();
         this.focusWindow();
-        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
-        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        const { width: viewportWidth, height: viewportHeight, offsetTop: viewportOffsetTop } = getViewportMetrics();
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         if (!viewportWidth || !viewportHeight) return;
         const snapBottomInset = measureSnapBottomInset();
-        const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset, snapBottomInset);
+        const regions = computeSnapRegions({
+            viewportWidth,
+            viewportHeight,
+            topInset,
+            bottomInset: snapBottomInset,
+            viewportOffsetTop,
+        });
         const region = regions[resolvedPosition];
         if (!region) return;
         const { width, height } = this.state;
@@ -508,15 +546,20 @@ export class Window extends Component {
         const node = this.getWindowNode();
         if (!node) return;
         const rect = node.getBoundingClientRect();
-        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
-        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        const { width: viewportWidth, height: viewportHeight, offsetTop: viewportOffsetTop } = getViewportMetrics();
         if (!viewportWidth || !viewportHeight) return;
 
         const horizontalThreshold = computeEdgeThreshold(viewportWidth);
         const verticalThreshold = computeEdgeThreshold(viewportHeight);
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         const snapBottomInset = measureSnapBottomInset();
-        const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset, snapBottomInset);
+        const regions = computeSnapRegions({
+            viewportWidth,
+            viewportHeight,
+            topInset,
+            bottomInset: snapBottomInset,
+            viewportOffsetTop,
+        });
 
         const nearTop = rect.top <= topInset + verticalThreshold;
         const nearBottom = viewportHeight - rect.bottom <= verticalThreshold;
@@ -670,7 +713,7 @@ export class Window extends Component {
             const node = this.getWindowNode();
             this.setWinowsPosition();
             // translate window to maximize position
-            const viewportHeight = window.innerHeight;
+            const { height: viewportHeight, offsetTop: viewportOffsetTop } = getViewportMetrics();
             const topOffset = measureWindowTopOffset();
             const snapBottomInset = measureSnapBottomInset();
             const availableHeight = Math.max(
@@ -681,7 +724,7 @@ export class Window extends Component {
             const currentSize = { width: this.state.width, height: this.state.height };
             if (node) {
                 this.setTransformMotionPreset(node, 'maximize');
-                const translateYOffset = topOffset - DESKTOP_TOP_PADDING;
+                const translateYOffset = viewportOffsetTop + topOffset - DESKTOP_TOP_PADDING;
                 node.style.transform = `translate(-1pt, ${translateYOffset}px)`;
             }
             this.setState({ maximized: true, height: heightPercent, width: 100.2, preMaximizeSize: currentSize }, () => {
