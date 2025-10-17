@@ -16,10 +16,17 @@ export default function useRovingTabIndex(
     if (!node || !active) return;
 
     const items = Array.from(
-      node.querySelectorAll<HTMLElement>(
-        '[role="tab"], [role="menuitem"], [role="option"]'
-      )
-    );
+      node
+        .querySelectorAll<HTMLElement>(
+          '[role="tab"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="option"]'
+        )
+    ).filter((el) => {
+      if (el.hasAttribute('disabled')) {
+        return false;
+      }
+
+      return el.getAttribute('aria-disabled') !== 'true';
+    });
     if (items.length === 0) return;
 
     let index = items.findIndex((el) => el.tabIndex === 0);

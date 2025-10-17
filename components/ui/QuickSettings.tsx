@@ -1,15 +1,18 @@
 "use client";
 
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, RefObject, useEffect, useRef, useState } from 'react';
+import useFocusTrap from '../../hooks/useFocusTrap';
+import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 import usePersistentState from '../../hooks/usePersistentState';
 
 interface Props {
   open: boolean;
+  restoreFocusRef?: RefObject<HTMLElement | null>;
 }
 
 const transitionDurationMs = 200;
 
-const QuickSettings = ({ open }: Props) => {
+const QuickSettings = ({ open, restoreFocusRef }: Props) => {
   const [theme, setTheme] = usePersistentState('qs-theme', 'light');
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
@@ -28,9 +31,17 @@ const QuickSettings = ({ open }: Props) => {
       typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100,
   );
   const panelRef = useRef<HTMLDivElement>(null);
+  const themeOptionsRef = useRef<HTMLDivElement>(null);
+  const firstThemeOptionRef = useRef<HTMLButtonElement>(null);
   const [shouldRender, setShouldRender] = useState(open);
   const [isVisible, setIsVisible] = useState(open);
   const focusableTabIndex = open ? 0 : -1;
+
+  useFocusTrap(panelRef, open, {
+    initialFocusRef: firstThemeOptionRef,
+    restoreFocusRef,
+  });
+  useRovingTabIndex(themeOptionsRef, open, 'horizontal');
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -247,7 +258,7 @@ const QuickSettings = ({ open }: Props) => {
             {theme === 'light' ? 'Light mode' : 'Dark mode'}
           </span>
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-2" role="group" aria-label="Theme options">
+        <div ref={themeOptionsRef} className="mt-3 grid grid-cols-2 gap-2" role="group" aria-label="Theme options">
           {[
             { option: 'light', label: 'Light', icon: <SunIcon /> },
             { option: 'dark', label: 'Dark', icon: <MoonIcon /> },
@@ -266,6 +277,7 @@ const QuickSettings = ({ open }: Props) => {
                 }`}
                 onClick={() => setTheme(option)}
                 tabIndex={focusableTabIndex}
+                ref={option === 'light' ? firstThemeOptionRef : undefined}
               >
                 <span className="text-lg" aria-hidden>
                   {icon}

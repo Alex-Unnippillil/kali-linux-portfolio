@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import useFocusTrap from '../../hooks/useFocusTrap'
+import useRovingTabIndex from '../../hooks/useRovingTabIndex'
 import logger from '../../utils/logger'
 
 function DesktopMenu(props) {
@@ -11,6 +13,9 @@ function DesktopMenu(props) {
         { value: 'medium', label: 'Medium Icons' },
         { value: 'large', label: 'Large Icons' },
     ]
+    const menuRef = useRef(null)
+    useFocusTrap(menuRef, props.active, { restoreFocusRef: props.restoreFocusRef })
+    useRovingTabIndex(menuRef, props.active, 'vertical')
 
     useEffect(() => {
         document.addEventListener('fullscreenchange', checkFullScreen);
@@ -18,6 +23,12 @@ function DesktopMenu(props) {
             document.removeEventListener('fullscreenchange', checkFullScreen);
         };
     }, [])
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Escape') {
+            props.onClose && props.onClose()
+        }
+    }
 
 
     const openTerminal = () => {
@@ -55,6 +66,8 @@ function DesktopMenu(props) {
             id="desktop-menu"
             role="menu"
             aria-label="Desktop context menu"
+            ref={menuRef}
+            onKeyDown={handleKeyDown}
             className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
         >
             <button
@@ -63,6 +76,7 @@ function DesktopMenu(props) {
                 role="menuitem"
                 aria-label="New Folder"
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                tabIndex={-1}
             >
                 <span className="ml-5">New Folder</span>
             </button>
@@ -72,6 +86,7 @@ function DesktopMenu(props) {
                 role="menuitem"
                 aria-label="Create Shortcut"
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                tabIndex={-1}
             >
                 <span className="ml-5">Create Shortcut...</span>
             </button>
@@ -89,6 +104,7 @@ function DesktopMenu(props) {
                         role="menuitemradio"
                         aria-checked={isActive}
                         className={(isActive ? " text-ubt-blue " : "") + " group w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 flex items-center justify-between"}
+                        tabIndex={-1}
                     >
                         <span className="ml-5">{option.label}</span>
                         <span
@@ -114,6 +130,7 @@ function DesktopMenu(props) {
                 role="menuitem"
                 aria-label="Open in Terminal"
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                tabIndex={-1}
             >
                 <span className="ml-5">Open in Terminal</span>
             </button>
@@ -124,6 +141,7 @@ function DesktopMenu(props) {
                 role="menuitem"
                 aria-label="Change Background"
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                tabIndex={-1}
             >
                 <span className="ml-5">Change Background...</span>
             </button>
@@ -137,6 +155,7 @@ function DesktopMenu(props) {
                 role="menuitem"
                 aria-label="Settings"
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                tabIndex={-1}
             >
                 <span className="ml-5">Settings</span>
             </button>
@@ -147,6 +166,7 @@ function DesktopMenu(props) {
                 role="menuitem"
                 aria-label={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                tabIndex={-1}
             >
                 <span className="ml-5">{isFullScreen ? "Exit" : "Enter"} Full Screen</span>
             </button>
@@ -157,6 +177,7 @@ function DesktopMenu(props) {
                 role="menuitem"
                 aria-label="Clear Session"
                 className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                tabIndex={-1}
             >
                 <span className="ml-5">Clear Session</span>
             </button>

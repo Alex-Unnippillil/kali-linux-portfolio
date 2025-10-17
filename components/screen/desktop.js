@@ -279,6 +279,7 @@ export class Desktop extends Component {
         }));
 
         this.desktopRef = React.createRef();
+        this.contextMenuTriggerRef = React.createRef();
         this.folderNameInputRef = React.createRef();
         this.allAppsSearchRef = React.createRef();
         this.allAppsOverlayRef = React.createRef();
@@ -3543,28 +3544,28 @@ export class Desktop extends Component {
                     category: `Context Menu`,
                     action: `Opened Desktop Context Menu`
                 });
-                this.showContextMenu(e, "desktop");
+                this.showContextMenu(e, "desktop", target);
                 break;
             case "app":
                 ReactGA.event({
                     category: `Context Menu`,
                     action: `Opened App Context Menu`
                 });
-                this.setState({ context_app: appId }, () => this.showContextMenu(e, "app"));
+                this.setState({ context_app: appId }, () => this.showContextMenu(e, "app", target));
                 break;
             case "taskbar":
                 ReactGA.event({
                     category: `Context Menu`,
                     action: `Opened Taskbar Context Menu`
                 });
-                this.setState({ context_app: appId }, () => this.showContextMenu(e, "taskbar"));
+                this.setState({ context_app: appId }, () => this.showContextMenu(e, "taskbar", target));
                 break;
             default:
                 ReactGA.event({
                     category: `Context Menu`,
                     action: `Opened Default Context Menu`
                 });
-                this.showContextMenu(e, "default");
+                this.showContextMenu(e, "default", target);
         }
     }
 
@@ -3580,25 +3581,27 @@ export class Desktop extends Component {
         switch (context) {
             case "desktop-area":
                 ReactGA.event({ category: `Context Menu`, action: `Opened Desktop Context Menu` });
-                this.showContextMenu(fakeEvent, "desktop");
+                this.showContextMenu(fakeEvent, "desktop", target);
                 break;
             case "app":
                 ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
-                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app"));
+                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app", target));
                 break;
             case "taskbar":
                 ReactGA.event({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
-                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar"));
+                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar", target));
                 break;
             default:
                 ReactGA.event({ category: `Context Menu`, action: `Opened Default Context Menu` });
-                this.showContextMenu(fakeEvent, "default");
+                this.showContextMenu(fakeEvent, "default", target);
         }
     }
 
-    showContextMenu = (e, menuName /* context menu name */) => {
+    showContextMenu = (e, menuName /* context menu name */, triggerElement) => {
         let { posx, posy } = this.getMenuPosition(e);
-        let contextMenu = document.getElementById(`${menuName}-menu`);
+        const contextMenu = document.getElementById(`${menuName}-menu`);
+
+        if (!contextMenu) return;
 
         const menuWidth = contextMenu.offsetWidth;
         const menuHeight = contextMenu.offsetHeight;
@@ -3610,6 +3613,10 @@ export class Desktop extends Component {
 
         contextMenu.style.left = posx;
         contextMenu.style.top = posy;
+
+        if (this.contextMenuTriggerRef) {
+            this.contextMenuTriggerRef.current = this.resolveContextMenuTrigger(triggerElement);
+        }
 
         this.setState({ context_menus: { ...this.state.context_menus, [menuName]: true } });
     }
@@ -3640,6 +3647,28 @@ export class Desktop extends Component {
         return {
             posx, posy
         }
+    }
+
+    resolveContextMenuTrigger = (element) => {
+        if (typeof document === 'undefined') {
+            return null;
+        }
+
+        const focusableSelector = 'button, [role="button"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], a[href], input:not([type="hidden"]), select, textarea, [tabindex]:not([tabindex="-1"])';
+
+        if (element && typeof element.closest === 'function') {
+            const focusable = element.closest(focusableSelector);
+            if (focusable) {
+                return focusable;
+            }
+        }
+
+        const activeElement = document.activeElement;
+        if (activeElement && activeElement !== document.body) {
+            return activeElement;
+        }
+
+        return this.desktopRef && this.desktopRef.current ? this.desktopRef.current : null;
     }
 
     fetchAppsData = (callback) => {
@@ -4638,14 +4667,21 @@ export class Desktop extends Component {
                     iconSizePreset={this.state.iconSizePreset}
                     setIconSizePreset={this.setIconSizePreset}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    onClose={this.hideAllContextMenu}
+                    restoreFocusRef={this.contextMenuTriggerRef}
                 />
-                <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
+                <DefaultMenu
+                    active={this.state.context_menus.default}
+                    onClose={this.hideAllContextMenu}
+                    restoreFocusRef={this.contextMenuTriggerRef}
+                />
                 <AppMenu
                     active={this.state.context_menus.app}
                     pinned={this.initFavourite[this.state.context_app]}
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
                     onClose={this.hideAllContextMenu}
+                    restoreFocusRef={this.contextMenuTriggerRef}
                 />
                 <TaskbarMenu
                     active={this.state.context_menus.taskbar}
@@ -4678,6 +4714,7 @@ export class Desktop extends Component {
                         }
                     }}
                     onCloseMenu={this.hideAllContextMenu}
+                    restoreFocusRef={this.contextMenuTriggerRef}
                 />
 
                 {/* Folder Input Name Bar */}
