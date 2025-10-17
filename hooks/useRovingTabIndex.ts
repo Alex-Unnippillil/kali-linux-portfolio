@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, type RefObject } from 'react';
 
 /**
  * Enables roving tab index and arrow key navigation within a container.
@@ -7,7 +7,7 @@ import { useEffect } from 'react';
  * common patterns such as tabs, menus and listboxes.
  */
 export default function useRovingTabIndex(
-  ref: React.RefObject<HTMLElement>,
+  ref: RefObject<HTMLElement | null>,
   active: boolean = true,
   orientation: 'horizontal' | 'vertical' = 'horizontal'
 ) {

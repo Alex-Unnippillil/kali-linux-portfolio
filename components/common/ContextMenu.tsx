@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import useFocusTrap from '../../hooks/useFocusTrap';
-import useRovingTabIndex from '../../hooks/useRovingTabIndex';
+import useMenuFocusManagement from '../../hooks/useMenuFocusManagement';
 
 export interface MenuItem {
   label: React.ReactNode;
@@ -25,12 +24,12 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
 
-  useFocusTrap(menuRef as React.RefObject<HTMLElement>, open);
-  useRovingTabIndex(
-    menuRef as React.RefObject<HTMLElement>,
-    open,
-    'vertical',
-  );
+  useMenuFocusManagement({
+    containerRef: menuRef,
+    active: open,
+    orientation: 'vertical',
+    triggerRef: targetRef,
+  });
 
   useEffect(() => {
     const node = targetRef.current;
