@@ -1,7 +1,9 @@
 "use client";
 
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { toPng } from 'html-to-image';
 import usePersistentState from '../../hooks/usePersistentState';
+import Toast from './Toast';
 
 interface Props {
   open: boolean;
@@ -27,10 +29,22 @@ const QuickSettings = ({ open }: Props) => {
     (value): value is number =>
       typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100,
   );
+  const [includeWindows, setIncludeWindows] = usePersistentState(
+    'qs-capture-include-windows',
+    true,
+    (value): value is boolean => typeof value === 'boolean',
+  );
+  const [includeWatermark, setIncludeWatermark] = usePersistentState(
+    'qs-capture-include-watermark',
+    true,
+    (value): value is boolean => typeof value === 'boolean',
+  );
   const panelRef = useRef<HTMLDivElement>(null);
   const [shouldRender, setShouldRender] = useState(open);
   const [isVisible, setIsVisible] = useState(open);
   const focusableTabIndex = open ? 0 : -1;
+  const [toast, setToast] = useState('');
+  const [isCapturing, setIsCapturing] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -96,8 +110,130 @@ const QuickSettings = ({ open }: Props) => {
     };
   }, [volume]);
 
+  const handleToastClose = useCallback(() => setToast(''), []);
+
+  const hideNode = useCallback((node: HTMLElement | null) => {
+    if (!node) return () => {};
+    const previousVisibility = node.style.visibility;
+    node.style.visibility = 'hidden';
+    return () => {
+      if (previousVisibility) {
+        node.style.visibility = previousVisibility;
+      } else {
+        node.style.removeProperty('visibility');
+      }
+    };
+  }, []);
+
+  const handleCapture = useCallback(async () => {
+    if (isCapturing) {
+      return;
+    }
+
+    const desktopNode = document.getElementById('desktop');
+    if (!(desktopNode instanceof HTMLElement)) {
+      setToast('Desktop not ready for capture.');
+      return;
+    }
+
+    setIsCapturing(true);
+    const cleanup: Array<() => void> = [];
+    let watermarkNode: HTMLDivElement | null = null;
+
+    try {
+      cleanup.push(hideNode(panelRef.current));
+
+      if (!includeWindows) {
+        const windowArea = desktopNode.querySelector('#window-area');
+        cleanup.push(hideNode(windowArea instanceof HTMLElement ? windowArea : null));
+
+        desktopNode
+          .querySelectorAll('[aria-modal="true"], aside[aria-label$="panel"]')
+          .forEach((node) => {
+            if (node instanceof HTMLElement) {
+              cleanup.push(hideNode(node));
+            }
+          });
+      }
+
+      if (includeWatermark) {
+        watermarkNode = document.createElement('div');
+        const now = new Date();
+        const timestamp = now.toLocaleString(undefined, {
+          hour12: false,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        });
+        const metadata = [
+          'Kali Linux Portfolio',
+          timestamp,
+          typeof window !== 'undefined' ? window.location.href : '',
+        ]
+          .filter(Boolean)
+          .join(' • ');
+
+        watermarkNode.textContent = metadata;
+        watermarkNode.setAttribute('data-desktop-watermark', '');
+        Object.assign(watermarkNode.style, {
+          position: 'absolute',
+          right: '1.5rem',
+          bottom: '1.5rem',
+          padding: '0.4rem 0.85rem',
+          background: 'rgba(11, 22, 38, 0.75)',
+          color: '#f8fafc',
+          fontSize: '0.7rem',
+          letterSpacing: '0.15em',
+          textTransform: 'uppercase',
+          borderRadius: '9999px',
+          border: '1px solid rgba(148, 163, 184, 0.35)',
+          pointerEvents: 'none',
+          zIndex: '9999',
+          fontFamily:
+            'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+        } as Partial<CSSStyleDeclaration>);
+        desktopNode.appendChild(watermarkNode);
+        cleanup.push(() => {
+          if (watermarkNode?.isConnected) {
+            watermarkNode.remove();
+          }
+        });
+      }
+
+      const pixelRatio = Math.max(window.devicePixelRatio || 1, 1);
+      const dataUrl = await toPng(desktopNode, {
+        cacheBust: true,
+        pixelRatio,
+      });
+
+      const link = document.createElement('a');
+      const downloadTimestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      link.download = `kali-desktop-${downloadTimestamp}.png`;
+      link.href = dataUrl;
+      link.rel = 'noopener';
+      link.click();
+
+      setToast('Desktop PNG is downloading.');
+    } catch (error) {
+      console.error('Failed to capture desktop', error);
+      setToast('Could not capture the desktop. Please try again.');
+    } finally {
+      cleanup.reverse().forEach((fn) => {
+        try {
+          fn();
+        } catch (error) {
+          // ignore cleanup errors
+        }
+      });
+      setIsCapturing(false);
+    }
+  }, [hideNode, includeWatermark, includeWindows, isCapturing]);
+
   if (!shouldRender) {
-    return null;
+    return toast ? <Toast message={toast} onClose={handleToastClose} /> : null;
   }
 
   const statusBadges = [
@@ -155,6 +291,35 @@ const QuickSettings = ({ open }: Props) => {
     },
   ];
 
+  const captureOptions: Array<{
+    id: string;
+    label: string;
+    description: string;
+    value: boolean;
+    onToggle: () => void;
+    icon: ReactNode;
+    accent: string;
+  }> = [
+    {
+      id: 'quick-settings-capture-windows',
+      label: 'Include windows',
+      description: 'Show open windows and overlays in the export.',
+      value: includeWindows,
+      onToggle: () => setIncludeWindows(!includeWindows),
+      icon: <WindowStackIcon />,
+      accent: 'from-sky-400/30 via-sky-500/10 to-transparent',
+    },
+    {
+      id: 'quick-settings-capture-watermark',
+      label: 'Watermark metadata',
+      description: 'Stamp the capture with timestamp and URL.',
+      value: includeWatermark,
+      onToggle: () => setIncludeWatermark(!includeWatermark),
+      icon: <WatermarkIcon />,
+      accent: 'from-emerald-400/30 via-emerald-500/10 to-transparent',
+    },
+  ];
+
   const sliderControls: Array<{
     id: string;
     label: string;
@@ -195,7 +360,8 @@ const QuickSettings = ({ open }: Props) => {
   ];
 
   return (
-    <div
+    <>
+      <div
       ref={panelRef}
       role="menu"
       aria-label="Quick settings"
@@ -367,6 +533,92 @@ const QuickSettings = ({ open }: Props) => {
         </div>
       </section>
 
+      <section
+        aria-label="Capture desktop"
+        className="mt-4 space-y-3 rounded-xl border border-white/[0.18] bg-white/[0.14] p-3 shadow-inner"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-white/80">Capture</span>
+          <span className="text-[10px] uppercase tracking-[0.2em] text-white/50">Export</span>
+        </div>
+        <p className="text-xs text-white/70">
+          Export the current desktop as a PNG. Hide windows or add a watermark before downloading.
+        </p>
+        <div className="space-y-2" role="group" aria-label="Capture options">
+          {captureOptions.map(({ id, label, description, value, onToggle, icon, accent }) => {
+            const labelId = `${id}-label`;
+            const descriptionId = `${id}-description`;
+            return (
+              <div
+                key={id}
+                role="presentation"
+                className="group flex items-center justify-between gap-3 rounded-xl border border-white/[0.18] bg-white/[0.16] px-3 py-3 transition duration-150 hover:border-white/25 hover:bg-white/[0.22] focus-within:border-white/25 focus-within:bg-white/[0.22]"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.22] text-white/80">
+                    <span
+                      className={`absolute inset-0 rounded-xl bg-gradient-to-br ${accent} opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100`}
+                      aria-hidden
+                    />
+                    <span className="relative text-lg" aria-hidden>
+                      {icon}
+                    </span>
+                  </span>
+                  <label htmlFor={id} className="flex flex-col">
+                    <span id={labelId} className="font-semibold text-white">
+                      {label}
+                    </span>
+                    <span id={descriptionId} className="text-xs text-white/80">
+                      {description}
+                    </span>
+                  </label>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span
+                    aria-hidden
+                    className={`inline-flex items-center rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                      value ? 'bg-kali-control text-black' : 'bg-white/10 text-white/70'
+                    }`}
+                  >
+                    {value ? 'On' : 'Off'}
+                  </span>
+                  <button
+                    id={id}
+                    type="button"
+                    role="switch"
+                    aria-checked={value}
+                    aria-labelledby={labelId}
+                    aria-describedby={descriptionId}
+                    className={`relative inline-flex h-6 w-12 shrink-0 items-center rounded-full border border-white/15 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
+                      value ? 'bg-kali-control shadow-[0_0_18px_rgba(120,190,255,0.55)]' : 'bg-white/30'
+                    }`}
+                    onClick={onToggle}
+                    tabIndex={focusableTabIndex}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-150 ${
+                        value ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <button
+          type="button"
+          onClick={handleCapture}
+          disabled={isCapturing}
+          aria-busy={isCapturing}
+          className={`w-full rounded-xl border border-white/20 bg-kali-control/90 px-4 py-2 text-sm font-semibold text-black shadow-[0_10px_30px_rgba(14,116,244,0.25)] transition hover:bg-kali-control focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
+            isCapturing ? 'opacity-60' : ''
+          }`}
+        >
+          {isCapturing ? 'Capturing…' : 'Capture desktop'}
+        </button>
+      </section>
+
       <div className="mt-4 space-y-2" role="none">
         {toggles.map(({ id, label, description, value, onToggle, icon, accent }) => {
           const labelId = `${id}-label`;
@@ -429,7 +681,9 @@ const QuickSettings = ({ open }: Props) => {
           );
         })}
       </div>
-    </div>
+      </div>
+      {toast ? <Toast message={toast} onClose={handleToastClose} /> : null}
+    </>
   );
 };
 
@@ -581,6 +835,51 @@ const VolumeIcon = ({ muted }: { muted: boolean }) => (
         strokeLinejoin="round"
       />
     )}
+  </svg>
+);
+
+const WindowStackIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="text-white"
+  >
+    <rect x="5" y="5" width="14" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+    <path
+      d="M7 15v2.5c0 .83.67 1.5 1.5 1.5H17"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const WatermarkIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="text-white"
+  >
+    <path
+      d="M5 5h14v14H5z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M8 9h8M8 12h8M8 15h5"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
   </svg>
 );
 
