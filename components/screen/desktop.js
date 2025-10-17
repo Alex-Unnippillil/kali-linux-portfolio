@@ -333,6 +333,13 @@ export class Desktop extends Component {
             this.commandPaletteUsesMeta = /Mac|iPhone|iPad|iPod/i.test(platform || userAgent);
         }
 
+        this.windowSyncId = `desktop-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+        this.windowSyncChannel = null;
+        this.windowSyncStrategy = 'none';
+        this.windowSyncStorageKey = 'desktop-layout-sync';
+        this.windowSyncTimestamps = new Map();
+        this.isApplyingRemoteDelta = false;
+
     }
 
     createEmptyWorkspaceState = () => ({
@@ -537,6 +544,245 @@ export class Desktop extends Component {
     broadcastIconSizePreset = (preset) => {
         if (typeof window === 'undefined') return;
         window.dispatchEvent(new CustomEvent('desktop-icon-size', { detail: { preset } }));
+    };
+
+    setupWindowSync = () => {
+        if (typeof window === 'undefined') return;
+        if (typeof window.BroadcastChannel === 'function') {
+            try {
+                const channel = new window.BroadcastChannel('desktop-layout');
+                channel.addEventListener('message', this.handleWindowSyncMessage);
+                this.windowSyncChannel = channel;
+                this.windowSyncStrategy = 'broadcast';
+                return;
+            } catch (e) {
+                this.windowSyncChannel = null;
+            }
+        }
+        window.addEventListener('storage', this.handleWindowStorageEvent);
+        this.windowSyncStrategy = 'storage';
+    };
+
+    teardownWindowSync = () => {
+        if (this.windowSyncChannel) {
+            this.windowSyncChannel.removeEventListener('message', this.handleWindowSyncMessage);
+            try {
+                this.windowSyncChannel.close();
+            } catch (e) {
+                // ignore close errors
+            }
+            this.windowSyncChannel = null;
+        }
+        if (typeof window !== 'undefined' && this.windowSyncStrategy === 'storage') {
+            window.removeEventListener('storage', this.handleWindowStorageEvent);
+        }
+        this.windowSyncStrategy = 'none';
+    };
+
+    handleWindowSyncMessage = (event) => {
+        this.processWindowSyncPayload(event?.data);
+    };
+
+    handleWindowStorageEvent = (event) => {
+        if (!event || event.key !== this.windowSyncStorageKey) return;
+        if (!event.newValue) return;
+        try {
+            const payload = JSON.parse(event.newValue);
+            this.processWindowSyncPayload(payload);
+        } catch (e) {
+            // ignore malformed payloads
+        }
+    };
+
+    dispatchStorageSync = (payload) => {
+        if (typeof window === 'undefined') return;
+        try {
+            const storage = window.localStorage;
+            if (!storage) return;
+            const serialized = JSON.stringify({ ...payload, nonce: Math.random().toString(36).slice(2) });
+            storage.setItem(this.windowSyncStorageKey, serialized);
+            window.setTimeout?.(() => {
+                try {
+                    storage.removeItem(this.windowSyncStorageKey);
+                } catch (removeError) {
+                    // ignore cleanup errors
+                }
+            }, 0);
+        } catch (e) {
+            // ignore storage sync errors
+        }
+    };
+
+    getWindowSyncKey = (type, workspaceId, windowId) => {
+        return `${type}:${workspaceId}:${windowId}`;
+    };
+
+    markWindowDeltaTimestamp = (type, workspaceId, windowId, timestamp) => {
+        const key = this.getWindowSyncKey(type, workspaceId, windowId);
+        this.windowSyncTimestamps.set(key, timestamp);
+    };
+
+    shouldApplyRemoteDelta = (type, workspaceId, windowId, timestamp) => {
+        if (!Number.isFinite(timestamp)) return false;
+        const key = this.getWindowSyncKey(type, workspaceId, windowId);
+        const last = this.windowSyncTimestamps.get(key) || 0;
+        if (timestamp <= last) {
+            return false;
+        }
+        this.windowSyncTimestamps.set(key, timestamp);
+        return true;
+    };
+
+    broadcastWindowDelta = (delta) => {
+        if (this.isApplyingRemoteDelta) return;
+        if (!delta || typeof delta !== 'object') return;
+        if (typeof window === 'undefined') return;
+        const { type, windowId, workspaceId, timestamp } = delta;
+        if (!type || !windowId || !Number.isFinite(workspaceId) || !Number.isFinite(timestamp)) {
+            return;
+        }
+        const payload = { ...delta, source: this.windowSyncId };
+        let dispatched = false;
+        if (this.windowSyncChannel) {
+            try {
+                this.windowSyncChannel.postMessage(payload);
+                dispatched = true;
+            } catch (e) {
+                dispatched = false;
+            }
+        }
+        if (!dispatched) {
+            this.dispatchStorageSync(payload);
+        }
+    };
+
+    processWindowSyncPayload = (payload) => {
+        if (!payload || typeof payload !== 'object') return;
+        if (payload.source === this.windowSyncId) return;
+        const type = payload.type;
+        const windowId = payload.windowId;
+        const workspaceId = Number(payload.workspaceId);
+        const timestamp = Number(payload.timestamp);
+        if (!type || !windowId || !Number.isInteger(workspaceId) || workspaceId < 0 || workspaceId >= this.workspaceCount) return;
+        if (!this.shouldApplyRemoteDelta(type, workspaceId, windowId, timestamp)) {
+            return;
+        }
+        this.isApplyingRemoteDelta = true;
+        try {
+            switch (type) {
+                case 'position':
+                    this.applyRemoteWindowPosition(workspaceId, windowId, payload.position);
+                    break;
+                case 'size':
+                    this.applyRemoteWindowSize(workspaceId, windowId, payload.size);
+                    break;
+                case 'focus':
+                    this.applyRemoteWindowFocus(workspaceId, windowId);
+                    break;
+                default:
+                    break;
+            }
+        } finally {
+            this.isApplyingRemoteDelta = false;
+        }
+    };
+
+    applyRemoteWindowPosition = (workspaceId, windowId, position) => {
+        if (!position || typeof position !== 'object') return;
+        if (this.isOverlayId(windowId)) return;
+        const x = Number(position.x);
+        const y = Number(position.y);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+        const safeX = Math.round(x);
+        const safeTopOffset = measureWindowTopOffset();
+        const safeY = clampWindowTopPosition(Math.round(y), safeTopOffset);
+        const snapshot = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
+        const nextPositions = { ...snapshot.window_positions, [windowId]: { x: safeX, y: safeY } };
+        this.workspaceSnapshots[workspaceId] = { ...snapshot, window_positions: nextPositions };
+        if (this.state.activeWorkspace === workspaceId) {
+            this.setState((prev) => {
+                const current = prev.window_positions || {};
+                const existing = current[windowId];
+                if (existing && existing.x === safeX && existing.y === safeY) {
+                    return null;
+                }
+                return {
+                    window_positions: { ...current, [windowId]: { x: safeX, y: safeY } },
+                };
+            }, () => {
+                this.persistWindowSizes(this.state.window_sizes || {});
+                this.saveSession();
+            });
+        }
+    };
+
+    applyRemoteWindowSize = (workspaceId, windowId, size) => {
+        if (!size || typeof size !== 'object') return;
+        if (this.isOverlayId(windowId)) return;
+        const width = Number(size.width);
+        const height = Number(size.height);
+        if (!Number.isFinite(width) || !Number.isFinite(height)) return;
+        const safeWidth = Math.max(0, Math.round(width));
+        const safeHeight = Math.max(0, Math.round(height));
+        const snapshot = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
+        const nextSizes = { ...(snapshot.window_sizes || {}), [windowId]: { width: safeWidth, height: safeHeight } };
+        this.workspaceSnapshots[workspaceId] = { ...snapshot, window_sizes: nextSizes };
+        if (this.state.activeWorkspace === workspaceId) {
+            this.setState((prev) => {
+                const current = prev.window_sizes || {};
+                const existing = current[windowId];
+                if (existing && existing.width === safeWidth && existing.height === safeHeight) {
+                    return null;
+                }
+                return {
+                    window_sizes: { ...current, [windowId]: { width: safeWidth, height: safeHeight } },
+                };
+            }, () => {
+                this.persistWindowSizes(this.state.window_sizes || {});
+            });
+        }
+    };
+
+    applyRemoteWindowFocus = (workspaceId, windowId) => {
+        if (!windowId || this.isOverlayId(windowId)) return;
+        const snapshot = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
+        const nextFocused = { ...snapshot.focused_windows };
+        let snapshotChanged = false;
+        Object.keys(nextFocused).forEach((key) => {
+            const value = key === windowId;
+            if (nextFocused[key] !== value) {
+                nextFocused[key] = value;
+                snapshotChanged = true;
+            }
+        });
+        if (!Object.prototype.hasOwnProperty.call(nextFocused, windowId) || nextFocused[windowId] !== true) {
+            nextFocused[windowId] = true;
+            snapshotChanged = true;
+        }
+        if (snapshotChanged) {
+            this.workspaceSnapshots[workspaceId] = { ...snapshot, focused_windows: nextFocused };
+        }
+        this.promoteWindowInWorkspaceStack(workspaceId, windowId);
+        if (this.state.activeWorkspace === workspaceId) {
+            this.setState((prev) => {
+                const current = prev.focused_windows || {};
+                const updated = { ...current };
+                let localChanged = false;
+                Object.keys(updated).forEach((key) => {
+                    const value = key === windowId;
+                    if (updated[key] !== value) {
+                        updated[key] = value;
+                        localChanged = true;
+                    }
+                });
+                if (!Object.prototype.hasOwnProperty.call(updated, windowId) || updated[windowId] !== true) {
+                    updated[windowId] = true;
+                    localChanged = true;
+                }
+                if (!localChanged) return null;
+                return { focused_windows: updated };
+            });
+        }
     };
 
     commitWorkspacePartial = (partial, index) => {
@@ -2746,22 +2992,34 @@ export class Desktop extends Component {
         this.switchWorkspace(next);
     };
 
-    getActiveStack = () => {
-        const { activeWorkspace } = this.state;
-        if (!this.workspaceStacks[activeWorkspace]) {
-            this.workspaceStacks[activeWorkspace] = [];
+    getWorkspaceStack = (workspaceId) => {
+        if (workspaceId < 0 || workspaceId >= this.workspaceStacks.length) {
+            return null;
         }
-        return this.workspaceStacks[activeWorkspace];
+        if (!this.workspaceStacks[workspaceId]) {
+            this.workspaceStacks[workspaceId] = [];
+        }
+        return this.workspaceStacks[workspaceId];
     };
 
-    promoteWindowInStack = (id) => {
+    getActiveStack = () => {
+        const stack = this.getWorkspaceStack(this.state.activeWorkspace);
+        return stack || [];
+    };
+
+    promoteWindowInWorkspaceStack = (workspaceId, id) => {
         if (!id) return;
-        const stack = this.getActiveStack();
+        const stack = this.getWorkspaceStack(workspaceId);
+        if (!stack) return;
         const index = stack.indexOf(id);
         if (index !== -1) {
             stack.splice(index, 1);
         }
         stack.unshift(id);
+    };
+
+    promoteWindowInStack = (id) => {
+        this.promoteWindowInWorkspaceStack(this.state.activeWorkspace, id);
     };
 
     handleExternalWorkspaceSelect = (event) => {
@@ -2844,6 +3102,8 @@ export class Desktop extends Component {
             this.broadcastWorkspaceState();
             this.broadcastIconSizePreset(this.state.iconSizePreset);
         }
+
+        this.setupWindowSync();
 
         this.savedIconPositions = this.loadDesktopIconPositions();
         this.initializeDefaultFolders(() => {
@@ -2940,6 +3200,7 @@ export class Desktop extends Component {
         window.removeEventListener('open-app', this.handleOpenAppEvent);
         window.removeEventListener('resize', this.handleViewportResize);
         this.detachIconKeyboardListeners();
+        this.teardownWindowSync();
         if (typeof window !== 'undefined') {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
@@ -4021,11 +4282,26 @@ export class Desktop extends Component {
         const safeTopOffset = measureWindowTopOffset();
         const nextX = snapValue(x, gridX);
         const nextY = clampWindowTopPosition(snapValue(y, gridY), safeTopOffset);
-        this.setWorkspaceState(prev => ({
-            window_positions: { ...prev.window_positions, [id]: { x: nextX, y: nextY } }
-        }), () => {
+        let workspaceId = this.state.activeWorkspace;
+        const timestamp = Date.now();
+        this.setWorkspaceState((prev) => {
+            workspaceId = prev.activeWorkspace;
+            return {
+                window_positions: { ...prev.window_positions, [id]: { x: nextX, y: nextY } }
+            };
+        }, () => {
             this.persistWindowSizes(this.state.window_sizes || {});
             this.saveSession();
+            if (!this.isOverlayId(id)) {
+                this.markWindowDeltaTimestamp('position', workspaceId, id, timestamp);
+                this.broadcastWindowDelta({
+                    type: 'position',
+                    windowId: id,
+                    workspaceId,
+                    position: { x: nextX, y: nextY },
+                    timestamp,
+                });
+            }
         });
     }
 
@@ -4038,12 +4314,25 @@ export class Desktop extends Component {
         }
         const safeWidth = Math.max(0, Math.round(normalizedWidth));
         const safeHeight = Math.max(0, Math.round(normalizedHeight));
+        let workspaceId = this.state.activeWorkspace;
+        const timestamp = Date.now();
         this.setWorkspaceState((prev) => {
+            workspaceId = prev.activeWorkspace;
             const nextSizes = { ...(prev.window_sizes || {}) };
             nextSizes[id] = { width: safeWidth, height: safeHeight };
             return { window_sizes: nextSizes };
         }, () => {
             this.persistWindowSizes(this.state.window_sizes || {});
+            if (!this.isOverlayId(id)) {
+                this.markWindowDeltaTimestamp('size', workspaceId, id, timestamp);
+                this.broadcastWindowDelta({
+                    type: 'size',
+                    windowId: id,
+                    workspaceId,
+                    size: { width: safeWidth, height: safeHeight },
+                    timestamp,
+                });
+            }
         });
     }
 
@@ -4411,8 +4700,11 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
+        let workspaceId = this.state.activeWorkspace;
+        const timestamp = Date.now();
         this.promoteWindowInStack(objId);
         this.setState((prev) => {
+            workspaceId = prev.activeWorkspace;
             const nextFocused = { ...prev.focused_windows };
             Object.keys(nextFocused).forEach((key) => {
                 nextFocused[key] = key === objId;
@@ -4437,6 +4729,17 @@ export class Desktop extends Component {
                 focused_windows: nextFocused,
                 overlayWindows,
             };
+        }, () => {
+            if (!this.isOverlayId(objId)) {
+                this.markWindowDeltaTimestamp('focus', workspaceId, objId, timestamp);
+                this.broadcastWindowDelta({
+                    type: 'focus',
+                    windowId: objId,
+                    workspaceId,
+                    focused: true,
+                    timestamp,
+                });
+            }
         });
     }
 
