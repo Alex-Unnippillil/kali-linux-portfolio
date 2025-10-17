@@ -194,4 +194,46 @@ describe('Navbar running apps tray', () => {
       order: ['app2', 'app3', 'app1'],
     });
   });
+
+  it('acknowledges attention requests on hover and focus', () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('workspace-state', {
+          detail: {
+            ...workspaceEventDetail,
+            runningApps: [
+              {
+                id: 'app1',
+                title: 'App One',
+                icon: '/icon.png',
+                isFocused: false,
+                isMinimized: false,
+                needsAttention: true,
+              },
+            ],
+          },
+        }),
+      );
+    });
+
+    const button = screen.getByRole('button', { name: /app one/i });
+    expect(button).toHaveAttribute('data-attention', 'true');
+    expect(button.className).toMatch(/attention-ring/);
+
+    dispatchSpy.mockClear();
+    fireEvent.pointerEnter(button);
+
+    const hoverAck = dispatchSpy.mock.calls.find(([event]) => event.type === 'window-attention');
+    expect(hoverAck).toBeTruthy();
+    expect(hoverAck && hoverAck[0].detail).toEqual({ id: 'app1', attention: false, source: 'hover' });
+
+    dispatchSpy.mockClear();
+    fireEvent.focus(button);
+
+    const focusAck = dispatchSpy.mock.calls.find(([event]) => event.type === 'window-attention');
+    expect(focusAck).toBeTruthy();
+    expect(focusAck && focusAck[0].detail).toEqual({ id: 'app1', attention: false, source: 'focus' });
+  });
 });

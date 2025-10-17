@@ -26,3 +26,50 @@
   }
 }
 
+@layer components {
+  .attention-ring {
+    position: relative;
+  }
+
+  .attention-ring::after {
+    content: "";
+    position: absolute;
+    inset: -0.2rem;
+    border-radius: inherit;
+    border: 2px solid rgba(56, 189, 248, 0.55);
+    box-shadow: 0 0 0.85rem rgba(56, 189, 248, 0.35);
+    opacity: 0.85;
+    animation: attention-ring-pulse 1.4s ease-in-out infinite;
+    pointer-events: none;
+    transition: opacity 120ms ease-out;
+  }
+
+  .attention-ring:hover::after,
+  .attention-ring:focus::after,
+  .attention-ring:focus-visible::after {
+    animation-play-state: paused;
+    opacity: 0.6;
+  }
+}
+
+@keyframes attention-ring-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+    box-shadow: 0 0 0.85rem rgba(56, 189, 248, 0.35);
+  }
+
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+    box-shadow: 0 0 1.2rem rgba(56, 189, 248, 0.5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attention-ring::after {
+    animation: none;
+  }
+}
+
