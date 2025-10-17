@@ -116,12 +116,75 @@
   box-shadow: 0 0 0 2px var(--color-window-accent);
 }
 
-.windowYBorder {
-  height: calc(100% - 10px);
-  width: calc(100% + 10px);
+.resizeHandle {
+  position: absolute;
+  z-index: 5;
+  touch-action: none;
+  user-select: none;
 }
 
-.windowXBorder {
-  height: calc(100% + 10px);
-  width: calc(100% - 10px);
+.resizeHandleNorth,
+.resizeHandleSouth {
+  left: 12px;
+  right: 12px;
+  height: 12px;
+}
+
+.resizeHandleNorth {
+  top: 0;
+  cursor: ns-resize;
+}
+
+.resizeHandleSouth {
+  bottom: 0;
+  cursor: ns-resize;
+}
+
+.resizeHandleEast,
+.resizeHandleWest {
+  top: 12px;
+  bottom: 12px;
+  width: 12px;
+}
+
+.resizeHandleEast {
+  right: 0;
+  cursor: ew-resize;
+}
+
+.resizeHandleWest {
+  left: 0;
+  cursor: ew-resize;
+}
+
+.resizeHandleNorthEast,
+.resizeHandleNorthWest,
+.resizeHandleSouthEast,
+.resizeHandleSouthWest {
+  width: 14px;
+  height: 14px;
+}
+
+.resizeHandleNorthEast {
+  top: 0;
+  right: 0;
+  cursor: nesw-resize;
+}
+
+.resizeHandleNorthWest {
+  top: 0;
+  left: 0;
+  cursor: nwse-resize;
+}
+
+.resizeHandleSouthEast {
+  bottom: 0;
+  right: 0;
+  cursor: nwse-resize;
+}
+
+.resizeHandleSouthWest {
+  bottom: 0;
+  left: 0;
+  cursor: nesw-resize;
 }
