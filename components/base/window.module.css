@@ -58,6 +58,10 @@
   transition-delay: 0s, 0s, 0s, 0s, var(--window-motion-opacity-duration);
 }
 
+.windowTransformHint {
+  will-change: transform;
+}
+
 .snapPreview {
   transition: opacity var(--window-motion-duration-snap-preview) var(--window-motion-ease-snap-preview);
 }
