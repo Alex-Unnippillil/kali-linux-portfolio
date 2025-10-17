@@ -141,6 +141,33 @@ export default class Navbar extends PureComponent {
                 </li>
         );
 
+        handleAppButtonAuxClick = (event, app) => {
+                if (!app || event?.button !== 1) {
+                        return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                const supportsNewWindow = Boolean(
+                        app.supportsNewWindow ?? app.canOpenNewWindow ?? app.multiWindow
+                );
+
+                if (supportsNewWindow) {
+                        this.dispatchTaskbarCommand({
+                                appId: app.id,
+                                action: 'open',
+                                openInNewInstance: true
+                        });
+                        return;
+                }
+
+                this.dispatchTaskbarCommand({
+                        appId: app.id,
+                        action: 'focus'
+                });
+        };
+
         renderRunningAppButton = (app) => {
                 const isActive = !app.isMinimized;
                 const isFocused = app.isFocused && isActive;
@@ -154,6 +181,7 @@ export default class Navbar extends PureComponent {
                                 data-app-id={app.id}
                                 data-active={isActive ? 'true' : 'false'}
                                 onClick={() => this.handleAppButtonClick(app)}
+                                onAuxClick={(event) => this.handleAppButtonAuxClick(event, app)}
                                 onKeyDown={(event) => this.handleAppButtonKeyDown(event, app)}
                                 className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
                         >

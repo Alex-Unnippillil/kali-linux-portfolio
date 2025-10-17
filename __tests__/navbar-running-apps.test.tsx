@@ -194,4 +194,55 @@ describe('Navbar running apps tray', () => {
       order: ['app2', 'app3', 'app1'],
     });
   });
+
+  it('dispatches an open command on middle click when new windows are supported', () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('workspace-state', {
+        detail: {
+          ...workspaceEventDetail,
+          runningApps: [
+            {
+              ...workspaceEventDetail.runningApps[0],
+              supportsNewWindow: true,
+            },
+          ],
+        },
+      }));
+    });
+
+    dispatchSpy.mockClear();
+
+    const button = screen.getByRole('button', { name: /app one/i });
+    fireEvent(button, new MouseEvent('auxclick', { button: 1, bubbles: true }));
+
+    const taskbarEventCall = dispatchSpy.mock.calls.find(([event]) => event.type === 'taskbar-command');
+    expect(taskbarEventCall).toBeTruthy();
+    expect(taskbarEventCall && taskbarEventCall[0].detail).toEqual({
+      appId: 'app1',
+      action: 'open',
+      openInNewInstance: true,
+    });
+  });
+
+  it('focuses the window on middle click when new windows are not supported', () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('workspace-state', { detail: workspaceEventDetail }));
+    });
+
+    dispatchSpy.mockClear();
+
+    const button = screen.getByRole('button', { name: /app one/i });
+    fireEvent(button, new MouseEvent('auxclick', { button: 1, bubbles: true }));
+
+    const taskbarEventCall = dispatchSpy.mock.calls.find(([event]) => event.type === 'taskbar-command');
+    expect(taskbarEventCall).toBeTruthy();
+    expect(taskbarEventCall && taskbarEventCall[0].detail).toEqual({
+      appId: 'app1',
+      action: 'focus',
+    });
+  });
 });
