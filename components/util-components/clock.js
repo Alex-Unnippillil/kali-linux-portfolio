@@ -133,6 +133,7 @@ const Clock = ({
     const prefersReducedMotion = usePrefersReducedMotion()
     const buttonRef = useRef(null)
     const popoverRef = useRef(null)
+    const [announcement, setAnnouncement] = useState('')
     const activeCellRef = useRef(null)
     const previouslyOpenRef = useRef(false)
     const headingId = useId()
@@ -189,6 +190,52 @@ const Clock = ({
             document.removeEventListener('mousedown', handleClick)
             document.removeEventListener('touchstart', handleClick)
             document.removeEventListener('keydown', handleKeyDown)
+        }
+    }, [isOpen, prefersReducedMotion])
+
+    useEffect(() => {
+        if (!isOpen) return undefined
+        const node = popoverRef.current
+        if (!node) return undefined
+
+        const focusableSelector =
+            'a[href], area[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+        const handleTrap = (event) => {
+            if (event.key !== 'Tab') return
+            const focusableElements = Array.from(node.querySelectorAll(focusableSelector)).filter(
+                (element) =>
+                    !element.hasAttribute('disabled') &&
+                    element.getAttribute('tabindex') !== '-1' &&
+                    element.getAttribute('aria-hidden') !== 'true' &&
+                    element.offsetParent !== null
+            )
+
+            if (focusableElements.length === 0) {
+                return
+            }
+
+            const first = focusableElements[0]
+            const last = focusableElements[focusableElements.length - 1]
+            const active = document.activeElement
+
+            if (event.shiftKey) {
+                if (!node.contains(active) || active === first) {
+                    event.preventDefault()
+                    last.focus({ preventScroll: prefersReducedMotion })
+                }
+                return
+            }
+
+            if (!node.contains(active) || active === last) {
+                event.preventDefault()
+                first.focus({ preventScroll: prefersReducedMotion })
+            }
+        }
+
+        node.addEventListener('keydown', handleTrap)
+        return () => {
+            node.removeEventListener('keydown', handleTrap)
         }
     }, [isOpen, prefersReducedMotion])
 
@@ -334,9 +381,10 @@ const Clock = ({
         setFocusedDate(today)
     }, [currentTime])
 
-    const handleDayKeyDown = useCallback((event, date) => {
-        let nextDate = null
-        switch (event.key) {
+    const handleDayKeyDown = useCallback(
+        (event, date) => {
+            let nextDate = null
+            switch (event.key) {
             case 'ArrowRight':
                 nextDate = addDays(date, 1)
                 break
@@ -356,16 +404,18 @@ const Clock = ({
                 nextDate = addDays(date, 6 - date.getDay())
                 break
             case 'PageUp':
-                nextDate = event.shiftKey ? addYears(date, -1) : addMonths(date, -1)
+                nextDate = event.shiftKey || event.altKey || event.ctrlKey || event.metaKey ? addYears(date, -1) : addMonths(date, -1)
                 break
             case 'PageDown':
-                nextDate = event.shiftKey ? addYears(date, 1) : addMonths(date, 1)
+                nextDate = event.shiftKey || event.altKey || event.ctrlKey || event.metaKey ? addYears(date, 1) : addMonths(date, 1)
                 break
             case 'Enter':
             case ' ': // modern browsers use a single space
             case 'Spacebar': { // fallback for older browsers
                 event.preventDefault()
                 setIsOpen(false)
+                setFocusedDate(date)
+                setAnnouncement(friendlyDateFormatter.format(date))
                 if (buttonRef.current) {
                     buttonRef.current.focus({ preventScroll: prefersReducedMotion })
                 }
@@ -377,15 +427,21 @@ const Clock = ({
         if (nextDate) {
             event.preventDefault()
             setFocusedDate(nextDate)
+            setAnnouncement(friendlyDateFormatter.format(nextDate))
             if (nextDate.getMonth() !== viewDate.getMonth() || nextDate.getFullYear() !== viewDate.getFullYear()) {
                 setViewDate(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1))
             }
         }
-    }, [prefersReducedMotion, viewDate])
+    }, [friendlyDateFormatter, prefersReducedMotion, viewDate])
 
-    const handleDayClick = useCallback(() => {
-        setIsOpen(false)
-    }, [])
+    const handleDayClick = useCallback(
+        (date) => {
+            setFocusedDate(date)
+            setAnnouncement(friendlyDateFormatter.format(date))
+            setIsOpen(false)
+        },
+        [friendlyDateFormatter]
+    )
 
     const displayTime = useMemo(
         () =>
@@ -402,6 +458,13 @@ const Clock = ({
 
     const friendlyTimeLabel = useMemo(() => (currentTime ? friendlyTimeFormatter.format(currentTime) : ''), [currentTime, friendlyTimeFormatter])
 
+    useEffect(() => {
+        if (!isOpen) return
+        if (focusedDate) {
+            setAnnouncement(friendlyDateFormatter.format(focusedDate))
+        }
+    }, [focusedDate, friendlyDateFormatter, isOpen])
+
     const popoverStyle = isOpen
         ? {
               ...popoverStyles,
@@ -414,12 +477,16 @@ const Clock = ({
             ref={popoverRef}
             id={popoverId}
             role="dialog"
-            aria-modal="false"
-            aria-label="Calendar"
-            className="fixed z-50 w-[20rem] origin-top-right overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/95 via-slate-950/90 to-slate-950/95 p-4 text-sm text-white shadow-2xl ring-1 ring-cyan-300/20 backdrop-blur-2xl"
+            aria-modal="true"
+            aria-labelledby={headingId}
+            className="fixed z-50"
             style={popoverStyle}
         >
-            <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-3 py-2 shadow-inner">
+            <div className="w-[20rem] origin-top-right overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/95 via-slate-950/90 to-slate-950/95 p-4 text-sm text-white shadow-2xl ring-1 ring-cyan-300/20 backdrop-blur-2xl">
+                <div className="sr-only" aria-live="polite" role="status">
+                    {announcement}
+                </div>
+                <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-3 py-2 shadow-inner">
                 <div className="flex flex-col" aria-live="polite" id={headingId}>
                     <span className="text-[0.65rem] uppercase tracking-[0.22em] text-cyan-200/70">{friendlyDateLabel}</span>
                     <span className="text-base font-semibold tracking-tight text-white">{headingLabel}</span>
@@ -479,7 +546,7 @@ const Clock = ({
                                     >
                                         <button
                                             type="button"
-                                            onClick={handleDayClick}
+                                            onClick={() => handleDayClick(date)}
                                             onKeyDown={(event) => handleDayKeyDown(event, date)}
                                             className={`flex h-9 w-9 items-center justify-center rounded-2xl text-sm font-medium transition duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
                                                 inCurrentMonth ? 'text-white' : 'text-white/35'
@@ -502,21 +569,27 @@ const Clock = ({
                     ))}
                 </tbody>
             </table>
-            <div className="mt-4 flex items-center justify-between">
-                <button
-                    type="button"
-                    onClick={handleToday}
-                    className="rounded-full bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-600 px-4 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-slate-950 shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
-                >
-                    Today
-                </button>
-                <button
-                    type="button"
-                    onClick={handleClose}
-                    className="rounded-full border border-white/20 px-3 py-1.5 text-[0.65rem] font-medium uppercase tracking-[0.3em] text-white/70 transition hover:border-white/40 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
-                >
-                    Close
-                </button>
+                <div className="mt-4 flex items-center justify-between">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            handleToday()
+                            if (currentTime) {
+                                setAnnouncement(friendlyDateFormatter.format(currentTime))
+                            }
+                        }}
+                        className="rounded-full bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-600 px-4 py-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-slate-950 shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                    >
+                        Today
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleClose}
+                        className="rounded-full border border-white/20 px-3 py-1.5 text-[0.65rem] font-medium uppercase tracking-[0.3em] text-white/70 transition hover:border-white/40 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                    >
+                        Close
+                    </button>
+                </div>
             </div>
         </div>
     )
