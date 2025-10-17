@@ -4,6 +4,7 @@ import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
+import QuickSearchLauncher from '../menu/QuickSearchLauncher';
 import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
@@ -313,6 +314,7 @@ export default class Navbar extends PureComponent {
                                 >
                                         <div className="flex items-center gap-2 text-xs md:text-sm">
                                                 <WhiskerMenu />
+                                                <QuickSearchLauncher />
                                                 {workspaces.length > 0 && (
                                                         <WorkspaceSwitcher
                                                                 workspaces={workspaces}
