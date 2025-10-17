@@ -28,8 +28,15 @@ function fuzzyHighlight(text, query) {
 export default function AppGrid({ openApp }) {
   const [query, setQuery] = useState('');
   const gridRef = useRef(null);
-  const columnCountRef = useRef(1);
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const [announcement, setAnnouncement] = useState('');
+  const gridMetricsRef = useRef({
+    columnCount: 1,
+    rowCount: 0,
+    rows: [],
+    positions: [],
+    pageJump: 1,
+  });
 
   const filtered = useMemo(() => {
     if (!query) return apps.map((app) => ({ ...app, nodes: app.title }));
@@ -126,25 +133,153 @@ export default function AppGrid({ openApp }) {
 
   const handleKeyDown = useCallback(
     (e) => {
-      if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+      if (
+        ![
+          'ArrowUp',
+          'ArrowDown',
+          'ArrowLeft',
+          'ArrowRight',
+          'Home',
+          'End',
+          'PageUp',
+          'PageDown',
+        ].includes(e.key)
+      ) {
+        return;
+      }
+
+      if (!filtered.length) return;
+
+      const metrics = gridMetricsRef.current;
+      const { positions, rows, pageJump } = metrics;
+      if (!positions.length) return;
+
+      const currentIndex = focusedIndex;
+      const currentPosition = positions[currentIndex];
+      if (!currentPosition) return;
+
       e.preventDefault();
-      const colCount = columnCountRef.current;
-      let idx = focusedIndex;
-      if (e.key === 'ArrowRight') idx = Math.min(idx + 1, filtered.length - 1);
-      if (e.key === 'ArrowLeft') idx = Math.max(idx - 1, 0);
-      if (e.key === 'ArrowDown') idx = Math.min(idx + colCount, filtered.length - 1);
-      if (e.key === 'ArrowUp') idx = Math.max(idx - colCount, 0);
-      setFocusedIndex(idx);
-      const row = Math.floor(idx / colCount);
-      const col = idx % colCount;
-      gridRef.current?.scrollToCell({ rowIndex: row, columnIndex: col, rowAlign: 'smart', columnAlign: 'smart' });
-      setTimeout(() => {
-        const el = document.getElementById('app-' + filtered[idx].id);
-        el?.focus();
-      }, 0);
+
+      const currentRowEntries = rows[currentPosition.row] ?? [];
+      const clampToRow = (rowIndex, columnIndex) => {
+        const targetRow = rows[rowIndex];
+        if (!targetRow || !targetRow.length) return currentIndex;
+        const safeColumn = Math.max(0, Math.min(columnIndex, targetRow.length - 1));
+        return targetRow[safeColumn];
+      };
+
+      let nextIndex = currentIndex;
+      switch (e.key) {
+        case 'ArrowRight': {
+          if (currentPosition.column < currentRowEntries.length - 1) {
+            nextIndex = currentRowEntries[currentPosition.column + 1];
+          } else if (rows[currentPosition.row + 1]?.length) {
+            nextIndex = rows[currentPosition.row + 1][0];
+          }
+          break;
+        }
+        case 'ArrowLeft': {
+          if (currentPosition.column > 0) {
+            nextIndex = currentRowEntries[currentPosition.column - 1];
+          } else if (rows[currentPosition.row - 1]?.length) {
+            const prevRow = rows[currentPosition.row - 1];
+            nextIndex = prevRow[prevRow.length - 1];
+          }
+          break;
+        }
+        case 'ArrowDown': {
+          const targetRowIndex = Math.min(rows.length - 1, currentPosition.row + 1);
+          if (targetRowIndex !== currentPosition.row) {
+            nextIndex = clampToRow(targetRowIndex, currentPosition.column);
+          }
+          break;
+        }
+        case 'ArrowUp': {
+          const targetRowIndex = Math.max(0, currentPosition.row - 1);
+          if (targetRowIndex !== currentPosition.row) {
+            nextIndex = clampToRow(targetRowIndex, currentPosition.column);
+          }
+          break;
+        }
+        case 'Home': {
+          if (e.ctrlKey || e.metaKey) {
+            nextIndex = rows[0]?.[0] ?? 0;
+          } else if (currentRowEntries.length) {
+            nextIndex = currentRowEntries[0];
+          }
+          break;
+        }
+        case 'End': {
+          if (e.ctrlKey || e.metaKey) {
+            const lastRow = rows[rows.length - 1] ?? [];
+            nextIndex = lastRow[lastRow.length - 1] ?? currentIndex;
+          } else if (currentRowEntries.length) {
+            nextIndex = currentRowEntries[currentRowEntries.length - 1];
+          }
+          break;
+        }
+        case 'PageDown': {
+          const jump = Math.max(1, pageJump || 1);
+          const targetRowIndex = Math.min(rows.length - 1, currentPosition.row + jump);
+          if (targetRowIndex !== currentPosition.row) {
+            nextIndex = clampToRow(targetRowIndex, currentPosition.column);
+          }
+          break;
+        }
+        case 'PageUp': {
+          const jump = Math.max(1, pageJump || 1);
+          const targetRowIndex = Math.max(0, currentPosition.row - jump);
+          if (targetRowIndex !== currentPosition.row) {
+            nextIndex = clampToRow(targetRowIndex, currentPosition.column);
+          }
+          break;
+        }
+        default:
+          break;
+      }
+
+      if (nextIndex !== currentIndex && filtered[nextIndex]) {
+        setFocusedIndex(nextIndex);
+      }
     },
     [filtered, focusedIndex]
   );
+
+  useEffect(() => {
+    if (!filtered.length) {
+      setAnnouncement('');
+      return;
+    }
+
+    const metrics = gridMetricsRef.current;
+    const { positions } = metrics;
+    const currentItem = filtered[focusedIndex];
+    const position = positions[focusedIndex];
+
+    if (!currentItem || !position) return;
+
+    const { row, column } = position;
+    const scrollToItemTarget = { rowIndex: row, columnIndex: column, align: 'smart' };
+    const scrollToCellTarget = { rowIndex: row, columnIndex: column, rowAlign: 'smart', columnAlign: 'smart' };
+    if (typeof gridRef.current?.scrollToItem === 'function') {
+      gridRef.current.scrollToItem(scrollToItemTarget);
+    } else if (typeof gridRef.current?.scrollToCell === 'function') {
+      gridRef.current.scrollToCell(scrollToCellTarget);
+    }
+
+    const focusItem = () => {
+      const el = document.getElementById('app-' + currentItem.id);
+      el?.focus();
+    };
+
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(focusItem);
+    } else {
+      setTimeout(focusItem, 0);
+    }
+
+    setAnnouncement(`Focus moved to ${currentItem.title}, row ${row + 1}, column ${column + 1}`);
+  }, [filtered, focusedIndex]);
 
   const Cell = ({ columnIndex, rowIndex, style, data }) => {
     const index = rowIndex * data.columnCount + columnIndex;
@@ -195,10 +330,28 @@ export default function AppGrid({ openApp }) {
         <AutoSizer>
           {({ height, width }) => {
             const layout = getColumnCount(width);
-            columnCountRef.current = layout.columnCount;
             const rowCount = Math.ceil(filtered.length / layout.columnCount);
+            const rows = [];
+            const positions = [];
+            for (let i = 0; i < filtered.length; i++) {
+              const rowIndex = Math.floor(i / layout.columnCount);
+              const columnIndex = i % layout.columnCount;
+              if (!rows[rowIndex]) rows[rowIndex] = [];
+              rows[rowIndex][columnIndex] = i;
+              positions[i] = { row: rowIndex, column: columnIndex };
+            }
+            const visibleRowCount = Math.max(1, Math.floor(height / layout.rowHeight));
+            gridMetricsRef.current = {
+              columnCount: layout.columnCount,
+              rowCount,
+              rows,
+              positions,
+              pageJump: visibleRowCount,
+            };
+
             return (
               <Grid
+                ref={gridRef}
                 gridRef={gridRef}
                 columnCount={layout.columnCount}
                 columnWidth={layout.columnWidth}
@@ -223,6 +376,9 @@ export default function AppGrid({ openApp }) {
             );
           }}
         </AutoSizer>
+      </div>
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {announcement}
       </div>
     </div>
   );
