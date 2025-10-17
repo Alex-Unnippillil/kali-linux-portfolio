@@ -175,6 +175,7 @@ export class Desktop extends Component {
             'minimized_windows',
             'window_positions',
             'window_sizes',
+            'attention_windows',
         ]);
         this.windowSizeStorageKey = 'desktop_window_sizes';
         this.defaultThemeConfig = {
@@ -226,6 +227,7 @@ export class Desktop extends Component {
         const initialOverlayClosed = createOverlayFlagMap(true);
         const initialOverlayMinimized = createOverlayFlagMap(false);
         const initialOverlayFocused = createOverlayFlagMap(false);
+        const initialOverlayAttention = createOverlayFlagMap(false);
 
         const initialWindowSizes = this.loadWindowSizes();
         const storedFolderContents = loadStoredFolderContents();
@@ -236,6 +238,7 @@ export class Desktop extends Component {
             disabled_apps: {},
             favourite_apps: {},
             minimized_windows: { ...initialOverlayMinimized },
+            attention_windows: { ...initialOverlayAttention },
             window_positions: {},
             window_sizes: initialWindowSizes,
             desktop_apps: [],
@@ -274,6 +277,7 @@ export class Desktop extends Component {
             focused_windows: {},
             closed_windows: {},
             minimized_windows: {},
+            attention_windows: { ...initialOverlayAttention },
             window_positions: {},
             window_sizes: { ...initialWindowSizes },
         }));
@@ -339,6 +343,7 @@ export class Desktop extends Component {
         focused_windows: createOverlayFlagMap(false),
         closed_windows: createOverlayFlagMap(true),
         minimized_windows: createOverlayFlagMap(false),
+        attention_windows: createOverlayFlagMap(false),
         window_positions: {},
         window_sizes: {},
     });
@@ -347,6 +352,7 @@ export class Desktop extends Component {
         focused_windows: { ...state.focused_windows },
         closed_windows: { ...state.closed_windows },
         minimized_windows: { ...state.minimized_windows },
+        attention_windows: { ...(state.attention_windows || {}) },
         window_positions: { ...state.window_positions },
         window_sizes: { ...(state.window_sizes || {}) },
     });
@@ -956,6 +962,7 @@ export class Desktop extends Component {
                 focused_windows: this.mergeWorkspaceMaps(existing.focused_windows, baseState.focused_windows, validKeys),
                 closed_windows: this.mergeWorkspaceMaps(existing.closed_windows, baseState.closed_windows, validKeys),
                 minimized_windows: this.mergeWorkspaceMaps(existing.minimized_windows, baseState.minimized_windows, validKeys),
+                attention_windows: this.mergeWorkspaceMaps(existing.attention_windows, baseState.attention_windows, validKeys),
                 window_positions: this.mergeWorkspaceMaps(existing.window_positions, baseState.window_positions, validKeys),
                 window_sizes: this.mergeWorkspaceMaps(existing.window_sizes, baseState.window_sizes, validKeys),
             };
@@ -979,6 +986,7 @@ export class Desktop extends Component {
             closed_windows = {},
             minimized_windows = {},
             focused_windows = {},
+            attention_windows = {},
             overlayWindows = {},
         } = this.state;
         const summaries = [];
@@ -990,6 +998,7 @@ export class Desktop extends Component {
                     icon: app.icon.replace('./', '/'),
                     isFocused: Boolean(focused_windows[app.id]),
                     isMinimized: Boolean(minimized_windows[app.id]),
+                    needsAttention: Boolean(attention_windows[app.id]),
                 });
             }
         });
@@ -1012,6 +1021,7 @@ export class Desktop extends Component {
                 isFocused,
                 isMinimized,
                 isOverlay: true,
+                needsAttention: Boolean(attention_windows[overlay.id]),
             });
         });
         return summaries;
@@ -1730,6 +1740,7 @@ export class Desktop extends Component {
     closeOverlay = (id, overrides = {}, callback) => {
         if (!this.isOverlayId(id)) return;
         this.recentlyClosedOverlays.add(id);
+        this.acknowledgeWindowAttention(id);
 
         const stack = this.getActiveStack();
         const index = stack.indexOf(id);
@@ -2727,6 +2738,7 @@ export class Desktop extends Component {
             focused_windows: { ...snapshot.focused_windows },
             closed_windows: { ...snapshot.closed_windows },
             minimized_windows: { ...snapshot.minimized_windows },
+            attention_windows: { ...(snapshot.attention_windows || {}) },
             window_positions: { ...snapshot.window_positions },
             switcherWindows: [],
             currentTheme: nextTheme,
@@ -2780,6 +2792,61 @@ export class Desktop extends Component {
             iconSizePreset: this.state.iconSizePreset,
         };
         window.dispatchEvent(new CustomEvent('workspace-state', { detail }));
+    };
+
+    setWindowAttention = (windowId, attention = true) => {
+        if (!windowId || !this.validAppIds?.has(windowId)) return;
+        if (attention && this.state.focused_windows?.[windowId] && !this.state.minimized_windows?.[windowId]) {
+            return;
+        }
+        let didChange = false;
+        this.setState((prevState) => {
+            const currentMap = prevState.attention_windows || {};
+            const previousValue = Boolean(currentMap[windowId]);
+            if (previousValue === attention) {
+                return null;
+            }
+            const nextMap = { ...currentMap, [windowId]: attention };
+            didChange = true;
+            this.commitWorkspacePartial({ attention_windows: nextMap }, prevState.activeWorkspace);
+            return { attention_windows: nextMap };
+        }, () => {
+            if (didChange) {
+                this.broadcastWorkspaceState();
+            }
+        });
+    };
+
+    requestWindowAttention = (windowId) => {
+        this.setWindowAttention(windowId, true);
+    };
+
+    acknowledgeWindowAttention = (windowId) => {
+        this.setWindowAttention(windowId, false);
+    };
+
+    handleWindowAttentionEvent = (event) => {
+        const detail = event?.detail || {};
+        const id = detail.id || detail.appId;
+        if (!id || !this.validAppIds?.has(id)) return;
+
+        if (detail.toggle) {
+            const current = Boolean(this.state.attention_windows?.[id]);
+            this.setWindowAttention(id, !current);
+            return;
+        }
+
+        if (typeof detail.attention === 'boolean') {
+            this.setWindowAttention(id, detail.attention);
+            return;
+        }
+
+        if (detail.action === 'acknowledge') {
+            this.acknowledgeWindowAttention(id);
+            return;
+        }
+
+        this.requestWindowAttention(id);
     };
 
     getOverlayDefaults = (key) => {
@@ -2841,6 +2908,7 @@ export class Desktop extends Component {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.addEventListener('window-attention', this.handleWindowAttentionEvent);
             this.broadcastWorkspaceState();
             this.broadcastIconSizePreset(this.state.iconSizePreset);
         }
@@ -2944,6 +3012,7 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.removeEventListener('window-attention', this.handleWindowAttentionEvent);
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
@@ -4380,6 +4449,7 @@ export class Desktop extends Component {
             }
             return nextState;
         }, this.saveSession);
+        this.acknowledgeWindowAttention(objId);
     }
 
     pinApp = (id) => {
@@ -4438,6 +4508,7 @@ export class Desktop extends Component {
                 overlayWindows,
             };
         });
+        this.acknowledgeWindowAttention(objId);
     }
 
     addNewFolder = () => {

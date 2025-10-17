@@ -29,7 +29,8 @@ const areRunningAppsEqual = (next = [], prev = []) => {
                         a.title !== b.title ||
                         a.icon !== b.icon ||
                         a.isFocused !== b.isFocused ||
-                        a.isMinimized !== b.isMinimized
+                        a.isMinimized !== b.isMinimized ||
+                        Boolean(a.needsAttention) !== Boolean(b.needsAttention)
                 ) {
                         return false;
                 }
@@ -71,7 +72,11 @@ export default class Navbar extends PureComponent {
                 const { workspaces, activeWorkspace } = detail;
                 const nextWorkspaces = Array.isArray(workspaces) ? workspaces : [];
                 const nextActiveWorkspace = typeof activeWorkspace === 'number' ? activeWorkspace : 0;
-                const nextRunningApps = Array.isArray(detail.runningApps) ? detail.runningApps : [];
+                const nextRunningAppsRaw = Array.isArray(detail.runningApps) ? detail.runningApps : [];
+                const nextRunningApps = nextRunningAppsRaw.map((app) => ({
+                        ...app,
+                        needsAttention: Boolean(app?.needsAttention),
+                }));
 
                 this.setState((previousState) => {
                         const workspacesChanged = !areWorkspacesEqual(nextWorkspaces, previousState.workspaces);
@@ -105,6 +110,27 @@ export default class Navbar extends PureComponent {
                         event.preventDefault();
                         this.handleAppButtonClick(app);
                 }
+        };
+
+        acknowledgeAttention = (appId, source) => {
+                if (typeof window === 'undefined' || !appId) return;
+                window.dispatchEvent(new CustomEvent('window-attention', {
+                        detail: {
+                                id: appId,
+                                attention: false,
+                                source,
+                        },
+                }));
+        };
+
+        handleAppButtonPointerEnter = (app) => {
+                if (!app || !app.id || !app.needsAttention) return;
+                this.acknowledgeAttention(app.id, 'hover');
+        };
+
+        handleAppButtonFocus = (app) => {
+                if (!app || !app.id || !app.needsAttention) return;
+                this.acknowledgeAttention(app.id, 'focus');
         };
 
         renderRunningApps = () => {
@@ -144,6 +170,7 @@ export default class Navbar extends PureComponent {
         renderRunningAppButton = (app) => {
                 const isActive = !app.isMinimized;
                 const isFocused = app.isFocused && isActive;
+                const shouldPulse = Boolean(app.needsAttention) && !isFocused;
 
                 return (
                         <button
@@ -153,9 +180,13 @@ export default class Navbar extends PureComponent {
                                 data-context="taskbar"
                                 data-app-id={app.id}
                                 data-active={isActive ? 'true' : 'false'}
+                                data-attention={shouldPulse ? 'true' : 'false'}
                                 onClick={() => this.handleAppButtonClick(app)}
                                 onKeyDown={(event) => this.handleAppButtonKeyDown(event, app)}
-                                className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
+                                onPointerEnter={() => this.handleAppButtonPointerEnter(app)}
+                                onMouseEnter={() => this.handleAppButtonPointerEnter(app)}
+                                onFocus={() => this.handleAppButtonFocus(app)}
+                                className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} ${shouldPulse ? 'attention-ring' : ''} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
                         >
                                 <span className="relative inline-flex items-center justify-center">
                                         <Image
