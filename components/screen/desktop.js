@@ -268,6 +268,7 @@ export class Desktop extends Component {
             overlayWindows: createOverlayStateMap(),
             minimizedShelfOpen: false,
             closedShelfOpen: false,
+            desktopSort: 'manual',
         };
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -1054,6 +1055,83 @@ export class Desktop extends Component {
         });
     };
 
+    sortDesktopIcons = (mode) => {
+        const allowed = new Set(['manual', 'name-asc', 'name-desc']);
+        const normalized = allowed.has(mode) ? mode : 'manual';
+        let positionsChanged = false;
+        let shouldAnnounce = false;
+
+        this.setState((prevState) => {
+            if (normalized === 'manual') {
+                if (prevState.desktopSort === 'manual') {
+                    return null;
+                }
+                shouldAnnounce = true;
+                return { desktopSort: 'manual' };
+            }
+
+            const desktopApps = Array.isArray(prevState.desktop_apps)
+                ? prevState.desktop_apps.slice()
+                : [];
+            if (!desktopApps.length) {
+                if (prevState.desktopSort === normalized) {
+                    return null;
+                }
+                shouldAnnounce = true;
+                return { desktopSort: normalized };
+            }
+
+            const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+            const getLabel = (id) => {
+                const app = this.getAppById(id);
+                if (!app) return id;
+                return (app.title || app.name || id || '').toString();
+            };
+
+            const sorted = desktopApps.slice().sort((a, b) => collator.compare(getLabel(a), getLabel(b)));
+            if (normalized === 'name-desc') {
+                sorted.reverse();
+            }
+
+            const previousPositions = prevState.desktop_icon_positions || {};
+            const layout = {};
+            sorted.forEach((id, index) => {
+                layout[id] = this.computeGridPosition(index);
+            });
+
+            const changedOrder = sorted.some((id, index) => desktopApps[index] !== id);
+            const changedLayout = sorted.some((id) => {
+                const prev = previousPositions[id];
+                const next = layout[id];
+                if (!prev || !next) return true;
+                return prev.x !== next.x || prev.y !== next.y;
+            });
+
+            if (!changedOrder && !changedLayout && prevState.desktopSort === normalized) {
+                return null;
+            }
+
+            shouldAnnounce = true;
+            positionsChanged = changedOrder || changedLayout;
+
+            const partial = { desktopSort: normalized };
+            if (changedOrder) {
+                partial.desktop_apps = sorted;
+            }
+            if (changedLayout) {
+                partial.desktop_icon_positions = layout;
+            }
+            return partial;
+        }, () => {
+            if (positionsChanged) {
+                this.persistIconPositions();
+            }
+            if (shouldAnnounce) {
+                this.announceDesktopSortChange(normalized);
+            }
+        });
+    };
+
     loadDesktopIconPositions = () => {
         if (!safeLocalStorage) return {};
         try {
@@ -1224,7 +1302,7 @@ export class Desktop extends Component {
                 const first = nextSelected.values().next().value;
                 nextAnchor = first ?? null;
             }
-            return {
+            const partial = {
                 desktop_apps: desktopApps,
                 desktop_icon_positions: positions,
                 folder_contents: nextContents,
@@ -1232,6 +1310,10 @@ export class Desktop extends Component {
                 selectionAnchorId: nextAnchor,
                 draggingIconId: null,
             };
+            if (prevState.desktopSort !== 'manual') {
+                partial.desktopSort = 'manual';
+            }
+            return partial;
         }, () => {
             this.persistIconPositions();
             this.persistFolderContents();
@@ -2224,10 +2306,14 @@ export class Desktop extends Component {
                 if (!shouldUpdatePositions && prevState.draggingIconId === null) {
                     return null;
                 }
-                return {
+                const partial = {
                     desktop_icon_positions: nextPositions,
                     draggingIconId: null,
                 };
+                if (prevState.desktopSort !== 'manual') {
+                    partial.desktopSort = 'manual';
+                }
+                return partial;
             }, () => {
                 this.persistIconPositions();
             });
@@ -2445,6 +2531,25 @@ export class Desktop extends Component {
         if (!app) return;
         const title = app.title || app.name || 'app';
         this.announce(`Cancelled moving ${title}.`);
+    };
+
+    announceDesktopSortChange = (mode) => {
+        let message = '';
+        switch (mode) {
+            case 'name-asc':
+                message = 'Desktop icons sorted by name, A to Z.';
+                break;
+            case 'name-desc':
+                message = 'Desktop icons sorted by name, Z to A.';
+                break;
+            case 'manual':
+            default:
+                message = 'Desktop icons set to manual order.';
+                break;
+        }
+        if (message) {
+            this.announce(message);
+        }
     };
 
     handleIconPointerEnter = (appId) => {
@@ -3687,6 +3792,9 @@ export class Desktop extends Component {
             desktop_apps,
         }, () => {
             this.ensureIconPositions(desktop_apps);
+            if (this.state.desktopSort && this.state.desktopSort !== 'manual') {
+                this.sortDesktopIcons(this.state.desktopSort);
+            }
             if (typeof callback === 'function') callback();
         });
         this.initFavourite = { ...favourite_apps };
@@ -3727,6 +3835,9 @@ export class Desktop extends Component {
             desktop_apps,
         }, () => {
             this.ensureIconPositions(desktop_apps);
+            if (this.state.desktopSort && this.state.desktopSort !== 'manual') {
+                this.sortDesktopIcons(this.state.desktopSort);
+            }
         });
         this.initFavourite = { ...favourite_apps };
     }
@@ -4637,7 +4748,10 @@ export class Desktop extends Component {
                     openShortcutSelector={this.openShortcutSelector}
                     iconSizePreset={this.state.iconSizePreset}
                     setIconSizePreset={this.setIconSizePreset}
+                    sortOrder={this.state.desktopSort}
+                    onSortChange={this.sortDesktopIcons}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    onClose={this.hideAllContextMenu}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu
