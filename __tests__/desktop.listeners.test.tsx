@@ -26,7 +26,7 @@ function createMockComponent(testId: string, displayName: string) {
 
 jest.mock('../components/base/window', () => {
   const MockWindow = createMockComponent('window', 'MockWindow');
-  function MockWindowTopBar({ title }: { title: string }) {
+  function MockWindowTopBar({ title }: { title: string } & Record<string, unknown>) {
     return (
       <div data-testid="window-top-bar" role="presentation">
         {title}

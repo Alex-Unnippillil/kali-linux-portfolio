@@ -8,7 +8,7 @@ jest.mock('../components/util-components/background-image', () => () => <div dat
 jest.mock('../components/base/window', () => ({
   __esModule: true,
   default: () => <div data-testid="window" />,
-  WindowTopBar: ({ title }: { title: string }) => (
+  WindowTopBar: ({ title }: { title: string } & Record<string, unknown>) => (
     <div data-testid="window-top-bar" role="presentation">
       {title}
     </div>

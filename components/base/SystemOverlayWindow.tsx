@@ -118,6 +118,7 @@ export default function SystemOverlayWindow({
                     grabbed={false}
                     onPointerDown={undefined}
                     onDoubleClick={onMaximize ? handleMaximize : undefined}
+                    titleId={ariaLabelledBy}
                 />
                 <WindowEditButtons
                     minimize={handleMinimize}
