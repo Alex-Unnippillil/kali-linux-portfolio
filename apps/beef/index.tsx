@@ -266,6 +266,11 @@ const BeefPage: React.FC = () => {
         data-window-state={windowState}
         data-testid="beef-window-frame"
       >
+        {isMinimized && (
+          <p className="sr-only" role="status" aria-live="polite">
+            BeEF Demo is minimized. Use the restore window control to reopen it.
+          </p>
+        )}
         <header
           className={clsx(
             windowStyles.windowTitlebar,
