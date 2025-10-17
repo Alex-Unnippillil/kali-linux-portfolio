@@ -268,6 +268,7 @@ export class Desktop extends Component {
             overlayWindows: createOverlayStateMap(),
             minimizedShelfOpen: false,
             closedShelfOpen: false,
+            taskbarPinnedApps: [],
         };
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -2841,6 +2842,7 @@ export class Desktop extends Component {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.addEventListener('taskbar-pins-change', this.handleTaskbarPinsChange);
             this.broadcastWorkspaceState();
             this.broadcastIconSizePreset(this.state.iconSizePreset);
         }
@@ -2944,6 +2946,7 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.removeEventListener('taskbar-pins-change', this.handleTaskbarPinsChange);
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
@@ -3024,6 +3027,27 @@ export class Desktop extends Component {
                     this.openApp(appId);
                 }
         }
+    };
+
+    handleTaskbarPinsChange = (event) => {
+        const detail = event?.detail || {};
+        const nextPins = Array.isArray(detail.pinnedApps)
+            ? detail.pinnedApps.filter((id) => typeof id === 'string')
+            : [];
+        this.setState({ taskbarPinnedApps: nextPins });
+    };
+
+    isTaskbarAppPinned = (appId) => {
+        if (!appId) return false;
+        const list = this.state.taskbarPinnedApps || [];
+        return list.includes(appId);
+    };
+
+    requestTaskbarPinChange = (appId, shouldPin) => {
+        if (!appId || typeof window === 'undefined') return;
+        window.dispatchEvent(new CustomEvent('taskbar-pin-request', {
+            detail: { appId, pin: Boolean(shouldPin) },
+        }));
     };
 
     attachIconKeyboardListeners = () => {
@@ -4649,6 +4673,7 @@ export class Desktop extends Component {
                 />
                 <TaskbarMenu
                     active={this.state.context_menus.taskbar}
+                    pinned={this.isTaskbarAppPinned(this.state.context_app)}
                     minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
                     onMinimize={() => {
                         const id = this.state.context_app;
@@ -4676,6 +4701,16 @@ export class Desktop extends Component {
                         } else {
                             this.closeApp(id);
                         }
+                    }}
+                    onPin={() => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        this.requestTaskbarPinChange(id, true);
+                    }}
+                    onUnpin={() => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        this.requestTaskbarPinChange(id, false);
                     }}
                     onCloseMenu={this.hideAllContextMenu}
                 />

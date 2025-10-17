@@ -1,4 +1,4 @@
-import React, { PureComponent } from 'react';
+import React, { PureComponent, useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
@@ -6,6 +6,8 @@ import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
+import usePersistentState from '../../hooks/usePersistentState';
+import apps from '../../apps.config';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
 
 const areWorkspacesEqual = (next, prev) => {
@@ -37,7 +39,74 @@ const areRunningAppsEqual = (next = [], prev = []) => {
         return true;
 };
 
-export default class Navbar extends PureComponent {
+const PIN_STORAGE_PREFIX = 'taskbar-pins';
+const DEFAULT_VIEWPORT_KEY = 'desktop';
+const DEFAULT_PIN_ICON = '/themes/Yaru/apps/bash.svg';
+const DEFAULT_STORAGE_KEY = `${PIN_STORAGE_PREFIX}:default:${DEFAULT_VIEWPORT_KEY}`;
+const USER_STORAGE_CANDIDATES = [
+        'active-user-id',
+        'active-user',
+        'desktop-user',
+        'current-user',
+        'session-user',
+];
+
+const APP_METADATA = new Map(apps.map((app) => [app.id, app]));
+
+const isValidPinnedArray = (value) => Array.isArray(value) && value.every((id) => typeof id === 'string');
+
+const normalizePinnedIds = (ids) => {
+        if (!Array.isArray(ids)) return [];
+        const seen = new Set();
+        const normalized = [];
+        ids.forEach((value) => {
+                if (typeof value !== 'string') return;
+                const trimmed = value.trim();
+                if (!trimmed || seen.has(trimmed)) return;
+                seen.add(trimmed);
+                normalized.push(trimmed);
+        });
+        return normalized;
+};
+
+const formatFallbackTitle = (id) => {
+        if (typeof id !== 'string' || !id) return 'Application';
+        return id
+                .replace(/[-_]+/g, ' ')
+                .replace(/\b\w/g, (match) => match.toUpperCase());
+};
+
+const safeGetLocalStorageItem = (key) => {
+        try {
+                return window.localStorage.getItem(key);
+        } catch (error) {
+                return null;
+        }
+};
+
+const getActiveUserId = () => {
+        if (typeof window === 'undefined') return 'default';
+        for (const key of USER_STORAGE_CANDIDATES) {
+                const value = safeGetLocalStorageItem(key);
+                if (value) return String(value);
+        }
+        return 'default';
+};
+
+const getViewportKey = () => {
+        if (typeof window === 'undefined') return DEFAULT_VIEWPORT_KEY;
+        const width = typeof window.innerWidth === 'number' ? window.innerWidth : 0;
+        if (width >= 1440) return 'wide';
+        if (width >= 1024) return 'desktop';
+        if (width >= 768) return 'tablet';
+        return 'mobile';
+};
+
+const buildStorageKey = (userId, viewport) => `${PIN_STORAGE_PREFIX}:${userId || 'default'}:${viewport || DEFAULT_VIEWPORT_KEY}`;
+
+const computeStorageKey = () => buildStorageKey(getActiveUserId(), getViewportKey());
+
+class NavbarBase extends PureComponent {
         constructor() {
                 super();
                 this.state = {
@@ -46,7 +115,7 @@ export default class Navbar extends PureComponent {
                         placesMenuOpen: false,
                         workspaces: [],
                         activeWorkspace: 0,
-                        runningApps: []
+                        runningApps: [],
                 };
                 this.taskbarListRef = React.createRef();
                 this.draggingAppId = null;
@@ -85,7 +154,7 @@ export default class Navbar extends PureComponent {
                         return {
                                 workspaces: workspacesChanged ? nextWorkspaces : previousState.workspaces,
                                 activeWorkspace: nextActiveWorkspace,
-                                runningApps: runningAppsChanged ? nextRunningApps : previousState.runningApps
+                                runningApps: runningAppsChanged ? nextRunningApps : previousState.runningApps,
                         };
                 });
         };
@@ -107,9 +176,49 @@ export default class Navbar extends PureComponent {
                 }
         };
 
-        renderRunningApps = () => {
+        getDisplayApps = () => {
                 const { runningApps } = this.state;
-                if (!runningApps.length) return null;
+                const pinnedIds = Array.isArray(this.props.pinnedApps) ? this.props.pinnedApps : [];
+                if (!pinnedIds.length && !runningApps.length) return [];
+
+                const runningMap = new Map();
+                runningApps.forEach((app) => {
+                        if (app && typeof app.id === 'string') {
+                                runningMap.set(app.id, app);
+                        }
+                });
+
+                const pinnedEntries = pinnedIds
+                        .map((id) => {
+                                if (!id) return null;
+                                const running = runningMap.get(id);
+                                if (running) {
+                                        return { ...running, isPinned: true, isRunning: true };
+                                }
+                                const metadata = APP_METADATA.get(id) || {};
+                                return {
+                                        id,
+                                        title: metadata.title || formatFallbackTitle(id),
+                                        icon: metadata.icon || DEFAULT_PIN_ICON,
+                                        isFocused: false,
+                                        isMinimized: true,
+                                        isPinned: true,
+                                        isRunning: false,
+                                };
+                        })
+                        .filter(Boolean);
+
+                const pinnedSet = new Set(pinnedEntries.map((entry) => entry.id));
+                const runningOnly = runningApps
+                        .filter((app) => app && !pinnedSet.has(app.id))
+                        .map((app) => ({ ...app, isPinned: false, isRunning: true }));
+
+                return [...pinnedEntries, ...runningOnly];
+        };
+
+        renderRunningApps = () => {
+                const entries = this.getDisplayApps();
+                if (!entries.length) return null;
 
                 return (
                         <ul
@@ -120,7 +229,7 @@ export default class Navbar extends PureComponent {
                                 onDragOver={this.handleTaskbarDragOver}
                                 onDrop={this.handleTaskbarDrop}
                         >
-                                {runningApps.map((app) => this.renderRunningAppItem(app))}
+                                {entries.map((app) => this.renderRunningAppItem(app))}
                         </ul>
                 );
         };
@@ -131,6 +240,7 @@ export default class Navbar extends PureComponent {
                         className="flex"
                         draggable
                         data-app-id={app.id}
+                        data-pinned={app.isPinned ? 'true' : 'false'}
                         role="listitem"
                         onDragStart={(event) => this.handleAppDragStart(event, app)}
                         onDragOver={this.handleAppDragOver}
@@ -142,8 +252,8 @@ export default class Navbar extends PureComponent {
         );
 
         renderRunningAppButton = (app) => {
-                const isActive = !app.isMinimized;
-                const isFocused = app.isFocused && isActive;
+                const isActive = Boolean(app.isRunning && !app.isMinimized);
+                const isFocused = Boolean(app.isRunning && app.isFocused && isActive);
 
                 return (
                         <button
@@ -153,13 +263,14 @@ export default class Navbar extends PureComponent {
                                 data-context="taskbar"
                                 data-app-id={app.id}
                                 data-active={isActive ? 'true' : 'false'}
+                                data-pinned={app.isPinned ? 'true' : 'false'}
                                 onClick={() => this.handleAppButtonClick(app)}
                                 onKeyDown={(event) => this.handleAppButtonKeyDown(event, app)}
                                 className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
                         >
                                 <span className="relative inline-flex items-center justify-center">
                                         <Image
-                                                src={app.icon}
+                                                src={app.icon || DEFAULT_PIN_ICON}
                                                 alt=""
                                                 width={28}
                                                 height={28}
@@ -189,7 +300,7 @@ export default class Navbar extends PureComponent {
                 event.preventDefault();
                 const sourceId = this.getDragSourceId(event);
                 if (!sourceId) return;
-                this.reorderRunningApps(sourceId, null, true);
+                this.reorderTaskbarItems(sourceId, null, true);
         };
 
         handleAppDragStart = (event, app) => {
@@ -213,7 +324,7 @@ export default class Navbar extends PureComponent {
                 if (!sourceId) return;
                 const rect = event.currentTarget?.getBoundingClientRect?.();
                 const insertAfter = rect ? (event.clientX - rect.left) > rect.width / 2 : false;
-                this.reorderRunningApps(sourceId, targetId, insertAfter);
+                this.reorderTaskbarItems(sourceId, targetId, insertAfter);
         };
 
         handleAppDragEnd = () => {
@@ -229,8 +340,56 @@ export default class Navbar extends PureComponent {
                 return this.draggingAppId;
         };
 
-        reorderRunningApps = (sourceId, targetId, insertAfter = false) => {
+        reorderTaskbarItems = (sourceId, targetId, insertAfter = false) => {
                 if (!sourceId) return;
+                const pinnedIds = Array.isArray(this.props.pinnedApps) ? this.props.pinnedApps : [];
+                const pinnedSet = new Set(pinnedIds);
+                const sourcePinned = pinnedSet.has(sourceId);
+                const targetPinned = targetId ? pinnedSet.has(targetId) : false;
+
+                if (sourcePinned) {
+                        const updated = this.computePinnedReorder(pinnedIds, sourceId, targetId, insertAfter, targetPinned);
+                        if (updated && this.props.onPinnedReorder) {
+                                this.props.onPinnedReorder(updated);
+                        }
+                        return;
+                }
+
+                if (targetPinned) {
+                        targetId = null;
+                        insertAfter = false;
+                }
+
+                this.reorderRunningAppsInternal(sourceId, targetId, insertAfter);
+        };
+
+        computePinnedReorder = (ids, sourceId, targetId, insertAfter, targetIsPinned) => {
+                if (!Array.isArray(ids) || ids.length === 0) return null;
+                const current = [...ids];
+                const sourceIndex = current.indexOf(sourceId);
+                if (sourceIndex === -1) return null;
+
+                const [moved] = current.splice(sourceIndex, 1);
+
+                let insertIndex;
+                if (!targetId || !targetIsPinned) {
+                        insertIndex = insertAfter ? current.length : 0;
+                } else {
+                        const targetIndex = current.indexOf(targetId);
+                        insertIndex = targetIndex === -1 ? current.length : (insertAfter ? targetIndex + 1 : targetIndex);
+                }
+
+                if (insertIndex < 0) insertIndex = 0;
+                if (insertIndex > current.length) insertIndex = current.length;
+
+                current.splice(insertIndex, 0, moved);
+
+                const unchanged = ids.length === current.length && ids.every((id, index) => id === current[index]);
+                if (unchanged) return null;
+                return current;
+        };
+
+        reorderRunningAppsInternal = (sourceId, targetId, insertAfter = false) => {
                 this.pendingReorder = null;
                 this.setState((prevState) => {
                         const updated = this.computeReorderedApps(prevState.runningApps, sourceId, targetId, insertAfter);
@@ -245,11 +404,11 @@ export default class Navbar extends PureComponent {
                 });
         };
 
-        computeReorderedApps = (apps, sourceId, targetId, insertAfter) => {
-                if (!Array.isArray(apps) || apps.length === 0) return null;
+        computeReorderedApps = (appsList, sourceId, targetId, insertAfter) => {
+                if (!Array.isArray(appsList) || appsList.length === 0) return null;
                 if (sourceId === targetId) return null;
 
-                const list = [...apps];
+                const list = [...appsList];
                 const sourceIndex = list.findIndex((item) => item.id === sourceId);
                 if (sourceIndex === -1) return null;
 
@@ -272,7 +431,7 @@ export default class Navbar extends PureComponent {
 
                 list.splice(insertIndex, 0, moved);
 
-                const unchanged = apps.length === list.length && apps.every((item, index) => item.id === list[index].id);
+                const unchanged = appsList.length === list.length && appsList.every((item, index) => item.id === list[index].id);
                 if (unchanged) return null;
 
                 return list;
@@ -297,53 +456,151 @@ export default class Navbar extends PureComponent {
                 }
         };
 
-                render() {
-                        const { workspaces, activeWorkspace } = this.state;
-                        return (
-                                <div
-                                        className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
+        render() {
+                const { workspaces, activeWorkspace } = this.state;
+                return (
+                        <div
+                                className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
                                 style={{
-                                                minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
-                                                paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
-                                                paddingBottom: '0.25rem',
-                                                paddingLeft: `calc(0.75rem + var(--safe-area-left, 0px))`,
-                                                paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
-                                                '--desktop-navbar-height': `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px) + 0.375rem + 0.25rem)`
-                                        }}
-                                >
-                                        <div className="flex items-center gap-2 text-xs md:text-sm">
-                                                <WhiskerMenu />
-                                                {workspaces.length > 0 && (
-                                                        <WorkspaceSwitcher
-                                                                workspaces={workspaces}
-                                                                activeWorkspace={activeWorkspace}
-                                                                onSelect={this.handleWorkspaceSelect}
-                                                        />
-                                                )}
-                                                {this.renderRunningApps()}
-                                                <PerformanceGraph />
-                                        </div>
-                                        <div className="flex items-center gap-4 text-xs md:text-sm">
-                                                <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
-                                                <div
-                                                        id="status-bar"
-                                                        role="button"
-                                                        tabIndex={0}
-                                                        aria-label="System status"
-                                                        aria-expanded={this.state.status_card}
-                                                        onClick={this.handleStatusToggle}
-                                                        onKeyDown={this.handleStatusKeyDown}
-                                                        className={
-                                                                'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
-                                                        }
-                                                >
-                                                        <Status />
-                                                        <QuickSettings open={this.state.status_card} />
-                                                </div>
+                                        minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
+                                        paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
+                                        paddingBottom: '0.25rem',
+                                        paddingLeft: `calc(0.75rem + var(--safe-area-left, 0px))`,
+                                        paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
+                                        '--desktop-navbar-height': `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px) + 0.375rem + 0.25rem)`,
+                                }}
+                        >
+                                <div className="flex items-center gap-2 text-xs md:text-sm">
+                                        <WhiskerMenu />
+                                        {workspaces.length > 0 && (
+                                                <WorkspaceSwitcher
+                                                        workspaces={workspaces}
+                                                        activeWorkspace={activeWorkspace}
+                                                        onSelect={this.handleWorkspaceSelect}
+                                                />
+                                        )}
+                                        {this.renderRunningApps()}
+                                        <PerformanceGraph />
+                                </div>
+                                <div className="flex items-center gap-4 text-xs md:text-sm">
+                                        <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
+                                        <div
+                                                id="status-bar"
+                                                role="button"
+                                                tabIndex={0}
+                                                aria-label="System status"
+                                                aria-expanded={this.state.status_card}
+                                                onClick={this.handleStatusToggle}
+                                                onKeyDown={this.handleStatusKeyDown}
+                                                className={
+                                                        'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
+                                                }
+                                        >
+                                                <Status />
+                                                <QuickSettings open={this.state.status_card} />
                                         </div>
                                 </div>
-			);
-		}
-
-
+                        </div>
+                );
+        }
 }
+
+function Navbar(props) {
+        const [storageKey, setStorageKey] = useState(() => (typeof window === 'undefined' ? DEFAULT_STORAGE_KEY : computeStorageKey()));
+        const [pinnedApps, setPinnedApps] = usePersistentState(storageKey, () => [], isValidPinnedArray);
+        const [hydrated, setHydrated] = useState(false);
+
+        const applyPinnedUpdate = useCallback((updater) => {
+                setPinnedApps((prev) => {
+                        const current = normalizePinnedIds(prev);
+                        const result = typeof updater === 'function' ? updater([...current]) : updater;
+                        const next = normalizePinnedIds(result);
+                        const unchanged = current.length === next.length && current.every((id, index) => id === next[index]);
+                        return unchanged ? prev : next;
+                });
+        }, [setPinnedApps]);
+
+        useEffect(() => {
+                if (hydrated) return;
+                setHydrated(true);
+                applyPinnedUpdate(pinnedApps);
+        }, [hydrated, pinnedApps, applyPinnedUpdate]);
+
+        useEffect(() => {
+                if (typeof window === 'undefined') return undefined;
+
+                const syncKey = () => {
+                        const nextKey = computeStorageKey();
+                        if (nextKey === storageKey) return;
+                        let restored = [];
+                        try {
+                                const stored = window.localStorage.getItem(nextKey);
+                                if (stored) {
+                                        const parsed = JSON.parse(stored);
+                                        if (isValidPinnedArray(parsed)) {
+                                                restored = parsed;
+                                        }
+                                }
+                        } catch (error) {
+                                restored = [];
+                        }
+                        setStorageKey(nextKey);
+                        applyPinnedUpdate(restored);
+                };
+
+                syncKey();
+
+                let frame = null;
+                const handleResize = () => {
+                        if (frame) window.cancelAnimationFrame(frame);
+                        frame = window.requestAnimationFrame(syncKey);
+                };
+
+                window.addEventListener('resize', handleResize);
+                return () => {
+                        if (frame) window.cancelAnimationFrame(frame);
+                        window.removeEventListener('resize', handleResize);
+                };
+        }, [storageKey, applyPinnedUpdate]);
+
+        useEffect(() => {
+                if (typeof window === 'undefined') return undefined;
+                const handlePinRequest = (event) => {
+                        const detail = event?.detail || {};
+                        const rawId = typeof detail.appId === 'string' ? detail.appId.trim() : '';
+                        if (!rawId) return;
+                        const shouldPin = detail.pin !== false;
+                        applyPinnedUpdate((current) => {
+                                const index = current.indexOf(rawId);
+                                if (shouldPin) {
+                                        if (index !== -1) return current;
+                                        current.push(rawId);
+                                        return current;
+                                }
+                                if (index === -1) return current;
+                                current.splice(index, 1);
+                                return current;
+                        });
+                };
+
+                window.addEventListener('taskbar-pin-request', handlePinRequest);
+                return () => {
+                        window.removeEventListener('taskbar-pin-request', handlePinRequest);
+                };
+        }, [applyPinnedUpdate]);
+
+        const normalizedPinned = useMemo(() => normalizePinnedIds(pinnedApps), [pinnedApps]);
+
+        useEffect(() => {
+                if (typeof window === 'undefined') return undefined;
+                window.dispatchEvent(new CustomEvent('taskbar-pins-change', { detail: { pinnedApps: normalizedPinned } }));
+        }, [normalizedPinned]);
+
+        const handlePinnedReorder = useCallback((nextOrder) => {
+                applyPinnedUpdate(Array.isArray(nextOrder) ? nextOrder : []);
+        }, [applyPinnedUpdate]);
+
+        return <NavbarBase {...props} pinnedApps={normalizedPinned} onPinnedReorder={handlePinnedReorder} />;
+}
+
+export default Navbar;

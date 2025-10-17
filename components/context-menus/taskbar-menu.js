@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 
@@ -6,6 +6,8 @@ function TaskbarMenu(props) {
     const menuRef = useRef(null);
     useFocusTrap(menuRef, props.active);
     useRovingTabIndex(menuRef, props.active, 'vertical');
+
+    const pinned = Boolean(props.pinned);
 
     const handleKeyDown = (e) => {
         if (e.key === 'Escape') {
@@ -23,6 +25,16 @@ function TaskbarMenu(props) {
         props.onCloseMenu && props.onCloseMenu();
     };
 
+    const handlePinToggle = () => {
+        const handler = pinned ? props.onUnpin : props.onPin;
+        if (handler) {
+            handler();
+        }
+        props.onCloseMenu && props.onCloseMenu();
+    };
+
+    const pinLabel = useMemo(() => (pinned ? 'Unpin from taskbar' : 'Pin to taskbar'), [pinned]);
+
     return (
         <div
             id="taskbar-menu"
@@ -30,8 +42,17 @@ function TaskbarMenu(props) {
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}
-            className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-40 context-menu-bg border text-left border-gray-900 rounded text-white py-2 absolute z-50 text-sm'}
+            className={(props.active ? ' block ' : ' hidden ') + ' cursor-default w-44 context-menu-bg border text-left border-gray-900 rounded text-white py-2 absolute z-50 text-sm'}
         >
+            <button
+                type="button"
+                onClick={handlePinToggle}
+                role="menuitem"
+                aria-label={pinLabel}
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">{pinLabel}</span>
+            </button>
             <button
                 type="button"
                 onClick={handleMinimize}
