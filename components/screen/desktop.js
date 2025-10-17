@@ -268,6 +268,7 @@ export class Desktop extends Component {
             overlayWindows: createOverlayStateMap(),
             minimizedShelfOpen: false,
             closedShelfOpen: false,
+            desktopPeekActive: false,
         };
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -2778,6 +2779,7 @@ export class Desktop extends Component {
             activeWorkspace: this.state.activeWorkspace,
             runningApps: this.getRunningAppSummaries(),
             iconSizePreset: this.state.iconSizePreset,
+            allWindowsMinimized: this.checkAllMinimised(),
         };
         window.dispatchEvent(new CustomEvent('workspace-state', { detail }));
     };
@@ -2841,6 +2843,8 @@ export class Desktop extends Component {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.addEventListener('desktop-command', this.handleExternalDesktopCommand);
+            window.addEventListener('desktop-peek', this.handleDesktopPeekEvent);
             this.broadcastWorkspaceState();
             this.broadcastIconSizePreset(this.state.iconSizePreset);
         }
@@ -2944,6 +2948,8 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.removeEventListener('desktop-command', this.handleExternalDesktopCommand);
+            window.removeEventListener('desktop-peek', this.handleDesktopPeekEvent);
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
@@ -3024,6 +3030,33 @@ export class Desktop extends Component {
                     this.openApp(appId);
                 }
         }
+    };
+
+    handleExternalDesktopCommand = (event) => {
+        const action = event?.detail?.action || 'toggle-show-desktop';
+
+        if (action === 'minimize-all') {
+            this.disableDesktopPeek();
+            this.minimizeAllOpenWindows();
+            return;
+        }
+
+        if (action === 'restore-all') {
+            this.disableDesktopPeek();
+            this.restoreAllWindows();
+            return;
+        }
+
+        if (action === 'toggle-show-desktop' || action === 'toggle-minimize-all') {
+            this.disableDesktopPeek();
+            this.toggleShowDesktop();
+        }
+    };
+
+    handleDesktopPeekEvent = (event) => {
+        const active = Boolean(event?.detail?.active);
+        if (active === this.state.desktopPeekActive) return;
+        this.setState({ desktopPeekActive: active });
     };
 
     attachIconKeyboardListeners = () => {
@@ -4100,6 +4133,95 @@ export class Desktop extends Component {
         });
     }
 
+    disableDesktopPeek = () => {
+        if (this.state.desktopPeekActive) {
+            this.setState({ desktopPeekActive: false });
+        }
+    };
+
+    minimizeAllOpenWindows = () => {
+        const activeStack = this.getActiveStack();
+        const stack = Array.isArray(activeStack) ? [...activeStack] : [];
+        if (!stack.length) return;
+
+        const closed = this.state.closed_windows || {};
+        const minimized = this.state.minimized_windows || {};
+        const updates = {};
+        const overlayIds = [];
+
+        stack.forEach((id) => {
+            if (!id) return;
+            if (closed[id]) return;
+            if (minimized[id]) return;
+            updates[id] = true;
+            if (this.isOverlayId(id)) {
+                overlayIds.push(id);
+            }
+        });
+
+        const updateIds = Object.keys(updates);
+        if (!updateIds.length) {
+            return;
+        }
+
+        this.setState((prev) => {
+            const nextMinimized = { ...prev.minimized_windows };
+            const nextFocused = { ...prev.focused_windows };
+            updateIds.forEach((id) => {
+                nextMinimized[id] = true;
+                nextFocused[id] = false;
+            });
+            this.commitWorkspacePartial(
+                { minimized_windows: nextMinimized, focused_windows: nextFocused },
+                prev.activeWorkspace,
+            );
+            return {
+                minimized_windows: nextMinimized,
+                focused_windows: nextFocused,
+            };
+        }, () => {
+            overlayIds.forEach((id) => {
+                this.updateOverlayState(id, (current = {}) => ({
+                    ...current,
+                    open: true,
+                    minimized: true,
+                    maximized: false,
+                    focused: false,
+                }));
+            });
+            this.giveFocusToLastApp();
+        });
+    };
+
+    restoreAllWindows = () => {
+        const activeStack = this.getActiveStack();
+        const stack = Array.isArray(activeStack) ? [...activeStack] : [];
+        if (!stack.length) return;
+
+        const closed = this.state.closed_windows || {};
+        const minimized = this.state.minimized_windows || {};
+
+        for (let index = stack.length - 1; index >= 0; index -= 1) {
+            const id = stack[index];
+            if (!id) continue;
+            if (closed[id]) continue;
+            if (!minimized[id]) continue;
+            if (this.isOverlayId(id)) {
+                this.openOverlay(id, { transitionState: 'entered' });
+            } else {
+                this.openApp(id);
+            }
+        }
+    };
+
+    toggleShowDesktop = () => {
+        if (this.checkAllMinimised()) {
+            this.restoreAllWindows();
+        } else {
+            this.minimizeAllOpenWindows();
+        }
+    };
+
     giveFocusToLastApp = () => {
         // if there is atleast one app opened, give it focus
         if (!this.checkAllMinimised()) {
@@ -4161,13 +4283,17 @@ export class Desktop extends Component {
     };
 
     checkAllMinimised = () => {
-        let result = true;
-        for (const key in this.state.minimized_windows) {
-            if (!this.state.closed_windows[key]) { // if app is opened
-                result = result & this.state.minimized_windows[key];
+        const minimized = this.state.minimized_windows || {};
+        const closed = this.state.closed_windows || {};
+        let hasOpenWindow = false;
+        for (const key in minimized) {
+            if (closed[key]) continue;
+            hasOpenWindow = true;
+            if (!minimized[key]) {
+                return false;
             }
         }
-        return result;
+        return hasOpenWindow;
     }
 
     handleOpenAppEvent = (e) => {
@@ -4605,6 +4731,14 @@ export class Desktop extends Component {
         const closedEntries = this.getClosedWindowEntries();
         const showMinimizedShelf = this.state.minimizedShelfOpen || minimizedEntries.length > 0;
         const showClosedShelf = this.state.closedShelfOpen || closedEntries.length > 0;
+        const desktopPeekActive = Boolean(this.state.desktopPeekActive);
+        const windowAreaClassName = [
+            'absolute h-full w-full bg-transparent',
+            desktopPeekActive ? 'pointer-events-none' : '',
+        ].filter(Boolean).join(' ');
+        const windowAreaStyle = desktopPeekActive ? { visibility: 'hidden' } : undefined;
+        const overlayWrapperClassName = desktopPeekActive ? 'pointer-events-none' : undefined;
+        const overlayWrapperStyle = desktopPeekActive ? { visibility: 'hidden' } : undefined;
         return (
             <main
                 id="desktop"
@@ -4617,8 +4751,9 @@ export class Desktop extends Component {
                 {/* Window Area */}
                 <div
                     id="window-area"
-                    className="absolute h-full w-full bg-transparent"
+                    className={windowAreaClassName}
                     data-context="desktop-area"
+                    style={windowAreaStyle}
                 >
                     {this.renderWindows()}
                 </div>
@@ -4711,7 +4846,9 @@ export class Desktop extends Component {
                     />
                 ) : null}
 
-                {this.renderOverlayWindows()}
+                <div className={overlayWrapperClassName} style={overlayWrapperStyle}>
+                    {this.renderOverlayWindows()}
+                </div>
 
                 <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
                     {this.state.liveRegionMessage}

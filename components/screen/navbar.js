@@ -40,17 +40,20 @@ const areRunningAppsEqual = (next = [], prev = []) => {
 export default class Navbar extends PureComponent {
         constructor() {
                 super();
-                this.state = {
-                        status_card: false,
-                        applicationsMenuOpen: false,
-                        placesMenuOpen: false,
-                        workspaces: [],
-                        activeWorkspace: 0,
-                        runningApps: []
-                };
-                this.taskbarListRef = React.createRef();
-                this.draggingAppId = null;
-                this.pendingReorder = null;
+        this.state = {
+                status_card: false,
+                applicationsMenuOpen: false,
+                placesMenuOpen: false,
+                workspaces: [],
+                activeWorkspace: 0,
+                runningApps: [],
+                allWindowsMinimized: false,
+        };
+        this.taskbarListRef = React.createRef();
+        this.draggingAppId = null;
+        this.pendingReorder = null;
+        this.desktopPeekTimeout = null;
+        this.peekPreviewActive = false;
         }
 
         componentDidMount() {
@@ -64,6 +67,10 @@ export default class Navbar extends PureComponent {
                 if (typeof window !== 'undefined') {
                         window.removeEventListener('workspace-state', this.handleWorkspaceStateUpdate);
                 }
+                this.clearDesktopPeekTimeout();
+                if (this.peekPreviewActive) {
+                        this.dispatchDesktopPeek(false);
+                }
         }
 
         handleWorkspaceStateUpdate = (event) => {
@@ -72,20 +79,23 @@ export default class Navbar extends PureComponent {
                 const nextWorkspaces = Array.isArray(workspaces) ? workspaces : [];
                 const nextActiveWorkspace = typeof activeWorkspace === 'number' ? activeWorkspace : 0;
                 const nextRunningApps = Array.isArray(detail.runningApps) ? detail.runningApps : [];
+                const nextAllWindowsMinimized = Boolean(detail.allWindowsMinimized);
 
                 this.setState((previousState) => {
                         const workspacesChanged = !areWorkspacesEqual(nextWorkspaces, previousState.workspaces);
                         const activeChanged = previousState.activeWorkspace !== nextActiveWorkspace;
                         const runningAppsChanged = !areRunningAppsEqual(nextRunningApps, previousState.runningApps);
+                        const minimizedChanged = previousState.allWindowsMinimized !== nextAllWindowsMinimized;
 
-                        if (!workspacesChanged && !activeChanged && !runningAppsChanged) {
+                        if (!workspacesChanged && !activeChanged && !runningAppsChanged && !minimizedChanged) {
                                 return null;
                         }
 
                         return {
                                 workspaces: workspacesChanged ? nextWorkspaces : previousState.workspaces,
                                 activeWorkspace: nextActiveWorkspace,
-                                runningApps: runningAppsChanged ? nextRunningApps : previousState.runningApps
+                                runningApps: runningAppsChanged ? nextRunningApps : previousState.runningApps,
+                                allWindowsMinimized: minimizedChanged ? nextAllWindowsMinimized : previousState.allWindowsMinimized,
                         };
                 });
         };
@@ -95,9 +105,55 @@ export default class Navbar extends PureComponent {
                 window.dispatchEvent(new CustomEvent('taskbar-command', { detail }));
         };
 
+        dispatchDesktopCommand = (detail) => {
+                if (typeof window === 'undefined') return;
+                window.dispatchEvent(new CustomEvent('desktop-command', { detail }));
+        };
+
+        dispatchDesktopPeek = (active) => {
+                if (typeof window === 'undefined') return;
+                if (this.peekPreviewActive === active) return;
+                this.peekPreviewActive = active;
+                window.dispatchEvent(new CustomEvent('desktop-peek', { detail: { active } }));
+        };
+
+        clearDesktopPeekTimeout = () => {
+                if (this.desktopPeekTimeout) {
+                        clearTimeout(this.desktopPeekTimeout);
+                        this.desktopPeekTimeout = null;
+                }
+        };
+
+        startDesktopPeek = () => {
+                this.clearDesktopPeekTimeout();
+                if (typeof window === 'undefined') return;
+                this.desktopPeekTimeout = window.setTimeout(() => {
+                        this.desktopPeekTimeout = null;
+                        this.dispatchDesktopPeek(true);
+                }, 400);
+        };
+
+        endDesktopPeek = () => {
+                this.clearDesktopPeekTimeout();
+                this.dispatchDesktopPeek(false);
+        };
+
         handleAppButtonClick = (app) => {
                 const detail = { appId: app.id, action: 'toggle' };
                 this.dispatchTaskbarCommand(detail);
+        };
+
+        handleShowDesktopClick = () => {
+                this.endDesktopPeek();
+                this.dispatchDesktopCommand({ action: 'toggle-show-desktop' });
+        };
+
+        handleShowDesktopMouseEnter = () => {
+                this.startDesktopPeek();
+        };
+
+        handleShowDesktopMouseLeave = () => {
+                this.endDesktopPeek();
         };
 
         handleAppButtonKeyDown = (event, app) => {
@@ -105,6 +161,30 @@ export default class Navbar extends PureComponent {
                         event.preventDefault();
                         this.handleAppButtonClick(app);
                 }
+        };
+
+        renderShowDesktopControl = () => {
+                const { allWindowsMinimized } = this.state;
+                return (
+                        <button
+                                type="button"
+                                aria-label="Show desktop"
+                                title="Show desktop"
+                                aria-pressed={allWindowsMinimized}
+                                onClick={this.handleShowDesktopClick}
+                                onMouseEnter={this.handleShowDesktopMouseEnter}
+                                onMouseLeave={this.handleShowDesktopMouseLeave}
+                                onFocus={this.handleShowDesktopMouseEnter}
+                                onBlur={this.handleShowDesktopMouseLeave}
+                                onMouseDown={this.endDesktopPeek}
+                                className={`group relative flex h-8 items-center rounded-lg border px-1.5 transition duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 ${allWindowsMinimized ? 'border-white/30 bg-white/10' : 'border-transparent hover:border-white/20 hover:bg-white/10'}`}
+                        >
+                                <span
+                                        aria-hidden="true"
+                                        className="pointer-events-none block h-5 w-[2px] rounded-full bg-white/50 transition group-hover:bg-white group-focus-visible:bg-white"
+                                />
+                        </button>
+                );
         };
 
         renderRunningApps = () => {
@@ -325,6 +405,7 @@ export default class Navbar extends PureComponent {
                                         </div>
                                         <div className="flex items-center gap-4 text-xs md:text-sm">
                                                 <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
+                                                {this.renderShowDesktopControl()}
                                                 <div
                                                         id="status-bar"
                                                         role="button"
