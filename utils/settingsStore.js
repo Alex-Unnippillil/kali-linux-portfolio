@@ -15,6 +15,8 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  taskbarOpacity: 0.8,
+  taskbarBlur: 12,
 };
 
 let hasLoggedStorageWarning = false;
@@ -176,6 +178,34 @@ export async function setAllowNetwork(value) {
   storage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getTaskbarOpacity() {
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.taskbarOpacity;
+  const stored = storage.getItem('taskbar-opacity');
+  const parsed = stored ? Number.parseFloat(stored) : Number.NaN;
+  return Number.isFinite(parsed) ? parsed : DEFAULT_SETTINGS.taskbarOpacity;
+}
+
+export async function setTaskbarOpacity(value) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem('taskbar-opacity', String(value));
+}
+
+export async function getTaskbarBlur() {
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.taskbarBlur;
+  const stored = storage.getItem('taskbar-blur');
+  const parsed = stored ? Number.parseFloat(stored) : Number.NaN;
+  return Number.isFinite(parsed) ? parsed : DEFAULT_SETTINGS.taskbarBlur;
+}
+
+export async function setTaskbarBlur(value) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem('taskbar-blur', String(value));
+}
+
 export async function resetSettings() {
   const storage = getLocalStorage();
   if (!storage) return;
@@ -192,6 +222,8 @@ export async function resetSettings() {
   storage.removeItem('allow-network');
   storage.removeItem('haptics');
   storage.removeItem('use-kali-wallpaper');
+  storage.removeItem('taskbar-opacity');
+  storage.removeItem('taskbar-blur');
 }
 
 export async function exportSettings() {
@@ -207,6 +239,8 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    taskbarOpacity,
+    taskbarBlur,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -219,6 +253,8 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getTaskbarOpacity(),
+    getTaskbarBlur(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -234,6 +270,8 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    taskbarOpacity,
+    taskbarBlur,
   });
 }
 
@@ -259,6 +297,8 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    taskbarOpacity,
+    taskbarBlur,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -271,6 +311,8 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (taskbarOpacity !== undefined) await setTaskbarOpacity(taskbarOpacity);
+  if (taskbarBlur !== undefined) await setTaskbarBlur(taskbarBlur);
   if (theme !== undefined) setTheme(theme);
 }
 

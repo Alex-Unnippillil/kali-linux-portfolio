@@ -29,6 +29,8 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
             --shell-taskbar-gap: 0.5rem;
             --shell-taskbar-font-size: 0.875rem;
             --shell-taskbar-icon: 1.5rem;
+            --taskbar-opacity: 0.8;
+            --taskbar-blur: 12px;
             --shell-hit-target: 2.5rem;
             --desktop-icon-width: 6rem;
             --desktop-icon-height: 5.5rem;
