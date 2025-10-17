@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useId, useState } from "react";
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
 import VolumeControl from '../ui/VolumeControl';
@@ -38,17 +38,38 @@ export default function Status() {
     };
   }, []);
 
+  const networkDescriptionId = useId();
+  const volumeDescriptionId = useId();
+  const batteryDescriptionId = useId();
+
+  const networkTooltipId = `${networkDescriptionId}-tooltip`;
+  const volumeTooltipId = `${volumeDescriptionId}-tooltip`;
+  const batteryTooltipId = `${batteryDescriptionId}-tooltip`;
+
   return (
-    <div className="flex justify-center items-center">
+    <div className="grid grid-flow-col auto-cols-[var(--shell-hit-target)] items-center gap-1">
       <NetworkIndicator
-        className="mx-1.5"
+        className="justify-center"
         allowNetwork={allowNetwork}
         online={online}
+        descriptionId={networkDescriptionId}
+        tooltipId={networkTooltipId}
       />
-      <VolumeControl className="mx-1.5" />
-      <BatteryIndicator className="mx-1.5" />
-      <span className="mx-1">
-        <SmallArrow angle="down" className=" status-symbol" />
+      <VolumeControl
+        className="justify-center"
+        descriptionId={volumeDescriptionId}
+        tooltipId={volumeTooltipId}
+      />
+      <BatteryIndicator
+        className="justify-center"
+        descriptionId={batteryDescriptionId}
+        tooltipId={batteryTooltipId}
+      />
+      <span
+        className="inline-flex h-[var(--shell-hit-target)] w-[var(--shell-hit-target)] items-center justify-center"
+        aria-hidden="true"
+      >
+        <SmallArrow angle="down" className="status-symbol" />
       </span>
     </div>
   );
