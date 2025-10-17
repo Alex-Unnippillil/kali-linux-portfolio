@@ -169,6 +169,7 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.disableTransformHint();
     }
 
     setDefaultWindowDimenstion = () => {
@@ -307,6 +308,18 @@ export class Window extends Component {
         return null;
     }
 
+    enableTransformHint = () => {
+        const node = this.getWindowNode();
+        if (!node) return;
+        node.classList.add(styles.windowTransformHint);
+    }
+
+    disableTransformHint = () => {
+        const node = this.getWindowNode();
+        if (!node) return;
+        node.classList.remove(styles.windowTransformHint);
+    }
+
     setTransformMotionPreset = (node, preset) => {
         if (!node) return;
         const durationVars = {
@@ -352,10 +365,12 @@ export class Window extends Component {
         if (this.state.snapped) {
             this.unsnapWindow();
         }
+        this.enableTransformHint();
         this.setState({ cursorType: "cursor-move", grabbed: true })
     }
 
     changeCursorToDefault = () => {
+        this.disableTransformHint();
         this.setState({ cursorType: "cursor-default", grabbed: false })
     }
 
@@ -890,8 +905,20 @@ export class Window extends Component {
                         onPointerDown={this.focusWindow}
                         onFocus={this.focusWindow}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && (
+                            <WindowYBorder
+                                resize={this.handleHorizontalResize}
+                                onResizeStart={this.enableTransformHint}
+                                onResizeStop={this.disableTransformHint}
+                            />
+                        )}
+                        {this.props.resizable !== false && (
+                            <WindowXBorder
+                                resize={this.handleVerticleResize}
+                                onResizeStart={this.enableTransformHint}
+                                onResizeStop={this.disableTransformHint}
+                            />
+                        )}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -957,8 +984,18 @@ export class WindowYBorder extends Component {
                 <div
                     className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
                     draggable
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
+                    onDragStart={(e) => {
+                        e.dataTransfer.setDragImage(this.trpImg, 0, 0);
+                        if (this.props.onResizeStart) {
+                            this.props.onResizeStart();
+                        }
+                    }}
                     onDrag={this.props.resize}
+                    onDragEnd={() => {
+                        if (this.props.onResizeStop) {
+                            this.props.onResizeStop();
+                        }
+                    }}
                 ></div>
             )
         }
@@ -977,8 +1014,18 @@ export class WindowXBorder extends Component {
                 <div
                     className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
                     draggable
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
+                    onDragStart={(e) => {
+                        e.dataTransfer.setDragImage(this.trpImg, 0, 0);
+                        if (this.props.onResizeStart) {
+                            this.props.onResizeStart();
+                        }
+                    }}
                     onDrag={this.props.resize}
+                    onDragEnd={() => {
+                        if (this.props.onResizeStop) {
+                            this.props.onResizeStop();
+                        }
+                    }}
                 ></div>
             )
         }
