@@ -72,6 +72,8 @@ const loadStoredFolderContents = () => {
     }
 };
 
+const normalizeIconPath = (icon) => (typeof icon === 'string' ? icon.replace('./', '/') : icon);
+
 const persistStoredFolderContents = (contents) => {
     if (!safeLocalStorage) return;
     try {
@@ -211,6 +213,9 @@ export class Desktop extends Component {
         };
 
         this.taskbarOrderKeyBase = 'taskbar-order';
+        this.pinnedStorageKey = 'pinnedApps';
+        this.cachedPinnedOrder = this.loadPinnedAppIdsFromStorage();
+        const initialTaskbarOrder = this.loadTaskbarOrder();
 
         const initialIconSizePreset = this.getStoredIconSizePreset();
         const initialPresetConfig = this.getIconSizePresetConfig(initialIconSizePreset);
@@ -268,6 +273,7 @@ export class Desktop extends Component {
             overlayWindows: createOverlayStateMap(),
             minimizedShelfOpen: false,
             closedShelfOpen: false,
+            taskbarOrder: initialTaskbarOrder,
         };
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -403,53 +409,168 @@ export class Desktop extends Component {
         }
     };
 
+    loadPinnedAppIdsFromStorage = () => {
+        if (!safeLocalStorage) return [];
+        try {
+            const stored = safeLocalStorage.getItem(this.pinnedStorageKey);
+            if (!stored) return [];
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+                return parsed.filter((value) => typeof value === 'string');
+            }
+        } catch (e) {
+            // ignore malformed entries and fall back to defaults
+        }
+        return [];
+    };
+
+    persistPinnedAppsOrder = (order) => {
+        const normalized = Array.isArray(order)
+            ? order.filter((value) => typeof value === 'string')
+            : [];
+        const current = Array.isArray(this.cachedPinnedOrder) ? this.cachedPinnedOrder : [];
+        const changed =
+            normalized.length !== current.length ||
+            normalized.some((value, index) => current[index] !== value);
+        if (!changed && current.length === normalized.length) {
+            return;
+        }
+        this.cachedPinnedOrder = [...normalized];
+        if (!safeLocalStorage) return;
+        try {
+            safeLocalStorage.setItem(this.pinnedStorageKey, JSON.stringify(this.cachedPinnedOrder));
+        } catch (e) {
+            // ignore write errors
+        }
+    };
+
+    getNormalizedTaskbarSegments = (pinnedIds = [], runningIds = [], preferredOrder) => {
+        const pinnedSet = new Set(Array.isArray(pinnedIds) ? pinnedIds : []);
+        const runningSet = new Set(Array.isArray(runningIds) ? runningIds : []);
+        const normalizedPinned = [];
+        const normalizedRunning = [];
+        const seenPinned = new Set();
+        const seenRunning = new Set();
+
+        const addPinned = (id) => {
+            if (!pinnedSet.has(id) || seenPinned.has(id)) return;
+            normalizedPinned.push(id);
+            seenPinned.add(id);
+        };
+
+        const addRunning = (id) => {
+            if (!runningSet.has(id) || pinnedSet.has(id) || seenRunning.has(id)) return;
+            normalizedRunning.push(id);
+            seenRunning.add(id);
+        };
+
+        const applySequence = (sequence) => {
+            if (!Array.isArray(sequence)) return;
+            sequence.forEach((id) => {
+                if (pinnedSet.has(id)) {
+                    addPinned(id);
+                } else {
+                    addRunning(id);
+                }
+            });
+        };
+
+        let preferredPinned = [];
+        let preferredRunning = [];
+        let preferredMerged = [];
+
+        if (Array.isArray(preferredOrder)) {
+            preferredMerged = preferredOrder;
+        } else if (preferredOrder && typeof preferredOrder === 'object') {
+            if (Array.isArray(preferredOrder.pinned)) {
+                preferredPinned = preferredOrder.pinned;
+            }
+            if (Array.isArray(preferredOrder.running)) {
+                preferredRunning = preferredOrder.running;
+            }
+            if (Array.isArray(preferredOrder.merged)) {
+                preferredMerged = preferredOrder.merged;
+            } else if (Array.isArray(preferredOrder.order)) {
+                preferredMerged = preferredOrder.order;
+            }
+        }
+
+        applySequence(preferredPinned);
+        applySequence(preferredRunning);
+        applySequence(preferredMerged);
+        applySequence(this.state.taskbarOrder || []);
+        applySequence(pinnedIds);
+        applySequence(runningIds);
+
+        return { pinned: normalizedPinned, running: normalizedRunning };
+    };
+
     getNormalizedTaskbarOrder = (runningIds, preferredOrder) => {
-        const base = Array.isArray(preferredOrder)
-            ? preferredOrder
-            : (this.state.taskbarOrder || []);
-        const normalized = [];
+        const pinnedIds = this.getPinnedAppIds();
+        const segments = this.getNormalizedTaskbarSegments(pinnedIds, runningIds, preferredOrder);
+        return {
+            pinned: segments.pinned,
+            running: segments.running,
+            merged: [...segments.pinned, ...segments.running],
+        };
+    };
+
+    getPinnedAppIds = () => {
+        const favourite = this.state.favourite_apps || {};
+        const baseOrder = Array.isArray(this.cachedPinnedOrder)
+            ? this.cachedPinnedOrder
+            : this.loadPinnedAppIdsFromStorage();
         const seen = new Set();
+        const result = [];
 
-        base.forEach((id) => {
-            if (typeof id !== 'string') return;
-            if (!seen.has(id) && runningIds.includes(id)) {
-                normalized.push(id);
+        baseOrder.forEach((id) => {
+            if (favourite[id] && !seen.has(id)) {
+                result.push(id);
                 seen.add(id);
             }
         });
 
-        runningIds.forEach((id) => {
-            if (!seen.has(id)) {
-                normalized.push(id);
-                seen.add(id);
+        apps.forEach((app) => {
+            if (favourite[app.id] && !seen.has(app.id)) {
+                result.push(app.id);
+                seen.add(app.id);
             }
         });
 
-        return normalized;
+        return result;
     };
 
     setTaskbarOrder = (nextOrder) => {
         if (!Array.isArray(nextOrder)) return;
+        const normalized = nextOrder.filter((value) => typeof value === 'string');
+        if (normalized.length === 0) {
+            const current = Array.isArray(this.state.taskbarOrder) ? this.state.taskbarOrder : [];
+            if (current.length > 0) {
+                return;
+            }
+        }
+
         this.setState((prevState) => {
-            const current = prevState.taskbarOrder || [];
+            const current = Array.isArray(prevState.taskbarOrder) ? prevState.taskbarOrder : [];
             if (
-                current.length === nextOrder.length &&
-                current.every((id, index) => id === nextOrder[index])
+                current.length === normalized.length &&
+                current.every((id, index) => id === normalized[index])
             ) {
                 return null;
             }
-            return { taskbarOrder: nextOrder };
+            return { taskbarOrder: normalized };
         }, () => {
-            const order = this.state.taskbarOrder || [];
+            const order = Array.isArray(this.state.taskbarOrder) ? this.state.taskbarOrder : [];
+            if (order.length === 0) {
+                return;
+            }
             this.persistTaskbarOrder(order);
         });
     };
 
     getCurrentRunningAppIds = () => {
-        const { closed_windows = {} } = this.state;
-        return apps
-            .filter((app) => closed_windows[app.id] === false)
-            .map((app) => app.id);
+        const { ids } = this.buildRunningAppMap();
+        return ids;
     };
 
     normalizeTheme(theme) {
@@ -974,25 +1095,31 @@ export class Desktop extends Component {
         });
     };
 
-    getRunningAppSummaries = () => {
+    buildRunningAppMap = () => {
         const {
             closed_windows = {},
             minimized_windows = {},
             focused_windows = {},
             overlayWindows = {},
         } = this.state;
-        const summaries = [];
+        const map = new Map();
+        const ids = [];
+
         apps.forEach((app) => {
             if (closed_windows[app.id] === false) {
-                summaries.push({
+                map.set(app.id, {
                     id: app.id,
                     title: app.title,
-                    icon: app.icon.replace('./', '/'),
+                    icon: normalizeIconPath(app.icon),
                     isFocused: Boolean(focused_windows[app.id]),
                     isMinimized: Boolean(minimized_windows[app.id]),
+                    isOverlay: false,
+                    isRunning: true,
                 });
+                ids.push(app.id);
             }
         });
+
         OVERLAY_WINDOW_LIST.forEach((overlay) => {
             const state = overlayWindows?.[overlay.id] || {};
             const isOpen = state.open === true || closed_windows[overlay.id] === false;
@@ -1005,16 +1132,64 @@ export class Desktop extends Component {
             const isFocused = typeof state.focused === 'boolean'
                 ? state.focused
                 : Boolean(focused_windows[overlay.id]);
-            summaries.push({
+            map.set(overlay.id, {
                 id: overlay.id,
                 title: overlay.title,
                 icon: overlay.icon,
                 isFocused,
                 isMinimized,
                 isOverlay: true,
+                isRunning: true,
             });
+            ids.push(overlay.id);
         });
-        return summaries;
+
+        return { map, ids };
+    };
+
+    getTaskbarSummaries = () => {
+        const runningState = this.buildRunningAppMap();
+        const pinnedIds = this.getPinnedAppIds();
+        const segments = this.getNormalizedTaskbarSegments(pinnedIds, runningState.ids);
+
+        const pinnedSummaries = segments.pinned
+            .map((id) => {
+                const running = runningState.map.get(id);
+                const appMeta = this.getAppById(id);
+                if (!running && !appMeta) return null;
+                const iconSource = running?.icon ?? appMeta?.icon;
+                const icon = normalizeIconPath(iconSource);
+                const title = running?.title || appMeta?.title || appMeta?.name || id;
+                return {
+                    id,
+                    title,
+                    icon,
+                    isFocused: Boolean(running?.isFocused),
+                    isMinimized: running ? Boolean(running.isMinimized) : true,
+                    isRunning: Boolean(running),
+                    isOverlay: running?.isOverlay || Boolean(appMeta?.isOverlay),
+                };
+            })
+            .filter(Boolean);
+
+        const runningSummaries = segments.running
+            .map((id) => runningState.map.get(id))
+            .filter(Boolean);
+
+        this.setTaskbarOrder([...segments.pinned, ...segments.running]);
+        this.persistPinnedAppsOrder(segments.pinned);
+
+        return { pinned: pinnedSummaries, running: runningSummaries };
+    };
+
+    getPinnedAppSummaries = () => {
+        const { pinned } = this.getTaskbarSummaries();
+        return pinned;
+    };
+
+    getRunningAppSummaries = () => {
+        const { running } = this.getTaskbarSummaries();
+        return running;
     };
 
     setWorkspaceState = (updater, callback) => {
@@ -2773,10 +2948,12 @@ export class Desktop extends Component {
 
     broadcastWorkspaceState = () => {
         if (typeof window === 'undefined') return;
+        const taskbar = this.getTaskbarSummaries();
         const detail = {
             workspaces: this.getWorkspaceSummaries(),
             activeWorkspace: this.state.activeWorkspace,
-            runningApps: this.getRunningAppSummaries(),
+            runningApps: taskbar.running,
+            pinnedApps: taskbar.pinned,
             iconSizePreset: this.state.iconSizePreset,
         };
         window.dispatchEvent(new CustomEvent('workspace-state', { detail }));
@@ -2967,11 +3144,11 @@ export class Desktop extends Component {
         const action = detail.action || 'toggle';
 
         if (action === 'reorder') {
-            if (Array.isArray(detail.order)) {
-                const runningIds = this.getCurrentRunningAppIds();
-                const normalized = this.getNormalizedTaskbarOrder(runningIds, detail.order);
-                this.setTaskbarOrder(normalized);
-            }
+            const orderDetail = detail.order ?? detail.segments ?? {};
+            const runningIds = this.getCurrentRunningAppIds();
+            const normalized = this.getNormalizedTaskbarOrder(runningIds, orderDetail);
+            this.persistPinnedAppsOrder(normalized.pinned);
+            this.setTaskbarOrder(normalized.merged);
             return;
         }
 
@@ -3645,14 +3822,14 @@ export class Desktop extends Component {
     fetchAppsData = (callback) => {
         this.refreshAppRegistry();
 
-        let pinnedApps = safeLocalStorage?.getItem('pinnedApps');
-        if (pinnedApps) {
-            pinnedApps = JSON.parse(pinnedApps);
-            apps.forEach(app => { app.favourite = pinnedApps.includes(app.id); });
+        let pinnedApps = this.loadPinnedAppIdsFromStorage();
+        if (pinnedApps.length) {
+            const pinnedSet = new Set(pinnedApps);
+            apps.forEach((app) => { app.favourite = pinnedSet.has(app.id); });
         } else {
-            pinnedApps = apps.filter(app => app.favourite).map(app => app.id);
-            safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps));
+            pinnedApps = apps.filter((app) => app.favourite).map((app) => app.id);
         }
+        this.persistPinnedAppsOrder(pinnedApps);
 
         const focused_windows = {};
         const closed_windows = {};
@@ -4388,10 +4565,13 @@ export class Desktop extends Component {
         this.initFavourite[id] = true
         const app = apps.find(a => a.id === id)
         if (app) app.favourite = true
-        let pinnedApps = [];
-        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        if (!pinnedApps.includes(id)) pinnedApps.push(id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        const nextPinned = Array.isArray(this.cachedPinnedOrder)
+            ? [...this.cachedPinnedOrder]
+            : this.loadPinnedAppIdsFromStorage();
+        if (!nextPinned.includes(id)) {
+            nextPinned.push(id);
+        }
+        this.persistPinnedAppsOrder(nextPinned);
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }
@@ -4402,10 +4582,10 @@ export class Desktop extends Component {
         this.initFavourite[id] = false
         const app = apps.find(a => a.id === id)
         if (app) app.favourite = false
-        let pinnedApps = [];
-        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        pinnedApps = pinnedApps.filter(appId => appId !== id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        const nextPinned = Array.isArray(this.cachedPinnedOrder)
+            ? this.cachedPinnedOrder.filter((appId) => appId !== id)
+            : this.loadPinnedAppIdsFromStorage().filter((appId) => appId !== id);
+        this.persistPinnedAppsOrder(nextPinned);
         this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }

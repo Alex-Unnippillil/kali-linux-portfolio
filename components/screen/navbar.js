@@ -37,6 +37,26 @@ const areRunningAppsEqual = (next = [], prev = []) => {
         return true;
 };
 
+const arePinnedAppsEqual = (next = [], prev = []) => {
+        if (next.length !== prev.length) return false;
+        for (let index = 0; index < next.length; index += 1) {
+                const a = next[index];
+                const b = prev[index];
+                if (!b) return false;
+                if (
+                        a.id !== b.id ||
+                        a.title !== b.title ||
+                        a.icon !== b.icon ||
+                        a.isRunning !== b.isRunning ||
+                        a.isFocused !== b.isFocused ||
+                        a.isMinimized !== b.isMinimized
+                ) {
+                        return false;
+                }
+        }
+        return true;
+};
+
 export default class Navbar extends PureComponent {
         constructor() {
                 super();
@@ -46,11 +66,12 @@ export default class Navbar extends PureComponent {
                         placesMenuOpen: false,
                         workspaces: [],
                         activeWorkspace: 0,
-                        runningApps: []
+                        runningApps: [],
+                        pinnedApps: []
                 };
                 this.taskbarListRef = React.createRef();
                 this.draggingAppId = null;
-                this.pendingReorder = null;
+                this.draggingSegment = null;
         }
 
         componentDidMount() {
@@ -72,20 +93,23 @@ export default class Navbar extends PureComponent {
                 const nextWorkspaces = Array.isArray(workspaces) ? workspaces : [];
                 const nextActiveWorkspace = typeof activeWorkspace === 'number' ? activeWorkspace : 0;
                 const nextRunningApps = Array.isArray(detail.runningApps) ? detail.runningApps : [];
+                const nextPinnedApps = Array.isArray(detail.pinnedApps) ? detail.pinnedApps : [];
 
                 this.setState((previousState) => {
                         const workspacesChanged = !areWorkspacesEqual(nextWorkspaces, previousState.workspaces);
                         const activeChanged = previousState.activeWorkspace !== nextActiveWorkspace;
                         const runningAppsChanged = !areRunningAppsEqual(nextRunningApps, previousState.runningApps);
+                        const pinnedAppsChanged = !arePinnedAppsEqual(nextPinnedApps, previousState.pinnedApps);
 
-                        if (!workspacesChanged && !activeChanged && !runningAppsChanged) {
+                        if (!workspacesChanged && !activeChanged && !runningAppsChanged && !pinnedAppsChanged) {
                                 return null;
                         }
 
                         return {
                                 workspaces: workspacesChanged ? nextWorkspaces : previousState.workspaces,
                                 activeWorkspace: nextActiveWorkspace,
-                                runningApps: runningAppsChanged ? nextRunningApps : previousState.runningApps
+                                runningApps: runningAppsChanged ? nextRunningApps : previousState.runningApps,
+                                pinnedApps: pinnedAppsChanged ? nextPinnedApps : previousState.pinnedApps
                         };
                 });
         };
@@ -107,43 +131,54 @@ export default class Navbar extends PureComponent {
                 }
         };
 
-        renderRunningApps = () => {
-                const { runningApps } = this.state;
-                if (!runningApps.length) return null;
+        renderTaskbarSection = (segment, apps, label, ref = null) => {
+                if (!apps || !apps.length) return null;
 
                 return (
                         <ul
-                                ref={this.taskbarListRef}
+                                ref={ref}
                                 className="flex max-w-[40vw] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
                                 role="list"
-                                aria-label="Open applications"
+                                aria-label={label}
                                 onDragOver={this.handleTaskbarDragOver}
-                                onDrop={this.handleTaskbarDrop}
+                                onDrop={(event) => this.handleTaskbarDrop(event, segment)}
                         >
-                                {runningApps.map((app) => this.renderRunningAppItem(app))}
+                                {apps.map((app) => this.renderTaskbarItem(app, segment))}
                         </ul>
                 );
         };
 
-        renderRunningAppItem = (app) => (
+        renderPinnedApps = () => {
+                const { pinnedApps } = this.state;
+                return this.renderTaskbarSection('pinned', pinnedApps, 'Pinned applications');
+        };
+
+        renderRunningApps = () => {
+                const { runningApps } = this.state;
+                return this.renderTaskbarSection('running', runningApps, 'Open applications', this.taskbarListRef);
+        };
+
+        renderTaskbarItem = (app, segment) => (
                 <li
                         key={app.id}
                         className="flex"
                         draggable
                         data-app-id={app.id}
+                        data-taskbar-segment={segment}
                         role="listitem"
-                        onDragStart={(event) => this.handleAppDragStart(event, app)}
+                        onDragStart={(event) => this.handleAppDragStart(event, app, segment)}
                         onDragOver={this.handleAppDragOver}
-                        onDrop={(event) => this.handleAppDrop(event, app.id)}
+                        onDrop={(event) => this.handleAppDrop(event, app.id, segment)}
                         onDragEnd={this.handleAppDragEnd}
                 >
-                        {this.renderRunningAppButton(app)}
+                        {this.renderTaskbarButton(app)}
                 </li>
         );
 
-        renderRunningAppButton = (app) => {
-                const isActive = !app.isMinimized;
-                const isFocused = app.isFocused && isActive;
+        renderTaskbarButton = (app) => {
+                const isRunning = app.isRunning !== false;
+                const isActive = isRunning && !app.isMinimized;
+                const isFocused = isRunning && app.isFocused && isActive;
 
                 return (
                         <button
@@ -185,18 +220,20 @@ export default class Navbar extends PureComponent {
                 }
         };
 
-        handleTaskbarDrop = (event) => {
+        handleTaskbarDrop = (event, segment) => {
                 event.preventDefault();
-                const sourceId = this.getDragSourceId(event);
-                if (!sourceId) return;
-                this.reorderRunningApps(sourceId, null, true);
+                const source = this.getDragSourceMeta(event);
+                if (!source.id || source.segment !== segment) return;
+                this.reorderTaskbarApps(segment, source.id, null, true);
         };
 
-        handleAppDragStart = (event, app) => {
+        handleAppDragStart = (event, app, segment) => {
                 this.draggingAppId = app.id;
+                this.draggingSegment = segment;
                 if (event.dataTransfer) {
                         event.dataTransfer.effectAllowed = 'move';
                         event.dataTransfer.setData('application/x-taskbar-app-id', app.id);
+                        event.dataTransfer.setData('application/x-taskbar-segment', segment);
                 }
         };
 
@@ -207,41 +244,55 @@ export default class Navbar extends PureComponent {
                 }
         };
 
-        handleAppDrop = (event, targetId) => {
+        handleAppDrop = (event, targetId, segment) => {
                 event.preventDefault();
-                const sourceId = this.getDragSourceId(event);
-                if (!sourceId) return;
+                const source = this.getDragSourceMeta(event);
+                if (!source.id || source.segment !== segment) return;
                 const rect = event.currentTarget?.getBoundingClientRect?.();
                 const insertAfter = rect ? (event.clientX - rect.left) > rect.width / 2 : false;
-                this.reorderRunningApps(sourceId, targetId, insertAfter);
+                this.reorderTaskbarApps(segment, source.id, targetId, insertAfter);
         };
 
         handleAppDragEnd = () => {
                 this.draggingAppId = null;
+                this.draggingSegment = null;
         };
 
-        getDragSourceId = (event) => {
+        getDragSourceMeta = (event) => {
                 const transfer = event.dataTransfer;
+                let id = this.draggingAppId;
+                let segment = this.draggingSegment;
                 if (transfer) {
                         const explicit = transfer.getData('application/x-taskbar-app-id');
-                        if (explicit) return explicit;
+                        if (explicit) id = explicit;
+                        const explicitSegment = transfer.getData('application/x-taskbar-segment');
+                        if (explicitSegment) segment = explicitSegment;
                 }
-                return this.draggingAppId;
+                return { id, segment };
         };
 
-        reorderRunningApps = (sourceId, targetId, insertAfter = false) => {
-                if (!sourceId) return;
-                this.pendingReorder = null;
+        reorderTaskbarApps = (segment, sourceId, targetId, insertAfter = false) => {
+                if (!segment || !sourceId) return;
+                let didUpdate = false;
                 this.setState((prevState) => {
-                        const updated = this.computeReorderedApps(prevState.runningApps, sourceId, targetId, insertAfter);
+                        const listKey = segment === 'pinned' ? 'pinnedApps' : 'runningApps';
+                        const currentList = Array.isArray(prevState[listKey]) ? prevState[listKey] : [];
+                        const updated = this.computeReorderedApps(currentList, sourceId, targetId, insertAfter);
                         if (!updated) return null;
-                        this.pendingReorder = updated.map((item) => item.id);
-                        return { runningApps: updated };
+                        didUpdate = true;
+                        return { [listKey]: updated };
                 }, () => {
-                        if (this.pendingReorder) {
-                                this.dispatchTaskbarCommand({ action: 'reorder', order: this.pendingReorder });
-                                this.pendingReorder = null;
-                        }
+                        if (!didUpdate) return;
+                        const pinnedOrder = Array.isArray(this.state.pinnedApps)
+                                ? this.state.pinnedApps.map((item) => item.id)
+                                : [];
+                        const runningOrder = Array.isArray(this.state.runningApps)
+                                ? this.state.runningApps.map((item) => item.id)
+                                : [];
+                        this.dispatchTaskbarCommand({
+                                action: 'reorder',
+                                order: { pinned: pinnedOrder, running: runningOrder },
+                        });
                 });
         };
 
@@ -320,6 +371,7 @@ export default class Navbar extends PureComponent {
                                                                 onSelect={this.handleWorkspaceSelect}
                                                         />
                                                 )}
+                                                {this.renderPinnedApps()}
                                                 {this.renderRunningApps()}
                                                 <PerformanceGraph />
                                         </div>
