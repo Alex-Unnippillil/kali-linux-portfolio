@@ -15,10 +15,14 @@ import {
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET } from '../../utils/uiConstants';
+import { safeLocalStorage } from '../../utils/safeStorage';
 
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
 const EDGE_THRESHOLD_RATIO = 0.05;
+const HINT_AUTO_HIDE_MS = 9000;
+const SNAP_HINT_STORAGE_KEY = 'window-hint:snap';
+const RESIZE_HINT_STORAGE_KEY = 'window-hint:resize';
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -55,6 +59,22 @@ const normalizeRightCornerSnap = (candidate, regions) => {
     }
     return candidate;
 };
+
+const WindowHint = ({ id, text, visible, className }) => (
+    <>
+        <span id={id} className="sr-only">
+            {text}
+        </span>
+        {visible ? (
+            <div
+                aria-hidden="true"
+                className={`pointer-events-none absolute z-50 max-w-[18rem] rounded-md border border-slate-500/70 bg-slate-900/95 px-3 py-2 text-xs leading-snug text-slate-100 shadow-xl ${className}`}
+            >
+                {text}
+            </div>
+        ) : null}
+    </>
+);
 
 const computeSnapRegions = (
     viewportWidth,
@@ -122,11 +142,15 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            showSnapHint: false,
+            showResizeHint: false,
         }
         this.windowRef = React.createRef();
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._snapHintTimeout = null;
+        this._resizeHintTimeout = null;
     }
 
     notifySizeChange = () => {
@@ -156,6 +180,7 @@ export class Window extends Component {
         if (this.props.isFocused) {
             this.focusWindow();
         }
+        this.initializeFirstUseHints();
     }
 
     componentWillUnmount() {
@@ -168,6 +193,91 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+        this.clearHintTimers();
+    }
+
+    initializeFirstUseHints = () => {
+        if (typeof window === 'undefined') return;
+
+        const snapSeen = safeLocalStorage?.getItem(SNAP_HINT_STORAGE_KEY) === 'true';
+        const resizeSeen = safeLocalStorage?.getItem(RESIZE_HINT_STORAGE_KEY) === 'true';
+        const updates = {};
+
+        if (!snapSeen) {
+            updates.showSnapHint = true;
+        }
+
+        if (this.props.resizable !== false && !resizeSeen) {
+            updates.showResizeHint = true;
+        }
+
+        const hasUpdates = Object.keys(updates).length > 0;
+
+        if (hasUpdates) {
+            this.setState(updates, () => {
+                this.scheduleHintAutoHide();
+            });
+        }
+
+        try {
+            if (!snapSeen) {
+                safeLocalStorage?.setItem(SNAP_HINT_STORAGE_KEY, 'true');
+            }
+            if (this.props.resizable !== false && !resizeSeen) {
+                safeLocalStorage?.setItem(RESIZE_HINT_STORAGE_KEY, 'true');
+            }
+        } catch (error) {
+            // Ignore storage failures in restricted environments.
+        }
+    }
+
+    scheduleHintAutoHide = () => {
+        if (typeof window === 'undefined') return;
+
+        if (this.state.showSnapHint && !this._snapHintTimeout) {
+            this._snapHintTimeout = window.setTimeout(() => {
+                this._snapHintTimeout = null;
+                this.setState({ showSnapHint: false });
+            }, HINT_AUTO_HIDE_MS);
+        }
+
+        if (this.state.showResizeHint && !this._resizeHintTimeout) {
+            this._resizeHintTimeout = window.setTimeout(() => {
+                this._resizeHintTimeout = null;
+                this.setState({ showResizeHint: false });
+            }, HINT_AUTO_HIDE_MS);
+        }
+    }
+
+    clearHintTimers = () => {
+        if (this._snapHintTimeout) {
+            clearTimeout(this._snapHintTimeout);
+            this._snapHintTimeout = null;
+        }
+        if (this._resizeHintTimeout) {
+            clearTimeout(this._resizeHintTimeout);
+            this._resizeHintTimeout = null;
+        }
+    }
+
+    dismissSnapHint = () => {
+        if (this._snapHintTimeout) {
+            clearTimeout(this._snapHintTimeout);
+            this._snapHintTimeout = null;
+        }
+        if (this.state.showSnapHint) {
+            this.setState({ showSnapHint: false });
+        }
+    }
+
+    dismissResizeHint = () => {
+        if (this._resizeHintTimeout) {
+            clearTimeout(this._resizeHintTimeout);
+            this._resizeHintTimeout = null;
+        }
+        if (this.state.showResizeHint) {
+            this.setState({ showResizeHint: false });
         }
     }
 
@@ -345,6 +455,7 @@ export class Window extends Component {
     }
 
     changeCursorToMove = () => {
+        this.dismissSnapHint();
         this.focusWindow();
         if (this.state.maximized) {
             this.restoreWindow();
@@ -357,6 +468,38 @@ export class Window extends Component {
 
     changeCursorToDefault = () => {
         this.setState({ cursorType: "cursor-default", grabbed: false })
+    }
+
+    handleTitleBarPointerDown = () => {
+        this.dismissSnapHint();
+        this.focusWindow();
+    }
+
+    handleTitleBarFocus = () => {
+        this.dismissSnapHint();
+        this.focusWindow();
+    }
+
+    handleResizeHandlePointerDown = () => {
+        this.dismissResizeHint();
+        this.focusWindow();
+    }
+
+    handleResizeHandleFocus = () => {
+        this.dismissResizeHint();
+        this.focusWindow();
+    }
+
+    handleWindowPointerDown = () => {
+        this.dismissSnapHint();
+        this.dismissResizeHint();
+        this.focusWindow();
+    }
+
+    handleWindowFocus = () => {
+        this.dismissSnapHint();
+        this.dismissResizeHint();
+        this.focusWindow();
     }
 
     getSnapGrid = () => {
@@ -388,6 +531,7 @@ export class Window extends Component {
 
     handleVerticleResize = () => {
         if (this.props.resizable === false) return;
+        this.dismissResizeHint();
         const px = (this.state.height / 100) * window.innerHeight + 1;
         const snapped = this.snapToGrid(px, 'y');
         const heightPercent = snapped / window.innerHeight * 100;
@@ -399,6 +543,7 @@ export class Window extends Component {
 
     handleHorizontalResize = () => {
         if (this.props.resizable === false) return;
+        this.dismissResizeHint();
         const px = (this.state.width / 100) * window.innerWidth + 1;
         const snapped = this.snapToGrid(px, 'x');
         const widthPercent = snapped / window.innerWidth * 100;
@@ -612,6 +757,7 @@ export class Window extends Component {
             event.preventDefault();
             event.stopPropagation();
         }
+        this.dismissSnapHint();
         if (this.props.allowMaximize === false) return;
         if (this.state.maximized) {
             this.restoreWindow();
@@ -749,6 +895,7 @@ export class Window extends Component {
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.altKey) {
+            this.dismissSnapHint();
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 e.stopPropagation();
@@ -768,6 +915,7 @@ export class Window extends Component {
             }
             this.focusWindow();
         } else if (e.shiftKey) {
+            this.dismissResizeHint();
             const step = 1;
             if (e.key === 'ArrowLeft') {
                 e.preventDefault();
@@ -791,6 +939,7 @@ export class Window extends Component {
     }
 
     handleSuperArrow = (e) => {
+        this.dismissSnapHint();
         const key = e.detail;
         if (key === 'ArrowLeft') {
             if (this.state.snapped === 'left') this.unsnapWindow();
@@ -823,6 +972,13 @@ export class Window extends Component {
                 : (this.state.snapped
                     ? `snapped-${this.state.snapped}`
                     : 'active'));
+
+        const windowId = this.id || this.props.id || 'window';
+        const snapHintId = `${windowId}-snap-hint`;
+        const canResize = this.props.resizable !== false;
+        const resizeHintId = canResize ? `${windowId}-resize-hint` : undefined;
+        const snapHintText = 'Drag the title bar to move the window. Press Alt plus the Arrow keys to snap it to screen edges.';
+        const resizeHintText = 'Drag the window edges to resize. Press Shift plus the Arrow keys to resize with the keyboard.';
 
         return (
             <>
@@ -880,25 +1036,57 @@ export class Window extends Component {
                             this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
                             this.state.maximized ? styles.windowFrameMaximized : '',
                         ].filter(Boolean).join(' ')}
-                        id={this.id}
+                        id={windowId}
                         role="dialog"
                         data-window-state={windowState}
                         aria-hidden={this.props.minimized ? true : false}
                         aria-label={this.props.title}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
-                        onPointerDown={this.focusWindow}
-                        onFocus={this.focusWindow}
+                        onPointerDown={this.handleWindowPointerDown}
+                        onFocus={this.handleWindowFocus}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        <WindowHint
+                            id={snapHintId}
+                            text={snapHintText}
+                            visible={this.state.showSnapHint}
+                            className="left-1/2 top-9 -translate-x-1/2"
+                        />
+                        {canResize ? (
+                            <WindowHint
+                                id={resizeHintId}
+                                text={resizeHintText}
+                                visible={this.state.showResizeHint}
+                                className="bottom-6 right-4"
+                            />
+                        ) : null}
+                        {canResize && (
+                            <WindowYBorder
+                                resize={this.handleHorizontalResize}
+                                describedBy={resizeHintId}
+                                onPointerDown={this.handleResizeHandlePointerDown}
+                                onFocus={this.handleResizeHandleFocus}
+                                onKeyDown={this.handleKeyDown}
+                            />
+                        )}
+                        {canResize && (
+                            <WindowXBorder
+                                resize={this.handleVerticleResize}
+                                describedBy={resizeHintId}
+                                onPointerDown={this.handleResizeHandlePointerDown}
+                                onFocus={this.handleResizeHandleFocus}
+                                onKeyDown={this.handleKeyDown}
+                            />
+                        )}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
-                            onPointerDown={this.focusWindow}
+                            onPointerDown={this.handleTitleBarPointerDown}
+                            onFocus={this.handleTitleBarFocus}
                             onDoubleClick={this.handleTitleBarDoubleClick}
+                            describedBy={snapHintId}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -925,16 +1113,18 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, onFocus, describedBy }) {
     return (
         <div
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
+            aria-describedby={describedBy}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
             onPointerDown={onPointerDown}
+            onFocus={onFocus}
             onDoubleClick={onDoubleClick}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
@@ -957,6 +1147,14 @@ export class WindowYBorder extends Component {
                 <div
                     className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
                     draggable
+                    role="separator"
+                    aria-orientation="vertical"
+                    tabIndex={0}
+                    aria-label="Resize window width"
+                    aria-describedby={this.props.describedBy}
+                    onPointerDown={this.props.onPointerDown}
+                    onFocus={this.props.onFocus}
+                    onKeyDown={this.props.onKeyDown}
                     onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
                     onDrag={this.props.resize}
                 ></div>
@@ -977,6 +1175,14 @@ export class WindowXBorder extends Component {
                 <div
                     className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
                     draggable
+                    role="separator"
+                    aria-orientation="horizontal"
+                    tabIndex={0}
+                    aria-label="Resize window height"
+                    aria-describedby={this.props.describedBy}
+                    onPointerDown={this.props.onPointerDown}
+                    onFocus={this.props.onFocus}
+                    onKeyDown={this.props.onKeyDown}
                     onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
                     onDrag={this.props.resize}
                 ></div>
