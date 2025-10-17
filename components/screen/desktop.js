@@ -2976,6 +2976,7 @@ export class Desktop extends Component {
         }
 
         const appId = detail.appId;
+        const windowId = typeof detail.windowId === 'string' ? detail.windowId : null;
         if (!appId || !this.validAppIds.has(appId)) return;
 
         if (this.isOverlayId(appId)) {
@@ -3002,6 +3003,8 @@ export class Desktop extends Component {
             return;
         }
 
+        const focusTarget = windowId || appId;
+
         switch (action) {
             case 'minimize':
                 if (!this.state.minimized_windows[appId]) {
@@ -3009,7 +3012,7 @@ export class Desktop extends Component {
                 }
                 break;
             case 'focus':
-                this.focus(appId);
+                this.focus(focusTarget);
                 break;
             case 'open':
                 this.openApp(appId);

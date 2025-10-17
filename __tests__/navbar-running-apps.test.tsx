@@ -54,6 +54,40 @@ const multiAppWorkspaceDetail = {
   ],
 };
 
+const groupedAppWorkspaceDetail = {
+  ...workspaceEventDetail,
+  runningApps: [
+    {
+      id: 'editor#1',
+      appId: 'editor',
+      windowId: 'editor#1',
+      appTitle: 'Editor',
+      title: 'Editor - Notes',
+      icon: '/editor.png',
+      isFocused: true,
+      isMinimized: false,
+      preview: 'data:image/png;base64,AAA=',
+    },
+    {
+      id: 'editor#2',
+      appId: 'editor',
+      windowId: 'editor#2',
+      appTitle: 'Editor',
+      title: 'Editor - Report',
+      icon: '/editor.png',
+      isFocused: false,
+      isMinimized: false,
+    },
+    {
+      id: 'terminal',
+      title: 'Terminal',
+      icon: '/terminal.png',
+      isFocused: false,
+      isMinimized: true,
+    },
+  ],
+};
+
 const createDataTransfer = () => {
   const store = new Map<string, string>();
   const types: string[] = [];
@@ -192,6 +226,49 @@ describe('Navbar running apps tray', () => {
     expect(taskbarEventCall && taskbarEventCall[0].detail).toEqual({
       action: 'reorder',
       order: ['app2', 'app3', 'app1'],
+    });
+  });
+
+  it('groups multiple windows per app and opens flyout menu', () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('workspace-state', { detail: groupedAppWorkspaceDetail }));
+    });
+
+    dispatchSpy.mockClear();
+
+    const list = screen.getByRole('list', { name: /open applications/i });
+    const items = within(list).getAllByRole('listitem');
+    expect(items).toHaveLength(2);
+
+    const editorButton = within(items[0]).getByRole('button', { name: /editor/i });
+    expect(editorButton).toHaveAttribute('data-has-multiple', 'true');
+    expect(editorButton).toHaveAttribute('aria-haspopup', 'menu');
+    expect(editorButton).toHaveAttribute('aria-expanded', 'false');
+
+    act(() => {
+      fireEvent.keyDown(editorButton, { key: 'ArrowDown' });
+    });
+
+    expect(editorButton).toHaveAttribute('aria-expanded', 'true');
+
+    const menu = screen.getByRole('menu', { name: /editor/i });
+    const menuItems = within(menu).getAllByRole('menuitem');
+    expect(menuItems).toHaveLength(2);
+    expect(menuItems[0]).toHaveTextContent('Editor - Notes');
+    expect(menuItems[1]).toHaveTextContent('Editor - Report');
+
+    act(() => {
+      fireEvent.click(menuItems[1]);
+    });
+
+    const taskbarEventCall = dispatchSpy.mock.calls.find(([event]) => event.type === 'taskbar-command');
+    expect(taskbarEventCall).toBeTruthy();
+    expect(taskbarEventCall && taskbarEventCall[0].detail).toEqual({
+      appId: 'editor',
+      action: 'focus',
+      windowId: 'editor#2',
     });
   });
 });
