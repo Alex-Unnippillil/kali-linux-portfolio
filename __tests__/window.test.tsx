@@ -138,7 +138,9 @@ describe('Window lifecycle', () => {
 
     const frame = document.getElementById('focused-window');
     expect(frame).not.toBeNull();
-    expect(frame).toHaveFocus();
+    const titlebar = frame?.querySelector('.bg-ub-window-title');
+    expect(titlebar).not.toBeNull();
+    expect(titlebar).toHaveFocus();
     expect(focus).toHaveBeenCalledWith('focused-window');
   });
 });

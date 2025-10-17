@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 
 jest.mock('next/image', () => ({
   __esModule: true,
@@ -23,7 +23,7 @@ describe('BeEF standalone window controls', () => {
     fireEvent.click(minimizeButton);
 
     expect(getFrame()).toHaveAttribute('data-window-state', 'minimized');
-    expect(screen.getByText(/beef demo is minimized/i)).toBeInTheDocument();
+    expect(within(getFrame()).getByText(/minimized/i)).toBeInTheDocument();
 
     const restoreButtons = screen.getAllByRole('button', { name: /restore window/i });
     fireEvent.click(restoreButtons[restoreButtons.length - 1]);

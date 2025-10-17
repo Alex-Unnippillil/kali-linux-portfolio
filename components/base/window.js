@@ -20,6 +20,24 @@ const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
 const EDGE_THRESHOLD_RATIO = 0.05;
 
+const FOCUSABLE_SELECTOR = [
+    'a[href]',
+    'button:not([disabled])',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    'textarea:not([disabled])',
+    '[role="button"]',
+    '[role="menuitem"]',
+    '[role="menuitemradio"]',
+    '[role="menuitemcheckbox"]',
+    '[role="tab"]',
+    '[role="checkbox"]',
+    '[role="radio"]',
+    '[role="textbox"]',
+    '[contenteditable="true"]',
+    '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 const computeEdgeThreshold = (size) => clamp(size * EDGE_THRESHOLD_RATIO, EDGE_THRESHOLD_MIN, EDGE_THRESHOLD_MAX);
@@ -124,6 +142,13 @@ export class Window extends Component {
             grabbed: false,
         }
         this.windowRef = React.createRef();
+        this.titleBarRef = React.createRef();
+        const sanitizedTitle = typeof props.title === 'string'
+            ? props.title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+            : 'window';
+        this.titleElementId = props.id
+            ? `${props.id}-title`
+            : `${sanitizedTitle || 'window'}-title`;
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
@@ -597,14 +622,65 @@ export class Window extends Component {
         }
     }
 
-    focusWindow = () => {
-        this.props.focus(this.id);
-        const node = this.getWindowNode();
-        if (!node || typeof node.focus !== 'function') return;
-        const alreadyFocused = typeof document !== 'undefined' && document.activeElement === node;
-        if (!alreadyFocused) {
-            node.focus();
+    shouldPreserveFocus = (eventTarget) => {
+        if (typeof window === 'undefined') {
+            return false;
         }
+        const target = eventTarget;
+        if (!target || !(target instanceof Element)) {
+            return false;
+        }
+
+        const rootNode = this.getWindowNode();
+        if (rootNode && target === rootNode) {
+            return false;
+        }
+
+        if (typeof target.closest === 'function') {
+            const withinTitleBar = target.closest('.bg-ub-window-title');
+            if (withinTitleBar) {
+                return false;
+            }
+            const focusable = target.closest(FOCUSABLE_SELECTOR);
+            if (focusable) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    focusTitleBar = () => {
+        const titleBarNode = this.titleBarRef?.current;
+        if (!titleBarNode || typeof titleBarNode.focus !== 'function') {
+            return;
+        }
+        if (typeof document !== 'undefined' && document.activeElement === titleBarNode) {
+            return;
+        }
+        titleBarNode.focus();
+    }
+
+    focusWindow = (event) => {
+        this.props.focus(this.id);
+        const titleBarNode = this.titleBarRef?.current;
+        if (!titleBarNode || typeof titleBarNode.focus !== 'function') {
+            const node = this.getWindowNode();
+            if (!node || typeof node.focus !== 'function') {
+                return;
+            }
+            const alreadyFocused = typeof document !== 'undefined' && document.activeElement === node;
+            if (!alreadyFocused) {
+                node.focus();
+            }
+            return;
+        }
+
+        if (event && this.shouldPreserveFocus(event.target)) {
+            return;
+        }
+
+        this.focusTitleBar();
     }
 
     handleTitleBarDoubleClick = (event) => {
@@ -824,6 +900,8 @@ export class Window extends Component {
                     ? `snapped-${this.state.snapped}`
                     : 'active'));
 
+        const titleElementId = this.titleElementId;
+
         return (
             <>
                 {this.state.snapPreview && (
@@ -882,9 +960,10 @@ export class Window extends Component {
                         ].filter(Boolean).join(' ')}
                         id={this.id}
                         role="dialog"
+                        aria-modal="false"
                         data-window-state={windowState}
                         aria-hidden={this.props.minimized ? true : false}
-                        aria-label={this.props.title}
+                        aria-labelledby={titleElementId}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                         onPointerDown={this.focusWindow}
@@ -899,6 +978,8 @@ export class Window extends Component {
                             grabbed={this.state.grabbed}
                             onPointerDown={this.focusWindow}
                             onDoubleClick={this.handleTitleBarDoubleClick}
+                            titleId={titleElementId}
+                            titleRef={this.titleBarRef}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -925,10 +1006,11 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, titleId, titleRef }) {
     return (
         <div
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
+            ref={titleRef}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
@@ -937,7 +1019,9 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
             onPointerDown={onPointerDown}
             onDoubleClick={onDoubleClick}
         >
-            <div className="flex justify-center w-full text-sm font-bold">{title}</div>
+            <div className="flex justify-center w-full text-sm font-bold" id={titleId}>
+                {title}
+            </div>
         </div>
     )
 }
