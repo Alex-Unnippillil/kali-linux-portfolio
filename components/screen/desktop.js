@@ -192,6 +192,7 @@ export class Desktop extends Component {
         this.allWindowClosed = false;
 
         this.iconSizePresetKey = 'desktop_icon_size_preset';
+        this.showIconsStorageKey = 'desktop_show_icons';
         this.iconSizePresets = {
             small: {
                 dimensions: { width: 84, height: 76 },
@@ -229,6 +230,7 @@ export class Desktop extends Component {
 
         const initialWindowSizes = this.loadWindowSizes();
         const storedFolderContents = loadStoredFolderContents();
+        const initialShowDesktopIcons = this.getStoredShowDesktopIcons();
 
         this.state = {
             focused_windows: { ...initialOverlayFocused },
@@ -268,6 +270,7 @@ export class Desktop extends Component {
             overlayWindows: createOverlayStateMap(),
             minimizedShelfOpen: false,
             closedShelfOpen: false,
+            showDesktopIcons: initialShowDesktopIcons,
         };
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -537,6 +540,53 @@ export class Desktop extends Component {
     broadcastIconSizePreset = (preset) => {
         if (typeof window === 'undefined') return;
         window.dispatchEvent(new CustomEvent('desktop-icon-size', { detail: { preset } }));
+    };
+
+    getStoredShowDesktopIcons = () => {
+        if (!safeLocalStorage) return true;
+        try {
+            const stored = safeLocalStorage.getItem(this.showIconsStorageKey);
+            if (stored === 'true') return true;
+            if (stored === 'false') return false;
+        } catch (e) {
+            // ignore malformed entries
+        }
+        return true;
+    };
+
+    persistShowDesktopIcons = (value) => {
+        if (!safeLocalStorage) return;
+        try {
+            safeLocalStorage.setItem(this.showIconsStorageKey, value ? 'true' : 'false');
+        } catch (e) {
+            // ignore write errors
+        }
+    };
+
+    setShowDesktopIcons = (value) => {
+        const nextValue = Boolean(value);
+        const previousValue = Boolean(this.state.showDesktopIcons);
+        this.persistShowDesktopIcons(nextValue);
+        if (previousValue === nextValue) {
+            this.broadcastWorkspaceState();
+            return;
+        }
+        this.setState({ showDesktopIcons: nextValue }, () => {
+            this.broadcastWorkspaceState();
+        });
+    };
+
+    toggleDesktopIcons = () => {
+        this.setShowDesktopIcons(!this.state.showDesktopIcons);
+    };
+
+    handleDesktopIconVisibilityEvent = (event) => {
+        const detail = event?.detail || {};
+        if (typeof detail.visible === 'boolean') {
+            this.setShowDesktopIcons(detail.visible);
+        } else {
+            this.toggleDesktopIcons();
+        }
     };
 
     commitWorkspacePartial = (partial, index) => {
@@ -2778,6 +2828,7 @@ export class Desktop extends Component {
             activeWorkspace: this.state.activeWorkspace,
             runningApps: this.getRunningAppSummaries(),
             iconSizePreset: this.state.iconSizePreset,
+            showDesktopIcons: Boolean(this.state.showDesktopIcons),
         };
         window.dispatchEvent(new CustomEvent('workspace-state', { detail }));
     };
@@ -2841,6 +2892,7 @@ export class Desktop extends Component {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.addEventListener('desktop-icon-visibility', this.handleDesktopIconVisibilityEvent);
             this.broadcastWorkspaceState();
             this.broadcastIconSizePreset(this.state.iconSizePreset);
         }
@@ -2944,6 +2996,7 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.removeEventListener('desktop-icon-visibility', this.handleDesktopIconVisibilityEvent);
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
@@ -3746,6 +3799,8 @@ export class Desktop extends Component {
             draggingIconId,
             keyboardMoveState,
         } = this.state;
+        const showDesktopIcons = this.state.showDesktopIcons !== false;
+        if (!showDesktopIcons) return null;
         if (!desktopApps || desktopApps.length === 0) return null;
 
         const hasOpenWindows = this.hasVisibleWindows();
@@ -4638,6 +4693,8 @@ export class Desktop extends Component {
                     iconSizePreset={this.state.iconSizePreset}
                     setIconSizePreset={this.setIconSizePreset}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    showDesktopIcons={this.state.showDesktopIcons !== false}
+                    onToggleDesktopIcons={this.toggleDesktopIcons}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu

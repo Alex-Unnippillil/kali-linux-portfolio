@@ -46,7 +46,8 @@ export default class Navbar extends PureComponent {
                         placesMenuOpen: false,
                         workspaces: [],
                         activeWorkspace: 0,
-                        runningApps: []
+                        runningApps: [],
+                        showDesktopIcons: true
                 };
                 this.taskbarListRef = React.createRef();
                 this.draggingAppId = null;
@@ -72,22 +73,33 @@ export default class Navbar extends PureComponent {
                 const nextWorkspaces = Array.isArray(workspaces) ? workspaces : [];
                 const nextActiveWorkspace = typeof activeWorkspace === 'number' ? activeWorkspace : 0;
                 const nextRunningApps = Array.isArray(detail.runningApps) ? detail.runningApps : [];
-
                 this.setState((previousState) => {
                         const workspacesChanged = !areWorkspacesEqual(nextWorkspaces, previousState.workspaces);
                         const activeChanged = previousState.activeWorkspace !== nextActiveWorkspace;
                         const runningAppsChanged = !areRunningAppsEqual(nextRunningApps, previousState.runningApps);
+                        const nextShowDesktopIcons = typeof detail.showDesktopIcons === 'boolean'
+                                ? detail.showDesktopIcons
+                                : previousState.showDesktopIcons;
+                        const showDesktopIconsChanged = previousState.showDesktopIcons !== nextShowDesktopIcons;
 
-                        if (!workspacesChanged && !activeChanged && !runningAppsChanged) {
+                        if (!workspacesChanged && !activeChanged && !runningAppsChanged && !showDesktopIconsChanged) {
                                 return null;
                         }
 
                         return {
                                 workspaces: workspacesChanged ? nextWorkspaces : previousState.workspaces,
                                 activeWorkspace: nextActiveWorkspace,
-                                runningApps: runningAppsChanged ? nextRunningApps : previousState.runningApps
+                                runningApps: runningAppsChanged ? nextRunningApps : previousState.runningApps,
+                                showDesktopIcons: showDesktopIconsChanged ? nextShowDesktopIcons : previousState.showDesktopIcons
                         };
                 });
+        };
+
+        handleToggleDesktopIcons = () => {
+                if (typeof window === 'undefined') return;
+                const next = !this.state.showDesktopIcons;
+                window.dispatchEvent(new CustomEvent('desktop-icon-visibility', { detail: { visible: next } }));
+                this.setState({ showDesktopIcons: next });
         };
 
         dispatchTaskbarCommand = (detail) => {
@@ -338,7 +350,11 @@ export default class Navbar extends PureComponent {
                                                         }
                                                 >
                                                         <Status />
-                                                        <QuickSettings open={this.state.status_card} />
+                                                        <QuickSettings
+                                                                open={this.state.status_card}
+                                                                showDesktopIcons={this.state.showDesktopIcons}
+                                                                onToggleDesktopIcons={this.handleToggleDesktopIcons}
+                                                        />
                                                 </div>
                                         </div>
                                 </div>

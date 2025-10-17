@@ -5,11 +5,13 @@ import usePersistentState from '../../hooks/usePersistentState';
 
 interface Props {
   open: boolean;
+  showDesktopIcons: boolean;
+  onToggleDesktopIcons: () => void;
 }
 
 const transitionDurationMs = 200;
 
-const QuickSettings = ({ open }: Props) => {
+const QuickSettings = ({ open, showDesktopIcons, onToggleDesktopIcons }: Props) => {
   const [theme, setTheme] = usePersistentState('qs-theme', 'light');
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
@@ -152,6 +154,15 @@ const QuickSettings = ({ open }: Props) => {
       onToggle: () => setFocusMode(!focusMode),
       accent: 'from-amber-400/30 via-amber-500/10 to-transparent',
       icon: <FocusIcon />,
+    },
+    {
+      id: 'quick-settings-desktop-icons',
+      label: 'Desktop icons',
+      description: 'Show shortcuts on the workspace.',
+      value: showDesktopIcons,
+      onToggle: onToggleDesktopIcons,
+      accent: 'from-cyan-400/30 via-cyan-500/10 to-transparent',
+      icon: <DesktopIconsIcon />,
     },
   ];
 
@@ -544,6 +555,37 @@ const FocusIcon = () => (
       strokeWidth="1.5"
       strokeLinecap="round"
       strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const DesktopIconsIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="text-white"
+  >
+    <rect
+      x="4"
+      y="5"
+      width="16"
+      height="11"
+      rx="1.5"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    />
+    <path
+      d="M10 20h4"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+    <path
+      d="M7.5 8.5h2v2h-2zM11.5 8.5h2v2h-2zM15.5 8.5h2v2h-2z"
+      fill="currentColor"
     />
   </svg>
 );
