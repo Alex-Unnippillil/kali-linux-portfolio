@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, ReactNode } from "react";
-import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
+import type { Density, DensityPreferences } from "../../hooks/useSettings";
+import { useSettings, ACCENT_OPTIONS, DENSITY_BREAKPOINTS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
   resetSettings,
@@ -89,7 +90,9 @@ export default function Settings() {
     useKaliWallpaper,
     setUseKaliWallpaper,
     density,
+    densityBreakpoint,
     setDensity,
+    setDensityPreferences,
     reducedMotion,
     setReducedMotion,
     fontScale,
@@ -102,6 +105,10 @@ export default function Settings() {
     setTheme,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const activeDensityPreset =
+    DENSITY_BREAKPOINTS.find((preset) => preset.id === densityBreakpoint) ??
+    DENSITY_BREAKPOINTS[DENSITY_BREAKPOINTS.length - 1];
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
@@ -143,7 +150,10 @@ export default function Settings() {
       const parsed = JSON.parse(text);
       if (parsed.accent !== undefined) setAccent(parsed.accent);
       if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-      if (parsed.density !== undefined) setDensity(parsed.density);
+      if (parsed.densityPreferences !== undefined)
+        setDensityPreferences(parsed.densityPreferences as DensityPreferences);
+      else if (parsed.density !== undefined)
+        setDensity(parsed.density as Density, "all");
       if (parsed.reducedMotion !== undefined)
         setReducedMotion(parsed.reducedMotion);
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
@@ -166,7 +176,10 @@ export default function Settings() {
     window.localStorage.clear();
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
-    setDensity(defaults.density as any);
+    setDensityPreferences(
+      defaults.densityPreferences as DensityPreferences,
+    );
+    setDensity(defaults.density as Density, "all");
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
@@ -238,11 +251,11 @@ export default function Settings() {
 
               <SettingRow
                 label="Interface Density"
-                helperText="Compact mode tightens window padding for smaller displays or multitasking."
+                helperText={`Compact mode tightens window padding for smaller displays or multitasking. Applies to ${activeDensityPreset.label}; other display ranges keep their saved presets.`}
               >
                 <select
                   value={density}
-                  onChange={(e) => setDensity(e.target.value as any)}
+                  onChange={(e) => setDensity(e.target.value as Density)}
                   className="rounded border border-[var(--kali-panel-border)] bg-[var(--kali-panel)] px-3 py-2 text-[var(--color-text)] focus:border-kali-control focus:outline-none"
                 >
                   <option value="regular">Regular</option>

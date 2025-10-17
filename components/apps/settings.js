@@ -1,15 +1,17 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
+import { useSettings, ACCENT_OPTIONS, DENSITY_BREAKPOINTS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, densityBreakpoint, setDensity, setDensityPreferences, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
+
+    const activeDensityPreset = DENSITY_BREAKPOINTS.find((preset) => preset.id === densityBreakpoint) ?? DENSITY_BREAKPOINTS[DENSITY_BREAKPOINTS.length - 1];
 
     const changeBackgroundImage = (e) => {
         const name = e.currentTarget.dataset.path;
@@ -117,16 +119,21 @@ export function Settings() {
                 </div>
             </div>
             <div className="flex justify-center my-4">
-                <label htmlFor="density-select" className="mr-2 text-kali-text/80">Density:</label>
-                <select
-                    id="density-select"
-                    value={density}
-                    onChange={(e) => setDensity(e.target.value)}
-                    className="bg-kali-surface-muted text-kali-text px-2 py-1 rounded-md border border-kali-border/70 transition-colors hover:border-kali-focus/60 focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-surface"
-                >
-                    <option value="regular">Regular</option>
-                    <option value="compact">Compact</option>
-                </select>
+                <label htmlFor="density-select" className="mr-2 text-kali-text/80">Density ({activeDensityPreset.label}):</label>
+                <div className="flex flex-col items-start">
+                    <select
+                        id="density-select"
+                        value={density}
+                        onChange={(e) => setDensity(e.target.value)}
+                        className="bg-kali-surface-muted text-kali-text px-2 py-1 rounded-md border border-kali-border/70 transition-colors hover:border-kali-focus/60 focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-surface"
+                    >
+                        <option value="regular">Regular</option>
+                        <option value="compact">Compact</option>
+                    </select>
+                    <span className="mt-2 text-xs text-kali-text/70">
+                        Applies to {activeDensityPreset.label}. Other display ranges keep their saved presets.
+                    </span>
+                </div>
             </div>
             <div className="flex justify-center my-4">
                 <label htmlFor="font-scale-slider" className="mr-2 text-kali-text/80">Font Size:</label>
@@ -283,7 +290,8 @@ export function Settings() {
                         setAccent(defaults.accent);
                         setWallpaper(defaults.wallpaper);
                         setUseKaliWallpaper(defaults.useKaliWallpaper);
-                        setDensity(defaults.density);
+                        setDensityPreferences(defaults.densityPreferences);
+                        setDensity(defaults.density, 'all');
                         setReducedMotion(defaults.reducedMotion);
                         setLargeHitAreas(defaults.largeHitAreas);
                         setFontScale(defaults.fontScale);
@@ -312,7 +320,8 @@ export function Settings() {
                         if (parsed.accent !== undefined) setAccent(parsed.accent);
                         if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
                         if (parsed.useKaliWallpaper !== undefined) setUseKaliWallpaper(parsed.useKaliWallpaper);
-                        if (parsed.density !== undefined) setDensity(parsed.density);
+                        if (parsed.densityPreferences !== undefined) setDensityPreferences(parsed.densityPreferences);
+                        else if (parsed.density !== undefined) setDensity(parsed.density, 'all');
                         if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
                         if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
                         if (parsed.pongSpin !== undefined) setPongSpin(parsed.pongSpin);
