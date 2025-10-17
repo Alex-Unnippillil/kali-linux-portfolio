@@ -1,3 +1,5 @@
+'use client';
+
 import React, { PureComponent } from 'react';
 import Image from 'next/image';
 import Clock from '../util-components/clock';
