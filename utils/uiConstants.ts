@@ -8,3 +8,8 @@ export const DESKTOP_TOP_PADDING =
   WINDOW_TOP_MARGIN +
   WINDOW_TOP_INSET;
 export const SNAP_BOTTOM_INSET = NAVBAR_HEIGHT + 2;
+
+export const DESKTOP_ICON_VISIBILITY_STORAGE_KEY = 'desktop:show-icons';
+export const DESKTOP_ICON_VISIBILITY_EVENT = 'desktop-icons-visibility';
+export const DESKTOP_ICON_VISIBILITY_REQUEST_EVENT =
+  'desktop-icons-visibility-request';

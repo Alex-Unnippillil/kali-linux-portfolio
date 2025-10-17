@@ -2,12 +2,36 @@
 
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
+import {
+  DESKTOP_ICON_VISIBILITY_EVENT,
+  DESKTOP_ICON_VISIBILITY_REQUEST_EVENT,
+  DESKTOP_ICON_VISIBILITY_STORAGE_KEY,
+} from '../../utils/uiConstants';
 
 interface Props {
   open: boolean;
 }
 
 const transitionDurationMs = 200;
+
+const getInitialDesktopIconVisibility = () => {
+  if (typeof window === 'undefined') return true;
+  try {
+    const stored = window.localStorage.getItem(DESKTOP_ICON_VISIBILITY_STORAGE_KEY);
+    if (stored === null || typeof stored === 'undefined') {
+      return true;
+    }
+    if (stored === 'true') return true;
+    if (stored === 'false') return false;
+    const parsed = JSON.parse(stored);
+    if (typeof parsed === 'boolean') return parsed;
+    if (parsed === 'true') return true;
+    if (parsed === 'false') return false;
+    return true;
+  } catch {
+    return true;
+  }
+};
 
 const QuickSettings = ({ open }: Props) => {
   const [theme, setTheme] = usePersistentState('qs-theme', 'light');
@@ -27,10 +51,25 @@ const QuickSettings = ({ open }: Props) => {
     (value): value is number =>
       typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100,
   );
+  const [showDesktopIcons, setShowDesktopIcons] = useState<boolean>(
+    () => getInitialDesktopIconVisibility(),
+  );
   const panelRef = useRef<HTMLDivElement>(null);
   const [shouldRender, setShouldRender] = useState(open);
   const [isVisible, setIsVisible] = useState(open);
   const focusableTabIndex = open ? 0 : -1;
+
+  const toggleDesktopIcons = () => {
+    const next = !showDesktopIcons;
+    setShowDesktopIcons(next);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent(DESKTOP_ICON_VISIBILITY_REQUEST_EVENT, {
+          detail: { visible: next },
+        }),
+      );
+    }
+  };
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -39,6 +78,28 @@ const QuickSettings = ({ open }: Props) => {
   useEffect(() => {
     document.documentElement.classList.toggle('reduce-motion', reduceMotion);
   }, [reduceMotion]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleVisibility = (event: Event) => {
+      const detail = (event as CustomEvent<{ visible?: boolean }>).detail;
+      if (detail && typeof detail.visible === 'boolean') {
+        setShowDesktopIcons(detail.visible);
+      }
+    };
+
+    window.addEventListener(
+      DESKTOP_ICON_VISIBILITY_EVENT,
+      handleVisibility as EventListener,
+    );
+
+    return () => {
+      window.removeEventListener(
+        DESKTOP_ICON_VISIBILITY_EVENT,
+        handleVisibility as EventListener,
+      );
+    };
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -105,6 +166,11 @@ const QuickSettings = ({ open }: Props) => {
     { id: 'audio', label: 'Sound', value: sound ? 'On' : 'Muted' },
     { id: 'network', label: 'Network', value: online ? 'Online' : 'Offline' },
     { id: 'focus', label: 'Focus mode', value: focusMode ? 'On' : 'Off' },
+    {
+      id: 'desktop',
+      label: 'Desktop',
+      value: showDesktopIcons ? 'Icons visible' : 'Icons hidden',
+    },
     { id: 'volume', label: 'Volume', value: `${volume}%` },
   ];
 
@@ -117,6 +183,17 @@ const QuickSettings = ({ open }: Props) => {
     icon: ReactNode;
     accent: string;
   }> = [
+    {
+      id: 'quick-settings-desktop-icons',
+      label: 'Desktop icons',
+      description: showDesktopIcons
+        ? 'Hide shortcuts to declutter the desktop.'
+        : 'Show shortcuts on the desktop.',
+      value: showDesktopIcons,
+      onToggle: toggleDesktopIcons,
+      accent: 'from-cyan-400/30 via-cyan-500/10 to-transparent',
+      icon: <DesktopIcon />,
+    },
     {
       id: 'quick-settings-sound',
       label: 'Sound',
@@ -432,6 +509,44 @@ const QuickSettings = ({ open }: Props) => {
     </div>
   );
 };
+
+const DesktopIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="text-white"
+  >
+    <rect
+      x="3"
+      y="5"
+      width="18"
+      height="12"
+      rx="2"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M8 19h8"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M12 17v2"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <rect x="7" y="9" width="4" height="4" rx="1" fill="currentColor" />
+  </svg>
+);
 
 const SunIcon = () => (
   <svg
