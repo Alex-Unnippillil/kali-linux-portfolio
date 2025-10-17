@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Component } from 'react';
+import React, { Component, useCallback, useEffect, useRef } from 'react';
 import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
@@ -15,6 +15,7 @@ import {
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET } from '../../utils/uiConstants';
+import HintedTooltip from '../ui/HintedTooltip';
 
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
@@ -926,68 +927,196 @@ export default Window
 
 // Window's title bar
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick }) {
+    const hintContent = 'Drag the title bar to move the window. Drag to screen edges or corners to snap. Double-click to toggle maximize. Press Super+Arrow keys to snap with the keyboard.';
+
     return (
-        <div
-            className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
-            tabIndex={0}
-            role="button"
-            aria-grabbed={grabbed}
-            onKeyDown={onKeyDown}
-            onBlur={onBlur}
-            onPointerDown={onPointerDown}
-            onDoubleClick={onDoubleClick}
-        >
-            <div className="flex justify-center w-full text-sm font-bold">{title}</div>
-        </div>
+        <HintedTooltip storageKey="window-titlebar" content={hintContent}>
+            {({ getTriggerProps, hintId, showHintOnce }) => (
+                <div
+                    {...getTriggerProps({
+                        className: `${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`,
+                        tabIndex: 0,
+                        role: 'button',
+                        'aria-grabbed': grabbed,
+                        onKeyDown: (event) => {
+                            showHintOnce();
+                            if (typeof onKeyDown === 'function') {
+                                onKeyDown(event);
+                            }
+                        },
+                        onFocus: () => {
+                            showHintOnce();
+                        },
+                        onBlur,
+                        onPointerDown: (event) => {
+                            showHintOnce();
+                            if (typeof onPointerDown === 'function') {
+                                onPointerDown(event);
+                            }
+                        },
+                        onDoubleClick,
+                        'aria-describedby': hintId,
+                    })}
+                >
+                    <div className="flex justify-center w-full text-sm font-bold">{title}</div>
+                </div>
+            )}
+        </HintedTooltip>
     )
 }
 
 // Window's Borders
-export class WindowYBorder extends Component {
-    componentDidMount() {
-        // Use the browser's Image constructor rather than the imported Next.js
-        // Image component to avoid runtime errors when running in tests.
+export function WindowYBorder({ resize }) {
+    const dragImageRef = useRef(null);
 
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
-    }
-    render() {
-            return (
-                <div
-                    className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    draggable
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
-                ></div>
-            )
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        const img = new window.Image(0, 0);
+        img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        img.style.opacity = 0;
+        dragImageRef.current = img;
+        return () => {
+            dragImageRef.current = null;
+        };
+    }, []);
+
+    const handleDragStart = useCallback((event) => {
+        if (event && event.dataTransfer && dragImageRef.current) {
+            event.dataTransfer.setDragImage(dragImageRef.current, 0, 0);
         }
-    }
+    }, [dragImageRef]);
 
-export class WindowXBorder extends Component {
-    componentDidMount() {
-        // Use the global Image constructor instead of Next.js Image component
+    const hintContent = 'Drag the side edge to resize width. Press Shift+Left or Shift+Right while the window is focused to resize with the keyboard.';
 
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
-    }
-    render() {
-            return (
+    return (
+        <HintedTooltip storageKey="window-resize-horizontal" content={hintContent}>
+            {({ getTriggerProps, hintId, showHintOnce }) => (
                 <div
-                    className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
-                    draggable
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
+                    {...getTriggerProps({
+                        className: `${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`,
+                        draggable: true,
+                        role: 'separator',
+                        tabIndex: 0,
+                        'aria-orientation': 'vertical',
+                        'aria-label': 'Resize window width',
+                        'aria-describedby': hintId,
+                        onDragStart: (event) => {
+                            handleDragStart(event);
+                            showHintOnce();
+                        },
+                        onDrag: resize,
+                        onPointerDown: () => showHintOnce(),
+                        onFocus: () => showHintOnce(),
+                    })}
                 ></div>
-            )
+            )}
+        </HintedTooltip>
+    )
+}
+
+export function WindowXBorder({ resize }) {
+    const dragImageRef = useRef(null);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        const img = new window.Image(0, 0);
+        img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        img.style.opacity = 0;
+        dragImageRef.current = img;
+        return () => {
+            dragImageRef.current = null;
+        };
+    }, []);
+
+    const handleDragStart = useCallback((event) => {
+        if (event && event.dataTransfer && dragImageRef.current) {
+            event.dataTransfer.setDragImage(dragImageRef.current, 0, 0);
         }
-    }
+    }, [dragImageRef]);
+
+    const hintContent = 'Drag the bottom edge to resize height. Press Shift+Up or Shift+Down while the window is focused to resize with the keyboard.';
+
+    return (
+        <HintedTooltip storageKey="window-resize-vertical" content={hintContent}>
+            {({ getTriggerProps, hintId, showHintOnce }) => (
+                <div
+                    {...getTriggerProps({
+                        className: `${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`,
+                        draggable: true,
+                        role: 'separator',
+                        tabIndex: 0,
+                        'aria-orientation': 'horizontal',
+                        'aria-label': 'Resize window height',
+                        'aria-describedby': hintId,
+                        onDragStart: (event) => {
+                            handleDragStart(event);
+                            showHintOnce();
+                        },
+                        onDrag: resize,
+                        onPointerDown: () => showHintOnce(),
+                        onFocus: () => showHintOnce(),
+                    })}
+                ></div>
+            )}
+        </HintedTooltip>
+    )
+}
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
+    const maximizeHint = 'Click to maximize or restore the window. Double-click the title bar or press Super+Up to maximize. Press Super+Down to restore.';
+
+    const renderMaximizeButton = () => {
+        if (!props.allowMaximize) {
+            return null;
+        }
+
+        const isMaximised = !!props.isMaximised;
+        const ariaLabel = isMaximised ? 'Window restore' : 'Window maximize';
+        const iconSrc = isMaximised
+            ? '/themes/Yaru/window/window-restore-symbolic.svg'
+            : '/themes/Yaru/window/window-maximize-symbolic.svg';
+        const iconAlt = isMaximised ? 'Kali window restore' : 'Kali window maximize';
+
+        return (
+            <HintedTooltip storageKey="window-maximize" content={maximizeHint}>
+                {({ getTriggerProps, hintId, showHintOnce }) => (
+                    <button
+                        {...getTriggerProps({
+                            type: 'button',
+                            'aria-label': ariaLabel,
+                            className: `${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`,
+                            onClick: (event) => {
+                                if (typeof props.maximize === 'function') {
+                                    props.maximize(event);
+                                }
+                            },
+                            onPointerDown: () => showHintOnce(),
+                            onKeyDown: (event) => {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                    showHintOnce();
+                                }
+                            },
+                            onFocus: () => showHintOnce(),
+                            'aria-describedby': hintId,
+                        })}
+                    >
+                        <NextImage
+                            src={iconSrc}
+                            alt={iconAlt}
+                            className="h-4 w-4 inline"
+                            width={16}
+                            height={16}
+                            sizes="16px"
+                        />
+                    </button>
+                )}
+            </HintedTooltip>
+        );
+    };
+
     return (
         <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[8.25rem]`}>
             {pipSupported && props.pip && (
@@ -1022,42 +1151,7 @@ export function WindowEditButtons(props) {
                     sizes="16px"
                 />
             </button>
-            {props.allowMaximize && (
-                props.isMaximised
-                    ? (
-                        <button
-                            type="button"
-                            aria-label="Window restore"
-                            className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
-                            onClick={props.maximize}
-                        >
-                            <NextImage
-                                src="/themes/Yaru/window/window-restore-symbolic.svg"
-                                alt="Kali window restore"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
-                        </button>
-                    ) : (
-                        <button
-                            type="button"
-                            aria-label="Window maximize"
-                            className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
-                            onClick={props.maximize}
-                        >
-                            <NextImage
-                                src="/themes/Yaru/window/window-maximize-symbolic.svg"
-                                alt="Kali window maximize"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
-                        </button>
-                    )
-            )}
+            {renderMaximizeButton()}
             <button
                 type="button"
                 id={`close-${props.id}`}
