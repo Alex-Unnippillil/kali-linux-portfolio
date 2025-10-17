@@ -932,6 +932,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
+            aria-keyshortcuts="Space Enter ArrowLeft ArrowRight ArrowUp ArrowDown"
             onKeyDown={onKeyDown}
             onBlur={onBlur}
             onPointerDown={onPointerDown}
@@ -1010,6 +1011,7 @@ export function WindowEditButtons(props) {
             <button
                 type="button"
                 aria-label="Window minimize"
+                aria-keyshortcuts="Meta+ArrowDown"
                 className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
                 onClick={props.minimize}
             >
@@ -1028,6 +1030,7 @@ export function WindowEditButtons(props) {
                         <button
                             type="button"
                             aria-label="Window restore"
+                            aria-keyshortcuts="Meta+ArrowDown"
                             className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
                             onClick={props.maximize}
                         >
@@ -1044,6 +1047,7 @@ export function WindowEditButtons(props) {
                         <button
                             type="button"
                             aria-label="Window maximize"
+                            aria-keyshortcuts="Meta+ArrowUp"
                             className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
                             onClick={props.maximize}
                         >
@@ -1062,6 +1066,7 @@ export function WindowEditButtons(props) {
                 type="button"
                 id={`close-${props.id}`}
                 aria-label="Window close"
+                aria-keyshortcuts="Escape"
                 className={`${styles.windowControlButton} mx-1 cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6`}
                 onClick={props.close}
             >
