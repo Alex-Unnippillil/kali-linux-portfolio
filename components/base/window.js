@@ -44,13 +44,31 @@ const getSnapLabel = (position) => {
     return SNAP_LABELS[position] || 'Snap window';
 };
 
+const MOVEMENT_STEP_PX = 10;
+
+const KEYBOARD_SNAP_CYCLES = {
+    ArrowLeft: ['left', 'top-left', 'bottom-left'],
+    ArrowRight: ['right', 'top-right', 'bottom-right'],
+    ArrowUp: ['top'],
+};
+
+const KEYBOARD_SHIFT_SNAP_CYCLES = {
+    ArrowLeft: ['top-left', 'bottom-left', 'left'],
+    ArrowRight: ['top-right', 'bottom-right', 'right'],
+    ArrowUp: ['top-left', 'top-right', 'top'],
+    ArrowDown: ['bottom-left', 'bottom-right'],
+};
+
 const normalizeRightCornerSnap = (candidate, regions) => {
     if (!candidate) return null;
     const { position } = candidate;
     if (position === 'top-right' || position === 'bottom-right') {
-        const rightRegion = regions?.right;
-        if (rightRegion && rightRegion.width > 0 && rightRegion.height > 0) {
-            return { position: 'right', preview: rightRegion };
+        const cornerRegion = regions?.[position];
+        if (!cornerRegion || cornerRegion.width <= 0 || cornerRegion.height <= 0) {
+            const rightRegion = regions?.right;
+            if (rightRegion && rightRegion.width > 0 && rightRegion.height > 0) {
+                return { position: 'right', preview: rightRegion };
+            }
         }
     }
     return candidate;
@@ -122,11 +140,13 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            liveMessage: '',
         }
         this.windowRef = React.createRef();
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this.liveRegionTimeout = null;
     }
 
     notifySizeChange = () => {
@@ -134,6 +154,44 @@ export class Window extends Component {
             const { width, height } = this.state;
             this.props.onSizeChange(width, height);
         }
+    }
+
+    announce = (message) => {
+        if (this.liveRegionTimeout) {
+            clearTimeout(this.liveRegionTimeout);
+            this.liveRegionTimeout = null;
+        }
+        if (!message) {
+            this.setState({ liveMessage: '' });
+            return;
+        }
+        this.setState({ liveMessage: '' }, () => {
+            this.liveRegionTimeout = setTimeout(() => {
+                this.setState({ liveMessage: message });
+                this.liveRegionTimeout = null;
+            }, 60);
+        });
+    }
+
+    announceWindowPosition = (x, y) => {
+        const roundedX = Math.round(x);
+        const roundedY = Math.round(y);
+        this.announce(`Window moved to ${roundedX}px from the left and ${roundedY}px from the top.`);
+    }
+
+    announceWindowSizeFromPercent = (widthPercent, heightPercent) => {
+        if (typeof window === 'undefined') return;
+        const viewportWidth = window.innerWidth || 0;
+        const viewportHeight = window.innerHeight || 0;
+        if (!viewportWidth || !viewportHeight) return;
+        const widthPx = Math.round((widthPercent / 100) * viewportWidth);
+        const heightPx = Math.round((heightPercent / 100) * viewportHeight);
+        this.announce(`Window size ${widthPx}px by ${heightPx}px.`);
+    }
+
+    announceSnap = (position) => {
+        const label = getSnapLabel(position);
+        this.announce(label);
     }
 
     componentDidMount() {
@@ -168,6 +226,10 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+        if (this.liveRegionTimeout) {
+            clearTimeout(this.liveRegionTimeout);
+            this.liveRegionTimeout = null;
         }
     }
 
@@ -307,6 +369,26 @@ export class Window extends Component {
         return null;
     }
 
+    getCurrentTranslate = () => {
+        const node = this.getWindowNode();
+        if (!node) {
+            return { x: 0, y: this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET };
+        }
+        const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
+        if (match) {
+            const parsedX = parseFloat(match[1]);
+            const parsedY = parseFloat(match[2]);
+            if (Number.isFinite(parsedX) && Number.isFinite(parsedY)) {
+                return { x: parsedX, y: parsedY };
+            }
+        }
+        const storedX = parseFloat(node.style.getPropertyValue('--window-transform-x'));
+        const storedY = parseFloat(node.style.getPropertyValue('--window-transform-y'));
+        const fallbackX = Number.isFinite(storedX) ? storedX : 0;
+        const fallbackY = Number.isFinite(storedY) ? storedY : (this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET);
+        return { x: fallbackX, y: fallbackY };
+    }
+
     setTransformMotionPreset = (node, preset) => {
         if (!node) return;
         const durationVars = {
@@ -357,6 +439,90 @@ export class Window extends Component {
 
     changeCursorToDefault = () => {
         this.setState({ cursorType: "cursor-default", grabbed: false })
+    }
+
+    prepareForManualAdjustment = ({ unsnap = false } = {}) => {
+        if (this.state.maximized) {
+            this.restoreWindow();
+            return false;
+        }
+        if (unsnap && this.state.snapped) {
+            this.setState({ snapped: null, preMaximizeSize: null, lastSize: null });
+        }
+        return true;
+    }
+
+    moveWindowByKeyboard = (key) => {
+        if (!this.prepareForManualAdjustment({ unsnap: true })) return;
+        const deltas = {
+            ArrowLeft: { dx: -MOVEMENT_STEP_PX, dy: 0 },
+            ArrowRight: { dx: MOVEMENT_STEP_PX, dy: 0 },
+            ArrowUp: { dx: 0, dy: -MOVEMENT_STEP_PX },
+            ArrowDown: { dx: 0, dy: MOVEMENT_STEP_PX },
+        };
+        const delta = deltas[key];
+        if (!delta) return;
+        const node = this.getWindowNode();
+        if (!node) return;
+        const { x, y } = this.getCurrentTranslate();
+        const topBound = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const maxX = this.state.parentSize.width;
+        const maxY = topBound + this.state.parentSize.height;
+        const nextX = clamp(x + delta.dx, 0, maxX);
+        const nextY = clamp(y + delta.dy, topBound, maxY);
+        node.style.transform = `translate(${nextX}px, ${nextY}px)`;
+        this.setWinowsPosition();
+        this.announceWindowPosition(nextX, nextY);
+    }
+
+    resizeWindowByPixels = (key) => {
+        if (this.props.resizable === false) return;
+        if (!this.prepareForManualAdjustment()) return;
+        if (typeof window === 'undefined') return;
+        const viewportWidth = window.innerWidth || 0;
+        const viewportHeight = window.innerHeight || 0;
+        if (!viewportWidth || !viewportHeight) return;
+        const widthDirection = key === 'ArrowLeft' ? -1 : key === 'ArrowRight' ? 1 : 0;
+        const heightDirection = key === 'ArrowUp' ? -1 : key === 'ArrowDown' ? 1 : 0;
+        if (widthDirection === 0 && heightDirection === 0) return;
+        const widthDelta = widthDirection ? (widthDirection * MOVEMENT_STEP_PX / viewportWidth) * 100 : 0;
+        const heightDelta = heightDirection ? (heightDirection * MOVEMENT_STEP_PX / viewportHeight) * 100 : 0;
+        this.setState((prev) => {
+            let nextWidth = prev.width;
+            let nextHeight = prev.height;
+            if (widthDelta) {
+                nextWidth = clamp(prev.width + widthDelta, 20, 100);
+            }
+            if (heightDelta) {
+                nextHeight = clamp(prev.height + heightDelta, 20, 100);
+            }
+            if (nextWidth === prev.width && nextHeight === prev.height) {
+                return null;
+            }
+            return {
+                width: nextWidth,
+                height: nextHeight,
+                preMaximizeSize: null,
+                snapped: null,
+                lastSize: null,
+            };
+        }, () => {
+            this.resizeBoundries();
+            this.notifySizeChange();
+            this.announceWindowSizeFromPercent(this.state.width, this.state.height);
+        });
+    }
+
+    getNextSnapPosition = (key, shiftKey) => {
+        const cycle = shiftKey ? KEYBOARD_SHIFT_SNAP_CYCLES[key] : KEYBOARD_SNAP_CYCLES[key];
+        if (!cycle || !cycle.length) return null;
+        const current = this.state.snapped;
+        const currentIndex = cycle.indexOf(current);
+        if (currentIndex === -1) {
+            return cycle[0];
+        }
+        const nextIndex = (currentIndex + 1) % cycle.length;
+        return cycle[nextIndex];
     }
 
     getSnapGrid = () => {
@@ -447,19 +613,18 @@ export class Window extends Component {
             }, () => {
                 this.resizeBoundries();
                 this.notifySizeChange();
+                this.announce('Window returned to floating position.');
             });
         } else {
             this.setState({ snapped: null, preMaximizeSize: null }, () => {
                 this.resizeBoundries();
                 this.notifySizeChange();
+                this.announce('Window returned to floating position.');
             });
         }
     }
 
     snapWindow = (position) => {
-        const resolvedPosition = (position === 'top-right' || position === 'bottom-right')
-            ? 'right'
-            : position;
         this.setWinowsPosition();
         this.focusWindow();
         const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
@@ -468,7 +633,7 @@ export class Window extends Component {
         if (!viewportWidth || !viewportHeight) return;
         const snapBottomInset = measureSnapBottomInset();
         const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset, snapBottomInset);
-        const region = regions[resolvedPosition];
+        const region = regions[position];
         if (!region) return;
         const { width, height } = this.state;
         const node = this.getWindowNode();
@@ -479,7 +644,7 @@ export class Window extends Component {
         this.setState({
             snapPreview: null,
             snapPosition: null,
-            snapped: resolvedPosition,
+            snapped: position,
             lastSize: { width, height },
             width: percentOf(region.width, viewportWidth),
             height: percentOf(region.height, viewportHeight),
@@ -487,6 +652,7 @@ export class Window extends Component {
         }, () => {
             this.resizeBoundries();
             this.notifySizeChange();
+            this.announceSnap(position);
         });
     }
 
@@ -727,11 +893,15 @@ export class Window extends Component {
                     const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
                     let x = match ? parseFloat(match[1]) : 0;
                     let y = match ? parseFloat(match[2]) : 0;
-                    x += dx;
-                    y += dy;
+                    const topBound = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+                    const maxX = this.state.parentSize.width;
+                    const maxY = topBound + this.state.parentSize.height;
+                    x = clamp(x + dx, 0, maxX);
+                    y = clamp(y + dy, topBound, maxY);
                     node.style.transform = `translate(${x}px, ${y}px)`;
                     this.checkSnapPreview();
                     this.setWinowsPosition();
+                    this.announceWindowPosition(x, y);
                 }
             }
         }
@@ -744,48 +914,73 @@ export class Window extends Component {
     }
 
     handleKeyDown = (e) => {
-        if (e.key === 'Escape') {
+        const { key } = e;
+        const isArrowKey = key === 'ArrowLeft' || key === 'ArrowRight' || key === 'ArrowUp' || key === 'ArrowDown';
+        if (key === 'Escape') {
             this.closeWindow();
-        } else if (e.key === 'Tab') {
+        } else if (key === 'Tab') {
+            this.focusWindow();
+        } else if ((e.ctrlKey || e.metaKey) && !e.altKey && isArrowKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.shiftKey) {
+                this.resizeWindowByPixels(key);
+            } else {
+                this.moveWindowByKeyboard(key);
+            }
             this.focusWindow();
         } else if (e.altKey) {
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
+            if (!isArrowKey) return;
+            if (this.state.maximized) {
+                this.restoreWindow();
+                return;
+            }
+            e.preventDefault();
+            e.stopPropagation();
+            if (key === 'ArrowDown' && !e.shiftKey) {
                 this.unsnapWindow();
-            } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('left');
-            } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('right');
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('top');
+            } else {
+                const nextSnap = this.getNextSnapPosition(key, e.shiftKey);
+                if (nextSnap) {
+                    this.snapWindow(nextSnap);
+                } else if (e.shiftKey && key === 'ArrowDown') {
+                    this.unsnapWindow();
+                }
             }
             this.focusWindow();
-        } else if (e.shiftKey) {
+        } else if (e.shiftKey && isArrowKey) {
+            if (!this.prepareForManualAdjustment()) return;
+            if (this.props.resizable === false) return;
             const step = 1;
-            if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ width: Math.max(prev.width - step, 20), preMaximizeSize: null }), this.resizeBoundries);
-            } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ width: Math.min(prev.width + step, 100), preMaximizeSize: null }), this.resizeBoundries);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ height: Math.max(prev.height - step, 20), preMaximizeSize: null }), this.resizeBoundries);
-            } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ height: Math.min(prev.height + step, 100), preMaximizeSize: null }), this.resizeBoundries);
-            }
+            e.preventDefault();
+            e.stopPropagation();
+            this.setState((prev) => {
+                let nextWidth = prev.width;
+                let nextHeight = prev.height;
+                if (key === 'ArrowLeft') {
+                    nextWidth = Math.max(prev.width - step, 20);
+                } else if (key === 'ArrowRight') {
+                    nextWidth = Math.min(prev.width + step, 100);
+                } else if (key === 'ArrowUp') {
+                    nextHeight = Math.max(prev.height - step, 20);
+                } else if (key === 'ArrowDown') {
+                    nextHeight = Math.min(prev.height + step, 100);
+                }
+                if (nextWidth === prev.width && nextHeight === prev.height) {
+                    return null;
+                }
+                return {
+                    width: nextWidth,
+                    height: nextHeight,
+                    preMaximizeSize: null,
+                    snapped: null,
+                    lastSize: null,
+                };
+            }, () => {
+                this.resizeBoundries();
+                this.notifySizeChange();
+                this.announceWindowSizeFromPercent(this.state.width, this.state.height);
+            });
             this.focusWindow();
         }
     }
@@ -793,10 +988,12 @@ export class Window extends Component {
     handleSuperArrow = (e) => {
         const key = e.detail;
         if (key === 'ArrowLeft') {
-            if (this.state.snapped === 'left') this.unsnapWindow();
+            const isLeftSnap = this.state.snapped === 'left' || this.state.snapped === 'top-left' || this.state.snapped === 'bottom-left';
+            if (isLeftSnap) this.unsnapWindow();
             else this.snapWindow('left');
         } else if (key === 'ArrowRight') {
-            if (this.state.snapped === 'right') this.unsnapWindow();
+            const isRightSnap = this.state.snapped === 'right' || this.state.snapped === 'top-right' || this.state.snapped === 'bottom-right';
+            if (isRightSnap) this.unsnapWindow();
             else this.snapWindow('right');
         } else if (key === 'ArrowUp') {
             this.maximizeWindow();
@@ -823,6 +1020,57 @@ export class Window extends Component {
                 : (this.state.snapped
                     ? `snapped-${this.state.snapped}`
                     : 'active'));
+
+        const combineShortcuts = (list = []) => Array.from(new Set(list.filter(Boolean))).join(' ');
+        const baseTitlebarShortcuts = [
+            'Space',
+            'Enter',
+            'Alt+ArrowLeft',
+            'Alt+ArrowRight',
+            'Alt+ArrowUp',
+            'Alt+ArrowDown',
+            'Alt+Shift+ArrowLeft',
+            'Alt+Shift+ArrowRight',
+            'Alt+Shift+ArrowUp',
+            'Alt+Shift+ArrowDown',
+            'Ctrl+ArrowLeft',
+            'Ctrl+ArrowRight',
+            'Ctrl+ArrowUp',
+            'Ctrl+ArrowDown',
+        ];
+        if (this.props.resizable !== false) {
+            baseTitlebarShortcuts.push(
+                'Shift+ArrowLeft',
+                'Shift+ArrowRight',
+                'Shift+ArrowUp',
+                'Shift+ArrowDown',
+                'Ctrl+Shift+ArrowLeft',
+                'Ctrl+Shift+ArrowRight',
+                'Ctrl+Shift+ArrowUp',
+                'Ctrl+Shift+ArrowDown',
+            );
+        }
+        const titlebarShortcuts = combineShortcuts(baseTitlebarShortcuts);
+
+        const controlShortcuts = {
+            minimize: combineShortcuts([
+                'Ctrl+ArrowDown',
+                'Ctrl+Shift+ArrowDown',
+                'Alt+ArrowDown',
+            ]),
+            maximize: combineShortcuts([
+                'Alt+ArrowUp',
+                'Ctrl+ArrowUp',
+                'Ctrl+Shift+ArrowUp',
+            ]),
+            restore: combineShortcuts([
+                'Alt+ArrowDown',
+                'Ctrl+ArrowDown',
+            ]),
+            close: combineShortcuts([
+                'Escape',
+            ]),
+        };
 
         return (
             <>
@@ -899,6 +1147,7 @@ export class Window extends Component {
                             grabbed={this.state.grabbed}
                             onPointerDown={this.focusWindow}
                             onDoubleClick={this.handleTitleBarDoubleClick}
+                            shortcutHints={titlebarShortcuts}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -908,7 +1157,9 @@ export class Window extends Component {
                             id={this.id}
                             allowMaximize={this.props.allowMaximize !== false}
                             pip={() => this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
+                            shortcuts={controlShortcuts}
                         />
+                        <div className="sr-only" aria-live="polite" aria-atomic="true">{this.state.liveMessage}</div>
                         {(this.id === "settings"
                             ? <Settings />
                             : <WindowMainScreen screen={this.props.screen} title={this.props.title}
@@ -925,13 +1176,14 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, shortcutHints }) {
     return (
         <div
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
+            aria-keyshortcuts={shortcutHints || undefined}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
             onPointerDown={onPointerDown}
@@ -987,6 +1239,7 @@ export class WindowXBorder extends Component {
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
+    const shortcuts = props.shortcuts || {};
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
     return (
         <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[8.25rem]`}>
@@ -996,6 +1249,7 @@ export function WindowEditButtons(props) {
                     aria-label="Window pin"
                     className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
                     onClick={togglePin}
+                    aria-keyshortcuts={shortcuts.pin || undefined}
                 >
                     <NextImage
                         src="/themes/Yaru/window/window-pin-symbolic.svg"
@@ -1012,6 +1266,7 @@ export function WindowEditButtons(props) {
                 aria-label="Window minimize"
                 className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
                 onClick={props.minimize}
+                aria-keyshortcuts={shortcuts.minimize || undefined}
             >
                 <NextImage
                     src="/themes/Yaru/window/window-minimize-symbolic.svg"
@@ -1030,6 +1285,7 @@ export function WindowEditButtons(props) {
                             aria-label="Window restore"
                             className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
                             onClick={props.maximize}
+                            aria-keyshortcuts={shortcuts.restore || undefined}
                         >
                             <NextImage
                                 src="/themes/Yaru/window/window-restore-symbolic.svg"
@@ -1046,6 +1302,7 @@ export function WindowEditButtons(props) {
                             aria-label="Window maximize"
                             className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
                             onClick={props.maximize}
+                            aria-keyshortcuts={shortcuts.maximize || undefined}
                         >
                             <NextImage
                                 src="/themes/Yaru/window/window-maximize-symbolic.svg"
@@ -1064,6 +1321,7 @@ export function WindowEditButtons(props) {
                 aria-label="Window close"
                 className={`${styles.windowControlButton} mx-1 cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6`}
                 onClick={props.close}
+                aria-keyshortcuts={shortcuts.close || undefined}
             >
                 <NextImage
                     src="/themes/Yaru/window/window-close-symbolic.svg"

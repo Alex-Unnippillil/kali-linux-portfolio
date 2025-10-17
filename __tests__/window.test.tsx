@@ -378,15 +378,16 @@ describe('Window snapping preview', () => {
       ref.current!.handleDrag();
     });
 
-    expect(ref.current!.state.snapPosition).toBe('right');
+    expect(ref.current!.state.snapPosition).toBe('bottom-right');
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toHaveStyle(`left: ${window.innerWidth / 2}px`);
+    const bottomTop = measureWindowTopOffset() + computeAvailableHeightPx() / 2;
     expect(preview).toHaveStyle(
-      `top: ${measureWindowTopOffset()}px`
+      `top: ${bottomTop}px`
     );
-    expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx()}px`);
-    expect(preview).toHaveAttribute('aria-label', 'Snap right half');
-    expect(within(preview).getByText('Snap right half')).toBeInTheDocument();
+    expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx() / 2}px`);
+    expect(preview).toHaveAttribute('aria-label', 'Snap bottom-right quarter');
+    expect(within(preview).getByText('Snap bottom-right quarter')).toBeInTheDocument();
   });
 });
 
@@ -602,13 +603,13 @@ describe('Window snapping finalize and release', () => {
       ref.current!.handleStop();
     });
 
-    expect(ref.current!.state.snapped).toBe('right');
+    expect(ref.current!.state.snapped).toBe('bottom-right');
     expect(ref.current!.state.width).toBeCloseTo(50, 2);
-    const expectedHeight = computeSnappedHeightPercent();
-    expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 5);
+    const quarterHeight = computeQuarterHeightPercent();
+    expect(ref.current!.state.height).toBeCloseTo(quarterHeight, 5);
     const expectedX = window.innerWidth / 2;
-    const expectedY = getSnapTranslateTop();
-    expect(winEl.style.transform).toBe(`translate(${expectedX}px, ${expectedY}px)`);
+    const bottomTop = measureWindowTopOffset() + computeAvailableHeightPx() / 2;
+    expect(winEl.style.transform).toBe(`translate(${expectedX}px, ${bottomTop}px)`);
   });
 
   it('releases snap with Alt+ArrowDown restoring size', () => {
@@ -769,11 +770,156 @@ describe('Window keyboard dragging', () => {
     fireEvent.keyDown(handle, { key: 'ArrowRight' });
 
     const winEl = document.getElementById('test-window')!;
-    expect(winEl.style.transform).toBe('translate(10px, 0px)');
+    const snapTop = getSnapTranslateTop();
+    expect(winEl.style.transform).toBe(`translate(10px, ${snapTop}px)`);
     expect(handle).toHaveAttribute('aria-grabbed', 'true');
 
     fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
     expect(handle).toHaveAttribute('aria-grabbed', 'false');
+  });
+});
+
+describe('Window keyboard shortcuts', () => {
+  it('cycles snap positions with repeated Alt+ArrowLeft presses', () => {
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+
+    act(() => {
+      fireEvent.keyDown(winEl, { key: 'ArrowLeft', altKey: true });
+    });
+    expect(ref.current!.state.snapped).toBe('left');
+
+    act(() => {
+      fireEvent.keyDown(winEl, { key: 'ArrowLeft', altKey: true });
+    });
+    expect(ref.current!.state.snapped).toBe('top-left');
+
+    act(() => {
+      fireEvent.keyDown(winEl, { key: 'ArrowLeft', altKey: true });
+    });
+    expect(ref.current!.state.snapped).toBe('bottom-left');
+
+    act(() => {
+      fireEvent.keyDown(winEl, { key: 'ArrowLeft', altKey: true });
+    });
+    expect(ref.current!.state.snapped).toBe('left');
+  });
+
+  it('supports corner snapping with Alt+Shift combos', () => {
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+
+    act(() => {
+      fireEvent.keyDown(winEl, { key: 'ArrowRight', altKey: true, shiftKey: true });
+    });
+    expect(ref.current!.state.snapped).toBe('top-right');
+
+    act(() => {
+      fireEvent.keyDown(winEl, { key: 'ArrowRight', altKey: true, shiftKey: true });
+    });
+    expect(ref.current!.state.snapped).toBe('bottom-right');
+
+    act(() => {
+      fireEvent.keyDown(winEl, { key: 'ArrowUp', altKey: true, shiftKey: true });
+    });
+    expect(ref.current!.state.snapped).toBe('top-left');
+  });
+
+  it('moves window with Ctrl+Arrow and announces position', () => {
+    jest.useFakeTimers();
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+
+    act(() => {
+      fireEvent.keyDown(winEl, { key: 'ArrowRight', ctrlKey: true });
+    });
+
+    const topBound = measureWindowTopOffset();
+    expect(winEl.style.transform).toBe(`translate(10px, ${topBound}px)`);
+
+    act(() => {
+      jest.advanceTimersByTime(100);
+    });
+    expect(ref.current!.state.liveMessage).toBe(
+      `Window moved to 10px from the left and ${Math.round(topBound)}px from the top.`,
+    );
+    jest.useRealTimers();
+  });
+
+  it('resizes window with Ctrl+Shift+Arrow and updates live region', () => {
+    jest.useFakeTimers();
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+
+    act(() => {
+      fireEvent.keyDown(winEl, { key: 'ArrowRight', ctrlKey: true, shiftKey: true });
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(100);
+    });
+
+    const widthPercent = ref.current!.state.width;
+    const heightPercent = ref.current!.state.height;
+    const expectedWidth = Math.round((widthPercent / 100) * window.innerWidth);
+    const expectedHeight = Math.round((heightPercent / 100) * window.innerHeight);
+
+    expect(ref.current!.state.liveMessage).toBe(
+      `Window size ${expectedWidth}px by ${expectedHeight}px.`,
+    );
+    jest.useRealTimers();
   });
 });
 
