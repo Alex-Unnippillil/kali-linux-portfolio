@@ -127,6 +127,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._floatingPosition = { x: this.startX, y: this.startY };
     }
 
     notifySizeChange = () => {
@@ -307,6 +308,63 @@ export class Window extends Component {
         return null;
     }
 
+    roundToPixel = (value) => {
+        if (!Number.isFinite(value)) return 0;
+        return Math.round(value);
+    }
+
+    formatPixelValue = (value) => `${this.roundToPixel(value)}px`
+
+    parsePixelValue = (value, fallback = 0) => {
+        if (typeof value !== 'string') {
+            return Number.isFinite(value) ? value : fallback;
+        }
+        const parsed = parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : fallback;
+    }
+
+    getStoredWindowPosition = (node) => {
+        const fallbackX = this._floatingPosition?.x ?? this.startX ?? 0;
+        const fallbackY = this._floatingPosition?.y ?? this.startY ?? 0;
+        if (!node) {
+            return { x: fallbackX, y: fallbackY };
+        }
+        const inlineX = node.style.getPropertyValue('--window-x');
+        const inlineY = node.style.getPropertyValue('--window-y');
+        let resolvedX = inlineX ? inlineX.trim() : inlineX;
+        let resolvedY = inlineY ? inlineY.trim() : inlineY;
+        if (typeof window !== 'undefined') {
+            const computed = window.getComputedStyle(node);
+            if (!resolvedX) {
+                resolvedX = computed.getPropertyValue('--window-x');
+            }
+            if (!resolvedY) {
+                resolvedY = computed.getPropertyValue('--window-y');
+            }
+            resolvedX = resolvedX ? resolvedX.trim() : resolvedX;
+            resolvedY = resolvedY ? resolvedY.trim() : resolvedY;
+        }
+        return {
+            x: this.parsePixelValue(resolvedX, fallbackX),
+            y: this.parsePixelValue(resolvedY, fallbackY),
+        };
+    }
+
+    setWindowPositionVariables = (node, x, y, { persist = false } = {}) => {
+        if (!node) return;
+        const resolvedX = Number.isFinite(x) ? x : 0;
+        const resolvedY = Number.isFinite(y) ? y : 0;
+        node.style.setProperty('--window-x', this.formatPixelValue(resolvedX));
+        node.style.setProperty('--window-y', this.formatPixelValue(resolvedY));
+        node.style.removeProperty('transform');
+        if (persist) {
+            this._floatingPosition = {
+                x: this.roundToPixel(resolvedX),
+                y: this.roundToPixel(resolvedY),
+            };
+        }
+    }
+
     setTransformMotionPreset = (node, preset) => {
         if (!node) return;
         const durationVars = {
@@ -417,11 +475,12 @@ export class Window extends Component {
         const relativeY = rect.y - topInset;
         const snappedRelativeY = this.snapToGrid(relativeY, 'y');
         const absoluteY = clampWindowTopPosition(snappedRelativeY + topInset, topInset);
-        node.style.setProperty('--window-transform-x', `${snappedX.toFixed(1)}px`);
-        node.style.setProperty('--window-transform-y', `${absoluteY.toFixed(1)}px`);
+        const roundedX = this.roundToPixel(snappedX);
+        const roundedY = this.roundToPixel(absoluteY);
+        this.setWindowPositionVariables(node, roundedX, roundedY, { persist: true });
 
         if (this.props.onPositionChange) {
-            this.props.onPositionChange(snappedX, absoluteY);
+            this.props.onPositionChange(roundedX, roundedY);
         }
 
         this.notifySizeChange();
@@ -432,11 +491,8 @@ export class Window extends Component {
         const node = this.getWindowNode();
         if (node) {
             this.setTransformMotionPreset(node, 'snap');
-            const x = node.style.getPropertyValue('--window-transform-x');
-            const y = node.style.getPropertyValue('--window-transform-y');
-            if (x && y) {
-                node.style.transform = `translate(${x},${y})`;
-            }
+            const { x, y } = this._floatingPosition || this.getStoredWindowPosition(node);
+            this.setWindowPositionVariables(node, x, y, { persist: true });
         }
         if (this.state.lastSize) {
             this.setState({
@@ -474,7 +530,7 @@ export class Window extends Component {
         const node = this.getWindowNode();
         if (node) {
             this.setTransformMotionPreset(node, 'snap');
-            node.style.transform = `translate(${region.left}px, ${region.top}px)`;
+            this.setWindowPositionVariables(node, region.left, region.top);
         }
         this.setState({
             snapPreview: null,
@@ -577,7 +633,7 @@ export class Window extends Component {
 
         x = resist(x, 0, maxX);
         y = resist(y, topBound, maxY);
-        node.style.transform = `translate(${x}px, ${y}px)`;
+        node.style.transform = `translate3d(${x}px, ${y}px, 0)`;
     }
 
     handleDrag = (e, data) => {
@@ -593,6 +649,7 @@ export class Window extends Component {
         if (snapPos) {
             this.snapWindow(snapPos);
         } else {
+            this.setWinowsPosition();
             this.setState({ snapPreview: null, snapPosition: null });
         }
     }
@@ -646,18 +703,10 @@ export class Window extends Component {
             this.setState({ maximized: false, preMaximizeSize: null });
         }
         // get previous position
-        const posx = node.style.getPropertyValue("--window-transform-x") || `${this.startX}px`;
-        const posy = node.style.getPropertyValue("--window-transform-y") || `${this.startY}px`;
-        const endTransform = `translate(${posx},${posy})`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const storedPosition = this._floatingPosition || this.getStoredWindowPosition(node);
 
         this.setTransformMotionPreset(node, 'restore');
-        if (prefersReducedMotion) {
-            node.style.transform = endTransform;
-            return;
-        }
-
-        node.style.transform = endTransform;
+        this.setWindowPositionVariables(node, storedPosition.x, storedPosition.y, { persist: true });
     }
 
     maximizeWindow = () => {
@@ -682,7 +731,7 @@ export class Window extends Component {
             if (node) {
                 this.setTransformMotionPreset(node, 'maximize');
                 const translateYOffset = topOffset - DESKTOP_TOP_PADDING;
-                node.style.transform = `translate(-1pt, ${translateYOffset}px)`;
+                this.setWindowPositionVariables(node, -1, translateYOffset);
             }
             this.setState({ maximized: true, height: heightPercent, width: 100.2, preMaximizeSize: currentSize }, () => {
                 this.notifySizeChange();
@@ -724,12 +773,10 @@ export class Window extends Component {
                 e.stopPropagation();
                 const node = this.getWindowNode();
                 if (node) {
-                    const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
-                    let x = match ? parseFloat(match[1]) : 0;
-                    let y = match ? parseFloat(match[2]) : 0;
-                    x += dx;
-                    y += dy;
-                    node.style.transform = `translate(${x}px, ${y}px)`;
+                    const current = this.getStoredWindowPosition(node);
+                    const nextX = current.x + dx;
+                    const nextY = current.y + dy;
+                    this.setWindowPositionVariables(node, nextX, nextY);
                     this.checkSnapPreview();
                     this.setWinowsPosition();
                 }
