@@ -51,6 +51,7 @@ export default class Navbar extends PureComponent {
                 this.taskbarListRef = React.createRef();
                 this.draggingAppId = null;
                 this.pendingReorder = null;
+                this.statusButtonRef = React.createRef();
         }
 
         componentDidMount() {
@@ -336,9 +337,10 @@ export default class Navbar extends PureComponent {
                                                         className={
                                                                 'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
                                                         }
+                                                        ref={this.statusButtonRef}
                                                 >
                                                         <Status />
-                                                        <QuickSettings open={this.state.status_card} />
+                                                        <QuickSettings open={this.state.status_card} restoreFocusRef={this.statusButtonRef} />
                                                 </div>
                                         </div>
                                 </div>

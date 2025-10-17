@@ -12,6 +12,8 @@ interface ContextMenuProps {
   targetRef: React.RefObject<HTMLElement>;
   /** Menu items to render */
   items: MenuItem[];
+  /** Optional focus restoration target */
+  restoreFocusRef?: React.RefObject<HTMLElement | null>;
 }
 
 /**
@@ -20,12 +22,12 @@ interface ContextMenuProps {
  * dispatches global events when opened/closed so backgrounds can
  * be made inert.
  */
-const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
+const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items, restoreFocusRef }) => {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
 
-  useFocusTrap(menuRef as React.RefObject<HTMLElement>, open);
+  useFocusTrap(menuRef as React.RefObject<HTMLElement>, open, { restoreFocusRef });
   useRovingTabIndex(
     menuRef as React.RefObject<HTMLElement>,
     open,

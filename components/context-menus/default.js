@@ -4,7 +4,7 @@ import useRovingTabIndex from '../../hooks/useRovingTabIndex'
 
 function DefaultMenu(props) {
     const menuRef = useRef(null)
-    useFocusTrap(menuRef, props.active)
+    useFocusTrap(menuRef, props.active, { restoreFocusRef: props.restoreFocusRef })
     useRovingTabIndex(menuRef, props.active, 'vertical')
 
     const handleKeyDown = (e) => {
@@ -61,6 +61,7 @@ function DefaultMenu(props) {
                 role="menuitem"
                 aria-label="Reset Kali Linux"
                 className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                tabIndex={-1}
             >
                 <span className="ml-5">Reset Kali Linux</span>
             </button>
