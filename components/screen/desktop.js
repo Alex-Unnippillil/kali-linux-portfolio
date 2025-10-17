@@ -163,6 +163,10 @@ const createOverlayStateMap = () => {
 export class Desktop extends Component {
     static defaultProps = {
         snapGrid: [8, 8],
+        windowKeyboardMoveStep: 24,
+        windowKeyboardFineStep: 10,
+        windowKeyboardResizeStep: 24,
+        windowKeyboardResizeFineStep: 10,
     };
 
     constructor(props) {
@@ -2447,6 +2451,32 @@ export class Desktop extends Component {
         this.announce(`Cancelled moving ${title}.`);
     };
 
+    announceWindowKeyboardMove = (windowId, x, y, details = {}) => {
+        const app = this.getAppById(windowId);
+        if (!app) return;
+        const title = app.title || app.name || 'window';
+        const left = Number.isFinite(x) ? Math.round(x) : null;
+        const top = Number.isFinite(y) ? Math.round(y) : null;
+        if (details?.unchanged || left === null || top === null) {
+            this.announce(`${title} position unchanged.`);
+            return;
+        }
+        this.announce(`${title} positioned ${left} pixels from the left and ${top} pixels from the top.`);
+    };
+
+    announceWindowKeyboardResize = (windowId, width, height, details = {}) => {
+        const app = this.getAppById(windowId);
+        if (!app) return;
+        const title = app.title || app.name || 'window';
+        const safeWidth = Number.isFinite(width) ? Math.max(0, Math.round(width)) : null;
+        const safeHeight = Number.isFinite(height) ? Math.max(0, Math.round(height)) : null;
+        if (details?.unchanged || safeWidth === null || safeHeight === null) {
+            this.announce(`${title} size unchanged.`);
+            return;
+        }
+        this.announce(`${title} resized to ${safeWidth} by ${safeHeight} pixels.`);
+    };
+
     handleIconPointerEnter = (appId) => {
         this.setState((prevState) => {
             if (prevState.hoveredIconId === appId) return null;
@@ -3901,6 +3931,12 @@ export class Desktop extends Component {
                 snapGrid,
                 context: this.state.window_context[id],
                 zIndex: 200 + index,
+                onKeyboardMove: (windowId, x, y, details) => this.announceWindowKeyboardMove(windowId, x, y, details),
+                onKeyboardResize: (windowId, width, height, details) => this.announceWindowKeyboardResize(windowId, width, height, details),
+                keyboardMoveStep: this.props.windowKeyboardMoveStep,
+                keyboardMoveFineStep: this.props.windowKeyboardFineStep,
+                keyboardResizeStep: this.props.windowKeyboardResizeStep,
+                keyboardResizeFineStep: this.props.windowKeyboardResizeFineStep,
             };
 
             return <Window key={id} {...props} />;

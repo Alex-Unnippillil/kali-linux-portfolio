@@ -90,6 +90,10 @@ const computeSnapRegions = (
 export class Window extends Component {
     static defaultProps = {
         snapGrid: [8, 8],
+        keyboardMoveStep: 24,
+        keyboardMoveFineStep: 10,
+        keyboardResizeStep: 24,
+        keyboardResizeFineStep: 10,
     };
 
     constructor(props) {
@@ -427,6 +431,32 @@ export class Window extends Component {
         this.notifySizeChange();
     }
 
+    getStoredTransformPosition = () => {
+        const node = this.getWindowNode();
+        const fallbackTop = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        if (!node) {
+            return { x: 0, y: fallbackTop };
+        }
+        const rawX = parseFloat(node.style.getPropertyValue('--window-transform-x'));
+        const rawY = parseFloat(node.style.getPropertyValue('--window-transform-y'));
+        if (Number.isFinite(rawX) && Number.isFinite(rawY)) {
+            return { x: rawX, y: rawY };
+        }
+        const rect = node.getBoundingClientRect();
+        return { x: rect.left, y: rect.top };
+    }
+
+    getWindowPixelSize = () => {
+        if (typeof window === 'undefined') {
+            return { width: 0, height: 0 };
+        }
+        const viewportWidth = window.visualViewport?.width ?? window.innerWidth ?? 0;
+        const viewportHeight = window.visualViewport?.height ?? window.innerHeight ?? 0;
+        const width = Math.max(0, Math.round((this.state.width / 100) * viewportWidth));
+        const height = Math.max(0, Math.round((this.state.height / 100) * viewportHeight));
+        return { width, height };
+    }
+
     unsnapWindow = () => {
         if (!this.state.snapped) return;
         const node = this.getWindowNode();
@@ -743,50 +773,207 @@ export class Window extends Component {
         }
     }
 
+    getArrowDirection = (key) => {
+        if (key === 'ArrowLeft') return { dx: -1, dy: 0 };
+        if (key === 'ArrowRight') return { dx: 1, dy: 0 };
+        if (key === 'ArrowUp') return { dx: 0, dy: -1 };
+        if (key === 'ArrowDown') return { dx: 0, dy: 1 };
+        return null;
+    }
+
+    performKeyboardMove = (dx, dy, options = {}) => {
+        if ((dx === 0 && dy === 0) || typeof window === 'undefined') {
+            if (typeof this.props.onKeyboardMove === 'function') {
+                const { x, y } = this.getStoredTransformPosition();
+                this.props.onKeyboardMove(this.id, x, y, { unchanged: true });
+            }
+            return;
+        }
+
+        const node = this.getWindowNode();
+        if (!node) return;
+
+        const baseStep = Number.isFinite(this.props.keyboardMoveStep)
+            ? this.props.keyboardMoveStep
+            : Window.defaultProps.keyboardMoveStep;
+        const fineStep = Number.isFinite(this.props.keyboardMoveFineStep)
+            ? this.props.keyboardMoveFineStep
+            : Window.defaultProps.keyboardMoveFineStep;
+        const step = options.fine ? fineStep : baseStep;
+        const deltaX = dx * step;
+        const deltaY = dy * step;
+        if (deltaX === 0 && deltaY === 0) {
+            this.focusWindow();
+            if (typeof this.props.onKeyboardMove === 'function') {
+                const { x, y } = this.getStoredTransformPosition();
+                this.props.onKeyboardMove(this.id, x, y, { unchanged: true });
+            }
+            return;
+        }
+
+        const rect = node.getBoundingClientRect();
+        const safeTop = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const parentWidth = this.state.parentSize?.width ?? 0;
+        const parentHeight = this.state.parentSize?.height ?? 0;
+        const currentX = rect.left;
+        const currentY = rect.top;
+        const maxX = parentWidth;
+        const maxY = safeTop + parentHeight;
+
+        const targetX = clamp(currentX + deltaX, 0, maxX);
+        const targetY = clamp(currentY + deltaY, safeTop, maxY);
+        const reachedBounds = Math.round(targetX) === Math.round(currentX)
+            && Math.round(targetY) === Math.round(currentY);
+
+        if (reachedBounds) {
+            this.focusWindow();
+            if (typeof this.props.onKeyboardMove === 'function') {
+                this.props.onKeyboardMove(this.id, targetX, targetY, { unchanged: true });
+            }
+            return;
+        }
+
+        node.style.transform = `translate(${targetX}px, ${targetY}px)`;
+        this.setState({ snapPreview: null, snapPosition: null }, () => {
+            this.setWinowsPosition();
+            this.focusWindow();
+            const notify = () => {
+                if (typeof this.props.onKeyboardMove !== 'function') return;
+                const { x, y } = this.getStoredTransformPosition();
+                const unchanged = Math.round(x) === Math.round(currentX)
+                    && Math.round(y) === Math.round(currentY);
+                this.props.onKeyboardMove(this.id, x, y, { unchanged });
+            };
+            if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(notify);
+            } else {
+                setTimeout(notify, 0);
+            }
+        });
+    }
+
+    nudgeWindowPosition = (dx, dy, options = {}) => {
+        if (dx === 0 && dy === 0) return;
+        if (this.state.snapped) {
+            this.unsnapWindow();
+            setTimeout(() => this.performKeyboardMove(dx, dy, options), 0);
+            return;
+        }
+        if (this.state.maximized) {
+            this.restoreWindow();
+            setTimeout(() => this.performKeyboardMove(dx, dy, options), 0);
+            return;
+        }
+        this.performKeyboardMove(dx, dy, options);
+    }
+
+    performKeyboardResize = (dx, dy, options = {}) => {
+        if (this.props.resizable === false || typeof window === 'undefined') {
+            if (typeof this.props.onKeyboardResize === 'function') {
+                const { width, height } = this.getWindowPixelSize();
+                this.props.onKeyboardResize(this.id, width, height, { unchanged: true });
+            }
+            return;
+        }
+
+        const baseStep = Number.isFinite(this.props.keyboardResizeStep)
+            ? this.props.keyboardResizeStep
+            : Window.defaultProps.keyboardResizeStep;
+        const fineStep = Number.isFinite(this.props.keyboardResizeFineStep)
+            ? this.props.keyboardResizeFineStep
+            : Window.defaultProps.keyboardResizeFineStep;
+        const step = options.fine ? fineStep : baseStep;
+        const deltaWidthPx = dx * step;
+        const deltaHeightPx = dy * step;
+        if (deltaWidthPx === 0 && deltaHeightPx === 0) {
+            this.focusWindow();
+            if (typeof this.props.onKeyboardResize === 'function') {
+                const { width, height } = this.getWindowPixelSize();
+                this.props.onKeyboardResize(this.id, width, height, { unchanged: true });
+            }
+            return;
+        }
+
+        const viewportWidth = window.visualViewport?.width ?? window.innerWidth ?? 0;
+        const viewportHeight = window.visualViewport?.height ?? window.innerHeight ?? 0;
+        if (!viewportWidth || !viewportHeight) return;
+
+        const currentWidth = this.state.width;
+        const currentHeight = this.state.height;
+
+        const deltaWidthPercent = (deltaWidthPx / viewportWidth) * 100;
+        const deltaHeightPercent = (deltaHeightPx / viewportHeight) * 100;
+
+        const nextWidth = clamp(currentWidth + deltaWidthPercent, 20, 100);
+        const nextHeight = clamp(currentHeight + deltaHeightPercent, 20, 100);
+        const widthChanged = deltaWidthPx !== 0 && Math.abs(nextWidth - currentWidth) > 0.01;
+        const heightChanged = deltaHeightPx !== 0 && Math.abs(nextHeight - currentHeight) > 0.01;
+
+        if (!widthChanged && !heightChanged) {
+            this.focusWindow();
+            if (typeof this.props.onKeyboardResize === 'function') {
+                const { width, height } = this.getWindowPixelSize();
+                this.props.onKeyboardResize(this.id, width, height, { unchanged: true });
+            }
+            return;
+        }
+
+        this.setState((prev) => ({
+            width: widthChanged ? nextWidth : prev.width,
+            height: heightChanged ? nextHeight : prev.height,
+            preMaximizeSize: null,
+            snapped: null,
+            maximized: false,
+        }), () => {
+            this.resizeBoundries();
+            this.notifySizeChange();
+            this.focusWindow();
+            if (typeof this.props.onKeyboardResize === 'function') {
+                const { width, height } = this.getWindowPixelSize();
+                this.props.onKeyboardResize(this.id, width, height, { unchanged: false });
+            }
+        });
+    }
+
+    resizeWindowWithKeyboard = (dx, dy, options = {}) => {
+        if (dx === 0 && dy === 0) return;
+        if (this.state.snapped) {
+            this.unsnapWindow();
+            setTimeout(() => this.performKeyboardResize(dx, dy, options), 0);
+            return;
+        }
+        if (this.state.maximized) {
+            this.restoreWindow();
+            setTimeout(() => this.performKeyboardResize(dx, dy, options), 0);
+            return;
+        }
+        this.performKeyboardResize(dx, dy, options);
+    }
+
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
             this.closeWindow();
-        } else if (e.key === 'Tab') {
+            return;
+        }
+        if (e.key === 'Tab') {
             this.focusWindow();
-        } else if (e.altKey) {
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.unsnapWindow();
-            } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('left');
-            } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('right');
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.snapWindow('top');
-            }
-            this.focusWindow();
-        } else if (e.shiftKey) {
-            const step = 1;
-            if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ width: Math.max(prev.width - step, 20), preMaximizeSize: null }), this.resizeBoundries);
-            } else if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ width: Math.min(prev.width + step, 100), preMaximizeSize: null }), this.resizeBoundries);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ height: Math.max(prev.height - step, 20), preMaximizeSize: null }), this.resizeBoundries);
-            } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                e.stopPropagation();
-                this.setState(prev => ({ height: Math.min(prev.height + step, 100), preMaximizeSize: null }), this.resizeBoundries);
-            }
-            this.focusWindow();
+            return;
+        }
+
+        const direction = this.getArrowDirection(e.key);
+
+        if (direction && e.altKey && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.nudgeWindowPosition(direction.dx, direction.dy, { fine: e.shiftKey });
+            return;
+        }
+
+        if (direction && e.ctrlKey && !e.altKey && !e.metaKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.resizeWindowWithKeyboard(direction.dx, direction.dy, { fine: e.shiftKey });
+            return;
         }
     }
 
@@ -823,6 +1010,50 @@ export class Window extends Component {
                 : (this.state.snapped
                     ? `snapped-${this.state.snapped}`
                     : 'active'));
+
+        const resolvedMoveStep = Number.isFinite(this.props.keyboardMoveStep)
+            ? this.props.keyboardMoveStep
+            : Window.defaultProps.keyboardMoveStep;
+        const resolvedFineMoveStep = Number.isFinite(this.props.keyboardMoveFineStep)
+            ? this.props.keyboardMoveFineStep
+            : Window.defaultProps.keyboardMoveFineStep;
+        const resolvedResizeStep = Number.isFinite(this.props.keyboardResizeStep)
+            ? this.props.keyboardResizeStep
+            : Window.defaultProps.keyboardResizeStep;
+        const resolvedFineResizeStep = Number.isFinite(this.props.keyboardResizeFineStep)
+            ? this.props.keyboardResizeFineStep
+            : Window.defaultProps.keyboardResizeFineStep;
+
+        const moveStepLabel = Math.round(resolvedMoveStep);
+        const moveFineLabel = Math.round(resolvedFineMoveStep);
+        const resizeStepLabel = Math.round(resolvedResizeStep);
+        const resizeFineLabel = Math.round(resolvedFineResizeStep);
+
+        const shortcutHint = [
+            `Alt + Arrow keys move the window by ${moveStepLabel}px.`,
+            `Hold Shift for ${moveFineLabel}px nudges.`,
+            `Ctrl + Arrow keys resize the window by ${resizeStepLabel}px.`,
+            `Hold Shift for ${resizeFineLabel}px adjustments.`,
+        ].join(' ');
+
+        const ariaKeyShortcuts = [
+            'Alt+ArrowUp',
+            'Alt+ArrowDown',
+            'Alt+ArrowLeft',
+            'Alt+ArrowRight',
+            'Ctrl+ArrowUp',
+            'Ctrl+ArrowDown',
+            'Ctrl+ArrowLeft',
+            'Ctrl+ArrowRight',
+            'Shift+Alt+ArrowUp',
+            'Shift+Alt+ArrowDown',
+            'Shift+Alt+ArrowLeft',
+            'Shift+Alt+ArrowRight',
+            'Shift+Ctrl+ArrowUp',
+            'Shift+Ctrl+ArrowDown',
+            'Shift+Ctrl+ArrowLeft',
+            'Shift+Ctrl+ArrowRight',
+        ].join(' ');
 
         return (
             <>
@@ -885,6 +1116,7 @@ export class Window extends Component {
                         data-window-state={windowState}
                         aria-hidden={this.props.minimized ? true : false}
                         aria-label={this.props.title}
+                        aria-keyshortcuts={ariaKeyShortcuts}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                         onPointerDown={this.focusWindow}
@@ -899,6 +1131,7 @@ export class Window extends Component {
                             grabbed={this.state.grabbed}
                             onPointerDown={this.focusWindow}
                             onDoubleClick={this.handleTitleBarDoubleClick}
+                            shortcutHint={shortcutHint}
                         />
                         <WindowEditButtons
                             minimize={this.minimizeWindow}
@@ -925,7 +1158,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, shortcutHint }) {
     return (
         <div
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
@@ -936,6 +1169,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
             onBlur={onBlur}
             onPointerDown={onPointerDown}
             onDoubleClick={onDoubleClick}
+            title={shortcutHint}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
