@@ -8,6 +8,7 @@ export type WindowShelfEntry = {
     id: string;
     title: string;
     icon?: string;
+    description?: string;
 };
 
 type WindowShelfProps = {
@@ -18,23 +19,32 @@ type WindowShelfProps = {
     onActivate: (id: string) => void;
     emptyLabel: string;
     anchor: 'left' | 'right';
-    accent: 'minimized' | 'closed';
+    accent: 'minimized' | 'closed' | 'recent';
     actionLabel?: string;
     onRemove?: (id: string) => void;
+    offset?: number;
 };
 
 const accentBackground: Record<WindowShelfProps['accent'], string> = {
     minimized: 'from-sky-500/90 via-sky-500/80 to-sky-600/90',
     closed: 'from-slate-600/90 via-slate-600/80 to-slate-700/90',
+    recent: 'from-amber-500/90 via-amber-500/80 to-amber-600/90',
 };
 
 const badgeStyles: Record<WindowShelfProps['accent'], string> = {
     minimized: 'bg-sky-400/20 text-sky-100',
     closed: 'bg-slate-500/25 text-slate-100',
+    recent: 'bg-amber-400/25 text-amber-100',
 };
 
 const focusRing =
     'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 focus-visible:ring-sky-300';
+
+const defaultActionLabels: Record<WindowShelfProps['accent'], string> = {
+    minimized: 'Restore window',
+    closed: 'Reopen window',
+    recent: 'Restore window',
+};
 
 function renderIcon(entry: WindowShelfEntry) {
     if (entry.icon) {
@@ -68,11 +78,17 @@ function WindowStateShelf({
     accent,
     actionLabel,
     onRemove,
+    offset = 0,
 }: WindowShelfProps) {
     const containerClasses = clsx(
         'pointer-events-auto fixed bottom-4 z-[70] w-[18rem] max-w-[92vw] text-sm text-white drop-shadow-xl',
         anchor === 'left' ? 'left-4' : 'right-4',
     );
+
+    const resolvedOffset = Number.isFinite(offset) && offset > 0 ? offset : 0;
+    const containerStyle = resolvedOffset
+        ? { bottom: `calc(1rem + ${resolvedOffset}rem)` }
+        : undefined;
 
     const headerClasses = clsx(
         'flex w-full items-center justify-between rounded-lg border border-white/10 bg-gradient-to-br px-3 py-2',
@@ -91,10 +107,10 @@ function WindowStateShelf({
     );
 
     const count = entries.length;
-    const resolvedAction = actionLabel || (accent === 'minimized' ? 'Restore window' : 'Reopen window');
+    const resolvedAction = actionLabel || defaultActionLabels[accent];
 
     return (
-        <aside className={containerClasses} aria-label={`${label} panel`}>
+        <aside className={containerClasses} aria-label={`${label} panel`} style={containerStyle}>
             <div className={headerClasses}>
                 <button
                     type="button"
@@ -126,7 +142,9 @@ function WindowStateShelf({
                                     {renderIcon(entry)}
                                     <span className="flex flex-col text-left">
                                         <span className="text-sm font-semibold leading-tight">{entry.title}</span>
-                                        <span className="text-[0.7rem] uppercase tracking-wide text-white/60">{resolvedAction}</span>
+                                        <span className="text-[0.7rem] uppercase tracking-wide text-white/60">
+                                            {entry.description || resolvedAction}
+                                        </span>
                                     </span>
                                 </button>
                                 {onRemove ? (
@@ -167,6 +185,17 @@ export function ClosedWindowShelf(props: Omit<WindowShelfProps, 'anchor' | 'acce
             {...props}
             anchor="right"
             accent="closed"
+        />
+    );
+}
+
+export function RecentWindowShelf(props: Omit<WindowShelfProps, 'anchor' | 'accent'>) {
+    return (
+        <WindowStateShelf
+            {...props}
+            anchor="right"
+            accent="recent"
+            offset={6}
         />
     );
 }

@@ -20,7 +20,7 @@ import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import TaskbarMenu from '../context-menus/taskbar-menu';
-import { MinimizedWindowShelf, ClosedWindowShelf } from '../desktop/WindowStateShelf';
+import { MinimizedWindowShelf, ClosedWindowShelf, RecentWindowShelf } from '../desktop/WindowStateShelf';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -175,6 +175,7 @@ export class Desktop extends Component {
             'minimized_windows',
             'window_positions',
             'window_sizes',
+            'recent_windows',
         ]);
         this.windowSizeStorageKey = 'desktop_window_sizes';
         this.defaultThemeConfig = {
@@ -268,6 +269,8 @@ export class Desktop extends Component {
             overlayWindows: createOverlayStateMap(),
             minimizedShelfOpen: false,
             closedShelfOpen: false,
+            recentShelfOpen: false,
+            recent_windows: [],
         };
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -276,6 +279,7 @@ export class Desktop extends Component {
             minimized_windows: {},
             window_positions: {},
             window_sizes: { ...initialWindowSizes },
+            recent_windows: [],
         }));
 
         this.desktopRef = React.createRef();
@@ -341,6 +345,7 @@ export class Desktop extends Component {
         minimized_windows: createOverlayFlagMap(false),
         window_positions: {},
         window_sizes: {},
+        recent_windows: [],
     });
 
     cloneWorkspaceState = (state) => ({
@@ -349,6 +354,9 @@ export class Desktop extends Component {
         minimized_windows: { ...state.minimized_windows },
         window_positions: { ...state.window_positions },
         window_sizes: { ...(state.window_sizes || {}) },
+        recent_windows: Array.isArray(state.recent_windows)
+            ? state.recent_windows.map((entry) => ({ ...entry }))
+            : [],
     });
 
     getActiveUserId = () => {
@@ -958,6 +966,9 @@ export class Desktop extends Component {
                 minimized_windows: this.mergeWorkspaceMaps(existing.minimized_windows, baseState.minimized_windows, validKeys),
                 window_positions: this.mergeWorkspaceMaps(existing.window_positions, baseState.window_positions, validKeys),
                 window_sizes: this.mergeWorkspaceMaps(existing.window_sizes, baseState.window_sizes, validKeys),
+                recent_windows: Array.isArray(existing.recent_windows)
+                    ? existing.recent_windows.map((entry) => ({ ...entry }))
+                    : [],
             };
         });
     };
@@ -1656,6 +1667,7 @@ export class Desktop extends Component {
     openOverlay = (id, overrides = {}, callback) => {
         if (!this.isOverlayId(id)) return;
         this.recentlyClosedOverlays.delete(id);
+        this.removeRecentWindowEntry(id);
         this.promoteWindowInStack(id);
 
         const applyOverrides = (current = {}) => {
@@ -1719,6 +1731,7 @@ export class Desktop extends Component {
             { closed: false, minimized: true, focused: false },
             () => {
                 this.giveFocusToLastApp();
+                this.addRecentWindowEntry(id, 'minimized');
             },
         );
     };
@@ -1771,6 +1784,7 @@ export class Desktop extends Component {
             () => {
                 this.giveFocusToLastApp();
                 this.saveSession();
+                this.addRecentWindowEntry(id, 'closed');
                 if (typeof callback === 'function') {
                     callback();
                 }
@@ -1856,6 +1870,59 @@ export class Desktop extends Component {
         });
         entries.sort((a, b) => (b.closedAt || 0) - (a.closedAt || 0));
         return entries.map(({ id, title, icon }) => ({ id, title, icon }));
+    };
+
+    getRecentWindowEntries = () => {
+        const entries = Array.isArray(this.state.recent_windows) ? this.state.recent_windows : [];
+        return entries
+            .filter((entry) => entry && entry.id && this.validAppIds.has(entry.id))
+            .map((entry) => ({
+                id: entry.id,
+                title: entry.title,
+                icon: entry.icon,
+                description: entry.description,
+            }));
+    };
+
+    addRecentWindowEntry = (id, state) => {
+        if (!id || !this.validAppIds.has(id)) return;
+        const entry = this.buildWindowShelfEntry(id);
+        if (!entry) return;
+        const normalizedState = state === 'minimized' ? 'minimized' : 'closed';
+        const description = normalizedState === 'minimized'
+            ? 'Minimized · Select to restore'
+            : 'Closed · Select to reopen';
+        const limit = 12;
+        this.setState((prev) => {
+            const current = Array.isArray(prev.recent_windows) ? prev.recent_windows : [];
+            const filtered = current.filter((item) => item && item.id !== id);
+            const nextEntry = {
+                ...entry,
+                state: normalizedState,
+                timestamp: Date.now(),
+                description,
+            };
+            const recent_windows = [nextEntry, ...filtered].slice(0, limit);
+            this.commitWorkspacePartial({ recent_windows }, prev.activeWorkspace);
+            return { recent_windows };
+        });
+    };
+
+    removeRecentWindowEntry = (id) => {
+        if (!id) return;
+        this.setState((prev) => {
+            const current = Array.isArray(prev.recent_windows) ? prev.recent_windows : [];
+            if (!current.some((item) => item && item.id === id)) {
+                return null;
+            }
+            const recent_windows = current.filter((item) => item && item.id !== id);
+            const nextState = { recent_windows };
+            if (prev.recentShelfOpen && recent_windows.length === 0) {
+                nextState.recentShelfOpen = false;
+            }
+            this.commitWorkspacePartial({ recent_windows }, prev.activeWorkspace);
+            return nextState;
+        });
     };
 
     getDesktopAppIndex = (id) => {
@@ -2728,6 +2795,7 @@ export class Desktop extends Component {
             closed_windows: { ...snapshot.closed_windows },
             minimized_windows: { ...snapshot.minimized_windows },
             window_positions: { ...snapshot.window_positions },
+            recent_windows: Array.isArray(snapshot.recent_windows) ? snapshot.recent_windows.map((entry) => ({ ...entry })) : [],
             switcherWindows: [],
             currentTheme: nextTheme,
         }, () => {
@@ -3677,6 +3745,7 @@ export class Desktop extends Component {
             minimized_windows,
             window_positions: this.state.window_positions || {},
             window_sizes: this.state.window_sizes || {},
+            recent_windows: Array.isArray(this.state.recent_windows) ? this.state.recent_windows : [],
         };
         this.updateWorkspaceSnapshots(workspaceState);
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
@@ -3718,6 +3787,7 @@ export class Desktop extends Component {
             minimized_windows,
             window_positions: this.state.window_positions || {},
             window_sizes: this.state.window_sizes || {},
+            recent_windows: Array.isArray(this.state.recent_windows) ? this.state.recent_windows : [],
         };
         this.updateWorkspaceSnapshots(workspaceState);
         this.setWorkspaceState({
@@ -4097,6 +4167,7 @@ export class Desktop extends Component {
             };
         }, () => {
             this.giveFocusToLastApp();
+            this.addRecentWindowEntry(objId, 'minimized');
         });
     }
 
@@ -4117,6 +4188,10 @@ export class Desktop extends Component {
         this.setState((prev) => ({ minimizedShelfOpen: !prev.minimizedShelfOpen }));
     };
 
+    toggleRecentShelf = () => {
+        this.setState((prev) => ({ recentShelfOpen: !prev.recentShelfOpen }));
+    };
+
     toggleClosedShelf = () => {
         this.setState((prev) => ({ closedShelfOpen: !prev.closedShelfOpen }));
     };
@@ -4128,6 +4203,7 @@ export class Desktop extends Component {
         } else {
             this.openApp(id);
         }
+        this.removeRecentWindowEntry(id);
         this.setState({ minimizedShelfOpen: false });
     };
 
@@ -4138,7 +4214,19 @@ export class Desktop extends Component {
         } else {
             this.openApp(id);
         }
+        this.removeRecentWindowEntry(id);
         this.setState({ closedShelfOpen: false });
+    };
+
+    handleRecentWindowActivate = (id) => {
+        if (!id) return;
+        if (this.isOverlayId(id)) {
+            this.openOverlay(id, { transitionState: 'entered' });
+        } else {
+            this.openApp(id);
+        }
+        this.removeRecentWindowEntry(id);
+        this.setState({ recentShelfOpen: false });
     };
 
     dismissClosedWindowEntry = (id) => {
@@ -4156,6 +4244,7 @@ export class Desktop extends Component {
             if (this.isOverlayId(id)) {
                 this.recentlyClosedOverlays.delete(id);
             }
+            this.removeRecentWindowEntry(id);
             this.saveSession();
         });
     };
@@ -4192,6 +4281,7 @@ export class Desktop extends Component {
             this.openOverlay(objId);
             return;
         }
+        this.removeRecentWindowEntry(objId);
         const baseContext = params && typeof params === 'object'
             ? {
                 ...params,
@@ -4379,7 +4469,10 @@ export class Desktop extends Component {
                 nextState.focused_windows = { ...prevState.focused_windows, [objId]: false };
             }
             return nextState;
-        }, this.saveSession);
+        }, () => {
+            this.saveSession();
+            this.addRecentWindowEntry(objId, 'closed');
+        });
     }
 
     pinApp = (id) => {
@@ -4603,8 +4696,10 @@ export class Desktop extends Component {
         const windowSwitcherOverlay = overlayWindows.windowSwitcher || { open: false, minimized: false, maximized: false };
         const minimizedEntries = this.getMinimizedWindowEntries();
         const closedEntries = this.getClosedWindowEntries();
+        const recentEntries = this.getRecentWindowEntries();
         const showMinimizedShelf = this.state.minimizedShelfOpen || minimizedEntries.length > 0;
         const showClosedShelf = this.state.closedShelfOpen || closedEntries.length > 0;
+        const showRecentShelf = this.state.recentShelfOpen || recentEntries.length > 0;
         return (
             <main
                 id="desktop"
@@ -4696,6 +4791,18 @@ export class Desktop extends Component {
                         onToggle={this.toggleMinimizedShelf}
                         onActivate={this.handleMinimizedWindowActivate}
                         emptyLabel="No windows are minimized"
+                    />
+                ) : null}
+
+                {showRecentShelf ? (
+                    <RecentWindowShelf
+                        label="Recent windows"
+                        entries={recentEntries}
+                        open={this.state.recentShelfOpen}
+                        onToggle={this.toggleRecentShelf}
+                        onActivate={this.handleRecentWindowActivate}
+                        onRemove={this.removeRecentWindowEntry}
+                        emptyLabel="No recent windows"
                     />
                 ) : null}
 
