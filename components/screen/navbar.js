@@ -7,6 +7,7 @@ import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
+import { areTaskbarBadgesEqual } from '../../utils/taskbarBadges';
 
 const areWorkspacesEqual = (next, prev) => {
         if (next.length !== prev.length) return false;
@@ -29,13 +30,121 @@ const areRunningAppsEqual = (next = [], prev = []) => {
                         a.title !== b.title ||
                         a.icon !== b.icon ||
                         a.isFocused !== b.isFocused ||
-                        a.isMinimized !== b.isMinimized
+                        a.isMinimized !== b.isMinimized ||
+                        !areTaskbarBadgesEqual(a.badge, b.badge)
                 ) {
                         return false;
                 }
         }
         return true;
 };
+
+const BADGE_TONE_STYLES = {
+        accent: {
+                chip: 'bg-sky-500 text-white shadow-[0_0_0_1px_rgba(56,189,248,0.35)]',
+                dot: 'bg-sky-400 shadow-[0_0_0_1px_rgba(8,47,73,0.45)]',
+                ring: '#38bdf8',
+                track: 'rgba(8, 47, 73, 0.35)'
+        },
+        neutral: {
+                chip: 'bg-slate-500 text-white shadow-[0_0_0_1px_rgba(100,116,139,0.45)]',
+                dot: 'bg-slate-400 shadow-[0_0_0_1px_rgba(30,41,59,0.45)]',
+                ring: '#94a3b8',
+                track: 'rgba(30, 41, 59, 0.35)'
+        },
+        success: {
+                chip: 'bg-emerald-500 text-white shadow-[0_0_0_1px_rgba(16,185,129,0.35)]',
+                dot: 'bg-emerald-400 shadow-[0_0_0_1px_rgba(6,95,70,0.45)]',
+                ring: '#34d399',
+                track: 'rgba(6, 78, 59, 0.35)'
+        },
+        warning: {
+                chip: 'bg-amber-400 text-slate-900 shadow-[0_0_0_1px_rgba(251,191,36,0.45)]',
+                dot: 'bg-amber-300 shadow-[0_0_0_1px_rgba(113,63,18,0.35)]',
+                ring: '#fbbf24',
+                track: 'rgba(113, 63, 18, 0.35)'
+        },
+        danger: {
+                chip: 'bg-rose-500 text-white shadow-[0_0_0_1px_rgba(244,63,94,0.35)]',
+                dot: 'bg-rose-400 shadow-[0_0_0_1px_rgba(136,19,55,0.35)]',
+                ring: '#fb7185',
+                track: 'rgba(136, 19, 55, 0.35)'
+        }
+};
+
+const getBadgeToneStyles = (tone) => BADGE_TONE_STYLES[tone] || BADGE_TONE_STYLES.accent;
+
+const formatBadgeCount = (value, max = 99) => {
+        if (typeof value !== 'number' || Number.isNaN(value)) return '0';
+        if (typeof max === 'number' && value > max) {
+                return `${max}+`;
+        }
+        return `${value}`;
+};
+
+const describeBadge = (badge) => {
+        if (!badge) return '';
+        if (typeof badge.ariaLabel === 'string' && badge.ariaLabel.trim()) {
+                return badge.ariaLabel.trim();
+        }
+        if (badge.variant === 'count') {
+                const value = typeof badge.value === 'number' ? badge.value : 0;
+                const max = typeof badge.max === 'number' ? badge.max : 99;
+                if (value > max) {
+                        return `More than ${max} pending items`;
+                }
+                const noun = value === 1 ? 'pending item' : 'pending items';
+                return `${value} ${noun}`;
+        }
+        if (badge.variant === 'progress') {
+                const percent = typeof badge.value === 'number' ? Math.round(badge.value) : 0;
+                return `Progress ${percent}%`;
+        }
+        return 'Background activity';
+};
+
+const renderProgressRing = (badge, tone) => {
+        const percent = typeof badge?.value === 'number' ? Math.max(0, Math.min(100, badge.value)) : 0;
+        const stop = `${percent}%`;
+        const ringColor = tone.ring || '#38bdf8';
+        const trackColor = tone.track || 'rgba(15, 23, 42, 0.55)';
+        return (
+                <span className="pointer-events-none absolute -inset-1 flex items-center justify-center" aria-hidden="true">
+                        <span
+                                className="relative block h-full w-full rounded-full motion-safe:transition-all motion-safe:duration-300 motion-reduce:transition-none"
+                                style={{
+                                        backgroundColor: trackColor,
+                                        boxShadow: '0 0 0 1px rgba(148, 163, 184, 0.35)',
+                                        transform: 'translateZ(0)'
+                                }}
+                        >
+                                <span
+                                        className="absolute inset-0 rounded-full motion-safe:transition-all motion-safe:duration-300 motion-reduce:transition-none"
+                                        style={{
+                                                background: `conic-gradient(${ringColor} ${stop}, transparent ${stop} 100%)`
+                                        }}
+                                />
+                                <span className="absolute inset-[24%] rounded-full bg-slate-950/85" />
+                        </span>
+                </span>
+        );
+};
+
+const renderCountBadge = (badge, tone) => (
+        <span
+                aria-hidden="true"
+                className={`pointer-events-none absolute -top-1.5 -right-1 z-[2] inline-flex min-h-[1.25rem] min-w-[1.25rem] translate-y-0 items-center justify-center rounded-full px-1.5 text-[0.65rem] font-semibold leading-none motion-safe:transition-[transform,background-color] motion-safe:duration-300 motion-reduce:transition-none ${tone.chip}`}
+        >
+                {formatBadgeCount(badge.value, badge.max)}
+        </span>
+);
+
+const renderDotBadge = (tone) => (
+        <span
+                aria-hidden="true"
+                className={`pointer-events-none absolute -top-1 -right-1 z-[2] h-2.5 w-2.5 rounded-full border border-white/40 motion-safe:transition-transform motion-safe:duration-300 motion-reduce:transition-none ${tone.dot}`}
+        />
+);
 
 export default class Navbar extends PureComponent {
         constructor() {
@@ -144,11 +253,21 @@ export default class Navbar extends PureComponent {
         renderRunningAppButton = (app) => {
                 const isActive = !app.isMinimized;
                 const isFocused = app.isFocused && isActive;
+                const badge = app.badge;
+                const tone = getBadgeToneStyles(badge?.tone);
+                const badgeDescription = describeBadge(badge);
+                const ariaLabel = badgeDescription ? `${app.title}, ${badgeDescription}` : app.title;
+                const progressElement = badge?.variant === 'progress' ? renderProgressRing(badge, tone) : null;
+                const badgeElement = badge?.variant === 'count'
+                        ? renderCountBadge(badge, tone)
+                        : badge?.variant === 'dot'
+                                ? renderDotBadge(tone)
+                                : null;
 
                 return (
                         <button
                                 type="button"
-                                aria-label={app.title}
+                                aria-label={ariaLabel}
                                 aria-pressed={isActive}
                                 data-context="taskbar"
                                 data-app-id={app.id}
@@ -158,18 +277,20 @@ export default class Navbar extends PureComponent {
                                 className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
                         >
                                 <span className="relative inline-flex items-center justify-center">
+                                        {progressElement}
                                         <Image
                                                 src={app.icon}
                                                 alt=""
                                                 width={28}
                                                 height={28}
-                                                className="h-6 w-6"
+                                                className="relative z-[1] h-6 w-6 drop-shadow-[0_1px_1px_rgba(15,23,42,0.45)]"
                                         />
+                                        {badgeElement}
                                         {isActive && (
                                                 <span
                                                         aria-hidden="true"
                                                         data-testid="running-indicator"
-                                                        className="absolute -bottom-1 left-1/2 h-1 w-2 -translate-x-1/2 rounded-full bg-current"
+                                                        className="absolute -bottom-1 left-1/2 h-1 w-2 -translate-x-1/2 rounded-full bg-current motion-safe:transition-[opacity,transform] motion-safe:duration-300 motion-reduce:transition-none"
                                                 />
                                         )}
                                 </span>

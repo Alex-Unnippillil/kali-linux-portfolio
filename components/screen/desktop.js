@@ -34,6 +34,7 @@ import {
     getSafeAreaInsets,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
+import { normalizeTaskbarBadge, areTaskbarBadgesEqual } from '../../utils/taskbarBadges';
 
 const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
 const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
@@ -242,6 +243,7 @@ export class Desktop extends Component {
             desktop_icon_positions: {},
             folder_contents: storedFolderContents,
             window_context: {},
+            taskbar_badges: {},
             context_menus: {
                 desktop: false,
                 default: false,
@@ -309,6 +311,8 @@ export class Desktop extends Component {
         this.windowPreviewCache = new Map();
         this.windowSwitcherRequestId = 0;
         this.refreshAppRegistry();
+
+        this.taskbarBadgeHandlers = new Map();
 
         this.openSettingsTarget = null;
         this.openSettingsClickHandler = null;
@@ -974,6 +978,77 @@ export class Desktop extends Component {
         });
     };
 
+    getTaskbarBadgeValue = (appId) => {
+        const map = this.state.taskbar_badges || {};
+        const badge = map[appId];
+        if (!badge) return null;
+        return { ...badge };
+    };
+
+    getTaskbarBadgeApi = (appId) => {
+        if (!this.taskbarBadgeHandlers.has(appId)) {
+            this.taskbarBadgeHandlers.set(appId, {
+                setTaskbarBadge: (badge) => this.setTaskbarBadge(appId, badge),
+                clearTaskbarBadge: () => this.clearTaskbarBadge(appId),
+                getTaskbarBadge: () => this.getTaskbarBadgeValue(appId),
+            });
+        }
+        return this.taskbarBadgeHandlers.get(appId);
+    };
+
+    getWindowContext = (appId) => {
+        const stored = this.state.window_context?.[appId];
+        const badgeApi = this.getTaskbarBadgeApi(appId);
+        if (stored && typeof stored === 'object') {
+            return { ...stored, ...badgeApi };
+        }
+        return { ...badgeApi };
+    };
+
+    setTaskbarBadge = (appId, badge) => {
+        if (!appId || !this.validAppIds.has(appId)) return;
+
+        const shouldClear = badge == null;
+        const normalized = shouldClear ? null : normalizeTaskbarBadge(badge);
+        if (!shouldClear && !normalized) {
+            return;
+        }
+
+        let didChange = false;
+        this.setState((prevState) => {
+            const current = prevState.taskbar_badges || {};
+            const existing = current[appId];
+
+            if (shouldClear) {
+                if (!existing) return null;
+                const next = { ...current };
+                delete next[appId];
+                didChange = true;
+                return { taskbar_badges: next };
+            }
+
+            if (areTaskbarBadgesEqual(existing, normalized)) {
+                return null;
+            }
+
+            didChange = true;
+            return {
+                taskbar_badges: {
+                    ...current,
+                    [appId]: normalized,
+                },
+            };
+        }, () => {
+            if (didChange) {
+                this.broadcastWorkspaceState();
+            }
+        });
+    };
+
+    clearTaskbarBadge = (appId) => {
+        this.setTaskbarBadge(appId, null);
+    };
+
     getRunningAppSummaries = () => {
         const {
             closed_windows = {},
@@ -984,13 +1059,18 @@ export class Desktop extends Component {
         const summaries = [];
         apps.forEach((app) => {
             if (closed_windows[app.id] === false) {
-                summaries.push({
+                const badge = this.getTaskbarBadgeValue(app.id);
+                const summary = {
                     id: app.id,
                     title: app.title,
                     icon: app.icon.replace('./', '/'),
                     isFocused: Boolean(focused_windows[app.id]),
                     isMinimized: Boolean(minimized_windows[app.id]),
-                });
+                };
+                if (badge) {
+                    summary.badge = badge;
+                }
+                summaries.push(summary);
             }
         });
         OVERLAY_WINDOW_LIST.forEach((overlay) => {
@@ -1005,14 +1085,19 @@ export class Desktop extends Component {
             const isFocused = typeof state.focused === 'boolean'
                 ? state.focused
                 : Boolean(focused_windows[overlay.id]);
-            summaries.push({
+            const badge = this.getTaskbarBadgeValue(overlay.id);
+            const summary = {
                 id: overlay.id,
                 title: overlay.title,
                 icon: overlay.icon,
                 isFocused,
                 isMinimized,
                 isOverlay: true,
-            });
+            };
+            if (badge) {
+                summary.badge = badge;
+            }
+            summaries.push(summary);
         });
         return summaries;
     };
@@ -1730,6 +1815,8 @@ export class Desktop extends Component {
     closeOverlay = (id, overrides = {}, callback) => {
         if (!this.isOverlayId(id)) return;
         this.recentlyClosedOverlays.add(id);
+
+        this.clearTaskbarBadge(id);
 
         const stack = this.getActiveStack();
         const index = stack.indexOf(id);
@@ -2960,6 +3047,9 @@ export class Desktop extends Component {
             this.allAppsEnterRaf = null;
         }
         this.deactivateAllAppsFocusTrap();
+        if (this.taskbarBadgeHandlers) {
+            this.taskbarBadgeHandlers.clear();
+        }
     }
 
     handleExternalTaskbarCommand = (event) => {
@@ -3899,7 +3989,7 @@ export class Desktop extends Component {
                 onSizeChange: (width, height) => this.updateWindowSize(id, width, height),
                 snapEnabled: this.props.snapEnabled,
                 snapGrid,
-                context: this.state.window_context[id],
+                context: this.getWindowContext(id),
                 zIndex: 200 + index,
             };
 
@@ -4348,6 +4438,8 @@ export class Desktop extends Component {
         }
 
         this.giveFocusToLastApp();
+
+        this.clearTaskbarBadge(objId);
 
         // close window
         this.setWorkspaceState((prevState) => {
