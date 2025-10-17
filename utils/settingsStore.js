@@ -3,11 +3,23 @@
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
 
+const DENSITY_STORAGE_KEY = 'density-map';
+const LEGACY_DENSITY_KEY = 'density';
+
+const DEFAULT_DENSITY = 'regular';
+
+const DEFAULT_DENSITY_PREFERENCES = Object.freeze({
+  small: DEFAULT_DENSITY,
+  medium: DEFAULT_DENSITY,
+  large: DEFAULT_DENSITY,
+});
+
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
   useKaliWallpaper: false,
-  density: 'regular',
+  density: DEFAULT_DENSITY,
+  densityPreferences: DEFAULT_DENSITY_PREFERENCES,
   reducedMotion: false,
   fontScale: 1,
   highContrast: false,
@@ -33,6 +45,18 @@ function getLocalStorage() {
     }
     return null;
   }
+}
+
+function isDensity(value) {
+  return value === 'regular' || value === 'compact';
+}
+
+function normalizeDensityPreferences(preferences = {}) {
+  const entries = Object.entries(DEFAULT_DENSITY_PREFERENCES).map(([key, fallback]) => {
+    const value = preferences[key];
+    return [key, isDensity(value) ? value : fallback];
+  });
+  return Object.fromEntries(entries);
 }
 
 export async function getAccent() {
@@ -68,16 +92,56 @@ export async function setUseKaliWallpaper(value) {
   storage.setItem('use-kali-wallpaper', value ? 'true' : 'false');
 }
 
-export async function getDensity() {
+export async function getDensityPreferences() {
   const storage = getLocalStorage();
-  if (!storage) return DEFAULT_SETTINGS.density;
-  return storage.getItem('density') || DEFAULT_SETTINGS.density;
+  if (!storage) return normalizeDensityPreferences();
+  const stored = storage.getItem(DENSITY_STORAGE_KEY);
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      return normalizeDensityPreferences(parsed);
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('Invalid density preferences; falling back to defaults.', error);
+      }
+    }
+  }
+  const legacy = storage.getItem(LEGACY_DENSITY_KEY);
+  if (legacy && isDensity(legacy)) {
+    return normalizeDensityPreferences({
+      small: legacy,
+      medium: legacy,
+      large: legacy,
+    });
+  }
+  return normalizeDensityPreferences();
+}
+
+export async function setDensityPreferences(preferences) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  const normalized = normalizeDensityPreferences(preferences);
+  try {
+    storage.setItem(DENSITY_STORAGE_KEY, JSON.stringify(normalized));
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('Failed to persist density preferences', error);
+    }
+  }
+}
+
+export async function getDensity() {
+  const preferences = await getDensityPreferences();
+  return preferences.large;
 }
 
 export async function setDensity(density) {
-  const storage = getLocalStorage();
-  if (!storage) return;
-  storage.setItem('density', density);
+  const next = normalizeDensityPreferences({
+    small: density,
+    medium: density,
+    large: density,
+  });
+  await setDensityPreferences(next);
 }
 
 export async function getReducedMotion() {
@@ -183,6 +247,7 @@ export async function resetSettings() {
     del('accent'),
     del('bg-image'),
   ]);
+  storage.removeItem(DENSITY_STORAGE_KEY);
   storage.removeItem('density');
   storage.removeItem('reduced-motion');
   storage.removeItem('font-scale');
@@ -199,7 +264,7 @@ export async function exportSettings() {
     accent,
     wallpaper,
     useKaliWallpaper,
-    density,
+    densityPreferences,
     reducedMotion,
     fontScale,
     highContrast,
@@ -211,7 +276,7 @@ export async function exportSettings() {
     getAccent(),
     getWallpaper(),
     getUseKaliWallpaper(),
-    getDensity(),
+    getDensityPreferences(),
     getReducedMotion(),
     getFontScale(),
     getHighContrast(),
@@ -221,10 +286,12 @@ export async function exportSettings() {
     getHaptics(),
   ]);
   const theme = getTheme();
+  const density = densityPreferences.large;
   return JSON.stringify({
     accent,
     wallpaper,
     density,
+    densityPreferences,
     reducedMotion,
     fontScale,
     highContrast,
@@ -251,6 +318,7 @@ export async function importSettings(json) {
     wallpaper,
     useKaliWallpaper,
     density,
+    densityPreferences,
     reducedMotion,
     fontScale,
     highContrast,
@@ -263,7 +331,8 @@ export async function importSettings(json) {
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
   if (useKaliWallpaper !== undefined) await setUseKaliWallpaper(useKaliWallpaper);
-  if (density !== undefined) await setDensity(density);
+  if (densityPreferences !== undefined) await setDensityPreferences(densityPreferences);
+  else if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);
   if (highContrast !== undefined) await setHighContrast(highContrast);

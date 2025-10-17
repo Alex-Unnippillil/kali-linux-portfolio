@@ -14,8 +14,8 @@ import {
   setWallpaper as saveWallpaper,
   getUseKaliWallpaper as loadUseKaliWallpaper,
   setUseKaliWallpaper as saveUseKaliWallpaper,
-  getDensity as loadDensity,
-  setDensity as saveDensity,
+  getDensityPreferences as loadDensityPreferences,
+  setDensityPreferences as persistDensityPreferences,
   getReducedMotion as loadReducedMotion,
   setReducedMotion as saveReducedMotion,
   getFontScale as loadFontScale,
@@ -39,7 +39,62 @@ import {
   getTheme as loadTheme,
   setTheme as saveTheme,
 } from '../utils/theme';
-type Density = 'regular' | 'compact';
+export type Density = 'regular' | 'compact';
+export type DensityBreakpoint = 'small' | 'medium' | 'large';
+export type DensityPreferences = Record<DensityBreakpoint, Density>;
+
+const ensureDensityValue = (value?: string): Density =>
+  value === 'compact' ? 'compact' : 'regular';
+
+const defaultPreferenceSource = (
+  (defaults as unknown as { densityPreferences?: Partial<DensityPreferences> })
+    .densityPreferences ?? {}
+);
+
+const DEFAULT_DENSITY_PREFERENCES: DensityPreferences = {
+  small: ensureDensityValue(
+    defaultPreferenceSource.small ?? (defaults.density as Density),
+  ),
+  medium: ensureDensityValue(
+    defaultPreferenceSource.medium ?? (defaults.density as Density),
+  ),
+  large: ensureDensityValue(
+    defaultPreferenceSource.large ?? (defaults.density as Density),
+  ),
+};
+
+const sanitizeDensityPreferences = (
+  preferences?: Partial<Record<DensityBreakpoint, string>>,
+): DensityPreferences => ({
+  small: ensureDensityValue(
+    preferences?.small ?? DEFAULT_DENSITY_PREFERENCES.small,
+  ),
+  medium: ensureDensityValue(
+    preferences?.medium ?? DEFAULT_DENSITY_PREFERENCES.medium,
+  ),
+  large: ensureDensityValue(
+    preferences?.large ?? DEFAULT_DENSITY_PREFERENCES.large,
+  ),
+});
+
+export const DENSITY_BREAKPOINTS: Array<{
+  id: DensityBreakpoint;
+  min: number;
+  max: number;
+  label: string;
+}> = [
+  { id: 'small', min: 0, max: 1023, label: 'Small displays (≤1023px)' },
+  { id: 'medium', min: 1024, max: 1439, label: 'Medium displays (1024–1439px)' },
+  { id: 'large', min: 1440, max: Infinity, label: 'Large displays (≥1440px)' },
+];
+
+const getBreakpointForWidth = (width?: number): DensityBreakpoint => {
+  if (typeof width !== 'number' || Number.isNaN(width)) return 'large';
+  const match = DENSITY_BREAKPOINTS.find(
+    (breakpoint) => width >= breakpoint.min && width <= breakpoint.max,
+  );
+  return match ? match.id : 'large';
+};
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -73,6 +128,8 @@ interface SettingsContextValue {
   bgImageName: string;
   useKaliWallpaper: boolean;
   density: Density;
+  densityPreferences: DensityPreferences;
+  densityBreakpoint: DensityBreakpoint;
   reducedMotion: boolean;
   fontScale: number;
   highContrast: boolean;
@@ -85,7 +142,8 @@ interface SettingsContextValue {
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setUseKaliWallpaper: (value: boolean) => void;
-  setDensity: (density: Density) => void;
+  setDensity: (density: Density, target?: DensityBreakpoint | 'all') => void;
+  setDensityPreferences: (preferences: DensityPreferences) => void;
   setReducedMotion: (value: boolean) => void;
   setFontScale: (value: number) => void;
   setHighContrast: (value: boolean) => void;
@@ -110,6 +168,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   bgImageName: defaults.wallpaper,
   useKaliWallpaper: defaults.useKaliWallpaper,
   density: defaults.density as Density,
+  densityPreferences: DEFAULT_DENSITY_PREFERENCES,
+  densityBreakpoint: 'large',
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
   highContrast: defaults.highContrast,
@@ -123,6 +183,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setWallpaper: () => {},
   setUseKaliWallpaper: () => {},
   setDensity: () => {},
+  setDensityPreferences: () => {},
   setReducedMotion: () => {},
   setFontScale: () => {},
   setHighContrast: () => {},
@@ -137,7 +198,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [useKaliWallpaper, setUseKaliWallpaper] = useState<boolean>(defaults.useKaliWallpaper);
-  const [density, setDensity] = useState<Density>(defaults.density as Density);
+  const [densityPreferences, setDensityPreferencesState] = useState<DensityPreferences>(() =>
+    sanitizeDensityPreferences(),
+  );
+  const [densityBreakpoint, setDensityBreakpoint] = useState<DensityBreakpoint>(() =>
+    getBreakpointForWidth(typeof window !== 'undefined' ? window.innerWidth : undefined),
+  );
+  const [density, setDensityState] = useState<Density>(() => {
+    const breakpoint = getBreakpointForWidth(
+      typeof window !== 'undefined' ? window.innerWidth : undefined,
+    );
+    return sanitizeDensityPreferences()[breakpoint];
+  });
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
@@ -149,21 +221,146 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const fetchRef = useRef<typeof fetch | null>(null);
   const previousThemeRef = useRef<string | null>(null);
 
+  const applyDensityPreferences = (
+    updater:
+      | DensityPreferences
+      | Partial<Record<DensityBreakpoint, string>>
+      | ((prev: DensityPreferences) => DensityPreferences | Partial<Record<DensityBreakpoint, string>>),
+    options: { persist?: boolean } = {},
+  ) => {
+    const { persist = true } = options;
+    setDensityPreferencesState((prev) => {
+      const candidate =
+        typeof updater === 'function'
+          ? (updater as (
+              prev: DensityPreferences,
+            ) => DensityPreferences | Partial<Record<DensityBreakpoint, string>>)(prev)
+          : updater;
+      const next = sanitizeDensityPreferences(candidate as Partial<
+        Record<DensityBreakpoint, string>
+      >);
+      const hasChanged =
+        prev.small !== next.small ||
+        prev.medium !== next.medium ||
+        prev.large !== next.large;
+      if (hasChanged && persist) {
+        void persistDensityPreferences(next);
+      }
+      return hasChanged ? next : prev;
+    });
+  };
+
+  const setDensityPreferencesValue = (preferences: DensityPreferences) => {
+    applyDensityPreferences(preferences);
+  };
+
+  const setDensityValue = (
+    value: Density,
+    target: DensityBreakpoint | 'all' = densityBreakpoint,
+  ) => {
+    if (target === 'all') {
+      applyDensityPreferences({
+        small: value,
+        medium: value,
+        large: value,
+      });
+      setDensityState((prev) => (prev === value ? prev : value));
+      return;
+    }
+    applyDensityPreferences((prev) => {
+      if (prev[target] === value) {
+        return prev;
+      }
+      return { ...prev, [target]: value };
+    });
+    if (target === densityBreakpoint) {
+      setDensityState((prev) => (prev === value ? prev : value));
+    }
+  };
+
   useEffect(() => {
     (async () => {
-      setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
-      setUseKaliWallpaper(await loadUseKaliWallpaper());
-      setDensity((await loadDensity()) as Density);
-      setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
-      setHighContrast(await loadHighContrast());
-      setLargeHitAreas(await loadLargeHitAreas());
-      setPongSpin(await loadPongSpin());
-      setAllowNetwork(await loadAllowNetwork());
-      setHaptics(await loadHaptics());
+      const [
+        loadedAccent,
+        loadedWallpaper,
+        loadedUseKali,
+        loadedDensityPreferences,
+        loadedReducedMotion,
+        loadedFontScale,
+        loadedHighContrast,
+        loadedLargeHitAreas,
+        loadedPongSpin,
+        loadedAllowNetwork,
+        loadedHaptics,
+      ] = await Promise.all([
+        loadAccent(),
+        loadWallpaper(),
+        loadUseKaliWallpaper(),
+        loadDensityPreferences(),
+        loadReducedMotion(),
+        loadFontScale(),
+        loadHighContrast(),
+        loadLargeHitAreas(),
+        loadPongSpin(),
+        loadAllowNetwork(),
+        loadHaptics(),
+      ]);
+      setAccent(loadedAccent);
+      setWallpaper(loadedWallpaper);
+      setUseKaliWallpaper(loadedUseKali);
+      applyDensityPreferences(loadedDensityPreferences, { persist: false });
+      setReducedMotion(loadedReducedMotion);
+      setFontScale(loadedFontScale);
+      setHighContrast(loadedHighContrast);
+      setLargeHitAreas(loadedLargeHitAreas);
+      setPongSpin(loadedPongSpin);
+      setAllowNetwork(loadedAllowNetwork);
+      setHaptics(loadedHaptics);
       setTheme(loadTheme());
     })();
+  }, []);
+
+  useEffect(() => {
+    const nextDensity =
+      densityPreferences[densityBreakpoint] ?? (defaults.density as Density);
+    setDensityState((prev) => (prev === nextDensity ? prev : nextDensity));
+  }, [densityPreferences, densityBreakpoint]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const schedule = (callback: () => void): number => {
+      if (typeof window.requestAnimationFrame === 'function') {
+        return window.requestAnimationFrame(() => callback());
+      }
+      return window.setTimeout(callback, 0);
+    };
+    const cancel = (id: number) => {
+      if (typeof window.cancelAnimationFrame === 'function') {
+        window.cancelAnimationFrame(id);
+      } else {
+        window.clearTimeout(id);
+      }
+    };
+    let frame: number | null = null;
+    const commitBreakpoint = () => {
+      frame = null;
+      const next = getBreakpointForWidth(window.innerWidth);
+      setDensityBreakpoint((prev) => (prev === next ? prev : next));
+    };
+    const handleResize = () => {
+      if (frame !== null) {
+        cancel(frame);
+      }
+      frame = schedule(commitBreakpoint);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => {
+      if (frame !== null) {
+        cancel(frame);
+      }
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   useEffect(() => {
@@ -218,7 +415,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
-    saveDensity(density);
   }, [density]);
 
   useEffect(() => {
@@ -351,6 +547,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         bgImageName,
         useKaliWallpaper,
         density,
+        densityPreferences,
+        densityBreakpoint,
         reducedMotion,
         fontScale,
         highContrast,
@@ -363,7 +561,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAccent,
         setWallpaper,
         setUseKaliWallpaper,
-        setDensity,
+        setDensity: setDensityValue,
+        setDensityPreferences: setDensityPreferencesValue,
         setReducedMotion,
         setFontScale,
         setHighContrast,
