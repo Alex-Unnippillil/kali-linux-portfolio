@@ -5,6 +5,30 @@ import type { ReactNode, Ref } from 'react';
 import styles from './window.module.css';
 import { WindowEditButtons, WindowTopBar } from './window';
 
+const SafeWindowTopBar: typeof WindowTopBar =
+    WindowTopBar || (({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick }) => (
+        <div
+            role="presentation"
+            tabIndex={-1}
+            aria-grabbed={grabbed}
+            onKeyDown={onKeyDown}
+            onBlur={onBlur}
+            onPointerDown={onPointerDown}
+            onDoubleClick={onDoubleClick}
+        >
+            {title}
+        </div>
+    ));
+
+const SafeWindowEditButtons: typeof WindowEditButtons =
+    WindowEditButtons || ((props) => (
+        <div
+            role="presentation"
+            aria-hidden="true"
+            data-testid={props?.id ? `${props.id}-window-controls` : undefined}
+        />
+    ));
+
 type SystemOverlayWindowProps = {
     id: string;
     title: string;
@@ -111,7 +135,7 @@ export default function SystemOverlayWindow({
                 aria-describedby={ariaDescribedBy}
                 tabIndex={-1}
             >
-                <WindowTopBar
+                <SafeWindowTopBar
                     title={title}
                     onKeyDown={undefined}
                     onBlur={undefined}
@@ -119,7 +143,7 @@ export default function SystemOverlayWindow({
                     onPointerDown={undefined}
                     onDoubleClick={onMaximize ? handleMaximize : undefined}
                 />
-                <WindowEditButtons
+                <SafeWindowEditButtons
                     minimize={handleMinimize}
                     maximize={handleMaximize}
                     isMaximised={Boolean(maximized)}

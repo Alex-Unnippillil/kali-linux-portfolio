@@ -229,6 +229,7 @@ export class Desktop extends Component {
 
         const initialWindowSizes = this.loadWindowSizes();
         const storedFolderContents = loadStoredFolderContents();
+        const initialTaskbarOrder = this.loadTaskbarOrder();
 
         this.state = {
             focused_windows: { ...initialOverlayFocused },
@@ -268,6 +269,7 @@ export class Desktop extends Component {
             overlayWindows: createOverlayStateMap(),
             minimizedShelfOpen: false,
             closedShelfOpen: false,
+            taskbarOrder: initialTaskbarOrder,
         };
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -443,6 +445,17 @@ export class Desktop extends Component {
             const order = this.state.taskbarOrder || [];
             this.persistTaskbarOrder(order);
         });
+    };
+
+    updateTaskbarOrderFromRunning = (runningIds) => {
+        const ids = Array.isArray(runningIds)
+            ? runningIds.filter((id) => typeof id === 'string' && this.validAppIds.has(id))
+            : [];
+        if (!ids.length) {
+            return;
+        }
+        const normalized = this.getNormalizedTaskbarOrder(ids);
+        this.setTaskbarOrder(normalized);
     };
 
     getCurrentRunningAppIds = () => {
@@ -981,18 +994,23 @@ export class Desktop extends Component {
             focused_windows = {},
             overlayWindows = {},
         } = this.state;
-        const summaries = [];
+        const summaryMap = new Map();
+        const runningIds = [];
+
         apps.forEach((app) => {
             if (closed_windows[app.id] === false) {
-                summaries.push({
+                const summary = {
                     id: app.id,
                     title: app.title,
                     icon: app.icon.replace('./', '/'),
                     isFocused: Boolean(focused_windows[app.id]),
                     isMinimized: Boolean(minimized_windows[app.id]),
-                });
+                };
+                summaryMap.set(app.id, summary);
+                runningIds.push(app.id);
             }
         });
+
         OVERLAY_WINDOW_LIST.forEach((overlay) => {
             const state = overlayWindows?.[overlay.id] || {};
             const isOpen = state.open === true || closed_windows[overlay.id] === false;
@@ -1005,16 +1023,20 @@ export class Desktop extends Component {
             const isFocused = typeof state.focused === 'boolean'
                 ? state.focused
                 : Boolean(focused_windows[overlay.id]);
-            summaries.push({
+            const summary = {
                 id: overlay.id,
                 title: overlay.title,
                 icon: overlay.icon,
                 isFocused,
                 isMinimized,
                 isOverlay: true,
-            });
+            };
+            summaryMap.set(overlay.id, summary);
+            runningIds.push(overlay.id);
         });
-        return summaries;
+
+        const orderedIds = this.getNormalizedTaskbarOrder(runningIds);
+        return orderedIds.map((id) => summaryMap.get(id)).filter(Boolean);
     };
 
     setWorkspaceState = (updater, callback) => {
@@ -2773,10 +2795,13 @@ export class Desktop extends Component {
 
     broadcastWorkspaceState = () => {
         if (typeof window === 'undefined') return;
+        const runningApps = this.getRunningAppSummaries();
+        const runningIds = runningApps.map((item) => item.id);
+        this.updateTaskbarOrderFromRunning(runningIds);
         const detail = {
             workspaces: this.getWorkspaceSummaries(),
             activeWorkspace: this.state.activeWorkspace,
-            runningApps: this.getRunningAppSummaries(),
+            runningApps,
             iconSizePreset: this.state.iconSizePreset,
         };
         window.dispatchEvent(new CustomEvent('workspace-state', { detail }));
@@ -2861,7 +2886,7 @@ export class Desktop extends Component {
                     this.setWorkspaceState({ window_positions: positions }, () => {
                         session.windows.forEach(({ id }) => this.openApp(id));
                     });
-                } else {
+                } else if (!Array.isArray(this.state.taskbarOrder) || this.state.taskbarOrder.length === 0) {
                     this.openApp('about');
                 }
             });
@@ -3175,6 +3200,84 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleContextKey);
     }
 
+    getPinnedTaskbarIds = () => {
+        const favouriteApps = this.state?.favourite_apps || {};
+        const disabledApps = this.state?.disabled_apps || {};
+        const pinned = [];
+        apps.forEach((app) => {
+            if (!app || !app.id) return;
+            if (!this.validAppIds.has(app.id)) return;
+            if (disabledApps[app.id]) return;
+            const stateValue = favouriteApps[app.id];
+            const isPinned = typeof stateValue === 'boolean' ? stateValue : Boolean(app.favourite);
+            if (isPinned) {
+                pinned.push(app.id);
+            }
+        });
+        return pinned;
+    };
+
+    getTaskbarShortcutTargets = () => {
+        const pinnedIds = this.getPinnedTaskbarIds();
+        const runningSummaries = this.getRunningAppSummaries();
+        const orderedRunning = this.getNormalizedTaskbarOrder(runningSummaries.map((item) => item.id));
+        const targets = [];
+        const seen = new Set();
+
+        pinnedIds.forEach((id) => {
+            if (id && !seen.has(id)) {
+                targets.push(id);
+                seen.add(id);
+            }
+        });
+
+        orderedRunning.forEach((id) => {
+            if (id && !seen.has(id)) {
+                targets.push(id);
+                seen.add(id);
+            }
+        });
+
+        return targets;
+    };
+
+    getTaskbarShortcutAction = (appId) => {
+        const { closed_windows = {}, minimized_windows = {}, overlayWindows = {} } = this.state;
+        if (this.isOverlayId(appId)) {
+            const overlayState = overlayWindows?.[appId] || {};
+            const isOpen = overlayState.open === true || closed_windows[appId] === false;
+            const isMinimized = overlayState.minimized === true || minimized_windows[appId] === true;
+            if (!isOpen || isMinimized) {
+                return 'open';
+            }
+            return 'focus';
+        }
+        const isOpen = closed_windows[appId] === false;
+        if (!isOpen) {
+            return 'open';
+        }
+        if (minimized_windows[appId]) {
+            return 'open';
+        }
+        return 'focus';
+    };
+
+    activateTaskbarShortcut = (index) => {
+        if (typeof index !== 'number' || index < 0) return false;
+        const targets = this.getTaskbarShortcutTargets();
+        if (!Array.isArray(targets) || index >= targets.length) return false;
+        const appId = targets[index];
+        if (!appId || !this.validAppIds.has(appId)) return false;
+        const action = this.getTaskbarShortcutAction(appId);
+        const detail = { appId, action };
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+            window.dispatchEvent(new CustomEvent('taskbar-command', { detail }));
+        } else {
+            this.handleExternalTaskbarCommand({ detail });
+        }
+        return true;
+    };
+
     handleGlobalShortcut = (e) => {
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
@@ -3184,6 +3287,12 @@ export class Desktop extends Component {
         } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
+        }
+        else if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey && /^[1-9]$/.test(e.key)) {
+            const handled = this.activateTaskbarShortcut(parseInt(e.key, 10) - 1);
+            if (handled) {
+                e.preventDefault();
+            }
         }
         else if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
