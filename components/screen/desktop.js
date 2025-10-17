@@ -37,6 +37,17 @@ import {
 
 const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
 const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
+const LAYOUT_STATE_KEYS = [
+    'window_positions',
+    'window_sizes',
+    'focused_windows',
+    'minimized_windows',
+    'closed_windows',
+    'desktop_apps',
+    'desktop_icon_positions',
+    'folder_contents',
+    'overlayWindows',
+];
 
 const sanitizeFolderItem = (item) => {
     if (!item) return null;
@@ -332,6 +343,13 @@ export class Desktop extends Component {
             const userAgent = navigator.userAgent || '';
             this.commandPaletteUsesMeta = /Mac|iPhone|iPad|iPod/i.test(platform || userAgent);
         }
+
+        this.layoutChannel = null;
+        this.layoutChannelId = `desktop-layout-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
+        this.lastLayoutMessageTimestamp = 0;
+        this.suppressLayoutBroadcast = false;
+        this.awaitingRemoteHydration = false;
+        this.remoteHydrationTimeoutId = null;
 
     }
 
@@ -1103,6 +1121,154 @@ export class Desktop extends Component {
         } catch (e) {
             // ignore write errors (storage may be unavailable)
         }
+    };
+
+    getLayoutStateSnapshot = (state = this.state) => ({
+        activeWorkspace: state.activeWorkspace,
+        window_positions: state.window_positions,
+        window_sizes: state.window_sizes,
+        focused_windows: state.focused_windows,
+        minimized_windows: state.minimized_windows,
+        closed_windows: state.closed_windows,
+        desktop_apps: state.desktop_apps,
+        desktop_icon_positions: state.desktop_icon_positions,
+        folder_contents: state.folder_contents,
+        overlayWindows: state.overlayWindows,
+    });
+
+    hasLayoutStateChanged = (prevState, nextState) => {
+        if (prevState.activeWorkspace !== nextState.activeWorkspace) {
+            return true;
+        }
+        return LAYOUT_STATE_KEYS.some((key) => prevState[key] !== nextState[key]);
+    };
+
+    publishLayoutUpdate = (reason = 'update', options = {}) => {
+        if (!this.layoutChannel) return;
+        if (this.awaitingRemoteHydration && !options.force) return;
+        const payload = this.getLayoutStateSnapshot();
+        const timestamp = Date.now();
+        try {
+            this.layoutChannel.postMessage({
+                type: 'layout-update',
+                reason,
+                sourceId: this.layoutChannelId,
+                timestamp,
+                payload,
+            });
+            this.lastLayoutMessageTimestamp = Math.max(this.lastLayoutMessageTimestamp, timestamp);
+        } catch (e) {
+            // ignore broadcast errors
+        }
+    };
+
+    requestLayoutSync = () => {
+        if (!this.layoutChannel) return;
+        try {
+            this.layoutChannel.postMessage({
+                type: 'layout-request',
+                sourceId: this.layoutChannelId,
+                timestamp: Date.now(),
+            });
+        } catch (e) {
+            // ignore broadcast errors
+        }
+    };
+
+    handleLayoutChannelMessage = (event) => {
+        const message = event?.data;
+        if (!message || message.sourceId === this.layoutChannelId) {
+            return;
+        }
+        if (message.type === 'layout-update' && message.payload) {
+            const timestamp = typeof message.timestamp === 'number' ? message.timestamp : Date.now();
+            if (timestamp < this.lastLayoutMessageTimestamp) {
+                return;
+            }
+            this.applyRemoteLayoutUpdate(message.payload, timestamp);
+            return;
+        }
+        if (message.type === 'layout-request') {
+            this.publishLayoutUpdate('request-response', { force: true });
+        }
+    };
+
+    applyRemoteLayoutUpdate = (payload, timestamp) => {
+        if (!payload || typeof payload !== 'object') return;
+        const workspaceId = typeof payload.activeWorkspace === 'number'
+            ? payload.activeWorkspace
+            : this.state.activeWorkspace;
+
+        const partial = {};
+        const workspacePartial = {};
+
+        if (typeof payload.activeWorkspace === 'number') {
+            partial.activeWorkspace = payload.activeWorkspace;
+        }
+
+        LAYOUT_STATE_KEYS.forEach((key) => {
+            if (!Object.prototype.hasOwnProperty.call(payload, key)) return;
+            const value = payload[key];
+            if (key === 'desktop_apps' && Array.isArray(value)) {
+                partial.desktop_apps = value;
+                return;
+            }
+            if (key === 'desktop_icon_positions' || key === 'folder_contents' || key === 'overlayWindows') {
+                if (value && typeof value === 'object') {
+                    partial[key] = value;
+                }
+                return;
+            }
+            if (value && typeof value === 'object') {
+                partial[key] = value;
+                workspacePartial[key] = value;
+            }
+        });
+
+        if (!Object.keys(partial).length) {
+            if (this.awaitingRemoteHydration) {
+                this.awaitingRemoteHydration = false;
+            }
+            if (this.remoteHydrationTimeoutId) {
+                clearTimeout(this.remoteHydrationTimeoutId);
+                this.remoteHydrationTimeoutId = null;
+            }
+            this.lastLayoutMessageTimestamp = Math.max(this.lastLayoutMessageTimestamp, timestamp || Date.now());
+            return;
+        }
+
+        this.suppressLayoutBroadcast = true;
+        this.setState((prevState) => {
+            const nextState = { ...partial };
+            if (
+                typeof payload.activeWorkspace === 'number' &&
+                payload.activeWorkspace !== prevState.activeWorkspace
+            ) {
+                nextState.currentTheme = this.getWorkspaceTheme(payload.activeWorkspace);
+            }
+            return nextState;
+        }, () => {
+            if (Object.keys(workspacePartial).length) {
+                this.commitWorkspacePartial(workspacePartial, workspaceId);
+            }
+            if (payload.desktop_icon_positions || payload.desktop_apps) {
+                this.persistIconPositions();
+            }
+            if (payload.folder_contents) {
+                this.persistFolderContents();
+            }
+            if (payload.window_sizes) {
+                this.persistWindowSizes(this.state.window_sizes || {});
+            }
+            this.lastLayoutMessageTimestamp = Math.max(this.lastLayoutMessageTimestamp, timestamp || Date.now());
+            if (this.awaitingRemoteHydration) {
+                this.awaitingRemoteHydration = false;
+            }
+            if (this.remoteHydrationTimeoutId) {
+                clearTimeout(this.remoteHydrationTimeoutId);
+                this.remoteHydrationTimeoutId = null;
+            }
+        });
     };
 
     ensureIconPositions = (desktopApps = []) => {
@@ -2838,6 +3004,23 @@ export class Desktop extends Component {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
         if (typeof window !== 'undefined') {
+            if ('BroadcastChannel' in window) {
+                try {
+                    this.layoutChannel = new BroadcastChannel('desktop-layout');
+                    this.layoutChannel.addEventListener('message', this.handleLayoutChannelMessage);
+                    this.awaitingRemoteHydration = true;
+                    this.requestLayoutSync();
+                    this.remoteHydrationTimeoutId = window.setTimeout(() => {
+                        this.awaitingRemoteHydration = false;
+                        this.publishLayoutUpdate('initial-state');
+                    }, 600);
+                } catch (e) {
+                    this.layoutChannel = null;
+                    this.awaitingRemoteHydration = false;
+                }
+            } else {
+                this.awaitingRemoteHydration = false;
+            }
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
@@ -2929,6 +3112,12 @@ export class Desktop extends Component {
             this.deactivateAllAppsFocusTrap();
             this.restoreFocusToPreviousElement();
         }
+
+        if (this.suppressLayoutBroadcast) {
+            this.suppressLayoutBroadcast = false;
+        } else if (!this.awaitingRemoteHydration && this.hasLayoutStateChanged(prevState, this.state)) {
+            this.publishLayoutUpdate('state-change');
+        }
     }
 
     componentWillUnmount() {
@@ -2944,6 +3133,19 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+        }
+        if (this.remoteHydrationTimeoutId) {
+            clearTimeout(this.remoteHydrationTimeoutId);
+            this.remoteHydrationTimeoutId = null;
+        }
+        if (this.layoutChannel) {
+            this.layoutChannel.removeEventListener('message', this.handleLayoutChannelMessage);
+            try {
+                this.layoutChannel.close();
+            } catch (e) {
+                // ignore close errors
+            }
+            this.layoutChannel = null;
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
