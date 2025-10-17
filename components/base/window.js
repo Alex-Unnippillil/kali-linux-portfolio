@@ -127,6 +127,9 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this.dragFrame = null;
+        this.pendingTransform = null;
+        this.pendingAfterCallbacks = new Set();
     }
 
     notifySizeChange = () => {
@@ -134,6 +137,93 @@ export class Window extends Component {
             const { width, height } = this.state;
             this.props.onSizeChange(width, height);
         }
+    }
+
+    applyPendingTransform = () => {
+        const pending = this.pendingTransform;
+        this.pendingTransform = null;
+        if (pending && pending.node) {
+            const { node, x, y } = pending;
+            node.style.transform = `translate(${x}px, ${y}px)`;
+        }
+
+        if (this.pendingAfterCallbacks.size > 0) {
+            const callbacks = Array.from(this.pendingAfterCallbacks);
+            this.pendingAfterCallbacks.clear();
+            callbacks.forEach((fn) => {
+                if (typeof fn === 'function') {
+                    fn();
+                }
+            });
+        }
+    }
+
+    scheduleTransformUpdate = (node, x, y, after) => {
+        if (node && typeof x === 'number' && typeof y === 'number') {
+            this.pendingTransform = { node, x, y };
+        } else if (node) {
+            const current = this.getCurrentTranslate(node);
+            this.pendingTransform = { node, x: current.x, y: current.y };
+        }
+
+        if (typeof after === 'function') {
+            this.pendingAfterCallbacks.add(after);
+        }
+
+        if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+            this.applyPendingTransform();
+            return;
+        }
+
+        if (this.dragFrame) {
+            return;
+        }
+
+        this.dragFrame = window.requestAnimationFrame(() => {
+            this.dragFrame = null;
+            this.applyPendingTransform();
+        });
+    }
+
+    flushTransformUpdate = () => {
+        if (this.dragFrame && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+            window.cancelAnimationFrame(this.dragFrame);
+        }
+        this.dragFrame = null;
+        this.applyPendingTransform();
+    }
+
+    cancelScheduledTransform = () => {
+        if (this.dragFrame && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+            window.cancelAnimationFrame(this.dragFrame);
+        }
+        this.dragFrame = null;
+        this.pendingTransform = null;
+        this.pendingAfterCallbacks.clear();
+    }
+
+    getCurrentTranslate = (node) => {
+        if (!node) {
+            return { x: 0, y: 0 };
+        }
+
+        const transform = node.style.transform || '';
+        const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(transform);
+        if (match) {
+            const parsedX = parseFloat(match[1]);
+            const parsedY = parseFloat(match[2]);
+            return {
+                x: Number.isFinite(parsedX) ? parsedX : 0,
+                y: Number.isFinite(parsedY) ? parsedY : 0,
+            };
+        }
+
+        const xVar = parseFloat(node.style.getPropertyValue('--window-transform-x'));
+        const yVar = parseFloat(node.style.getPropertyValue('--window-transform-y'));
+        return {
+            x: Number.isFinite(xVar) ? xVar : 0,
+            y: Number.isFinite(yVar) ? yVar : 0,
+        };
     }
 
     componentDidMount() {
@@ -169,6 +259,7 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.cancelScheduledTransform();
     }
 
     setDefaultWindowDimenstion = () => {
@@ -235,6 +326,11 @@ export class Window extends Component {
                 this.scheduleUsageCheck();
             }
         });
+    }
+
+    commitResizeMeasurements = () => {
+        this.resizeBoundries();
+        this.notifySizeChange();
     }
 
     computeContentUsage = () => {
@@ -392,8 +488,7 @@ export class Window extends Component {
         const snapped = this.snapToGrid(px, 'y');
         const heightPercent = snapped / window.innerHeight * 100;
         this.setState({ height: heightPercent, preMaximizeSize: null }, () => {
-            this.resizeBoundries();
-            this.notifySizeChange();
+            this.scheduleTransformUpdate(null, null, null, this.commitResizeMeasurements);
         });
     }
 
@@ -403,8 +498,7 @@ export class Window extends Component {
         const snapped = this.snapToGrid(px, 'x');
         const widthPercent = snapped / window.innerWidth * 100;
         this.setState({ width: widthPercent, preMaximizeSize: null }, () => {
-            this.resizeBoundries();
-            this.notifySizeChange();
+            this.scheduleTransformUpdate(null, null, null, this.commitResizeMeasurements);
         });
     }
 
@@ -577,18 +671,18 @@ export class Window extends Component {
 
         x = resist(x, 0, maxX);
         y = resist(y, topBound, maxY);
-        node.style.transform = `translate(${x}px, ${y}px)`;
+        this.scheduleTransformUpdate(node, x, y, this.checkSnapPreview);
     }
 
     handleDrag = (e, data) => {
         if (data && data.node) {
             this.applyEdgeResistance(data.node, data);
         }
-        this.checkSnapPreview();
     }
 
     handleStop = () => {
         this.changeCursorToDefault();
+        this.flushTransformUpdate();
         const snapPos = this.state.snapPosition;
         if (snapPos) {
             this.snapWindow(snapPos);
@@ -724,14 +818,10 @@ export class Window extends Component {
                 e.stopPropagation();
                 const node = this.getWindowNode();
                 if (node) {
-                    const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
-                    let x = match ? parseFloat(match[1]) : 0;
-                    let y = match ? parseFloat(match[2]) : 0;
-                    x += dx;
-                    y += dy;
-                    node.style.transform = `translate(${x}px, ${y}px)`;
-                    this.checkSnapPreview();
-                    this.setWinowsPosition();
+                    const current = this.getCurrentTranslate(node);
+                    const nextX = current.x + dx;
+                    const nextY = current.y + dy;
+                    this.scheduleTransformUpdate(node, nextX, nextY, this.commitKeyboardMove);
                 }
             }
         }
@@ -741,6 +831,11 @@ export class Window extends Component {
         if (this.state.grabbed) {
             this.handleStop();
         }
+    }
+
+    commitKeyboardMove = () => {
+        this.checkSnapPreview();
+        this.setWinowsPosition();
     }
 
     handleKeyDown = (e) => {
