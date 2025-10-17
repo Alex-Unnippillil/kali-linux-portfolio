@@ -8,6 +8,7 @@ const BackgroundImage = dynamic(
     { ssr: false }
 );
 import apps, { games } from '../../apps.config';
+import { buildAppMetadata } from '../../lib/appRegistry';
 import { DEFAULT_DESKTOP_FOLDERS } from '../../data/desktopFolders';
 import Window from '../desktop/Window';
 import UbuntuApp from '../base/ubuntu_app';
@@ -984,12 +985,14 @@ export class Desktop extends Component {
         const summaries = [];
         apps.forEach((app) => {
             if (closed_windows[app.id] === false) {
+                const metadata = buildAppMetadata(app);
                 summaries.push({
                     id: app.id,
                     title: app.title,
                     icon: app.icon.replace('./', '/'),
                     isFocused: Boolean(focused_windows[app.id]),
                     isMinimized: Boolean(minimized_windows[app.id]),
+                    supportsMultipleInstances: Boolean(metadata?.supportsMultipleInstances),
                 });
             }
         });
@@ -1012,6 +1015,7 @@ export class Desktop extends Component {
                 isFocused,
                 isMinimized,
                 isOverlay: true,
+                supportsMultipleInstances: false,
             });
         });
         return summaries;

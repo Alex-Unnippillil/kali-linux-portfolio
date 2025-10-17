@@ -4,12 +4,14 @@ export type AppMetadata = {
   path: string;
   keyboard: string[];
   icon?: string;
+  supportsMultipleInstances?: boolean;
 };
 
 type AppEntry = {
   id: string;
   title: string;
   icon?: string;
+  supportsMultipleInstances?: boolean;
 };
 
 const DEFAULT_KEYBOARD_HINTS = [
@@ -26,10 +28,12 @@ const metadataOverrides: Partial<Record<string, Partial<AppMetadata>>> = {
       'Ctrl+L — Clear terminal output',
       'Arrow keys — Navigate history',
     ],
+    supportsMultipleInstances: true,
   },
   firefox: {
     description: 'Lightweight Firefox-inspired web view that loads a single sandboxed iframe.',
     keyboard: ['Ctrl+L — Focus address bar', 'Enter — Navigate to URL'],
+    supportsMultipleInstances: true,
   },
   vscode: {
     description: 'VS Code remote workspace embedded via StackBlitz iframe for quick code editing.',
@@ -38,6 +42,7 @@ const metadataOverrides: Partial<Record<string, Partial<AppMetadata>>> = {
       'Ctrl+Shift+P — Command palette',
       'Ctrl+B — Toggle sidebar',
     ],
+    supportsMultipleInstances: true,
   },
   spotify: {
     description: 'Spotify-inspired player that streams curated demo playlists without external calls.',
@@ -49,6 +54,12 @@ const metadataOverrides: Partial<Record<string, Partial<AppMetadata>>> = {
   },
   settings: {
     description: 'Desktop settings hub with themes, key bindings, and personalization options.',
+  },
+  files: {
+    supportsMultipleInstances: true,
+  },
+  gedit: {
+    supportsMultipleInstances: true,
   },
   'security-tools': {
     description: 'Unified console aggregating repeater, log viewers, and lab-only detection fixtures.',
@@ -81,6 +92,8 @@ export const buildAppMetadata = (app: AppEntry): AppMetadata => {
       override.description ?? `Launch the ${app.title} demo environment.`,
     path: override.path ?? `/apps/${app.id}`,
     keyboard: override.keyboard ?? DEFAULT_KEYBOARD_HINTS,
+    supportsMultipleInstances:
+      override.supportsMultipleInstances ?? app.supportsMultipleInstances,
   };
 };
 

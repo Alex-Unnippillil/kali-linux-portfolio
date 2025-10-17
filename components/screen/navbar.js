@@ -29,7 +29,8 @@ const areRunningAppsEqual = (next = [], prev = []) => {
                         a.title !== b.title ||
                         a.icon !== b.icon ||
                         a.isFocused !== b.isFocused ||
-                        a.isMinimized !== b.isMinimized
+                        a.isMinimized !== b.isMinimized ||
+                        a.supportsMultipleInstances !== b.supportsMultipleInstances
                 ) {
                         return false;
                 }
@@ -100,6 +101,41 @@ export default class Navbar extends PureComponent {
                 this.dispatchTaskbarCommand(detail);
         };
 
+        supportsMultipleInstances = (app) => {
+                if (!app || typeof app !== 'object') return false;
+                if (typeof app.supportsMultipleInstances === 'boolean') {
+                        return app.supportsMultipleInstances;
+                }
+                const metadata = app.metadata;
+                if (metadata && typeof metadata.supportsMultipleInstances === 'boolean') {
+                        return metadata.supportsMultipleInstances;
+                }
+                return false;
+        };
+
+        handleAppAuxiliaryClick = (event, app) => {
+                if (!event || !app) return;
+                const isPointerEvent = typeof event.pointerType === 'string';
+                if (isPointerEvent && event.pointerType !== 'mouse') {
+                        return;
+                }
+                if (event.button !== 1) {
+                        return;
+                }
+                if (typeof event.preventDefault === 'function') {
+                        event.preventDefault();
+                }
+                if (typeof event.stopPropagation === 'function') {
+                        event.stopPropagation();
+                }
+
+                const supportsMultiple = this.supportsMultipleInstances(app);
+                const detail = supportsMultiple
+                        ? { appId: app.id, action: 'open', spawnNewInstance: true }
+                        : { appId: app.id, action: 'toggle' };
+                this.dispatchTaskbarCommand(detail);
+        };
+
         handleAppButtonKeyDown = (event, app) => {
                 if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
@@ -154,6 +190,8 @@ export default class Navbar extends PureComponent {
                                 data-app-id={app.id}
                                 data-active={isActive ? 'true' : 'false'}
                                 onClick={() => this.handleAppButtonClick(app)}
+                                onAuxClick={(event) => this.handleAppAuxiliaryClick(event, app)}
+                                onPointerUp={(event) => this.handleAppAuxiliaryClick(event, app)}
                                 onKeyDown={(event) => this.handleAppButtonKeyDown(event, app)}
                                 className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
                         >
