@@ -16,6 +16,7 @@ const workspaceEventDetail = {
     { id: 1, label: 'Workspace 2', openWindows: 0 },
   ],
   activeWorkspace: 0,
+  pinnedApps: [],
   runningApps: [
     {
       id: 'app1',
@@ -50,6 +51,37 @@ const multiAppWorkspaceDetail = {
       icon: '/icon.png',
       isFocused: false,
       isMinimized: true,
+    },
+  ],
+};
+
+const pinnedWorkspaceDetail = {
+  ...workspaceEventDetail,
+  pinnedApps: [
+    {
+      id: 'pin1',
+      title: 'Pinned One',
+      icon: '/icon.png',
+      isRunning: false,
+      isFocused: false,
+      isMinimized: true,
+    },
+    {
+      id: 'pin2',
+      title: 'Pinned Two',
+      icon: '/icon.png',
+      isRunning: true,
+      isFocused: true,
+      isMinimized: false,
+    },
+  ],
+  runningApps: [
+    {
+      id: 'run-app',
+      title: 'Runner',
+      icon: '/icon.png',
+      isFocused: false,
+      isMinimized: false,
     },
   ],
 };
@@ -191,7 +223,59 @@ describe('Navbar running apps tray', () => {
     expect(taskbarEventCall).toBeTruthy();
     expect(taskbarEventCall && taskbarEventCall[0].detail).toEqual({
       action: 'reorder',
-      order: ['app2', 'app3', 'app1'],
+      order: { pinned: [], running: ['app2', 'app3', 'app1'] },
+    });
+  });
+
+  it('reorders pinned apps independently of running apps', () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('workspace-state', { detail: pinnedWorkspaceDetail }));
+    });
+
+    dispatchSpy.mockClear();
+
+    const pinnedList = screen.getByRole('list', { name: /pinned applications/i });
+    const pinnedItems = within(pinnedList).getAllByRole('listitem');
+    expect(pinnedItems).toHaveLength(2);
+
+    const [firstPinned, secondPinned] = pinnedItems;
+    Object.defineProperty(secondPinned, 'getBoundingClientRect', {
+      value: () => ({ left: 0, width: 120, top: 0, right: 120, bottom: 32, height: 32 }),
+    });
+
+    const dataTransfer = createDataTransfer();
+
+    act(() => {
+      fireEvent.dragStart(firstPinned, { dataTransfer });
+    });
+
+    expect(dataTransfer.getData('application/x-taskbar-segment')).toBe('pinned');
+
+    act(() => {
+      fireEvent.dragOver(secondPinned, { dataTransfer, clientX: 100 });
+    });
+
+    act(() => {
+      fireEvent.drop(secondPinned, { dataTransfer, clientX: 100 });
+    });
+
+    act(() => {
+      fireEvent.dragEnd(firstPinned, { dataTransfer });
+    });
+
+    const pinnedButtons = within(pinnedList).getAllByRole('button', { name: /pinned/i });
+    expect(pinnedButtons.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Pinned Two',
+      'Pinned One',
+    ]);
+
+    const taskbarEventCall = dispatchSpy.mock.calls.find(([event]) => event.type === 'taskbar-command');
+    expect(taskbarEventCall).toBeTruthy();
+    expect(taskbarEventCall && taskbarEventCall[0].detail).toEqual({
+      action: 'reorder',
+      order: { pinned: ['pin2', 'pin1'], running: ['run-app'] },
     });
   });
 });

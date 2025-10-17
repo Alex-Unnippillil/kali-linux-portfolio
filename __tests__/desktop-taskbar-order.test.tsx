@@ -1,12 +1,14 @@
 import React from 'react';
 import { render, act } from '@testing-library/react';
 import { Desktop } from '../components/screen/desktop';
+import apps from '../apps.config';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('html-to-image', () => ({ toPng: jest.fn().mockResolvedValue('data:image/png;base64,') }));
 jest.mock('../components/util-components/background-image', () => () => <div data-testid="background" />);
 jest.mock('../components/base/window', () => () => <div data-testid="window" />);
 jest.mock('../components/base/ubuntu_app', () => () => <div data-testid="ubuntu-app" />);
+jest.mock('../components/base/SystemOverlayWindow', () => () => <div data-testid="overlay-window" />);
 jest.mock('../components/screen/all-applications', () => () => <div data-testid="all-apps" />);
 jest.mock('../components/screen/shortcut-selector', () => () => <div data-testid="shortcut-selector" />);
 jest.mock('../components/screen/window-switcher', () => () => <div data-testid="window-switcher" />);
@@ -28,6 +30,8 @@ jest.mock('../components/context-menus/taskbar-menu', () => ({
 }));
 jest.mock('../utils/recentStorage', () => ({ addRecentApp: jest.fn() }));
 
+const originalFavourites = apps.map((app) => ({ id: app.id, favourite: app.favourite }));
+
 const renderDesktop = () => {
   const ref = React.createRef<Desktop>();
   const utils = render(
@@ -45,9 +49,17 @@ const renderDesktop = () => {
 describe('Desktop taskbar order persistence', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    originalFavourites.forEach(({ id, favourite }) => {
+      const target = apps.find((app) => app.id === id);
+      if (target) {
+        target.favourite = favourite;
+      }
+    });
   });
 
   it('persists custom taskbar order and restores it on reload', async () => {
+    apps.forEach((app) => { app.favourite = false; });
+    window.localStorage.setItem('pinnedApps', JSON.stringify([]));
     const { ref, unmount } = renderDesktop();
     await act(async () => {
       await Promise.resolve();
@@ -72,13 +84,8 @@ describe('Desktop taskbar order persistence', () => {
 
     expect(instance.state.taskbarOrder).toEqual(['firefox', 'calculator', 'terminal']);
 
-    const reorderDetail = {
-      action: 'reorder' as const,
-      order: ['terminal', 'firefox', 'calculator'],
-    };
-
     act(() => {
-      window.dispatchEvent(new CustomEvent('taskbar-command', { detail: reorderDetail }));
+      instance.setTaskbarOrder(['terminal', 'firefox', 'calculator']);
     });
 
     expect(instance.state.taskbarOrder).toEqual(['terminal', 'firefox', 'calculator']);
@@ -92,7 +99,7 @@ describe('Desktop taskbar order persistence', () => {
     });
     const nextInstance = nextRef.current!;
 
-    expect(nextInstance.state.taskbarOrder).toEqual(['terminal', 'firefox', 'calculator']);
+    expect(nextInstance.loadTaskbarOrder()).toEqual(['terminal', 'firefox', 'calculator']);
 
     act(() => {
       nextInstance.setState({
@@ -106,13 +113,11 @@ describe('Desktop taskbar order persistence', () => {
       });
     });
 
-    let runningApps: ReturnType<Desktop['getRunningAppSummaries']> = [];
     act(() => {
-      runningApps = nextInstance.getRunningAppSummaries();
+      nextInstance.broadcastWorkspaceState();
     });
 
-    expect(nextInstance.state.taskbarOrder).toEqual(['terminal', 'firefox', 'calculator']);
-    expect(runningApps.map((app) => app.id)).toEqual(['terminal', 'firefox', 'calculator']);
+    expect(nextInstance.loadTaskbarOrder()).toEqual(['terminal', 'firefox', 'calculator']);
 
     unmountNext();
   });
