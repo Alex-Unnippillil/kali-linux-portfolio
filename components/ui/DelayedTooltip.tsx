@@ -1,3 +1,5 @@
+"use client";
+
 import React, {
   ReactNode,
   useCallback,
@@ -19,17 +21,16 @@ type TriggerProps = {
 type DelayedTooltipProps = {
   content: ReactNode;
   delay?: number;
+  forceVisible?: boolean;
   children: (triggerProps: TriggerProps) => React.ReactElement;
 };
-
-const useIsomorphicLayoutEffect =
-  typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 const DEFAULT_OFFSET = 8;
 
 const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
   content,
   delay = 300,
+  forceVisible = false,
   children,
 }) => {
   const triggerRef = useRef<HTMLElement | null>(null);
@@ -72,8 +73,10 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
 
   useEffect(() => () => clearTimer(), [clearTimer]);
 
-  useIsomorphicLayoutEffect(() => {
-    if (!visible || !triggerRef.current || !tooltipRef.current) {
+  const isVisible = forceVisible || visible;
+
+  useLayoutEffect(() => {
+    if (!isVisible || !triggerRef.current || !tooltipRef.current) {
       return;
     }
     const triggerRect = triggerRef.current.getBoundingClientRect();
@@ -103,7 +106,7 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
     }
 
     setPosition({ top, left });
-  }, [visible, content]);
+  }, [isVisible, content]);
 
   const triggerProps: TriggerProps = {
     ref: (node) => {
@@ -126,7 +129,7 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
   return (
     <>
       {children(triggerProps)}
-      {portalEl && visible
+      {portalEl && isVisible
         ? createPortal(
             <div
               ref={tooltipRef}
