@@ -8,6 +8,7 @@ import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
 import {
     clampWindowTopPosition,
+    computeSnapRegions,
     DEFAULT_WINDOW_TOP_OFFSET,
     measureSafeAreaInset,
     measureSnapBottomInset,
@@ -54,37 +55,6 @@ const normalizeRightCornerSnap = (candidate, regions) => {
         }
     }
     return candidate;
-};
-
-const computeSnapRegions = (
-    viewportWidth,
-    viewportHeight,
-    topInset = DEFAULT_WINDOW_TOP_OFFSET,
-    bottomInset,
-) => {
-    const normalizedTopInset = typeof topInset === 'number'
-        ? Math.max(topInset, DESKTOP_TOP_PADDING)
-        : DEFAULT_WINDOW_TOP_OFFSET;
-    const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
-    const snapBottomInset = typeof bottomInset === 'number' && Number.isFinite(bottomInset)
-        ? Math.max(bottomInset, 0)
-        : measureSnapBottomInset();
-    const availableHeight = Math.max(0, viewportHeight - normalizedTopInset - snapBottomInset - safeBottom);
-    const halfWidth = Math.max(viewportWidth / 2, 0);
-    const halfHeight = Math.max(availableHeight / 2, 0);
-    const rightStart = Math.max(viewportWidth - halfWidth, 0);
-    const bottomStart = normalizedTopInset + halfHeight;
-
-    return {
-        left: { left: 0, top: normalizedTopInset, width: halfWidth, height: availableHeight },
-        right: { left: rightStart, top: normalizedTopInset, width: halfWidth, height: availableHeight },
-        top: { left: 0, top: normalizedTopInset, width: viewportWidth, height: availableHeight },
-        'top-left': { left: 0, top: normalizedTopInset, width: halfWidth, height: halfHeight },
-        'top-right': { left: rightStart, top: normalizedTopInset, width: halfWidth, height: halfHeight },
-        'bottom-left': { left: 0, top: bottomStart, width: halfWidth, height: halfHeight },
-        'bottom-right': { left: rightStart, top: bottomStart, width: halfWidth, height: halfHeight },
-
-    };
 };
 
 export class Window extends Component {

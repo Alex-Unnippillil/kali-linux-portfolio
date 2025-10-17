@@ -1,4 +1,5 @@
 import {
+  DESKTOP_TOP_PADDING,
   NAVBAR_HEIGHT,
   NAVBAR_VERTICAL_PADDING,
   SNAP_BOTTOM_INSET,
@@ -159,6 +160,43 @@ export const measureSnapBottomInset = () => {
     return Math.max(measured, DEFAULT_SNAP_BOTTOM_INSET);
   }
   return DEFAULT_SNAP_BOTTOM_INSET;
+};
+
+export const computeSnapRegions = (
+  viewportWidth,
+  viewportHeight,
+  topInset = DEFAULT_WINDOW_TOP_OFFSET,
+  bottomInset,
+  options = {},
+) => {
+  const safeAreaReader = typeof options.measureSafeAreaInset === 'function'
+    ? options.measureSafeAreaInset
+    : measureSafeAreaInset;
+  const snapBottomReader = typeof options.measureSnapBottomInset === 'function'
+    ? options.measureSnapBottomInset
+    : measureSnapBottomInset;
+  const normalizedTopInset = typeof topInset === 'number'
+    ? Math.max(topInset, DESKTOP_TOP_PADDING)
+    : DEFAULT_WINDOW_TOP_OFFSET;
+  const safeBottom = Math.max(0, safeAreaReader('bottom'));
+  const snapBottomInset = typeof bottomInset === 'number' && Number.isFinite(bottomInset)
+    ? Math.max(bottomInset, 0)
+    : snapBottomReader();
+  const availableHeight = Math.max(0, viewportHeight - normalizedTopInset - snapBottomInset - safeBottom);
+  const halfWidth = Math.max(viewportWidth / 2, 0);
+  const halfHeight = Math.max(availableHeight / 2, 0);
+  const rightStart = Math.max(viewportWidth - halfWidth, 0);
+  const bottomStart = normalizedTopInset + halfHeight;
+
+  return {
+    left: { left: 0, top: normalizedTopInset, width: halfWidth, height: availableHeight },
+    right: { left: rightStart, top: normalizedTopInset, width: halfWidth, height: availableHeight },
+    top: { left: 0, top: normalizedTopInset, width: viewportWidth, height: availableHeight },
+    'top-left': { left: 0, top: normalizedTopInset, width: halfWidth, height: halfHeight },
+    'top-right': { left: rightStart, top: normalizedTopInset, width: halfWidth, height: halfHeight },
+    'bottom-left': { left: 0, top: bottomStart, width: halfWidth, height: halfHeight },
+    'bottom-right': { left: rightStart, top: bottomStart, width: halfWidth, height: halfHeight },
+  };
 };
 
 export const clampWindowTopPosition = (value, topOffset) => {
