@@ -17,7 +17,13 @@ interface ReadingUpdate {
   time: number;
 }
 
-function CityTile({ city }: { city: City }) {
+function CityTile({
+  city,
+  onRemove,
+}: {
+  city: City;
+  onRemove: (city: City) => void;
+}) {
   const reading = city.lastReading;
   const hasReading = Boolean(reading);
   const tempLabel = hasReading
@@ -42,10 +48,23 @@ function CityTile({ city }: { city: City }) {
             {tempLabel}
           </div>
         </div>
-        <WeatherIcon
-          code={reading?.condition ?? 3}
-          className="h-16 w-16 text-[color:color-mix(in_srgb,var(--kali-text)_80%,transparent)] sm:h-20 sm:w-20"
-        />
+        <div className="flex flex-col items-end gap-2">
+          <button
+            type="button"
+            className="rounded bg-[color:color-mix(in_srgb,var(--kali-panel)_80%,transparent)] px-2 py-1 text-xs font-medium uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_75%,transparent)] transition hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,transparent)] hover:text-[color:var(--kali-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control/60"
+            onClick={(event) => {
+              event.stopPropagation();
+              onRemove(city);
+            }}
+            aria-label={`Remove ${city.name}`}
+          >
+            Remove
+          </button>
+          <WeatherIcon
+            code={reading?.condition ?? 3}
+            className="h-16 w-16 text-[color:color-mix(in_srgb,var(--kali-text)_80%,transparent)] sm:h-20 sm:w-20"
+          />
+        </div>
       </div>
       <div>
         <div className="mb-2 text-xs uppercase tracking-wider text-[color:color-mix(in_srgb,var(--kali-text)_60%,transparent)]">
@@ -76,6 +95,28 @@ export default function WeatherApp() {
   );
   const [selected, setSelected] = useState<City | null>(null);
   const dragSrc = useRef<number | null>(null);
+
+  const requestRemoveCity = (city: City) => {
+    const confirmed =
+      typeof window === 'undefined'
+        ? true
+        : window.confirm(`Remove ${city.name} from the dashboard?`);
+    if (!confirmed) return;
+    setCities((prev) => prev.filter((item) => item.id !== city.id));
+    setGroups((prev) => {
+      let changed = false;
+      const next = prev.map((group) => {
+        const filtered = group.cities.filter((item) => item.id !== city.id);
+        if (filtered.length !== group.cities.length) {
+          changed = true;
+          return { ...group, cities: filtered };
+        }
+        return group;
+      });
+      return changed ? next : prev;
+    });
+    setSelected((current) => (current?.id === city.id ? null : current));
+  };
 
   useEffect(() => {
     if (!currentGroup) return;
@@ -245,7 +286,7 @@ export default function WeatherApp() {
             onClick={() => setSelected(city)}
             className="cursor-pointer rounded border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent)] p-4 transition hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_94%,transparent)] focus-within:bg-[color:color-mix(in_srgb,var(--kali-panel)_94%,transparent)]"
           >
-            <CityTile city={city} />
+            <CityTile city={city} onRemove={requestRemoveCity} />
           </div>
         ))}
       </div>
@@ -255,7 +296,11 @@ export default function WeatherApp() {
         </div>
       )}
       {selected && (
-        <CityDetail city={selected} onClose={() => setSelected(null)} />
+        <CityDetail
+          city={selected}
+          onClose={() => setSelected(null)}
+          onDelete={requestRemoveCity}
+        />
       )}
     </div>
   );
