@@ -4,6 +4,7 @@ import { RRule } from 'rrule';
 import { parseRecurring } from '../../apps/todoist/utils/recurringParser';
 
 const STORAGE_KEY = 'portfolio-tasks';
+const DESTINATION_STORAGE_KEY = 'portfolio-tasks-destination';
 
 const initialGroups = {
   Today: [],
@@ -15,6 +16,14 @@ const WIP_LIMITS = {
   Today: 0,
   Upcoming: 0,
   Someday: 0,
+};
+
+const formatLimitMessage = (group) => {
+  const limit = WIP_LIMITS[group];
+  if (!limit) {
+    return `${group} is at capacity.`;
+  }
+  return `${group} is at capacity (limit ${limit}).`;
 };
 
 const PRIORITY_COLORS = {
@@ -36,12 +45,15 @@ export default function Todoist() {
   const [recurringPreview, setRecurringPreview] = useState([]);
   const [recurringRule, setRecurringRule] = useState('');
   const [quick, setQuick] = useState('');
+  const [destination, setDestination] = useState('Today');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [view, setView] = useState('all');
   const [activeProject, setActiveProject] = useState('all');
   const [editingTask, setEditingTask] = useState({ id: null, group: '', title: '' });
+  const [formError, setFormError] = useState('');
+  const [quickError, setQuickError] = useState('');
   const [calendarDate, setCalendarDate] = useState(() => {
     const d = new Date();
     d.setDate(1);
@@ -65,6 +77,10 @@ export default function Todoist() {
         } catch {
           // ignore bad data
         }
+      }
+      const storedDestination = localStorage.getItem(DESTINATION_STORAGE_KEY);
+      if (storedDestination && storedDestination in initialGroups) {
+        setDestination(storedDestination);
       }
     }
   }, []);
@@ -123,6 +139,23 @@ export default function Todoist() {
     },
     [announce],
   );
+
+  const persistDestination = useCallback((value) => {
+    setDestination(value);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(DESTINATION_STORAGE_KEY, value);
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
+
+  const handleDestinationChange = (value) => {
+    setFormError('');
+    setQuickError('');
+    persistDestination(value);
+  };
 
   const handleDragStart = (group, task) => (e) => {
     dragged.current = { group, id: task.id, title: task.title };
@@ -254,6 +287,9 @@ export default function Todoist() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
+    if (formError) {
+      setFormError('');
+    }
     if (name === 'recurring') {
       const result = parseRecurring(
         value,
@@ -318,7 +354,13 @@ export default function Todoist() {
   const handleAdd = (e) => {
     e.preventDefault();
     if (!form.title) return;
-    if (WIP_LIMITS.Today && groups.Today.length >= WIP_LIMITS.Today) return;
+    if (
+      WIP_LIMITS[destination] &&
+      groups[destination].length >= WIP_LIMITS[destination]
+    ) {
+      setFormError(formatLimitMessage(destination));
+      return;
+    }
     const newTask = {
       id: Date.now(),
       title: form.title,
@@ -331,34 +373,49 @@ export default function Todoist() {
     };
     const newGroups = {
       ...groups,
-      Today: [...groups.Today, newTask],
+      [destination]: [...groups[destination], newTask],
     };
-    finalizeMove(newGroups, form.title, 'Today');
+    finalizeMove(newGroups, form.title, destination);
+    persistDestination(destination);
     setForm({ title: '', due: '', priority: 'medium', section: '', recurring: '' });
     setRecurringRule('');
     setRecurringPreview([]);
+    setFormError('');
   };
 
   const handleQuickAdd = (e) => {
     e.preventDefault();
     if (!quick.trim()) return;
+    setQuickError('');
+    let working = quick;
+    const destinationMatch = working.match(/>(today|upcoming|someday)/i);
+    let targetGroup = destination;
+    if (destinationMatch) {
+      const normalized =
+        destinationMatch[1].charAt(0).toUpperCase() +
+        destinationMatch[1].slice(1).toLowerCase();
+      if (normalized in initialGroups) {
+        targetGroup = normalized;
+        working = working.replace(destinationMatch[0], '').trim();
+      }
+    }
     let due;
     try {
-      const date = chrono.parseDate(quick);
+      const date = chrono.parseDate(working);
       if (date) {
         due = date.toISOString().split('T')[0];
       }
     } catch {
       // ignore
     }
-    const priorityMatch = quick.match(/!([1-3])/);
-    const sectionMatch = quick.match(/#(\w+)/);
-    const recurringMatch = quick.match(/every\s+([a-z0-9\s]+)/i);
+    const priorityMatch = working.match(/!([1-3])/);
+    const sectionMatch = working.match(/#(\w+)/);
+    const recurringMatch = working.match(/every\s+([a-z0-9\s]+)/i);
     const priorityMap = { '1': 'high', '2': 'medium', '3': 'low' };
     const priority = priorityMatch ? priorityMap[priorityMatch[1]] : 'medium';
-    let title = quick;
+    let title = working;
     if (due) {
-      const parsed = chrono.parse(quick)[0];
+      const parsed = chrono.parse(working)[0];
       if (parsed) {
         title = title.replace(parsed.text, '').trim();
       }
@@ -372,8 +429,9 @@ export default function Todoist() {
     if (recurringMatch) {
       title = title.replace(recurringMatch[0], '').trim();
     }
+    title = title.trim();
     const section = sectionMatch ? sectionMatch[1] : undefined;
-    let recurring = recurringMatch ? recurringMatch[1].toLowerCase() : undefined;
+    let recurring = recurringMatch ? recurringMatch[1].toLowerCase().trim() : undefined;
     let rrule;
     if (recurringMatch) {
       const parsed = parseRecurring(
@@ -385,9 +443,16 @@ export default function Todoist() {
         due = parsed.preview[0].toISOString().split('T')[0];
       }
     }
+    if (
+      WIP_LIMITS[targetGroup] &&
+      groups[targetGroup].length >= WIP_LIMITS[targetGroup]
+    ) {
+      setQuickError(formatLimitMessage(targetGroup));
+      return;
+    }
     const newTask = {
       id: Date.now(),
-      title: title || quick,
+      title: title || working || quick,
       due,
       priority,
       section,
@@ -397,10 +462,12 @@ export default function Todoist() {
     };
     const newGroups = {
       ...groups,
-      Today: [...groups.Today, newTask],
+      [targetGroup]: [...groups[targetGroup], newTask],
     };
-    finalizeMove(newGroups, newTask.title, 'Today');
+    finalizeMove(newGroups, newTask.title, targetGroup);
+    persistDestination(targetGroup);
     setQuick('');
+    setQuickError('');
   };
 
   const handleExport = () => {
@@ -639,6 +706,7 @@ export default function Todoist() {
               onKeyDown={(e) => e.key === 'Enter' && saveEditing()}
               className="mt-1.5 w-full border p-1.5"
               autoFocus
+              aria-label="Edit task title"
             />
           )}
         </div>
@@ -821,22 +889,46 @@ export default function Todoist() {
       <div className="flex flex-1 flex-col">
         <div aria-live="polite" className="sr-only" ref={liveRef} />
         <div className="p-2 border-b flex flex-col gap-2">
-          <form onSubmit={handleQuickAdd} className="flex gap-2">
+          <form onSubmit={handleQuickAdd} className="flex gap-2 items-start">
             <input
               ref={quickRef}
               value={quick}
-              onChange={(e) => setQuick(e.target.value)}
-            placeholder="Quick add (e.g., 'Pay bills tomorrow !1')"
-            className="border p-1 flex-1"
-          />
-          <button
-            type="submit"
-            className="px-2 py-1 bg-blue-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            Add
-          </button>
-        </form>
-        <form onSubmit={handleAdd} className="flex flex-wrap gap-2">
+              onChange={(e) => {
+                setQuick(e.target.value);
+                if (quickError) {
+                  setQuickError('');
+                }
+              }}
+              placeholder="Quick add (e.g., 'Pay bills tomorrow !1 >Upcoming')"
+              className="border p-1 flex-1"
+              aria-label="Quick add task"
+            />
+            <select
+              aria-label="Destination"
+              value={destination}
+              onChange={(e) => handleDestinationChange(e.target.value)}
+              className="border p-1"
+            >
+              {Object.keys(initialGroups).map((group) => (
+                <option key={group} value={group}>
+                  {group}
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              className="px-2 py-1 bg-blue-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              Add
+            </button>
+          </form>
+          {quickError && (
+            <p className="text-xs text-red-600" role="alert">
+              {quickError}
+            </p>
+          )}
+        
+        <form onSubmit={handleAdd} className="flex flex-wrap gap-2 items-start">
           <input
             name="title"
             value={form.title}
@@ -845,6 +937,7 @@ export default function Todoist() {
             placeholder="Task"
             className="border p-1"
             required
+            aria-label="Task title"
           />
           <input
             type="date"
@@ -852,6 +945,7 @@ export default function Todoist() {
             value={form.due}
             onChange={handleChange}
             className="border p-1"
+            aria-label="Due date"
           />
           <input
             name="section"
@@ -859,6 +953,7 @@ export default function Todoist() {
             onChange={handleChange}
             placeholder="Section"
             className="border p-1"
+            aria-label="Section"
           />
           <input
             name="recurring"
@@ -866,6 +961,7 @@ export default function Todoist() {
             onChange={handleChange}
             placeholder="Recurring (e.g., every mon)"
             className="border p-1"
+            aria-label="Recurring pattern"
           />
           {recurringPreview.length > 0 && (
             <div className="text-xs text-gray-500">
@@ -875,10 +971,23 @@ export default function Todoist() {
             </div>
           )}
           <select
+            aria-label="Destination"
+            value={destination}
+            onChange={(e) => handleDestinationChange(e.target.value)}
+            className="border p-1"
+          >
+            {Object.keys(initialGroups).map((group) => (
+              <option key={group} value={group}>
+                {group}
+              </option>
+            ))}
+          </select>
+          <select
             name="priority"
             value={form.priority}
             onChange={handleChange}
             className="border p-1"
+            aria-label="Priority"
           >
             <option value="low">Low</option>
             <option value="medium">Medium</option>
@@ -890,18 +999,25 @@ export default function Todoist() {
           >
             Add
           </button>
-        </form>
+          </form>
+          {formError && (
+            <p className="text-xs text-red-600" role="alert">
+              {formError}
+            </p>
+          )}
         <div className="flex flex-wrap gap-2">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search"
             className="border p-1 flex-1"
+            aria-label="Search tasks"
           />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="border p-1"
+            aria-label="Status filter"
           >
             <option value="all">All</option>
             <option value="active">Active</option>
@@ -911,6 +1027,7 @@ export default function Todoist() {
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
             className="border p-1"
+            aria-label="Priority filter"
           >
             <option value="all">All priorities</option>
             <option value="high">High</option>
@@ -927,11 +1044,23 @@ export default function Todoist() {
           <button className="px-2 py-1 border rounded" onClick={handleExportCsv}>Export CSV</button>
           <label className="px-2 py-1 border rounded cursor-pointer">
             Import
-            <input type="file" accept="application/json" onChange={handleImport} className="sr-only" />
+            <input
+              type="file"
+              accept="application/json"
+              onChange={handleImport}
+              className="sr-only"
+              aria-label="Import JSON tasks"
+            />
           </label>
           <label className="px-2 py-1 border rounded cursor-pointer">
             Import CSV
-            <input type="file" accept="text/csv" onChange={handleImportCsv} className="sr-only" />
+            <input
+              type="file"
+              accept="text/csv"
+              onChange={handleImportCsv}
+              className="sr-only"
+              aria-label="Import CSV tasks"
+            />
           </label>
         </div>
         <div className="flex flex-1">
