@@ -699,6 +699,8 @@ export class Desktop extends Component {
             this.iconDimensions = nextIconDimensions;
             this.iconGridSpacing = nextIconGridSpacing;
             this.desktopPadding = nextDesktopPadding;
+            const metrics = this.computeGridMetrics();
+            this.savedIconPositions = this.sanitizeIconPositionMap(this.savedIconPositions, metrics);
         }
 
         return changed;
@@ -1066,13 +1068,27 @@ export class Desktop extends Component {
 
     persistIconPositions = () => {
         if (!safeLocalStorage) return;
+        const metrics = this.computeGridMetrics();
         const positions = this.state.desktop_icon_positions || {};
-        try {
-            safeLocalStorage.setItem('desktop_icon_positions', JSON.stringify(positions));
-            this.savedIconPositions = { ...positions };
-        } catch (e) {
-            // ignore write errors (storage may be unavailable)
+        const sanitized = this.sanitizeIconPositionMap(positions, metrics);
+
+        const commit = (finalPositions) => {
+            try {
+                safeLocalStorage.setItem('desktop_icon_positions', JSON.stringify(finalPositions));
+                this.savedIconPositions = { ...finalPositions };
+            } catch (e) {
+                // ignore write errors (storage may be unavailable)
+            }
+        };
+
+        if (!this.areIconLayoutsEqual(positions, sanitized)) {
+            this.setState({ desktop_icon_positions: sanitized }, () => {
+                commit(sanitized);
+            });
+            return;
         }
+
+        commit(sanitized);
     };
 
     persistFolderContents = (contents) => {
@@ -1109,7 +1125,8 @@ export class Desktop extends Component {
         if (!Array.isArray(desktopApps)) return;
         this.setState((prevState) => {
             const current = prevState.desktop_icon_positions || {};
-            const layout = this.resolveIconLayout(desktopApps, current);
+            const metrics = this.computeGridMetrics();
+            const layout = this.resolveIconLayout(desktopApps, current, { metrics });
             if (this.areIconLayoutsEqual(current, layout)) {
                 return null;
             }
@@ -1306,8 +1323,14 @@ export class Desktop extends Component {
         };
     };
 
-    computeGridPosition = (index = 0) => {
-        const { iconsPerColumn, offsetX, offsetY, columnSpacing, rowSpacing } = this.computeGridMetrics();
+    computeGridPosition = (index = 0, metricsInput) => {
+        const metrics = metricsInput || this.computeGridMetrics();
+        const iconsPerColumnValue = Number.isFinite(metrics.iconsPerColumn) ? metrics.iconsPerColumn : 1;
+        const iconsPerColumn = Math.max(1, Math.round(iconsPerColumnValue));
+        const offsetX = Number.isFinite(metrics.offsetX) ? metrics.offsetX : 0;
+        const offsetY = Number.isFinite(metrics.offsetY) ? metrics.offsetY : 0;
+        const columnSpacing = Number.isFinite(metrics.columnSpacing) ? metrics.columnSpacing : 0;
+        const rowSpacing = Number.isFinite(metrics.rowSpacing) ? metrics.rowSpacing : 0;
         const column = Math.floor(index / iconsPerColumn);
         const row = index % iconsPerColumn;
         const x = offsetX + column * columnSpacing;
@@ -1863,15 +1886,17 @@ export class Desktop extends Component {
         return appsOnDesktop.indexOf(id);
     };
 
-    describeKeyboardIconPosition = (position) => {
+    describeKeyboardIconPosition = (position, metricsInput) => {
         if (!this.isValidIconPosition(position)) {
             return { column: null, row: null };
         }
-        const metrics = this.computeGridMetrics();
-        const columnSpacing = Math.max(metrics.columnSpacing || 0, 1);
-        const rowSpacing = Math.max(metrics.rowSpacing || 0, 1);
-        const column = Math.max(1, Math.round((position.x - metrics.offsetX) / columnSpacing) + 1);
-        const row = Math.max(1, Math.round((position.y - metrics.offsetY) / rowSpacing) + 1);
+        const metrics = metricsInput || this.computeGridMetrics();
+        const columnSpacing = Math.max(Number.isFinite(metrics.columnSpacing) ? metrics.columnSpacing : 0, 1);
+        const rowSpacing = Math.max(Number.isFinite(metrics.rowSpacing) ? metrics.rowSpacing : 0, 1);
+        const offsetX = Number.isFinite(metrics.offsetX) ? metrics.offsetX : 0;
+        const offsetY = Number.isFinite(metrics.offsetY) ? metrics.offsetY : 0;
+        const column = Math.max(1, Math.round((position.x - offsetX) / columnSpacing) + 1);
+        const row = Math.max(1, Math.round((position.y - offsetY) / rowSpacing) + 1);
         return { column, row };
     };
 
@@ -1880,10 +1905,12 @@ export class Desktop extends Component {
             return undefined;
         }
         const title = app.title || app.name || 'app';
+        const moveState = this.state.keyboardMoveState;
+        const metrics = moveState && moveState.id === app.id ? moveState.gridMetrics : null;
         if (isMoving) {
             let location = '';
             if (this.isValidIconPosition(position)) {
-                const { column, row } = this.describeKeyboardIconPosition(position);
+                const { column, row } = this.describeKeyboardIconPosition(position, metrics);
                 if (column && row) {
                     location = ` Current position column ${column}, row ${row}.`;
                 }
@@ -1892,7 +1919,7 @@ export class Desktop extends Component {
         }
         let location = '';
         if (this.isValidIconPosition(position)) {
-            const { column, row } = this.describeKeyboardIconPosition(position);
+            const { column, row } = this.describeKeyboardIconPosition(position, metrics);
             if (column && row) {
                 location = ` It is currently in column ${column}, row ${row}.`;
             }
@@ -2106,24 +2133,25 @@ export class Desktop extends Component {
     };
 
     resolveIconLayout = (desktopApps = [], current = {}, options = {}) => {
+        const metrics = options?.metrics || this.computeGridMetrics();
         const next = {};
         const taken = new Set();
         const clampOnly = options?.clampOnly === true;
 
         const claimPosition = (position) => {
-            if (!this.isValidIconPosition(position)) return null;
-            const base = this.clampIconPosition(position.x, position.y);
-            const key = this.getIconPositionKey(base);
+            const normalized = this.normalizeIconPosition(position, metrics);
+            if (!normalized) return null;
+            const key = this.getIconPositionKey(normalized);
             if (!key || taken.has(key)) return null;
             taken.add(key);
-            return base;
+            return normalized;
         };
 
         let fallbackIndex = 0;
         const assignFallback = (startIndex) => {
             let index = Math.max(startIndex, fallbackIndex);
             while (index < startIndex + 1000) {
-                const candidate = this.computeGridPosition(index);
+                const candidate = this.computeGridPosition(index, metrics);
                 const key = this.getIconPositionKey(candidate);
                 if (key && !taken.has(key)) {
                     taken.add(key);
@@ -2132,7 +2160,7 @@ export class Desktop extends Component {
                 }
                 index += 1;
             }
-            const fallback = this.computeGridPosition(startIndex);
+            const fallback = this.computeGridPosition(startIndex, metrics);
             const fallbackKey = this.getIconPositionKey(fallback);
             if (fallbackKey && !taken.has(fallbackKey)) {
                 taken.add(fallbackKey);
@@ -2182,43 +2210,89 @@ export class Desktop extends Component {
         return { x: Math.round(clampedX), y: Math.round(clampedY) };
     };
 
-    snapIconPosition = (x, y) => {
-        const metrics = this.computeGridMetrics();
-        const snapAxis = (value, offset, spacing) => {
-            if (!Number.isFinite(value) || !Number.isFinite(offset) || !Number.isFinite(spacing) || spacing <= 0) {
-                return value;
-            }
-            const relative = value - offset;
-            const snappedRelative = Math.round(relative / spacing) * spacing;
-            return offset + snappedRelative;
-        };
-
-        const snappedX = snapAxis(x, metrics.offsetX, metrics.columnSpacing);
-        const snappedY = snapAxis(y, metrics.offsetY, metrics.rowSpacing);
-
-        return { x: snappedX, y: snappedY };
-    };
-
-    calculateIconPosition = (clientX, clientY, dragState = this.iconDragState) => {
-        if (!dragState) return { x: 0, y: 0 };
-        const rect = this.getDesktopRect();
-        if (!rect) {
-            const snapped = this.snapIconPosition(clientX - dragState.offsetX, clientY - dragState.offsetY);
-            return this.clampIconPosition(snapped.x, snapped.y);
+    normalizeIconPosition = (position, metricsInput) => {
+        if (!position || !Number.isFinite(position.x) || !Number.isFinite(position.y)) {
+            return null;
         }
-        const x = clientX - rect.left - dragState.offsetX;
-        const y = clientY - rect.top - dragState.offsetY;
-        const snapped = this.snapIconPosition(x, y);
+        const metrics = metricsInput || this.computeGridMetrics();
+        const snapped = this.snapIconPosition(position.x, position.y, metrics);
         return this.clampIconPosition(snapped.x, snapped.y);
     };
 
-    updateIconPosition = (id, x, y, persist = false) => {
-        const nextPosition = this.clampIconPosition(x, y);
+    sanitizeIconPositionMap = (positions, metricsInput) => {
+        const metrics = metricsInput || this.computeGridMetrics();
+        const sanitized = {};
+        if (!positions || typeof positions !== 'object') {
+            return sanitized;
+        }
+        Object.entries(positions).forEach(([id, value]) => {
+            const normalized = this.normalizeIconPosition(value, metrics);
+            if (normalized) {
+                sanitized[id] = normalized;
+            }
+        });
+        return sanitized;
+    };
+
+    snapIconPosition = (x, y, metricsInput) => {
+        const metrics = metricsInput || this.computeGridMetrics();
+        const snapAxis = (value, offset, spacing) => {
+            const safeOffset = Number.isFinite(offset) ? offset : 0;
+            const safeSpacing = Number.isFinite(spacing) && spacing > 0 ? spacing : 1;
+            const safeValue = Number.isFinite(value) ? value : safeOffset;
+            const relative = safeValue - safeOffset;
+            const snappedRelative = Math.round(relative / safeSpacing) * safeSpacing;
+            return safeOffset + snappedRelative;
+        };
+
+        return {
+            x: snapAxis(x, metrics.offsetX, metrics.columnSpacing),
+            y: snapAxis(y, metrics.offsetY, metrics.rowSpacing),
+        };
+    };
+
+    calculateIconPosition = (clientX, clientY, dragState = this.iconDragState) => {
+        const metrics = dragState?.gridMetrics || this.computeGridMetrics();
+        if (!dragState) {
+            return this.computeGridPosition(0, metrics);
+        }
+        const rect = this.getDesktopRect();
+        let x;
+        let y;
+        if (rect) {
+            x = clientX - rect.left - dragState.offsetX;
+            y = clientY - rect.top - dragState.offsetY;
+        } else {
+            x = clientX - dragState.offsetX;
+            y = clientY - dragState.offsetY;
+        }
+        const normalized = this.normalizeIconPosition({ x, y }, metrics);
+        if (normalized) {
+            return normalized;
+        }
+        const fallback = dragState?.lastPosition || dragState?.startPosition;
+        if (fallback) {
+            const fallbackNormalized = this.normalizeIconPosition(fallback, metrics);
+            if (fallbackNormalized) {
+                return fallbackNormalized;
+            }
+        }
+        return this.computeGridPosition(0, metrics);
+    };
+
+    updateIconPosition = (id, x, y, persist = false, metricsInput = null) => {
+        const metrics = metricsInput || this.computeGridMetrics();
+        const nextPosition = this.normalizeIconPosition({ x, y }, metrics);
+        if (!nextPosition) return;
         if (persist) {
             this.setState((prevState) => {
                 const current = prevState.desktop_icon_positions || {};
                 const desktopApps = Array.isArray(prevState.desktop_apps) ? prevState.desktop_apps : [];
-                const layout = this.resolveIconLayout(desktopApps, { ...current, [id]: nextPosition });
+                const layout = this.resolveIconLayout(
+                    desktopApps,
+                    { ...current, [id]: nextPosition },
+                    { metrics }
+                );
                 const shouldUpdatePositions = !this.areIconLayoutsEqual(current, layout);
                 const nextPositions = shouldUpdatePositions ? layout : current;
                 if (!shouldUpdatePositions && prevState.draggingIconId === null) {
@@ -2250,61 +2324,69 @@ export class Desktop extends Component {
     startKeyboardIconMove = (appId) => {
         if (!this.validAppIds.has(appId)) return;
         if (this.state.disabled_apps?.[appId]) return;
+        const metrics = this.computeGridMetrics();
         const positions = this.state.desktop_icon_positions || {};
         const currentIndex = this.getDesktopAppIndex(appId);
-        const fallback = currentIndex >= 0 ? this.computeGridPosition(currentIndex) : this.computeGridPosition(0);
-        const currentPosition = positions[appId] || fallback;
-        const basePosition = this.clampIconPosition(currentPosition.x, currentPosition.y);
+        const fallback = currentIndex >= 0
+            ? this.computeGridPosition(currentIndex, metrics)
+            : this.computeGridPosition(0, metrics);
+        const currentPosition = positions[appId];
+        const basePosition = this.normalizeIconPosition(currentPosition, metrics) || fallback;
         this.setState({
             keyboardMoveState: {
                 id: appId,
-                origin: basePosition,
-                position: basePosition,
+                origin: { ...basePosition },
+                position: { ...basePosition },
+                gridMetrics: metrics,
             },
         }, () => {
-            this.announceKeyboardMoveStart(appId, basePosition);
+            this.announceKeyboardMoveStart(appId, basePosition, metrics);
         });
     };
 
     moveIconWithKeyboard = (appId, deltaX, deltaY) => {
-        const metrics = this.computeGridMetrics();
-        const stepX = (deltaX || 0) * (metrics.columnSpacing || 0);
-        const stepY = (deltaY || 0) * (metrics.rowSpacing || 0);
-        if (stepX === 0 && stepY === 0) return;
         this.setState((prevState) => {
             const moveState = prevState.keyboardMoveState;
             if (!moveState || moveState.id !== appId || !this.isValidIconPosition(moveState.position)) {
                 return null;
             }
+            const metrics = moveState.gridMetrics || this.computeGridMetrics();
+            const stepX = (deltaX || 0) * (metrics.columnSpacing || 0);
+            const stepY = (deltaY || 0) * (metrics.rowSpacing || 0);
+            if (stepX === 0 && stepY === 0) {
+                return null;
+            }
             const current = moveState.position;
-            const next = this.clampIconPosition(current.x + stepX, current.y + stepY);
-            if (next.x === current.x && next.y === current.y) {
+            const target = { x: current.x + stepX, y: current.y + stepY };
+            const next = this.normalizeIconPosition(target, metrics);
+            if (!next || (next.x === current.x && next.y === current.y)) {
                 return null;
             }
             return {
-                keyboardMoveState: { ...moveState, position: next },
+                keyboardMoveState: { ...moveState, gridMetrics: metrics, position: next },
             };
         }, () => {
             const moveState = this.state.keyboardMoveState;
             if (!moveState || moveState.id !== appId || !this.isValidIconPosition(moveState.position)) {
                 return;
             }
+            const metrics = moveState.gridMetrics || this.computeGridMetrics();
             const { position } = moveState;
-            this.updateIconPosition(appId, position.x, position.y, false);
-            this.announceKeyboardPosition(appId, position);
+            this.updateIconPosition(appId, position.x, position.y, false, metrics);
+            this.announceKeyboardPosition(appId, position, metrics);
         });
     };
 
     completeKeyboardIconMove = () => {
         const moveState = this.state.keyboardMoveState;
         if (!moveState) return;
-        const { id, position } = moveState;
+        const { id, position, gridMetrics } = moveState;
         this.setState({ keyboardMoveState: null }, () => {
             if (this.isValidIconPosition(position)) {
-                this.updateIconPosition(id, position.x, position.y, true);
-                this.announceKeyboardPlacement(id, position);
+                this.updateIconPosition(id, position.x, position.y, true, gridMetrics);
+                this.announceKeyboardPlacement(id, position, gridMetrics);
             } else {
-                this.announceKeyboardPlacement(id, null);
+                this.announceKeyboardPlacement(id, null, gridMetrics);
             }
         });
     };
@@ -2312,10 +2394,10 @@ export class Desktop extends Component {
     cancelKeyboardIconMove = () => {
         const moveState = this.state.keyboardMoveState;
         if (!moveState) return;
-        const { id, origin } = moveState;
+        const { id, origin, gridMetrics } = moveState;
         this.setState({ keyboardMoveState: null }, () => {
             if (this.isValidIconPosition(origin)) {
-                this.updateIconPosition(id, origin.x, origin.y, false);
+                this.updateIconPosition(id, origin.x, origin.y, false, gridMetrics);
             }
             this.announceKeyboardCancel(id);
         });
@@ -2403,13 +2485,14 @@ export class Desktop extends Component {
         }, 75);
     };
 
-    announceKeyboardMoveStart = (appId, position) => {
+    announceKeyboardMoveStart = (appId, position, metricsInput) => {
         const app = this.getAppById(appId);
         if (!app) return;
         const title = app.title || app.name || 'app';
         let location = '';
         if (this.isValidIconPosition(position)) {
-            const { column, row } = this.describeKeyboardIconPosition(position);
+            const metrics = metricsInput || (this.state.keyboardMoveState?.gridMetrics);
+            const { column, row } = this.describeKeyboardIconPosition(position, metrics);
             if (column && row) {
                 location = ` Starting position column ${column}, row ${row}.`;
             }
@@ -2417,21 +2500,22 @@ export class Desktop extends Component {
         this.announce(`Moving ${title}. Use arrow keys to reposition. Press Enter to place or Escape to cancel.${location}`);
     };
 
-    announceKeyboardPosition = (appId, position) => {
+    announceKeyboardPosition = (appId, position, metricsInput) => {
         const app = this.getAppById(appId);
         if (!app || !this.isValidIconPosition(position)) return;
-        const { column, row } = this.describeKeyboardIconPosition(position);
+        const metrics = metricsInput || (this.state.keyboardMoveState?.gridMetrics);
+        const { column, row } = this.describeKeyboardIconPosition(position, metrics);
         if (!column || !row) return;
         const title = app.title || app.name || 'app';
         this.announce(`${title} moved to column ${column}, row ${row}.`);
     };
 
-    announceKeyboardPlacement = (appId, position) => {
+    announceKeyboardPlacement = (appId, position, metricsInput) => {
         const app = this.getAppById(appId);
         if (!app) return;
         const title = app.title || app.name || 'app';
         if (this.isValidIconPosition(position)) {
-            const { column, row } = this.describeKeyboardIconPosition(position);
+            const { column, row } = this.describeKeyboardIconPosition(position, metricsInput);
             if (column && row) {
                 this.announce(`${title} placed at column ${column}, row ${row}.`);
                 return;
@@ -2608,16 +2692,25 @@ export class Desktop extends Component {
             }
             return partial;
         });
+        const metrics = this.computeGridMetrics();
         let startPosition = null;
         const positions = this.state.desktop_icon_positions || {};
-        if (positions[appId]) {
-            startPosition = { ...positions[appId] };
+        const storedPosition = positions[appId];
+        if (storedPosition) {
+            startPosition = this.normalizeIconPosition(storedPosition, metrics);
         } else if (typeof window !== 'undefined') {
             const style = window.getComputedStyle(container);
-            const left = parseFloat(style.left) || 0;
-            const top = parseFloat(style.top) || 0;
-            startPosition = { x: left, y: top };
+            const left = parseFloat(style.left);
+            const top = parseFloat(style.top);
+            const fromStyle = {
+                x: Number.isFinite(left) ? left : 0,
+                y: Number.isFinite(top) ? top : 0,
+            };
+            startPosition = this.normalizeIconPosition(fromStyle, metrics);
         }
+        const fallbackIndex = this.getDesktopAppIndex(appId);
+        const fallbackPosition = this.computeGridPosition(fallbackIndex >= 0 ? fallbackIndex : 0, metrics);
+        const safeStart = startPosition || fallbackPosition;
         this.iconDragState = {
             id: appId,
             pointerId: event.pointerId,
@@ -2627,10 +2720,11 @@ export class Desktop extends Component {
             startY: event.clientY,
             moved: false,
             container,
-            startPosition,
-            lastPosition: startPosition,
+            startPosition: safeStart,
+            lastPosition: safeStart,
             selectionChangedOnPointerDown: selectionChangedFlag,
             multiSelectIntent: modifiers.multi || modifiers.range,
+            gridMetrics: metrics,
         };
         this.attachIconKeyboardListeners();
     };
@@ -2650,7 +2744,7 @@ export class Desktop extends Component {
         event.preventDefault();
         const position = this.calculateIconPosition(event.clientX, event.clientY, dragState);
         dragState.lastPosition = position;
-        this.updateIconPosition(dragState.id, position.x, position.y, false);
+        this.updateIconPosition(dragState.id, position.x, position.y, false, dragState.gridMetrics);
     };
 
     handleIconPointerUp = (event) => {
@@ -2660,6 +2754,7 @@ export class Desktop extends Component {
         const moved = dragState.moved;
         const selectionChanged = Boolean(dragState.selectionChangedOnPointerDown);
         const hadMultiIntent = Boolean(dragState.multiSelectIntent);
+        const metrics = dragState.gridMetrics || this.computeGridMetrics();
         this.iconDragState = null;
         dragState.container?.releasePointerCapture?.(event.pointerId);
         this.detachIconKeyboardListeners();
@@ -2671,7 +2766,7 @@ export class Desktop extends Component {
                 this.moveIconIntoFolder(dragState.id, dropTarget.id);
             } else {
                 const position = this.resolveDropPosition(event, dragState);
-                this.updateIconPosition(dragState.id, position.x, position.y, true);
+                this.updateIconPosition(dragState.id, position.x, position.y, true, metrics);
                 this.setState({ draggingIconId: null });
             }
             return;
@@ -2706,7 +2801,8 @@ export class Desktop extends Component {
         if (!desktopApps.length) return;
         this.setState((prevState) => {
             const current = prevState.desktop_icon_positions || {};
-            const layout = this.resolveIconLayout(desktopApps, current, { clampOnly: true });
+            const metrics = this.computeGridMetrics();
+            const layout = this.resolveIconLayout(desktopApps, current, { clampOnly: true, metrics });
             if (this.areIconLayoutsEqual(current, layout)) {
                 return null;
             }
@@ -2845,7 +2941,8 @@ export class Desktop extends Component {
             this.broadcastIconSizePreset(this.state.iconSizePreset);
         }
 
-        this.savedIconPositions = this.loadDesktopIconPositions();
+        const initialMetrics = this.computeGridMetrics();
+        this.savedIconPositions = this.sanitizeIconPositionMap(this.loadDesktopIconPositions(), initialMetrics);
         this.initializeDefaultFolders(() => {
             this.fetchAppsData(() => {
                 const session = this.props.session || {};
@@ -3055,8 +3152,12 @@ export class Desktop extends Component {
         this.iconDragState = null;
         this.detachIconKeyboardListeners();
 
+        const metrics = dragState.gridMetrics || this.computeGridMetrics();
+
         if (revert && dragState.startPosition) {
-            const original = this.clampIconPosition(dragState.startPosition.x, dragState.startPosition.y);
+            const fallbackIndex = this.getDesktopAppIndex(dragState.id);
+            const fallback = this.computeGridPosition(fallbackIndex >= 0 ? fallbackIndex : 0, metrics);
+            const original = this.normalizeIconPosition(dragState.startPosition, metrics) || fallback;
             this.setState((prevState) => {
                 const current = prevState.desktop_icon_positions || {};
                 const previous = current[dragState.id];
@@ -3076,13 +3177,18 @@ export class Desktop extends Component {
     };
 
     resolveDropPosition = (event, dragState) => {
+        const metrics = dragState?.gridMetrics || this.computeGridMetrics();
         const hasValidCoordinates = Number.isFinite(event?.clientX) && Number.isFinite(event?.clientY);
         if (hasValidCoordinates) {
-            return this.calculateIconPosition(event.clientX, event.clientY, dragState);
+            const stateWithMetrics = dragState ? { ...dragState, gridMetrics: metrics } : dragState;
+            return this.calculateIconPosition(event.clientX, event.clientY, stateWithMetrics);
         }
-        const fallback = dragState?.lastPosition || dragState?.startPosition || { x: 0, y: 0 };
-        const snapped = this.snapIconPosition(fallback.x, fallback.y);
-        return this.clampIconPosition(snapped.x, snapped.y);
+        const fallback = dragState?.lastPosition || dragState?.startPosition || this.computeGridPosition(0, metrics);
+        const normalized = this.normalizeIconPosition(fallback, metrics);
+        if (normalized) {
+            return normalized;
+        }
+        return this.computeGridPosition(0, metrics);
     };
 
     checkForNewFolders = () => {
