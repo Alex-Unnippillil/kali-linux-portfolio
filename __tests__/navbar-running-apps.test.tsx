@@ -2,13 +2,37 @@ import React from 'react';
 import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import Navbar from '../components/screen/navbar';
 
-jest.mock('../components/util-components/clock', () => () => <div data-testid="clock" />);
-jest.mock('../components/util-components/status', () => () => <div data-testid="status" />);
-jest.mock('../components/ui/QuickSettings', () => ({ open }: { open: boolean }) => (
-  <div data-testid="quick-settings">{open ? 'open' : 'closed'}</div>
-));
-jest.mock('../components/menu/WhiskerMenu', () => () => <button type="button">Menu</button>);
-jest.mock('../components/ui/PerformanceGraph', () => () => <div data-testid="performance" />);
+jest.mock('../components/util-components/clock', () => {
+  const MockClock = () => <div data-testid="clock" />;
+  MockClock.displayName = 'MockClock';
+  return MockClock;
+});
+
+jest.mock('../components/util-components/status', () => {
+  const MockStatus = () => <div data-testid="status" />;
+  MockStatus.displayName = 'MockStatus';
+  return MockStatus;
+});
+
+jest.mock('../components/ui/QuickSettings', () => {
+  const MockQuickSettings = ({ open }: { open: boolean }) => (
+    <div data-testid="quick-settings">{open ? 'open' : 'closed'}</div>
+  );
+  MockQuickSettings.displayName = 'MockQuickSettings';
+  return MockQuickSettings;
+});
+
+jest.mock('../components/menu/WhiskerMenu', () => {
+  const MockWhiskerMenu = () => <button type="button">Menu</button>;
+  MockWhiskerMenu.displayName = 'MockWhiskerMenu';
+  return MockWhiskerMenu;
+});
+
+jest.mock('../components/ui/PerformanceGraph', () => {
+  const MockPerformanceGraph = () => <div data-testid="performance" />;
+  MockPerformanceGraph.displayName = 'MockPerformanceGraph';
+  return MockPerformanceGraph;
+});
 
 const workspaceEventDetail = {
   workspaces: [
@@ -50,6 +74,35 @@ const multiAppWorkspaceDetail = {
       icon: '/icon.png',
       isFocused: false,
       isMinimized: true,
+    },
+  ],
+};
+
+const groupedWorkspaceDetail = {
+  ...workspaceEventDetail,
+  runningApps: [
+    {
+      id: 'app1',
+      title: 'App One',
+      icon: '/icon.png',
+      windowId: 'app1',
+      isFocused: false,
+      isMinimized: false,
+    },
+    {
+      id: 'app1',
+      title: 'App One',
+      icon: '/icon.png',
+      windowId: 'app1#2',
+      isFocused: true,
+      isMinimized: false,
+    },
+    {
+      id: 'app2',
+      title: 'App Two',
+      icon: '/icon.png',
+      isFocused: false,
+      isMinimized: false,
     },
   ],
 };
@@ -193,5 +246,64 @@ describe('Navbar running apps tray', () => {
       action: 'reorder',
       order: ['app2', 'app3', 'app1'],
     });
+  });
+
+  it('groups multiple windows and exposes a flyout for selection', () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('workspace-state', { detail: groupedWorkspaceDetail }));
+    });
+
+    const list = screen.getByRole('list', { name: /open applications/i });
+    const items = within(list).getAllByRole('listitem');
+    expect(items).toHaveLength(2);
+
+    const [groupItem] = items;
+    const groupButton = within(groupItem).getByRole('button', { name: /app one/i });
+    expect(groupButton).toHaveAttribute('aria-haspopup', 'menu');
+    expect(groupButton).toHaveAttribute('aria-expanded', 'false');
+    expect(within(groupButton).getByText('2')).toBeInTheDocument();
+
+    dispatchSpy.mockClear();
+    fireEvent.click(groupButton);
+
+    const flyout = screen.getByRole('menu', { name: /app one windows/i });
+    const flyoutItems = within(flyout).getAllByRole('menuitem');
+    expect(flyoutItems).toHaveLength(2);
+
+    fireEvent.click(flyoutItems[1]);
+
+    const taskbarEventCall = dispatchSpy.mock.calls.find(([event]) => event.type === 'taskbar-command');
+    expect(taskbarEventCall).toBeTruthy();
+    const [event] = taskbarEventCall!;
+    expect(event.detail).toEqual({ appId: 'app1', action: 'focus', instanceId: 'app1#2', windowId: 'app1#2' });
+  });
+
+  it('supports keyboard navigation in grouped flyouts', async () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('workspace-state', { detail: groupedWorkspaceDetail }));
+    });
+
+    const groupButton = screen.getByRole('button', { name: /app one/i });
+
+    dispatchSpy.mockClear();
+    fireEvent.keyDown(groupButton, { key: 'Enter' });
+
+    await screen.findByRole('menu', { name: /app one windows/i });
+
+    await act(async () => {
+      fireEvent.keyDown(groupButton, { key: 'ArrowDown' });
+    });
+
+    dispatchSpy.mockClear();
+    fireEvent.keyDown(groupButton, { key: 'Enter' });
+
+    const taskbarEventCall = dispatchSpy.mock.calls.find(([event]) => event.type === 'taskbar-command');
+    expect(taskbarEventCall).toBeTruthy();
+    const [event] = taskbarEventCall!;
+    expect(event.detail).toEqual({ appId: 'app1', action: 'focus', instanceId: 'app1#2', windowId: 'app1#2' });
   });
 });
