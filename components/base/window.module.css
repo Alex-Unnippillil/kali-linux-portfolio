@@ -2,7 +2,12 @@
   position: relative;
   border: 1px solid var(--color-window-border);
   border-radius: var(--radius-6);
-  box-shadow: var(--shadow-2);
+  background-color: rgba(15, 23, 42, 0.78);
+  --window-shadow-elevation:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 12px 28px rgba(15, 23, 42, 0.28),
+    0 24px 52px rgba(15, 23, 42, 0.4);
+  box-shadow: var(--window-shadow-elevation);
   overflow: hidden;
   --window-motion-transform-duration: var(--window-motion-duration-restore);
   --window-motion-transform-easing: var(--window-motion-ease-restore);
@@ -12,9 +17,11 @@
     transform var(--window-motion-transform-duration) var(--window-motion-transform-easing),
     filter var(--motion-fast) ease,
     box-shadow var(--motion-fast) ease,
+    background-color var(--motion-fast) ease,
+    backdrop-filter var(--motion-fast) ease,
     opacity var(--window-motion-opacity-duration) var(--window-motion-opacity-easing),
     visibility 0s linear;
-  transition-delay: 0s, 0s, 0s, 0s, 0s;
+  transition-delay: 0s, 0s, 0s, 0s, 0s, 0s, 0s;
 }
 
 .windowFrame::before {
@@ -33,12 +40,51 @@
   z-index: 2;
 }
 
+
+.windowFrameActive {
+  --window-shadow-elevation:
+    0 0 0 1px rgba(136, 191, 255, 0.45),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 16px 36px rgba(15, 23, 42, 0.32),
+    0 32px 64px rgba(15, 23, 42, 0.46);
+  background-color: rgba(15, 23, 42, 0.74);
+}
+
 .windowFrameActive::before {
   opacity: 1;
 }
 
 .windowFrameInactive {
-  filter: brightness(0.85);
+  --window-shadow-elevation:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 10px 24px rgba(15, 23, 42, 0.24),
+    0 18px 38px rgba(15, 23, 42, 0.32);
+  background-color: rgba(15, 23, 42, 0.82);
+  opacity: 0.97;
+}
+
+.windowFrameInactive::before {
+  opacity: 0.45;
+}
+
+@supports ((-webkit-backdrop-filter: blur(0)) or (backdrop-filter: blur(0))) {
+  .windowFrame {
+    background-color: rgba(15, 23, 42, 0.58);
+    backdrop-filter: blur(18px) saturate(1.28);
+    -webkit-backdrop-filter: blur(18px) saturate(1.28);
+  }
+
+  .windowFrameActive {
+    background-color: rgba(15, 23, 42, 0.52);
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  }
+
+  .windowFrameInactive {
+    background-color: rgba(15, 23, 42, 0.68);
+    backdrop-filter: blur(14px) saturate(0.92);
+    -webkit-backdrop-filter: blur(14px) saturate(0.92);
+  }
 }
 
 .windowFrameMaximized {
