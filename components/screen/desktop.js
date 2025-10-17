@@ -157,7 +157,26 @@ const createOverlayStateMap = () => {
             next[id].transitionState = 'exited';
         }
     });
-    return next;
+    return applyOverlayAliases(next);
+};
+
+const resolveOverlayId = (value) => {
+    if (!value) return null;
+    if (typeof value === 'string' && OVERLAY_WINDOWS[value]?.id) {
+        return OVERLAY_WINDOWS[value].id;
+    }
+    return value;
+};
+
+const applyOverlayAliases = (state = {}) => {
+    if (!state || typeof state !== 'object') {
+        return state;
+    }
+    state.launcher = state[LAUNCHER_OVERLAY_ID];
+    state.shortcutSelector = state[SHORTCUT_OVERLAY_ID];
+    state.windowSwitcher = state[SWITCHER_OVERLAY_ID];
+    state.commandPalette = state[COMMAND_PALETTE_OVERLAY_ID];
+    return state;
 };
 
 export class Desktop extends Component {
@@ -304,7 +323,13 @@ export class Desktop extends Component {
 
         this.validAppIds = new Set();
         this.appMap = new Map();
-        this.overlayRegistry = new Map(OVERLAY_WINDOW_LIST.map((meta) => [meta.id, meta]));
+        this.windowRefs = new Map();
+        this.windowRefCallbacks = new Map();
+        this.overlayRegistry = new Map();
+        Object.entries(OVERLAY_WINDOWS).forEach(([alias, meta]) => {
+            this.overlayRegistry.set(meta.id, meta);
+            this.overlayRegistry.set(alias, meta);
+        });
         this.folderMetadata = new Map(DEFAULT_DESKTOP_FOLDERS.map((folder) => [folder.id, folder]));
         this.windowPreviewCache = new Map();
         this.windowSwitcherRequestId = 0;
@@ -1404,27 +1429,45 @@ export class Desktop extends Component {
         if (typeof callback === 'function') callback();
     };
 
-    isOverlayId = (id) => this.overlayRegistry?.has(id);
+    isOverlayId = (id) => {
+        const resolved = resolveOverlayId(id);
+        return Boolean(resolved && this.overlayRegistry?.has(resolved));
+    };
 
-    getOverlayMeta = (id) => this.overlayRegistry?.get(id) || null;
+    getOverlayMeta = (id) => {
+        const resolved = resolveOverlayId(id);
+        return resolved ? this.overlayRegistry?.get(resolved) || null : null;
+    };
 
     getOverlayState = (id) => {
+        const resolved = resolveOverlayId(id);
+        if (!resolved) return null;
         const state = this.state.overlayWindows || {};
-        return state[id] || null;
+        const current = state[resolved] || null;
+        if (!current) return null;
+        const defaults = this.getOverlayDefaults(resolved);
+        return { ...defaults, ...current };
     };
 
     buildOverlayStateMap = (prev, id, partial) => {
-        const current = (prev && prev[id]) || {};
-        return {
+        const resolved = resolveOverlayId(id);
+        if (!resolved) return prev || {};
+        const current = (prev && prev[resolved]) || {};
+        const next = {
             ...prev,
-            [id]: {
+            [resolved]: {
                 ...current,
                 ...partial,
             },
         };
+        return applyOverlayAliases(next);
     };
 
-    isOverlayOpen = (id) => Boolean(this.state.overlayWindows?.[id]?.open);
+    isOverlayOpen = (id) => {
+        const resolved = resolveOverlayId(id);
+        if (!resolved) return false;
+        return Boolean(this.state.overlayWindows?.[resolved]?.open);
+    };
 
     getLauncherState = () => this.state.overlayWindows?.[LAUNCHER_OVERLAY_ID] || null;
 
@@ -1594,7 +1637,8 @@ export class Desktop extends Component {
     };
 
     syncOverlayWindowFlags = (id, flags, callback) => {
-        if (!id) {
+        const targetId = resolveOverlayId(id);
+        if (!targetId) {
             if (typeof callback === 'function') {
                 callback();
             }
@@ -1609,22 +1653,22 @@ export class Desktop extends Component {
 
             if (typeof closed === 'boolean') {
                 const previousClosed = prev.closed_windows || {};
-                if (!Object.prototype.hasOwnProperty.call(previousClosed, id) || previousClosed[id] !== closed) {
-                    partial.closed_windows = { ...previousClosed, [id]: closed };
+                if (!Object.prototype.hasOwnProperty.call(previousClosed, targetId) || previousClosed[targetId] !== closed) {
+                    partial.closed_windows = { ...previousClosed, [targetId]: closed };
                 }
             }
 
             if (typeof minimized === 'boolean') {
                 const previousMinimized = prev.minimized_windows || {};
-                if (!Object.prototype.hasOwnProperty.call(previousMinimized, id) || previousMinimized[id] !== minimized) {
-                    partial.minimized_windows = { ...previousMinimized, [id]: minimized };
+                if (!Object.prototype.hasOwnProperty.call(previousMinimized, targetId) || previousMinimized[targetId] !== minimized) {
+                    partial.minimized_windows = { ...previousMinimized, [targetId]: minimized };
                 }
             }
 
             if (typeof focused === 'boolean') {
                 const previousFocused = prev.focused_windows || {};
-                if (!Object.prototype.hasOwnProperty.call(previousFocused, id) || previousFocused[id] !== focused) {
-                    partial.focused_windows = { ...previousFocused, [id]: focused };
+                if (!Object.prototype.hasOwnProperty.call(previousFocused, targetId) || previousFocused[targetId] !== focused) {
+                    partial.focused_windows = { ...previousFocused, [targetId]: focused };
                 }
             }
 
@@ -1654,9 +1698,10 @@ export class Desktop extends Component {
     };
 
     openOverlay = (id, overrides = {}, callback) => {
-        if (!this.isOverlayId(id)) return;
-        this.recentlyClosedOverlays.delete(id);
-        this.promoteWindowInStack(id);
+        const targetId = resolveOverlayId(id);
+        if (!this.isOverlayId(targetId)) return;
+        this.recentlyClosedOverlays.delete(targetId);
+        this.promoteWindowInStack(targetId);
 
         const applyOverrides = (current = {}) => {
             const resolved = typeof overrides === 'function' ? overrides({ ...current }) : overrides;
@@ -1667,7 +1712,7 @@ export class Desktop extends Component {
                 focused: true,
             };
 
-            if (id === LAUNCHER_OVERLAY_ID) {
+            if (targetId === LAUNCHER_OVERLAY_ID) {
                 const previousTransition = current.transitionState;
                 baseState.transitionState = resolved?.transitionState
                     || (previousTransition === 'entered' ? 'entered' : 'entering');
@@ -1680,13 +1725,13 @@ export class Desktop extends Component {
             return baseState;
         };
 
-        this.updateOverlayState(id, applyOverrides);
+        this.updateOverlayState(targetId, applyOverrides);
 
         this.syncOverlayWindowFlags(
-            id,
+            targetId,
             { closed: false, minimized: false, focused: true },
             () => {
-                this.focus(id);
+                this.focus(targetId);
                 if (typeof callback === 'function') {
                     callback();
                 }
@@ -1695,18 +1740,36 @@ export class Desktop extends Component {
     };
 
     toggleOverlayMinimize = (id) => {
-        if (!this.isOverlayId(id)) return;
-        if (this.state.minimized_windows?.[id]) {
-            this.openOverlay(id, { transitionState: 'entered' });
+        const targetId = resolveOverlayId(id);
+        if (!this.isOverlayId(targetId)) return;
+        if (this.state.minimized_windows?.[targetId]) {
+            this.openOverlay(targetId, { transitionState: 'entered' });
         } else {
-            this.minimizeOverlay(id);
+            this.minimizeOverlay(targetId);
+        }
+    };
+
+    toggleOverlayMaximize = (id) => {
+        const targetId = resolveOverlayId(id);
+        if (!this.isOverlayId(targetId)) return;
+        const state = this.getOverlayState(targetId) || {};
+        if (state.maximized) {
+            this.restoreOverlay(targetId, (current = {}) => ({
+                ...current,
+                maximized: false,
+                minimized: false,
+                transitionState: 'entered',
+            }));
+        } else {
+            this.maximizeOverlay(targetId);
         }
     };
 
     minimizeOverlay = (id) => {
-        if (!this.isOverlayId(id)) return;
+        const targetId = resolveOverlayId(id);
+        if (!this.isOverlayId(targetId)) return;
 
-        this.updateOverlayState(id, (current = {}) => ({
+        this.updateOverlayState(targetId, (current = {}) => ({
             ...current,
             open: true,
             minimized: true,
@@ -1715,10 +1778,32 @@ export class Desktop extends Component {
         }));
 
         this.syncOverlayWindowFlags(
-            id,
+            targetId,
             { closed: false, minimized: true, focused: false },
             () => {
                 this.giveFocusToLastApp();
+            },
+        );
+    };
+
+    maximizeOverlay = (id) => {
+        const targetId = resolveOverlayId(id);
+        if (!this.isOverlayId(targetId)) return;
+
+        this.updateOverlayState(targetId, (current = {}) => ({
+            ...current,
+            open: true,
+            minimized: false,
+            maximized: true,
+            focused: true,
+            transitionState: current.transitionState === 'exiting' ? 'entered' : current.transitionState,
+        }));
+
+        this.syncOverlayWindowFlags(
+            targetId,
+            { closed: false, minimized: false, focused: true },
+            () => {
+                this.focus(targetId);
             },
         );
     };
@@ -1728,17 +1813,18 @@ export class Desktop extends Component {
     };
 
     closeOverlay = (id, overrides = {}, callback) => {
-        if (!this.isOverlayId(id)) return;
-        this.recentlyClosedOverlays.add(id);
+        const targetId = resolveOverlayId(id);
+        if (!this.isOverlayId(targetId)) return;
+        this.recentlyClosedOverlays.add(targetId);
 
         const stack = this.getActiveStack();
-        const index = stack.indexOf(id);
+        const index = stack.indexOf(targetId);
         if (index !== -1) {
             stack.splice(index, 1);
         }
 
-        if (this.windowPreviewCache?.has(id)) {
-            this.windowPreviewCache.delete(id);
+        if (this.windowPreviewCache?.has(targetId)) {
+            this.windowPreviewCache.delete(targetId);
         }
 
         const applyOverrides = (current = {}) => {
@@ -1751,7 +1837,7 @@ export class Desktop extends Component {
                 focused: false,
             };
 
-            if (id === LAUNCHER_OVERLAY_ID) {
+            if (targetId === LAUNCHER_OVERLAY_ID) {
                 const transitionOverride = resolved && typeof resolved === 'object' && resolved.transitionState;
                 baseState.transitionState = transitionOverride || 'exiting';
             }
@@ -1763,10 +1849,10 @@ export class Desktop extends Component {
             return baseState;
         };
 
-        this.updateOverlayState(id, applyOverrides);
+        this.updateOverlayState(targetId, applyOverrides);
 
         this.syncOverlayWindowFlags(
-            id,
+            targetId,
             { closed: true, minimized: false, focused: false },
             () => {
                 this.giveFocusToLastApp();
@@ -1787,6 +1873,80 @@ export class Desktop extends Component {
             }
         }
         return this.appMap.get(id);
+    };
+
+    getWindowRefCallback = (id) => {
+        if (!id) {
+            return () => {};
+        }
+        if (!this.windowRefCallbacks.has(id)) {
+            this.windowRefCallbacks.set(id, (instance) => {
+                if (instance) {
+                    this.windowRefs.set(id, instance);
+                } else {
+                    this.windowRefs.delete(id);
+                }
+            });
+        }
+        return this.windowRefCallbacks.get(id);
+    };
+
+    getWindowInstance = (id) => {
+        if (!id) return null;
+        return this.windowRefs.get(id) || null;
+    };
+
+    isWindowMaximized = (id) => {
+        const instance = this.getWindowInstance(id);
+        return Boolean(instance?.state?.maximized);
+    };
+
+    restoreWindowFromTaskbar = (id) => {
+        if (!id) return;
+        if (this.isOverlayId(id)) {
+            this.restoreOverlay(id, { transitionState: 'entered' });
+            return;
+        }
+
+        const minimized = this.state.minimized_windows?.[id];
+        if (minimized) {
+            this.openApp(id);
+            return;
+        }
+
+        const instance = this.getWindowInstance(id);
+        if (instance?.state?.maximized && typeof instance.restoreWindow === 'function') {
+            instance.restoreWindow();
+            return;
+        }
+
+        this.openApp(id);
+    };
+
+    maximizeWindowFromTaskbar = (id) => {
+        if (!id || this.isOverlayId(id)) return;
+
+        const ensureMaximize = () => {
+            const instance = this.getWindowInstance(id);
+            if (!instance || instance.state?.maximized) return;
+            if (typeof instance.maximizeWindow === 'function') {
+                instance.maximizeWindow();
+            }
+        };
+
+        if (this.state.minimized_windows?.[id]) {
+            this.openApp(id);
+            setTimeout(ensureMaximize, 0);
+            return;
+        }
+
+        if (!this.getWindowInstance(id)) {
+            this.openApp(id);
+            setTimeout(ensureMaximize, 0);
+            return;
+        }
+
+        ensureMaximize();
     };
 
     buildWindowShelfEntry = (id) => {
@@ -2789,18 +2949,12 @@ export class Desktop extends Component {
         return { open: false, minimized: false, maximized: false };
     };
 
-    getOverlayState = (key) => {
-        const overlays = this.state?.overlayWindows || {};
-        const current = overlays[key];
-        const defaults = this.getOverlayDefaults(key);
-        return current ? { ...defaults, ...current } : { ...defaults };
-    };
-
     updateOverlayState = (key, updater, callback) => {
-        if (!key) return;
+        const targetKey = resolveOverlayId(key);
+        if (!targetKey) return;
         this.setState((prevState) => {
             const overlays = prevState.overlayWindows || {};
-            const previous = overlays[key] ? { ...overlays[key] } : this.getOverlayDefaults(key);
+            const previous = overlays[targetKey] ? { ...overlays[targetKey] } : this.getOverlayDefaults(targetKey);
             const nextState = typeof updater === 'function'
                 ? updater({ ...previous })
                 : { ...previous, ...(updater || {}) };
@@ -2823,11 +2977,12 @@ export class Desktop extends Component {
                 return null;
             }
 
+            const merged = {
+                ...overlays,
+                [targetKey]: next,
+            };
             return {
-                overlayWindows: {
-                    ...overlays,
-                    [key]: next,
-                },
+                overlayWindows: applyOverlayAliases(merged),
             };
         }, callback);
     };
@@ -3903,7 +4058,7 @@ export class Desktop extends Component {
                 zIndex: 200 + index,
             };
 
-            return <Window key={id} {...props} />;
+            return <Window key={id} ref={this.getWindowRefCallback(id)} {...props} />;
         }).filter(Boolean);
     }
 
@@ -3926,6 +4081,7 @@ export class Desktop extends Component {
                     'w-full max-w-6xl transform transition-all duration-200 ease-out focus:outline-none',
                     overlayActive ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 -translate-y-2',
                 ].join(' ');
+                const launcherMaximizeLabel = launcherState.maximized ? 'Window restore' : 'Window maximize';
 
                 elements.push(
                     <div
@@ -3939,6 +4095,29 @@ export class Desktop extends Component {
                         className={overlayClasses}
                     >
                         <div className={panelClasses}>
+                            <div className="sr-only" role="group" aria-label="Launcher window controls">
+                                <button
+                                    type="button"
+                                    aria-label="Window minimize"
+                                    onClick={() => this.toggleOverlayMinimize(LAUNCHER_OVERLAY_ID)}
+                                >
+                                    Minimize
+                                </button>
+                                <button
+                                    type="button"
+                                    aria-label={launcherMaximizeLabel}
+                                    onClick={() => this.toggleOverlayMaximize(LAUNCHER_OVERLAY_ID)}
+                                >
+                                    Maximize
+                                </button>
+                                <button
+                                    type="button"
+                                    aria-label="Window close"
+                                    onClick={this.closeAllAppsOverlay}
+                                >
+                                    Close
+                                </button>
+                            </div>
                             <AllApplications
                                 apps={apps}
                                 games={games}
@@ -3954,6 +4133,31 @@ export class Desktop extends Component {
         }
 
         const shortcutState = overlays[SHORTCUT_OVERLAY_ID];
+        if (shortcutState?.open) {
+            elements.push(
+                <div
+                    key={`${SHORTCUT_OVERLAY_ID}-controls`}
+                    className="sr-only"
+                    role="group"
+                    aria-label="Shortcut selector window controls"
+                >
+                    <button
+                        type="button"
+                        aria-label="Window minimize"
+                        onClick={() => this.toggleOverlayMinimize(SHORTCUT_OVERLAY_ID)}
+                    >
+                        Minimize
+                    </button>
+                    <button
+                        type="button"
+                        aria-label="Window close"
+                        onClick={() => this.closeOverlay(SHORTCUT_OVERLAY_ID)}
+                    >
+                        Close
+                    </button>
+                </div>
+            );
+        }
         if (shortcutState?.open && !shortcutState.minimized) {
             elements.push(
                 <ShortcutSelector
@@ -3967,6 +4171,31 @@ export class Desktop extends Component {
         }
 
         const switcherState = overlays[SWITCHER_OVERLAY_ID];
+        if (switcherState?.open) {
+            elements.push(
+                <div
+                    key={`${SWITCHER_OVERLAY_ID}-controls`}
+                    className="sr-only"
+                    role="group"
+                    aria-label="Window switcher controls"
+                >
+                    <button
+                        type="button"
+                        aria-label="Window minimize"
+                        onClick={() => this.toggleOverlayMinimize(SWITCHER_OVERLAY_ID)}
+                    >
+                        Minimize
+                    </button>
+                    <button
+                        type="button"
+                        aria-label="Window close"
+                        onClick={this.closeWindowSwitcher}
+                    >
+                        Close
+                    </button>
+                </div>
+            );
+        }
         if (switcherState?.open && !switcherState.minimized) {
             elements.push(
                 <WindowSwitcher
@@ -3979,7 +4208,13 @@ export class Desktop extends Component {
         }
 
         const commandPaletteState = overlays[COMMAND_PALETTE_OVERLAY_ID];
-        if (commandPaletteState) {
+        const shouldRenderCommandPalette = Boolean(
+            commandPaletteState
+            && (commandPaletteState.open
+                || commandPaletteState.minimized
+                || commandPaletteState.maximized)
+        );
+        if (shouldRenderCommandPalette) {
             const paletteActive = commandPaletteState.open && !commandPaletteState.minimized;
             elements.push(
                 <SystemOverlayWindow
@@ -4605,6 +4840,25 @@ export class Desktop extends Component {
         const closedEntries = this.getClosedWindowEntries();
         const showMinimizedShelf = this.state.minimizedShelfOpen || minimizedEntries.length > 0;
         const showClosedShelf = this.state.closedShelfOpen || closedEntries.length > 0;
+        const minimizedWindows = this.state.minimized_windows || {};
+        const contextAppId = this.state.context_app;
+        const isOverlayContext = contextAppId ? this.isOverlayId(contextAppId) : false;
+        const contextAppMeta = contextAppId && !isOverlayContext ? this.getAppById(contextAppId) : null;
+        const contextOverlayState = contextAppId && isOverlayContext ? this.getOverlayState(contextAppId) : null;
+        const contextMinimized = contextAppId ? Boolean(minimizedWindows[contextAppId]) : false;
+        const contextMaximized = contextAppId
+            ? (isOverlayContext
+                ? Boolean(contextOverlayState?.maximized)
+                : this.isWindowMaximized(contextAppId))
+            : false;
+        const contextAllowMaximize = contextAppId && !isOverlayContext
+            ? contextAppMeta?.allowMaximize !== false
+            : false;
+        const contextPinned = contextAppId ? Boolean(this.initFavourite?.[contextAppId]) : false;
+        const contextCanRestore = contextAppId ? (contextMinimized || contextMaximized) : false;
+        const contextCanMinimize = contextAppId ? !contextMinimized : false;
+        const contextCanMaximize = contextAppId ? (contextAllowMaximize && !contextMaximized) : false;
+        const contextCanPin = contextAppId ? !isOverlayContext : false;
         return (
             <main
                 id="desktop"
@@ -4649,7 +4903,19 @@ export class Desktop extends Component {
                 />
                 <TaskbarMenu
                     active={this.state.context_menus.taskbar}
-                    minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
+                    minimized={contextMinimized}
+                    maximized={contextMaximized}
+                    allowMaximize={contextAllowMaximize}
+                    pinned={contextPinned}
+                    canRestore={contextCanRestore}
+                    canMinimize={contextCanMinimize}
+                    canMaximize={contextCanMaximize}
+                    canPin={contextCanPin}
+                    onRestore={() => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        this.restoreWindowFromTaskbar(id);
+                    }}
                     onMinimize={() => {
                         const id = this.state.context_app;
                         if (!id) return;
@@ -4668,6 +4934,13 @@ export class Desktop extends Component {
                             }
                         }
                     }}
+                    onMaximize={() => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        this.maximizeWindowFromTaskbar(id);
+                    }}
+                    onPin={contextCanPin ? () => this.pinApp(this.state.context_app) : undefined}
+                    onUnpin={contextCanPin ? () => this.unpinApp(this.state.context_app) : undefined}
                     onClose={() => {
                         const id = this.state.context_app;
                         if (!id) return;
