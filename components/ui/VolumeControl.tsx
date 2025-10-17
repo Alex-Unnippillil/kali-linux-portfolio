@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import DelayedTooltip from "./DelayedTooltip";
 import usePersistentState from "../../hooks/usePersistentState";
 
 const ICONS = {
@@ -17,6 +18,8 @@ const clamp = (value: number) => Math.min(1, Math.max(0, value));
 
 interface VolumeControlProps {
   className?: string;
+  descriptionId?: string;
+  tooltipId?: string;
 }
 
 const isValidVolume = (value: unknown): value is number =>
@@ -24,7 +27,11 @@ const isValidVolume = (value: unknown): value is number =>
 
 const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
 
-const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
+const VolumeControl: React.FC<VolumeControlProps> = ({
+  className = "",
+  descriptionId,
+  tooltipId,
+}) => {
   const [volume, setVolume] = usePersistentState<number>(
     "system-volume",
     () => 0.7,
@@ -100,32 +107,59 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
     }
   }, [open]);
 
+  const formattedVolume = formatPercent(volume);
+  const description = volume <= 0.001 ? "Volume muted" : `Volume ${formattedVolume}`;
+
   return (
     <div
       ref={rootRef}
       className={`relative flex items-center ${className}`.trim()}
       onWheel={handleWheel}
     >
-      <button
-        type="button"
-        className="flex h-6 w-6 items-center justify-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue"
-        aria-label={`Volume ${formatPercent(volume)}`}
-        aria-haspopup="true"
-        aria-expanded={open}
-        title={`Volume ${formatPercent(volume)}`}
-        onClick={handleToggle}
-        onPointerDown={(event) => event.stopPropagation()}
-      >
-        <Image
-          width={16}
-          height={16}
-          src={ICONS[level]}
-          alt={`${level} volume`}
-          className="status-symbol h-4 w-4"
-          draggable={false}
-          sizes="16px"
-        />
-      </button>
+      <DelayedTooltip id={tooltipId} content={description}>
+        {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+          <button
+            type="button"
+            ref={(node) => {
+              ref(node);
+            }}
+            className="inline-flex h-[var(--shell-hit-target)] min-h-[var(--shell-hit-target)] w-[var(--shell-hit-target)] min-w-[var(--shell-hit-target)] items-center justify-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            aria-label={description}
+            aria-haspopup="true"
+            aria-expanded={open}
+            aria-describedby={descriptionId}
+            onClick={handleToggle}
+            onPointerDown={(event) => event.stopPropagation()}
+            onMouseEnter={(event) => {
+              onMouseEnter(event);
+            }}
+            onMouseLeave={(event) => {
+              onMouseLeave(event);
+            }}
+            onFocus={(event) => {
+              onFocus(event);
+            }}
+            onBlur={(event) => {
+              onBlur(event);
+            }}
+          >
+            <Image
+              width={16}
+              height={16}
+              src={ICONS[level]}
+              alt={`${level} volume`}
+              className="status-symbol h-4 w-4"
+              draggable={false}
+              sizes="16px"
+            />
+            {descriptionId ? (
+              <span id={descriptionId} className="sr-only">
+                {description}
+              </span>
+            ) : null}
+          </button>
+        )}
+      </DelayedTooltip>
       {open && (
         <div
           className="absolute bottom-full right-0 z-50 mb-2 min-w-[9rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-2 text-xs text-white shadow-lg"
