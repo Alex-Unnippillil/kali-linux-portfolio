@@ -378,12 +378,37 @@ export class Window extends Component {
         return [normalizedX, normalizedY];
     }
 
+    getDevicePixelRatio = () => {
+        if (typeof window === 'undefined') return 1;
+        const { devicePixelRatio } = window;
+        if (typeof devicePixelRatio !== 'number' || !Number.isFinite(devicePixelRatio)) {
+            return 1;
+        }
+        if (devicePixelRatio <= 0) {
+            return 1;
+        }
+        return devicePixelRatio;
+    }
+
+    roundToDevicePixels = (value) => {
+        const ratio = this.getDevicePixelRatio();
+        const rounded = Math.round(value * ratio) / ratio;
+        if (!Number.isFinite(rounded)) {
+            return 0;
+        }
+        // Clamp floating point artifacts by trimming to 4 decimal places
+        return Number(rounded.toFixed(4));
+    }
+
     snapToGrid = (value, axis = 'x') => {
-        if (!this.props.snapEnabled) return value;
+        const input = typeof value === 'number' ? value : Number(value) || 0;
+        if (!this.props.snapEnabled) {
+            return this.roundToDevicePixels(input);
+        }
         const [gridX, gridY] = this.getSnapGrid();
         const size = axis === 'y' ? gridY : gridX;
-        if (!size) return value;
-        return Math.round(value / size) * size;
+        if (!size) return this.roundToDevicePixels(input);
+        return this.roundToDevicePixels(Math.round(input / size) * size);
     }
 
     handleVerticleResize = () => {
@@ -417,8 +442,10 @@ export class Window extends Component {
         const relativeY = rect.y - topInset;
         const snappedRelativeY = this.snapToGrid(relativeY, 'y');
         const absoluteY = clampWindowTopPosition(snappedRelativeY + topInset, topInset);
-        node.style.setProperty('--window-transform-x', `${snappedX.toFixed(1)}px`);
-        node.style.setProperty('--window-transform-y', `${absoluteY.toFixed(1)}px`);
+        const roundedX = this.roundToDevicePixels(snappedX);
+        const roundedY = this.roundToDevicePixels(absoluteY);
+        node.style.setProperty('--window-transform-x', `${roundedX}px`);
+        node.style.setProperty('--window-transform-y', `${roundedY}px`);
 
         if (this.props.onPositionChange) {
             this.props.onPositionChange(snappedX, absoluteY);
