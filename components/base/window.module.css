@@ -1,3 +1,26 @@
+:global(:root) {
+  --window-motion-duration-minimize: 200ms;
+  --window-motion-ease-minimize: cubic-bezier(0.4, 0, 0.2, 1);
+  --window-motion-duration-restore: 300ms;
+  --window-motion-ease-restore: cubic-bezier(0.2, 0.8, 0.4, 1);
+  --window-motion-duration-snap: 240ms;
+  --window-motion-ease-snap: cubic-bezier(0.2, 0.8, 0.4, 1);
+  --window-motion-duration-maximize: 320ms;
+  --window-motion-ease-maximize: cubic-bezier(0.2, 0.8, 0.4, 1);
+  --window-motion-duration-snap-preview: var(--window-motion-duration-snap);
+  --window-motion-ease-snap-preview: var(--window-motion-ease-snap);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :global(:root) {
+    --window-motion-duration-minimize: 0ms;
+    --window-motion-duration-restore: 0ms;
+    --window-motion-duration-snap: 0ms;
+    --window-motion-duration-maximize: 0ms;
+    --window-motion-duration-snap-preview: 0ms;
+  }
+}
+
 .windowFrame {
   position: relative;
   border: 1px solid var(--color-window-border);
@@ -6,12 +29,12 @@
   overflow: hidden;
   --window-motion-transform-duration: var(--window-motion-duration-restore);
   --window-motion-transform-easing: var(--window-motion-ease-restore);
-  --window-motion-opacity-duration: var(--window-motion-duration-minimize);
-  --window-motion-opacity-easing: var(--window-motion-ease-minimize);
+  --window-motion-opacity-duration: var(--window-motion-duration-restore);
+  --window-motion-opacity-easing: var(--window-motion-ease-restore);
   transition:
     transform var(--window-motion-transform-duration) var(--window-motion-transform-easing),
-    filter var(--motion-fast) ease,
-    box-shadow var(--motion-fast) ease,
+    filter var(--window-motion-transform-duration) var(--window-motion-transform-easing),
+    box-shadow var(--window-motion-transform-duration) var(--window-motion-transform-easing),
     opacity var(--window-motion-opacity-duration) var(--window-motion-opacity-easing),
     visibility 0s linear;
   transition-delay: 0s, 0s, 0s, 0s, 0s;
@@ -43,8 +66,6 @@
 
 .windowFrameMaximized {
   border-radius: 0;
-  --window-motion-transform-duration: var(--window-motion-duration-maximize);
-  --window-motion-transform-easing: var(--window-motion-ease-maximize);
 }
 
 .windowFrameMaximized::before {
@@ -55,7 +76,40 @@
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
+  --window-motion-transform-duration: var(--window-motion-duration-minimize);
+  --window-motion-transform-easing: var(--window-motion-ease-minimize);
+  --window-motion-opacity-duration: var(--window-motion-duration-minimize);
+  --window-motion-opacity-easing: var(--window-motion-ease-minimize);
   transition-delay: 0s, 0s, 0s, 0s, var(--window-motion-opacity-duration);
+}
+
+:global([data-window-state='active']),
+:global([data-window-state='normal']) {
+  --window-motion-transform-duration: var(--window-motion-duration-restore);
+  --window-motion-transform-easing: var(--window-motion-ease-restore);
+  --window-motion-opacity-duration: var(--window-motion-duration-restore);
+  --window-motion-opacity-easing: var(--window-motion-ease-restore);
+}
+
+:global([data-window-state='minimized']) {
+  --window-motion-transform-duration: var(--window-motion-duration-minimize);
+  --window-motion-transform-easing: var(--window-motion-ease-minimize);
+  --window-motion-opacity-duration: var(--window-motion-duration-minimize);
+  --window-motion-opacity-easing: var(--window-motion-ease-minimize);
+}
+
+:global([data-window-state='maximized']) {
+  --window-motion-transform-duration: var(--window-motion-duration-maximize);
+  --window-motion-transform-easing: var(--window-motion-ease-maximize);
+  --window-motion-opacity-duration: var(--window-motion-duration-restore);
+  --window-motion-opacity-easing: var(--window-motion-ease-restore);
+}
+
+:global([data-window-state^='snapped']) {
+  --window-motion-transform-duration: var(--window-motion-duration-snap);
+  --window-motion-transform-easing: var(--window-motion-ease-snap);
+  --window-motion-opacity-duration: var(--window-motion-duration-restore);
+  --window-motion-opacity-easing: var(--window-motion-ease-restore);
 }
 
 .snapPreview {
