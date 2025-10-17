@@ -61,6 +61,7 @@ export interface DesktopTheme {
   wallpaperName: string | null;
   overlay?: string;
   useKaliWallpaper: boolean;
+  wallpaperFit: 'cover' | 'contain' | 'fill' | 'fit';
 }
 
 type DesktopThemePreset = {
@@ -68,6 +69,7 @@ type DesktopThemePreset = {
   wallpaperName?: string;
   overlay?: string;
   useKaliWallpaper?: boolean;
+  wallpaperFit?: DesktopTheme['wallpaperFit'];
 };
 
 export const DESKTOP_THEME_PRESETS: Record<string, DesktopThemePreset> = {
@@ -98,6 +100,7 @@ interface ResolveDesktopThemeInput {
   wallpaperName: string;
   bgImageName: string;
   useKaliWallpaper: boolean;
+  wallpaperFit: DesktopTheme['wallpaperFit'];
 }
 
 export const resolveDesktopTheme = ({
@@ -106,9 +109,12 @@ export const resolveDesktopTheme = ({
   wallpaperName,
   bgImageName,
   useKaliWallpaper,
+  wallpaperFit,
 }: ResolveDesktopThemeInput): DesktopTheme => {
   const preset = DESKTOP_THEME_PRESETS[theme] ?? {};
   const resolvedUseKali = preset.useKaliWallpaper ?? useKaliWallpaper;
+  const resolvedWallpaperFit =
+    preset.wallpaperFit ?? wallpaperFit ?? 'cover';
   const fallbackWallpaperUrl = buildWallpaperUrl(wallpaperName);
   const resolvedWallpaperUrl = resolvedUseKali
     ? null
@@ -122,5 +128,6 @@ export const resolveDesktopTheme = ({
     wallpaperName: wallpaperName ?? null,
     overlay: preset.overlay,
     useKaliWallpaper: resolvedUseKali,
+    wallpaperFit: resolvedWallpaperFit,
   };
 };

@@ -12,6 +12,8 @@ import {
   setAccent as saveAccent,
   getWallpaper as loadWallpaper,
   setWallpaper as saveWallpaper,
+  getWallpaperFit as loadWallpaperFit,
+  setWallpaperFit as saveWallpaperFit,
   getUseKaliWallpaper as loadUseKaliWallpaper,
   setUseKaliWallpaper as saveUseKaliWallpaper,
   getDensity as loadDensity,
@@ -72,6 +74,7 @@ interface SettingsContextValue {
   wallpaper: string;
   bgImageName: string;
   useKaliWallpaper: boolean;
+  wallpaperFit: 'cover' | 'contain' | 'fill' | 'fit';
   density: Density;
   reducedMotion: boolean;
   fontScale: number;
@@ -85,6 +88,7 @@ interface SettingsContextValue {
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setUseKaliWallpaper: (value: boolean) => void;
+  setWallpaperFit: (mode: 'cover' | 'contain' | 'fill' | 'fit') => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
   setFontScale: (value: number) => void;
@@ -102,6 +106,7 @@ const DEFAULT_DESKTOP_THEME = resolveDesktopTheme({
   wallpaperName: defaults.wallpaper,
   bgImageName: defaults.wallpaper,
   useKaliWallpaper: defaults.useKaliWallpaper,
+  wallpaperFit: defaults.wallpaperFit as SettingsContextValue['wallpaperFit'],
 });
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -109,6 +114,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   wallpaper: defaults.wallpaper,
   bgImageName: defaults.wallpaper,
   useKaliWallpaper: defaults.useKaliWallpaper,
+  wallpaperFit: defaults.wallpaperFit as SettingsContextValue['wallpaperFit'],
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
@@ -122,6 +128,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAccent: () => {},
   setWallpaper: () => {},
   setUseKaliWallpaper: () => {},
+  setWallpaperFit: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
   setFontScale: () => {},
@@ -137,6 +144,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [useKaliWallpaper, setUseKaliWallpaper] = useState<boolean>(defaults.useKaliWallpaper);
+  const [wallpaperFit, setWallpaperFit] = useState<
+    SettingsContextValue['wallpaperFit']
+  >(defaults.wallpaperFit as SettingsContextValue['wallpaperFit']);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
@@ -154,6 +164,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAccent(await loadAccent());
       setWallpaper(await loadWallpaper());
       setUseKaliWallpaper(await loadUseKaliWallpaper());
+      setWallpaperFit(await loadWallpaperFit());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
@@ -190,6 +201,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveWallpaper(wallpaper);
   }, [wallpaper]);
+
+  useEffect(() => {
+    saveWallpaperFit(wallpaperFit);
+  }, [wallpaperFit]);
 
   useEffect(() => {
     saveUseKaliWallpaper(useKaliWallpaper);
@@ -308,8 +323,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         wallpaperName: wallpaper,
         bgImageName,
         useKaliWallpaper,
+        wallpaperFit,
       }),
-    [theme, accent, wallpaper, bgImageName, useKaliWallpaper],
+    [theme, accent, wallpaper, bgImageName, useKaliWallpaper, wallpaperFit],
   );
 
   useEffect(() => {
@@ -331,6 +347,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       ) {
         setUseKaliWallpaper(preset.useKaliWallpaper);
       }
+      if (preset?.wallpaperFit && preset.wallpaperFit !== wallpaperFit) {
+        setWallpaperFit(preset.wallpaperFit);
+      }
       previousThemeRef.current = theme;
     }
   }, [
@@ -338,9 +357,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     accent,
     wallpaper,
     useKaliWallpaper,
+    wallpaperFit,
     setAccent,
     setWallpaper,
     setUseKaliWallpaper,
+    setWallpaperFit,
   ]);
 
   return (
@@ -350,6 +371,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         wallpaper,
         bgImageName,
         useKaliWallpaper,
+        wallpaperFit,
         density,
         reducedMotion,
         fontScale,
@@ -363,6 +385,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAccent,
         setWallpaper,
         setUseKaliWallpaper,
+        setWallpaperFit,
         setDensity,
         setReducedMotion,
         setFontScale,
