@@ -263,6 +263,7 @@ export class Desktop extends Component {
             selectionAnchorId: null,
             marqueeSelection: null,
             hoveredIconId: null,
+            focusedIconId: null,
             currentTheme: initialTheme,
             iconSizePreset: initialIconSizePreset,
             overlayWindows: createOverlayStateMap(),
@@ -1875,6 +1876,98 @@ export class Desktop extends Component {
         return { column, row };
     };
 
+    getIconPositionForApp = (appId, state = this.state) => {
+        if (!appId) return null;
+        const desktopApps = Array.isArray(state.desktop_apps) ? state.desktop_apps : [];
+        const positions = state.desktop_icon_positions || {};
+        const keyboardMoveState = state.keyboardMoveState;
+        if (keyboardMoveState && keyboardMoveState.id === appId && this.isValidIconPosition(keyboardMoveState.position)) {
+            return keyboardMoveState.position;
+        }
+        const stored = positions[appId];
+        if (this.isValidIconPosition(stored)) {
+            return stored;
+        }
+        const index = desktopApps.indexOf(appId);
+        if (index >= 0) {
+            return this.computeGridPosition(index);
+        }
+        return null;
+    };
+
+    getDesktopIconLayoutEntries = (state = this.state) => {
+        const desktopApps = Array.isArray(state.desktop_apps) ? state.desktop_apps : [];
+        if (!desktopApps.length) return [];
+        return desktopApps.map((appId, index) => {
+            const position = this.getIconPositionForApp(appId, state);
+            if (!this.isValidIconPosition(position)) {
+                return null;
+            }
+            const { column, row } = this.describeKeyboardIconPosition(position);
+            return {
+                appId,
+                index,
+                position,
+                column: Number.isFinite(column) ? column : 1,
+                row: Number.isFinite(row) ? row : 1,
+                x: position.x,
+                y: position.y,
+            };
+        }).filter(Boolean);
+    };
+
+    sortIconEntries = (entries = []) => {
+        return entries.slice().sort((a, b) => {
+            if (a.column !== b.column) return a.column - b.column;
+            if (a.row !== b.row) return a.row - b.row;
+            if (a.y !== b.y) return a.y - b.y;
+            if (a.x !== b.x) return a.x - b.x;
+            return a.index - b.index;
+        });
+    };
+
+    getIconNavigationEntries = (state = this.state) => {
+        const entries = this.getDesktopIconLayoutEntries(state);
+        const disabledMap = state.disabled_apps || {};
+        const enabledEntries = entries.filter((entry) => !disabledMap[entry.appId]);
+        return this.sortIconEntries(enabledEntries);
+    };
+
+    getDesktopAppOrder = (state = this.state) => {
+        return this.getIconNavigationEntries(state).map((entry) => entry.appId);
+    };
+
+    getEffectiveFocusedIconId = (state = this.state) => {
+        const desktopApps = Array.isArray(state.desktop_apps) ? state.desktop_apps : [];
+        if (!desktopApps.length) return null;
+        const disabledMap = state.disabled_apps || {};
+        const storedFocus = state.focusedIconId;
+        if (storedFocus && desktopApps.includes(storedFocus) && !disabledMap[storedFocus]) {
+            return storedFocus;
+        }
+        const selectedSet = state.selectedIcons instanceof Set ? state.selectedIcons : new Set();
+        for (const id of selectedSet) {
+            if (desktopApps.includes(id) && !disabledMap[id]) {
+                return id;
+            }
+        }
+        const firstAvailable = desktopApps.find((id) => !disabledMap[id]);
+        return firstAvailable || null;
+    };
+
+    ensureFocusedIconValidity = () => {
+        const { focusedIconId } = this.state;
+        if (!focusedIconId) return;
+        const desktopApps = Array.isArray(this.state.desktop_apps) ? this.state.desktop_apps : [];
+        const disabledMap = this.state.disabled_apps || {};
+        if (!desktopApps.includes(focusedIconId) || disabledMap[focusedIconId]) {
+            const fallback = this.getEffectiveFocusedIconId();
+            if (fallback !== focusedIconId) {
+                this.setState({ focusedIconId: fallback || null });
+            }
+        }
+    };
+
     buildKeyboardMoveHint = (app, isMoving, position) => {
         if (!app || this.state.disabled_apps?.[app.id]) {
             return undefined;
@@ -1975,7 +2068,7 @@ export class Desktop extends Component {
 
     calculateSelectionForState = (state, appId, modifiers = {}) => {
         if (!appId) return null;
-        const desktopApps = Array.isArray(state.desktop_apps) ? state.desktop_apps : [];
+        const desktopApps = this.getDesktopAppOrder(state);
         const prevSelected = state.selectedIcons instanceof Set ? state.selectedIcons : new Set();
         const prevAnchor = state.selectionAnchorId ?? null;
         const multi = Boolean(modifiers.multi);
@@ -2050,6 +2143,191 @@ export class Desktop extends Component {
         this.setState({
             selectedIcons: selection.nextSelected,
             selectionAnchorId: selection.nextSelected.size ? selection.anchorId : null,
+        });
+    };
+
+    focusIcon = (appId, options = {}) => {
+        if (!appId) return;
+        const desktopApps = Array.isArray(this.state.desktop_apps) ? this.state.desktop_apps : [];
+        if (!desktopApps.includes(appId)) return;
+        if (this.state.disabled_apps?.[appId]) return;
+
+        const {
+            updateSelection = false,
+            range = false,
+            multi = false,
+            announce = false,
+        } = options;
+
+        const runSideEffects = () => {
+            if (updateSelection) {
+                this.applyKeyboardSelection(appId, { range, multi });
+            }
+            if (announce) {
+                this.announceIconFocus(appId);
+            }
+            if (typeof document !== 'undefined') {
+                const element = document.getElementById(`app-${appId}`);
+                if (element && typeof element.focus === 'function') {
+                    try {
+                        element.focus({ preventScroll: true });
+                    } catch (error) {
+                        element.focus();
+                    }
+                }
+            }
+        };
+
+        if (this.state.focusedIconId !== appId) {
+            this.setState({ focusedIconId: appId }, runSideEffects);
+        } else {
+            runSideEffects();
+        }
+    };
+
+    announceIconFocus = (appId) => {
+        const app = this.getAppById(appId);
+        if (!app) return;
+        const title = app.title || app.name || 'app';
+        const position = this.getIconPositionForApp(appId);
+        if (this.isValidIconPosition(position)) {
+            const { column, row } = this.describeKeyboardIconPosition(position);
+            if (column && row) {
+                this.announce(`${title} focused at column ${column}, row ${row}.`);
+                return;
+            }
+        }
+        this.announce(`${title} focused.`);
+    };
+
+    findIconInDirection = (currentEntry, key, entries) => {
+        if (!currentEntry) return null;
+        const { position } = currentEntry;
+        if (!position) return currentEntry;
+        const candidates = entries.filter((entry) => entry.appId !== currentEntry.appId);
+        if (!candidates.length) return currentEntry;
+        const epsilon = 0.5;
+
+        const sortBy = (a, b, primary, secondary) => {
+            if (primary(a) !== primary(b)) {
+                return primary(a) - primary(b);
+            }
+            if (secondary) {
+                const result = secondary(a) - secondary(b);
+                if (result !== 0) return result;
+            }
+            if (a.row !== b.row) return a.row - b.row;
+            if (a.column !== b.column) return a.column - b.column;
+            return a.index - b.index;
+        };
+
+        switch (key) {
+            case 'ArrowUp': {
+                const filtered = candidates
+                    .filter((entry) => entry.position?.y < position.y - epsilon)
+                    .sort((a, b) => sortBy(a, b,
+                        (entry) => position.y - entry.position.y,
+                        (entry) => Math.abs(position.x - entry.position.x)));
+                return filtered[0] || currentEntry;
+            }
+            case 'ArrowDown': {
+                const filtered = candidates
+                    .filter((entry) => entry.position?.y > position.y + epsilon)
+                    .sort((a, b) => sortBy(a, b,
+                        (entry) => entry.position.y - position.y,
+                        (entry) => Math.abs(position.x - entry.position.x)));
+                return filtered[0] || currentEntry;
+            }
+            case 'ArrowLeft': {
+                const filtered = candidates
+                    .filter((entry) => entry.position?.x < position.x - epsilon)
+                    .sort((a, b) => sortBy(a, b,
+                        (entry) => position.x - entry.position.x,
+                        (entry) => Math.abs(position.y - entry.position.y)));
+                return filtered[0] || currentEntry;
+            }
+            case 'ArrowRight': {
+                const filtered = candidates
+                    .filter((entry) => entry.position?.x > position.x + epsilon)
+                    .sort((a, b) => sortBy(a, b,
+                        (entry) => entry.position.x - position.x,
+                        (entry) => Math.abs(position.y - entry.position.y)));
+                return filtered[0] || currentEntry;
+            }
+            default:
+                return currentEntry;
+        }
+    };
+
+    findColumnExtremeIcon = (currentEntry, goToEnd, entries) => {
+        if (!currentEntry) return null;
+        const columnEntries = entries.filter((entry) => entry.column === currentEntry.column);
+        if (!columnEntries.length) return currentEntry;
+        const sorted = columnEntries.slice().sort((a, b) => {
+            if (a.row !== b.row) return a.row - b.row;
+            if (a.position?.y !== b.position?.y) return (a.position?.y || 0) - (b.position?.y || 0);
+            return a.index - b.index;
+        });
+        return goToEnd ? sorted[sorted.length - 1] : sorted[0];
+    };
+
+    findRowExtremeIcon = (currentEntry, goToEnd, entries) => {
+        if (!currentEntry) return null;
+        const rowEntries = entries.filter((entry) => entry.row === currentEntry.row);
+        if (!rowEntries.length) return currentEntry;
+        const sorted = rowEntries.slice().sort((a, b) => {
+            if (a.column !== b.column) return a.column - b.column;
+            if (a.position?.x !== b.position?.x) return (a.position?.x || 0) - (b.position?.x || 0);
+            return a.index - b.index;
+        });
+        return goToEnd ? sorted[sorted.length - 1] : sorted[0];
+    };
+
+    navigateIconFocus = (currentId, key, modifiers = {}) => {
+        const entries = this.getIconNavigationEntries();
+        if (!entries.length) return;
+        const currentEntry = entries.find((entry) => entry.appId === currentId) || entries[0];
+        let targetEntry = currentEntry;
+
+        switch (key) {
+            case 'ArrowUp':
+            case 'ArrowDown':
+            case 'ArrowLeft':
+            case 'ArrowRight':
+                targetEntry = this.findIconInDirection(currentEntry, key, entries);
+                break;
+            case 'Home':
+                targetEntry = this.findColumnExtremeIcon(currentEntry, false, entries);
+                break;
+            case 'End':
+                targetEntry = this.findColumnExtremeIcon(currentEntry, true, entries);
+                break;
+            case 'PageUp':
+                targetEntry = this.findRowExtremeIcon(currentEntry, false, entries);
+                break;
+            case 'PageDown':
+                targetEntry = this.findRowExtremeIcon(currentEntry, true, entries);
+                break;
+            default:
+                break;
+        }
+
+        if (!targetEntry || targetEntry.appId === currentEntry.appId) {
+            if (modifiers.range) {
+                this.applyKeyboardSelection(currentEntry.appId, { range: true, multi: modifiers.multi });
+            }
+            return;
+        }
+
+        const shouldUpdateSelection = modifiers.range || !modifiers.multi;
+        const selectionRange = Boolean(modifiers.range);
+        const selectionMulti = selectionRange ? Boolean(modifiers.multi) : Boolean(modifiers.multi && shouldUpdateSelection);
+
+        this.focusIcon(targetEntry.appId, {
+            updateSelection: shouldUpdateSelection,
+            range: selectionRange,
+            multi: selectionMulti,
+            announce: true,
         });
     };
 
@@ -2321,6 +2599,14 @@ export class Desktop extends Component {
         });
     };
 
+    handleIconFocus = (_event, appId) => {
+        if (!appId) return;
+        this.setState((prevState) => {
+            if (prevState.focusedIconId === appId) return null;
+            return { focusedIconId: appId };
+        });
+    };
+
     handleIconKeyDown = (event, app) => {
         if (!app) return;
         const appId = app.id;
@@ -2365,6 +2651,23 @@ export class Desktop extends Component {
                 default:
                     return;
             }
+        }
+
+        const navigationKeys = [
+            'ArrowUp',
+            'ArrowDown',
+            'ArrowLeft',
+            'ArrowRight',
+            'Home',
+            'End',
+            'PageUp',
+            'PageDown',
+        ];
+
+        if (navigationKeys.includes(key)) {
+            event.preventDefault();
+            this.navigateIconFocus(appId, key, { multi, range });
+            return;
         }
 
         if (key === 'Enter') {
@@ -2486,18 +2789,23 @@ export class Desktop extends Component {
             anchor: selectionAnchor,
         };
 
-        if (!isAdditive && !isRange) {
-            if (baseSelectionArray.length > 0) {
-                this.setState({ selectedIcons: new Set(), selectionAnchorId: null });
+        this.setState((prevState) => {
+            const updates = {};
+            if (!isAdditive && !isRange && baseSelectionArray.length > 0) {
+                updates.selectedIcons = new Set();
+                updates.selectionAnchorId = null;
             }
-        }
-
-        if (this.state.keyboardMoveState) {
-            this.setState({ keyboardMoveState: null });
-        }
-        if (this.state.hoveredIconId !== null) {
-            this.setState({ hoveredIconId: null });
-        }
+            if (prevState.focusedIconId !== null) {
+                updates.focusedIconId = null;
+            }
+            if (prevState.keyboardMoveState) {
+                updates.keyboardMoveState = null;
+            }
+            if (prevState.hoveredIconId !== null) {
+                updates.hoveredIconId = null;
+            }
+            return Object.keys(updates).length ? updates : null;
+        });
     };
 
     handleDesktopPointerMove = (event) => {
@@ -2597,6 +2905,9 @@ export class Desktop extends Component {
             const partial = { draggingIconId: appId };
             if (prevState.keyboardMoveState) {
                 partial.keyboardMoveState = null;
+            }
+            if (prevState.focusedIconId !== appId) {
+                partial.focusedIconId = appId;
             }
             const selection = this.calculateSelectionForState(prevState, appId, modifiers);
             if (selection) {
@@ -2928,6 +3239,13 @@ export class Desktop extends Component {
         } else if (launcherWasOpen && !launcherIsOpen) {
             this.deactivateAllAppsFocusTrap();
             this.restoreFocusToPreviousElement();
+        }
+
+        if (
+            prevState.desktop_apps !== this.state.desktop_apps ||
+            prevState.disabled_apps !== this.state.disabled_apps
+        ) {
+            this.ensureFocusedIconValidity();
         }
     }
 
@@ -3755,6 +4073,7 @@ export class Desktop extends Component {
         const selectionSet = this.state.selectedIcons instanceof Set ? this.state.selectedIcons : new Set();
         const hoveredIconId = this.state.hoveredIconId;
         const marqueeSelection = this.state.marqueeSelection;
+        const focusTargetId = this.getEffectiveFocusedIconId();
 
         const icons = desktopApps.map((appId, index) => {
             const app = this.getAppById(appId);
@@ -3779,6 +4098,9 @@ export class Desktop extends Component {
             const isSelected = selectionSet.has(appId);
             const isHovered = hoveredIconId === appId;
             const assistiveHint = this.buildKeyboardMoveHint(app, isKeyboardMoving, position);
+            const isDisabled = Boolean(props.disabled);
+            const isTabbable = !isDisabled && focusTargetId === appId;
+            const tabIndex = isDisabled ? -1 : (isTabbable ? 0 : -1);
             const wrapperStyle = {
                 position: 'absolute',
                 left: `${position.x}px`,
@@ -3806,9 +4128,11 @@ export class Desktop extends Component {
                         isBeingDragged={isDragging}
                         onKeyDown={(event) => this.handleIconKeyDown(event, app)}
                         onBlur={(event) => this.handleIconBlur(event, app.id)}
+                        onFocus={(event) => this.handleIconFocus(event, app.id)}
                         assistiveHint={assistiveHint}
                         isSelected={isSelected}
                         isHovered={isHovered}
+                        tabIndex={tabIndex}
                     />
                 </div>
             );
