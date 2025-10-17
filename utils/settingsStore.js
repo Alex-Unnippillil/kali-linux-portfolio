@@ -3,9 +3,16 @@
 import { get, set, del } from 'idb-keyval';
 import { getTheme, setTheme } from './theme';
 
+const WALLPAPER_MODE_KEY = 'wallpaper-mode';
+const WALLPAPER_OFFSETS_KEY = 'wallpaper-fit-offsets';
+
+const VALID_WALLPAPER_MODES = new Set(['cover', 'contain', 'fill', 'fit']);
+
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
+  wallpaperMode: 'cover',
+  wallpaperOffsets: {},
   useKaliWallpaper: false,
   density: 'regular',
   reducedMotion: false,
@@ -53,6 +60,77 @@ export async function getWallpaper() {
 export async function setWallpaper(wallpaper) {
   if (typeof window === 'undefined') return;
   await set('bg-image', wallpaper);
+}
+
+const sanitizeWallpaperMode = (value) =>
+  VALID_WALLPAPER_MODES.has(value)
+    ? value
+    : DEFAULT_SETTINGS.wallpaperMode;
+
+const sanitizeOffsetsMap = (value) => {
+  if (!value || typeof value !== 'object') return {};
+  const normalized = {};
+  Object.entries(value).forEach(([key, offset]) => {
+    if (!key || typeof key !== 'string') return;
+    if (!offset || typeof offset !== 'object') return;
+    const x = Number(offset.x);
+    const y = Number(offset.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    const clampedX = Math.min(Math.max(x, -0.5), 0.5);
+    const clampedY = Math.min(Math.max(y, -0.5), 0.5);
+    if (Math.abs(clampedX) < 1e-6 && Math.abs(clampedY) < 1e-6) {
+      return;
+    }
+    normalized[key] = { x: clampedX, y: clampedY };
+  });
+  return normalized;
+};
+
+export async function getWallpaperMode() {
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.wallpaperMode;
+  const stored = storage.getItem(WALLPAPER_MODE_KEY);
+  if (!stored) return DEFAULT_SETTINGS.wallpaperMode;
+  return sanitizeWallpaperMode(stored);
+}
+
+export async function setWallpaperMode(mode) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  const normalized = sanitizeWallpaperMode(mode);
+  if (normalized === DEFAULT_SETTINGS.wallpaperMode) {
+    storage.removeItem(WALLPAPER_MODE_KEY);
+    return;
+  }
+  storage.setItem(WALLPAPER_MODE_KEY, normalized);
+}
+
+export async function getWallpaperOffsets() {
+  const storage = getLocalStorage();
+  if (!storage) return {};
+  const raw = storage.getItem(WALLPAPER_OFFSETS_KEY);
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return sanitizeOffsetsMap(parsed);
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production' && !hasLoggedStorageWarning) {
+      console.warn('Failed to parse wallpaper offsets from storage.', error);
+      hasLoggedStorageWarning = true;
+    }
+    return {};
+  }
+}
+
+export async function setWallpaperOffsets(offsets) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  const normalized = sanitizeOffsetsMap(offsets);
+  if (!Object.keys(normalized).length) {
+    storage.removeItem(WALLPAPER_OFFSETS_KEY);
+    return;
+  }
+  storage.setItem(WALLPAPER_OFFSETS_KEY, JSON.stringify(normalized));
 }
 
 export async function getUseKaliWallpaper() {
@@ -192,12 +270,15 @@ export async function resetSettings() {
   storage.removeItem('allow-network');
   storage.removeItem('haptics');
   storage.removeItem('use-kali-wallpaper');
+  storage.removeItem(WALLPAPER_MODE_KEY);
+  storage.removeItem(WALLPAPER_OFFSETS_KEY);
 }
 
 export async function exportSettings() {
   const [
     accent,
     wallpaper,
+    wallpaperMode,
     useKaliWallpaper,
     density,
     reducedMotion,
@@ -207,9 +288,11 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    wallpaperOffsets,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
+    getWallpaperMode(),
     getUseKaliWallpaper(),
     getDensity(),
     getReducedMotion(),
@@ -219,11 +302,13 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getWallpaperOffsets(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
     accent,
     wallpaper,
+    wallpaperMode,
     density,
     reducedMotion,
     fontScale,
@@ -234,6 +319,7 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    wallpaperOffsets,
   });
 }
 
@@ -250,6 +336,7 @@ export async function importSettings(json) {
     accent,
     wallpaper,
     useKaliWallpaper,
+    wallpaperMode,
     density,
     reducedMotion,
     fontScale,
@@ -259,10 +346,12 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    wallpaperOffsets,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
   if (useKaliWallpaper !== undefined) await setUseKaliWallpaper(useKaliWallpaper);
+  if (wallpaperMode !== undefined) await setWallpaperMode(wallpaperMode);
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);
@@ -272,6 +361,7 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (wallpaperOffsets !== undefined) await setWallpaperOffsets(wallpaperOffsets);
 }
 
 export const defaults = DEFAULT_SETTINGS;
