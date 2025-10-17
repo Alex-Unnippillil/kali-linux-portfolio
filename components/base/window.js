@@ -2,10 +2,10 @@
 
 import React, { Component } from 'react';
 import NextImage from 'next/image';
-import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import useDocPiP from '../../hooks/useDocPiP';
+import useWindowPointerDrag from '../../hooks/useWindowPointerDrag';
 import {
     clampWindowTopPosition,
     DEFAULT_WINDOW_TOP_OFFSET,
@@ -139,6 +139,7 @@ export class Window extends Component {
     componentDidMount() {
         this.id = this.props.id;
         this.setDefaultWindowDimenstion();
+        this.applyInitialTransform();
 
         // google analytics
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
@@ -357,6 +358,35 @@ export class Window extends Component {
 
     changeCursorToDefault = () => {
         this.setState({ cursorType: "cursor-default", grabbed: false })
+    }
+
+    applyInitialTransform = () => {
+        const node = this.getWindowNode();
+        if (!node) return;
+        const x = typeof this.startX === 'number' ? this.startX : 0;
+        const y = typeof this.startY === 'number' ? this.startY : 0;
+        node.style.transform = `translate(${x}px, ${y}px)`;
+        node.style.setProperty('--window-transform-x', `${x}px`);
+        node.style.setProperty('--window-transform-y', `${y}px`);
+    }
+
+    cancelDrag = () => {
+        this.changeCursorToDefault();
+        if (this.state.snapPreview || this.state.snapPosition) {
+            this.setState({ snapPreview: null, snapPosition: null });
+        }
+    }
+
+    getDragBounds = () => {
+        const top = this.state.safeAreaTop ?? 0;
+        const height = this.state.parentSize?.height ?? 0;
+        const width = this.state.parentSize?.width ?? 0;
+        return {
+            left: 0,
+            top,
+            right: width,
+            bottom: top + height,
+        };
     }
 
     getSnapGrid = () => {
@@ -814,8 +844,6 @@ export class Window extends Component {
             ? this.props.zIndex
             : (this.props.isFocused ? 30 : 20);
 
-        const snapGrid = this.getSnapGrid();
-
         const windowState = this.props.minimized
             ? 'minimized'
             : (this.state.maximized
@@ -848,75 +876,76 @@ export class Window extends Component {
                         </span>
                     </div>
                 )}
-                <Draggable
-                    nodeRef={this.windowRef}
-                    axis="both"
-                    handle=".bg-ub-window-title"
-                    grid={this.props.snapEnabled ? snapGrid : [1, 1]}
-                    scale={1}
-                    onStart={this.changeCursorToMove}
-                    onStop={this.handleStop}
-                    onDrag={this.handleDrag}
-                    allowAnyClick={false}
-                    defaultPosition={{ x: this.startX, y: this.startY }}
-                    bounds={{
-                        left: 0,
-                        top: this.state.safeAreaTop,
-                        right: this.state.parentSize.width,
-                        bottom: this.state.safeAreaTop + this.state.parentSize.height,
+                <WindowFrameWrapper
+                    windowRef={this.windowRef}
+                    dragConfig={{
+                        getBounds: this.getDragBounds,
+                        onDragStart: this.changeCursorToMove,
+                        onDrag: this.handleDrag,
+                        onDragEnd: this.handleStop,
+                        onDragCancel: this.cancelDrag,
+                        snapToGrid: this.props.snapEnabled ? this.snapToGrid : null,
+                    }}
+                    frameHandlers={{
+                        onPointerDown: this.focusWindow,
+                    }}
+                    handleHandlers={{
+                        onPointerDown: this.focusWindow,
                     }}
                 >
-                    <div
-                        ref={this.windowRef}
-                        style={{ position: 'absolute', width: `${this.state.width}%`, height: `${this.state.height}%`, zIndex: computedZIndex }}
-                        className={[
-                            this.state.cursorType,
-                            this.state.closed ? 'closed-window' : '',
-                            this.props.minimized ? styles.windowFrameMinimized : '',
-                            this.state.grabbed ? 'opacity-70' : '',
-                            this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
-                            'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',
-                            styles.windowFrame,
-                            this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
-                            this.state.maximized ? styles.windowFrameMaximized : '',
-                        ].filter(Boolean).join(' ')}
-                        id={this.id}
-                        role="dialog"
-                        data-window-state={windowState}
-                        aria-hidden={this.props.minimized ? true : false}
-                        aria-label={this.props.title}
-                        tabIndex={0}
-                        onKeyDown={this.handleKeyDown}
-                        onPointerDown={this.focusWindow}
-                        onFocus={this.focusWindow}
-                    >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
-                        <WindowTopBar
-                            title={this.props.title}
-                            onKeyDown={this.handleTitleBarKeyDown}
-                            onBlur={this.releaseGrab}
-                            grabbed={this.state.grabbed}
-                            onPointerDown={this.focusWindow}
-                            onDoubleClick={this.handleTitleBarDoubleClick}
-                        />
-                        <WindowEditButtons
-                            minimize={this.minimizeWindow}
-                            maximize={this.maximizeWindow}
-                            isMaximised={this.state.maximized}
-                            close={this.closeWindow}
+                    {({ frameProps, handleProps }) => (
+                        <div
+                            ref={this.windowRef}
+                            {...frameProps}
+                            style={{ position: 'absolute', width: `${this.state.width}%`, height: `${this.state.height}%`, zIndex: computedZIndex }}
+                            className={[
+                                this.state.cursorType,
+                                this.state.closed ? 'closed-window' : '',
+                                this.props.minimized ? styles.windowFrameMinimized : '',
+                                this.state.grabbed ? 'opacity-70' : '',
+                                this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
+                                'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',
+                                styles.windowFrame,
+                                this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
+                                this.state.maximized ? styles.windowFrameMaximized : '',
+                            ].filter(Boolean).join(' ')}
                             id={this.id}
-                            allowMaximize={this.props.allowMaximize !== false}
-                            pip={() => this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
-                        />
-                        {(this.id === "settings"
-                            ? <Settings />
-                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
-                                addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp}
-                                context={this.props.context} />)}
-                    </div>
-                </Draggable >
+                            role="dialog"
+                            data-window-state={windowState}
+                            aria-hidden={this.props.minimized ? true : false}
+                            aria-label={this.props.title}
+                            tabIndex={0}
+                            onKeyDown={this.handleKeyDown}
+                            onFocus={this.focusWindow}
+                        >
+                            {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
+                            {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                            <WindowTopBar
+                                {...handleProps}
+                                title={this.props.title}
+                                onKeyDown={this.handleTitleBarKeyDown}
+                                onBlur={this.releaseGrab}
+                                grabbed={this.state.grabbed}
+                                onDoubleClick={this.handleTitleBarDoubleClick}
+                            />
+                            <WindowEditButtons
+                                minimize={this.minimizeWindow}
+                                maximize={this.maximizeWindow}
+                                isMaximised={this.state.maximized}
+                                close={this.closeWindow}
+                                id={this.id}
+                                allowMaximize={this.props.allowMaximize !== false}
+                                pip={() => this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
+                            />
+                            {(this.id === "settings"
+                                ? <Settings />
+                                : <WindowMainScreen screen={this.props.screen} title={this.props.title}
+                                    addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
+                                    openApp={this.props.openApp}
+                                    context={this.props.context} />)}
+                        </div>
+                    )}
+                </WindowFrameWrapper>
             </>
         )
     }
@@ -925,7 +954,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onDoubleClick, ...pointerEvents }) {
     return (
         <div
             className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
@@ -934,12 +963,41 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
-            onPointerDown={onPointerDown}
             onDoubleClick={onDoubleClick}
+            {...pointerEvents}
         >
             <div className="flex justify-center w-full text-sm font-bold">{title}</div>
         </div>
     )
+}
+
+function mergePointerHandlers(base = {}, extra = {}) {
+    const merged = { ...base };
+    Object.keys(extra).forEach((key) => {
+        const extraHandler = extra[key];
+        if (typeof extraHandler !== 'function') {
+            merged[key] = extraHandler;
+            return;
+        }
+        const baseHandler = merged[key];
+        if (typeof baseHandler === 'function') {
+            merged[key] = (event) => {
+                baseHandler(event);
+                extraHandler(event);
+            };
+        } else {
+            merged[key] = extraHandler;
+        }
+    });
+    return merged;
+}
+
+function WindowFrameWrapper({ windowRef, dragConfig, frameHandlers = {}, handleHandlers = {}, children }) {
+    const dragHandlers = useWindowPointerDrag({ ...dragConfig, windowRef });
+    const mergedFrameProps = mergePointerHandlers(frameHandlers, dragHandlers.frameProps);
+    const mergedHandleProps = mergePointerHandlers(handleHandlers, dragHandlers.handleProps);
+
+    return children({ frameProps: mergedFrameProps, handleProps: mergedHandleProps });
 }
 
 // Window's Borders
