@@ -3881,6 +3881,7 @@ export class Desktop extends Component {
             const props = {
                 title: app.title,
                 id: app.id,
+                icon: app.icon,
                 screen: app.screen,
                 addFolder: this.addToDesktop,
                 closed: this.closeApp,
@@ -3986,6 +3987,7 @@ export class Desktop extends Component {
                     key={COMMAND_PALETTE_OVERLAY_ID}
                     id={COMMAND_PALETTE_OVERLAY_ID}
                     title="Command Palette"
+                    icon={OVERLAY_WINDOWS.commandPalette.icon}
                     open={Boolean(commandPaletteState.open)}
                     minimized={Boolean(commandPaletteState.minimized)}
                     maximized={Boolean(commandPaletteState.maximized)}
