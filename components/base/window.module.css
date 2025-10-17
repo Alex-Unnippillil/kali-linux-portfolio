@@ -4,10 +4,13 @@
   border-radius: var(--radius-6);
   box-shadow: var(--shadow-2);
   overflow: hidden;
+  --window-x: 0px;
+  --window-y: 0px;
   --window-motion-transform-duration: var(--window-motion-duration-restore);
   --window-motion-transform-easing: var(--window-motion-ease-restore);
   --window-motion-opacity-duration: var(--window-motion-duration-minimize);
   --window-motion-opacity-easing: var(--window-motion-ease-minimize);
+  transform: translate3d(var(--window-x, 0px), var(--window-y, 0px), 0);
   transition:
     transform var(--window-motion-transform-duration) var(--window-motion-transform-easing),
     filter var(--motion-fast) ease,
