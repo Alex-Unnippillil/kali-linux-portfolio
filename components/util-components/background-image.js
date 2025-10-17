@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import KaliWallpaper from './kali-wallpaper';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
@@ -20,6 +20,32 @@ const hexToRgba = (hex, alpha = 1) => {
 export default function BackgroundImage({ theme }) {
     const [needsOverlay, setNeedsOverlay] = useState(false);
     const [imageError, setImageError] = useState(false);
+    const containerRef = useRef(null);
+    const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+    const [imageMetrics, setImageMetrics] = useState({ naturalWidth: 0, naturalHeight: 0, url: null });
+    const [offset, setOffset] = useState({ x: 0, y: 0 });
+    const offsetRef = useRef(offset);
+    const panStateRef = useRef({
+        active: false,
+        pointerId: null,
+        startX: 0,
+        startY: 0,
+        initialX: 0,
+        initialY: 0,
+    });
+    const hasUserPannedRef = useRef(false);
+    const fitMetricsRef = useRef({
+        canPan: false,
+        scaledWidth: 0,
+        scaledHeight: 0,
+        minX: 0,
+        maxX: 0,
+        minY: 0,
+        maxY: 0,
+        centerX: 0,
+        centerY: 0,
+    });
+    const [isPanning, setIsPanning] = useState(false);
 
     const accent = theme?.accent || '#1793d1';
     const wallpaperUrl = theme?.useKaliWallpaper ? null : theme?.wallpaperUrl || null;
@@ -27,10 +53,45 @@ export default function BackgroundImage({ theme }) {
     const effectiveUrl = (!imageError && wallpaperUrl) || fallbackUrl;
     const prefersReducedMotion = usePrefersReducedMotion();
     const shouldAnimate = !prefersReducedMotion;
+    const wallpaperFit = typeof theme?.wallpaperFit === 'string' ? theme.wallpaperFit : 'cover';
 
     useEffect(() => {
         setImageError(false);
     }, [wallpaperUrl, fallbackUrl, theme?.useKaliWallpaper]);
+
+    useEffect(() => {
+        const node = containerRef.current;
+        if (!node) return undefined;
+
+        const updateSize = () => {
+            const rect = node.getBoundingClientRect();
+            setContainerSize({ width: rect.width, height: rect.height });
+        };
+
+        updateSize();
+
+        if (typeof ResizeObserver === 'undefined') {
+            if (typeof window !== 'undefined') {
+                window.addEventListener('resize', updateSize);
+                return () => {
+                    window.removeEventListener('resize', updateSize);
+                };
+            }
+            return undefined;
+        }
+
+        const observer = new ResizeObserver((entries) => {
+            entries.forEach((entry) => {
+                const { width, height } = entry.contentRect;
+                setContainerSize({ width, height });
+            });
+        });
+
+        observer.observe(node);
+        return () => {
+            observer.disconnect();
+        };
+    }, []);
 
     useEffect(() => {
         if (theme?.useKaliWallpaper || theme?.overlay) {
@@ -91,6 +152,16 @@ export default function BackgroundImage({ theme }) {
         };
     }, [effectiveUrl, theme?.useKaliWallpaper, theme?.overlay]);
 
+    useEffect(() => {
+        hasUserPannedRef.current = false;
+        setImageMetrics((prev) => {
+            if (prev.url === effectiveUrl) {
+                return prev;
+            }
+            return { naturalWidth: 0, naturalHeight: 0, url: null };
+        });
+    }, [effectiveUrl]);
+
     const accentGlow = useMemo(() => {
         const strong = hexToRgba(accent, 0.38);
         const medium = hexToRgba(accent, 0.16);
@@ -139,10 +210,277 @@ export default function BackgroundImage({ theme }) {
         }
     };
 
+    useEffect(() => {
+        offsetRef.current = offset;
+    }, [offset]);
+
+    const fitMetrics = useMemo(() => {
+        if (wallpaperFit !== 'fit') {
+            return {
+                canPan: false,
+                scaledWidth: containerSize.width,
+                scaledHeight: containerSize.height,
+                minX: 0,
+                maxX: 0,
+                minY: 0,
+                maxY: 0,
+                centerX: 0,
+                centerY: 0,
+            };
+        }
+
+        const containerWidth = containerSize.width;
+        const containerHeight = containerSize.height;
+        const naturalWidth = imageMetrics.naturalWidth;
+        const naturalHeight = imageMetrics.naturalHeight;
+
+        if (!containerWidth || !containerHeight || !naturalWidth || !naturalHeight) {
+            return {
+                canPan: false,
+                scaledWidth: containerWidth,
+                scaledHeight: containerHeight,
+                minX: 0,
+                maxX: 0,
+                minY: 0,
+                maxY: 0,
+                centerX: 0,
+                centerY: 0,
+            };
+        }
+
+        const scale = Math.max(containerWidth / naturalWidth, containerHeight / naturalHeight);
+        const scaledWidth = naturalWidth * scale;
+        const scaledHeight = naturalHeight * scale;
+        const minX = Math.min(0, containerWidth - scaledWidth);
+        const minY = Math.min(0, containerHeight - scaledHeight);
+        const centerX = (containerWidth - scaledWidth) / 2;
+        const centerY = (containerHeight - scaledHeight) / 2;
+        const canPan = scaledWidth - containerWidth > 1 || scaledHeight - containerHeight > 1;
+
+        return {
+            canPan,
+            scaledWidth,
+            scaledHeight,
+            minX,
+            maxX: 0,
+            minY,
+            maxY: 0,
+            centerX,
+            centerY,
+        };
+    }, [wallpaperFit, containerSize.height, containerSize.width, imageMetrics.naturalHeight, imageMetrics.naturalWidth]);
+
+    useEffect(() => {
+        fitMetricsRef.current = fitMetrics;
+    }, [fitMetrics]);
+
+    const clamp = (value, min, max) => {
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
+    };
+
+    const canPan = wallpaperFit === 'fit' && fitMetrics.canPan;
+
+    useEffect(() => {
+        if (wallpaperFit !== 'fit') {
+            hasUserPannedRef.current = false;
+            if (offsetRef.current.x !== 0 || offsetRef.current.y !== 0) {
+                setOffset({ x: 0, y: 0 });
+            }
+            return;
+        }
+
+        const metrics = fitMetricsRef.current;
+        const targetX = clamp(metrics.centerX, metrics.minX, metrics.maxX);
+        const targetY = clamp(metrics.centerY, metrics.minY, metrics.maxY);
+
+        if (!hasUserPannedRef.current) {
+            setOffset((current) => {
+                if (Math.abs(current.x - targetX) > 0.1 || Math.abs(current.y - targetY) > 0.1) {
+                    return { x: targetX, y: targetY };
+                }
+                return current;
+            });
+            return;
+        }
+
+        setOffset((current) => {
+            const nextX = clamp(current.x, metrics.minX, metrics.maxX);
+            const nextY = clamp(current.y, metrics.minY, metrics.maxY);
+            if (Math.abs(nextX - current.x) > 0.1 || Math.abs(nextY - current.y) > 0.1) {
+                return { x: nextX, y: nextY };
+            }
+            return current;
+        });
+    }, [
+        wallpaperFit,
+        imageMetrics.url,
+        fitMetrics.centerX,
+        fitMetrics.centerY,
+        fitMetrics.maxX,
+        fitMetrics.maxY,
+        fitMetrics.minX,
+        fitMetrics.minY,
+    ]);
+
+    useEffect(() => {
+        if (!canPan && isPanning) {
+            panStateRef.current = { ...panStateRef.current, active: false };
+            setIsPanning(false);
+        }
+    }, [canPan, isPanning]);
+
+    const handleImageLoad = (event) => {
+        const img = event.currentTarget;
+        setImageMetrics({
+            naturalWidth: img.naturalWidth,
+            naturalHeight: img.naturalHeight,
+            url: img.currentSrc || img.src,
+        });
+    };
+
+    const handlePointerDown = (event) => {
+        if (wallpaperFit !== 'fit') return;
+        const metrics = fitMetricsRef.current;
+        if (!metrics.canPan) return;
+        const target = event.currentTarget;
+        if (target.setPointerCapture) {
+            try {
+                target.setPointerCapture(event.pointerId);
+            } catch (error) {
+                // ignore capture errors
+            }
+        }
+        panStateRef.current = {
+            active: true,
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            initialX: offsetRef.current.x,
+            initialY: offsetRef.current.y,
+        };
+        setIsPanning(true);
+        event.preventDefault();
+    };
+
+    const handlePointerMove = (event) => {
+        const panState = panStateRef.current;
+        if (!panState.active || panState.pointerId !== event.pointerId) {
+            return;
+        }
+        const metrics = fitMetricsRef.current;
+        event.preventDefault();
+        const deltaX = event.clientX - panState.startX;
+        const deltaY = event.clientY - panState.startY;
+        const nextX = clamp(panState.initialX + deltaX, metrics.minX, metrics.maxX);
+        const nextY = clamp(panState.initialY + deltaY, metrics.minY, metrics.maxY);
+        const current = offsetRef.current;
+        if (Math.abs(nextX - current.x) > 0.1 || Math.abs(nextY - current.y) > 0.1) {
+            hasUserPannedRef.current = true;
+            setOffset({ x: nextX, y: nextY });
+        }
+    };
+
+    const handlePointerUp = (event) => {
+        const panState = panStateRef.current;
+        if (!panState.active || panState.pointerId !== event.pointerId) {
+            return;
+        }
+        const target = event.currentTarget;
+        if (target.releasePointerCapture) {
+            try {
+                target.releasePointerCapture(event.pointerId);
+            } catch (error) {
+                // ignore release errors
+            }
+        }
+        panStateRef.current = {
+            active: false,
+            pointerId: null,
+            startX: 0,
+            startY: 0,
+            initialX: 0,
+            initialY: 0,
+        };
+        setIsPanning(false);
+    };
+
+    const containerStyle = useMemo(
+        () => ({
+            pointerEvents: canPan ? 'auto' : 'none',
+            touchAction: canPan ? 'none' : undefined,
+            cursor: canPan ? (isPanning ? 'grabbing' : 'grab') : undefined,
+            userSelect: 'none',
+        }),
+        [canPan, isPanning],
+    );
+
+    const imageStyle = useMemo(() => {
+        if (wallpaperFit === 'contain') {
+            return {
+                objectFit: 'contain',
+                width: '100%',
+                height: '100%',
+                transform: 'none',
+            };
+        }
+        if (wallpaperFit === 'fill') {
+            return {
+                objectFit: 'fill',
+                width: '100%',
+                height: '100%',
+                transform: 'none',
+            };
+        }
+        if (wallpaperFit === 'fit') {
+            const width = fitMetrics.scaledWidth ? `${fitMetrics.scaledWidth}px` : '100%';
+            const height = fitMetrics.scaledHeight ? `${fitMetrics.scaledHeight}px` : '100%';
+            return {
+                objectFit: 'cover',
+                width,
+                height,
+                maxWidth: 'none',
+                maxHeight: 'none',
+                transform: `translate(${offset.x}px, ${offset.y}px)`,
+                transition:
+                    isPanning || !shouldAnimate ? 'none' : 'transform 180ms ease-out',
+                willChange: fitMetrics.canPan ? 'transform' : undefined,
+            };
+        }
+        return {
+            objectFit: 'cover',
+            width: '100%',
+            height: '100%',
+            transform: 'scale(1.05)',
+        };
+    }, [
+        wallpaperFit,
+        fitMetrics.scaledHeight,
+        fitMetrics.scaledWidth,
+        fitMetrics.canPan,
+        offset.x,
+        offset.y,
+        isPanning,
+        shouldAnimate,
+    ]);
+
+    const pointerHandlers = canPan
+        ? {
+              onPointerDown: handlePointerDown,
+              onPointerMove: handlePointerMove,
+              onPointerUp: handlePointerUp,
+              onPointerCancel: handlePointerUp,
+          }
+        : {};
+
     return (
         <div
-            className="absolute inset-0 -z-10 overflow-hidden pointer-events-none"
+            ref={containerRef}
+            className="absolute inset-0 -z-10 overflow-hidden"
             aria-hidden="true"
+            style={containerStyle}
+            {...pointerHandlers}
         >
             {theme?.useKaliWallpaper ? (
                 <KaliWallpaper className="h-full w-full" />
@@ -151,11 +489,11 @@ export default function BackgroundImage({ theme }) {
                     key={effectiveUrl}
                     src={effectiveUrl}
                     alt=""
-                    className="h-full w-full object-cover"
-                    style={{
-                        transform: 'scale(1.05)',
-                    }}
+                    className="absolute top-0 left-0 h-full w-full select-none"
+                    style={imageStyle}
                     onError={handleImageError}
+                    onLoad={handleImageLoad}
+                    draggable={false}
                 />
             ) : null}
             {overlayBackground && (

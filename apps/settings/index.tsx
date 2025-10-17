@@ -20,6 +20,8 @@ type SectionProps = {
   children: ReactNode;
 };
 
+type WallpaperFitOption = "cover" | "contain" | "fill" | "fit";
+
 const Section = ({ title, description, children }: SectionProps) => (
   <section className="rounded-xl overflow-hidden border border-[var(--kali-panel-border)] bg-[var(--kali-panel)] shadow-kali-panel backdrop-blur-sm">
     <header className="border-b border-[var(--kali-panel-border)] bg-[var(--kali-panel)] px-4 py-3">
@@ -88,6 +90,8 @@ export default function Settings() {
     setWallpaper,
     useKaliWallpaper,
     setUseKaliWallpaper,
+    wallpaperFit,
+    setWallpaperFit,
     density,
     setDensity,
     reducedMotion,
@@ -143,6 +147,10 @@ export default function Settings() {
       const parsed = JSON.parse(text);
       if (parsed.accent !== undefined) setAccent(parsed.accent);
       if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
+      if (parsed.useKaliWallpaper !== undefined)
+        setUseKaliWallpaper(parsed.useKaliWallpaper);
+      if (parsed.wallpaperFit !== undefined)
+        setWallpaperFit(parsed.wallpaperFit as WallpaperFitOption);
       if (parsed.density !== undefined) setDensity(parsed.density);
       if (parsed.reducedMotion !== undefined)
         setReducedMotion(parsed.reducedMotion);
@@ -166,6 +174,7 @@ export default function Settings() {
     window.localStorage.clear();
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
+    setWallpaperFit(defaults.wallpaperFit as WallpaperFitOption);
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
@@ -194,7 +203,17 @@ export default function Settings() {
                   ) : (
                     <div
                       className="absolute inset-0 bg-cover bg-center"
-                      style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)` }}
+                      style={{
+                        backgroundImage: `url(/wallpapers/${wallpaper}.webp)`,
+                        backgroundSize:
+                          wallpaperFit === "fill"
+                            ? "100% 100%"
+                            : wallpaperFit === "contain"
+                            ? "contain"
+                            : "cover",
+                        backgroundRepeat: "no-repeat",
+                        backgroundPosition: "center center",
+                      }}
                       aria-hidden="true"
                     />
                   )}
@@ -263,6 +282,26 @@ export default function Settings() {
                   />
                   Enable gradient wallpaper
                 </label>
+              </SettingRow>
+
+              <SettingRow
+                label="Wallpaper Fit"
+                helperText="Control how wallpapers scale across different displays."
+              >
+                <select
+                  value={wallpaperFit}
+                  onChange={(e) =>
+                    setWallpaperFit(
+                      e.target.value as WallpaperFitOption
+                    )
+                  }
+                  className="rounded border border-[var(--kali-panel-border)] bg-[var(--kali-panel)] px-3 py-2 text-[var(--color-text)] focus:border-kali-control focus:outline-none"
+                >
+                  <option value="cover">Cover</option>
+                  <option value="contain">Contain</option>
+                  <option value="fill">Fill</option>
+                  <option value="fit">Fit &amp; Pan</option>
+                </select>
               </SettingRow>
 
               <SettingRow label="Wallpaper" labelFor="wallpaper-slider">

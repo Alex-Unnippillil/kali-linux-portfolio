@@ -4,7 +4,34 @@ import { resetSettings, defaults, exportSettings as exportSettingsData, importSe
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const {
+        accent,
+        setAccent,
+        wallpaper,
+        setWallpaper,
+        useKaliWallpaper,
+        setUseKaliWallpaper,
+        wallpaperFit,
+        setWallpaperFit,
+        density,
+        setDensity,
+        reducedMotion,
+        setReducedMotion,
+        largeHitAreas,
+        setLargeHitAreas,
+        fontScale,
+        setFontScale,
+        highContrast,
+        setHighContrast,
+        pongSpin,
+        setPongSpin,
+        allowNetwork,
+        setAllowNetwork,
+        haptics,
+        setHaptics,
+        theme,
+        setTheme,
+    } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -64,7 +91,17 @@ export function Settings() {
                 ) : (
                     <div
                         className="absolute inset-0 bg-cover bg-center"
-                        style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)` }}
+                        style={{
+                            backgroundImage: `url(/wallpapers/${wallpaper}.webp)`,
+                            backgroundSize:
+                                wallpaperFit === 'fill'
+                                    ? '100% 100%'
+                                    : wallpaperFit === 'contain'
+                                    ? 'contain'
+                                    : 'cover',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center center',
+                        }}
                         aria-hidden="true"
                     />
                 )}
@@ -94,6 +131,22 @@ export function Settings() {
                     />
                     Kali Gradient Wallpaper
                 </label>
+            </div>
+            <div className="flex justify-center my-4">
+                <label htmlFor="wallpaper-fit-select" className="mr-2 text-kali-text/80">
+                    Wallpaper Fit:
+                </label>
+                <select
+                    id="wallpaper-fit-select"
+                    value={wallpaperFit}
+                    onChange={(e) => setWallpaperFit(e.target.value)}
+                    className="bg-kali-surface-muted text-kali-text px-2 py-1 rounded-md border border-kali-border/70 transition-colors hover:border-kali-focus/60 focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-surface"
+                >
+                    <option value="cover">Cover</option>
+                    <option value="contain">Contain</option>
+                    <option value="fill">Fill</option>
+                    <option value="fit">Fit &amp; Pan</option>
+                </select>
             </div>
             {useKaliWallpaper && (
                 <p className="text-center text-xs text-kali-text/70 px-6 -mt-2 mb-4">
@@ -283,6 +336,7 @@ export function Settings() {
                         setAccent(defaults.accent);
                         setWallpaper(defaults.wallpaper);
                         setUseKaliWallpaper(defaults.useKaliWallpaper);
+                        setWallpaperFit(defaults.wallpaperFit);
                         setDensity(defaults.density);
                         setReducedMotion(defaults.reducedMotion);
                         setLargeHitAreas(defaults.largeHitAreas);
@@ -312,6 +366,7 @@ export function Settings() {
                         if (parsed.accent !== undefined) setAccent(parsed.accent);
                         if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
                         if (parsed.useKaliWallpaper !== undefined) setUseKaliWallpaper(parsed.useKaliWallpaper);
+                        if (parsed.wallpaperFit !== undefined) setWallpaperFit(parsed.wallpaperFit);
                         if (parsed.density !== undefined) setDensity(parsed.density);
                         if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
                         if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);

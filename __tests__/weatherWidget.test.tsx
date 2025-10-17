@@ -13,6 +13,7 @@ const desktopTheme = resolveDesktopTheme({
   wallpaperName: defaults.wallpaper,
   bgImageName: defaults.wallpaper,
   useKaliWallpaper: defaults.useKaliWallpaper,
+  wallpaperFit: defaults.wallpaperFit as 'cover' | 'contain' | 'fill' | 'fit',
 });
 
 const baseSettings = {
@@ -20,6 +21,7 @@ const baseSettings = {
   wallpaper: defaults.wallpaper,
   bgImageName: defaults.wallpaper,
   useKaliWallpaper: defaults.useKaliWallpaper,
+  wallpaperFit: defaults.wallpaperFit as 'cover' | 'contain' | 'fill' | 'fit',
   density: defaults.density as 'regular' | 'compact',
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
@@ -33,6 +35,7 @@ const baseSettings = {
   setAccent: () => {},
   setWallpaper: () => {},
   setUseKaliWallpaper: () => {},
+  setWallpaperFit: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
   setFontScale: () => {},

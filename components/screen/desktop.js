@@ -185,6 +185,7 @@ export class Desktop extends Component {
             wallpaperName: (props.desktopTheme && props.desktopTheme.wallpaperName) || 'wall-2',
             overlay: props.desktopTheme ? props.desktopTheme.overlay : undefined,
             useKaliWallpaper: Boolean(props.desktopTheme && props.desktopTheme.useKaliWallpaper),
+            wallpaperFit: (props.desktopTheme && props.desktopTheme.wallpaperFit) || 'cover',
         };
         const initialTheme = this.normalizeTheme(props.desktopTheme);
         this.workspaceThemes = Array.from({ length: this.workspaceCount }, () => ({ ...initialTheme }));
@@ -469,6 +470,10 @@ export class Desktop extends Component {
             useKaliWallpaper: typeof theme.useKaliWallpaper === 'boolean'
                 ? theme.useKaliWallpaper
                 : Boolean(fallback.useKaliWallpaper),
+            wallpaperFit:
+                (typeof theme.wallpaperFit === 'string' && theme.wallpaperFit) ||
+                fallback.wallpaperFit ||
+                'cover',
         };
         if (!normalized.wallpaperUrl && !normalized.useKaliWallpaper) {
             normalized.wallpaperUrl = normalized.fallbackWallpaperUrl || null;
@@ -485,7 +490,8 @@ export class Desktop extends Component {
             themeA.fallbackWallpaperUrl === themeB.fallbackWallpaperUrl &&
             themeA.wallpaperName === themeB.wallpaperName &&
             themeA.overlay === themeB.overlay &&
-            themeA.useKaliWallpaper === themeB.useKaliWallpaper
+            themeA.useKaliWallpaper === themeB.useKaliWallpaper &&
+            themeA.wallpaperFit === themeB.wallpaperFit
         );
     }
 
