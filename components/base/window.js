@@ -127,6 +127,8 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._willChangeActive = false;
+        this._pointerUpCleanup = null;
     }
 
     notifySizeChange = () => {
@@ -169,6 +171,7 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.endPointerInteraction();
     }
 
     setDefaultWindowDimenstion = () => {
@@ -353,10 +356,57 @@ export class Window extends Component {
             this.unsnapWindow();
         }
         this.setState({ cursorType: "cursor-move", grabbed: true })
+        this.setWindowWillChangeTransform(true);
     }
 
     changeCursorToDefault = () => {
         this.setState({ cursorType: "cursor-default", grabbed: false })
+    }
+
+    setWindowWillChangeTransform = (enable) => {
+        const node = this.getWindowNode();
+        if (!node) return;
+        if (enable) {
+            if (this._willChangeActive) return;
+            node.style.willChange = 'transform';
+            this._willChangeActive = true;
+        } else {
+            if (!this._willChangeActive) return;
+            node.style.removeProperty('will-change');
+            this._willChangeActive = false;
+        }
+    }
+
+    beginPointerInteraction = () => {
+        if (typeof window !== 'undefined') {
+            if (!this._pointerUpCleanup) {
+                this._pointerUpCleanup = () => {
+                    this.endPointerInteraction();
+                };
+                window.addEventListener('pointerup', this._pointerUpCleanup);
+                window.addEventListener('pointercancel', this._pointerUpCleanup);
+            }
+        }
+        this.setWindowWillChangeTransform(true);
+    }
+
+    endPointerInteraction = () => {
+        if (typeof window !== 'undefined' && this._pointerUpCleanup) {
+            window.removeEventListener('pointerup', this._pointerUpCleanup);
+            window.removeEventListener('pointercancel', this._pointerUpCleanup);
+            this._pointerUpCleanup = null;
+        }
+        this.setWindowWillChangeTransform(false);
+    }
+
+    handleTitleBarPointerDown = () => {
+        this.focusWindow();
+        this.beginPointerInteraction();
+    }
+
+    handleResizePointerDown = () => {
+        this.focusWindow();
+        this.beginPointerInteraction();
     }
 
     getSnapGrid = () => {
@@ -595,6 +645,15 @@ export class Window extends Component {
         } else {
             this.setState({ snapPreview: null, snapPosition: null });
         }
+        this.endPointerInteraction();
+    }
+
+    handleResizeStart = () => {
+        this.beginPointerInteraction();
+    }
+
+    handleResizeEnd = () => {
+        this.endPointerInteraction();
     }
 
     focusWindow = () => {
@@ -890,14 +949,28 @@ export class Window extends Component {
                         onPointerDown={this.focusWindow}
                         onFocus={this.focusWindow}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && (
+                            <WindowYBorder
+                                resize={this.handleHorizontalResize}
+                                onResizeStart={this.handleResizeStart}
+                                onResizeEnd={this.handleResizeEnd}
+                                onPointerDown={this.handleResizePointerDown}
+                            />
+                        )}
+                        {this.props.resizable !== false && (
+                            <WindowXBorder
+                                resize={this.handleVerticleResize}
+                                onResizeStart={this.handleResizeStart}
+                                onResizeEnd={this.handleResizeEnd}
+                                onPointerDown={this.handleResizePointerDown}
+                            />
+                        )}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
-                            onPointerDown={this.focusWindow}
+                            onPointerDown={this.handleTitleBarPointerDown}
                             onDoubleClick={this.handleTitleBarDoubleClick}
                         />
                         <WindowEditButtons
@@ -953,12 +1026,28 @@ export class WindowYBorder extends Component {
         this.trpImg.style.opacity = 0;
     }
     render() {
+            const { resize, onResizeStart, onResizeEnd, onPointerDown } = this.props;
             return (
                 <div
                     className={`${styles.windowYBorder} cursor-[e-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
                     draggable
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
+                    onPointerDown={onPointerDown}
+                    onDragStart={(event) => {
+                        event.dataTransfer.setDragImage(this.trpImg, 0, 0);
+                        if (typeof onResizeStart === 'function') {
+                            onResizeStart();
+                        }
+                    }}
+                    onDrag={(event) => {
+                        if (typeof resize === 'function') {
+                            resize(event);
+                        }
+                    }}
+                    onDragEnd={() => {
+                        if (typeof onResizeEnd === 'function') {
+                            onResizeEnd();
+                        }
+                    }}
                 ></div>
             )
         }
@@ -973,12 +1062,28 @@ export class WindowXBorder extends Component {
         this.trpImg.style.opacity = 0;
     }
     render() {
+            const { resize, onResizeStart, onResizeEnd, onPointerDown } = this.props;
             return (
                 <div
                     className={`${styles.windowXBorder} cursor-[n-resize] border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2`}
                     draggable
-                    onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }}
-                    onDrag={this.props.resize}
+                    onPointerDown={onPointerDown}
+                    onDragStart={(event) => {
+                        event.dataTransfer.setDragImage(this.trpImg, 0, 0);
+                        if (typeof onResizeStart === 'function') {
+                            onResizeStart();
+                        }
+                    }}
+                    onDrag={(event) => {
+                        if (typeof resize === 'function') {
+                            resize(event);
+                        }
+                    }}
+                    onDragEnd={() => {
+                        if (typeof onResizeEnd === 'function') {
+                            onResizeEnd();
+                        }
+                    }}
                 ></div>
             )
         }
