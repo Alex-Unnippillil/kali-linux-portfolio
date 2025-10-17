@@ -52,12 +52,12 @@ const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: height });
 };
 
-const setVisualViewport = (width?: number, height?: number) => {
+const setVisualViewport = (width?: number, height?: number, offsetTop = 0) => {
   if (typeof width === 'number' && typeof height === 'number') {
     Object.defineProperty(window, 'visualViewport', {
       configurable: true,
       writable: true,
-      value: { width, height },
+      value: { width, height, offsetTop },
     });
     return;
   }
@@ -609,6 +609,45 @@ describe('Window snapping finalize and release', () => {
     const expectedX = window.innerWidth / 2;
     const expectedY = getSnapTranslateTop();
     expect(winEl.style.transform).toBe(`translate(${expectedX}px, ${expectedY}px)`);
+  });
+
+  it('aligns snap regions with reduced visual viewport height', () => {
+    const ref = React.createRef<any>();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    setVisualViewport(360, 420, 280);
+
+    act(() => {
+      ref.current!.snapWindow('top');
+    });
+
+    expect(ref.current!.state.snapped).toBe('top');
+    const viewport = window.visualViewport!;
+    const topInset = measureWindowTopOffset();
+    const expectedTop = (viewport.offsetTop ?? 0) + topInset;
+    expect(winEl.style.transform).toBe(`translate(0px, ${expectedTop}px)`);
+
+    const viewportHeight = viewport.height ?? window.innerHeight;
+    const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
+    const snapBottomInset = measureSnapBottomInset();
+    const expectedHeightPx = Math.max(viewportHeight - topInset - snapBottomInset - safeBottom, 0);
+    const expectedHeightPercent = (expectedHeightPx / viewportHeight) * 100;
+
+    expect(ref.current!.state.height).toBeCloseTo(expectedHeightPercent, 5);
+    expect(ref.current!.state.width).toBeCloseTo(100, 2);
   });
 
   it('releases snap with Alt+ArrowDown restoring size', () => {
