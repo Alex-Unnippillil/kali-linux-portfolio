@@ -747,6 +747,84 @@ describe('Window maximize behavior', () => {
     const winEl = document.getElementById('test-window') as HTMLElement | null;
     expect(winEl?.style.transform).toBe(`translate(-1pt, ${safeTop - DESKTOP_TOP_PADDING}px)`);
   });
+
+  it('restores beneath the pointer when dragging from maximized state', () => {
+    setViewport(1280, 720);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    const preBounds = {
+      left: 180,
+      top: DESKTOP_TOP_PADDING + 120,
+      width: 640,
+      height: 360,
+    };
+    const maximizedBounds = {
+      left: 0,
+      top: DESKTOP_TOP_PADDING,
+      width: window.innerWidth,
+      height: window.innerHeight - DESKTOP_TOP_PADDING - DEFAULT_SNAP_BOTTOM_INSET,
+    };
+
+    let rectState: 'initial' | 'maximized' = 'initial';
+    winEl.getBoundingClientRect = jest.fn(() => {
+      const bounds = rectState === 'maximized' ? maximizedBounds : preBounds;
+      return {
+        left: bounds.left,
+        top: bounds.top,
+        right: bounds.left + bounds.width,
+        bottom: bounds.top + bounds.height,
+        width: bounds.width,
+        height: bounds.height,
+        x: bounds.left,
+        y: bounds.top,
+        toJSON: () => {},
+      } as DOMRect;
+    });
+
+    const maximizeButton = screen.getByRole('button', { name: /window maximize/i });
+    act(() => {
+      fireEvent.click(maximizeButton);
+    });
+
+    rectState = 'maximized';
+
+    const pointerX = 960;
+    const pointerY = DESKTOP_TOP_PADDING + 24;
+
+    act(() => {
+      ref.current!.handleTitleBarPointerDown({ clientX: pointerX, clientY: pointerY } as any);
+      ref.current!.changeCursorToMove({ clientX: pointerX, clientY: pointerY } as any);
+    });
+
+    const relativeX = (pointerX - maximizedBounds.left) / maximizedBounds.width;
+    const relativeY = (pointerY - maximizedBounds.top) / maximizedBounds.height;
+    const expectedLeft = pointerX - relativeX * preBounds.width;
+    const expectedTop = pointerY - relativeY * preBounds.height;
+
+    const cssX = parseFloat(winEl.style.getPropertyValue('--window-transform-x'));
+    const cssY = parseFloat(winEl.style.getPropertyValue('--window-transform-y'));
+
+    expect(cssX).toBeCloseTo(expectedLeft, 5);
+    expect(cssY).toBeCloseTo(expectedTop, 5);
+    const normalizedTransform = winEl.style.transform.replace(/\s+/g, '');
+    expect(normalizedTransform).toBe(`translate(${expectedLeft}px,${expectedTop}px)`);
+    expect(ref.current!.state.maximized).toBe(false);
+    expect(ref.current!.state.snapped).toBeNull();
+    expect(ref.current!.state.snapPreview).toBeNull();
+  });
 });
 
 describe('Window keyboard dragging', () => {
