@@ -34,6 +34,7 @@ import {
     getSafeAreaInsets,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
+import { DesktopViewportContext } from '../desktop/viewportContext';
 
 const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
 const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
@@ -332,6 +333,15 @@ export class Desktop extends Component {
             const userAgent = navigator.userAgent || '';
             this.commandPaletteUsesMeta = /Mac|iPhone|iPad|iPod/i.test(platform || userAgent);
         }
+
+        this.viewportListeners = new Set();
+        this.viewportSize = null;
+        this.desktopResizeObserver = null;
+        this.windowResizeFallbackAttached = false;
+        this.viewportContextValue = {
+            subscribe: this.subscribeToViewport,
+            getSize: this.getViewportSize,
+        };
 
     }
 
@@ -704,14 +714,103 @@ export class Desktop extends Component {
         return changed;
     };
 
-    handleViewportResize = () => {
+    subscribeToViewport = (listener) => {
+        if (typeof listener !== 'function') {
+            return () => {};
+        }
+        this.viewportListeners.add(listener);
+        return () => {
+            this.viewportListeners.delete(listener);
+        };
+    };
+
+    getViewportSize = () => this.viewportSize;
+
+    updateViewportSnapshot = (dimensions) => {
+        let width = 0;
+        let height = 0;
+        if (dimensions && typeof dimensions.width === 'number' && typeof dimensions.height === 'number') {
+            width = dimensions.width;
+            height = dimensions.height;
+        } else if (typeof window !== 'undefined') {
+            width = typeof window.innerWidth === 'number' ? window.innerWidth : 0;
+            height = typeof window.innerHeight === 'number' ? window.innerHeight : 0;
+        }
+        const snapshot = { width, height };
+        this.viewportSize = snapshot;
+        return snapshot;
+    };
+
+    notifyViewportListeners = (size) => {
+        if (!size) return;
+        this.viewportListeners.forEach((listener) => {
+            try {
+                listener(size);
+            } catch (error) {
+                if (process.env.NODE_ENV !== 'production') {
+                    console.error(error);
+                }
+            }
+        });
+    };
+
+    setupDesktopResizeObserver = () => {
+        const node = this.desktopRef && this.desktopRef.current ? this.desktopRef.current : null;
+        if (node && typeof ResizeObserver !== 'undefined') {
+            this.desktopResizeObserver = new ResizeObserver((entries) => {
+                const entry = entries && entries.length ? entries[entries.length - 1] : entries[0];
+                if (!entry) return;
+                const { width, height } = entry.contentRect || {};
+                this.handleViewportResize({ width, height });
+            });
+            this.desktopResizeObserver.observe(node);
+            const rect = typeof node.getBoundingClientRect === 'function' ? node.getBoundingClientRect() : null;
+            if (rect) {
+                this.handleViewportResize({ width: rect.width, height: rect.height });
+            } else {
+                this.handleViewportResize();
+            }
+            return;
+        }
+
+        if (typeof window !== 'undefined' && !this.windowResizeFallbackAttached) {
+            window.addEventListener('resize', this.handleViewportResize);
+            this.windowResizeFallbackAttached = true;
+            this.handleViewportResize();
+        }
+    };
+
+    teardownDesktopResizeObserver = () => {
+        if (this.desktopResizeObserver) {
+            try {
+                this.desktopResizeObserver.disconnect();
+            } catch (e) {
+                // ignore disconnect errors
+            }
+            this.desktopResizeObserver = null;
+        }
+        if (this.windowResizeFallbackAttached && typeof window !== 'undefined') {
+            window.removeEventListener('resize', this.handleViewportResize);
+            this.windowResizeFallbackAttached = false;
+        }
+    };
+
+    handleViewportResize = (arg) => {
+        const dimensions = arg && typeof arg === 'object' && typeof arg.width === 'number' && typeof arg.height === 'number'
+            ? arg
+            : undefined;
         this.configureTouchTargets(this.currentPointerIsCoarse);
         this.realignIconPositions();
 
-        if (typeof window === 'undefined') return;
+        const viewport = this.updateViewportSnapshot(dimensions);
 
-        const viewportWidth = typeof window.innerWidth === 'number' ? window.innerWidth : 0;
-        const viewportHeight = typeof window.innerHeight === 'number' ? window.innerHeight : 0;
+        if (typeof window === 'undefined') {
+            this.notifyViewportListeners(viewport);
+            return;
+        }
+
+        const viewportWidth = viewport.width;
+        const viewportHeight = viewport.height;
         const topOffset = measureWindowTopOffset();
         const closedWindows = this.state.closed_windows || {};
         const storedPositions = this.state.window_positions || {};
@@ -776,6 +875,8 @@ export class Desktop extends Component {
         if (changed) {
             this.setWorkspaceState({ window_positions: nextPositions }, this.saveSession);
         }
+
+        this.notifyViewportListeners(viewport);
     };
 
     computeTouchCentroid = (touchList) => {
@@ -2872,7 +2973,7 @@ export class Desktop extends Component {
         this.setContextListeners();
         this.setEventListeners();
         window.addEventListener('trash-change', this.updateTrashIcon);
-        window.addEventListener('resize', this.handleViewportResize);
+        this.setupDesktopResizeObserver();
         document.addEventListener('keydown', this.handleGlobalShortcut);
         document.addEventListener('keyup', this.handleGlobalShortcutKeyup);
         window.addEventListener('open-app', this.handleOpenAppEvent);
@@ -2932,13 +3033,13 @@ export class Desktop extends Component {
     }
 
     componentWillUnmount() {
+        this.teardownDesktopResizeObserver();
         this.removeEventListeners();
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
         document.removeEventListener('keyup', this.handleGlobalShortcutKeyup);
         window.removeEventListener('trash-change', this.updateTrashIcon);
         window.removeEventListener('open-app', this.handleOpenAppEvent);
-        window.removeEventListener('resize', this.handleViewportResize);
         this.detachIconKeyboardListeners();
         if (typeof window !== 'undefined') {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
@@ -4606,118 +4707,119 @@ export class Desktop extends Component {
         const showMinimizedShelf = this.state.minimizedShelfOpen || minimizedEntries.length > 0;
         const showClosedShelf = this.state.closedShelfOpen || closedEntries.length > 0;
         return (
-            <main
-                id="desktop"
-                role="main"
-                ref={this.desktopRef}
-                className={" min-h-screen h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent"}
-                style={desktopStyle}
-            >
-
-                {/* Window Area */}
-                <div
-                    id="window-area"
-                    className="absolute h-full w-full bg-transparent"
-                    data-context="desktop-area"
+            <DesktopViewportContext.Provider value={this.viewportContextValue}>
+                <main
+                    id="desktop"
+                    role="main"
+                    ref={this.desktopRef}
+                    className={" min-h-screen h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent"}
+                    style={desktopStyle}
                 >
-                    {this.renderWindows()}
-                </div>
+                    {/* Window Area */}
+                    <div
+                        id="window-area"
+                        className="absolute h-full w-full bg-transparent"
+                        data-context="desktop-area"
+                    >
+                        {this.renderWindows()}
+                    </div>
 
-                {/* Background Image */}
-                <BackgroundImage theme={theme} />
+                    {/* Background Image */}
+                    <BackgroundImage theme={theme} />
 
-                {/* Desktop Apps */}
-                {this.renderDesktopApps()}
+                    {/* Desktop Apps */}
+                    {this.renderDesktopApps()}
 
-                {/* Context Menus */}
-                <DesktopMenu
-                    active={this.state.context_menus.desktop}
-                    openApp={this.openApp}
-                    addNewFolder={this.addNewFolder}
-                    openShortcutSelector={this.openShortcutSelector}
-                    iconSizePreset={this.state.iconSizePreset}
-                    setIconSizePreset={this.setIconSizePreset}
-                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
-                />
-                <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
-                <AppMenu
-                    active={this.state.context_menus.app}
-                    pinned={this.initFavourite[this.state.context_app]}
-                    pinApp={() => this.pinApp(this.state.context_app)}
-                    unpinApp={() => this.unpinApp(this.state.context_app)}
-                    onClose={this.hideAllContextMenu}
-                />
-                <TaskbarMenu
-                    active={this.state.context_menus.taskbar}
-                    minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
-                    onMinimize={() => {
-                        const id = this.state.context_app;
-                        if (!id) return;
-                        const isOverlay = this.isOverlayId(id);
-                        if (this.state.minimized_windows[id]) {
-                            if (isOverlay) {
-                                this.openOverlay(id, { transitionState: 'entered' });
-                            } else {
-                                this.openApp(id);
-                            }
-                        } else {
-                            if (isOverlay) {
-                                this.minimizeOverlay(id);
-                            } else {
-                                this.hasMinimised(id);
-                            }
-                        }
-                    }}
-                    onClose={() => {
-                        const id = this.state.context_app;
-                        if (!id) return;
-                        if (this.isOverlayId(id)) {
-                            this.closeOverlay(id);
-                        } else {
-                            this.closeApp(id);
-                        }
-                    }}
-                    onCloseMenu={this.hideAllContextMenu}
-                />
-
-                {/* Folder Input Name Bar */}
-                {
-                    (this.state.showNameBar
-                        ? this.renderNameBar()
-                        : null
-                    )
-                }
-
-                {showMinimizedShelf ? (
-                    <MinimizedWindowShelf
-                        label="Minimized windows"
-                        entries={minimizedEntries}
-                        open={this.state.minimizedShelfOpen}
-                        onToggle={this.toggleMinimizedShelf}
-                        onActivate={this.handleMinimizedWindowActivate}
-                        emptyLabel="No windows are minimized"
+                    {/* Context Menus */}
+                    <DesktopMenu
+                        active={this.state.context_menus.desktop}
+                        openApp={this.openApp}
+                        addNewFolder={this.addNewFolder}
+                        openShortcutSelector={this.openShortcutSelector}
+                        iconSizePreset={this.state.iconSizePreset}
+                        setIconSizePreset={this.setIconSizePreset}
+                        clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                     />
-                ) : null}
-
-                {showClosedShelf ? (
-                    <ClosedWindowShelf
-                        label="Closed windows"
-                        entries={closedEntries}
-                        open={this.state.closedShelfOpen}
-                        onToggle={this.toggleClosedShelf}
-                        onActivate={this.handleClosedWindowActivate}
-                        onRemove={this.dismissClosedWindowEntry}
-                        emptyLabel="No recently closed windows"
+                    <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
+                    <AppMenu
+                        active={this.state.context_menus.app}
+                        pinned={this.initFavourite[this.state.context_app]}
+                        pinApp={() => this.pinApp(this.state.context_app)}
+                        unpinApp={() => this.unpinApp(this.state.context_app)}
+                        onClose={this.hideAllContextMenu}
                     />
-                ) : null}
+                    <TaskbarMenu
+                        active={this.state.context_menus.taskbar}
+                        minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
+                        onMinimize={() => {
+                            const id = this.state.context_app;
+                            if (!id) return;
+                            const isOverlay = this.isOverlayId(id);
+                            if (this.state.minimized_windows[id]) {
+                                if (isOverlay) {
+                                    this.openOverlay(id, { transitionState: 'entered' });
+                                } else {
+                                    this.openApp(id);
+                                }
+                            } else {
+                                if (isOverlay) {
+                                    this.minimizeOverlay(id);
+                                } else {
+                                    this.hasMinimised(id);
+                                }
+                            }
+                        }}
+                        onClose={() => {
+                            const id = this.state.context_app;
+                            if (!id) return;
+                            if (this.isOverlayId(id)) {
+                                this.closeOverlay(id);
+                            } else {
+                                this.closeApp(id);
+                            }
+                        }}
+                        onCloseMenu={this.hideAllContextMenu}
+                    />
 
-                {this.renderOverlayWindows()}
+                    {/* Folder Input Name Bar */}
+                    {
+                        (this.state.showNameBar
+                            ? this.renderNameBar()
+                            : null
+                        )
+                    }
 
-                <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-                    {this.state.liveRegionMessage}
-                </div>
+                    {showMinimizedShelf ? (
+                        <MinimizedWindowShelf
+                            label="Minimized windows"
+                            entries={minimizedEntries}
+                            open={this.state.minimizedShelfOpen}
+                            onToggle={this.toggleMinimizedShelf}
+                            onActivate={this.handleMinimizedWindowActivate}
+                            emptyLabel="No windows are minimized"
+                        />
+                    ) : null}
 
-            </main>
+                    {showClosedShelf ? (
+                        <ClosedWindowShelf
+                            label="Closed windows"
+                            entries={closedEntries}
+                            open={this.state.closedShelfOpen}
+                            onToggle={this.toggleClosedShelf}
+                            onActivate={this.handleClosedWindowActivate}
+                            onRemove={this.dismissClosedWindowEntry}
+                            emptyLabel="No recently closed windows"
+                        />
+                    ) : null}
+
+                    {this.renderOverlayWindows()}
+
+                    <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+                        {this.state.liveRegionMessage}
+                    </div>
+
+                </main>
+            </DesktopViewportContext.Provider>
         );
     }
 }
