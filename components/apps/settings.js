@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
-import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData, getLayoutPresets, deleteLayoutPreset } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
@@ -8,8 +8,101 @@ export function Settings() {
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
+    const [layoutName, setLayoutName] = useState('');
+    const [layoutPresets, setLayoutPresets] = useState([]);
+    const [layoutStatus, setLayoutStatus] = useState('');
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
+
+    const loadLayoutPresets = useCallback(async () => {
+        const presets = await getLayoutPresets();
+        const entries = Object.entries(presets || {}).map(([name, value]) => {
+            const savedAt = typeof value?.savedAt === 'number' ? value.savedAt : null;
+            const windows = Array.isArray(value?.windows) ? value.windows.length : 0;
+            return { name, preset: value, savedAt, windows };
+        });
+        entries.sort((a, b) => {
+            const timeA = a.savedAt ?? 0;
+            const timeB = b.savedAt ?? 0;
+            if (timeA !== timeB) {
+                return timeB - timeA;
+            }
+            return a.name.localeCompare(b.name);
+        });
+        setLayoutPresets(entries);
+    }, []);
+
+    useEffect(() => {
+        loadLayoutPresets();
+    }, [loadLayoutPresets]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        const handleSaved = (event) => {
+            const presetName = event?.detail?.name;
+            if (presetName) {
+                setLayoutStatus(`Saved "${presetName}" layout.`);
+                setLayoutName('');
+            } else {
+                setLayoutStatus('Layout saved.');
+            }
+            loadLayoutPresets();
+        };
+        const handleError = (event) => {
+            const message = event?.detail?.message || 'Unable to save layout.';
+            setLayoutStatus(message);
+        };
+        const handleApplied = (event) => {
+            const presetName = event?.detail?.name;
+            if (presetName) {
+                setLayoutStatus(`Applied "${presetName}" layout.`);
+            } else {
+                setLayoutStatus('Layout applied.');
+            }
+        };
+        window.addEventListener('desktop-layout-saved', handleSaved);
+        window.addEventListener('desktop-layout-save-error', handleError);
+        window.addEventListener('desktop-layout-applied', handleApplied);
+        return () => {
+            window.removeEventListener('desktop-layout-saved', handleSaved);
+            window.removeEventListener('desktop-layout-save-error', handleError);
+            window.removeEventListener('desktop-layout-applied', handleApplied);
+        };
+    }, [loadLayoutPresets]);
+
+    useEffect(() => {
+        if (!layoutStatus) return undefined;
+        const timeout = setTimeout(() => setLayoutStatus(''), 4000);
+        return () => clearTimeout(timeout);
+    }, [layoutStatus]);
+
+    const handleLayoutSave = useCallback((event) => {
+        if (event) {
+            event.preventDefault();
+        }
+        const trimmed = layoutName.trim();
+        if (!trimmed) {
+            setLayoutStatus('Enter a name to save your layout.');
+            return;
+        }
+        if (typeof window === 'undefined') return;
+        window.dispatchEvent(new CustomEvent('desktop-layout-save', { detail: { name: trimmed } }));
+        setLayoutStatus(`Saving "${trimmed}"...`);
+    }, [layoutName]);
+
+    const handleLayoutApply = useCallback((entry) => {
+        if (!entry) return;
+        if (typeof window === 'undefined') return;
+        window.dispatchEvent(new CustomEvent('desktop-layout-apply', { detail: { name: entry.name, preset: entry.preset } }));
+        setLayoutStatus(`Applying "${entry.name}"...`);
+    }, []);
+
+    const handleLayoutDelete = useCallback(async (name) => {
+        if (!name) return;
+        await deleteLayoutPreset(name);
+        setLayoutStatus(`Deleted "${name}" layout.`);
+        loadLayoutPresets();
+    }, [loadLayoutPresets]);
 
     const changeBackgroundImage = (e) => {
         const name = e.currentTarget.dataset.path;
@@ -229,6 +322,74 @@ export function Settings() {
                         {`Contrast ${contrast.toFixed(2)}:1 ${contrast >= 4.5 ? 'Pass' : 'Fail'}`}
                     </p>
                     <span ref={liveRegion} role="status" aria-live="polite" className="sr-only"></span>
+                </div>
+            </div>
+            <div className="border-t border-kali-border/60 pt-4 px-6">
+                <h2 className="text-center text-lg font-semibold text-kali-text mb-1">Window Layout Presets</h2>
+                <p className="text-center text-sm text-kali-text/70 mb-4">
+                    Capture the current desktop arrangement and reapply it later.
+                </p>
+                <form className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-center" onSubmit={handleLayoutSave}>
+                    <label htmlFor="layout-name" className="sr-only">Layout name</label>
+                    <input
+                        id="layout-name"
+                        type="text"
+                        value={layoutName}
+                        onChange={(e) => setLayoutName(e.target.value)}
+                        placeholder="Name this layout"
+                        aria-label="Layout name"
+                        className="flex-1 min-w-0 rounded-md border border-kali-border/60 bg-kali-surface-muted px-3 py-2 text-kali-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                    />
+                    <button
+                        type="submit"
+                        className="rounded-md bg-kali-primary px-4 py-2 text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                    >
+                        Save Current Layout
+                    </button>
+                </form>
+                <div className="mt-3 min-h-[1.5rem] text-center text-sm text-kali-text/80" role="status" aria-live="polite">
+                    {layoutStatus}
+                </div>
+                <div className="mt-4 space-y-3">
+                    {layoutPresets.length === 0 ? (
+                        <p className="text-center text-sm text-kali-text/60">No saved layouts yet.</p>
+                    ) : (
+                        layoutPresets.map((entry) => {
+                            const savedLabel = entry.savedAt ? new Date(entry.savedAt).toLocaleString() : null;
+                            return (
+                                <div
+                                    key={entry.name}
+                                    className="flex flex-col gap-3 rounded-lg border border-kali-border/60 bg-kali-surface-muted px-4 py-3 text-kali-text sm:flex-row sm:items-center sm:justify-between"
+                                >
+                                    <div>
+                                        <p className="font-semibold">{entry.name}</p>
+                                        <p className="text-sm text-kali-text/70">
+                                            {entry.windows === 1 ? '1 window' : `${entry.windows} windows`}
+                                            {savedLabel ? ` • Saved ${savedLabel}` : ''}
+                                        </p>
+                                    </div>
+                                    <div className="flex gap-2 sm:flex-none">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleLayoutApply(entry)}
+                                            className="rounded-md bg-kali-primary px-3 py-1.5 text-sm text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                                            aria-label={`Apply ${entry.name} layout`}
+                                        >
+                                            Apply
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleLayoutDelete(entry.name)}
+                                            className="rounded-md border border-kali-border/70 px-3 py-1.5 text-sm text-kali-text transition-colors hover:border-kali-focus/70 hover:text-kali-focus focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                                            aria-label={`Delete ${entry.name} layout`}
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
                 </div>
             </div>
             <div className="flex flex-wrap justify-center items-center border-t border-kali-border/60">

@@ -87,6 +87,15 @@ const computeSnapRegions = (
     };
 };
 
+const normalizeViewState = (state) => {
+    if (!state || typeof state !== 'object') {
+        return { maximized: false, snapped: null };
+    }
+    const maximized = Boolean(state.maximized);
+    const snapped = typeof state.snapped === 'string' && state.snapped.length ? state.snapped : null;
+    return { maximized, snapped };
+};
+
 export class Window extends Component {
     static defaultProps = {
         snapGrid: [8, 8],
@@ -136,6 +145,44 @@ export class Window extends Component {
         }
     }
 
+    notifyViewStateChange = (override = null) => {
+        if (typeof this.props.onViewStateChange !== 'function') {
+            return;
+        }
+        const hasSnappedOverride = override && Object.prototype.hasOwnProperty.call(override, 'snapped');
+        const nextMaximized = typeof override?.maximized === 'boolean'
+            ? override.maximized
+            : this.state.maximized;
+        const nextSnappedRaw = hasSnappedOverride ? override?.snapped : this.state.snapped;
+        const nextSnapped = typeof nextSnappedRaw === 'string' && nextSnappedRaw.length ? nextSnappedRaw : null;
+        this.props.onViewStateChange({
+            maximized: Boolean(nextMaximized),
+            snapped: nextSnapped,
+        });
+    }
+
+    syncViewStateFromProps = (viewState) => {
+        const { maximized, snapped } = normalizeViewState(viewState);
+        const currentMaximized = Boolean(this.state.maximized);
+        const currentSnapped = this.state.snapped || null;
+
+        if (maximized && !currentMaximized) {
+            this.maximizeWindow();
+            return;
+        }
+
+        if (!maximized && currentMaximized) {
+            this.restoreWindow();
+        }
+
+        const targetSnap = maximized ? null : snapped;
+        if (targetSnap && currentSnapped !== targetSnap) {
+            this.snapWindow(targetSnap);
+        } else if (!targetSnap && currentSnapped) {
+            this.unsnapWindow();
+        }
+    }
+
     componentDidMount() {
         this.id = this.props.id;
         this.setDefaultWindowDimenstion();
@@ -155,6 +202,15 @@ export class Window extends Component {
         }
         if (this.props.isFocused) {
             this.focusWindow();
+        }
+        if (this.props.viewState) {
+            this.syncViewStateFromProps(this.props.viewState);
+        }
+    }
+
+    componentDidUpdate(prevProps) {
+        if (prevProps.viewState !== this.props.viewState) {
+            this.syncViewStateFromProps(this.props.viewState);
         }
     }
 
@@ -447,11 +503,13 @@ export class Window extends Component {
             }, () => {
                 this.resizeBoundries();
                 this.notifySizeChange();
+                this.notifyViewStateChange({ snapped: null });
             });
         } else {
             this.setState({ snapped: null, preMaximizeSize: null }, () => {
                 this.resizeBoundries();
                 this.notifySizeChange();
+                this.notifyViewStateChange({ snapped: null });
             });
         }
     }
@@ -487,6 +545,7 @@ export class Window extends Component {
         }, () => {
             this.resizeBoundries();
             this.notifySizeChange();
+            this.notifyViewStateChange({ snapped: resolvedPosition, maximized: false });
         });
     }
 
@@ -640,10 +699,13 @@ export class Window extends Component {
             }, () => {
                 this.resizeBoundries();
                 this.notifySizeChange();
+                this.notifyViewStateChange({ maximized: false });
             });
         } else {
             this.setDefaultWindowDimenstion();
-            this.setState({ maximized: false, preMaximizeSize: null });
+            this.setState({ maximized: false, preMaximizeSize: null }, () => {
+                this.notifyViewStateChange({ maximized: false });
+            });
         }
         // get previous position
         const posx = node.style.getPropertyValue("--window-transform-x") || `${this.startX}px`;
@@ -686,6 +748,7 @@ export class Window extends Component {
             }
             this.setState({ maximized: true, height: heightPercent, width: 100.2, preMaximizeSize: currentSize }, () => {
                 this.notifySizeChange();
+                this.notifyViewStateChange({ maximized: true, snapped: null });
             });
         }
     }
