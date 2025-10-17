@@ -19,7 +19,19 @@ export default function useRovingTabIndex(
       node.querySelectorAll<HTMLElement>(
         '[role="tab"], [role="menuitem"], [role="option"]'
       )
-    );
+    ).filter((el) => {
+      if (el.getAttribute('data-roving-disabled') === 'true') {
+        return false;
+      }
+      const ariaDisabled = el.getAttribute('aria-disabled');
+      if (ariaDisabled === 'true') {
+        return false;
+      }
+      if ((el as HTMLButtonElement).disabled) {
+        return false;
+      }
+      return true;
+    });
     if (items.length === 0) return;
 
     let index = items.findIndex((el) => el.tabIndex === 0);

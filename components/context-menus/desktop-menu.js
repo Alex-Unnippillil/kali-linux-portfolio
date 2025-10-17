@@ -1,43 +1,69 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import useFocusTrap from '../../hooks/useFocusTrap'
+import useRovingTabIndex from '../../hooks/useRovingTabIndex'
 import logger from '../../utils/logger'
 
 function DesktopMenu(props) {
-
     const [isFullScreen, setIsFullScreen] = useState(false)
+    const menuRef = useRef(null)
     const iconSizePreset = props.iconSizePreset || 'medium'
     const setIconSizePreset = typeof props.setIconSizePreset === 'function' ? props.setIconSizePreset : () => { }
+    const sortOrder = props.sortOrder || 'manual'
+
+    useFocusTrap(menuRef, props.active)
+    useRovingTabIndex(menuRef, props.active, 'vertical')
+
+    useEffect(() => {
+        const handleChange = () => {
+            if (document.fullscreenElement) {
+                setIsFullScreen(true)
+            } else {
+                setIsFullScreen(false)
+            }
+        }
+
+        document.addEventListener('fullscreenchange', handleChange)
+        handleChange()
+        return () => {
+            document.removeEventListener('fullscreenchange', handleChange)
+        }
+    }, [])
+
     const iconSizeOptions = [
         { value: 'small', label: 'Small Icons' },
         { value: 'medium', label: 'Medium Icons' },
         { value: 'large', label: 'Large Icons' },
     ]
 
-    useEffect(() => {
-        document.addEventListener('fullscreenchange', checkFullScreen);
-        return () => {
-            document.removeEventListener('fullscreenchange', checkFullScreen);
-        };
-    }, [])
+    const sortOptions = [
+        { value: 'manual', label: 'Manual order' },
+        { value: 'name-asc', label: 'Name (A to Z)' },
+        { value: 'name-desc', label: 'Name (Z to A)' },
+    ]
 
-
-    const openTerminal = () => {
-        props.openApp("terminal");
+    const handleKeyDown = (event) => {
+        if (event.key === 'Escape') {
+            event.preventDefault()
+            if (props.onClose) props.onClose()
+        }
     }
 
-    const openSettings = () => {
-        props.openApp("settings");
+    const handleAction = (callback, { closeMenu = true } = {}) => () => {
+        if (typeof callback === 'function') {
+            callback()
+        }
+        if (closeMenu && props.onClose) {
+            props.onClose()
+        }
     }
 
-    const checkFullScreen = () => {
-        if (document.fullscreenElement) {
-            setIsFullScreen(true)
-        } else {
-            setIsFullScreen(false)
+    const handleSortSelect = (value) => {
+        if (typeof props.onSortChange === 'function') {
+            props.onSortChange(value)
         }
     }
 
     const goFullScreen = () => {
-        // make website full screen
         try {
             if (document.fullscreenElement) {
                 document.exitFullscreen()
@@ -53,32 +79,32 @@ function DesktopMenu(props) {
     return (
         <div
             id="desktop-menu"
+            ref={menuRef}
             role="menu"
+            aria-hidden={!props.active}
             aria-label="Desktop context menu"
-            className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
+            onKeyDown={handleKeyDown}
+            className={(props.active ? " block " : " hidden ") + " cursor-default w-60 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
         >
+            <SectionLabel>New</SectionLabel>
             <button
-                onClick={props.addNewFolder}
+                onClick={handleAction(props.addNewFolder)}
                 type="button"
                 role="menuitem"
-                aria-label="New Folder"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 focus-visible:outline-none focus-visible:bg-ub-warm-grey focus-visible:bg-opacity-30"
             >
                 <span className="ml-5">New Folder</span>
             </button>
             <button
-                onClick={props.openShortcutSelector}
+                onClick={handleAction(props.openShortcutSelector)}
                 type="button"
                 role="menuitem"
-                aria-label="Create Shortcut"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 focus-visible:outline-none focus-visible:bg-ub-warm-grey focus-visible:bg-opacity-30"
             >
                 <span className="ml-5">Create Shortcut...</span>
             </button>
-            <Devider />
-            <div className="px-5 pb-1 text-xs tracking-wide uppercase text-ub-warm-grey text-opacity-80">
-                View
-            </div>
+            <Divider />
+            <SectionLabel>View</SectionLabel>
             {iconSizeOptions.map((option) => {
                 const isActive = iconSizePreset === option.value
                 return (
@@ -88,7 +114,7 @@ function DesktopMenu(props) {
                         type="button"
                         role="menuitemradio"
                         aria-checked={isActive}
-                        className={(isActive ? " text-ubt-blue " : "") + " group w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 flex items-center justify-between"}
+                        className={(isActive ? " text-ubt-blue " : "") + " group w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 flex items-center justify-between focus-visible:outline-none focus-visible:bg-ub-warm-grey focus-visible:bg-opacity-30"}
                     >
                         <span className="ml-5">{option.label}</span>
                         <span
@@ -100,63 +126,103 @@ function DesktopMenu(props) {
                     </button>
                 )
             })}
-            <Devider />
-            <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Paste</span>
-            </div>
-            <Devider />
-            <div role="menuitem" aria-label="Show Desktop in Files" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Show Desktop in Files</span>
-            </div>
+            <Divider />
+            <SectionLabel>Sort</SectionLabel>
+            {sortOptions.map((option) => {
+                const isActive = sortOrder === option.value
+                return (
+                    <button
+                        key={option.value}
+                        onClick={() => handleSortSelect(option.value)}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={isActive}
+                        className={(isActive ? " text-ubt-blue " : "") + " group w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 flex items-center justify-between focus-visible:outline-none focus-visible:bg-ub-warm-grey focus-visible:bg-opacity-30"}
+                    >
+                        <span className="ml-5">{option.label}</span>
+                        <span
+                            aria-hidden="true"
+                            className={(isActive ? " opacity-100 " : " opacity-0 group-hover:opacity-60 group-focus-visible:opacity-60 ") + " mr-5 text-xs transition-opacity"}
+                        >
+                            ✓
+                        </span>
+                    </button>
+                )
+            })}
+            <Divider />
             <button
-                onClick={openTerminal}
                 type="button"
                 role="menuitem"
-                aria-label="Open in Terminal"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                aria-disabled="true"
+                disabled
+                data-roving-disabled="true"
+                className="w-full text-left py-0.5 mb-1.5 text-gray-400 cursor-not-allowed"
+            >
+                <span className="ml-5">Paste</span>
+            </button>
+            <Divider />
+            <button
+                type="button"
+                role="menuitem"
+                aria-disabled="true"
+                disabled
+                data-roving-disabled="true"
+                className="w-full text-left py-0.5 mb-1.5 text-gray-400 cursor-not-allowed"
+            >
+                <span className="ml-5">Show Desktop in Files</span>
+            </button>
+            <button
+                onClick={handleAction(() => props.openApp("terminal"))}
+                type="button"
+                role="menuitem"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 focus-visible:outline-none focus-visible:bg-ub-warm-grey focus-visible:bg-opacity-30"
             >
                 <span className="ml-5">Open in Terminal</span>
             </button>
-            <Devider />
+            <Divider />
             <button
-                onClick={openSettings}
+                onClick={handleAction(() => props.openApp("settings"))}
                 type="button"
                 role="menuitem"
-                aria-label="Change Background"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 focus-visible:outline-none focus-visible:bg-ub-warm-grey focus-visible:bg-opacity-30"
             >
                 <span className="ml-5">Change Background...</span>
             </button>
-            <Devider />
-            <div role="menuitem" aria-label="Display Settings" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
-                <span className="ml-5">Display Settings</span>
-            </div>
+            <Divider />
             <button
-                onClick={openSettings}
                 type="button"
                 role="menuitem"
-                aria-label="Settings"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                aria-disabled="true"
+                disabled
+                data-roving-disabled="true"
+                className="w-full text-left py-0.5 mb-1.5 text-gray-400 cursor-not-allowed"
+            >
+                <span className="ml-5">Display Settings</span>
+            </button>
+            <button
+                onClick={handleAction(() => props.openApp("settings"))}
+                type="button"
+                role="menuitem"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 focus-visible:outline-none focus-visible:bg-ub-warm-grey focus-visible:bg-opacity-30"
             >
                 <span className="ml-5">Settings</span>
             </button>
-            <Devider />
+            <Divider />
             <button
-                onClick={goFullScreen}
+                onClick={handleAction(goFullScreen)}
                 type="button"
                 role="menuitem"
                 aria-label={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 focus-visible:outline-none focus-visible:bg-ub-warm-grey focus-visible:bg-opacity-30"
             >
                 <span className="ml-5">{isFullScreen ? "Exit" : "Enter"} Full Screen</span>
             </button>
-            <Devider />
+            <Divider />
             <button
-                onClick={props.clearSession}
+                onClick={handleAction(props.clearSession)}
                 type="button"
                 role="menuitem"
-                aria-label="Clear Session"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 focus-visible:outline-none focus-visible:bg-ub-warm-grey focus-visible:bg-opacity-30"
             >
                 <span className="ml-5">Clear Session</span>
             </button>
@@ -164,13 +230,20 @@ function DesktopMenu(props) {
     )
 }
 
-function Devider() {
+function SectionLabel({ children }) {
     return (
-        <div className="flex justify-center w-full">
-            <div className=" border-t border-gray-900 py-1 w-2/5"></div>
+        <div className="px-5 pb-1 text-xs tracking-wide uppercase text-ub-warm-grey text-opacity-80">
+            {children}
         </div>
-    );
+    )
 }
 
+function Divider() {
+    return (
+        <div className="flex justify-center w-full" role="separator" aria-hidden="true">
+            <div className="border-t border-gray-900 py-1 w-2/5"></div>
+        </div>
+    )
+}
 
 export default DesktopMenu
