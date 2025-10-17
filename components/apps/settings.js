@@ -2,14 +2,32 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
+import Modal from '../base/Modal';
+import Toast from '../ui/Toast';
 
 export function Settings() {
     const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [toastMessage, setToastMessage] = useState('');
+    const [canUndo, setCanUndo] = useState(false);
+    const [undoSettings, setUndoSettings] = useState(null);
+    const undoTimeoutRef = useRef(null);
+    const [resetAnnouncement, setResetAnnouncement] = useState('');
+    const resetDescriptionId = 'reset-desktop-description';
+    const resetSummaryId = 'reset-desktop-summary';
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
+
+    const resetSummaryItems = [
+        'Accent color and wallpaper choices, including the Kali gradient toggle.',
+        'Desktop density, font size, and motion or accessibility preferences.',
+        'Accessibility options like high contrast mode and large hit areas.',
+        'App behavior toggles such as Pong spin, haptics, and network access.',
+        'Theme selection and other desktop personalization defaults.',
+    ];
 
     const changeBackgroundImage = (e) => {
         const name = e.currentTarget.dataset.path;
@@ -55,6 +73,98 @@ export function Settings() {
         });
         return () => cancelAnimationFrame(raf);
     }, [accent, accentText, contrastRatio]);
+
+    useEffect(() => {
+        return () => {
+            if (undoTimeoutRef.current) {
+                clearTimeout(undoTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    const handleCancelReset = () => {
+        setIsConfirmOpen(false);
+    };
+
+    const handleResetConfirm = async () => {
+        const previous = {
+            accent,
+            wallpaper,
+            useKaliWallpaper,
+            density,
+            reducedMotion,
+            largeHitAreas,
+            fontScale,
+            highContrast,
+            pongSpin,
+            allowNetwork,
+            haptics,
+            theme: theme || 'default',
+        };
+        setUndoSettings(previous);
+        await resetSettings();
+        setAccent(defaults.accent);
+        setWallpaper(defaults.wallpaper);
+        setUseKaliWallpaper(defaults.useKaliWallpaper);
+        setDensity(defaults.density);
+        setReducedMotion(defaults.reducedMotion);
+        setLargeHitAreas(defaults.largeHitAreas);
+        setFontScale(defaults.fontScale);
+        setHighContrast(defaults.highContrast);
+        setPongSpin(defaults.pongSpin);
+        setAllowNetwork(defaults.allowNetwork);
+        setHaptics(defaults.haptics);
+        setTheme('default');
+        setIsConfirmOpen(false);
+        setCanUndo(true);
+        setResetAnnouncement('Desktop settings reset to defaults. You can undo for the next 10 seconds.');
+        setToastMessage('Desktop settings reset. You can undo for the next 10 seconds.');
+        if (undoTimeoutRef.current) {
+            clearTimeout(undoTimeoutRef.current);
+        }
+        undoTimeoutRef.current = setTimeout(() => {
+            setCanUndo(false);
+            setUndoSettings(null);
+            setToastMessage('');
+            undoTimeoutRef.current = null;
+        }, 10000);
+    };
+
+    const handleUndo = () => {
+        if (!undoSettings) return;
+        setAccent(undoSettings.accent);
+        setWallpaper(undoSettings.wallpaper);
+        setUseKaliWallpaper(undoSettings.useKaliWallpaper);
+        setDensity(undoSettings.density);
+        setReducedMotion(undoSettings.reducedMotion);
+        setLargeHitAreas(undoSettings.largeHitAreas);
+        setFontScale(undoSettings.fontScale);
+        setHighContrast(undoSettings.highContrast);
+        setPongSpin(undoSettings.pongSpin);
+        setAllowNetwork(undoSettings.allowNetwork);
+        setHaptics(undoSettings.haptics);
+        setTheme(undoSettings.theme || 'default');
+        setUndoSettings(null);
+        setCanUndo(false);
+        if (undoTimeoutRef.current) {
+            clearTimeout(undoTimeoutRef.current);
+            undoTimeoutRef.current = null;
+        }
+        setToastMessage('Desktop settings restored.');
+        setResetAnnouncement('Desktop settings restored.');
+    };
+
+    const handleToastClose = () => {
+        setToastMessage('');
+        if (undoTimeoutRef.current) {
+            clearTimeout(undoTimeoutRef.current);
+            undoTimeoutRef.current = null;
+        }
+        if (canUndo) {
+            setCanUndo(false);
+            setUndoSettings(null);
+        }
+    };
 
     return (
         <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-kali-surface text-kali-text">
@@ -278,21 +388,8 @@ export function Settings() {
                     Import Settings
                 </button>
                 <button
-                    onClick={async () => {
-                        await resetSettings();
-                        setAccent(defaults.accent);
-                        setWallpaper(defaults.wallpaper);
-                        setUseKaliWallpaper(defaults.useKaliWallpaper);
-                        setDensity(defaults.density);
-                        setReducedMotion(defaults.reducedMotion);
-                        setLargeHitAreas(defaults.largeHitAreas);
-                        setFontScale(defaults.fontScale);
-                        setHighContrast(defaults.highContrast);
-                        setPongSpin(defaults.pongSpin);
-                        setAllowNetwork(defaults.allowNetwork);
-                        setHaptics(defaults.haptics);
-                        setTheme('default');
-                    }}
+                    type="button"
+                    onClick={() => setIsConfirmOpen(true)}
                     className="px-4 py-2 rounded-md bg-kali-primary text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
                 >
                     Reset Desktop
@@ -328,6 +425,58 @@ export function Settings() {
                 className="hidden"
                 aria-label="Import settings JSON file"
             />
+            <div aria-live="polite" role="status" className="sr-only">
+                {resetAnnouncement}
+            </div>
+            {toastMessage && (
+                <Toast
+                    message={toastMessage}
+                    actionLabel={canUndo ? 'Undo' : undefined}
+                    onAction={canUndo ? handleUndo : undefined}
+                    onClose={handleToastClose}
+                    duration={canUndo ? 10000 : undefined}
+                />
+            )}
+            <Modal
+                isOpen={isConfirmOpen}
+                onClose={handleCancelReset}
+                dialogProps={{
+                    'aria-labelledby': 'reset-desktop-title',
+                    'aria-describedby': `${resetDescriptionId} ${resetSummaryId}`,
+                    className: 'fixed inset-0 z-50 flex items-center justify-center p-4',
+                }}
+            >
+                <div className="absolute inset-0 bg-black/70" aria-hidden="true"></div>
+                <div className="relative w-full max-w-md space-y-4 rounded-lg bg-kali-surface-raised p-6 text-kali-text shadow-lg">
+                    <h2 id="reset-desktop-title" className="text-lg font-semibold">
+                        Reset desktop preferences?
+                    </h2>
+                    <p id={resetDescriptionId} className="text-sm text-kali-text/90">
+                        This will clear your personalizations and restore the default Kali desktop experience.
+                    </p>
+                    <ul id={resetSummaryId} className="list-disc space-y-1 pl-5 text-sm text-kali-text/80">
+                        {resetSummaryItems.map((item) => (
+                            <li key={item}>{item}</li>
+                        ))}
+                    </ul>
+                    <div className="flex justify-end gap-2 pt-2">
+                        <button
+                            type="button"
+                            onClick={handleCancelReset}
+                            className="rounded-md border border-kali-border/80 bg-kali-surface px-4 py-2 text-kali-text transition-colors hover:border-kali-focus/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleResetConfirm}
+                            className="rounded-md bg-kali-primary px-4 py-2 text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                        >
+                            Reset desktop
+                        </button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     )
 }
