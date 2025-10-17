@@ -279,6 +279,9 @@ export class Desktop extends Component {
         }));
 
         this.desktopRef = React.createRef();
+        this.desktopResizeObserver = null;
+        this.desktopResizeFrame = null;
+        this.desktopResizeObservedNode = null;
         this.folderNameInputRef = React.createRef();
         this.allAppsSearchRef = React.createRef();
         this.allAppsOverlayRef = React.createRef();
@@ -775,6 +778,57 @@ export class Desktop extends Component {
 
         if (changed) {
             this.setWorkspaceState({ window_positions: nextPositions }, this.saveSession);
+        }
+    };
+
+    setupDesktopResizeObserver = () => {
+        if (typeof ResizeObserver === 'undefined') {
+            return;
+        }
+        const node = this.desktopRef?.current;
+        if (!node) return;
+
+        if (this.desktopResizeObservedNode === node) {
+            return;
+        }
+
+        if (!this.desktopResizeObserver) {
+            this.desktopResizeObserver = new ResizeObserver(() => {
+                if (this.desktopResizeFrame) return;
+
+                if (typeof requestAnimationFrame === 'function') {
+                    this.desktopResizeFrame = requestAnimationFrame(() => {
+                        this.desktopResizeFrame = null;
+                        this.handleViewportResize();
+                    });
+                } else {
+                    this.desktopResizeFrame = setTimeout(() => {
+                        this.desktopResizeFrame = null;
+                        this.handleViewportResize();
+                    }, 16);
+                }
+            });
+        } else if (this.desktopResizeObservedNode) {
+            this.desktopResizeObserver.unobserve(this.desktopResizeObservedNode);
+        }
+
+        this.desktopResizeObserver.observe(node);
+        this.desktopResizeObservedNode = node;
+    };
+
+    teardownDesktopResizeObserver = () => {
+        if (this.desktopResizeObserver) {
+            this.desktopResizeObserver.disconnect();
+            this.desktopResizeObserver = null;
+        }
+        this.desktopResizeObservedNode = null;
+        if (this.desktopResizeFrame) {
+            if (typeof cancelAnimationFrame === 'function' && typeof this.desktopResizeFrame === 'number') {
+                cancelAnimationFrame(this.desktopResizeFrame);
+            } else {
+                clearTimeout(this.desktopResizeFrame);
+            }
+            this.desktopResizeFrame = null;
         }
     };
 
@@ -2878,9 +2932,11 @@ export class Desktop extends Component {
         window.addEventListener('open-app', this.handleOpenAppEvent);
         this.setupPointerMediaWatcher();
         this.setupGestureListeners();
+        this.setupDesktopResizeObserver();
     }
 
     componentDidUpdate(prevProps, prevState) {
+        this.setupDesktopResizeObserver();
         if (
             prevProps?.density !== this.props.density ||
             prevProps?.fontScale !== this.props.fontScale ||
@@ -2947,6 +3003,7 @@ export class Desktop extends Component {
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
+        this.teardownDesktopResizeObserver();
         if (this.liveRegionTimeout) {
             clearTimeout(this.liveRegionTimeout);
             this.liveRegionTimeout = null;
