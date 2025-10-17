@@ -194,4 +194,47 @@ describe('Navbar running apps tray', () => {
       order: ['app2', 'app3', 'app1'],
     });
   });
+
+  it('opens a new instance on middle click for multi-window apps', () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('workspace-state', {
+          detail: {
+            ...workspaceEventDetail,
+            runningApps: [
+              {
+                id: 'multi-app',
+                title: 'Multi App',
+                icon: '/icon.png',
+                isFocused: false,
+                isMinimized: false,
+                supportsMultipleInstances: true,
+              },
+            ],
+          },
+        }),
+      );
+    });
+
+    dispatchSpy.mockClear();
+
+    const button = screen.getByRole('button', { name: /multi app/i });
+    fireEvent(
+      button,
+      new MouseEvent('auxclick', {
+        button: 1,
+        bubbles: true,
+      }),
+    );
+
+    const taskbarEventCall = dispatchSpy.mock.calls.find(([event]) => event.type === 'taskbar-command');
+    expect(taskbarEventCall).toBeTruthy();
+    expect(taskbarEventCall && taskbarEventCall[0].detail).toEqual({
+      appId: 'multi-app',
+      action: 'open',
+      spawnNewInstance: true,
+    });
+  });
 });
