@@ -1,0 +1,27 @@
+.quick-settings-panel {
+  pointer-events: none;
+  opacity: 0;
+  transform: translate3d(0, -0.5rem, 0) scale(0.95);
+  transition-property: opacity, transform;
+  transition-duration: var(--quick-settings-motion-duration-exit);
+  transition-timing-function: var(--quick-settings-motion-ease);
+  will-change: opacity, transform;
+}
+
+.quick-settings-panel[data-state='open'] {
+  pointer-events: auto;
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  transition-duration: var(--quick-settings-motion-duration-enter);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-settings-panel {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.reduce-motion .quick-settings-panel,
+.reduced-motion .quick-settings-panel {
+  transform: translate3d(0, 0, 0) scale(1);
+}

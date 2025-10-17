@@ -7,7 +7,16 @@ interface Props {
   open: boolean;
 }
 
-const transitionDurationMs = 200;
+const getMotionDuration = (token: string) => {
+  if (typeof window === 'undefined') {
+    return 0;
+  }
+
+  const value = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+  const parsed = Number.parseFloat(value);
+
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 
 const QuickSettings = ({ open }: Props) => {
   const [theme, setTheme] = usePersistentState('qs-theme', 'light');
@@ -48,7 +57,8 @@ const QuickSettings = ({ open }: Props) => {
     }
 
     setIsVisible(false);
-    const timeout = window.setTimeout(() => setShouldRender(false), transitionDurationMs);
+    const duration = getMotionDuration('--quick-settings-motion-duration-exit');
+    const timeout = window.setTimeout(() => setShouldRender(false), duration);
     return () => window.clearTimeout(timeout);
   }, [open]);
 
@@ -200,11 +210,8 @@ const QuickSettings = ({ open }: Props) => {
       role="menu"
       aria-label="Quick settings"
       aria-hidden={!open}
-      className={`group/qs absolute top-9 right-3 w-[19rem] origin-top-right rounded-2xl border border-white/15 bg-kali-surface/95 p-4 text-sm text-white shadow-kali-panel backdrop-blur-lg transition-all duration-200 focus:outline-none ${
-        isVisible
-          ? 'pointer-events-auto translate-y-0 scale-100 opacity-100'
-          : 'pointer-events-none -translate-y-2 scale-95 opacity-0'
-      }`}
+      className="quick-settings-panel group/qs absolute top-9 right-3 w-[19rem] origin-top-right rounded-2xl border border-white/15 bg-kali-surface/95 p-4 text-sm text-white shadow-kali-panel backdrop-blur-lg focus:outline-none"
+      data-state={isVisible ? 'open' : 'closed'}
       style={{
         boxShadow:
           '0 20px 45px -35px rgba(40,120,255,0.65), inset 0 0 0 1px rgba(255,255,255,0.06)',
