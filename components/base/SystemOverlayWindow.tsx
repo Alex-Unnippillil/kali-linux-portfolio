@@ -74,7 +74,9 @@ export default function SystemOverlayWindow({
         .filter(Boolean)
         .join(' ');
 
-    const bodyClasses = ['flex-1 overflow-auto', bodyClassName].filter(Boolean).join(' ');
+    const bodyClasses = ['flex-1 overflow-auto', styles.windowBody, bodyClassName]
+        .filter(Boolean)
+        .join(' ');
 
     const handleMinimize = () => {
         if (typeof onMinimize === 'function') {

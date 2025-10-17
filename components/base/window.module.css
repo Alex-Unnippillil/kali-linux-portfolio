@@ -125,3 +125,8 @@
   height: calc(100% + 10px);
   width: calc(100% - 10px);
 }
+
+.windowBody {
+  content-visibility: auto;
+  contain: layout paint style;
+}
