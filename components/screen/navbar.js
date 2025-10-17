@@ -114,11 +114,16 @@ export default class Navbar extends PureComponent {
                 return (
                         <ul
                                 ref={this.taskbarListRef}
-                                className="flex max-w-[40vw] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
+                                className="flex max-w-[40vw] items-center gap-2 overflow-x-auto rounded-md border border-white/10 px-2 py-1"
                                 role="list"
                                 aria-label="Open applications"
                                 onDragOver={this.handleTaskbarDragOver}
                                 onDrop={this.handleTaskbarDrop}
+                                style={{
+                                        backgroundColor: 'rgba(27, 34, 49, var(--taskbar-opacity))',
+                                        backdropFilter: 'blur(var(--taskbar-blur))',
+                                        WebkitBackdropFilter: 'blur(var(--taskbar-blur))',
+                                }}
                         >
                                 {runningApps.map((app) => this.renderRunningAppItem(app))}
                         </ul>
@@ -301,14 +306,17 @@ export default class Navbar extends PureComponent {
                         const { workspaces, activeWorkspace } = this.state;
                         return (
                                 <div
-                                        className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
+                                        className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between text-ubt-grey shadow-lg"
                                 style={{
                                                 minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
                                                 paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
                                                 paddingBottom: '0.25rem',
                                                 paddingLeft: `calc(0.75rem + var(--safe-area-left, 0px))`,
                                                 paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
-                                                '--desktop-navbar-height': `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px) + 0.375rem + 0.25rem)`
+                                                '--desktop-navbar-height': `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px) + 0.375rem + 0.25rem)`,
+                                                backgroundColor: 'rgba(15, 23, 42, var(--taskbar-opacity))',
+                                                backdropFilter: 'blur(var(--taskbar-blur))',
+                                                WebkitBackdropFilter: 'blur(var(--taskbar-blur))',
                                         }}
                                 >
                                         <div className="flex items-center gap-2 text-xs md:text-sm">

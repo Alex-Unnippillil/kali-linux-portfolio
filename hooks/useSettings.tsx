@@ -30,6 +30,10 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getTaskbarOpacity as loadTaskbarOpacity,
+  setTaskbarOpacity as saveTaskbarOpacity,
+  getTaskbarBlur as loadTaskbarBlur,
+  setTaskbarBlur as saveTaskbarBlur,
   defaults,
 } from '../utils/settingsStore';
 import {
@@ -80,6 +84,8 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  taskbarOpacity: number;
+  taskbarBlur: number;
   theme: string;
   desktopTheme: DesktopTheme;
   setAccent: (accent: string) => void;
@@ -93,6 +99,8 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setTaskbarOpacity: (value: number) => void;
+  setTaskbarBlur: (value: number) => void;
   setTheme: (value: string) => void;
 }
 
@@ -117,6 +125,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  taskbarOpacity: defaults.taskbarOpacity,
+  taskbarBlur: defaults.taskbarBlur,
   theme: 'default',
   desktopTheme: DEFAULT_DESKTOP_THEME,
   setAccent: () => {},
@@ -130,6 +140,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => {},
   setAllowNetwork: () => {},
   setHaptics: () => {},
+  setTaskbarOpacity: () => {},
+  setTaskbarBlur: () => {},
   setTheme: () => {},
 });
 
@@ -145,6 +157,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [taskbarOpacity, setTaskbarOpacity] = useState<number>(defaults.taskbarOpacity);
+  const [taskbarBlur, setTaskbarBlur] = useState<number>(defaults.taskbarBlur);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
   const previousThemeRef = useRef<string | null>(null);
@@ -162,6 +176,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setTaskbarOpacity(await loadTaskbarOpacity());
+      setTaskbarBlur(await loadTaskbarBlur());
       setTheme(loadTheme());
     })();
   }, []);
@@ -299,6 +315,18 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.style.setProperty('--taskbar-opacity', taskbarOpacity.toString());
+    saveTaskbarOpacity(taskbarOpacity);
+  }, [taskbarOpacity]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.style.setProperty('--taskbar-blur', `${taskbarBlur}px`);
+    saveTaskbarBlur(taskbarBlur);
+  }, [taskbarBlur]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
   const desktopTheme = useMemo(
     () =>
@@ -358,6 +386,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        taskbarOpacity,
+        taskbarBlur,
         theme,
         desktopTheme,
         setAccent,
@@ -371,6 +401,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setTaskbarOpacity,
+        setTaskbarBlur,
         setTheme,
       }}
     >

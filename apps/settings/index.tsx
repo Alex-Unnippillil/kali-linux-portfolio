@@ -98,6 +98,10 @@ export default function Settings() {
     setHighContrast,
     haptics,
     setHaptics,
+    taskbarOpacity,
+    setTaskbarOpacity,
+    taskbarBlur,
+    setTaskbarBlur,
     theme,
     setTheme,
   } = useSettings();
@@ -149,6 +153,10 @@ export default function Settings() {
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
+      if (parsed.taskbarOpacity !== undefined)
+        setTaskbarOpacity(parsed.taskbarOpacity);
+      if (parsed.taskbarBlur !== undefined)
+        setTaskbarBlur(parsed.taskbarBlur);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
     } catch (err) {
       console.error("Invalid settings", err);
@@ -170,6 +178,8 @@ export default function Settings() {
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
+    setTaskbarOpacity(defaults.taskbarOpacity);
+    setTaskbarBlur(defaults.taskbarBlur);
     setTheme("default");
   };
 
@@ -248,6 +258,48 @@ export default function Settings() {
                   <option value="regular">Regular</option>
                   <option value="compact">Compact</option>
                 </select>
+              </SettingRow>
+
+              <SettingRow
+                label="Taskbar Opacity"
+                labelFor="taskbar-opacity"
+                helperText="Lower values make the taskbar more transparent while keeping icons readable."
+              >
+                <input
+                  id="taskbar-opacity"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={taskbarOpacity}
+                  onChange={(e) => setTaskbarOpacity(parseFloat(e.target.value))}
+                  className="kali-slider flex-1"
+                  aria-label="Taskbar opacity"
+                />
+                <span className="w-10 text-right text-sm text-[var(--color-text)] opacity-70">
+                  {taskbarOpacity.toFixed(2)}
+                </span>
+              </SettingRow>
+
+              <SettingRow
+                label="Taskbar Blur"
+                labelFor="taskbar-blur"
+                helperText="Increase the blur for a frosted glass effect behind the taskbar."
+              >
+                <input
+                  id="taskbar-blur"
+                  type="range"
+                  min="0"
+                  max="30"
+                  step="1"
+                  value={taskbarBlur}
+                  onChange={(e) => setTaskbarBlur(parseInt(e.target.value, 10))}
+                  className="kali-slider flex-1"
+                  aria-label="Taskbar blur"
+                />
+                <span className="w-12 text-right text-sm text-[var(--color-text)] opacity-70">
+                  {taskbarBlur.toString()}px
+                </span>
               </SettingRow>
             </Section>
 
