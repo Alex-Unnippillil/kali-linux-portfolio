@@ -39,6 +39,27 @@ const SNAP_LABELS = {
     'bottom-right': 'Snap bottom-right quarter',
 };
 
+const SnapPreviewOverlay = React.memo(React.forwardRef(function SnapPreviewOverlay({ label }, ref) {
+    return (
+        <div className="pointer-events-none fixed inset-0 z-40">
+            <div
+                ref={ref}
+                data-testid="snap-preview"
+                className={`absolute pointer-events-none opacity-0 transition-opacity ${styles.snapPreview} ${styles.snapPreviewGlass}`}
+                style={{ transform: 'translate3d(-9999px, -9999px, 0)' }}
+                aria-live="polite"
+                aria-label={label}
+                aria-hidden="true"
+                role="status"
+            >
+                <span className={styles.snapPreviewLabel} aria-hidden="true">
+                    {label}
+                </span>
+            </div>
+        </div>
+    );
+}));
+
 const getSnapLabel = (position) => {
     if (!position) return 'Snap window';
     return SNAP_LABELS[position] || 'Snap window';
@@ -117,13 +138,23 @@ export class Window extends Component {
                 width: 100
             },
             safeAreaTop: initialTopInset,
-            snapPreview: null,
             snapPosition: null,
             snapped: null,
             lastSize: null,
             grabbed: false,
         }
         this.windowRef = React.createRef();
+        this.snapPreviewRef = React.createRef();
+        this.snapPreviewFrame = null;
+        this.pendingSnapCandidate = null;
+        this.dragStartRect = null;
+        this.dragStartPosition = null;
+        this.currentDragPosition = null;
+        this.cachedSnapRegions = null;
+        this.cachedViewport = null;
+        this.cachedThresholds = null;
+        this.lastPreviewSize = null;
+        this.activeSnapPreview = null;
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
@@ -169,6 +200,8 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.clearSnapPreviewAnimation();
+        this.clearSnapPreviewCaches();
     }
 
     setDefaultWindowDimenstion = () => {
@@ -378,6 +411,171 @@ export class Window extends Component {
         return [normalizedX, normalizedY];
     }
 
+    prepareSnapPreviewCaches = (node, data) => {
+        if (!node || typeof window === 'undefined') {
+            this.dragStartRect = null;
+            this.dragStartPosition = null;
+            this.currentDragPosition = null;
+            this.cachedSnapRegions = null;
+            this.cachedViewport = null;
+            this.cachedThresholds = null;
+            this.activeSnapPreview = null;
+            return;
+        }
+
+        this.dragStartRect = node.getBoundingClientRect();
+        this.dragStartPosition = {
+            x: data?.x ?? 0,
+            y: data?.y ?? 0,
+        };
+        this.currentDragPosition = { ...this.dragStartPosition };
+
+        const viewportWidth = window.innerWidth || 0;
+        const viewportHeight = window.innerHeight || 0;
+        const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const snapBottomInset = measureSnapBottomInset();
+
+        this.cachedViewport = { width: viewportWidth, height: viewportHeight };
+        this.cachedThresholds = {
+            horizontal: computeEdgeThreshold(viewportWidth),
+            vertical: computeEdgeThreshold(viewportHeight),
+            topInset,
+        };
+        this.cachedSnapRegions = computeSnapRegions(viewportWidth, viewportHeight, topInset, snapBottomInset);
+        this.lastPreviewSize = null;
+        this.activeSnapPreview = null;
+    }
+
+    computeDragRect = () => {
+        if (!this.dragStartRect || !this.dragStartPosition || !this.currentDragPosition) {
+            return null;
+        }
+        const deltaX = this.currentDragPosition.x - this.dragStartPosition.x;
+        const deltaY = this.currentDragPosition.y - this.dragStartPosition.y;
+        const left = this.dragStartRect.left + deltaX;
+        const top = this.dragStartRect.top + deltaY;
+        const width = this.dragStartRect.width;
+        const height = this.dragStartRect.height;
+        return {
+            left,
+            top,
+            right: left + width,
+            bottom: top + height,
+            width,
+            height,
+        };
+    }
+
+    resolveSnapCandidate = () => {
+        if (!this.cachedSnapRegions || !this.cachedViewport || !this.cachedThresholds) {
+            return null;
+        }
+
+        const rect = this.computeDragRect();
+        if (!rect) return null;
+
+        const { width: viewportWidth, height: viewportHeight } = this.cachedViewport;
+        const { horizontal, vertical, topInset } = this.cachedThresholds;
+        const regions = this.cachedSnapRegions;
+
+        const nearTop = rect.top <= topInset + vertical;
+        const nearBottom = viewportHeight - rect.bottom <= vertical;
+        const nearLeft = rect.left <= horizontal;
+        const nearRight = viewportWidth - rect.right <= horizontal;
+
+        let candidate = null;
+        if (nearTop && nearLeft && regions['top-left'].width > 0 && regions['top-left'].height > 0) {
+            candidate = { position: 'top-left', preview: regions['top-left'] };
+        } else if (nearTop && nearRight && regions['top-right'].width > 0 && regions['top-right'].height > 0) {
+            candidate = { position: 'top-right', preview: regions['top-right'] };
+        } else if (nearBottom && nearLeft && regions['bottom-left'].width > 0 && regions['bottom-left'].height > 0) {
+            candidate = { position: 'bottom-left', preview: regions['bottom-left'] };
+        } else if (nearBottom && nearRight && regions['bottom-right'].width > 0 && regions['bottom-right'].height > 0) {
+            candidate = { position: 'bottom-right', preview: regions['bottom-right'] };
+        } else if (nearTop && regions.top.height > 0) {
+            candidate = { position: 'top', preview: regions.top };
+        } else if (nearLeft && regions.left.width > 0) {
+            candidate = { position: 'left', preview: regions.left };
+        } else if (nearRight && regions.right.width > 0) {
+            candidate = { position: 'right', preview: regions.right };
+        }
+
+        return normalizeRightCornerSnap(candidate, regions);
+    }
+
+    queueSnapPreview = (candidate) => {
+        if (typeof window === 'undefined') return;
+        this.pendingSnapCandidate = candidate;
+        if (this.snapPreviewFrame) return;
+        this.snapPreviewFrame = window.requestAnimationFrame(() => {
+            this.snapPreviewFrame = null;
+            this.applyPendingSnapCandidate();
+        });
+    }
+
+    applyPendingSnapCandidate = () => {
+        const candidate = this.pendingSnapCandidate;
+        this.pendingSnapCandidate = null;
+        if (candidate) {
+            this.updateSnapPreviewOverlay(candidate.preview);
+            if (this.state.snapPosition !== candidate.position) {
+                this.setState({ snapPosition: candidate.position });
+            }
+        } else {
+            this.hideSnapPreviewOverlay();
+            if (this.state.snapPosition !== null) {
+                this.setState({ snapPosition: null });
+            }
+        }
+    }
+
+    clearSnapPreviewAnimation = () => {
+        if (typeof window === 'undefined') return;
+        if (this.snapPreviewFrame) {
+            window.cancelAnimationFrame(this.snapPreviewFrame);
+            this.snapPreviewFrame = null;
+        }
+        this.pendingSnapCandidate = null;
+    }
+
+    clearSnapPreviewCaches = () => {
+        this.dragStartRect = null;
+        this.dragStartPosition = null;
+        this.currentDragPosition = null;
+        this.cachedSnapRegions = null;
+        this.cachedViewport = null;
+        this.cachedThresholds = null;
+        this.activeSnapPreview = null;
+        this.lastPreviewSize = null;
+    }
+
+    updateSnapPreviewOverlay = (preview) => {
+        const node = this.snapPreviewRef.current;
+        if (!node || !preview) {
+            this.hideSnapPreviewOverlay();
+            return;
+        }
+
+        if (!this.lastPreviewSize || this.lastPreviewSize.width !== preview.width || this.lastPreviewSize.height !== preview.height) {
+            node.style.width = `${preview.width}px`;
+            node.style.height = `${preview.height}px`;
+            this.lastPreviewSize = { width: preview.width, height: preview.height };
+        }
+
+        node.style.transform = `translate3d(${preview.left}px, ${preview.top}px, 0)`;
+        node.style.opacity = '1';
+        node.setAttribute('aria-hidden', 'false');
+        this.activeSnapPreview = preview;
+    }
+
+    hideSnapPreviewOverlay = () => {
+        const node = this.snapPreviewRef.current;
+        if (!node) return;
+        node.style.opacity = '0';
+        node.setAttribute('aria-hidden', 'true');
+        this.activeSnapPreview = null;
+    }
+
     snapToGrid = (value, axis = 'x') => {
         if (!this.props.snapEnabled) return value;
         const [gridX, gridY] = this.getSnapGrid();
@@ -462,6 +660,9 @@ export class Window extends Component {
             : position;
         this.setWinowsPosition();
         this.focusWindow();
+        this.clearSnapPreviewAnimation();
+        this.hideSnapPreviewOverlay();
+        this.clearSnapPreviewCaches();
         const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
         const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
@@ -477,7 +678,6 @@ export class Window extends Component {
             node.style.transform = `translate(${region.left}px, ${region.top}px)`;
         }
         this.setState({
-            snapPreview: null,
             snapPosition: null,
             snapped: resolvedPosition,
             lastSize: { width, height },
@@ -504,60 +704,6 @@ export class Window extends Component {
         }
     }
 
-    checkSnapPreview = () => {
-        const node = this.getWindowNode();
-        if (!node) return;
-        const rect = node.getBoundingClientRect();
-        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
-        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
-        if (!viewportWidth || !viewportHeight) return;
-
-        const horizontalThreshold = computeEdgeThreshold(viewportWidth);
-        const verticalThreshold = computeEdgeThreshold(viewportHeight);
-        const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
-        const snapBottomInset = measureSnapBottomInset();
-        const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset, snapBottomInset);
-
-        const nearTop = rect.top <= topInset + verticalThreshold;
-        const nearBottom = viewportHeight - rect.bottom <= verticalThreshold;
-        const nearLeft = rect.left <= horizontalThreshold;
-        const nearRight = viewportWidth - rect.right <= horizontalThreshold;
-
-        let candidate = null;
-        if (nearTop && nearLeft && regions['top-left'].width > 0 && regions['top-left'].height > 0) {
-            candidate = { position: 'top-left', preview: regions['top-left'] };
-        } else if (nearTop && nearRight && regions['top-right'].width > 0 && regions['top-right'].height > 0) {
-            candidate = { position: 'top-right', preview: regions['top-right'] };
-        } else if (nearBottom && nearLeft && regions['bottom-left'].width > 0 && regions['bottom-left'].height > 0) {
-            candidate = { position: 'bottom-left', preview: regions['bottom-left'] };
-        } else if (nearBottom && nearRight && regions['bottom-right'].width > 0 && regions['bottom-right'].height > 0) {
-            candidate = { position: 'bottom-right', preview: regions['bottom-right'] };
-        } else if (nearTop && regions.top.height > 0) {
-            candidate = { position: 'top', preview: regions.top };
-        } else if (nearLeft && regions.left.width > 0) {
-            candidate = { position: 'left', preview: regions.left };
-        } else if (nearRight && regions.right.width > 0) {
-            candidate = { position: 'right', preview: regions.right };
-        }
-
-        const resolvedCandidate = normalizeRightCornerSnap(candidate, regions);
-        if (resolvedCandidate) {
-            const { position, preview } = resolvedCandidate;
-            const samePosition = this.state.snapPosition === position;
-            const samePreview =
-                this.state.snapPreview &&
-                this.state.snapPreview.left === preview.left &&
-                this.state.snapPreview.top === preview.top &&
-                this.state.snapPreview.width === preview.width &&
-                this.state.snapPreview.height === preview.height;
-            if (!samePosition || !samePreview) {
-                this.setState({ snapPreview: preview, snapPosition: position });
-            }
-        } else if (this.state.snapPreview) {
-            this.setState({ snapPreview: null, snapPosition: null });
-        }
-    }
-
     applyEdgeResistance = (node, data) => {
         if (!node || !data) return;
         const threshold = 30;
@@ -578,22 +724,41 @@ export class Window extends Component {
         x = resist(x, 0, maxX);
         y = resist(y, topBound, maxY);
         node.style.transform = `translate(${x}px, ${y}px)`;
+        this.currentDragPosition = { x, y };
     }
 
     handleDrag = (e, data) => {
         if (data && data.node) {
             this.applyEdgeResistance(data.node, data);
         }
-        this.checkSnapPreview();
+        if (!this.currentDragPosition && data) {
+            this.currentDragPosition = { x: data.x, y: data.y };
+        }
+        const candidate = this.resolveSnapCandidate();
+        this.queueSnapPreview(candidate);
+    }
+
+    handleDragStart = (event, data) => {
+        this.changeCursorToMove();
+        if (data && data.node) {
+            this.prepareSnapPreviewCaches(data.node, data);
+        } else {
+            this.prepareSnapPreviewCaches(null, null);
+        }
+        const candidate = this.resolveSnapCandidate();
+        this.queueSnapPreview(candidate);
     }
 
     handleStop = () => {
         this.changeCursorToDefault();
         const snapPos = this.state.snapPosition;
+        this.clearSnapPreviewAnimation();
+        this.hideSnapPreviewOverlay();
+        this.clearSnapPreviewCaches();
         if (snapPos) {
             this.snapWindow(snapPos);
-        } else {
-            this.setState({ snapPreview: null, snapPosition: null });
+        } else if (this.state.snapPosition !== null) {
+            this.setState({ snapPosition: null });
         }
     }
 
@@ -711,6 +876,18 @@ export class Window extends Component {
                 this.handleStop();
             } else {
                 this.changeCursorToMove();
+                const node = this.getWindowNode();
+                if (node) {
+                    const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
+                    const x = match ? parseFloat(match[1]) : 0;
+                    const y = match ? parseFloat(match[2]) : 0;
+                    this.prepareSnapPreviewCaches(node, { x, y });
+                    this.currentDragPosition = { x, y };
+                    const candidate = this.resolveSnapCandidate();
+                    this.queueSnapPreview(candidate);
+                } else {
+                    this.prepareSnapPreviewCaches(null, null);
+                }
             }
         } else if (this.state.grabbed) {
             const step = 10;
@@ -727,10 +904,17 @@ export class Window extends Component {
                     const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
                     let x = match ? parseFloat(match[1]) : 0;
                     let y = match ? parseFloat(match[2]) : 0;
+                    const originalX = x;
+                    const originalY = y;
                     x += dx;
                     y += dy;
                     node.style.transform = `translate(${x}px, ${y}px)`;
-                    this.checkSnapPreview();
+                    if (!this.dragStartRect) {
+                        this.prepareSnapPreviewCaches(node, { x: originalX, y: originalY });
+                    }
+                    this.currentDragPosition = { x, y };
+                    const candidate = this.resolveSnapCandidate();
+                    this.queueSnapPreview(candidate);
                     this.setWinowsPosition();
                 }
             }
@@ -826,35 +1010,17 @@ export class Window extends Component {
 
         return (
             <>
-                {this.state.snapPreview && (
-                    <div
-                        data-testid="snap-preview"
-                        className={`fixed pointer-events-none z-40 transition-opacity ${styles.snapPreview} ${styles.snapPreviewGlass}`}
-                        style={{
-                            left: `${this.state.snapPreview.left}px`,
-                            top: `${this.state.snapPreview.top}px`,
-                            width: `${this.state.snapPreview.width}px`,
-                            height: `${this.state.snapPreview.height}px`,
-                            backdropFilter: 'brightness(1.1) saturate(1.2)',
-                            WebkitBackdropFilter: 'brightness(1.1) saturate(1.2)'
-
-                        }}
-                        aria-live="polite"
-                        aria-label={getSnapLabel(this.state.snapPosition)}
-                        role="status"
-                    >
-                        <span className={styles.snapPreviewLabel} aria-hidden="true">
-                            {getSnapLabel(this.state.snapPosition)}
-                        </span>
-                    </div>
-                )}
+                <SnapPreviewOverlay
+                    ref={this.snapPreviewRef}
+                    label={getSnapLabel(this.state.snapPosition)}
+                />
                 <Draggable
                     nodeRef={this.windowRef}
                     axis="both"
                     handle=".bg-ub-window-title"
                     grid={this.props.snapEnabled ? snapGrid : [1, 1]}
                     scale={1}
-                    onStart={this.changeCursorToMove}
+                    onStart={this.handleDragStart}
                     onStop={this.handleStop}
                     onDrag={this.handleDrag}
                     allowAnyClick={false}
@@ -874,7 +1040,7 @@ export class Window extends Component {
                             this.state.closed ? 'closed-window' : '',
                             this.props.minimized ? styles.windowFrameMinimized : '',
                             this.state.grabbed ? 'opacity-70' : '',
-                            this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
+                            this.state.snapPosition ? 'ring-2 ring-blue-400' : '',
                             'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',
                             styles.windowFrame,
                             this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
