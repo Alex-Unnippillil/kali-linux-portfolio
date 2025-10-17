@@ -19,6 +19,7 @@ import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET } from '../../utils/uiConstants';
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
 const EDGE_THRESHOLD_RATIO = 0.05;
+const TITLEBAR_HEIGHT = 28;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -122,11 +123,13 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            prevBounds: null,
         }
         this.windowRef = React.createRef();
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._restoredFromPointerDown = false;
     }
 
     notifySizeChange = () => {
@@ -325,6 +328,98 @@ export class Window extends Component {
         node.style.setProperty('--window-motion-transform-easing', `var(${easing})`);
     }
 
+    restoreWindowFromPointerDown = (event) => {
+        if (!event || (typeof event.button === 'number' && event.button !== 0)) {
+            return;
+        }
+        const node = this.getWindowNode();
+        if (!node) return;
+
+        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        if (!viewportWidth || !viewportHeight) return;
+
+        const storedSize = this.state.preMaximizeSize;
+        const prevBounds = this.state.prevBounds;
+
+        const sizeFromPrev = prevBounds
+            ? {
+                width: percentOf(prevBounds.width, viewportWidth),
+                height: percentOf(prevBounds.height, viewportHeight),
+            }
+            : null;
+
+        let widthPercent = storedSize?.width;
+        let heightPercent = storedSize?.height;
+
+        if (typeof widthPercent !== 'number' || Number.isNaN(widthPercent)) {
+            widthPercent = sizeFromPrev?.width;
+        }
+        if (typeof heightPercent !== 'number' || Number.isNaN(heightPercent)) {
+            heightPercent = sizeFromPrev?.height;
+        }
+
+        if (typeof widthPercent !== 'number' || Number.isNaN(widthPercent)) {
+            widthPercent = this.props.defaultWidth || 60;
+        }
+        if (typeof heightPercent !== 'number' || Number.isNaN(heightPercent)) {
+            heightPercent = this.props.defaultHeight || 85;
+        }
+
+        const restoreWidthPx = (widthPercent / 100) * viewportWidth;
+        const restoreHeightPx = (heightPercent / 100) * viewportHeight;
+
+        const pointerX = event.clientX;
+        const pointerY = event.clientY;
+        const ratioX = restoreWidthPx > 0 ? clamp(pointerX / viewportWidth, 0, 1) : 0;
+        let targetLeft = pointerX - restoreWidthPx * ratioX;
+        targetLeft = clamp(targetLeft, 0, Math.max(viewportWidth - restoreWidthPx, 0));
+
+        const safeTop = this.state.safeAreaTop ?? measureWindowTopOffset();
+        const pointerOffsetWithinTitlebar = clamp(pointerY - safeTop, 0, TITLEBAR_HEIGHT);
+        let targetTop = pointerY - pointerOffsetWithinTitlebar;
+        targetTop = clampWindowTopPosition(targetTop, safeTop);
+
+        const snappedX = this.snapToGrid(targetLeft, 'x');
+        const snappedRelativeY = this.snapToGrid(targetTop - safeTop, 'y');
+        const snappedY = clampWindowTopPosition(snappedRelativeY + safeTop, safeTop);
+
+        this.setTransformMotionPreset(node, 'restore');
+        node.style.transform = `translate(${snappedX}px, ${snappedY}px)`;
+        node.style.setProperty('--window-transform-x', `${snappedX}px`);
+        node.style.setProperty('--window-transform-y', `${snappedY}px`);
+
+        const nextBounds = {
+            left: snappedX,
+            top: snappedY,
+            width: restoreWidthPx,
+            height: restoreHeightPx,
+        };
+
+        this._restoredFromPointerDown = true;
+
+        this.setState({
+            maximized: false,
+            width: widthPercent,
+            height: heightPercent,
+            preMaximizeSize: null,
+            snapPreview: null,
+            snapPosition: null,
+            snapped: null,
+            prevBounds: nextBounds,
+        }, () => {
+            this.resizeBoundries();
+            this.notifySizeChange();
+        });
+    }
+
+    handleTitleBarPointerDown = (event) => {
+        this.focusWindow();
+        if (this.state.maximized) {
+            this.restoreWindowFromPointerDown(event);
+        }
+    }
+
     activateOverlay = () => {
         const root = this.getOverlayRoot();
         if (root) {
@@ -347,7 +442,13 @@ export class Window extends Component {
     changeCursorToMove = () => {
         this.focusWindow();
         if (this.state.maximized) {
-            this.restoreWindow();
+            if (this._restoredFromPointerDown) {
+                this._restoredFromPointerDown = false;
+            } else {
+                this.restoreWindow();
+            }
+        } else {
+            this._restoredFromPointerDown = false;
         }
         if (this.state.snapped) {
             this.unsnapWindow();
@@ -356,6 +457,7 @@ export class Window extends Component {
     }
 
     changeCursorToDefault = () => {
+        this._restoredFromPointerDown = false;
         this.setState({ cursorType: "cursor-default", grabbed: false })
     }
 
@@ -419,6 +521,33 @@ export class Window extends Component {
         const absoluteY = clampWindowTopPosition(snappedRelativeY + topInset, topInset);
         node.style.setProperty('--window-transform-x', `${snappedX.toFixed(1)}px`);
         node.style.setProperty('--window-transform-y', `${absoluteY.toFixed(1)}px`);
+
+        const bounds = {
+            left: snappedX,
+            top: absoluteY,
+            width: rect.width,
+            height: rect.height,
+        };
+
+        if (Number.isFinite(bounds.width) && Number.isFinite(bounds.height) && bounds.width > 0 && bounds.height > 0) {
+            const tolerance = 0.5;
+            this.setState((prevState) => {
+                if (prevState.maximized) {
+                    return null;
+                }
+                const prev = prevState.prevBounds;
+                if (
+                    prev &&
+                    Math.abs(prev.left - bounds.left) < tolerance &&
+                    Math.abs(prev.top - bounds.top) < tolerance &&
+                    Math.abs(prev.width - bounds.width) < tolerance &&
+                    Math.abs(prev.height - bounds.height) < tolerance
+                ) {
+                    return null;
+                }
+                return { prevBounds: bounds };
+            });
+        }
 
         if (this.props.onPositionChange) {
             this.props.onPositionChange(snappedX, absoluteY);
@@ -588,6 +717,7 @@ export class Window extends Component {
     }
 
     handleStop = () => {
+        this._restoredFromPointerDown = false;
         this.changeCursorToDefault();
         const snapPos = this.state.snapPosition;
         if (snapPos) {
@@ -628,36 +758,78 @@ export class Window extends Component {
     restoreWindow = () => {
         const node = this.getWindowNode();
         if (!node) return;
+        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
         const storedSize = this.state.preMaximizeSize;
+        const prevBounds = this.state.prevBounds;
         const hasStoredSize = storedSize && typeof storedSize.width === 'number' && typeof storedSize.height === 'number';
 
-        if (hasStoredSize) {
+        let widthPercent = hasStoredSize ? storedSize.width : null;
+        let heightPercent = hasStoredSize ? storedSize.height : null;
+
+        if (prevBounds && viewportWidth && viewportHeight) {
+            if (typeof widthPercent !== 'number' || Number.isNaN(widthPercent)) {
+                widthPercent = percentOf(prevBounds.width, viewportWidth);
+            }
+            if (typeof heightPercent !== 'number' || Number.isNaN(heightPercent)) {
+                heightPercent = percentOf(prevBounds.height, viewportHeight);
+            }
+        }
+
+        if (typeof widthPercent !== 'number' || Number.isNaN(widthPercent)) {
+            widthPercent = this.props.defaultWidth || 60;
+        }
+        if (typeof heightPercent !== 'number' || Number.isNaN(heightPercent)) {
+            heightPercent = this.props.defaultHeight || 85;
+        }
+
+        const widthPx = viewportWidth ? (widthPercent / 100) * viewportWidth : prevBounds?.width || 0;
+        const heightPx = viewportHeight ? (heightPercent / 100) * viewportHeight : prevBounds?.height || 0;
+
+        const storedPosX = node.style.getPropertyValue('--window-transform-x') || `${this.startX}px`;
+        const storedPosY = node.style.getPropertyValue('--window-transform-y') || `${this.startY}px`;
+
+        const resolvedX = prevBounds && Number.isFinite(prevBounds.left) ? prevBounds.left : parseFloat(storedPosX);
+        const resolvedY = prevBounds && Number.isFinite(prevBounds.top) ? prevBounds.top : parseFloat(storedPosY);
+
+        const posx = Number.isFinite(resolvedX) ? `${resolvedX}px` : `${this.startX}px`;
+        const posy = Number.isFinite(resolvedY) ? `${resolvedY}px` : `${this.startY}px`;
+        const endTransform = `translate(${posx},${posy})`;
+        const prefersReducedMotion = typeof window !== 'undefined'
+            && window.matchMedia
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        this.setTransformMotionPreset(node, 'restore');
+        node.style.setProperty('--window-transform-x', posx);
+        node.style.setProperty('--window-transform-y', posy);
+        node.style.transform = endTransform;
+
+        const nextBounds = {
+            left: Number.isFinite(resolvedX) ? resolvedX : this.startX,
+            top: Number.isFinite(resolvedY) ? resolvedY : this.startY,
+            width: widthPx,
+            height: heightPx,
+        };
+
+        const finalize = () => {
             this.setState({
-                width: storedSize.width,
-                height: storedSize.height,
+                width: widthPercent,
+                height: heightPercent,
                 maximized: false,
                 preMaximizeSize: null,
+                prevBounds: nextBounds,
             }, () => {
                 this.resizeBoundries();
                 this.notifySizeChange();
             });
-        } else {
-            this.setDefaultWindowDimenstion();
-            this.setState({ maximized: false, preMaximizeSize: null });
-        }
-        // get previous position
-        const posx = node.style.getPropertyValue("--window-transform-x") || `${this.startX}px`;
-        const posy = node.style.getPropertyValue("--window-transform-y") || `${this.startY}px`;
-        const endTransform = `translate(${posx},${posy})`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        };
 
-        this.setTransformMotionPreset(node, 'restore');
         if (prefersReducedMotion) {
-            node.style.transform = endTransform;
+            finalize();
             return;
         }
 
-        node.style.transform = endTransform;
+        finalize();
     }
 
     maximizeWindow = () => {
@@ -897,7 +1069,7 @@ export class Window extends Component {
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
-                            onPointerDown={this.focusWindow}
+                            onPointerDown={this.handleTitleBarPointerDown}
                             onDoubleClick={this.handleTitleBarDoubleClick}
                         />
                         <WindowEditButtons
