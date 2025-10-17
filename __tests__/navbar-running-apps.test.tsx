@@ -194,4 +194,52 @@ describe('Navbar running apps tray', () => {
       order: ['app2', 'app3', 'app1'],
     });
   });
+
+  it('requests and displays a taskbar preview on hover', async () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('workspace-state', { detail: workspaceEventDetail }));
+    });
+
+    const button = screen.getByRole('button', { name: /app one/i });
+    Object.defineProperty(button, 'getBoundingClientRect', {
+      value: () => ({ left: 100, right: 140, top: 20, bottom: 52, width: 40, height: 32 }),
+    });
+
+    dispatchSpy.mockClear();
+
+    act(() => {
+      fireEvent.mouseEnter(button);
+    });
+
+    const previewRequestCall = dispatchSpy.mock.calls.find(([event]) => event.type === 'taskbar-preview-request');
+    expect(previewRequestCall).toBeTruthy();
+    const [previewRequestEvent] = previewRequestCall!;
+    expect(previewRequestEvent.detail.appId).toBe('app1');
+    expect(typeof previewRequestEvent.detail.requestId).toBe('number');
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('taskbar-preview-response', {
+          detail: {
+            appId: 'app1',
+            requestId: previewRequestEvent.detail.requestId,
+            preview: 'data:image/png;base64,preview',
+          },
+        }),
+      );
+    });
+
+    expect(
+      await screen.findByRole('dialog', { name: /app one preview/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByAltText(/app one window preview/i)).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.keyDown(document, { key: 'Escape' });
+    });
+
+    expect(screen.queryByRole('dialog', { name: /app one preview/i })).not.toBeInTheDocument();
+  });
 });
