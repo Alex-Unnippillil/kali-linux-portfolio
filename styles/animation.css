@@ -10,3 +10,13 @@
   --window-motion-duration-snap-preview: var(--window-motion-duration-snap);
   --window-motion-ease-snap-preview: var(--window-motion-ease-snap);
 }
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --window-motion-duration-minimize: 0ms;
+    --window-motion-duration-restore: 0ms;
+    --window-motion-duration-snap: 0ms;
+    --window-motion-duration-maximize: 0ms;
+    --window-motion-duration-snap-preview: 0ms;
+  }
+}

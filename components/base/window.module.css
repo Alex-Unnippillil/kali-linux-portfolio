@@ -8,13 +8,8 @@
   --window-motion-transform-easing: var(--window-motion-ease-restore);
   --window-motion-opacity-duration: var(--window-motion-duration-minimize);
   --window-motion-opacity-easing: var(--window-motion-ease-minimize);
-  transition:
-    transform var(--window-motion-transform-duration) var(--window-motion-transform-easing),
-    filter var(--motion-fast) ease,
-    box-shadow var(--motion-fast) ease,
-    opacity var(--window-motion-opacity-duration) var(--window-motion-opacity-easing),
-    visibility 0s linear;
-  transition-delay: 0s, 0s, 0s, 0s, 0s;
+  transition: none;
+  transition-delay: 0s;
 }
 
 .windowFrame::before {
@@ -29,7 +24,7 @@
   pointer-events: none;
   border-top-left-radius: calc(var(--radius-6) - 1px);
   border-top-right-radius: calc(var(--radius-6) - 1px);
-  transition: opacity var(--motion-fast) ease;
+  transition: none;
   z-index: 2;
 }
 
@@ -55,11 +50,54 @@
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition-delay: 0s, 0s, 0s, 0s, var(--window-motion-opacity-duration);
+  transition-delay: 0s;
 }
 
 .snapPreview {
-  transition: opacity var(--window-motion-duration-snap-preview) var(--window-motion-ease-snap-preview);
+  transition: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .windowFrame {
+    transition:
+      transform var(--window-motion-transform-duration) var(--window-motion-transform-easing),
+      filter var(--motion-fast) ease,
+      box-shadow var(--motion-fast) ease,
+      opacity var(--window-motion-opacity-duration) var(--window-motion-opacity-easing),
+      visibility 0s linear;
+    transition-delay: 0s, 0s, 0s, 0s, 0s;
+  }
+
+  .windowFrame::before {
+    transition: opacity var(--motion-fast) ease;
+  }
+
+  .windowFrameMinimized {
+    transition-delay: 0s, 0s, 0s, 0s, var(--window-motion-opacity-duration);
+  }
+
+  .snapPreview {
+    transition: opacity var(--window-motion-duration-snap-preview) var(--window-motion-ease-snap-preview);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .windowFrame {
+    transition: none;
+    transition-delay: 0s;
+  }
+
+  .windowFrame::before {
+    transition: none;
+  }
+
+  .windowFrameMinimized {
+    transition-delay: 0s;
+  }
+
+  .snapPreview {
+    transition: none;
+  }
 }
 
 .snapPreviewGlass {

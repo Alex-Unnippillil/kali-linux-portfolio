@@ -307,6 +307,12 @@ export class Window extends Component {
         return null;
     }
 
+    prefersReducedMotion = () => {
+        return typeof window !== 'undefined'
+            && typeof window.matchMedia === 'function'
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+
     setTransformMotionPreset = (node, preset) => {
         if (!node) return;
         const durationVars = {
@@ -649,7 +655,7 @@ export class Window extends Component {
         const posx = node.style.getPropertyValue("--window-transform-x") || `${this.startX}px`;
         const posy = node.style.getPropertyValue("--window-transform-y") || `${this.startY}px`;
         const endTransform = `translate(${posx},${posy})`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const prefersReducedMotion = this.prefersReducedMotion();
 
         this.setTransformMotionPreset(node, 'restore');
         if (prefersReducedMotion) {
@@ -694,12 +700,13 @@ export class Window extends Component {
         this.setWinowsPosition();
         this.setState({ closed: true, preMaximizeSize: null }, () => {
             this.deactivateOverlay();
+            const closeDelay = this.prefersReducedMotion() ? 0 : 300;
             setTimeout(() => {
                 const targetId = this.id ?? this.props.id;
                 if (typeof this.props.closed === 'function' && targetId) {
                     this.props.closed(targetId);
                 }
-            }, 300); // after 300ms this window will be unmounted from parent (Desktop)
+            }, closeDelay); // after animation completes this window will be unmounted from parent (Desktop)
         });
     }
 
