@@ -5,6 +5,7 @@ import {
   clampWindowTopPosition,
   measureWindowTopOffset,
 } from "../../utils/windowLayout";
+import { desktopViewportDefaultValue, useDesktopViewport } from "./viewportContext";
 
 type BaseWindowProps = React.ComponentProps<typeof BaseWindow>;
 // BaseWindow is a class component, so the instance type exposes helper methods.
@@ -64,7 +65,10 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       [forwardedRef],
     );
 
-    const clampToViewport = useCallback(() => {
+    const { initialX, initialY, onPositionChange } = props;
+
+    const clampToViewport = useCallback(
+      (dimensions?: { width: number; height: number }) => {
       if (typeof window === "undefined") return;
       const instance = innerRef.current;
       const node = instance && typeof instance.getWindowNode === "function"
@@ -76,13 +80,18 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       const topOffset = measureWindowTopOffset();
       const storedPosition = readNodePosition(node);
       const fallbackPosition = {
-        x: typeof props.initialX === "number" ? props.initialX : 0,
-        y: clampWindowTopPosition(props.initialY, topOffset),
+        x: typeof initialX === "number" ? initialX : 0,
+        y: clampWindowTopPosition(initialY, topOffset),
       };
       const currentPosition = storedPosition || fallbackPosition;
+      const viewportWidth =
+        typeof dimensions?.width === "number" ? dimensions.width : window.innerWidth;
+      const viewportHeight =
+        typeof dimensions?.height === "number" ? dimensions.height : window.innerHeight;
+
       const clamped = clampWindowPositionWithinViewport(currentPosition, rect, {
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
+        viewportWidth,
+        viewportHeight,
         topOffset,
       });
       if (!clamped) return;
@@ -98,20 +107,39 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
         (node.style as unknown as Record<string, string>)["--window-transform-x"] = `${clamped.x}px`;
         (node.style as unknown as Record<string, string>)["--window-transform-y"] = `${clamped.y}px`;
       }
-
-      if (typeof props.onPositionChange === "function") {
-        props.onPositionChange(clamped.x, clamped.y);
+      if (typeof onPositionChange === "function") {
+        onPositionChange(clamped.x, clamped.y);
       }
-    }, [props.initialX, props.initialY, props.onPositionChange]);
+    }, [initialX, initialY, onPositionChange]);
+
+    const viewport = useDesktopViewport();
+    const usingDefaultContext = viewport === desktopViewportDefaultValue;
 
     useEffect(() => {
-      if (typeof window === "undefined") return undefined;
-      const handler = () => clampToViewport();
-      window.addEventListener("resize", handler);
+      const size = viewport.getSize();
+      if (size) {
+        clampToViewport(size);
+      } else {
+        clampToViewport();
+      }
+      if (usingDefaultContext) {
+        if (typeof window === "undefined") {
+          return undefined;
+        }
+        const handler = () => clampToViewport();
+        window.addEventListener("resize", handler);
+        return () => {
+          window.removeEventListener("resize", handler);
+        };
+      }
+
+      const unsubscribe = viewport.subscribe((nextSize) => {
+        clampToViewport(nextSize);
+      });
       return () => {
-        window.removeEventListener("resize", handler);
+        unsubscribe();
       };
-    }, [clampToViewport]);
+    }, [clampToViewport, viewport, usingDefaultContext]);
 
     return <BaseWindow ref={assignRef} {...props} />;
   },

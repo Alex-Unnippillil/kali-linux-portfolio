@@ -15,6 +15,7 @@ import {
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET } from '../../utils/uiConstants';
+import { DesktopViewportContext, desktopViewportDefaultValue } from '../desktop/viewportContext';
 
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
@@ -127,6 +128,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this.unsubscribeViewport = null;
     }
 
     notifySizeChange = () => {
@@ -143,8 +145,21 @@ export class Window extends Component {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
 
-        // on window resize, resize boundary
-        window.addEventListener('resize', this.resizeBoundries);
+        const viewportApi = this.context;
+        const canSubscribe = viewportApi && typeof viewportApi.subscribe === 'function';
+        const usingDefaultContext = viewportApi === desktopViewportDefaultValue;
+        if (canSubscribe && !usingDefaultContext) {
+            this.unsubscribeViewport = viewportApi.subscribe((size) => {
+                this.resizeBoundries(size);
+            });
+            const snapshot = typeof viewportApi.getSize === 'function' ? viewportApi.getSize() : null;
+            if (snapshot) {
+                this.resizeBoundries(snapshot);
+            }
+        } else {
+            window.addEventListener('resize', this.resizeBoundries);
+            this.resizeBoundries();
+        }
         // Listen for context menu events to toggle inert background
         window.addEventListener('context-menu-open', this.setInertBackground);
         window.addEventListener('context-menu-close', this.removeInertBackground);
@@ -161,7 +176,12 @@ export class Window extends Component {
     componentWillUnmount() {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
-        window.removeEventListener('resize', this.resizeBoundries);
+        if (this.unsubscribeViewport) {
+            this.unsubscribeViewport();
+            this.unsubscribeViewport = null;
+        } else {
+            window.removeEventListener('resize', this.resizeBoundries);
+        }
         window.removeEventListener('context-menu-open', this.setInertBackground);
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = this.getWindowNode();
@@ -203,15 +223,19 @@ export class Window extends Component {
         }
     }
 
-    resizeBoundries = () => {
+    resizeBoundries = (dimensions) => {
         const hasWindow = typeof window !== 'undefined';
         const visualViewport = hasWindow && window.visualViewport ? window.visualViewport : null;
-        const viewportHeight = hasWindow
-            ? (visualViewport?.height ?? window.innerHeight)
-            : 0;
-        const viewportWidth = hasWindow
-            ? (visualViewport?.width ?? window.innerWidth)
-            : 0;
+        const viewportHeight = typeof dimensions?.height === 'number'
+            ? dimensions.height
+            : hasWindow
+                ? (visualViewport?.height ?? window.innerHeight)
+                : 0;
+        const viewportWidth = typeof dimensions?.width === 'number'
+            ? dimensions.width
+            : hasWindow
+                ? (visualViewport?.width ?? window.innerWidth)
+                : 0;
         const topInset = hasWindow
             ? measureWindowTopOffset()
             : DEFAULT_WINDOW_TOP_OFFSET;
@@ -921,6 +945,8 @@ export class Window extends Component {
         )
     }
 }
+
+Window.contextType = DesktopViewportContext;
 
 export default Window
 
