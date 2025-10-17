@@ -3900,7 +3900,6 @@ export class Desktop extends Component {
                 snapEnabled: this.props.snapEnabled,
                 snapGrid,
                 context: this.state.window_context[id],
-                zIndex: 200 + index,
             };
 
             return <Window key={id} {...props} />;

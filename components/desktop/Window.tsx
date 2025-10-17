@@ -5,6 +5,7 @@ import {
   clampWindowTopPosition,
   measureWindowTopOffset,
 } from "../../utils/windowLayout";
+import { useDesktopZIndex } from "./zIndexManager";
 
 type BaseWindowProps = React.ComponentProps<typeof BaseWindow>;
 // BaseWindow is a class component, so the instance type exposes helper methods.
@@ -49,7 +50,22 @@ const readNodePosition = (node: HTMLElement): { x: number; y: number } | null =>
 
 const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
   (props, forwardedRef) => {
+    const {
+      id,
+      focus: focusProp,
+      isFocused,
+      zIndex: _ignoredZIndex,
+      ...rest
+    } = props;
     const innerRef = useRef<BaseWindowInstance>(null);
+    const {
+      baseZIndex,
+      registerWindow,
+      unregisterWindow,
+      focusWindow: focusZIndex,
+      getZIndex,
+    } = useDesktopZIndex();
+    const windowId = id ?? null;
 
     const assignRef = useCallback(
       (instance: BaseWindowInstance) => {
@@ -105,6 +121,36 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
     }, [props.initialX, props.initialY, props.onPositionChange]);
 
     useEffect(() => {
+      if (!windowId) return;
+      registerWindow(windowId);
+      return () => {
+        unregisterWindow(windowId);
+      };
+    }, [windowId, registerWindow, unregisterWindow]);
+
+    useEffect(() => {
+      if (!windowId || !isFocused) return;
+      focusZIndex(windowId);
+    }, [windowId, isFocused, focusZIndex]);
+
+    const handleFocus = useCallback(
+      (targetId?: string | null) => {
+        const resolvedId = targetId ?? windowId;
+        if (resolvedId) {
+          focusZIndex(resolvedId);
+          if (typeof focusProp === "function") {
+            focusProp(resolvedId);
+          }
+        } else if (typeof focusProp === "function") {
+          focusProp(targetId ?? undefined);
+        }
+      },
+      [focusProp, focusZIndex, windowId],
+    );
+
+    const computedZIndex = windowId ? getZIndex(windowId) : baseZIndex;
+
+    useEffect(() => {
       if (typeof window === "undefined") return undefined;
       const handler = () => clampToViewport();
       window.addEventListener("resize", handler);
@@ -113,7 +159,16 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       };
     }, [clampToViewport]);
 
-    return <BaseWindow ref={assignRef} {...props} />;
+    return (
+      <BaseWindow
+        ref={assignRef}
+        {...rest}
+        id={id}
+        focus={handleFocus}
+        isFocused={isFocused}
+        zIndex={computedZIndex}
+      />
+    );
   },
 );
 
