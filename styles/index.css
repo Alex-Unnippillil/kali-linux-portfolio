@@ -196,6 +196,15 @@ input[type=range].ubuntu-slider:focus-visible::-webkit-slider-thumb {
 
 .windowMainScreen {
     container-type: inline-size;
+    content-visibility: auto;
+    contain: layout paint style;
+    overflow: auto;
+    contain-intrinsic-size: none;
+}
+
+[data-window-state="minimized"] .windowMainScreen,
+.closed-window .windowMainScreen {
+    contain-intrinsic-size: auto 480px;
 }
 
 .windowMainScreen::-webkit-scrollbar-track {

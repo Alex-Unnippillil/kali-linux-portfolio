@@ -127,6 +127,8 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._intrinsicSizeFallback = null;
+        this._containmentFrame = null;
     }
 
     notifySizeChange = () => {
@@ -156,6 +158,7 @@ export class Window extends Component {
         if (this.props.isFocused) {
             this.focusWindow();
         }
+        this.scheduleContainmentUpdate();
     }
 
     componentWillUnmount() {
@@ -169,6 +172,77 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        if (this._containmentFrame) {
+            if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+                window.cancelAnimationFrame(this._containmentFrame);
+            } else if (typeof cancelAnimationFrame === 'function') {
+                cancelAnimationFrame(this._containmentFrame);
+            }
+            this._containmentFrame = null;
+        }
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        const minimizedChanged = prevProps.minimized !== this.props.minimized;
+        const closedChanged = prevState.closed !== this.state.closed;
+        const sizeChanged = prevState.width !== this.state.width
+            || prevState.height !== this.state.height;
+        const layoutStateChanged = prevState.maximized !== this.state.maximized
+            || prevState.snapped !== this.state.snapped;
+
+        if (minimizedChanged || closedChanged || sizeChanged || layoutStateChanged) {
+            this.scheduleContainmentUpdate();
+        }
+    }
+
+    scheduleContainmentUpdate = () => {
+        if (this._containmentFrame) {
+            if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+                window.cancelAnimationFrame(this._containmentFrame);
+            } else if (typeof cancelAnimationFrame === 'function') {
+                cancelAnimationFrame(this._containmentFrame);
+            }
+            this._containmentFrame = null;
+        }
+
+        if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+            this.updateWindowContainment();
+            return;
+        }
+
+        this._containmentFrame = window.requestAnimationFrame(() => {
+            this._containmentFrame = null;
+            this.updateWindowContainment();
+        });
+    }
+
+    updateWindowContainment = () => {
+        const root = this.getWindowNode();
+        if (!root) return;
+        const container = root.querySelector('.windowMainScreen');
+        if (!container) return;
+
+        const containerRect = container.getBoundingClientRect();
+        const hasRealSize = containerRect.width > 0 && containerRect.height > 0;
+        if (hasRealSize) {
+            this._intrinsicSizeFallback = {
+                width: Math.round(containerRect.width),
+                height: Math.round(containerRect.height),
+            };
+        }
+
+        const shouldHoldFallback = Boolean(this.props.minimized || this.state.closed);
+        if (shouldHoldFallback) {
+            const fallback = this._intrinsicSizeFallback;
+            if (fallback && fallback.width > 0 && fallback.height > 0) {
+                container.style.setProperty('contain-intrinsic-size', `${fallback.width}px ${fallback.height}px`);
+            } else {
+                container.style.setProperty('contain-intrinsic-size', 'auto 480px');
+            }
+            return;
+        }
+
+        container.style.removeProperty('contain-intrinsic-size');
     }
 
     setDefaultWindowDimenstion = () => {
@@ -622,6 +696,7 @@ export class Window extends Component {
 
     minimizeWindow = () => {
         this.setWinowsPosition();
+        this.scheduleContainmentUpdate();
         this.props.hasMinimised(this.id);
     }
 
