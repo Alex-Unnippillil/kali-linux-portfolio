@@ -6,6 +6,8 @@ function DesktopMenu(props) {
     const [isFullScreen, setIsFullScreen] = useState(false)
     const iconSizePreset = props.iconSizePreset || 'medium'
     const setIconSizePreset = typeof props.setIconSizePreset === 'function' ? props.setIconSizePreset : () => { }
+    const showDesktopIcons = props.showDesktopIcons !== false
+    const toggleDesktopIcons = typeof props.toggleDesktopIcons === 'function' ? props.toggleDesktopIcons : () => { }
     const iconSizeOptions = [
         { value: 'small', label: 'Small Icons' },
         { value: 'medium', label: 'Medium Icons' },
@@ -100,6 +102,22 @@ function DesktopMenu(props) {
                     </button>
                 )
             })}
+            <button
+                onClick={toggleDesktopIcons}
+                type="button"
+                role="menuitemcheckbox"
+                aria-checked={showDesktopIcons}
+                aria-label={showDesktopIcons ? "Hide Desktop Icons" : "Show Desktop Icons"}
+                className={(showDesktopIcons ? " text-ubt-blue " : "") + " group w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 flex items-center justify-between"}
+            >
+                <span className="ml-5">{showDesktopIcons ? "Hide Desktop Icons" : "Show Desktop Icons"}</span>
+                <span
+                    aria-hidden="true"
+                    className={(showDesktopIcons ? " opacity-100 " : " opacity-0 group-hover:opacity-60 group-focus-visible:opacity-60 ") + " mr-5 text-xs transition-opacity"}
+                >
+                    ✓
+                </span>
+            </button>
             <Devider />
             <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
                 <span className="ml-5">Paste</span>

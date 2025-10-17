@@ -25,7 +25,14 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
-import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
+import {
+    DESKTOP_ICON_VISIBILITY_EVENT,
+    DESKTOP_ICON_VISIBILITY_REQUEST_EVENT,
+    DESKTOP_ICON_VISIBILITY_STORAGE_KEY,
+    DESKTOP_TOP_PADDING,
+    WINDOW_TOP_INSET,
+    WINDOW_TOP_MARGIN,
+} from '../../utils/uiConstants';
 import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
 import {
@@ -103,6 +110,40 @@ const loadStoredWindowSizes = (storageKey = WINDOW_SIZE_STORAGE_KEY) => {
         return normalized;
     } catch (e) {
         return {};
+    }
+};
+
+const loadStoredDesktopIconVisibility = (
+    storageKey = DESKTOP_ICON_VISIBILITY_STORAGE_KEY,
+) => {
+    if (!safeLocalStorage) return true;
+    try {
+        const stored = safeLocalStorage.getItem(storageKey);
+        if (stored === null || typeof stored === 'undefined') {
+            return true;
+        }
+        if (stored === 'true') return true;
+        if (stored === 'false') return false;
+        if (typeof stored === 'boolean') return stored;
+        const parsed = JSON.parse(stored);
+        if (typeof parsed === 'boolean') return parsed;
+        if (parsed === 'true') return true;
+        if (parsed === 'false') return false;
+        return true;
+    } catch (e) {
+        return true;
+    }
+};
+
+const persistDesktopIconVisibility = (
+    visible,
+    storageKey = DESKTOP_ICON_VISIBILITY_STORAGE_KEY,
+) => {
+    if (!safeLocalStorage) return;
+    try {
+        safeLocalStorage.setItem(storageKey, JSON.stringify(Boolean(visible)));
+    } catch (e) {
+        // ignore storage errors
     }
 };
 
@@ -211,9 +252,13 @@ export class Desktop extends Component {
         };
 
         this.taskbarOrderKeyBase = 'taskbar-order';
+        this.desktopIconVisibilityKey = DESKTOP_ICON_VISIBILITY_STORAGE_KEY;
 
         const initialIconSizePreset = this.getStoredIconSizePreset();
         const initialPresetConfig = this.getIconSizePresetConfig(initialIconSizePreset);
+        const initialShowDesktopIcons = loadStoredDesktopIconVisibility(
+            this.desktopIconVisibilityKey,
+        );
 
         this.baseIconDimensions = { ...initialPresetConfig.dimensions };
         this.baseIconGridSpacing = { ...initialPresetConfig.spacing };
@@ -268,6 +313,7 @@ export class Desktop extends Component {
             overlayWindows: createOverlayStateMap(),
             minimizedShelfOpen: false,
             closedShelfOpen: false,
+            showDesktopIcons: initialShowDesktopIcons,
         };
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -1052,6 +1098,50 @@ export class Desktop extends Component {
             this.broadcastIconSizePreset(normalized);
             this.broadcastWorkspaceState();
         });
+    };
+
+    broadcastDesktopIconVisibility = (visible) => {
+        if (typeof window === 'undefined') return;
+        window.dispatchEvent(new CustomEvent(DESKTOP_ICON_VISIBILITY_EVENT, {
+            detail: { visible: Boolean(visible) },
+        }));
+    };
+
+    setDesktopIconVisibility = (visible) => {
+        const nextVisible = Boolean(visible);
+        if (!nextVisible && this.iconDragState) {
+            this.iconDragState = null;
+        }
+        this.setState((prevState) => {
+            if (prevState.showDesktopIcons === nextVisible) {
+                return null;
+            }
+            const updates = { showDesktopIcons: nextVisible };
+            if (!nextVisible) {
+                updates.selectedIcons = new Set();
+                updates.selectionAnchorId = null;
+                updates.hoveredIconId = null;
+                updates.marqueeSelection = null;
+                updates.draggingIconId = null;
+                updates.keyboardMoveState = null;
+            }
+            return updates;
+        }, () => {
+            persistDesktopIconVisibility(nextVisible, this.desktopIconVisibilityKey);
+            this.broadcastDesktopIconVisibility(nextVisible);
+        });
+    };
+
+    toggleDesktopIconVisibility = () => {
+        this.setDesktopIconVisibility(!this.state.showDesktopIcons);
+    };
+
+    handleDesktopIconVisibilityRequest = (event) => {
+        const detail = event?.detail || {};
+        if (typeof detail.visible !== 'boolean') {
+            return;
+        }
+        this.setDesktopIconVisibility(detail.visible);
     };
 
     loadDesktopIconPositions = () => {
@@ -2841,8 +2931,13 @@ export class Desktop extends Component {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.addEventListener(
+                DESKTOP_ICON_VISIBILITY_REQUEST_EVENT,
+                this.handleDesktopIconVisibilityRequest,
+            );
             this.broadcastWorkspaceState();
             this.broadcastIconSizePreset(this.state.iconSizePreset);
+            this.broadcastDesktopIconVisibility(this.state.showDesktopIcons);
         }
 
         this.savedIconPositions = this.loadDesktopIconPositions();
@@ -2944,6 +3039,10 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.removeEventListener(
+                DESKTOP_ICON_VISIBILITY_REQUEST_EVENT,
+                this.handleDesktopIconVisibilityRequest,
+            );
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
@@ -3745,7 +3844,9 @@ export class Desktop extends Component {
             desktop_icon_positions: positions = {},
             draggingIconId,
             keyboardMoveState,
+            showDesktopIcons,
         } = this.state;
+        if (!showDesktopIcons) return null;
         if (!desktopApps || desktopApps.length === 0) return null;
 
         const hasOpenWindows = this.hasVisibleWindows();
@@ -4637,6 +4738,8 @@ export class Desktop extends Component {
                     openShortcutSelector={this.openShortcutSelector}
                     iconSizePreset={this.state.iconSizePreset}
                     setIconSizePreset={this.setIconSizePreset}
+                    showDesktopIcons={this.state.showDesktopIcons}
+                    toggleDesktopIcons={this.toggleDesktopIconVisibility}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
