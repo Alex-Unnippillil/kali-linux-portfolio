@@ -153,11 +153,11 @@ const BeefPage: React.FC = () => {
 
   const controlButtonClass = clsx(
     windowStyles.windowControlButton,
-    'mx-1 flex h-7 w-7 items-center justify-center rounded-full bg-[color:var(--kali-control-overlay)] text-kali-text transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-accent)_22%,var(--kali-control-overlay))] focus-visible:outline-none',
+    'bg-[color:var(--kali-control-overlay)] text-kali-text transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-accent)_22%,var(--kali-control-overlay))] focus-visible:outline-none',
   );
   const closeButtonClass = clsx(
     windowStyles.windowControlButton,
-    'mx-1 flex h-7 w-7 items-center justify-center rounded-full bg-kali-error text-kali-inverse transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-error)_85%,var(--kali-overlay))] focus-visible:outline-none',
+    'bg-kali-error text-kali-inverse transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-error)_85%,var(--kali-overlay))] focus-visible:outline-none',
   );
 
   if (isClosed) {
@@ -269,10 +269,10 @@ const BeefPage: React.FC = () => {
         <header
           className={clsx(
             windowStyles.windowTitlebar,
-            'relative flex items-center justify-between bg-[color:var(--kali-overlay)] px-3 text-sm font-medium text-kali-text',
+            'relative bg-[color:var(--kali-overlay)] text-sm font-medium text-kali-text'
           )}
         >
-          <div className="flex items-center gap-3">
+          <div className={clsx(windowStyles.windowTitleIcon, 'bg-[color:var(--kali-control-overlay)]/30 backdrop-blur-sm')}>
             <Image
               src="/themes/Yaru/apps/beef.svg"
               alt="BeEF badge"
@@ -281,8 +281,10 @@ const BeefPage: React.FC = () => {
               className="drop-shadow"
               priority
             />
+          </div>
+          <div className="flex flex-col items-center gap-1 text-center">
+            <h1 className="text-base font-semibold text-kali-text">BeEF Demo</h1>
             <div className="flex items-center gap-2">
-              <h1 className="text-base font-semibold">BeEF Demo</h1>
               {isMaximized && (
                 <span className="rounded-full border border-kali-accent/50 bg-kali-accent/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-kali-text">
                   Maximized
@@ -295,7 +297,7 @@ const BeefPage: React.FC = () => {
               )}
             </div>
           </div>
-          <div className="flex items-center">
+          <div className={clsx(windowStyles.windowTitleActions, 'text-kali-text')}>
             <button
               type="button"
               aria-label={isMinimized ? 'Restore window' : 'Minimize window'}
@@ -345,6 +347,13 @@ const BeefPage: React.FC = () => {
             </button>
           </div>
         </header>
+
+        {isMinimized && (
+          <div className="px-4 py-2 text-sm text-kali-text/80" role="status">
+            <strong className="font-semibold text-kali-text">BeEF Demo is minimized.</strong>{' '}
+            <span>Use the restore button to continue exploring the simulation.</span>
+          </div>
+        )}
 
       <div className="flex-1 overflow-auto bg-[color:color-mix(in_srgb,var(--kali-panel)_65%,transparent)] p-4 pt-2">
         <BeefApp />
