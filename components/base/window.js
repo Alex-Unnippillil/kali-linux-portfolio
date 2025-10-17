@@ -87,6 +87,18 @@ const computeSnapRegions = (
     };
 };
 
+const getReducedMotionFromContext = (context) => {
+    if (context && typeof context === 'object') {
+        if (context.settings && typeof context.settings.reducedMotion === 'boolean') {
+            return context.settings.reducedMotion;
+        }
+        if (typeof context.reducedMotion === 'boolean') {
+            return context.reducedMotion;
+        }
+    }
+    return false;
+};
+
 export class Window extends Component {
     static defaultProps = {
         snapGrid: [8, 8],
@@ -95,6 +107,8 @@ export class Window extends Component {
     constructor(props) {
         super(props);
         this.id = null;
+        this.prefersReducedMotion = getReducedMotionFromContext(props?.context);
+        this._motionMediaQuery = null;
         const isPortrait =
             typeof window !== "undefined" && window.innerHeight > window.innerWidth;
         const initialTopInset = typeof window !== 'undefined'
@@ -136,9 +150,47 @@ export class Window extends Component {
         }
     }
 
+    updateReducedMotionPreference = (matchesFromMedia) => {
+        const mediaPref = typeof matchesFromMedia === 'boolean'
+            ? matchesFromMedia
+            : Boolean(this._motionMediaQuery && this._motionMediaQuery.matches);
+        const contextPref = getReducedMotionFromContext(this.props?.context);
+        this.prefersReducedMotion = Boolean(contextPref || mediaPref);
+    }
+
+    handleReducedMotionChange = (event) => {
+        this.updateReducedMotionPreference(event?.matches);
+    }
+
+    setupReducedMotionListener = () => {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+            this.updateReducedMotionPreference(false);
+            return;
+        }
+        const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+        this._motionMediaQuery = mediaQuery;
+        if (typeof mediaQuery.addEventListener === 'function') {
+            mediaQuery.addEventListener('change', this.handleReducedMotionChange);
+        } else if (typeof mediaQuery.addListener === 'function') {
+            mediaQuery.addListener(this.handleReducedMotionChange);
+        }
+        this.updateReducedMotionPreference(mediaQuery.matches);
+    }
+
+    teardownReducedMotionListener = () => {
+        if (!this._motionMediaQuery) return;
+        if (typeof this._motionMediaQuery.removeEventListener === 'function') {
+            this._motionMediaQuery.removeEventListener('change', this.handleReducedMotionChange);
+        } else if (typeof this._motionMediaQuery.removeListener === 'function') {
+            this._motionMediaQuery.removeListener(this.handleReducedMotionChange);
+        }
+        this._motionMediaQuery = null;
+    }
+
     componentDidMount() {
         this.id = this.props.id;
         this.setDefaultWindowDimenstion();
+        this.setupReducedMotionListener();
 
         // google analytics
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
@@ -158,6 +210,12 @@ export class Window extends Component {
         }
     }
 
+    componentDidUpdate(prevProps) {
+        if (getReducedMotionFromContext(prevProps?.context) !== getReducedMotionFromContext(this.props?.context)) {
+            this.updateReducedMotionPreference();
+        }
+    }
+
     componentWillUnmount() {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
@@ -166,6 +224,7 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = this.getWindowNode();
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        this.teardownReducedMotionListener();
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -309,6 +368,11 @@ export class Window extends Component {
 
     setTransformMotionPreset = (node, preset) => {
         if (!node) return;
+        if (this.prefersReducedMotion) {
+            node.style.setProperty('--window-motion-transform-duration', '1ms');
+            node.style.setProperty('--window-motion-transform-easing', 'linear');
+            return;
+        }
         const durationVars = {
             maximize: '--window-motion-duration-maximize',
             restore: '--window-motion-duration-restore',
@@ -649,7 +713,7 @@ export class Window extends Component {
         const posx = node.style.getPropertyValue("--window-transform-x") || `${this.startX}px`;
         const posy = node.style.getPropertyValue("--window-transform-y") || `${this.startY}px`;
         const endTransform = `translate(${posx},${posy})`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const prefersReducedMotion = this.prefersReducedMotion;
 
         this.setTransformMotionPreset(node, 'restore');
         if (prefersReducedMotion) {
