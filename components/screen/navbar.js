@@ -334,7 +334,7 @@ export default class Navbar extends PureComponent {
                                                         onClick={this.handleStatusToggle}
                                                         onKeyDown={this.handleStatusKeyDown}
                                                         className={
-                                                                'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
+                                                                'status-panel relative rounded-full border border-transparent text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
                                                         }
                                                 >
                                                         <Status />

@@ -140,6 +140,38 @@ html {
   scrollbar-color: var(--kali-border, var(--color-border)) transparent;
 }
 
+.status-panel {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--shell-hit-target) * 0.2);
+  min-block-size: var(--shell-hit-target);
+  padding-block: calc(var(--shell-hit-target) * 0.1);
+  padding-inline: calc(var(--shell-hit-target) * 0.3);
+}
+
+.status-cluster {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--shell-hit-target) * 0.2);
+}
+
+.status-hit-target {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--shell-hit-target);
+  block-size: var(--shell-hit-target);
+  min-inline-size: var(--shell-hit-target);
+  min-block-size: var(--shell-hit-target);
+}
+
+.status-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-block-size: var(--shell-hit-target);
+}
+
 @keyframes ambientGlowDrift {
   0% {
     transform: rotate(0deg) scale(1);
