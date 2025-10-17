@@ -745,12 +745,13 @@ describe('Window maximize behavior', () => {
     fireEvent.click(maximizeButton);
 
     const winEl = document.getElementById('test-window') as HTMLElement | null;
-    expect(winEl?.style.transform).toBe(`translate(-1pt, ${safeTop - DESKTOP_TOP_PADDING}px)`);
+    expect(winEl?.style.transform).toBe(`translate(-1px, ${safeTop - DESKTOP_TOP_PADDING}px)`);
   });
 });
 
 describe('Window keyboard dragging', () => {
   it('moves window using arrow keys with grabbed state', () => {
+    const ref = React.createRef<any>();
     render(
       <Window
         id="test-window"
@@ -760,16 +761,31 @@ describe('Window keyboard dragging', () => {
         hasMinimised={() => {}}
         closed={() => {}}
         openApp={() => {}}
+        ref={ref}
       />
     );
 
     const handle = screen.getByText('Test').parentElement!;
 
+    const winEl = document.getElementById('test-window')!;
+    const parseTranslate = (value: string) => {
+      const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(value);
+      if (!match) {
+        return { x: 0, y: 0 };
+      }
+      return { x: parseFloat(match[1]), y: parseFloat(match[2]) };
+    };
+    const instance = ref.current as { getStoredPosition?: () => { x: number; y: number } } | null;
+    const basePosition = instance?.getStoredPosition?.() ?? { x: 0, y: 0 };
+
     fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
     fireEvent.keyDown(handle, { key: 'ArrowRight' });
 
-    const winEl = document.getElementById('test-window')!;
-    expect(winEl.style.transform).toBe('translate(10px, 0px)');
+    const translated = parseTranslate(winEl.style.transform);
+    expect(Number.isInteger(translated.x)).toBe(true);
+    expect(Number.isInteger(translated.y)).toBe(true);
+    expect(translated.x).toBe(basePosition.x + 10);
+    expect(translated.y).toBe(basePosition.y);
     expect(handle).toHaveAttribute('aria-grabbed', 'true');
 
     fireEvent.keyDown(handle, { key: ' ', code: 'Space' });

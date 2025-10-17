@@ -5,6 +5,7 @@ import {
   clampWindowTopPosition,
   measureWindowTopOffset,
 } from "../../utils/windowLayout";
+import { getEffectiveDevicePixelRatio, snapToDevicePixels } from "../../utils/pixelSnap";
 
 type BaseWindowProps = React.ComponentProps<typeof BaseWindow>;
 // BaseWindow is a class component, so the instance type exposes helper methods.
@@ -86,21 +87,27 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
         topOffset,
       });
       if (!clamped) return;
-      if (clamped.x === currentPosition.x && clamped.y === currentPosition.y) {
+      const ratio = getEffectiveDevicePixelRatio();
+      const snappedCurrentX = snapToDevicePixels(currentPosition.x, ratio);
+      const snappedCurrentY = snapToDevicePixels(currentPosition.y, ratio);
+      const snappedTargetX = snapToDevicePixels(clamped.x, ratio);
+      const snappedTargetY = snapToDevicePixels(clamped.y, ratio);
+
+      if (snappedTargetX === snappedCurrentX && snappedTargetY === snappedCurrentY) {
         return;
       }
 
-      node.style.transform = `translate(${clamped.x}px, ${clamped.y}px)`;
+      node.style.transform = `translate(${snappedTargetX}px, ${snappedTargetY}px)`;
       if (typeof node.style.setProperty === "function") {
-        node.style.setProperty("--window-transform-x", `${clamped.x}px`);
-        node.style.setProperty("--window-transform-y", `${clamped.y}px`);
+        node.style.setProperty("--window-transform-x", `${snappedTargetX}px`);
+        node.style.setProperty("--window-transform-y", `${snappedTargetY}px`);
       } else {
-        (node.style as unknown as Record<string, string>)["--window-transform-x"] = `${clamped.x}px`;
-        (node.style as unknown as Record<string, string>)["--window-transform-y"] = `${clamped.y}px`;
+        (node.style as unknown as Record<string, string>)["--window-transform-x"] = `${snappedTargetX}px`;
+        (node.style as unknown as Record<string, string>)["--window-transform-y"] = `${snappedTargetY}px`;
       }
 
       if (typeof props.onPositionChange === "function") {
-        props.onPositionChange(clamped.x, clamped.y);
+        props.onPositionChange(snappedTargetX, snappedTargetY);
       }
     }, [props.initialX, props.initialY, props.onPositionChange]);
 

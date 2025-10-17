@@ -289,9 +289,12 @@ const BeefPage: React.FC = () => {
                 </span>
               )}
               {isMinimized && (
-                <span className="rounded-full border border-kali-border/60 bg-[color:var(--kali-overlay)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-kali-text/80">
-                  Minimized
-                </span>
+                <>
+                  <span className="sr-only">BeEF demo is minimized</span>
+                  <span className="rounded-full border border-kali-border/60 bg-[color:var(--kali-overlay)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-kali-text/80">
+                    Minimized
+                  </span>
+                </>
               )}
             </div>
           </div>
