@@ -120,12 +120,12 @@ export default class Navbar extends PureComponent {
                                 onDragOver={this.handleTaskbarDragOver}
                                 onDrop={this.handleTaskbarDrop}
                         >
-                                {runningApps.map((app) => this.renderRunningAppItem(app))}
+                                {runningApps.map((app, index) => this.renderRunningAppItem(app, index))}
                         </ul>
                 );
         };
 
-        renderRunningAppItem = (app) => (
+        renderRunningAppItem = (app, index) => (
                 <li
                         key={app.id}
                         className="flex"
@@ -137,19 +137,21 @@ export default class Navbar extends PureComponent {
                         onDrop={(event) => this.handleAppDrop(event, app.id)}
                         onDragEnd={this.handleAppDragEnd}
                 >
-                        {this.renderRunningAppButton(app)}
+                        {this.renderRunningAppButton(app, index)}
                 </li>
         );
 
-        renderRunningAppButton = (app) => {
+        renderRunningAppButton = (app, index) => {
                 const isActive = !app.isMinimized;
                 const isFocused = app.isFocused && isActive;
+                const shortcut = index < 9 ? `Alt+${index + 1}` : null;
 
                 return (
                         <button
                                 type="button"
                                 aria-label={app.title}
                                 aria-pressed={isActive}
+                                aria-keyshortcuts={shortcut || undefined}
                                 data-context="taskbar"
                                 data-app-id={app.id}
                                 data-active={isActive ? 'true' : 'false'}
