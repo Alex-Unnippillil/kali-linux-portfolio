@@ -2,12 +2,29 @@
 
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
+import styles from './QuickSettings.module.css';
 
 interface Props {
   open: boolean;
 }
 
-const transitionDurationMs = 200;
+const PANEL_EXIT_FALLBACK_MS = 200;
+
+const readPanelExitDuration = () => {
+  if (typeof window === 'undefined') {
+    return PANEL_EXIT_FALLBACK_MS;
+  }
+
+  const root = document.documentElement;
+  const rawValue = getComputedStyle(root).getPropertyValue('--motion-panel-exit-duration');
+  const parsedValue = Number.parseFloat(rawValue);
+
+  if (Number.isFinite(parsedValue)) {
+    return parsedValue;
+  }
+
+  return PANEL_EXIT_FALLBACK_MS;
+};
 
 const QuickSettings = ({ open }: Props) => {
   const [theme, setTheme] = usePersistentState('qs-theme', 'light');
@@ -48,7 +65,7 @@ const QuickSettings = ({ open }: Props) => {
     }
 
     setIsVisible(false);
-    const timeout = window.setTimeout(() => setShouldRender(false), transitionDurationMs);
+    const timeout = window.setTimeout(() => setShouldRender(false), readPanelExitDuration());
     return () => window.clearTimeout(timeout);
   }, [open]);
 
@@ -200,11 +217,12 @@ const QuickSettings = ({ open }: Props) => {
       role="menu"
       aria-label="Quick settings"
       aria-hidden={!open}
-      className={`group/qs absolute top-9 right-3 w-[19rem] origin-top-right rounded-2xl border border-white/15 bg-kali-surface/95 p-4 text-sm text-white shadow-kali-panel backdrop-blur-lg transition-all duration-200 focus:outline-none ${
+      className={`${styles.panelMotion} group/qs absolute top-9 right-3 w-[19rem] origin-top-right rounded-2xl border border-white/15 bg-kali-surface/95 p-4 text-sm text-white shadow-kali-panel backdrop-blur-lg transition-[opacity,transform] motion-reduce:translate-y-0 motion-reduce:scale-100 focus:outline-none ${
         isVisible
           ? 'pointer-events-auto translate-y-0 scale-100 opacity-100'
           : 'pointer-events-none -translate-y-2 scale-95 opacity-0'
       }`}
+      data-motion-state={isVisible ? 'open' : 'closing'}
       style={{
         boxShadow:
           '0 20px 45px -35px rgba(40,120,255,0.65), inset 0 0 0 1px rgba(255,255,255,0.06)',
