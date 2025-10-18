@@ -106,7 +106,7 @@ export default class Navbar extends PureComponent {
                         workspaces: [],
                         activeWorkspace: 0,
                         runningApps: [],
-                        preview: null
+                        preview: null,
                         pinnedApps: [],
                 };
                 this.taskbarListRef = React.createRef();
@@ -860,7 +860,6 @@ export default class Navbar extends PureComponent {
 
                 render() {
                         const { workspaces, activeWorkspace, preview } = this.state;
-                        const { workspaces, activeWorkspace } = this.state;
                         const pinnedApps = this.renderPinnedApps();
                         const runningApps = this.renderRunningApps();
                         return (

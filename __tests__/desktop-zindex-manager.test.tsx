@@ -5,7 +5,7 @@ import { DesktopZIndexProvider } from '../components/desktop/zIndexManager';
 
 jest.mock('../components/base/window', () => {
   const React = require('react');
-  return React.forwardRef(({ id, focus, zIndex, isFocused, title }, ref) => (
+  const MockWindow = React.forwardRef(({ id, focus, zIndex, isFocused, title }, ref) => (
     <button
       ref={ref}
       data-testid={`window-${id}`}
@@ -17,6 +17,8 @@ jest.mock('../components/base/window', () => {
       {title || id}
     </button>
   ));
+  MockWindow.displayName = 'MockDesktopWindow';
+  return MockWindow;
 });
 
 const noop = () => {};
