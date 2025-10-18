@@ -54,6 +54,8 @@ jobs:
 
   vercel-preview:
     runs-on: ubuntu-latest
+    outputs:
+      preview_url: ${{ steps.deploy.outputs.preview_url }}
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -68,4 +70,36 @@ jobs:
       - run: yarn dedupe --check
       - run: npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel build --token=${{ secrets.VERCEL_TOKEN }}
-      - run: npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+      - id: deploy
+        run: |
+          set -euo pipefail
+          DEPLOY_OUTPUT=$(npx vercel deploy --prebuilt --yes --token=${{ secrets.VERCEL_TOKEN }})
+          echo "$DEPLOY_OUTPUT"
+          PREVIEW_URL=$(printf "%s" "$DEPLOY_OUTPUT" | grep -Eo 'https://[A-Za-z0-9.-]+\.vercel\.app' | tail -n 1)
+          if [ -z "$PREVIEW_URL" ]; then
+            echo "Unable to determine Vercel preview URL" >&2
+            exit 1
+          fi
+          echo "preview_url=$PREVIEW_URL" >> "$GITHUB_OUTPUT"
+
+  lighthouse:
+    needs: vercel-preview
+    if: needs.vercel-preview.outputs.preview_url != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: yarn dedupe --check
+      - name: Run Lighthouse CI (desktop & mobile)
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LHCI_BUILD_CONTEXT__EXTERNAL_URL: ${{ needs.vercel-preview.outputs.preview_url }}
+          LHCI_PREVIEW_URL: ${{ needs.vercel-preview.outputs.preview_url }}
+        run: |
+          npx lhci autorun \
+            --config=./lighthouserc.json \
+            --collect.url="$LHCI_PREVIEW_URL"
