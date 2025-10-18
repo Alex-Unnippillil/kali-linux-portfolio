@@ -9,6 +9,21 @@ import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
 import TaskbarPreviewFlyout from './TaskbarPreviewFlyout';
 
+const BADGE_TONE_COLORS = Object.freeze({
+        accent: { bg: '#3b82f6', fg: '#020817', glow: 'rgba(59,130,246,0.45)', track: 'rgba(8,15,26,0.82)' },
+        info: { bg: '#38bdf8', fg: '#04121f', glow: 'rgba(56,189,248,0.45)', track: 'rgba(8,15,26,0.82)' },
+        success: { bg: '#22c55e', fg: '#032014', glow: 'rgba(34,197,94,0.48)', track: 'rgba(8,15,26,0.82)' },
+        warning: { bg: '#fbbf24', fg: '#111827', glow: 'rgba(251,191,36,0.45)', track: 'rgba(8,15,26,0.82)' },
+        danger: { bg: '#f97316', fg: '#ffffff', glow: 'rgba(249,115,22,0.52)', track: 'rgba(8,15,26,0.82)' },
+        neutral: { bg: '#94a3b8', fg: '#0f172a', glow: 'rgba(148,163,184,0.4)', track: 'rgba(8,15,26,0.82)' },
+});
+
+const resolveBadgeTone = (tone) => {
+        if (typeof tone !== 'string') return BADGE_TONE_COLORS.accent;
+        const normalized = tone.trim().toLowerCase();
+        return BADGE_TONE_COLORS[normalized] || BADGE_TONE_COLORS.accent;
+};
+
 const areWorkspacesEqual = (next, prev) => {
         if (next.length !== prev.length) return false;
         for (let index = 0; index < next.length; index += 1) {
@@ -20,6 +35,26 @@ const areWorkspacesEqual = (next, prev) => {
 };
 
 const TASKBAR_PREVIEW_WIDTH = 280;
+const areBadgesEqual = (nextBadge, prevBadge) => {
+        if (nextBadge === prevBadge) return true;
+        if (!nextBadge || !prevBadge) return false;
+        if (nextBadge.type !== prevBadge.type) return false;
+        if ((nextBadge.displayValue || prevBadge.displayValue) && nextBadge.displayValue !== prevBadge.displayValue) return false;
+        if ((typeof nextBadge.count === 'number' || typeof prevBadge.count === 'number') && nextBadge.count !== prevBadge.count) return false;
+        if ((typeof nextBadge.max === 'number' || typeof prevBadge.max === 'number') && nextBadge.max !== prevBadge.max) return false;
+        if ((typeof nextBadge.progress === 'number' || typeof prevBadge.progress === 'number')) {
+                const progressA = typeof nextBadge.progress === 'number' ? nextBadge.progress : 0;
+                const progressB = typeof prevBadge.progress === 'number' ? prevBadge.progress : 0;
+                if (Math.abs(progressA - progressB) > 0.0005) {
+                        return false;
+                }
+        }
+        if ((nextBadge.label || prevBadge.label) && nextBadge.label !== prevBadge.label) return false;
+        if ((nextBadge.tone || prevBadge.tone) && nextBadge.tone !== prevBadge.tone) return false;
+        if (Boolean(nextBadge.pulse) !== Boolean(prevBadge.pulse)) return false;
+        if (Boolean(nextBadge.persistOnFocus) !== Boolean(prevBadge.persistOnFocus)) return false;
+        return true;
+};
 
 const areRunningAppsEqual = (next = [], prev = []) => {
         if (next.length !== prev.length) return false;
@@ -31,6 +66,27 @@ const areRunningAppsEqual = (next = [], prev = []) => {
                         a.id !== b.id ||
                         a.title !== b.title ||
                         a.icon !== b.icon ||
+                        a.isFocused !== b.isFocused ||
+                        a.isMinimized !== b.isMinimized ||
+                        !areBadgesEqual(a.badge, b.badge)
+                ) {
+                        return false;
+                }
+        }
+        return true;
+};
+
+const arePinnedAppsEqual = (next = [], prev = []) => {
+        if (next.length !== prev.length) return false;
+        for (let index = 0; index < next.length; index += 1) {
+                const a = next[index];
+                const b = prev[index];
+                if (!b) return false;
+                if (
+                        a.id !== b.id ||
+                        a.title !== b.title ||
+                        a.icon !== b.icon ||
+                        a.isRunning !== b.isRunning ||
                         a.isFocused !== b.isFocused ||
                         a.isMinimized !== b.isMinimized
                 ) {
@@ -51,6 +107,7 @@ export default class Navbar extends PureComponent {
                         activeWorkspace: 0,
                         runningApps: [],
                         preview: null
+                        pinnedApps: [],
                 };
                 this.taskbarListRef = React.createRef();
                 this.draggingAppId = null;
@@ -59,6 +116,8 @@ export default class Navbar extends PureComponent {
                 this.previewHideTimeout = null;
                 this.previewRequestSequence = 0;
                 this.previewFocusPending = false;
+                this.pendingPinnedReorder = null;
+                this.draggingSection = null;
         }
 
         componentDidMount() {
@@ -317,6 +376,7 @@ export default class Navbar extends PureComponent {
                 const nextWorkspaces = Array.isArray(workspaces) ? workspaces : [];
                 const nextActiveWorkspace = typeof activeWorkspace === 'number' ? activeWorkspace : 0;
                 const nextRunningApps = Array.isArray(detail.runningApps) ? detail.runningApps : [];
+                const nextPinnedApps = Array.isArray(detail.pinnedApps) ? detail.pinnedApps : [];
 
                 let runningAppsChanged = false;
 
@@ -324,8 +384,10 @@ export default class Navbar extends PureComponent {
                         const workspacesChanged = !areWorkspacesEqual(nextWorkspaces, previousState.workspaces);
                         const activeChanged = previousState.activeWorkspace !== nextActiveWorkspace;
                         runningAppsChanged = !areRunningAppsEqual(nextRunningApps, previousState.runningApps);
+                        const runningAppsChanged = !areRunningAppsEqual(nextRunningApps, previousState.runningApps);
+                        const pinnedAppsChanged = !arePinnedAppsEqual(nextPinnedApps, previousState.pinnedApps);
 
-                        if (!workspacesChanged && !activeChanged && !runningAppsChanged) {
+                        if (!workspacesChanged && !activeChanged && !runningAppsChanged && !pinnedAppsChanged) {
                                 return null;
                         }
 
@@ -333,6 +395,7 @@ export default class Navbar extends PureComponent {
                                 workspaces: workspacesChanged ? nextWorkspaces : previousState.workspaces,
                                 activeWorkspace: nextActiveWorkspace,
                                 runningApps: runningAppsChanged ? nextRunningApps : previousState.runningApps,
+                                pinnedApps: pinnedAppsChanged ? nextPinnedApps : previousState.pinnedApps,
                         };
                 }, () => {
                         if (runningAppsChanged) {
@@ -370,8 +433,12 @@ export default class Navbar extends PureComponent {
         };
 
         renderRunningApps = () => {
-                const { runningApps } = this.state;
+                const { runningApps, pinnedApps } = this.state;
                 if (!runningApps.length) return null;
+
+                const pinnedIds = new Set((pinnedApps || []).map((item) => item.id));
+                const visibleApps = runningApps.filter((app) => !pinnedIds.has(app.id));
+                if (!visibleApps.length) return null;
 
                 return (
                         <ul
@@ -382,7 +449,7 @@ export default class Navbar extends PureComponent {
                                 onDragOver={this.handleTaskbarDragOver}
                                 onDrop={this.handleTaskbarDrop}
                         >
-                                {runningApps.map((app) => this.renderRunningAppItem(app))}
+                                {visibleApps.map((app) => this.renderRunningAppItem(app))}
                         </ul>
                 );
         };
@@ -399,18 +466,151 @@ export default class Navbar extends PureComponent {
                         onDrop={(event) => this.handleAppDrop(event, app.id)}
                         onDragEnd={this.handleAppDragEnd}
                 >
-                        {this.renderRunningAppButton(app)}
+                        {this.renderTaskbarButton(app, 'running')}
                 </li>
         );
+
+        renderPinnedApps = () => {
+                const { pinnedApps = [] } = this.state;
+                const hasItems = pinnedApps.length > 0;
+
+                return (
+                        <ul
+                                className="flex min-h-[2.5rem] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
+                                role="list"
+                                aria-label="Pinned applications"
+                                onDragOver={this.handlePinnedDragOver}
+                                onDrop={this.handlePinnedContainerDrop}
+                        >
+                                {hasItems
+                                        ? pinnedApps.map((app) => this.renderPinnedAppItem(app))
+                                        : (
+                                                <li className="pointer-events-none select-none px-2 text-xs text-white/40">
+                                                        Drag apps here to pin
+                                                </li>
+                                        )}
+                        </ul>
+                );
+        };
+
+        renderPinnedAppItem = (app) => (
+                <li
+                        key={app.id}
+                        className="flex"
+                        draggable
+                        data-app-id={app.id}
+                        role="listitem"
+                        onDragStart={(event) => this.handlePinnedDragStart(event, app)}
+                        onDragOver={this.handlePinnedDragOver}
+                        onDrop={(event) => this.handlePinnedDrop(event, app.id)}
+                        onDragEnd={this.handlePinnedDragEnd}
+                >
+                        {this.renderTaskbarButton(app, 'pinned')}
+                </li>
+        );
+
+        renderAppBadge = (badge) => {
+                if (!badge || typeof badge !== 'object') return null;
+
+                const tone = resolveBadgeTone(badge.tone);
+                const style = {
+                        '--taskbar-badge-bg': tone.bg,
+                        '--taskbar-badge-fg': tone.fg,
+                        '--taskbar-badge-glow': tone.glow,
+                        '--taskbar-badge-track': tone.track,
+                };
+                const shouldPulse = Boolean(badge.pulse);
+                const classes = ['taskbar-badge'];
+                if (shouldPulse) {
+                        classes.push('taskbar-badge--pulse');
+                }
+
+                const resolvedLabel = typeof badge.label === 'string' && badge.label.trim()
+                        ? badge.label.trim()
+                        : undefined;
+
+                if (badge.type === 'count') {
+                        classes.push('taskbar-badge--count');
+                        const displayValue = typeof badge.displayValue === 'string' && badge.displayValue.trim()
+                                ? badge.displayValue.trim()
+                                : (typeof badge.count === 'number' ? String(badge.count) : '');
+                        if (!displayValue) return null;
+                        const label = resolvedLabel
+                                || (() => {
+                                        const numeric = Number(displayValue.replace(/\D+/g, ''));
+                                        if (Number.isFinite(numeric)) {
+                                                return numeric === 1 ? '1 notification' : `${displayValue} notifications`;
+                                        }
+                                        return `${displayValue} updates`;
+                                })();
+
+                        return (
+                                <span
+                                        className={classes.join(' ')}
+                                        style={style}
+                                        role="status"
+                                        aria-label={label}
+                                        title={label}
+                                >
+                                        <span aria-hidden="true">{displayValue}</span>
+                                </span>
+                        );
+                }
+
+                if (badge.type === 'ring') {
+                        classes.push('taskbar-badge--ring');
+                        const progress = typeof badge.progress === 'number' ? Math.max(0, Math.min(1, badge.progress)) : 0;
+                        style['--taskbar-badge-progress'] = `${Math.round(progress * 360)}deg`;
+                        const displayValue = typeof badge.displayValue === 'string' && badge.displayValue.trim()
+                                ? badge.displayValue.trim()
+                                : `${Math.round(progress * 100)}%`;
+                        const label = resolvedLabel || `${displayValue} complete`;
+
+                        return (
+                                <span
+                                        className={classes.join(' ')}
+                                        style={style}
+                                        role="status"
+                                        aria-label={label}
+                                        title={label}
+                                >
+                                        <span className="taskbar-badge__value" aria-hidden="true">{displayValue}</span>
+                                </span>
+                        );
+                }
+
+                classes.push('taskbar-badge--dot');
+                const label = resolvedLabel || 'Attention needed';
+
+                return (
+                        <span
+                                className={classes.join(' ')}
+                                style={style}
+                                role="status"
+                                aria-label={label}
+                                title={label}
+                        />
+                );
+        };
 
         renderRunningAppButton = (app) => {
                 const isActive = !app.isMinimized;
                 const isFocused = app.isFocused && isActive;
+                const badge = app && typeof app.badge === 'object' ? app.badge : null;
+                const badgeNode = this.renderAppBadge(badge);
+                const buttonLabel = badge?.label ? `${app.title} — ${badge.label}` : app.title;
+        renderTaskbarButton = (app, section) => {
+                const isMinimized = Boolean(app.isMinimized);
+                const isRunning = section === 'running' ? true : Boolean(app.isRunning);
+                const isActive = section === 'running' ? !isMinimized : (isRunning && !isMinimized);
+                const isFocused = section === 'running'
+                        ? Boolean(app.isFocused && isActive)
+                        : Boolean(app.isFocused && isActive);
 
                 return (
                         <button
                                 type="button"
-                                aria-label={app.title}
+                                aria-label={buttonLabel}
                                 aria-pressed={isActive}
                                 data-context="taskbar"
                                 data-app-id={app.id}
@@ -431,6 +631,7 @@ export default class Navbar extends PureComponent {
                                                 height={28}
                                                 className="h-6 w-6"
                                         />
+                                        {badgeNode}
                                         {isActive && (
                                                 <span
                                                         aria-hidden="true"
@@ -453,16 +654,21 @@ export default class Navbar extends PureComponent {
 
         handleTaskbarDrop = (event) => {
                 event.preventDefault();
-                const sourceId = this.getDragSourceId(event);
-                if (!sourceId) return;
-                this.reorderRunningApps(sourceId, null, true);
+                const source = this.getDragSource(event);
+                if (!source.id) return;
+                if (source.section === 'pinned') {
+                        this.dispatchTaskbarCommand({ action: 'unpin', appId: source.id });
+                        return;
+                }
+                this.reorderRunningApps(source.id, null, true);
         };
 
         handleAppDragStart = (event, app) => {
                 this.draggingAppId = app.id;
+                this.draggingSection = 'running';
                 if (event.dataTransfer) {
                         event.dataTransfer.effectAllowed = 'move';
-                        event.dataTransfer.setData('application/x-taskbar-app-id', app.id);
+                        event.dataTransfer.setData('application/x-taskbar-app-id', `running|${app.id}`);
                 }
         };
 
@@ -475,24 +681,113 @@ export default class Navbar extends PureComponent {
 
         handleAppDrop = (event, targetId) => {
                 event.preventDefault();
-                const sourceId = this.getDragSourceId(event);
-                if (!sourceId) return;
+                const source = this.getDragSource(event);
+                if (!source.id) return;
+                if (source.section === 'pinned') {
+                        this.dispatchTaskbarCommand({ action: 'unpin', appId: source.id });
+                        return;
+                }
                 const rect = event.currentTarget?.getBoundingClientRect?.();
                 const insertAfter = rect ? (event.clientX - rect.left) > rect.width / 2 : false;
-                this.reorderRunningApps(sourceId, targetId, insertAfter);
+                this.reorderRunningApps(source.id, targetId, insertAfter);
         };
 
         handleAppDragEnd = () => {
                 this.draggingAppId = null;
+                this.draggingSection = null;
         };
 
-        getDragSourceId = (event) => {
+        handlePinnedDragStart = (event, app) => {
+                this.draggingAppId = app.id;
+                this.draggingSection = 'pinned';
+                if (event.dataTransfer) {
+                        event.dataTransfer.effectAllowed = 'move';
+                        event.dataTransfer.setData('application/x-taskbar-app-id', `pinned|${app.id}`);
+                }
+        };
+
+        handlePinnedDragOver = (event) => {
+                event.preventDefault();
+                if (event.dataTransfer) {
+                        event.dataTransfer.dropEffect = 'move';
+                }
+        };
+
+        handlePinnedDrop = (event, targetId) => {
+                event.preventDefault();
+                const source = this.getDragSource(event);
+                if (!source.id) return;
+                const rect = event.currentTarget?.getBoundingClientRect?.();
+                const insertAfter = rect ? (event.clientX - rect.left) > rect.width / 2 : false;
+                if (source.section === 'running') {
+                        this.pinAppFromDrag(source.id, targetId, insertAfter);
+                        return;
+                }
+                this.reorderPinnedApps(source.id, targetId, insertAfter);
+        };
+
+        handlePinnedContainerDrop = (event) => {
+                event.preventDefault();
+                const source = this.getDragSource(event);
+                if (!source.id) return;
+                if (source.section === 'running') {
+                        this.pinAppFromDrag(source.id, null, true);
+                        return;
+                }
+                this.reorderPinnedApps(source.id, null, true);
+        };
+
+        handlePinnedDragEnd = () => {
+                this.draggingAppId = null;
+                this.draggingSection = null;
+        };
+
+        getDragSource = (event) => {
                 const transfer = event.dataTransfer;
                 if (transfer) {
                         const explicit = transfer.getData('application/x-taskbar-app-id');
-                        if (explicit) return explicit;
+                        if (explicit) {
+                                if (explicit.includes('|')) {
+                                        const [section, id] = explicit.split('|');
+                                        return { id, section };
+                                }
+                                return { id: explicit, section: 'running' };
+                        }
                 }
-                return this.draggingAppId;
+                if (this.draggingAppId) {
+                        return { id: this.draggingAppId, section: this.draggingSection || 'running' };
+                }
+                return { id: null, section: null };
+        };
+
+        pinAppFromDrag = (sourceId, targetId, insertAfter = false) => {
+                const detail = {
+                        action: 'pin',
+                        appId: sourceId,
+                };
+                if (targetId) {
+                        detail.targetId = targetId;
+                }
+                if (insertAfter) {
+                        detail.insertAfter = true;
+                }
+                this.dispatchTaskbarCommand(detail);
+        };
+
+        reorderPinnedApps = (sourceId, targetId, insertAfter = false) => {
+                if (!sourceId) return;
+                this.pendingPinnedReorder = null;
+                this.setState((prevState) => {
+                        const updated = this.computeReorderedApps(prevState.pinnedApps, sourceId, targetId, insertAfter);
+                        if (!updated) return null;
+                        this.pendingPinnedReorder = updated.map((item) => item.id);
+                        return { pinnedApps: updated };
+                }, () => {
+                        if (this.pendingPinnedReorder) {
+                                this.dispatchTaskbarCommand({ action: 'reorderPinned', order: this.pendingPinnedReorder });
+                                this.pendingPinnedReorder = null;
+                        }
+                });
         };
 
         reorderRunningApps = (sourceId, targetId, insertAfter = false) => {
@@ -565,6 +860,9 @@ export default class Navbar extends PureComponent {
 
                 render() {
                         const { workspaces, activeWorkspace, preview } = this.state;
+                        const { workspaces, activeWorkspace } = this.state;
+                        const pinnedApps = this.renderPinnedApps();
+                        const runningApps = this.renderRunningApps();
                         return (
                                 <div
                                         className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
@@ -586,7 +884,8 @@ export default class Navbar extends PureComponent {
                                                                 onSelect={this.handleWorkspaceSelect}
                                                         />
                                                 )}
-                                                {this.renderRunningApps()}
+                                                {pinnedApps}
+                                                {runningApps}
                                                 <PerformanceGraph />
                                         </div>
                                         <div className="flex items-center gap-4 text-xs md:text-sm">

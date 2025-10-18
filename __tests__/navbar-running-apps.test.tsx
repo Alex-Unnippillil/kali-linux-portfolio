@@ -241,5 +241,121 @@ describe('Navbar running apps tray', () => {
     });
 
     expect(screen.queryByRole('dialog', { name: /app one preview/i })).not.toBeInTheDocument();
+  it('renders badge metadata for running apps', () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('workspace-state', {
+          detail: {
+            ...workspaceEventDetail,
+            runningApps: [
+              {
+                ...workspaceEventDetail.runningApps[0],
+                badge: {
+                  type: 'count',
+                  displayValue: '3',
+                  count: 3,
+                  label: '3 pending alerts',
+                  tone: 'danger',
+                  pulse: true,
+                },
+              },
+            ],
+          },
+        }),
+      );
+    });
+
+    const button = screen.getByRole('button', { name: /app one/i });
+    expect(button).toHaveAttribute('aria-label', 'App One — 3 pending alerts');
+    const badge = within(button).getByRole('status', { name: /3 pending alerts/i });
+    expect(badge).toHaveClass('taskbar-badge', 'taskbar-badge--count');
+    expect(within(badge).getByText('3')).toBeInTheDocument();
+  });
+
+  it('updates badge overlays when metadata changes', () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('workspace-state', {
+          detail: {
+            ...workspaceEventDetail,
+            runningApps: [
+              {
+                ...workspaceEventDetail.runningApps[0],
+                badge: {
+                  type: 'count',
+                  displayValue: '2',
+                  count: 2,
+                  label: '2 pending alerts',
+                  tone: 'warning',
+                },
+              },
+            ],
+          },
+        }),
+      );
+    });
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('workspace-state', {
+          detail: {
+            ...workspaceEventDetail,
+            runningApps: [
+              {
+                ...workspaceEventDetail.runningApps[0],
+                badge: {
+                  type: 'count',
+                  displayValue: '4',
+                  count: 4,
+                  label: '4 pending alerts',
+                  tone: 'warning',
+                },
+              },
+            ],
+          },
+        }),
+      );
+    });
+
+    const button = screen.getByRole('button', { name: /app one/i });
+    expect(button).toHaveAttribute('aria-label', 'App One — 4 pending alerts');
+    const badge = within(button).getByRole('status', { name: /4 pending alerts/i });
+    expect(badge).toHaveClass('taskbar-badge', 'taskbar-badge--count');
+    expect(within(badge).getByText('4')).toBeInTheDocument();
+  });
+
+  it('supports progress ring badges', () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('workspace-state', {
+          detail: {
+            ...workspaceEventDetail,
+            runningApps: [
+              {
+                ...workspaceEventDetail.runningApps[0],
+                badge: {
+                  type: 'ring',
+                  progress: 0.75,
+                  displayValue: '75%',
+                  label: 'Download 75% complete',
+                  tone: 'accent',
+                },
+              },
+            ],
+          },
+        }),
+      );
+    });
+
+    const button = screen.getByRole('button', { name: /app one/i });
+    const ring = within(button).getByRole('status', { name: /download 75% complete/i });
+    expect(ring).toHaveClass('taskbar-badge--ring');
+    expect(ring).toHaveAttribute('style', expect.stringContaining('--taskbar-badge-progress: 270deg'));
   });
 });
