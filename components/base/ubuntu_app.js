@@ -53,11 +53,13 @@ export class UbuntuApp extends Component {
             style,
             onKeyDown: customKeyDown,
             onBlur,
+            onFocus: customFocus,
             assistiveHint,
             assistiveHintId,
             isSelected = false,
             isHovered = false,
             accentVariables = {},
+            tabIndex: customTabIndex,
         } = this.props;
 
         const dragging = this.state.dragging || isBeingDragged;
@@ -107,6 +109,17 @@ export class UbuntuApp extends Component {
             ...style,
         };
 
+        const handleFocus = (event) => {
+            if (typeof customFocus === 'function') {
+                customFocus(event);
+            }
+            this.handlePrefetch(event);
+        };
+
+        const resolvedTabIndex = this.props.disabled
+            ? -1
+            : (typeof customTabIndex === 'number' ? customTabIndex : 0);
+
         return (
             <div
                 role="button"
@@ -140,9 +153,9 @@ export class UbuntuApp extends Component {
                     }
                 }}
                 onBlur={onBlur}
-                tabIndex={this.props.disabled ? -1 : 0}
+                tabIndex={resolvedTabIndex}
                 onMouseEnter={this.handlePrefetch}
-                onFocus={this.handlePrefetch}
+                onFocus={handleFocus}
                 aria-describedby={hintId}
             >
                 <Image
