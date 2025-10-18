@@ -1,10 +1,22 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, {
+    forwardRef,
+    useEffect,
+    useImperativeHandle,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import KaliWallpaper from './kali-wallpaper';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import { useSettings } from '../../hooks/useSettings';
 
 const FALLBACK_OVERLAY = 'linear-gradient(180deg, rgba(6, 12, 20, 0.65) 0%, rgba(3, 8, 16, 0.88) 92%)';
+
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+const ZERO_OFFSET = { x: 0, y: 0 };
 
 const hexToRgba = (hex, alpha = 1) => {
     if (typeof hex !== 'string') return `rgba(0,0,0,${alpha})`;
@@ -17,9 +29,30 @@ const hexToRgba = (hex, alpha = 1) => {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
-export default function BackgroundImage({ theme }) {
+const hasDimension = (value) => Number.isFinite(value) && value > 0;
+
+const sanitizeOffset = (offset) => {
+    if (!offset || typeof offset !== 'object') return ZERO_OFFSET;
+    const x = Number(offset.x);
+    const y = Number(offset.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return ZERO_OFFSET;
+    return {
+        x: clamp(x, -0.5, 0.5),
+        y: clamp(y, -0.5, 0.5),
+    };
+};
+
+const BackgroundImage = forwardRef(function BackgroundImage({ theme }, ref) {
+    const containerRef = useRef(null);
+    const dragStateRef = useRef(null);
+    const offsetRef = useRef(ZERO_OFFSET);
+    const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+    const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
+    const [isDragging, setIsDragging] = useState(false);
     const [needsOverlay, setNeedsOverlay] = useState(false);
     const [imageError, setImageError] = useState(false);
+
+    const { wallpaper, wallpaperMode, wallpaperOffsets, updateWallpaperOffset } = useSettings();
 
     const accent = theme?.accent || '#1793d1';
     const wallpaperUrl = theme?.useKaliWallpaper ? null : theme?.wallpaperUrl || null;
@@ -28,9 +61,159 @@ export default function BackgroundImage({ theme }) {
     const prefersReducedMotion = usePrefersReducedMotion();
     const shouldAnimate = !prefersReducedMotion;
 
+    const wallpaperKey = useMemo(() => {
+        if (typeof wallpaper === 'string' && wallpaper.length) return wallpaper;
+        if (typeof theme?.wallpaperName === 'string' && theme.wallpaperName.length) {
+            return theme.wallpaperName;
+        }
+        if (typeof effectiveUrl === 'string' && effectiveUrl.length) return effectiveUrl;
+        return 'default-wallpaper';
+    }, [effectiveUrl, theme?.wallpaperName, wallpaper]);
+
+    const storedOffset = useMemo(() => {
+        if (wallpaperMode !== 'fit') return ZERO_OFFSET;
+        const entry = wallpaperOffsets?.[wallpaperKey];
+        return sanitizeOffset(entry);
+    }, [wallpaperKey, wallpaperMode, wallpaperOffsets]);
+
+    const [activeOffset, setActiveOffset] = useState(storedOffset);
+
+    useEffect(() => {
+        offsetRef.current = activeOffset;
+    }, [activeOffset]);
+
     useEffect(() => {
         setImageError(false);
     }, [wallpaperUrl, fallbackUrl, theme?.useKaliWallpaper]);
+
+    useEffect(() => {
+        setActiveOffset((prev) => {
+            if (
+                Math.abs(prev.x - storedOffset.x) < 1e-4 &&
+                Math.abs(prev.y - storedOffset.y) < 1e-4
+            ) {
+                return prev;
+            }
+            offsetRef.current = storedOffset;
+            return storedOffset;
+        });
+    }, [storedOffset, wallpaperKey]);
+
+    useEffect(() => {
+        if (!containerRef.current || typeof ResizeObserver === 'undefined') return undefined;
+        const observer = new ResizeObserver((entries) => {
+            const entry = entries[0];
+            if (!entry) return;
+            const { width, height } = entry.contentRect;
+            setContainerSize((prev) => {
+                if (Math.abs(prev.width - width) < 0.5 && Math.abs(prev.height - height) < 0.5) {
+                    return prev;
+                }
+                return { width, height };
+            });
+        });
+        observer.observe(containerRef.current);
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        if (!effectiveUrl) {
+            setNaturalSize({ width: 0, height: 0 });
+        }
+    }, [effectiveUrl]);
+
+    const slack = useMemo(() => {
+        if (wallpaperMode !== 'fit') {
+            return { x: 0, y: 0 };
+        }
+        const containerWidth = containerSize.width;
+        const containerHeight = containerSize.height;
+        const imageWidth = naturalSize.width;
+        const imageHeight = naturalSize.height;
+        if (!hasDimension(containerWidth) || !hasDimension(containerHeight)) {
+            return { x: 0, y: 0 };
+        }
+        if (!hasDimension(imageWidth) || !hasDimension(imageHeight)) {
+            return { x: 0, y: 0 };
+        }
+        const widthRatio = containerWidth / imageWidth;
+        const heightRatio = containerHeight / imageHeight;
+        const scale = Math.min(widthRatio, heightRatio);
+        const displayedWidth = imageWidth * scale;
+        const displayedHeight = imageHeight * scale;
+        return {
+            x: Math.max(0, containerWidth - displayedWidth),
+            y: Math.max(0, containerHeight - displayedHeight),
+        };
+    }, [containerSize.height, containerSize.width, naturalSize.height, naturalSize.width, wallpaperMode]);
+
+    const canPan = useMemo(() => {
+        if (wallpaperMode !== 'fit') return false;
+        if (theme?.useKaliWallpaper) return false;
+        if (!effectiveUrl) return false;
+        return slack.x > 0 || slack.y > 0;
+    }, [effectiveUrl, slack.x, slack.y, theme?.useKaliWallpaper, wallpaperMode]);
+
+    const beginPan = (event) => {
+        if (!canPan) return false;
+        if (event?.altKey || event?.ctrlKey || event?.metaKey || event?.shiftKey) {
+            return false;
+        }
+        dragStateRef.current = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            baseOffset: offsetRef.current,
+        };
+        setIsDragging(true);
+        return true;
+    };
+
+    const updatePan = (event) => {
+        const dragState = dragStateRef.current;
+        if (!dragState || dragState.pointerId !== event.pointerId) return;
+        const deltaX = event.clientX - dragState.startX;
+        const deltaY = event.clientY - dragState.startY;
+        setActiveOffset((prev) => {
+            let nextX = dragState.baseOffset.x;
+            let nextY = dragState.baseOffset.y;
+            if (slack.x > 0) {
+                nextX = clamp(dragState.baseOffset.x + deltaX / slack.x, -0.5, 0.5);
+            }
+            if (slack.y > 0) {
+                nextY = clamp(dragState.baseOffset.y + deltaY / slack.y, -0.5, 0.5);
+            }
+            if (Math.abs(nextX - prev.x) < 1e-4 && Math.abs(nextY - prev.y) < 1e-4) {
+                return prev;
+            }
+            const next = { x: nextX, y: nextY };
+            offsetRef.current = next;
+            return next;
+        });
+    };
+
+    const finishPan = (event, cancelled = false) => {
+        const dragState = dragStateRef.current;
+        if (!dragState || (event && dragState.pointerId !== event.pointerId)) return;
+        dragStateRef.current = null;
+        setIsDragging(false);
+        if (cancelled) {
+            const base = dragState.baseOffset || ZERO_OFFSET;
+            offsetRef.current = base;
+            setActiveOffset(base);
+            return;
+        }
+        const finalOffset = offsetRef.current;
+        updateWallpaperOffset(wallpaperKey, finalOffset);
+    };
+
+    useImperativeHandle(ref, () => ({
+        beginPan,
+        updatePan,
+        endPan: (event) => finishPan(event, false),
+        cancelPan: (event) => finishPan(event, true),
+        canPan: () => canPan,
+    }));
 
     useEffect(() => {
         if (theme?.useKaliWallpaper || theme?.overlay) {
@@ -91,6 +274,16 @@ export default function BackgroundImage({ theme }) {
         };
     }, [effectiveUrl, theme?.useKaliWallpaper, theme?.overlay]);
 
+    const handleImageLoad = (event) => {
+        const target = event?.currentTarget;
+        if (!target) return;
+        const width = Number(target.naturalWidth) || 0;
+        const height = Number(target.naturalHeight) || 0;
+        if (width && height) {
+            setNaturalSize({ width, height });
+        }
+    };
+
     const accentGlow = useMemo(() => {
         const strong = hexToRgba(accent, 0.38);
         const medium = hexToRgba(accent, 0.16);
@@ -139,10 +332,42 @@ export default function BackgroundImage({ theme }) {
         }
     };
 
+    const objectFitMode = useMemo(() => {
+        if (!effectiveUrl) return 'cover';
+        if (wallpaperMode === 'fit') return 'contain';
+        if (wallpaperMode === 'fill') return 'fill';
+        if (wallpaperMode === 'contain') return 'contain';
+        return 'cover';
+    }, [effectiveUrl, wallpaperMode]);
+
+    const objectPosition = useMemo(() => {
+        if (wallpaperMode !== 'fit') return '50% 50%';
+        const x = 50 + activeOffset.x * 100;
+        const y = 50 + activeOffset.y * 100;
+        return `${x}% ${y}%`;
+    }, [activeOffset.x, activeOffset.y, wallpaperMode]);
+
+    useEffect(() => {
+        setActiveOffset((prev) => {
+            if (wallpaperMode !== 'fit') {
+                const reset = ZERO_OFFSET;
+                if (prev.x === reset.x && prev.y === reset.y) return prev;
+                offsetRef.current = reset;
+                return reset;
+            }
+            return prev;
+        });
+    }, [wallpaperMode]);
+
     return (
         <div
+            ref={containerRef}
             className="absolute inset-0 -z-10 overflow-hidden pointer-events-none"
             aria-hidden="true"
+            style={{
+                contentVisibility: 'auto',
+                contain: 'paint layout style',
+            }}
         >
             {theme?.useKaliWallpaper ? (
                 <KaliWallpaper className="h-full w-full" />
@@ -151,11 +376,16 @@ export default function BackgroundImage({ theme }) {
                     key={effectiveUrl}
                     src={effectiveUrl}
                     alt=""
-                    className="h-full w-full object-cover"
+                    className="h-full w-full"
                     style={{
-                        transform: 'scale(1.05)',
+                        objectFit: objectFitMode,
+                        objectPosition,
+                        transform: objectFitMode === 'cover' ? 'scale(1.05)' : 'none',
+                        transition: isDragging ? 'none' : 'object-position 200ms ease-out',
+                        pointerEvents: 'none',
                     }}
                     onError={handleImageError}
+                    onLoad={handleImageLoad}
                 />
             ) : null}
             {overlayBackground && (
@@ -208,4 +438,6 @@ export default function BackgroundImage({ theme }) {
             />
         </div>
     );
-}
+});
+
+export default BackgroundImage;

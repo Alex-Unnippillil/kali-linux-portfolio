@@ -12,6 +12,10 @@ import {
   setAccent as saveAccent,
   getWallpaper as loadWallpaper,
   setWallpaper as saveWallpaper,
+  getWallpaperMode as loadWallpaperMode,
+  setWallpaperMode as saveWallpaperMode,
+  getWallpaperOffsets as loadWallpaperOffsets,
+  setWallpaperOffsets as saveWallpaperOffsets,
   getUseKaliWallpaper as loadUseKaliWallpaper,
   setUseKaliWallpaper as saveUseKaliWallpaper,
   getDensity as loadDensity,
@@ -40,6 +44,12 @@ import {
   setTheme as saveTheme,
 } from '../utils/theme';
 type Density = 'regular' | 'compact';
+export type WallpaperMode = 'cover' | 'contain' | 'fill' | 'fit';
+
+export type WallpaperOffset = {
+  x: number;
+  y: number;
+};
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -71,6 +81,8 @@ interface SettingsContextValue {
   accent: string;
   wallpaper: string;
   bgImageName: string;
+  wallpaperMode: WallpaperMode;
+  wallpaperOffsets: Record<string, WallpaperOffset>;
   useKaliWallpaper: boolean;
   density: Density;
   reducedMotion: boolean;
@@ -84,6 +96,9 @@ interface SettingsContextValue {
   desktopTheme: DesktopTheme;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
+  setWallpaperMode: (mode: WallpaperMode) => void;
+  updateWallpaperOffset: (wallpaper: string, offset: WallpaperOffset) => void;
+  setWallpaperOffsets: (offsets: Record<string, WallpaperOffset>) => void;
   setUseKaliWallpaper: (value: boolean) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
@@ -108,6 +123,8 @@ export const SettingsContext = createContext<SettingsContextValue>({
   accent: defaults.accent,
   wallpaper: defaults.wallpaper,
   bgImageName: defaults.wallpaper,
+  wallpaperMode: defaults.wallpaperMode as WallpaperMode,
+  wallpaperOffsets: defaults.wallpaperOffsets ?? {},
   useKaliWallpaper: defaults.useKaliWallpaper,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
@@ -121,6 +138,9 @@ export const SettingsContext = createContext<SettingsContextValue>({
   desktopTheme: DEFAULT_DESKTOP_THEME,
   setAccent: () => {},
   setWallpaper: () => {},
+  setWallpaperMode: () => {},
+  updateWallpaperOffset: () => {},
+  setWallpaperOffsets: () => {},
   setUseKaliWallpaper: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
@@ -136,6 +156,12 @@ export const SettingsContext = createContext<SettingsContextValue>({
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
+  const [wallpaperMode, setWallpaperMode] = useState<WallpaperMode>(
+    defaults.wallpaperMode as WallpaperMode,
+  );
+  const [wallpaperOffsets, setWallpaperOffsets] = useState<
+    Record<string, WallpaperOffset>
+  >(defaults.wallpaperOffsets ?? {});
   const [useKaliWallpaper, setUseKaliWallpaper] = useState<boolean>(defaults.useKaliWallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
@@ -153,6 +179,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     (async () => {
       setAccent(await loadAccent());
       setWallpaper(await loadWallpaper());
+      setWallpaperMode((await loadWallpaperMode()) as WallpaperMode);
+      setWallpaperOffsets(await loadWallpaperOffsets());
       setUseKaliWallpaper(await loadUseKaliWallpaper());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
@@ -190,6 +218,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveWallpaper(wallpaper);
   }, [wallpaper]);
+
+  useEffect(() => {
+    saveWallpaperMode(wallpaperMode);
+  }, [wallpaperMode]);
+
+  useEffect(() => {
+    saveWallpaperOffsets(wallpaperOffsets);
+  }, [wallpaperOffsets]);
 
   useEffect(() => {
     saveUseKaliWallpaper(useKaliWallpaper);
@@ -300,6 +336,48 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [haptics]);
 
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
+  const updateWallpaperOffset = (name: string, offset: WallpaperOffset) => {
+    setWallpaperOffsets((prev) => {
+      const next = { ...prev };
+      const clampedX = Math.min(Math.max(offset.x, -0.5), 0.5);
+      const clampedY = Math.min(Math.max(offset.y, -0.5), 0.5);
+      const isZero = Math.abs(clampedX) < 1e-4 && Math.abs(clampedY) < 1e-4;
+      const existing = prev[name];
+      if (isZero) {
+        if (!existing) {
+          return prev;
+        }
+        delete next[name];
+        return next;
+      }
+      if (existing && existing.x === clampedX && existing.y === clampedY) {
+        return prev;
+      }
+      next[name] = { x: clampedX, y: clampedY };
+      return next;
+    });
+  };
+
+  const replaceWallpaperOffsets = (offsets: Record<string, WallpaperOffset>) => {
+    const sanitized = Object.entries(offsets || {}).reduce<
+      Record<string, WallpaperOffset>
+    >((acc, [key, value]) => {
+      if (!key || typeof key !== 'string') return acc;
+      if (!value) return acc;
+      const x = Number(value.x);
+      const y = Number(value.y);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return acc;
+      const clampedX = Math.min(Math.max(x, -0.5), 0.5);
+      const clampedY = Math.min(Math.max(y, -0.5), 0.5);
+      if (Math.abs(clampedX) < 1e-4 && Math.abs(clampedY) < 1e-4) {
+        return acc;
+      }
+      acc[key] = { x: clampedX, y: clampedY };
+      return acc;
+    }, {});
+    setWallpaperOffsets(sanitized);
+  };
+
   const desktopTheme = useMemo(
     () =>
       resolveDesktopTheme({
@@ -349,6 +427,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         accent,
         wallpaper,
         bgImageName,
+        wallpaperMode,
+        wallpaperOffsets,
         useKaliWallpaper,
         density,
         reducedMotion,
@@ -362,6 +442,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         desktopTheme,
         setAccent,
         setWallpaper,
+        setWallpaperMode,
+        updateWallpaperOffset,
+        setWallpaperOffsets: replaceWallpaperOffsets,
         setUseKaliWallpaper,
         setDensity,
         setReducedMotion,
