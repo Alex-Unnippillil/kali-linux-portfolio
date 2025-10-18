@@ -3300,6 +3300,7 @@ export class Desktop extends Component {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.addEventListener('taskbar-preview-request', this.handleTaskbarPreviewRequest);
             window.addEventListener('app-badge', this.handleAppBadgeEvent);
             this.broadcastWorkspaceState();
             this.broadcastIconSizePreset(this.state.iconSizePreset);
@@ -3405,6 +3406,7 @@ export class Desktop extends Component {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
             window.removeEventListener('taskbar-command', this.handleExternalTaskbarCommand);
+            window.removeEventListener('taskbar-preview-request', this.handleTaskbarPreviewRequest);
             window.removeEventListener('app-badge', this.handleAppBadgeEvent);
         }
         this.teardownGestureListeners();
@@ -3957,6 +3959,33 @@ export class Desktop extends Component {
 
         this.windowPreviewCache.set(id, preview);
         return preview;
+    };
+
+    handleTaskbarPreviewRequest = (event) => {
+        const detail = event?.detail || {};
+        const appId = detail.appId;
+        const requestId = detail.requestId;
+        if (!appId || requestId === undefined || requestId === null) {
+            return;
+        }
+
+        if (detail.bustCache && this.windowPreviewCache?.has(appId)) {
+            this.windowPreviewCache.delete(appId);
+        }
+
+        Promise.resolve(this.getWindowPreview(appId))
+            .then((preview) => {
+                if (typeof window === 'undefined') return;
+                window.dispatchEvent(new CustomEvent('taskbar-preview-response', {
+                    detail: { appId, requestId, preview },
+                }));
+            })
+            .catch(() => {
+                if (typeof window === 'undefined') return;
+                window.dispatchEvent(new CustomEvent('taskbar-preview-response', {
+                    detail: { appId, requestId, preview: null },
+                }));
+            });
     };
 
     buildWindowSwitcherEntries = async (ids) => {

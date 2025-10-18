@@ -7,6 +7,7 @@ import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
+import TaskbarPreviewFlyout from './TaskbarPreviewFlyout';
 
 const BADGE_TONE_COLORS = Object.freeze({
         accent: { bg: '#3b82f6', fg: '#020817', glow: 'rgba(59,130,246,0.45)', track: 'rgba(8,15,26,0.82)' },
@@ -33,6 +34,7 @@ const areWorkspacesEqual = (next, prev) => {
         return true;
 };
 
+const TASKBAR_PREVIEW_WIDTH = 280;
 const areBadgesEqual = (nextBadge, prevBadge) => {
         if (nextBadge === prevBadge) return true;
         if (!nextBadge || !prevBadge) return false;
@@ -104,11 +106,16 @@ export default class Navbar extends PureComponent {
                         workspaces: [],
                         activeWorkspace: 0,
                         runningApps: [],
+                        preview: null
                         pinnedApps: [],
                 };
                 this.taskbarListRef = React.createRef();
                 this.draggingAppId = null;
                 this.pendingReorder = null;
+                this.previewFlyoutRef = React.createRef();
+                this.previewHideTimeout = null;
+                this.previewRequestSequence = 0;
+                this.previewFocusPending = false;
                 this.pendingPinnedReorder = null;
                 this.draggingSection = null;
         }
@@ -116,15 +123,252 @@ export default class Navbar extends PureComponent {
         componentDidMount() {
                 if (typeof window !== 'undefined') {
                         window.addEventListener('workspace-state', this.handleWorkspaceStateUpdate);
+                        window.addEventListener('taskbar-preview-response', this.handlePreviewResponse);
                         window.dispatchEvent(new CustomEvent('workspace-request'));
+                }
+                if (typeof document !== 'undefined') {
+                        document.addEventListener('keydown', this.handleDocumentKeyDown);
                 }
         }
 
         componentWillUnmount() {
                 if (typeof window !== 'undefined') {
                         window.removeEventListener('workspace-state', this.handleWorkspaceStateUpdate);
+                        window.removeEventListener('taskbar-preview-response', this.handlePreviewResponse);
                 }
+                if (typeof document !== 'undefined') {
+                        document.removeEventListener('keydown', this.handleDocumentKeyDown);
+                }
+                this.clearPreviewHideTimeout();
         }
+
+        escapeAttributeValue = (value) => {
+                if (typeof value !== 'string') return '';
+                if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+                        return CSS.escape(value);
+                }
+                return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+        };
+
+        getTaskbarButtonElement = (appId) => {
+                if (!appId || !this.taskbarListRef?.current) return null;
+                const selectorValue = this.escapeAttributeValue(appId);
+                return this.taskbarListRef.current.querySelector(`button[data-app-id="${selectorValue}"]`);
+        };
+
+        computePreviewPosition = (rect) => {
+                if (!rect) return { top: 0, left: 0 };
+                const offset = 8;
+                const viewportWidth = typeof window !== 'undefined' ? window.innerWidth || 0 : 0;
+                const center = rect.left + rect.width / 2;
+                const halfWidth = TASKBAR_PREVIEW_WIDTH / 2;
+                let left = center;
+                if (viewportWidth) {
+                        const min = halfWidth + 8;
+                        const max = viewportWidth - halfWidth - 8;
+                        if (min <= max) {
+                                left = Math.min(Math.max(center, min), max);
+                        }
+                }
+                const top = rect.bottom + offset;
+                return { top, left };
+        };
+
+        dispatchPreviewRequest = (appId, requestId, bustCache = false) => {
+                if (typeof window === 'undefined') return;
+                window.dispatchEvent(
+                        new CustomEvent('taskbar-preview-request', {
+                                detail: { appId, requestId, bustCache },
+                        }),
+                );
+        };
+
+        clearPreviewHideTimeout = () => {
+                if (this.previewHideTimeout) {
+                        clearTimeout(this.previewHideTimeout);
+                        this.previewHideTimeout = null;
+                }
+        };
+
+        schedulePreviewHide = () => {
+                this.clearPreviewHideTimeout();
+                this.previewHideTimeout = setTimeout(() => {
+                        this.hidePreview();
+                }, 120);
+        };
+
+        hidePreview = () => {
+                this.clearPreviewHideTimeout();
+                this.previewFocusPending = false;
+                this.setState((prevState) => (prevState.preview ? { preview: null } : null));
+        };
+
+        handlePreviewResponse = (event) => {
+                const detail = event?.detail || {};
+                const { appId, requestId, preview } = detail;
+                if (!appId || requestId === undefined || requestId === null) {
+                        return;
+                }
+
+                this.setState((prevState) => {
+                        const current = prevState.preview;
+                        if (!current || current.appId !== appId || current.requestId !== requestId) {
+                                return null;
+                        }
+                        return {
+                                preview: {
+                                        ...current,
+                                        image: preview || null,
+                                        status: preview ? 'ready' : 'empty',
+                                },
+                        };
+                }, () => {
+                        if (this.previewFocusPending && this.previewFlyoutRef.current) {
+                                this.previewFlyoutRef.current.focus();
+                        }
+                        this.previewFocusPending = false;
+                });
+        };
+
+        handleDocumentKeyDown = (event) => {
+                if (event.key !== 'Escape') return;
+                const { preview } = this.state;
+                if (!preview) return;
+
+                const target = event?.target;
+                const isNode = target && typeof target === 'object' && 'nodeType' in target;
+                const previewNode = this.previewFlyoutRef.current;
+                const taskbarButton = this.getTaskbarButtonElement(preview.appId);
+                if (isNode) {
+                        const nodeTarget = target;
+                        const buttonContains = typeof taskbarButton?.contains === 'function' && taskbarButton.contains(nodeTarget);
+                        if (previewNode?.contains(nodeTarget) || buttonContains) {
+                                event.preventDefault();
+                        }
+                }
+
+                this.hidePreview();
+        };
+
+        openPreviewForApp = (app, target, options = {}) => {
+                if (!app || !target || typeof target.getBoundingClientRect !== 'function') return;
+
+                const rect = target.getBoundingClientRect();
+                const position = this.computePreviewPosition(rect);
+                const previous = this.state.preview;
+                const sameApp = previous && previous.appId === app.id;
+
+                let status = sameApp ? previous.status : 'loading';
+                let image = sameApp ? previous.image : null;
+                let requestId = sameApp ? previous.requestId : null;
+                let shouldRequest = false;
+
+                if (!sameApp) {
+                        shouldRequest = true;
+                } else if (options.forceRefresh) {
+                        shouldRequest = true;
+                } else if (!image && status !== 'loading') {
+                        shouldRequest = true;
+                }
+
+                if (shouldRequest) {
+                        requestId = ++this.previewRequestSequence;
+                        status = 'loading';
+                        image = null;
+                }
+
+                this.previewFocusPending = Boolean(options.shouldFocus);
+                this.clearPreviewHideTimeout();
+
+                this.setState({
+                        preview: {
+                                appId: app.id,
+                                appTitle: app.title,
+                                position,
+                                status: status || 'loading',
+                                image: image || null,
+                                requestId,
+                        },
+                }, () => {
+                        if (shouldRequest) {
+                                this.dispatchPreviewRequest(app.id, requestId, Boolean(options.forceRefresh));
+                        } else if (this.previewFocusPending && this.previewFlyoutRef.current) {
+                                this.previewFlyoutRef.current.focus();
+                                this.previewFocusPending = false;
+                        }
+                });
+        };
+
+        handlePreviewMouseEnter = () => {
+                this.clearPreviewHideTimeout();
+        };
+
+        handlePreviewMouseLeave = () => {
+                this.schedulePreviewHide();
+        };
+
+        handlePreviewFocus = () => {
+                this.clearPreviewHideTimeout();
+        };
+
+        handlePreviewBlur = (event) => {
+                const related = event?.relatedTarget;
+                if (related) {
+                        if (this.previewFlyoutRef.current?.contains(related)) {
+                                return;
+                        }
+                        const currentAppId = this.state.preview?.appId;
+                        const taskbarButton = this.getTaskbarButtonElement(currentAppId);
+                        if (taskbarButton === related) {
+                                return;
+                        }
+                }
+                this.schedulePreviewHide();
+        };
+
+        handlePreviewKeyDown = (event) => {
+                if (event.key === 'Escape') {
+                        event.stopPropagation();
+                        event.preventDefault();
+                        this.hidePreview();
+                }
+        };
+
+        handleRunningAppsChange = (runningApps) => {
+                const { preview } = this.state;
+                if (!preview) return;
+                const nextApp = runningApps.find((item) => item.id === preview.appId);
+                if (!nextApp) {
+                        this.hidePreview();
+                        return;
+                }
+                const button = this.getTaskbarButtonElement(preview.appId);
+                if (!button) {
+                        this.hidePreview();
+                        return;
+                }
+                this.openPreviewForApp(nextApp, button, { forceRefresh: true });
+        };
+
+        handleAppButtonMouseEnter = (event, app) => {
+                this.openPreviewForApp(app, event.currentTarget);
+        };
+
+        handleAppButtonMouseLeave = () => {
+                this.schedulePreviewHide();
+        };
+
+        handleAppButtonFocus = (event, app) => {
+                this.openPreviewForApp(app, event.currentTarget);
+        };
+
+        handleAppButtonBlur = (event) => {
+                const related = event?.relatedTarget;
+                if (related && this.previewFlyoutRef.current?.contains(related)) {
+                        return;
+                }
+                this.schedulePreviewHide();
+        };
 
         handleWorkspaceStateUpdate = (event) => {
                 const detail = event?.detail || {};
@@ -134,9 +378,12 @@ export default class Navbar extends PureComponent {
                 const nextRunningApps = Array.isArray(detail.runningApps) ? detail.runningApps : [];
                 const nextPinnedApps = Array.isArray(detail.pinnedApps) ? detail.pinnedApps : [];
 
+                let runningAppsChanged = false;
+
                 this.setState((previousState) => {
                         const workspacesChanged = !areWorkspacesEqual(nextWorkspaces, previousState.workspaces);
                         const activeChanged = previousState.activeWorkspace !== nextActiveWorkspace;
+                        runningAppsChanged = !areRunningAppsEqual(nextRunningApps, previousState.runningApps);
                         const runningAppsChanged = !areRunningAppsEqual(nextRunningApps, previousState.runningApps);
                         const pinnedAppsChanged = !arePinnedAppsEqual(nextPinnedApps, previousState.pinnedApps);
 
@@ -150,6 +397,10 @@ export default class Navbar extends PureComponent {
                                 runningApps: runningAppsChanged ? nextRunningApps : previousState.runningApps,
                                 pinnedApps: pinnedAppsChanged ? nextPinnedApps : previousState.pinnedApps,
                         };
+                }, () => {
+                        if (runningAppsChanged) {
+                                this.handleRunningAppsChange(nextRunningApps);
+                        }
                 });
         };
 
@@ -159,11 +410,22 @@ export default class Navbar extends PureComponent {
         };
 
         handleAppButtonClick = (app) => {
+                this.hidePreview();
                 const detail = { appId: app.id, action: 'toggle' };
                 this.dispatchTaskbarCommand(detail);
         };
 
         handleAppButtonKeyDown = (event, app) => {
+                if (event.key === 'ArrowDown') {
+                        event.preventDefault();
+                        this.openPreviewForApp(app, event.currentTarget, { forceRefresh: true, shouldFocus: true });
+                        return;
+                }
+                if (event.key === 'Escape' && this.state.preview) {
+                        event.preventDefault();
+                        this.hidePreview();
+                        return;
+                }
                 if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
                         this.handleAppButtonClick(app);
@@ -355,6 +617,10 @@ export default class Navbar extends PureComponent {
                                 data-active={isActive ? 'true' : 'false'}
                                 onClick={() => this.handleAppButtonClick(app)}
                                 onKeyDown={(event) => this.handleAppButtonKeyDown(event, app)}
+                                onMouseEnter={(event) => this.handleAppButtonMouseEnter(event, app)}
+                                onMouseLeave={this.handleAppButtonMouseLeave}
+                                onFocus={(event) => this.handleAppButtonFocus(event, app)}
+                                onBlur={this.handleAppButtonBlur}
                                 className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
                         >
                                 <span className="relative inline-flex items-center justify-center">
@@ -593,6 +859,7 @@ export default class Navbar extends PureComponent {
         };
 
                 render() {
+                        const { workspaces, activeWorkspace, preview } = this.state;
                         const { workspaces, activeWorkspace } = this.state;
                         const pinnedApps = this.renderPinnedApps();
                         const runningApps = this.renderRunningApps();
@@ -639,9 +906,22 @@ export default class Navbar extends PureComponent {
                                                         <QuickSettings open={this.state.status_card} />
                                                 </div>
                                         </div>
+                                        <TaskbarPreviewFlyout
+                                                ref={this.previewFlyoutRef}
+                                                visible={Boolean(preview)}
+                                                title={preview?.appTitle}
+                                                image={preview?.image}
+                                                status={preview?.status}
+                                                position={preview?.position}
+                                                onMouseEnter={this.handlePreviewMouseEnter}
+                                                onMouseLeave={this.handlePreviewMouseLeave}
+                                                onFocus={this.handlePreviewFocus}
+                                                onBlur={this.handlePreviewBlur}
+                                                onKeyDown={this.handlePreviewKeyDown}
+                                        />
                                 </div>
-			);
-		}
+                        );
+                }
 
 
 }
