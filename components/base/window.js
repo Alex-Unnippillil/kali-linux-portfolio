@@ -183,6 +183,8 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._dragFrameId = null;
+        this._pendingDragUpdate = null;
     }
 
     notifySizeChange = () => {
@@ -284,6 +286,7 @@ export class Window extends Component {
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
+        this.cancelPendingDragFrame();
     }
 
     setDefaultWindowDimenstion = () => {
@@ -750,8 +753,8 @@ export class Window extends Component {
         }
     }
 
-    applyEdgeResistance = (node, data) => {
-        if (!node || !data) return;
+    applyEdgeResistance = (data) => {
+        if (!data) return null;
         const threshold = 30;
         const resistance = 0.35; // how much to slow near edges
         let { x, y } = data;
@@ -772,17 +775,67 @@ export class Window extends Component {
 
         x = resist(x, viewportLeft, maxX);
         y = resist(y, topBound, maxY);
-        node.style.transform = `translate(${x}px, ${y}px)`;
+        return { x, y };
+    }
+
+    commitDragTransform = () => {
+        this._dragFrameId = null;
+        if (!this._pendingDragUpdate) {
+            return;
+        }
+        const { node, data } = this._pendingDragUpdate;
+        this._pendingDragUpdate = null;
+        if (!node || !data) {
+            return;
+        }
+        const resolved = this.applyEdgeResistance(data);
+        if (!resolved) {
+            return;
+        }
+        node.style.transform = `translate(${resolved.x}px, ${resolved.y}px)`;
+    }
+
+    scheduleDragTransform = (node, data) => {
+        if (!node || !data) return;
+        this._pendingDragUpdate = { node, data };
+        if (this._dragFrameId !== null) {
+            return;
+        }
+        if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+            this.commitDragTransform();
+            return;
+        }
+        this._dragFrameId = window.requestAnimationFrame(this.commitDragTransform);
+    }
+
+    cancelPendingDragFrame = (applyPending = false) => {
+        if (this._dragFrameId !== null && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+            window.cancelAnimationFrame(this._dragFrameId);
+        }
+        this._dragFrameId = null;
+        if (applyPending && this._pendingDragUpdate) {
+            const { node, data } = this._pendingDragUpdate;
+            this._pendingDragUpdate = null;
+            if (node && data) {
+                const resolved = this.applyEdgeResistance(data);
+                if (resolved) {
+                    node.style.transform = `translate(${resolved.x}px, ${resolved.y}px)`;
+                }
+            }
+        } else {
+            this._pendingDragUpdate = null;
+        }
     }
 
     handleDrag = (e, data) => {
         if (data && data.node) {
-            this.applyEdgeResistance(data.node, data);
+            this.scheduleDragTransform(data.node, data);
         }
         this.checkSnapPreview();
     }
 
     handleStop = () => {
+        this.cancelPendingDragFrame(true);
         this.changeCursorToDefault();
         const snapPos = this.state.snapPosition;
         if (snapPos) {
