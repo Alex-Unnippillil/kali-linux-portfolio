@@ -1,2 +1,183 @@
-body { font-family: sans-serif; padding: 2rem; text-align: center; }
-ul { list-style: none; padding: 0; }
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  padding: 2.5rem 1.5rem;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: radial-gradient(circle at top, #0b1220, #05080f 60%);
+  color: #e2e8f0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+main {
+  width: min(60ch, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 2.5rem);
+  font-weight: 700;
+}
+
+.status-kicker {
+  margin: 0;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  color: #60a5fa;
+}
+
+.lead {
+  margin: 0;
+  color: #cbd5f5;
+  line-height: 1.5;
+}
+
+button {
+  align-self: flex-start;
+  background: linear-gradient(135deg, #1e3a8a, #2563eb);
+  border: none;
+  color: #f8fafc;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.35);
+}
+
+button:focus {
+  outline: 3px solid rgba(96, 165, 250, 0.75);
+  outline-offset: 3px;
+}
+
+.card {
+  background: rgba(15, 23, 42, 0.68);
+  border-radius: 1rem;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: 0 18px 35px rgba(15, 23, 42, 0.45);
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.section-summary {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.95rem;
+}
+
+.cached-apps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1rem;
+}
+
+.cached-apps li {
+  background: rgba(37, 99, 235, 0.12);
+  border-radius: 0.85rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  text-align: left;
+}
+
+.cached-apps a {
+  color: #bfdbfe;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.cached-apps a:hover,
+.cached-apps a:focus {
+  text-decoration: underline;
+}
+
+.cached-apps .cached-app-description {
+  display: block;
+  margin-top: 0.35rem;
+  color: #cbd5f5;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.suggestion-groups {
+  display: grid;
+  gap: 1rem;
+}
+
+.suggestion-card {
+  border-radius: 0.9rem;
+  padding: 1.25rem 1.5rem;
+  background: rgba(15, 23, 42, 0.82);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.15);
+}
+
+.suggestion-card h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.1rem;
+}
+
+.suggestion-card p {
+  margin: 0 0 0.75rem 0;
+  color: #cbd5f5;
+  font-size: 0.95rem;
+}
+
+.suggestion-card ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #e2e8f0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.suggestion-card li {
+  line-height: 1.4;
+}
+
+.suggestion-card a {
+  color: #93c5fd;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.suggestion-card a:hover,
+.suggestion-card a:focus {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  body {
+    padding: 2rem 1rem;
+  }
+
+  .card {
+    padding: 1.25rem;
+  }
+}
