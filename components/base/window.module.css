@@ -123,10 +123,12 @@
   border-top-right-radius: calc(var(--radius-6) - 1px);
   position: relative;
   z-index: 1;
+  touch-action: none;
 }
 
 .windowControls {
   height: 28px;
+  touch-action: none;
 }
 
 .windowControlButton {
@@ -143,9 +145,11 @@
 .windowYBorder {
   height: calc(100% - 10px);
   width: calc(100% + 10px);
+  touch-action: none;
 }
 
 .windowXBorder {
   height: calc(100% + 10px);
   width: calc(100% - 10px);
+  touch-action: none;
 }
