@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { getWordOfTheDay, buildResultMosaic } from '../utils/wordle';
 import type { ComponentType } from 'react';
 
@@ -9,7 +9,7 @@ describe('Wordle', () => {
   beforeEach(() => {
     jest.useFakeTimers().setSystemTime(new Date('2024-01-01T00:00:00Z'));
     Object.assign(navigator, {
-      clipboard: { writeText: jest.fn() },
+      clipboard: { writeText: jest.fn().mockResolvedValue(undefined) },
     });
     localStorage.clear();
     Wordle = require('../components/apps/wordle').default;
@@ -29,7 +29,16 @@ describe('Wordle', () => {
     fireEvent.submit(input.closest('form')!);
     const shareBtn = await screen.findByText('Share');
     fireEvent.click(shareBtn);
-    expect((navigator as any).clipboard.writeText).toHaveBeenCalled();
+    const base = new Date('2021-06-19T00:00:00Z');
+    const puzzleNumber = Math.floor(
+      (new Date('2024-01-01T00:00:00Z').getTime() - base.getTime()) /
+        86400000
+    );
+    await waitFor(() =>
+      expect((navigator as any).clipboard.writeText).toHaveBeenCalledWith(
+        `Wordle ${puzzleNumber} 1/6\n🟩🟩🟩🟩🟩`
+      )
+    );
   });
 
   test('supports themed word packs', async () => {
@@ -101,5 +110,16 @@ describe('Wordle', () => {
       )[],
     ]);
     expect(mosaic).toBe('🟩🟨⬛\n⬛🟩🟨');
+  });
+
+  test('virtual keyboard updates guesses', () => {
+    render(<Wordle />);
+    const input = screen.getByPlaceholderText('Guess') as HTMLInputElement;
+    const qKey = screen.getByRole('button', { name: 'Q key' });
+    fireEvent.click(qKey);
+    expect(input.value).toBe('Q');
+    const backKey = screen.getByRole('button', { name: 'Backspace key' });
+    fireEvent.click(backKey);
+    expect(input.value).toBe('');
   });
 });
