@@ -869,10 +869,10 @@ export default class Navbar extends PureComponent {
                                 style={{
                                                 minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
                                                 paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
-                                                paddingBottom: '0.25rem',
+                                                paddingBottom: '0.33px',
                                                 paddingLeft: `calc(0.75rem + var(--safe-area-left, 0px))`,
                                                 paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
-                                                '--desktop-navbar-height': `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px) + 0.375rem + 0.25rem)`
+                                                '--desktop-navbar-height': `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px) + 0.375rem + 0.33px)`
                                         }}
                                 >
                                         <div className="flex items-center gap-2 text-xs md:text-sm">
