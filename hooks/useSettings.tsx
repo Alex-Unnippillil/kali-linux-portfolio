@@ -28,6 +28,8 @@ import {
   setPongSpin as savePongSpin,
   getAllowNetwork as loadAllowNetwork,
   setAllowNetwork as saveAllowNetwork,
+  getAllowTelemetry as loadAllowTelemetry,
+  setAllowTelemetry as saveAllowTelemetry,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
   defaults,
@@ -79,6 +81,7 @@ interface SettingsContextValue {
   largeHitAreas: boolean;
   pongSpin: boolean;
   allowNetwork: boolean;
+  allowTelemetry: boolean;
   haptics: boolean;
   theme: string;
   desktopTheme: DesktopTheme;
@@ -92,6 +95,7 @@ interface SettingsContextValue {
   setLargeHitAreas: (value: boolean) => void;
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
+  setAllowTelemetry: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
 }
@@ -116,6 +120,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   largeHitAreas: defaults.largeHitAreas,
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
+  allowTelemetry: defaults.allowTelemetry,
   haptics: defaults.haptics,
   theme: 'default',
   desktopTheme: DEFAULT_DESKTOP_THEME,
@@ -129,6 +134,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setLargeHitAreas: () => {},
   setPongSpin: () => {},
   setAllowNetwork: () => {},
+  setAllowTelemetry: () => {},
   setHaptics: () => {},
   setTheme: () => {},
 });
@@ -144,6 +150,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
+  const [allowTelemetry, setAllowTelemetry] = useState<boolean>(defaults.allowTelemetry);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
@@ -161,6 +168,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
+      setAllowTelemetry(await loadAllowTelemetry());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
     })();
@@ -296,6 +304,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [allowNetwork]);
 
   useEffect(() => {
+    saveAllowTelemetry(allowTelemetry);
+    if (!allowTelemetry) {
+      document.documentElement.setAttribute('data-telemetry-opt-out', 'true');
+    } else {
+      document.documentElement.removeAttribute('data-telemetry-opt-out');
+    }
+  }, [allowTelemetry]);
+
+  useEffect(() => {
     saveHaptics(haptics);
   }, [haptics]);
 
@@ -357,6 +374,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         largeHitAreas,
         pongSpin,
         allowNetwork,
+        allowTelemetry,
         haptics,
         theme,
         desktopTheme,
@@ -370,6 +388,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setLargeHitAreas,
         setPongSpin,
         setAllowNetwork,
+        setAllowTelemetry,
         setHaptics,
         setTheme,
       }}

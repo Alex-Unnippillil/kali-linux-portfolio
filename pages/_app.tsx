@@ -12,11 +12,12 @@ import '../styles/resume-print.css';
 import '../styles/print.css';
 import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
-import { SettingsProvider } from '../hooks/useSettings';
+import { SettingsProvider, useSettings } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
+import { applyTelemetryPreference } from '../services/telemetry';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 import { Rajdhani } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
@@ -80,6 +81,23 @@ const kaliSans = Rajdhani({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
 });
+
+const TelemetryController = (): null => {
+  const { allowTelemetry } = useSettings();
+
+  useEffect(() => {
+    void applyTelemetryPreference(allowTelemetry, {
+      dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+      environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ?? process.env.NODE_ENV,
+      tracesSampleRate: process.env.NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE,
+      replaysSessionSampleRate: process.env.NEXT_PUBLIC_SENTRY_REPLAYS_SESSION_SAMPLE_RATE,
+      replaysOnErrorSampleRate: process.env.NEXT_PUBLIC_SENTRY_REPLAYS_ON_ERROR_SAMPLE_RATE,
+      tracePropagationTargets: process.env.NEXT_PUBLIC_SENTRY_TRACE_PROPAGATION_TARGETS,
+    });
+  }, [allowTelemetry]);
+
+  return null;
+};
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
   useEffect(() => {
@@ -213,6 +231,7 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
           Skip to app grid
         </a>
         <SettingsProvider>
+          <TelemetryController />
           <NotificationCenter>
             <PipPortalProvider>
               <div aria-live="polite" id="live-region" />

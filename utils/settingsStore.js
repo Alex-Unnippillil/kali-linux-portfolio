@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  allowTelemetry: true,
 };
 
 let hasLoggedStorageWarning = false;
@@ -176,6 +177,19 @@ export async function setAllowNetwork(value) {
   storage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getAllowTelemetry() {
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.allowTelemetry;
+  const stored = storage.getItem('allow-telemetry');
+  return stored === null ? DEFAULT_SETTINGS.allowTelemetry : stored === 'true';
+}
+
+export async function setAllowTelemetry(value) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem('allow-telemetry', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   const storage = getLocalStorage();
   if (!storage) return;
@@ -190,6 +204,7 @@ export async function resetSettings() {
   storage.removeItem('large-hit-areas');
   storage.removeItem('pong-spin');
   storage.removeItem('allow-network');
+  storage.removeItem('allow-telemetry');
   storage.removeItem('haptics');
   storage.removeItem('use-kali-wallpaper');
 }
@@ -206,6 +221,7 @@ export async function exportSettings() {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    allowTelemetry,
     haptics,
   ] = await Promise.all([
     getAccent(),
@@ -218,6 +234,7 @@ export async function exportSettings() {
     getLargeHitAreas(),
     getPongSpin(),
     getAllowNetwork(),
+    getAllowTelemetry(),
     getHaptics(),
   ]);
   const theme = getTheme();
@@ -231,6 +248,7 @@ export async function exportSettings() {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    allowTelemetry,
     haptics,
     useKaliWallpaper,
     theme,
@@ -257,6 +275,7 @@ export async function importSettings(json) {
     largeHitAreas,
     pongSpin,
     allowNetwork,
+    allowTelemetry,
     haptics,
     theme,
   } = settings;
@@ -270,6 +289,7 @@ export async function importSettings(json) {
   if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
+  if (allowTelemetry !== undefined) await setAllowTelemetry(allowTelemetry);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
 }
