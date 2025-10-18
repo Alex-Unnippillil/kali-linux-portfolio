@@ -110,6 +110,53 @@ const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
 const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
 const ContactApp = createDynamicApp('contact', 'Contact');
 
+const HEAVY_APP_IDS = new Set([
+  'autopsy',
+  'beef',
+  'ble-sensor',
+  'dsniff',
+  'evidence-vault',
+  'ettercap',
+  'ghidra',
+  'hashcat',
+  'hydra',
+  'john',
+  'kismet',
+  'metasploit',
+  'mimikatz',
+  'mimikatz/offline',
+  'msf-post',
+  'nessus',
+  'nikto',
+  'nmap-nse',
+  'openvas',
+  'plugin-manager',
+  'radare2',
+  'reaver',
+  'recon-ng',
+  'security-tools',
+  'volatility',
+  'wireshark',
+]);
+
+const annotateLoadHints = (app) => {
+  if (!app || !HEAVY_APP_IDS.has(app.id)) {
+    return app;
+  }
+
+  const existingHints = app.loadHints || {};
+
+  return {
+    ...app,
+    loadHints: {
+      strategy: 'lazy',
+      prefetchOnHover: true,
+      prefetchOnVisible: true,
+      ...existingHints,
+    },
+  };
+};
+
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -276,7 +323,7 @@ const utilityList = [
   },
 ];
 
-export const utilities = utilityList;
+export const utilities = utilityList.map(annotateLoadHints);
 
 // Default window sizing for games to prevent oversized frames
 export const gameDefaults = {
@@ -599,7 +646,9 @@ const gameList = [
   },
 ];
 
-export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
+export const games = gameList.map((game) =>
+  annotateLoadHints({ ...gameDefaults, ...game })
+);
 
 const folderApps = DEFAULT_DESKTOP_FOLDERS.map((folder) => ({
   id: folder.id,
@@ -612,7 +661,7 @@ const folderApps = DEFAULT_DESKTOP_FOLDERS.map((folder) => ({
   screen: displayDesktopFolder,
   defaultWidth: 64,
   defaultHeight: 70,
-}));
+})).map(annotateLoadHints);
 
 const apps = [
   ...folderApps,
@@ -1079,6 +1128,6 @@ const apps = [
   ...utilities,
   // Games are included so they appear alongside apps
   ...games,
-];
+].map(annotateLoadHints);
 
 export default apps;
