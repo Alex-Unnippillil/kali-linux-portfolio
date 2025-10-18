@@ -1,4 +1,5 @@
 import Document, { Html, Head, Main, NextScript } from 'next/document';
+import { CANONICAL_ORIGIN, DEFAULT_SEO_LOCALE } from '../lib/seo/config';
 
 class MyDocument extends Document {
   /**
@@ -13,7 +14,11 @@ class MyDocument extends Document {
   render() {
     const { nonce } = this.props;
     return (
-      <Html lang="en" data-csp-nonce={nonce}>
+      <Html
+        lang={DEFAULT_SEO_LOCALE.htmlLang}
+        data-csp-nonce={nonce}
+        data-canonical-origin={CANONICAL_ORIGIN}
+      >
         <Head>
           <link rel="icon" href="/favicon.ico" />
           <link rel="manifest" href="/manifest.webmanifest" />
