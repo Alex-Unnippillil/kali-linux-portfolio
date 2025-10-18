@@ -5,6 +5,7 @@ import {
   clampWindowTopPosition,
   measureWindowTopOffset,
 } from "../../utils/windowLayout";
+import { useDesktopZIndex } from "./zIndexManager";
 
 type BaseWindowProps = React.ComponentProps<typeof BaseWindow>;
 // BaseWindow is a class component, so the instance type exposes helper methods.
@@ -49,7 +50,22 @@ const readNodePosition = (node: HTMLElement): { x: number; y: number } | null =>
 
 const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
   (props, forwardedRef) => {
+    const {
+      id,
+      focus: focusProp,
+      isFocused,
+      zIndex: _ignoredZIndex,
+      ...rest
+    } = props;
     const innerRef = useRef<BaseWindowInstance>(null);
+    const {
+      baseZIndex,
+      registerWindow,
+      unregisterWindow,
+      focusWindow: focusZIndex,
+      getZIndex,
+    } = useDesktopZIndex();
+    const windowId = id ?? null;
 
     const assignRef = useCallback(
       (instance: BaseWindowInstance) => {
@@ -74,15 +90,25 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
 
       const rect = node.getBoundingClientRect();
       const topOffset = measureWindowTopOffset();
+      const visualViewport = window.visualViewport;
+      const viewportWidth = visualViewport?.width ?? window.innerWidth;
+      const viewportHeight = visualViewport?.height ?? window.innerHeight;
+      const viewportLeft = visualViewport?.offsetLeft ?? 0;
+      const viewportTop = visualViewport?.offsetTop ?? 0;
+      const combinedTopOffset = viewportTop + topOffset;
       const storedPosition = readNodePosition(node);
       const fallbackPosition = {
-        x: typeof props.initialX === "number" ? props.initialX : 0,
-        y: clampWindowTopPosition(props.initialY, topOffset),
+        x: typeof props.initialX === "number"
+          ? props.initialX + viewportLeft
+          : viewportLeft,
+        y: clampWindowTopPosition(props.initialY, combinedTopOffset),
       };
       const currentPosition = storedPosition || fallbackPosition;
       const clamped = clampWindowPositionWithinViewport(currentPosition, rect, {
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
+        viewportWidth,
+        viewportHeight,
+        viewportLeft,
+        viewportTop,
         topOffset,
       });
       if (!clamped) return;
@@ -105,6 +131,36 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
     }, [props.initialX, props.initialY, props.onPositionChange]);
 
     useEffect(() => {
+      if (!windowId) return;
+      registerWindow(windowId);
+      return () => {
+        unregisterWindow(windowId);
+      };
+    }, [windowId, registerWindow, unregisterWindow]);
+
+    useEffect(() => {
+      if (!windowId || !isFocused) return;
+      focusZIndex(windowId);
+    }, [windowId, isFocused, focusZIndex]);
+
+    const handleFocus = useCallback(
+      (targetId?: string | null) => {
+        const resolvedId = targetId ?? windowId;
+        if (resolvedId) {
+          focusZIndex(resolvedId);
+          if (typeof focusProp === "function") {
+            focusProp(resolvedId);
+          }
+        } else if (typeof focusProp === "function") {
+          focusProp(targetId ?? undefined);
+        }
+      },
+      [focusProp, focusZIndex, windowId],
+    );
+
+    const computedZIndex = windowId ? getZIndex(windowId) : baseZIndex;
+
+    useEffect(() => {
       if (typeof window === "undefined") return undefined;
       const handler = () => clampToViewport();
       window.addEventListener("resize", handler);
@@ -113,7 +169,16 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       };
     }, [clampToViewport]);
 
-    return <BaseWindow ref={assignRef} {...props} />;
+    return (
+      <BaseWindow
+        ref={assignRef}
+        {...rest}
+        id={id}
+        focus={handleFocus}
+        isFocused={isFocused}
+        zIndex={computedZIndex}
+      />
+    );
   },
 );
 

@@ -52,12 +52,12 @@ const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: height });
 };
 
-const setVisualViewport = (width?: number, height?: number) => {
+const setVisualViewport = (width?: number, height?: number, offsetLeft = 0, offsetTop = 0) => {
   if (typeof width === 'number' && typeof height === 'number') {
     Object.defineProperty(window, 'visualViewport', {
       configurable: true,
       writable: true,
-      value: { width, height },
+      value: { width, height, offsetLeft, offsetTop },
     });
     return;
   }
@@ -920,6 +920,54 @@ describe('Window viewport constraints', () => {
     expect(state.parentSize.width).toBeCloseTo(expectedWidth);
     expect(state.parentSize.height).toBeCloseTo(expectedHeight);
     expect(state.safeAreaTop).toBe(DESKTOP_TOP_PADDING);
+    expect(state.viewportOffset).toEqual({ left: 0, top: 0 });
+  });
+
+  it('respects visual viewport offsets when storing transform values', () => {
+    const ref = React.createRef<any>();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 10,
+      top: 10,
+      right: 110,
+      bottom: 110,
+      width: 100,
+      height: 100,
+      x: 10,
+      y: 10,
+      toJSON: () => {},
+    });
+
+    setVisualViewport(600, 500, 40, 30);
+
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+
+    act(() => {
+      ref.current!.setWinowsPosition();
+    });
+
+    expect(ref.current!.state.viewportOffset).toEqual({ left: 40, top: 30 });
+    const offset = ref.current!.state.viewportOffset;
+    const minY = offset.top + ref.current!.state.safeAreaTop;
+
+    expect(winEl.style.getPropertyValue('--window-transform-x')).toBe(`${offset.left.toFixed(1)}px`);
+    expect(winEl.style.getPropertyValue('--window-transform-y')).toBe(`${minY.toFixed(1)}px`);
   });
 });
 

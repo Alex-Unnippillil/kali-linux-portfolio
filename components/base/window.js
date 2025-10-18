@@ -40,6 +40,31 @@ const normalizePercentageDimension = (value, fallback) => {
 
 const computeEdgeThreshold = (size) => clamp(size * EDGE_THRESHOLD_RATIO, EDGE_THRESHOLD_MIN, EDGE_THRESHOLD_MAX);
 
+const getViewportMetrics = () => {
+    if (typeof window === 'undefined') {
+        return { width: 0, height: 0, left: 0, top: 0 };
+    }
+
+    const fallbackWidth = typeof window.innerWidth === 'number' ? window.innerWidth : 0;
+    const fallbackHeight = typeof window.innerHeight === 'number' ? window.innerHeight : 0;
+    const visualViewport = window.visualViewport;
+
+    if (visualViewport) {
+        const width = Number.isFinite(visualViewport.width) ? visualViewport.width : fallbackWidth;
+        const height = Number.isFinite(visualViewport.height) ? visualViewport.height : fallbackHeight;
+        const left = Number.isFinite(visualViewport.offsetLeft) ? visualViewport.offsetLeft : 0;
+        const top = Number.isFinite(visualViewport.offsetTop) ? visualViewport.offsetTop : 0;
+        return {
+            width: width || fallbackWidth,
+            height: height || fallbackHeight,
+            left,
+            top,
+        };
+    }
+
+    return { width: fallbackWidth, height: fallbackHeight, left: 0, top: 0 };
+};
+
 const percentOf = (value, total) => {
     if (!total) return 0;
     return (value / total) * 100;
@@ -75,6 +100,8 @@ const normalizeRightCornerSnap = (candidate, regions) => {
 const computeSnapRegions = (
     viewportWidth,
     viewportHeight,
+    viewportLeft = 0,
+    viewportTop = 0,
     topInset = DEFAULT_WINDOW_TOP_OFFSET,
     bottomInset,
 ) => {
@@ -88,16 +115,18 @@ const computeSnapRegions = (
     const availableHeight = Math.max(0, viewportHeight - normalizedTopInset - snapBottomInset - safeBottom);
     const halfWidth = Math.max(viewportWidth / 2, 0);
     const halfHeight = Math.max(availableHeight / 2, 0);
-    const rightStart = Math.max(viewportWidth - halfWidth, 0);
-    const bottomStart = normalizedTopInset + halfHeight;
+    const leftEdge = viewportLeft;
+    const topEdge = viewportTop + normalizedTopInset;
+    const rightStart = viewportLeft + Math.max(viewportWidth - halfWidth, 0);
+    const bottomStart = topEdge + halfHeight;
 
     return {
-        left: { left: 0, top: normalizedTopInset, width: halfWidth, height: availableHeight },
-        right: { left: rightStart, top: normalizedTopInset, width: halfWidth, height: availableHeight },
-        top: { left: 0, top: normalizedTopInset, width: viewportWidth, height: availableHeight },
-        'top-left': { left: 0, top: normalizedTopInset, width: halfWidth, height: halfHeight },
-        'top-right': { left: rightStart, top: normalizedTopInset, width: halfWidth, height: halfHeight },
-        'bottom-left': { left: 0, top: bottomStart, width: halfWidth, height: halfHeight },
+        left: { left: leftEdge, top: topEdge, width: halfWidth, height: availableHeight },
+        right: { left: rightStart, top: topEdge, width: halfWidth, height: availableHeight },
+        top: { left: leftEdge, top: topEdge, width: viewportWidth, height: availableHeight },
+        'top-left': { left: leftEdge, top: topEdge, width: halfWidth, height: halfHeight },
+        'top-right': { left: rightStart, top: topEdge, width: halfWidth, height: halfHeight },
+        'bottom-left': { left: leftEdge, top: bottomStart, width: halfWidth, height: halfHeight },
         'bottom-right': { left: rightStart, top: bottomStart, width: halfWidth, height: halfHeight },
 
     };
@@ -113,8 +142,8 @@ export class Window extends Component {
     constructor(props) {
         super(props);
         this.id = null;
-        const isPortrait =
-            typeof window !== "undefined" && window.innerHeight > window.innerWidth;
+        const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = getViewportMetrics();
+        const isPortrait = viewportHeight > viewportWidth;
         const initialTopInset = typeof window !== 'undefined'
             ? measureWindowTopOffset()
             : DEFAULT_WINDOW_TOP_OFFSET;
@@ -272,7 +301,8 @@ export class Window extends Component {
             return;
         }
 
-        const isPortrait = window.innerHeight > window.innerWidth;
+        const { width: viewportWidth, height: viewportHeight, left: viewportLeft } = getViewportMetrics();
+        const isPortrait = viewportHeight > viewportWidth;
         if (isPortrait) {
             this.startX = window.innerWidth * 0.05;
             this.setState({
@@ -306,13 +336,7 @@ export class Window extends Component {
 
     resizeBoundries = () => {
         const hasWindow = typeof window !== 'undefined';
-        const visualViewport = hasWindow && window.visualViewport ? window.visualViewport : null;
-        const viewportHeight = hasWindow
-            ? (visualViewport?.height ?? window.innerHeight)
-            : 0;
-        const viewportWidth = hasWindow
-            ? (visualViewport?.width ?? window.innerWidth)
-            : 0;
+        const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = getViewportMetrics();
         const topInset = hasWindow
             ? measureWindowTopOffset()
             : DEFAULT_WINDOW_TOP_OFFSET;
@@ -330,6 +354,7 @@ export class Window extends Component {
                 width: availableHorizontal,
             },
             safeAreaTop: topInset,
+            viewportOffset: { left: viewportLeft, top: viewportTop },
 
         }, () => {
             if (this._uiExperiments) {
@@ -533,7 +558,9 @@ export class Window extends Component {
 
     handleVerticleResize = () => {
         if (this.props.resizable === false) return;
-        const px = (this.state.height / 100) * window.innerHeight + 1;
+        const { height: viewportHeight } = getViewportMetrics();
+        if (!viewportHeight) return;
+        const px = (this.state.height / 100) * viewportHeight + 1;
         const snapped = this.snapToGrid(px, 'y');
         const heightPercent = snapped / window.innerHeight * 100;
         const clampedHeight = Math.max(heightPercent, this.state.minHeight);
@@ -545,7 +572,9 @@ export class Window extends Component {
 
     handleHorizontalResize = () => {
         if (this.props.resizable === false) return;
-        const px = (this.state.width / 100) * window.innerWidth + 1;
+        const { width: viewportWidth } = getViewportMetrics();
+        if (!viewportWidth) return;
+        const px = (this.state.width / 100) * viewportWidth + 1;
         const snapped = this.snapToGrid(px, 'x');
         const widthPercent = snapped / window.innerWidth * 100;
         const clampedWidth = Math.max(widthPercent, this.state.minWidth);
@@ -560,15 +589,24 @@ export class Window extends Component {
         if (!node) return;
         const rect = node.getBoundingClientRect();
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
-        const snappedX = this.snapToGrid(rect.x, 'x');
-        const relativeY = rect.y - topInset;
+        const viewportLeft = this.state.viewportOffset?.left ?? 0;
+        const viewportTop = this.state.viewportOffset?.top ?? 0;
+        const relativeX = rect.x - viewportLeft;
+        const snappedRelativeX = this.snapToGrid(relativeX, 'x');
+        const minX = viewportLeft;
+        const maxX = viewportLeft + this.state.parentSize.width;
+        const absoluteX = Math.min(Math.max(snappedRelativeX + viewportLeft, minX), maxX);
+        const relativeY = rect.y - (viewportTop + topInset);
         const snappedRelativeY = this.snapToGrid(relativeY, 'y');
-        const absoluteY = clampWindowTopPosition(snappedRelativeY + topInset, topInset);
-        node.style.setProperty('--window-transform-x', `${snappedX.toFixed(1)}px`);
+        const minY = viewportTop + topInset;
+        const maxY = minY + this.state.parentSize.height;
+        const baseY = snappedRelativeY + minY;
+        const absoluteY = Math.min(Math.max(clampWindowTopPosition(baseY, minY), minY), maxY);
+        node.style.setProperty('--window-transform-x', `${absoluteX.toFixed(1)}px`);
         node.style.setProperty('--window-transform-y', `${absoluteY.toFixed(1)}px`);
 
         if (this.props.onPositionChange) {
-            this.props.onPositionChange(snappedX, absoluteY);
+            this.props.onPositionChange(absoluteX, absoluteY);
         }
 
         this.notifySizeChange();
@@ -611,12 +649,11 @@ export class Window extends Component {
             : position;
         this.setWinowsPosition();
         this.focusWindow();
-        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
-        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = getViewportMetrics();
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         if (!viewportWidth || !viewportHeight) return;
         const snapBottomInset = measureSnapBottomInset();
-        const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset, snapBottomInset);
+        const regions = computeSnapRegions(viewportWidth, viewportHeight, viewportLeft, viewportTop, topInset, snapBottomInset);
         const region = regions[resolvedPosition];
         if (!region) return;
         const previousWidth = Math.max(this.state.width, this.state.minWidth);
@@ -660,20 +697,24 @@ export class Window extends Component {
         const node = this.getWindowNode();
         if (!node) return;
         const rect = node.getBoundingClientRect();
-        const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
-        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+        const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = getViewportMetrics();
         if (!viewportWidth || !viewportHeight) return;
 
         const horizontalThreshold = computeEdgeThreshold(viewportWidth);
         const verticalThreshold = computeEdgeThreshold(viewportHeight);
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         const snapBottomInset = measureSnapBottomInset();
-        const regions = computeSnapRegions(viewportWidth, viewportHeight, topInset, snapBottomInset);
+        const regions = computeSnapRegions(viewportWidth, viewportHeight, viewportLeft, viewportTop, topInset, snapBottomInset);
 
-        const nearTop = rect.top <= topInset + verticalThreshold;
-        const nearBottom = viewportHeight - rect.bottom <= verticalThreshold;
-        const nearLeft = rect.left <= horizontalThreshold;
-        const nearRight = viewportWidth - rect.right <= horizontalThreshold;
+        const topEdge = viewportTop + topInset;
+        const bottomEdge = viewportTop + viewportHeight;
+        const leftEdge = viewportLeft;
+        const rightEdge = viewportLeft + viewportWidth;
+
+        const nearTop = rect.top <= topEdge + verticalThreshold;
+        const nearBottom = bottomEdge - rect.bottom <= verticalThreshold;
+        const nearLeft = rect.left - leftEdge <= horizontalThreshold;
+        const nearRight = rightEdge - rect.right <= horizontalThreshold;
 
         let candidate = null;
         if (nearTop && nearLeft && regions['top-left'].width > 0 && regions['top-left'].height > 0) {
@@ -715,11 +756,14 @@ export class Window extends Component {
         const threshold = 30;
         const resistance = 0.35; // how much to slow near edges
         let { x, y } = data;
-        const topBound = this.state.safeAreaTop ?? 0;
-        const maxX = this.state.parentSize.width;
+        const viewportLeft = this.state.viewportOffset?.left ?? 0;
+        const viewportTop = this.state.viewportOffset?.top ?? 0;
+        const topBound = viewportTop + (this.state.safeAreaTop ?? 0);
+        const maxX = viewportLeft + this.state.parentSize.width;
         const maxY = topBound + this.state.parentSize.height;
 
         const resist = (pos, min, max) => {
+            if (max <= min) return min;
             if (pos < min) return min;
             if (pos < min + threshold) return min + (pos - min) * resistance;
             if (pos > max) return max;
@@ -727,7 +771,7 @@ export class Window extends Component {
             return pos;
         }
 
-        x = resist(x, 0, maxX);
+        x = resist(x, viewportLeft, maxX);
         y = resist(y, topBound, maxY);
         node.style.transform = `translate(${x}px, ${y}px)`;
     }
@@ -847,7 +891,7 @@ export class Window extends Component {
             const node = this.getWindowNode();
             this.setWinowsPosition();
             // translate window to maximize position
-            const viewportHeight = window.innerHeight;
+            const { height: viewportHeight, top: viewportTop } = getViewportMetrics();
             const topOffset = measureWindowTopOffset();
             const snapBottomInset = measureSnapBottomInset();
             const availableHeight = Math.max(
@@ -858,7 +902,7 @@ export class Window extends Component {
             const preBounds = this.getCurrentBounds();
             if (node) {
                 this.setTransformMotionPreset(node, 'maximize');
-                const translateYOffset = topOffset - DESKTOP_TOP_PADDING;
+                const translateYOffset = viewportTop + topOffset - DESKTOP_TOP_PADDING;
                 node.style.transform = `translate(-1pt, ${translateYOffset}px)`;
             }
             this.setState({ maximized: true, height: heightPercent, width: 100.2, preMaximizeBounds: preBounds }, () => {
@@ -1017,6 +1061,12 @@ export class Window extends Component {
 
         const snapGrid = this.getSnapGrid();
 
+        const viewportLeft = this.state.viewportOffset?.left ?? 0;
+        const viewportTop = this.state.viewportOffset?.top ?? 0;
+        const boundsTop = viewportTop + this.state.safeAreaTop;
+        const boundsRight = viewportLeft + this.state.parentSize.width;
+        const boundsBottom = boundsTop + this.state.parentSize.height;
+
         const windowState = this.props.minimized
             ? 'minimized'
             : (this.state.maximized
@@ -1061,10 +1111,10 @@ export class Window extends Component {
                     allowAnyClick={false}
                     defaultPosition={{ x: this.startX, y: this.startY }}
                     bounds={{
-                        left: 0,
-                        top: this.state.safeAreaTop,
-                        right: this.state.parentSize.width,
-                        bottom: this.state.safeAreaTop + this.state.parentSize.height,
+                        left: viewportLeft,
+                        top: boundsTop,
+                        right: boundsRight,
+                        bottom: boundsBottom,
                     }}
                 >
                     <div

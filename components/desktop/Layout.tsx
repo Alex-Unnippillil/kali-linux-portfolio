@@ -1,21 +1,23 @@
 import React from "react";
 import clsx from "clsx";
+import { DesktopZIndexProvider } from "./zIndexManager";
 
 type LayoutProps = React.HTMLAttributes<HTMLDivElement>;
 
 const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
   ({ className, children, ...props }, ref) => {
     return (
-      <div
-        ref={ref}
-        className={clsx(
-          "desktop-shell relative min-h-screen w-full overflow-hidden bg-transparent text-white antialiased",
-          className,
-        )}
-        {...props}
-      >
-        {children}
-        <style jsx>{`
+      <DesktopZIndexProvider>
+        <div
+          ref={ref}
+          className={clsx(
+            "desktop-shell isolate relative min-h-screen w-full overflow-hidden bg-transparent text-white antialiased",
+            className,
+          )}
+          {...props}
+        >
+          {children}
+          <style jsx>{`
           :global(:root) {
             --safe-area-top: env(safe-area-inset-top, 0px);
             --safe-area-right: env(safe-area-inset-right, 0px);
@@ -124,8 +126,9 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
               --desktop-icon-font-size: 0.9rem;
             }
           }
-        `}</style>
-      </div>
+          `}</style>
+        </div>
+      </DesktopZIndexProvider>
     );
   },
 );

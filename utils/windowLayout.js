@@ -191,6 +191,13 @@ const parsePositionCoordinate = (value, fallback) => {
   return fallback;
 };
 
+const parseViewportOffset = (value) => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  return 0;
+};
+
 export const clampWindowPositionWithinViewport = (
   position,
   dimensions,
@@ -202,6 +209,8 @@ export const clampWindowPositionWithinViewport = (
 
   const viewportWidth = getViewportDimension(options.viewportWidth, 'innerWidth');
   const viewportHeight = getViewportDimension(options.viewportHeight, 'innerHeight');
+  const viewportLeft = parseViewportOffset(options.viewportLeft);
+  const viewportTop = parseViewportOffset(options.viewportTop);
   const topOffset = typeof options.topOffset === 'number'
     ? options.topOffset
     : measureWindowTopOffset();
@@ -213,14 +222,15 @@ export const clampWindowPositionWithinViewport = (
     : measureSnapBottomInset();
 
   if (!viewportWidth || !viewportHeight) {
+    const minY = viewportTop + topOffset;
     return {
-      x: parsePositionCoordinate(position.x, 0),
-      y: clampWindowTopPosition(position.y, topOffset),
+      x: parsePositionCoordinate(position.x, viewportLeft),
+      y: clampWindowTopPosition(position.y, minY),
       bounds: {
-        minX: 0,
-        maxX: 0,
-        minY: topOffset,
-        maxY: topOffset,
+        minX: viewportLeft,
+        maxX: viewportLeft,
+        minY,
+        maxY: minY,
       },
     };
   }
@@ -236,14 +246,17 @@ export const clampWindowPositionWithinViewport = (
   const availableVertical = Math.max(viewportHeight - topOffset - snapBottomInset - bottomInset, 0);
   const verticalSpace = Math.max(availableVertical - height, 0);
 
-  const minX = 0;
-  const maxX = horizontalSpace;
-  const minY = topOffset;
-  const maxY = topOffset + verticalSpace;
+  const minX = viewportLeft;
+  const maxX = viewportLeft + horizontalSpace;
+  const minY = viewportTop + topOffset;
+  const maxY = minY + verticalSpace;
 
-  const nextX = Math.min(Math.max(parsePositionCoordinate(position.x, 0), minX), maxX);
+  const nextX = Math.min(
+    Math.max(parsePositionCoordinate(position.x, viewportLeft), minX),
+    maxX,
+  );
   const nextY = Math.min(
-    Math.max(clampWindowTopPosition(position.y, topOffset), minY),
+    Math.max(clampWindowTopPosition(position.y, minY), minY),
     maxY,
   );
 
