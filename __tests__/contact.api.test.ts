@@ -1,5 +1,13 @@
-import handler, { rateLimit, RATE_LIMIT_WINDOW_MS } from '../pages/api/contact';
+import handler, {
+  rateLimit,
+  RATE_LIMIT_WINDOW_MS,
+  clearRateLimitSubscribers,
+} from '../pages/api/contact';
 import { createMocks } from 'node-mocks-http';
+import {
+  getEmailTestOutbox,
+  resetEmailTestOutbox,
+} from '../lib/email/provider';
 
 const originalNodeEnv = process.env.NODE_ENV;
 
@@ -9,12 +17,21 @@ describe('contact api', () => {
     jest.restoreAllMocks();
     delete (global as any).fetch;
     delete process.env.RECAPTCHA_SECRET;
+    delete process.env.EMAIL_PROVIDER;
+    delete process.env.CONTACT_EMAIL_TO;
+    delete process.env.CONTACT_EMAIL_FROM;
+    delete process.env.CONTACT_EMAIL_SUBJECT;
+    delete process.env.RESEND_API_KEY;
+    delete process.env.POSTMARK_SERVER_TOKEN;
     process.env.NODE_ENV = originalNodeEnv;
+    resetEmailTestOutbox();
+    clearRateLimitSubscribers();
   });
 
   test('issues secure csrf cookie when running in production', async () => {
     process.env.NODE_ENV = 'production';
     process.env.RECAPTCHA_SECRET = 'secret';
+    process.env.EMAIL_PROVIDER = 'console';
 
     const { req, res } = createMocks({
       method: 'GET',
@@ -36,6 +53,9 @@ describe('contact api', () => {
       .fn()
       .mockResolvedValue({ json: () => Promise.resolve({ success: true }) });
     process.env.RECAPTCHA_SECRET = 'secret';
+    process.env.EMAIL_PROVIDER = 'test';
+    process.env.CONTACT_EMAIL_TO = 'owner@example.com';
+    process.env.CONTACT_EMAIL_FROM = 'portfolio@example.com';
 
     const { req, res } = createMocks({
       method: 'POST',
@@ -58,6 +78,9 @@ describe('contact api', () => {
 
     expect(res._getStatusCode()).toBe(200);
     expect(res._getJSONData()).toEqual({ ok: true });
+    const outbox = getEmailTestOutbox();
+    expect(outbox).toHaveLength(1);
+    expect(outbox[0].replyTo).toBe('alex@example.com');
   });
 
   test('removes stale ip entries', async () => {
@@ -72,6 +95,9 @@ describe('contact api', () => {
       .fn()
       .mockResolvedValue({ json: () => Promise.resolve({ success: true }) });
     process.env.RECAPTCHA_SECRET = 'secret';
+    process.env.EMAIL_PROVIDER = 'test';
+    process.env.CONTACT_EMAIL_TO = 'owner@example.com';
+    process.env.CONTACT_EMAIL_FROM = 'portfolio@example.com';
 
     const { req, res } = createMocks({
       method: 'POST',
