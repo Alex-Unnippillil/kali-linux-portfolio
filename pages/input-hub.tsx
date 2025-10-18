@@ -201,16 +201,24 @@ const InputHub = () => {
         <input
           className="p-1 border"
           placeholder="Name"
+          type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
+          inputMode="text"
+          autoComplete="name"
+          autoCorrect="off"
         />
         <input
           className="p-1 border"
           placeholder="Email"
+          type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          inputMode="email"
+          autoComplete="email"
+          autoCorrect="off"
         />
         <select
           className="p-1 border"
@@ -229,6 +237,9 @@ const InputHub = () => {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           required
+          inputMode="text"
+          autoComplete="on"
+          autoCorrect="on"
         />
         <label className="flex items-center gap-2">
           <input
