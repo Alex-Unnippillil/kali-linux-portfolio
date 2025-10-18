@@ -7,6 +7,7 @@ import React, {
   createContext,
   useContext,
 } from 'react';
+import useMenuFocusManagement from '../../hooks/useMenuFocusManagement';
 
 function middleEllipsis(text: string, max = 30) {
   if (text.length <= max) return text;
@@ -58,6 +59,13 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  useMenuFocusManagement({
+    containerRef: moreMenuRef,
+    active: moreMenuOpen,
+    orientation: 'vertical',
+    triggerRef: moreButtonRef,
+  });
 
   useEffect(() => {
     if (prevActive.current !== activeId) {

@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import logger from '../../utils/logger'
+import useMenuFocusManagement from '../../hooks/useMenuFocusManagement'
 
 function DesktopMenu(props) {
 
@@ -14,12 +15,51 @@ function DesktopMenu(props) {
         { value: 'large', label: 'Large Icons' },
     ]
 
+    const { active, onClose, restoreFocusRef } = props
+    const menuRef = useRef(null)
+
+    useMenuFocusManagement({
+        containerRef: menuRef,
+        active,
+        orientation: 'vertical',
+        restoreFocusRef,
+    })
+
     useEffect(() => {
         document.addEventListener('fullscreenchange', checkFullScreen);
         return () => {
             document.removeEventListener('fullscreenchange', checkFullScreen);
         };
     }, [])
+
+    useEffect(() => {
+        if (!active) {
+            return undefined
+        }
+
+        const handlePointer = (event) => {
+            if (!menuRef.current || menuRef.current.contains(event.target)) {
+                return
+            }
+            onClose && onClose()
+        }
+
+        const handleKey = (event) => {
+            if (event.key !== 'Escape') {
+                return
+            }
+            event.preventDefault()
+            onClose && onClose()
+        }
+
+        document.addEventListener('mousedown', handlePointer)
+        document.addEventListener('keydown', handleKey)
+
+        return () => {
+            document.removeEventListener('mousedown', handlePointer)
+            document.removeEventListener('keydown', handleKey)
+        }
+    }, [active, onClose])
 
 
     const openTerminal = () => {
@@ -57,7 +97,15 @@ function DesktopMenu(props) {
             id="desktop-menu"
             role="menu"
             aria-label="Desktop context menu"
-            className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
+            ref={menuRef}
+            onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    onClose && onClose()
+                }
+            }}
+            className={(active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
         >
             <button
                 onClick={props.addNewFolder}

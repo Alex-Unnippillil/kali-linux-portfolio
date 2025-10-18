@@ -219,6 +219,7 @@ export class Desktop extends Component {
         this.workspaceThemes = Array.from({ length: this.workspaceCount }, () => ({ ...initialTheme }));
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.contextMenuInvokerRef = { current: null };
 
         this.iconSizePresetStorageKey = 'desktop_icon_size_presets';
         this.iconSizePresetLegacyKey = 'desktop_icon_size_preset';
@@ -4240,7 +4241,7 @@ export class Desktop extends Component {
         const context = target ? target.dataset.context : null;
         const appId = target ? target.dataset.appId : null;
         const rect = target ? target.getBoundingClientRect() : { left: 0, top: 0, height: 0 };
-        const fakeEvent = { pageX: rect.left, pageY: rect.top + rect.height };
+        const fakeEvent = { pageX: rect.left, pageY: rect.top + rect.height, target };
         switch (context) {
             case "desktop-area":
                 ReactGA.event({ category: `Context Menu`, action: `Opened Desktop Context Menu` });
@@ -4261,8 +4262,24 @@ export class Desktop extends Component {
     }
 
     showContextMenu = (e, menuName /* context menu name */) => {
+        const rawTarget = e && 'target' in e ? e.target : null;
+        const resolvedInvoker = rawTarget && typeof rawTarget.closest === 'function'
+            ? rawTarget.closest('[data-context]') || rawTarget
+            : rawTarget;
+        const invokerNode = resolvedInvoker instanceof HTMLElement ? resolvedInvoker : null;
+
+        if (invokerNode && typeof invokerNode.focus === 'function') {
+            invokerNode.focus({ preventScroll: true });
+        }
+
+        this.contextMenuInvokerRef.current = invokerNode;
+
         let { posx, posy } = this.getMenuPosition(e);
         let contextMenu = document.getElementById(`${menuName}-menu`);
+
+        if (!contextMenu) {
+            return;
+        }
 
         const menuWidth = contextMenu.offsetWidth;
         const menuHeight = contextMenu.offsetHeight;
@@ -5319,14 +5336,21 @@ export class Desktop extends Component {
                     iconSizeBucketLabel={this.getViewportBucketLabel(this.state.iconSizeBucket)}
                     setIconSizePreset={this.setIconSizePreset}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    onClose={this.hideAllContextMenu}
+                    restoreFocusRef={this.contextMenuInvokerRef}
                 />
-                <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
+                <DefaultMenu
+                    active={this.state.context_menus.default}
+                    onClose={this.hideAllContextMenu}
+                    restoreFocusRef={this.contextMenuInvokerRef}
+                />
                 <AppMenu
                     active={this.state.context_menus.app}
                     pinned={this.initFavourite[this.state.context_app]}
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
                     onClose={this.hideAllContextMenu}
+                    restoreFocusRef={this.contextMenuInvokerRef}
                 />
                 <TaskbarMenu
                     active={this.state.context_menus.taskbar}
@@ -5359,6 +5383,7 @@ export class Desktop extends Component {
                         }
                     }}
                     onCloseMenu={this.hideAllContextMenu}
+                    restoreFocusRef={this.contextMenuInvokerRef}
                 />
 
                 {/* Folder Input Name Bar */}
