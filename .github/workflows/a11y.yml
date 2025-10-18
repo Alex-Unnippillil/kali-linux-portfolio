@@ -1,22 +1,52 @@
 name: Accessibility
 
 on:
+  pull_request:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
   a11y:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: true
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: yarn
-      - run: yarn install --immutable
-      - run: yarn dedupe --check
-      - run: npx playwright install --with-deps
-      - run: |
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Verify dependency graph
+        run: yarn dedupe --check
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Start Next.js dev server
+        run: |
           yarn dev &
-          npx wait-on http://localhost:3000
-      - run: npx pa11y-ci --config pa11yci.json
-      - run: npx playwright test playwright/a11y.spec.ts
+          echo $! > .next-dev.pid
+
+      - name: Wait for dev server
+        run: npx wait-on http://localhost:3000
+
+      - name: Run pa11y-ci accessibility crawl
+        run: npx pa11y-ci --config pa11yci.json
+
+      - name: Run Playwright accessibility audits
+        run: npx playwright test --config=playwright/a11y.config.ts
+
+      - name: Stop Next.js dev server
+        if: always()
+        run: |
+          kill $(cat .next-dev.pid) || true
+          rm -f .next-dev.pid

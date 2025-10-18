@@ -10,23 +10,65 @@ const thresholds: Record<string, number> = {
   minor: 50,
 };
 
-const urls = [
+const topLevelPages = [
   '/',
   '/apps',
-  '/apps/chess',
-  '/apps/sudoku',
-  '/apps/youtube',
-  // Additional resource-heavy apps
-  '/apps/vscode',
-  '/apps/spotify',
-  '/apps/x',
-  '/apps/firefox',
-  '/apps/trash',
-  '/apps/gedit',
-  '/apps/todoist',
+  '/admin/messages',
+  '/daily-quote',
+  '/dummy-form',
+  '/gamepad-calibration',
+  '/hook-flow',
+  '/hydra-preview',
+  '/input-hub',
+  '/keyboard-reference',
+  '/module-workspace',
+  '/nessus-dashboard',
+  '/nessus-report',
+  '/network-topology',
+  '/nikto-report',
+  '/notes',
+  '/popular-modules',
+  '/post_exploitation',
+  '/profile',
+  '/qr',
+  '/qr/vcard',
+  '/recon/graph',
+  '/security-education',
+  '/sekurlsa_logonpasswords',
+  '/share-target',
+  '/spoofing',
+  '/video-gallery',
+  '/wps-attack',
 ];
 
-for (const path of urls) {
+const representativeWindows = [
+  '/apps/2048',
+  '/apps/blackjack',
+  '/apps/beef',
+  '/apps/converter',
+  '/apps/firefox',
+  '/apps/input-lab',
+  '/apps/john',
+  '/apps/kismet',
+  '/apps/metasploit',
+  '/apps/metasploit-post',
+  '/apps/nmap-nse',
+  '/apps/project-gallery',
+  '/apps/qr',
+  '/apps/solitaire',
+  '/apps/spotify',
+  '/apps/ssh',
+  '/apps/subnet-calculator',
+  '/apps/tower-defense',
+  '/apps/volatility',
+  '/apps/vscode',
+  '/apps/weather_widget',
+  '/apps/wireshark',
+  '/apps/word_search',
+  '/apps/x',
+];
+
+for (const path of [...topLevelPages, ...representativeWindows]) {
   test(`accessibility audit for ${path}`, async ({ page }) => {
     await page.goto(`http://localhost:3000${path}`);
     const results = await new AxeBuilder({ page })
