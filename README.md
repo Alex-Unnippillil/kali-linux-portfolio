@@ -1,5 +1,7 @@
 # Kali Linux Portfolio
 
+![Mutation Score ≥70%](https://img.shields.io/badge/mutation--score-%E2%89%A570%25-blue?logo=stryker)
+
 A desktop-style portfolio built with Next.js and Tailwind that recreates the look and feel of a Kali/Ubuntu workstation. It ships with resizable windows, a dock, context menus, and a catalog of **security tool simulations**, **utilities**, and **retro games**. This document is aimed at engineers preparing production deployments or long-term maintenance.
 
 > Production site: https://unnippillil.com/
@@ -327,6 +329,7 @@ Add any additional variables required by your configuration (ReCAPTCHA, Supabase
 | `yarn lint` | ESLint (configured via `eslint.config.mjs`). |
 | `yarn test` | Jest unit tests (jsdom environment; see `jest.setup.ts`). |
 | `yarn test:watch` | Watch mode for Jest. |
+| `yarn mutation:test` | Stryker mutation testing (HTML/JSON reports in `reports/mutation`). |
 | `yarn smoke` | Manual smoke runner that opens each `/apps/*` route in a headless browser. |
 | `npx playwright test` | Playwright end-to-end suite (optional locally, required in E2E CI runs). |
 
@@ -335,6 +338,7 @@ Additional guidance:
 - Co-locate new tests with related code under `__tests__/` or feature folders.
 - Before PRs, confirm the static export still loads critical screens.
 - For major UI updates, capture screenshots or short clips for reviewers.
+- Review the [mutation testing workflow](./docs/mutation-testing.md) to interpret score thresholds and reports.
 
 Accessibility and performance checks using Lighthouse or Pa11y (`pa11yci.json`) are encouraged for desktop shell changes.
 
