@@ -88,6 +88,9 @@ const UTILITY_APP_IDS = buildIdSet([
     'weather-widget',
 ]);
 
+const GRID_LAYOUT_CLASSES =
+    'mt-4 grid grid-cols-3 gap-3 min-[420px]:grid-cols-4 sm:gap-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6';
+
 const sortAppsByTitle = (collection = []) =>
     [...collection].sort((a, b) => a.title.localeCompare(b.title));
 
@@ -274,7 +277,7 @@ class AllApplications extends React.Component {
         return (
             <div
                 key={app.id}
-                className="relative flex w-full items-center justify-center rounded-2xl border border-white/10 bg-slate-900/70 p-3 shadow-lg transition hover:border-sky-300/70 focus-within:ring-2 focus-within:ring-sky-300/70"
+                className="relative flex w-full items-center justify-center rounded-2xl border border-white/10 bg-slate-900/70 p-3 shadow-lg transition hover:border-sky-300/70 focus-within:ring-2 focus-within:ring-sky-300/70 aspect-[4/5] md:aspect-auto"
             >
                 <button
                     type="button"
@@ -323,7 +326,7 @@ class AllApplications extends React.Component {
                             {apps.length} {apps.length === 1 ? 'app' : 'apps'}
                         </span>
                     </div>
-                    <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                    <div className={GRID_LAYOUT_CLASSES}>
                         {apps.map((app) => this.renderAppTile(app))}
                     </div>
                 </div>
@@ -372,7 +375,7 @@ class AllApplications extends React.Component {
                         {countLabel}
                     </span>
                 </summary>
-                <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                <div className={GRID_LAYOUT_CLASSES}>
                     {folder.items.map((app) => this.renderAppTile(app))}
                 </div>
             </details>
