@@ -1,3 +1,16 @@
+:global(:root) {
+  --window-motion-duration-minimize: 200ms;
+  --window-motion-ease-minimize: cubic-bezier(0.4, 0, 0.2, 1);
+  --window-motion-duration-restore: 300ms;
+  --window-motion-ease-restore: cubic-bezier(0.2, 0.8, 0.4, 1);
+  --window-motion-duration-snap: 240ms;
+  --window-motion-ease-snap: cubic-bezier(0.2, 0.8, 0.4, 1);
+  --window-motion-duration-maximize: 320ms;
+  --window-motion-ease-maximize: cubic-bezier(0.2, 0.8, 0.4, 1);
+  --window-motion-duration-snap-preview: var(--window-motion-duration-snap);
+  --window-motion-ease-snap-preview: var(--window-motion-ease-snap);
+}
+
 .windowFrame {
   position: relative;
   border: 1px solid var(--color-window-border);
@@ -206,4 +219,30 @@
 .windowXBorder {
   height: calc(100% + 10px);
   width: calc(100% - 10px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :global(:root) {
+    --window-motion-duration-minimize: 0ms;
+    --window-motion-duration-restore: 0ms;
+    --window-motion-duration-snap: 0ms;
+    --window-motion-duration-maximize: 0ms;
+    --window-motion-duration-snap-preview: 0ms;
+  }
+
+  .windowFrame {
+    transition:
+      transform var(--window-motion-transform-duration) var(--window-motion-transform-easing),
+      filter var(--motion-fast) ease,
+      box-shadow var(--motion-fast) ease,
+      opacity var(--window-motion-opacity-duration) var(--window-motion-opacity-easing),
+      visibility 0s linear;
+  }
+
+  .windowFrame::before,
+  .snapPreview,
+  .windowControlButton {
+    transition-duration: 0ms;
+    transition-delay: 0s;
+  }
 }

@@ -79,6 +79,14 @@ const SNAP_LABELS = {
     'bottom-right': 'Snap bottom-right quarter',
 };
 
+const WINDOW_MOTION_PRESETS = {
+    maximize: { durationToken: 'maximize', easingToken: 'maximize' },
+    restore: { durationToken: 'restore', easingToken: 'restore' },
+    snap: { durationToken: 'snap', easingToken: 'snap' },
+};
+
+const DEFAULT_WINDOW_MOTION_PRESET = 'restore';
+
 const getSnapLabel = (position) => {
     if (!position) return 'Snap window';
     return SNAP_LABELS[position] || 'Snap window';
@@ -478,20 +486,10 @@ export class Window extends Component {
 
     setTransformMotionPreset = (node, preset) => {
         if (!node) return;
-        const durationVars = {
-            maximize: '--window-motion-duration-maximize',
-            restore: '--window-motion-duration-restore',
-            snap: '--window-motion-duration-snap',
-        };
-        const easingVars = {
-            maximize: '--window-motion-ease-maximize',
-            restore: '--window-motion-ease-restore',
-            snap: '--window-motion-ease-snap',
-        };
-        const duration = durationVars[preset] || durationVars.restore;
-        const easing = easingVars[preset] || easingVars.restore;
-        node.style.setProperty('--window-motion-transform-duration', `var(${duration})`);
-        node.style.setProperty('--window-motion-transform-easing', `var(${easing})`);
+        const { durationToken, easingToken } = WINDOW_MOTION_PRESETS[preset]
+            || WINDOW_MOTION_PRESETS[DEFAULT_WINDOW_MOTION_PRESET];
+        node.style.setProperty('--window-motion-transform-duration', `var(--window-motion-duration-${durationToken})`);
+        node.style.setProperty('--window-motion-transform-easing', `var(--window-motion-ease-${easingToken})`);
     }
 
     activateOverlay = () => {
