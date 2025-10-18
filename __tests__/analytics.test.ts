@@ -1,5 +1,12 @@
 import ReactGA from 'react-ga4';
-import { logEvent, logGameStart, logGameEnd, logGameError } from '../utils/analytics';
+import {
+  __resetExperimentExposureCache,
+  logEvent,
+  logExperimentExposure,
+  logGameStart,
+  logGameEnd,
+  logGameError,
+} from '../utils/analytics';
 
 jest.mock('react-ga4', () => ({
   event: jest.fn(),
@@ -10,6 +17,8 @@ describe('analytics utilities', () => {
 
   beforeEach(() => {
     mockEvent.mockReset();
+    __resetExperimentExposureCache();
+    sessionStorage.clear();
   });
 
   it('logs generic events', () => {
@@ -36,6 +45,29 @@ describe('analytics utilities', () => {
   it('handles errors from ReactGA.event without throwing', () => {
     mockEvent.mockImplementationOnce(() => { throw new Error('fail'); });
     expect(() => logEvent({ category: 't', action: 'a' } as any)).not.toThrow();
+  });
+
+  it('logs experiment exposure only once per session', () => {
+    logExperimentExposure('launcher-density', 'compact');
+    logExperimentExposure('launcher-density', 'compact');
+
+    expect(mockEvent).toHaveBeenCalledTimes(1);
+    expect(mockEvent).toHaveBeenCalledWith({
+      category: 'experiment:launcher-density',
+      action: 'exposure',
+      label: 'compact',
+      nonInteraction: true,
+    });
+  });
+
+  it('persists experiment exposure dedupe in session storage', () => {
+    logExperimentExposure('window-chrome', 'contrast');
+
+    expect(JSON.parse(sessionStorage.getItem('experiments:exposures') ?? '[]')).toContain('window-chrome');
+
+    mockEvent.mockClear();
+    logExperimentExposure('window-chrome', 'contrast');
+    expect(mockEvent).not.toHaveBeenCalled();
   });
 });
 
