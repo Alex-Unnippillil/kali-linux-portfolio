@@ -5,6 +5,21 @@ export class UbuntuApp extends Component {
     constructor() {
         super();
         this.state = { launching: false, dragging: false, prefetched: false };
+        this.prefetchHandle = null;
+        this.prefetchTimeout = null;
+        this.prefetchScheduled = false;
+        this.unmounted = false;
+    }
+
+    componentWillUnmount() {
+        this.unmounted = true;
+        if (typeof window !== 'undefined' && typeof window.cancelIdleCallback === 'function' && this.prefetchHandle !== null) {
+            window.cancelIdleCallback(this.prefetchHandle);
+        }
+        if (this.prefetchTimeout) {
+            clearTimeout(this.prefetchTimeout);
+            this.prefetchTimeout = null;
+        }
     }
 
     handleDragStart = () => {
@@ -24,9 +39,37 @@ export class UbuntuApp extends Component {
     }
 
     handlePrefetch = () => {
-        if (!this.state.prefetched && typeof this.props.prefetch === 'function') {
-            this.props.prefetch();
-            this.setState({ prefetched: true });
+        if (this.state.prefetched || typeof this.props.prefetch !== 'function' || this.prefetchScheduled) {
+            return;
+        }
+
+        this.prefetchScheduled = true;
+
+        const runPrefetch = () => {
+            if (this.state.prefetched || this.unmounted) {
+                return;
+            }
+            try {
+                this.props.prefetch();
+            } catch (error) {
+                console.error('Prefetch failed for app', this.props.id, error);
+            } finally {
+                if (!this.unmounted) {
+                    this.setState({ prefetched: true });
+                }
+            }
+        };
+
+        if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+            this.prefetchHandle = window.requestIdleCallback(() => {
+                this.prefetchHandle = null;
+                runPrefetch();
+            }, { timeout: 1000 });
+        } else {
+            this.prefetchTimeout = setTimeout(() => {
+                this.prefetchTimeout = null;
+                runPrefetch();
+            }, 120);
         }
     }
 
