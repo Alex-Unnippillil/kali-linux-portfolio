@@ -5,7 +5,7 @@ import Converter from "..";
 export default function ConverterPage() {
   const title = "Converter | Kali Linux Portfolio";
   const description =
-    "Convert currency, length, and weight units with a fast multi-domain converter.";
+    "Convert units, bases, and hashes with an offline-ready modular converter.";
 
   return (
     <>
