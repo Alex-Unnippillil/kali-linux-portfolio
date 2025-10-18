@@ -6,7 +6,18 @@ const NetworkTopology: React.FC = () => {
 
   return (
     <>
-      <Meta />
+      <Meta
+        title="Network Topology Mitigation Simulator — Alex Unnippillil"
+        description="Toggle mitigations to learn how perimeter defenses reroute suspicious traffic inside the Kali-themed network topology simulator."
+        canonicalPath="/network-topology"
+        og={{
+          title: 'Network Topology Simulator',
+          subtitle: 'Visualize mitigations across attacker, firewall, and server nodes',
+          badges: ['Live diagram', 'Defense-in-depth', 'Interactive toggle'],
+          project: 'network-topology-simulator',
+          image: '/images/logos/logo_1200.png',
+        }}
+      />
       <main className="bg-ub-cool-grey text-white min-h-screen p-4 space-y-4">
         <button
           onClick={() => setMitigated((m) => !m)}

@@ -48,7 +48,19 @@ const WpsAttack = () => {
 
   return (
     <>
-      <Meta />
+      <Meta
+        title="WPS Attack Walkthrough — Alex Unnippillil"
+        description="Step through a responsible, permissioned WPS brute-force simulation highlighting discovery, PIN cracking, and credential recovery."
+        canonicalPath="/wps-attack"
+        og={{
+          title: 'WPS Attack Simulation',
+          subtitle: 'Timed stages for discovery, brute force, and credential capture',
+          badges: ['Wireless', 'PIN brute force', 'Education only'],
+          project: 'wps-attack-walkthrough',
+          locale: 'fr-CA',
+          image: '/images/logos/logo_1200.png',
+        }}
+      />
       <main className="bg-ub-cool-grey text-white min-h-screen p-4">
         <div className="mx-auto max-w-3xl">
           <h1 className="text-2xl font-semibold mb-6">WPS Attack Walkthrough</h1>
