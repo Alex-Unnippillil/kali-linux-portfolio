@@ -4,6 +4,7 @@ import type { ChangeEvent, FC, MouseEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import usePersistentState from "../../hooks/usePersistentState";
+import DelayedTooltip from "./DelayedTooltip";
 
 export const clampLevel = (value: number) => Math.min(1, Math.max(0, value));
 
@@ -104,10 +105,16 @@ export const estimateBatteryTime = (level: number, charging: boolean) => {
 
 interface BatteryIndicatorProps {
   className?: string;
+  descriptionId?: string;
+  tooltipId?: string;
 }
 
 
-const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
+const BatteryIndicator: FC<BatteryIndicatorProps> = ({
+  className = "",
+  descriptionId,
+  tooltipId,
+}) => {
   const [open, setOpen] = useState(false);
   const [level, setLevel] = usePersistentState<number>(
     "status-battery-level",
@@ -177,20 +184,44 @@ const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
 
   return (
     <div ref={rootRef} className={`relative flex items-center ${className}`.trim()}>
-      <button
-        type="button"
-        className="flex h-6 w-6 items-center justify-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue"
-        aria-label={tooltip}
-        aria-haspopup="true"
-        aria-expanded={open}
-        title={tooltip}
-        onClick={handleToggle}
-        onPointerDown={(event) => event.stopPropagation()}
-      >
-        <span className="relative inline-flex">
-          <BatteryGlyph level={level} charging={charging} saver={batterySaver} />
-        </span>
-      </button>
+      <DelayedTooltip id={tooltipId} content={tooltip}>
+        {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+          <button
+            type="button"
+            ref={(node) => {
+              ref(node);
+            }}
+            className="inline-flex h-[var(--shell-hit-target)] min-h-[var(--shell-hit-target)] w-[var(--shell-hit-target)] min-w-[var(--shell-hit-target)] items-center justify-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            aria-label={tooltip}
+            aria-haspopup="true"
+            aria-expanded={open}
+            aria-describedby={descriptionId}
+            onClick={handleToggle}
+            onPointerDown={(event) => event.stopPropagation()}
+            onMouseEnter={(event) => {
+              onMouseEnter(event);
+            }}
+            onMouseLeave={(event) => {
+              onMouseLeave(event);
+            }}
+            onFocus={(event) => {
+              onFocus(event);
+            }}
+            onBlur={(event) => {
+              onBlur(event);
+            }}
+          >
+            <span className="relative inline-flex">
+              <BatteryGlyph level={level} charging={charging} saver={batterySaver} />
+            </span>
+            {descriptionId ? (
+              <span id={descriptionId} className="sr-only">
+                {tooltip}
+              </span>
+            ) : null}
+          </button>
+        )}
+      </DelayedTooltip>
       {open && (
         <div
           className="absolute bottom-full right-0 z-50 mb-2 min-w-[14rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-3 text-xs text-white shadow-lg"

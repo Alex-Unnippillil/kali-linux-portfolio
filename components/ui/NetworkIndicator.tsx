@@ -5,6 +5,7 @@ import type { FC, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import usePersistentState from "../../hooks/usePersistentState";
+import DelayedTooltip from "./DelayedTooltip";
 
 type NetworkType = "wired" | "wifi";
 type SignalStrength = "excellent" | "good" | "fair" | "weak";
@@ -379,9 +380,17 @@ interface NetworkIndicatorProps {
   className?: string;
   allowNetwork: boolean;
   online: boolean;
+  descriptionId?: string;
+  tooltipId?: string;
 }
 
-const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetwork, online }) => {
+const NetworkIndicator: FC<NetworkIndicatorProps> = ({
+  className = "",
+  allowNetwork,
+  online,
+  descriptionId,
+  tooltipId,
+}) => {
 
   const [wifiEnabled, setWifiEnabled] = usePersistentState<boolean>(
     "status-wifi-enabled",
@@ -557,23 +566,47 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
 
   return (
     <div ref={rootRef} className={classNames("relative flex items-center", className)}>
-      <button
-        type="button"
-        className="flex h-6 w-6 items-center justify-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue"
-        aria-label={summary.tooltip}
-        aria-haspopup="true"
-        aria-expanded={open}
-        title={summary.tooltip}
-        onClick={handleToggle}
-        onPointerDown={(event) => event.stopPropagation()}
-      >
-        <span className="relative inline-flex">
-          <StatusGlyph summary={summary} network={connectedNetwork} />
-          {!allowNetwork && (
-            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" aria-hidden="true" />
-          )}
-        </span>
-      </button>
+      <DelayedTooltip id={tooltipId} content={summary.tooltip}>
+        {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+          <button
+            type="button"
+            ref={(node) => {
+              ref(node);
+            }}
+            className="inline-flex h-[var(--shell-hit-target)] min-h-[var(--shell-hit-target)] w-[var(--shell-hit-target)] min-w-[var(--shell-hit-target)] items-center justify-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            aria-label={summary.tooltip}
+            aria-haspopup="true"
+            aria-expanded={open}
+            aria-describedby={descriptionId}
+            onClick={handleToggle}
+            onPointerDown={(event) => event.stopPropagation()}
+            onMouseEnter={(event) => {
+              onMouseEnter(event);
+            }}
+            onMouseLeave={(event) => {
+              onMouseLeave(event);
+            }}
+            onFocus={(event) => {
+              onFocus(event);
+            }}
+            onBlur={(event) => {
+              onBlur(event);
+            }}
+          >
+            <span className="relative inline-flex">
+              <StatusGlyph summary={summary} network={connectedNetwork} />
+              {!allowNetwork && (
+                <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-red-500" aria-hidden="true" />
+              )}
+            </span>
+            {descriptionId ? (
+              <span id={descriptionId} className="sr-only">
+                {summary.tooltip}
+              </span>
+            ) : null}
+          </button>
+        )}
+      </DelayedTooltip>
       {open && (
         <div
           className="absolute bottom-full right-0 z-50 mb-2 min-w-[14rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-3 text-xs text-white shadow-lg"

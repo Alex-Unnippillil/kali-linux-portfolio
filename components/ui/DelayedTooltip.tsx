@@ -19,17 +19,24 @@ type TriggerProps = {
 type DelayedTooltipProps = {
   content: ReactNode;
   delay?: number;
+  id?: string;
   children: (triggerProps: TriggerProps) => React.ReactElement;
 };
 
-const useIsomorphicLayoutEffect =
-  typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+const getDocument = () => {
+  if (typeof globalThis === 'undefined') return null;
+  const maybeDocument = (globalThis as typeof globalThis & { document?: Document }).document;
+  return maybeDocument ?? null;
+};
+
+const useIsomorphicLayoutEffect = getDocument() ? useLayoutEffect : useEffect;
 
 const DEFAULT_OFFSET = 8;
 
 const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
   content,
   delay = 300,
+  id,
   children,
 }) => {
   const triggerRef = useRef<HTMLElement | null>(null);
@@ -40,27 +47,28 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
   const [portalEl, setPortalEl] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (typeof document === 'undefined') return;
-    const el = document.createElement('div');
+    const doc = getDocument();
+    if (!doc || !doc.body) return;
+    const el = doc.createElement('div');
     el.setAttribute('data-delayed-tooltip', 'true');
-    document.body.appendChild(el);
+    doc.body.appendChild(el);
     setPortalEl(el);
     return () => {
-      document.body.removeChild(el);
+      doc.body?.removeChild(el);
       setPortalEl(null);
     };
   }, []);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
-      window.clearTimeout(timerRef.current);
+      globalThis.clearTimeout(timerRef.current);
       timerRef.current = null;
     }
   }, []);
 
   const show = useCallback(() => {
     clearTimer();
-    timerRef.current = window.setTimeout(() => {
+    timerRef.current = globalThis.setTimeout(() => {
       setVisible(true);
     }, delay);
   }, [clearTimer, delay]);
@@ -78,8 +86,14 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
     }
     const triggerRect = triggerRef.current.getBoundingClientRect();
     const tooltipRect = tooltipRef.current.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
+    const viewportWidth =
+      typeof globalThis !== 'undefined' && typeof globalThis.innerWidth === 'number'
+        ? globalThis.innerWidth
+        : triggerRect.right;
+    const viewportHeight =
+      typeof globalThis !== 'undefined' && typeof globalThis.innerHeight === 'number'
+        ? globalThis.innerHeight
+        : triggerRect.bottom;
 
     let top = triggerRect.bottom + DEFAULT_OFFSET;
     let left =
@@ -136,6 +150,8 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
                 left: position.left,
                 zIndex: 1000,
               }}
+              id={id}
+              role="tooltip"
               className="pointer-events-none max-w-xs rounded-md border border-gray-500/60 bg-ub-grey/95 px-3 py-2 text-xs text-white shadow-xl backdrop-blur"
             >
               {content}
