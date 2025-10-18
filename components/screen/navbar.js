@@ -384,7 +384,6 @@ export default class Navbar extends PureComponent {
                         const workspacesChanged = !areWorkspacesEqual(nextWorkspaces, previousState.workspaces);
                         const activeChanged = previousState.activeWorkspace !== nextActiveWorkspace;
                         runningAppsChanged = !areRunningAppsEqual(nextRunningApps, previousState.runningApps);
-                        const runningAppsChanged = !areRunningAppsEqual(nextRunningApps, previousState.runningApps);
                         const pinnedAppsChanged = !arePinnedAppsEqual(nextPinnedApps, previousState.pinnedApps);
 
                         if (!workspacesChanged && !activeChanged && !runningAppsChanged && !pinnedAppsChanged) {
@@ -593,12 +592,6 @@ export default class Navbar extends PureComponent {
                 );
         };
 
-        renderRunningAppButton = (app) => {
-                const isActive = !app.isMinimized;
-                const isFocused = app.isFocused && isActive;
-                const badge = app && typeof app.badge === 'object' ? app.badge : null;
-                const badgeNode = this.renderAppBadge(badge);
-                const buttonLabel = badge?.label ? `${app.title} — ${badge.label}` : app.title;
         renderTaskbarButton = (app, section) => {
                 const isMinimized = Boolean(app.isMinimized);
                 const isRunning = section === 'running' ? true : Boolean(app.isRunning);
@@ -606,6 +599,9 @@ export default class Navbar extends PureComponent {
                 const isFocused = section === 'running'
                         ? Boolean(app.isFocused && isActive)
                         : Boolean(app.isFocused && isActive);
+                const badge = app && typeof app.badge === 'object' ? app.badge : null;
+                const badgeNode = this.renderAppBadge(badge);
+                const buttonLabel = badge?.label ? `${app.title} — ${badge.label}` : app.title;
 
                 return (
                         <button
@@ -858,69 +854,68 @@ export default class Navbar extends PureComponent {
                 }
         };
 
-                render() {
-                        const { workspaces, activeWorkspace, preview } = this.state;
-                        const { workspaces, activeWorkspace } = this.state;
-                        const pinnedApps = this.renderPinnedApps();
-                        const runningApps = this.renderRunningApps();
-                        return (
-                                <div
-                                        className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
+        render() {
+                const { workspaces, activeWorkspace, preview } = this.state;
+                const pinnedApps = this.renderPinnedApps();
+                const runningApps = this.renderRunningApps();
+                return (
+                        <div
+                                className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
                                 style={{
-                                                minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
-                                                paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
-                                                paddingBottom: '0.25rem',
-                                                paddingLeft: `calc(0.75rem + var(--safe-area-left, 0px))`,
-                                                paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
-                                                '--desktop-navbar-height': `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px) + 0.375rem + 0.25rem)`
-                                        }}
-                                >
-                                        <div className="flex items-center gap-2 text-xs md:text-sm">
-                                                <WhiskerMenu />
-                                                {workspaces.length > 0 && (
-                                                        <WorkspaceSwitcher
-                                                                workspaces={workspaces}
-                                                                activeWorkspace={activeWorkspace}
-                                                                onSelect={this.handleWorkspaceSelect}
-                                                        />
-                                                )}
-                                                {pinnedApps}
-                                                {runningApps}
-                                                <PerformanceGraph />
-                                        </div>
-                                        <div className="flex items-center gap-4 text-xs md:text-sm">
-                                                <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
-                                                <div
-                                                        id="status-bar"
-                                                        role="button"
-                                                        tabIndex={0}
-                                                        aria-label="System status"
-                                                        aria-expanded={this.state.status_card}
-                                                        onClick={this.handleStatusToggle}
-                                                        onKeyDown={this.handleStatusKeyDown}
-                                                        className={
-                                                                'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
-                                                        }
-                                                >
-                                                        <Status />
-                                                        <QuickSettings open={this.state.status_card} />
-                                                </div>
-                                        </div>
-                                        <TaskbarPreviewFlyout
-                                                ref={this.previewFlyoutRef}
-                                                visible={Boolean(preview)}
-                                                title={preview?.appTitle}
-                                                image={preview?.image}
-                                                status={preview?.status}
-                                                position={preview?.position}
-                                                onMouseEnter={this.handlePreviewMouseEnter}
-                                                onMouseLeave={this.handlePreviewMouseLeave}
-                                                onFocus={this.handlePreviewFocus}
-                                                onBlur={this.handlePreviewBlur}
-                                                onKeyDown={this.handlePreviewKeyDown}
-                                        />
+                                        minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
+                                        paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
+                                        paddingBottom: '0.25rem',
+                                        paddingLeft: `calc(0.75rem + var(--safe-area-left, 0px))`,
+                                        paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
+                                        '--desktop-navbar-height': `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px) + 0.375rem + 0.25rem)`,
+                                }}
+                        >
+                                <div className="flex items-center gap-2 text-xs md:text-sm">
+                                        <WhiskerMenu />
+                                        {workspaces.length > 0 && (
+                                                <WorkspaceSwitcher
+                                                        workspaces={workspaces}
+                                                        activeWorkspace={activeWorkspace}
+                                                        onSelect={this.handleWorkspaceSelect}
+                                                />
+                                        )}
+                                        {pinnedApps}
+                                        {runningApps}
+                                        <PerformanceGraph />
                                 </div>
-                        );
+                                <div className="flex items-center gap-4 text-xs md:text-sm">
+                                        <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
+                                        <div
+                                                id="status-bar"
+                                                role="button"
+                                                tabIndex={0}
+                                                aria-label="System status"
+                                                aria-expanded={this.state.status_card}
+                                                onClick={this.handleStatusToggle}
+                                                onKeyDown={this.handleStatusKeyDown}
+                                                className={
+                                                        'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
+                                                }
+                                        >
+                                                <Status />
+                                                <QuickSettings open={this.state.status_card} />
+                                        </div>
+                                </div>
+                                <TaskbarPreviewFlyout
+                                        ref={this.previewFlyoutRef}
+                                        visible={Boolean(preview)}
+                                        title={preview?.appTitle}
+                                        image={preview?.image}
+                                        status={preview?.status}
+                                        position={preview?.position}
+                                        onMouseEnter={this.handlePreviewMouseEnter}
+                                        onMouseLeave={this.handlePreviewMouseLeave}
+                                        onFocus={this.handlePreviewFocus}
+                                        onBlur={this.handlePreviewBlur}
+                                        onKeyDown={this.handlePreviewKeyDown}
+                                />
+                        </div>
+                );
                 }
 
 
