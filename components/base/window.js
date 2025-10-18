@@ -1246,12 +1246,31 @@ export class WindowXBorder extends Component {
 export function WindowEditButtons(props) {
     const { togglePin } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
+    const allowMaximize = props.allowMaximize !== false;
+    const isMaximized = Boolean(props.isMaximised);
+
+    const handleMaximize = (event) => {
+        if (!allowMaximize) {
+            event?.preventDefault?.();
+            return;
+        }
+        if (typeof props.maximize === 'function') {
+            props.maximize(event);
+        }
+    };
+
     return (
-        <div className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[8.25rem]`}>
+        <div
+            className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[8.25rem]`}
+            role="group"
+            aria-label="Window controls"
+            onPointerDown={(event) => event.stopPropagation()}
+        >
             {pipSupported && props.pip && (
                 <button
                     type="button"
                     aria-label="Window pin"
+                    title="Pin window"
                     className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
                     onClick={togglePin}
                 >
@@ -1268,6 +1287,7 @@ export function WindowEditButtons(props) {
             <button
                 type="button"
                 aria-label="Window minimize"
+                title="Minimize"
                 className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
                 onClick={props.minimize}
             >
@@ -1280,46 +1300,31 @@ export function WindowEditButtons(props) {
                     sizes="16px"
                 />
             </button>
-            {props.allowMaximize && (
-                props.isMaximised
-                    ? (
-                        <button
-                            type="button"
-                            aria-label="Window restore"
-                            className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
-                            onClick={props.maximize}
-                        >
-                            <NextImage
-                                src="/themes/Yaru/window/window-restore-symbolic.svg"
-                                alt="Kali window restore"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
-                        </button>
-                    ) : (
-                        <button
-                            type="button"
-                            aria-label="Window maximize"
-                            className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
-                            onClick={props.maximize}
-                        >
-                            <NextImage
-                                src="/themes/Yaru/window/window-maximize-symbolic.svg"
-                                alt="Kali window maximize"
-                                className="h-4 w-4 inline"
-                                width={16}
-                                height={16}
-                                sizes="16px"
-                            />
-                        </button>
-                    )
-            )}
+            <button
+                type="button"
+                aria-label={isMaximized ? 'Window restore' : 'Window maximize'}
+                title={isMaximized ? 'Restore' : 'Maximize'}
+                className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6 ${allowMaximize ? '' : styles.windowControlButtonDisabled}`.trim()}
+                onClick={handleMaximize}
+                disabled={!allowMaximize}
+                aria-disabled={!allowMaximize}
+            >
+                <NextImage
+                    src={isMaximized
+                        ? '/themes/Yaru/window/window-restore-symbolic.svg'
+                        : '/themes/Yaru/window/window-maximize-symbolic.svg'}
+                    alt={isMaximized ? 'Kali window restore' : 'Kali window maximize'}
+                    className="h-4 w-4 inline"
+                    width={16}
+                    height={16}
+                    sizes="16px"
+                />
+            </button>
             <button
                 type="button"
                 id={`close-${props.id}`}
                 aria-label="Window close"
+                title="Close"
                 className={`${styles.windowControlButton} mx-1 cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6`}
                 onClick={props.close}
             >

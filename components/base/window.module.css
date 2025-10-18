@@ -129,7 +129,7 @@
   height: 28px;
 }
 
-.windowControlButton {
+.windowControlButton { 
   outline: none;
   box-shadow: none;
   transition: box-shadow var(--motion-fast) ease;
@@ -138,6 +138,14 @@
 .windowControlButton:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--color-window-accent);
+}
+
+.windowControlButton:disabled,
+.windowControlButtonDisabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  background-color: transparent !important;
+  box-shadow: none;
 }
 
 .windowYBorder {
