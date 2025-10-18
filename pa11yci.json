@@ -20,6 +20,22 @@
     {
       "label": "high-contrast",
       "beforeScript": "scripts/a11y-high-contrast.js"
+    },
+    {
+      "label": "window-open",
+      "beforeScript": "scripts/a11y-open-window.js"
+    },
+    {
+      "label": "snap-overlay",
+      "beforeScript": "scripts/a11y-snap-overlay.js"
+    },
+    {
+      "label": "desktop-menu",
+      "beforeScript": "scripts/a11y-open-desktop-menu.js"
+    },
+    {
+      "label": "taskbar-menu",
+      "beforeScript": "scripts/a11y-open-taskbar-menu.js"
     }
   ]
 }
