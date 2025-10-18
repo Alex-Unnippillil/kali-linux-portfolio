@@ -1,4 +1,6 @@
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+<svg role="img" aria-labelledby="icon-space-invaderssvg-title" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <title id="icon-space-invaderssvg-title">Space Invaders</title>
+
   <rect width="64" height="64" fill="#2e3436"/>
   <g fill="#4caf50">
     <rect x="8" y="0" width="8" height="8"/>

@@ -1,4 +1,6 @@
-<svg width="512" height="512" version="1.1" viewBox="0 0 384 384" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<svg role="img" aria-labelledby="icon-niktosvg-title" width="512" height="512" version="1.1" viewBox="0 0 384 384" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <title id="icon-niktosvg-title">Nikto</title>
+
 <defs>
 <radialGradient id="a" cx="937.05" cy="28.012" r="129.82" gradientTransform="matrix(1.7873 0 0 2.3233 -737.72 -54.149)" gradientUnits="userSpaceOnUse">
 <stop stop-color="#80c6ed" offset="0"/>

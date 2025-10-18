@@ -1,4 +1,6 @@
-<svg version="1.1" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<svg role="img" aria-labelledby="icon-mimikatzsvg-title" version="1.1" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <title id="icon-mimikatzsvg-title">Mimikatz</title>
+
   <defs>
     <radialGradient id="d" cx="52.227" cy="53.703" r="55.246" gradientTransform="matrix(2.3327 -2.469 2.144 1.9242 8.2433 261.61)" gradientUnits="userSpaceOnUse">
       <stop stop-color="#272a34" offset=".2" />

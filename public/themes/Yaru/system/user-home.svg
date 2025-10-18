@@ -1,0 +1,17 @@
+<svg role="img" aria-labelledby="icon-user-home-title" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <title id="icon-user-home-title">Home</title>
+  <defs>
+    <linearGradient id="home-sky" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#5dade2" />
+      <stop offset="100%" stop-color="#2874a6" />
+    </linearGradient>
+    <linearGradient id="home-wall" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#fdf2d0" />
+      <stop offset="100%" stop-color="#f4b183" />
+    </linearGradient>
+  </defs>
+  <rect x="6" y="26" width="52" height="28" rx="6" fill="url(#home-wall)" />
+  <path d="M32 10 8 30h6v22h12V38h12v14h12V30h6z" fill="url(#home-sky)" />
+  <path d="M20 44h8v10h-8z" fill="#ffffff" opacity="0.85" />
+  <circle cx="44" cy="40" r="6" fill="#ffffff" opacity="0.9" />
+</svg>

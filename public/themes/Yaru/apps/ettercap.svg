@@ -1,4 +1,6 @@
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+<svg role="img" aria-labelledby="icon-ettercapsvg-title" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <title id="icon-ettercapsvg-title">Ettercap</title>
+
   <circle cx="32" cy="12" r="6" fill="#4ade80"/>
   <circle cx="12" cy="52" r="6" fill="#4ade80"/>
   <circle cx="52" cy="52" r="6" fill="#4ade80"/>
