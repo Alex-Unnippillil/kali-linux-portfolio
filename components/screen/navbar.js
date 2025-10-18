@@ -860,7 +860,6 @@ export default class Navbar extends PureComponent {
 
                 render() {
                         const { workspaces, activeWorkspace, preview } = this.state;
-                        const { workspaces, activeWorkspace } = this.state;
                         const pinnedApps = this.renderPinnedApps();
                         const runningApps = this.renderRunningApps();
                         return (
