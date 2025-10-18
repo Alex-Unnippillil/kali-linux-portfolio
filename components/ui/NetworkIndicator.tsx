@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import QRCode from "qrcode";
 import type { FC, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -750,11 +751,18 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
               )}
               {shareStatus.state === "ready" && (
                 <div className="space-y-2 text-center">
-                  <img
-                    src={shareStatus.qr}
-                    alt={`Wi-Fi share code for ${shareTarget.name}`}
-                    className="mx-auto h-40 w-40 rounded bg-white p-2"
-                  />
+                  <div className="mx-auto h-40 w-40 rounded bg-white p-2">
+                    <div className="relative h-full w-full">
+                      <Image
+                        src={shareStatus.qr}
+                        alt={`Wi-Fi share code for ${shareTarget.name}`}
+                        fill
+                        className="rounded"
+                        sizes="160px"
+                        decoding="async"
+                      />
+                    </div>
+                  </div>
                   <p className="text-[11px] text-gray-300">Payload: {shareStatus.payload}</p>
                   {nfcStatus && <p className="text-[11px] text-gray-200">{nfcStatus}</p>}
                 </div>

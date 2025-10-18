@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import DOMPurify from 'dompurify';
 
@@ -371,31 +372,34 @@ export default function AsciiArt() {
 
   return (
     <div className="h-full w-full flex flex-col p-4 bg-ub-cool-grey text-white overflow-auto">
-      <div className="mb-2 flex flex-wrap gap-2">
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleFile}
-          className="mb-2"
-        />
+        <div className="mb-2 flex flex-wrap gap-2">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFile}
+            className="mb-2"
+            aria-label="Upload image"
+          />
         <label className="flex items-center gap-2">
           Charset:
-          <input
-            type="text"
-            value={charSet}
-            onChange={(e) =>
-              setCharSet(DOMPurify.sanitize(e.target.value).slice(0, 256))
-            }
-            className="px-1 bg-gray-700"
-          />
+            <input
+              type="text"
+              value={charSet}
+              onChange={(e) =>
+                setCharSet(DOMPurify.sanitize(e.target.value).slice(0, 256))
+              }
+              className="px-1 bg-gray-700"
+              aria-label="Character set"
+            />
         </label>
         <label className="flex items-center gap-2">
           Preset:
-          <select
-            onChange={(e) => setCharSet(presetCharSets[e.target.value])}
-            className="bg-gray-700"
-            defaultValue="standard"
-          >
+            <select
+              onChange={(e) => setCharSet(presetCharSets[e.target.value])}
+              className="bg-gray-700"
+              defaultValue="standard"
+              aria-label="Preset character set"
+            >
             {Object.keys(presetCharSets).map((p) => (
               <option key={p} value={p}>
                 {p}
@@ -405,14 +409,15 @@ export default function AsciiArt() {
         </label>
         <label className="flex items-center gap-2">
           Cell:
-          <input
-            type="number"
-            min="4"
-            max="32"
-            value={cellSize}
-            onChange={(e) => setCellSize(Number(e.target.value))}
-            className="w-16 px-1 bg-gray-700"
-          />
+            <input
+              type="number"
+              min="4"
+              max="32"
+              value={cellSize}
+              onChange={(e) => setCellSize(Number(e.target.value))}
+              className="w-16 px-1 bg-gray-700"
+              aria-label="Cell size"
+            />
         </label>
         <label className="flex items-center gap-2">
           Brightness:
@@ -454,11 +459,12 @@ export default function AsciiArt() {
         </label>
         <label className="flex items-center gap-2">
           Palette:
-          <select
-            value={paletteName}
-            onChange={(e) => setPaletteName(e.target.value)}
-            className="bg-gray-700"
-          >
+            <select
+              value={paletteName}
+              onChange={(e) => setPaletteName(e.target.value)}
+              className="bg-gray-700"
+              aria-label="Color palette"
+            >
             {Object.keys(palettes).map((p) => (
               <option key={p} value={p}>
                 {p}
@@ -468,11 +474,12 @@ export default function AsciiArt() {
         </label>
         <label className="flex items-center gap-2">
           Font:
-          <select
-            value={font}
-            onChange={(e) => setFont(e.target.value)}
-            className="bg-gray-700"
-          >
+            <select
+              value={font}
+              onChange={(e) => setFont(e.target.value)}
+              className="bg-gray-700"
+              aria-label="Font selection"
+            >
             {fonts.map((f) => (
               <option key={f} value={f}>
                 {f}
@@ -482,11 +489,12 @@ export default function AsciiArt() {
         </label>
         <label className="flex items-center gap-2">
           Color
-          <input
-            type="checkbox"
-            checked={useColor}
-            onChange={(e) => setUseColor(e.target.checked)}
-          />
+            <input
+              type="checkbox"
+              checked={useColor}
+              onChange={(e) => setUseColor(e.target.checked)}
+              aria-label="Enable color"
+            />
         </label>
         <button
           type="button"
@@ -550,34 +558,40 @@ export default function AsciiArt() {
         </button>
       </div>
       {imgSrc && !typingMode && (
-        <img
-          src={imgSrc}
-          alt="original image preview"
-          className="max-h-48 mb-2 object-contain"
-        />
+        <div className="relative mb-2 h-48 w-full">
+          <Image
+            src={imgSrc}
+            alt="original image preview"
+            fill
+            className="object-contain"
+            sizes="100vw"
+            decoding="async"
+          />
+        </div>
       )}
-      {typingMode ? (
-        <textarea
-          ref={editorRef}
-          value={plainAscii}
-          onChange={handleEditorChange}
-          onKeyDown={handleEditorKeyDown}
-          className="flex-1 font-mono bg-gray-800 text-white resize-none"
-          style={{
-            lineHeight: `${cellSize}px`,
-            fontSize: `${cellSize}px`,
-            backgroundSize: `${cellSize}px ${cellSize}px`,
-            backgroundImage:
-              'linear-gradient(0deg, transparent calc(100% - 1px), rgba(255,255,255,0.1) calc(100% - 1px)), linear-gradient(90deg, transparent calc(100% - 1px), rgba(255,255,255,0.1) calc(100% - 1px))',
-          }}
-        />
+        {typingMode ? (
+          <textarea
+            ref={editorRef}
+            value={plainAscii}
+            onChange={handleEditorChange}
+            onKeyDown={handleEditorKeyDown}
+            className="flex-1 font-mono bg-gray-800 text-white resize-none"
+            style={{
+              lineHeight: `${cellSize}px`,
+              fontSize: `${cellSize}px`,
+              backgroundSize: `${cellSize}px ${cellSize}px`,
+              backgroundImage:
+                'linear-gradient(0deg, transparent calc(100% - 1px), rgba(255,255,255,0.1) calc(100% - 1px)), linear-gradient(90deg, transparent calc(100% - 1px), rgba(255,255,255,0.1) calc(100% - 1px))',
+            }}
+            aria-label="ASCII editor"
+          />
       ) : (
         <pre
           className="font-mono whitespace-pre overflow-auto flex-1"
           dangerouslySetInnerHTML={{ __html: asciiHtml }}
         />
       )}
-      <canvas ref={canvasRef} className="hidden w-full h-full" />
+        <canvas ref={canvasRef} className="hidden w-full h-full" aria-hidden="true" />
       <div className="sr-only" aria-live="polite">
         {altText}
       </div>

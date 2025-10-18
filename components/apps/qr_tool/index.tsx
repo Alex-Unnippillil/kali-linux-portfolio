@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 import React, { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 
@@ -129,13 +130,14 @@ const QRTool: React.FC = () => {
       <div className="space-y-2">
         <label htmlFor="qr-input" className="block">
           <span className="text-sm">Text</span>
-          <input
-            id="qr-input"
-            type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            className="w-full rounded p-1 text-black"
-          />
+            <input
+              id="qr-input"
+              type="text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              className="w-full rounded p-1 text-black"
+              aria-label="QR text"
+            />
         </label>
         <div className="flex flex-wrap items-center gap-2">
           <label htmlFor="qr-error" className="flex items-center gap-1 text-sm">
@@ -153,15 +155,16 @@ const QRTool: React.FC = () => {
               ))}
             </select>
           </label>
-          <label htmlFor="qr-invert" className="flex items-center gap-1 text-sm">
-            <input
-              id="qr-invert"
-              type="checkbox"
-              checked={invert}
-              onChange={(e) => setInvert(e.target.checked)}
-            />
-            Invert
-          </label>
+            <label htmlFor="qr-invert" className="flex items-center gap-1 text-sm">
+              <input
+                id="qr-invert"
+                type="checkbox"
+                checked={invert}
+                onChange={(e) => setInvert(e.target.checked)}
+                aria-label="Invert colors"
+              />
+              Invert
+            </label>
           <button
             type="button"
             onClick={downloadPng}
@@ -177,18 +180,25 @@ const QRTool: React.FC = () => {
             SVG
           </button>
         </div>
-        {png && <img src={png} alt="QR preview" className="h-48 w-48 bg-white" />}
+        {png && (
+          <div className="h-48 w-48 bg-white">
+            <div className="relative h-full w-full">
+              <Image src={png} alt="QR preview" fill className="object-contain" sizes="192px" decoding="async" />
+            </div>
+          </div>
+        )}
       </div>
       <div className="space-y-2">
         <label htmlFor="qr-csv" className="block">
           <span className="text-sm">Batch CSV (text,name)</span>
-          <textarea
-            id="qr-csv"
-            rows={4}
-            value={csv}
-            onChange={(e) => setCsv(e.target.value)}
-            className="w-full rounded p-1 text-black"
-          />
+            <textarea
+              id="qr-csv"
+              rows={4}
+              value={csv}
+              onChange={(e) => setCsv(e.target.value)}
+              className="w-full rounded p-1 text-black"
+              aria-label="Batch QR definitions"
+            />
         </label>
         <button
           type="button"
@@ -201,7 +211,18 @@ const QRTool: React.FC = () => {
           <div className="grid grid-cols-2 gap-4 pt-2 sm:grid-cols-3">
             {batch.map((item) => (
               <div key={item.name} className="flex flex-col items-center space-y-1">
-                <img src={item.png} alt={item.name} className="w-32 h-32 bg-white" />
+                <div className="h-32 w-32 bg-white">
+                  <div className="relative h-full w-full">
+                    <Image
+                      src={item.png}
+                      alt={item.name}
+                      fill
+                      className="object-contain"
+                      sizes="128px"
+                      decoding="async"
+                    />
+                  </div>
+                </div>
                 <div className="text-center text-xs break-all">{item.name}</div>
                 <div className="flex gap-1">
                   <button

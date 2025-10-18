@@ -1,3 +1,4 @@
+import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import FormError from "../../ui/FormError";
 
@@ -101,22 +102,24 @@ const BluetoothApp: React.FC = () => {
           Scan for Devices
         </button>
       </div>
-      <div className="mb-4 flex gap-2">
-        <input
-          type="number"
-          placeholder="Min RSSI"
-          value={rssiFilter}
-          onChange={(e) => setRssiFilter(e.target.value)}
-          className="w-1/3 rounded bg-gray-800 p-2 text-white"
-        />
-        <input
-          type="text"
-          placeholder="Search devices"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-2/3 rounded bg-gray-800 p-2 text-white"
-        />
-      </div>
+        <div className="mb-4 flex gap-2">
+          <input
+            type="number"
+            placeholder="Min RSSI"
+            value={rssiFilter}
+            onChange={(e) => setRssiFilter(e.target.value)}
+            className="w-1/3 rounded bg-gray-800 p-2 text-white"
+            aria-label="Minimum signal strength"
+          />
+          <input
+            type="text"
+            placeholder="Search devices"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-2/3 rounded bg-gray-800 p-2 text-white"
+            aria-label="Search devices"
+          />
+        </div>
       {error && <FormError className="mb-4 mt-0">{error}</FormError>}
       {pairedDevice && <p className="mb-2">Paired with: {pairedDevice}</p>}
       <div className="space-y-4 overflow-auto">
@@ -129,10 +132,13 @@ const BluetoothApp: React.FC = () => {
                   key={d.address}
                   className="flex flex-col items-center rounded bg-gray-800 p-[6px]"
                 >
-                  <img
+                  <Image
                     src="/themes/Yaru/status/emblem-system-symbolic.svg"
                     alt=""
+                    width={64}
+                    height={64}
                     className="h-16 w-16"
+                    decoding="async"
                   />
                   <p className="mt-[6px] text-center text-sm font-bold">
                     {d.name || d.address}

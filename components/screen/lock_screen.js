@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import React, { useEffect } from 'react';
 import Clock from '../util-components/clock';
 import { useSettings } from '../../hooks/useSettings';
@@ -39,10 +40,13 @@ export default function LockScreen(props) {
                     className={`absolute top-0 left-0 h-full w-full transform z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
                 />
             ) : (
-                <img
+                <Image
                     src={`/wallpapers/${bgImageName}.webp`}
                     alt=""
-                    className={`absolute top-0 left-0 w-full h-full object-cover transform z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
+                    fill
+                    className={`absolute top-0 left-0 z-20 h-full w-full transform object-cover transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
+                    sizes="100vw"
+                    priority
                 />
             )}
             <div className="w-full h-full z-50 overflow-hidden relative flex flex-col justify-center items-center text-white">

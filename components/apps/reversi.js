@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   SIZE,
@@ -455,11 +456,17 @@ const Reversi = () => {
       <div className="mt-1 text-sm text-gray-300">{tip}</div>
       <div className="mt-2 flex space-x-2 items-center">
         <button
-          className="w-6 h-6 bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center"
+          className="flex h-6 w-6 items-center justify-center rounded bg-gray-700 hover:bg-gray-600"
           onClick={reset}
           aria-label="Reset"
         >
-          <img src="/themes/Yaru/status/chrome_refresh.svg" width="24" height="24" alt="" />
+          <Image
+            src="/themes/Yaru/status/chrome_refresh.svg"
+            alt=""
+            width={24}
+            height={24}
+            decoding="async"
+          />
         </button>
         <button
           className="w-6 h-6 bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center disabled:opacity-50"

@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import React, { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { FirefoxSimulationView, SIMULATIONS, toSimulationKey } from './simulations';
 
@@ -166,11 +167,13 @@ const Firefox: React.FC = () => {
                   className="rounded-md border border-transparent bg-[var(--kali-overlay)] p-1 transition hover:border-[color:var(--color-primary)] hover:bg-[color-mix(in_srgb,var(--kali-overlay)_85%,var(--kali-bg))] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)]"
                   aria-label={`Fill address with ${bookmark.label}`}
                 >
-                  <img
+                  <Image
                     src={getFaviconUrl(bookmark.url)}
                     alt=""
                     className="h-4 w-4"
-                    loading="lazy"
+                    width={16}
+                    height={16}
+                    decoding="async"
                   />
                 </button>
               ))}
@@ -227,7 +230,14 @@ const Firefox: React.FC = () => {
                   rel="noreferrer"
                   className="flex items-center gap-2 rounded border border-[color:var(--kali-border)] bg-[color-mix(in_srgb,var(--kali-overlay)_90%,var(--kali-bg))] px-2 py-1 text-[color:color-mix(in_srgb,var(--kali-text)_92%,var(--kali-bg))] transition hover:border-[color:var(--color-primary)] hover:text-[color:var(--kali-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)]"
                 >
-                  <img src={getFaviconUrl(bookmark.url)} alt="" className="h-4 w-4" />
+                  <Image
+                    src={getFaviconUrl(bookmark.url)}
+                    alt=""
+                    className="h-4 w-4"
+                    width={16}
+                    height={16}
+                    decoding="async"
+                  />
                   <span>{bookmark.label}</span>
                 </a>
               ))}
