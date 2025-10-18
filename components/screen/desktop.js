@@ -2613,16 +2613,19 @@ export class Desktop extends Component {
             }
         } else if (multi) {
             nextSelected = new Set(prevSelected);
+            let nextAnchor = anchorId;
             if (nextSelected.has(appId)) {
                 nextSelected.delete(appId);
-                if (anchorId === appId) {
-                    const remaining = nextSelected.values().next().value;
-                    anchorId = remaining ?? null;
+                if (!nextSelected.size) {
+                    nextAnchor = null;
                 }
             } else {
                 nextSelected.add(appId);
-                anchorId = appId;
+                if (!nextAnchor || !desktopApps.includes(nextAnchor)) {
+                    nextAnchor = appId;
+                }
             }
+            anchorId = nextAnchor;
         }
 
         if (!nextSelected) {
@@ -2645,12 +2648,17 @@ export class Desktop extends Component {
     };
 
     applyKeyboardSelection = (appId, modifiers = {}) => {
+        const prevSelected = this.state.selectedIcons instanceof Set ? new Set(this.state.selectedIcons) : new Set();
         const selection = this.calculateSelectionForState(this.state, appId, modifiers);
         if (!selection) return;
         if (!selection.shouldUpdate) return;
+        const nextSelected = new Set(selection.nextSelected);
+        const nextAnchor = nextSelected.size ? selection.anchorId : null;
         this.setState({
-            selectedIcons: selection.nextSelected,
-            selectionAnchorId: selection.nextSelected.size ? selection.anchorId : null,
+            selectedIcons: nextSelected,
+            selectionAnchorId: nextAnchor,
+        }, () => {
+            this.announceSelectionChange(prevSelected, nextSelected);
         });
     };
 
@@ -2673,6 +2681,7 @@ export class Desktop extends Component {
     };
 
     updateMarqueeSelection = (rect, selectionState) => {
+        let announcementData = null;
         this.setState((prevState) => {
             const changes = {};
             if (!this.areRectsEqual(prevState.marqueeSelection, rect)) {
@@ -2680,10 +2689,11 @@ export class Desktop extends Component {
             }
             const result = this.buildMarqueeSelection(prevState, rect, selectionState);
             if (result) {
-                const prevSelected = prevState.selectedIcons instanceof Set ? prevState.selectedIcons : new Set();
-                const nextSelected = result.nextSelected;
+                const prevSelected = prevState.selectedIcons instanceof Set ? new Set(prevState.selectedIcons) : new Set();
+                const nextSelected = new Set(result.nextSelected || []);
                 if (!this.areSetsEqual(prevSelected, nextSelected)) {
                     changes.selectedIcons = nextSelected;
+                    announcementData = { prevSelected, nextSelected };
                 }
                 if (nextSelected && nextSelected.size) {
                     const anchorCandidate = selectionState?.anchor;
@@ -2703,6 +2713,10 @@ export class Desktop extends Component {
                 }
             }
             return Object.keys(changes).length ? changes : null;
+        }, () => {
+            if (announcementData) {
+                this.announceSelectionChange(announcementData.prevSelected, announcementData.nextSelected);
+            }
         });
     };
 
@@ -3002,6 +3016,66 @@ export class Desktop extends Component {
             this.setState({ liveRegionMessage: message });
             this.liveRegionTimeout = null;
         }, 75);
+    };
+
+    getAppLabel = (appId) => {
+        if (!appId) return 'item';
+        const app = this.getAppById(appId);
+        if (!app) return appId;
+        return app.title || app.name || appId;
+    };
+
+    buildSelectionAnnouncement = (prevSelected, nextSelected) => {
+        if (this.areSetsEqual(prevSelected, nextSelected)) return '';
+
+        const added = [];
+        const removed = [];
+
+        nextSelected.forEach((id) => {
+            if (!prevSelected.has(id)) {
+                added.push(this.getAppLabel(id));
+            }
+        });
+
+        prevSelected.forEach((id) => {
+            if (!nextSelected.has(id)) {
+                removed.push(this.getAppLabel(id));
+            }
+        });
+
+        if (!nextSelected.size) {
+            if (removed.length === 1) {
+                return `${removed[0]} deselected. Selection cleared.`;
+            }
+            if (prevSelected.size) {
+                return 'Selection cleared.';
+            }
+            return '';
+        }
+
+        const countPart = nextSelected.size === 1
+            ? '1 icon selected.'
+            : `${nextSelected.size} icons selected.`;
+
+        if (added.length === 1 && removed.length === 0) {
+            return `${added[0]} selected. ${countPart}`;
+        }
+
+        if (removed.length === 1 && added.length === 0) {
+            return `${removed[0]} deselected. ${countPart}`;
+        }
+
+        return countPart;
+    };
+
+    announceSelectionChange = (prevSelectedInput, nextSelectedInput) => {
+        const prevSelected = prevSelectedInput instanceof Set ? prevSelectedInput : new Set(prevSelectedInput || []);
+        const nextSelected = nextSelectedInput instanceof Set ? nextSelectedInput : new Set(nextSelectedInput || []);
+        if (this.areSetsEqual(prevSelected, nextSelected)) return;
+        const message = this.buildSelectionAnnouncement(prevSelected, nextSelected);
+        if (message) {
+            this.announce(message);
+        }
     };
 
     announceKeyboardMoveStart = (appId, position) => {
@@ -4515,6 +4589,17 @@ export class Desktop extends Component {
                             height: `${marqueeSelection.height}px`,
                         }}
                     />
+                ) : null}
+                {selectionSet.size > 1 ? (
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute bottom-4 right-4 flex items-center gap-2 rounded-full bg-sky-500/90 px-3 py-1 text-sm font-medium text-white shadow-lg ring-1 ring-sky-200/80 backdrop-blur"
+                    >
+                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/25 text-xs font-semibold text-white">
+                            {selectionSet.size}
+                        </span>
+                        <span>selected</span>
+                    </div>
                 ) : null}
             </div>
         );
