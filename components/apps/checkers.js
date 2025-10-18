@@ -247,14 +247,6 @@ const Checkers = () => {
       setHintMoves([]);
       playBeep();
       const next = turnRef.current === 'red' ? 'black' : 'red';
-      if (capture) {
-        const further = getPieceMoves(nb, move.to[0], move.to[1]).filter((m) => m.captured);
-        if (further.length) {
-          setSelected([move.to[0], move.to[1]]);
-          setMoves(further);
-          return;
-        }
-      }
       setTurn(next);
       setSelected(null);
       setMoves([]);
@@ -314,9 +306,9 @@ const Checkers = () => {
     if (piece && piece.color === 'red') {
       const all = getAllMoves(boardRef.current, 'red', false);
       const pieceMoves = getPieceMoves(boardRef.current, r, c, false);
-      const mustCapture = requireCapture && all.some((m) => m.captured);
+      const mustCapture = requireCapture && all.some((m) => m.captures.length);
       const filtered = mustCapture
-        ? pieceMoves.filter((m) => m.captured)
+        ? pieceMoves.filter((m) => m.captures.length)
         : pieceMoves;
       setSelected([r, c]);
       setMoves(filtered);
@@ -363,7 +355,11 @@ const Checkers = () => {
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       <div className="w-56 mb-4">
+        <label htmlFor="checkers-difficulty" className="sr-only">
+          Difficulty
+        </label>
         <input
+          id="checkers-difficulty"
           type="range"
           min="0"
           max="2"
@@ -372,6 +368,7 @@ const Checkers = () => {
             setDifficulty(['easy', 'medium', 'hard'][parseInt(e.target.value, 10)])
           }
           className="w-full"
+          aria-label="Difficulty"
         />
         <div className="flex justify-between text-xs">
           <span>Easy</span>
@@ -379,22 +376,26 @@ const Checkers = () => {
           <span>Hard</span>
         </div>
       </div>
-      <canvas
-        ref={canvasRef}
-        width={BOARD_PIXELS}
-        height={BOARD_PIXELS}
-        onClick={handleClick}
-        className="mb-2"
-      />
-      <label className="mb-2 text-sm">
-        <input
-          type="checkbox"
-          checked={requireCapture}
-          onChange={(e) => setRequireCapture(e.target.checked)}
-          className="mr-1"
+        <canvas
+          ref={canvasRef}
+          width={BOARD_PIXELS}
+          height={BOARD_PIXELS}
+          onClick={handleClick}
+          className="mb-2"
+          role="img"
+          aria-label="Checkers board"
         />
-        Require capture
-      </label>
+        <div className="mb-2 text-sm flex items-center">
+          <input
+            id="checkers-require-capture"
+            type="checkbox"
+            checked={requireCapture}
+            onChange={(e) => setRequireCapture(e.target.checked)}
+            className="mr-1"
+            aria-label="Require capture rule"
+          />
+          <label htmlFor="checkers-require-capture">Require capture</label>
+        </div>
       <div className="space-x-2 mb-2">
         <button
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
