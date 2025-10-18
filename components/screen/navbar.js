@@ -106,7 +106,7 @@ export default class Navbar extends PureComponent {
                         workspaces: [],
                         activeWorkspace: 0,
                         runningApps: [],
-                        preview: null
+                        preview: null,
                         pinnedApps: [],
                 };
                 this.taskbarListRef = React.createRef();
