@@ -8,6 +8,21 @@ import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
 
+const BADGE_TONE_COLORS = Object.freeze({
+        accent: { bg: '#3b82f6', fg: '#020817', glow: 'rgba(59,130,246,0.45)', track: 'rgba(8,15,26,0.82)' },
+        info: { bg: '#38bdf8', fg: '#04121f', glow: 'rgba(56,189,248,0.45)', track: 'rgba(8,15,26,0.82)' },
+        success: { bg: '#22c55e', fg: '#032014', glow: 'rgba(34,197,94,0.48)', track: 'rgba(8,15,26,0.82)' },
+        warning: { bg: '#fbbf24', fg: '#111827', glow: 'rgba(251,191,36,0.45)', track: 'rgba(8,15,26,0.82)' },
+        danger: { bg: '#f97316', fg: '#ffffff', glow: 'rgba(249,115,22,0.52)', track: 'rgba(8,15,26,0.82)' },
+        neutral: { bg: '#94a3b8', fg: '#0f172a', glow: 'rgba(148,163,184,0.4)', track: 'rgba(8,15,26,0.82)' },
+});
+
+const resolveBadgeTone = (tone) => {
+        if (typeof tone !== 'string') return BADGE_TONE_COLORS.accent;
+        const normalized = tone.trim().toLowerCase();
+        return BADGE_TONE_COLORS[normalized] || BADGE_TONE_COLORS.accent;
+};
+
 const areWorkspacesEqual = (next, prev) => {
         if (next.length !== prev.length) return false;
         for (let index = 0; index < next.length; index += 1) {
@@ -15,6 +30,27 @@ const areWorkspacesEqual = (next, prev) => {
                         return false;
                 }
         }
+        return true;
+};
+
+const areBadgesEqual = (nextBadge, prevBadge) => {
+        if (nextBadge === prevBadge) return true;
+        if (!nextBadge || !prevBadge) return false;
+        if (nextBadge.type !== prevBadge.type) return false;
+        if ((nextBadge.displayValue || prevBadge.displayValue) && nextBadge.displayValue !== prevBadge.displayValue) return false;
+        if ((typeof nextBadge.count === 'number' || typeof prevBadge.count === 'number') && nextBadge.count !== prevBadge.count) return false;
+        if ((typeof nextBadge.max === 'number' || typeof prevBadge.max === 'number') && nextBadge.max !== prevBadge.max) return false;
+        if ((typeof nextBadge.progress === 'number' || typeof prevBadge.progress === 'number')) {
+                const progressA = typeof nextBadge.progress === 'number' ? nextBadge.progress : 0;
+                const progressB = typeof prevBadge.progress === 'number' ? prevBadge.progress : 0;
+                if (Math.abs(progressA - progressB) > 0.0005) {
+                        return false;
+                }
+        }
+        if ((nextBadge.label || prevBadge.label) && nextBadge.label !== prevBadge.label) return false;
+        if ((nextBadge.tone || prevBadge.tone) && nextBadge.tone !== prevBadge.tone) return false;
+        if (Boolean(nextBadge.pulse) !== Boolean(prevBadge.pulse)) return false;
+        if (Boolean(nextBadge.persistOnFocus) !== Boolean(prevBadge.persistOnFocus)) return false;
         return true;
 };
 
@@ -29,7 +65,8 @@ const areRunningAppsEqual = (next = [], prev = []) => {
                         a.title !== b.title ||
                         a.icon !== b.icon ||
                         a.isFocused !== b.isFocused ||
-                        a.isMinimized !== b.isMinimized
+                        a.isMinimized !== b.isMinimized ||
+                        !areBadgesEqual(a.badge, b.badge)
                 ) {
                         return false;
                 }
@@ -210,6 +247,96 @@ export default class Navbar extends PureComponent {
                 </li>
         );
 
+        renderAppBadge = (badge) => {
+                if (!badge || typeof badge !== 'object') return null;
+
+                const tone = resolveBadgeTone(badge.tone);
+                const style = {
+                        '--taskbar-badge-bg': tone.bg,
+                        '--taskbar-badge-fg': tone.fg,
+                        '--taskbar-badge-glow': tone.glow,
+                        '--taskbar-badge-track': tone.track,
+                };
+                const shouldPulse = Boolean(badge.pulse);
+                const classes = ['taskbar-badge'];
+                if (shouldPulse) {
+                        classes.push('taskbar-badge--pulse');
+                }
+
+                const resolvedLabel = typeof badge.label === 'string' && badge.label.trim()
+                        ? badge.label.trim()
+                        : undefined;
+
+                if (badge.type === 'count') {
+                        classes.push('taskbar-badge--count');
+                        const displayValue = typeof badge.displayValue === 'string' && badge.displayValue.trim()
+                                ? badge.displayValue.trim()
+                                : (typeof badge.count === 'number' ? String(badge.count) : '');
+                        if (!displayValue) return null;
+                        const label = resolvedLabel
+                                || (() => {
+                                        const numeric = Number(displayValue.replace(/\D+/g, ''));
+                                        if (Number.isFinite(numeric)) {
+                                                return numeric === 1 ? '1 notification' : `${displayValue} notifications`;
+                                        }
+                                        return `${displayValue} updates`;
+                                })();
+
+                        return (
+                                <span
+                                        className={classes.join(' ')}
+                                        style={style}
+                                        role="status"
+                                        aria-label={label}
+                                        title={label}
+                                >
+                                        <span aria-hidden="true">{displayValue}</span>
+                                </span>
+                        );
+                }
+
+                if (badge.type === 'ring') {
+                        classes.push('taskbar-badge--ring');
+                        const progress = typeof badge.progress === 'number' ? Math.max(0, Math.min(1, badge.progress)) : 0;
+                        style['--taskbar-badge-progress'] = `${Math.round(progress * 360)}deg`;
+                        const displayValue = typeof badge.displayValue === 'string' && badge.displayValue.trim()
+                                ? badge.displayValue.trim()
+                                : `${Math.round(progress * 100)}%`;
+                        const label = resolvedLabel || `${displayValue} complete`;
+
+                        return (
+                                <span
+                                        className={classes.join(' ')}
+                                        style={style}
+                                        role="status"
+                                        aria-label={label}
+                                        title={label}
+                                >
+                                        <span className="taskbar-badge__value" aria-hidden="true">{displayValue}</span>
+                                </span>
+                        );
+                }
+
+                classes.push('taskbar-badge--dot');
+                const label = resolvedLabel || 'Attention needed';
+
+                return (
+                        <span
+                                className={classes.join(' ')}
+                                style={style}
+                                role="status"
+                                aria-label={label}
+                                title={label}
+                        />
+                );
+        };
+
+        renderRunningAppButton = (app) => {
+                const isActive = !app.isMinimized;
+                const isFocused = app.isFocused && isActive;
+                const badge = app && typeof app.badge === 'object' ? app.badge : null;
+                const badgeNode = this.renderAppBadge(badge);
+                const buttonLabel = badge?.label ? `${app.title} — ${badge.label}` : app.title;
         renderTaskbarButton = (app, section) => {
                 const isMinimized = Boolean(app.isMinimized);
                 const isRunning = section === 'running' ? true : Boolean(app.isRunning);
@@ -221,7 +348,7 @@ export default class Navbar extends PureComponent {
                 return (
                         <button
                                 type="button"
-                                aria-label={app.title}
+                                aria-label={buttonLabel}
                                 aria-pressed={isActive}
                                 data-context="taskbar"
                                 data-app-id={app.id}
@@ -238,6 +365,7 @@ export default class Navbar extends PureComponent {
                                                 height={28}
                                                 className="h-6 w-6"
                                         />
+                                        {badgeNode}
                                         {isActive && (
                                                 <span
                                                         aria-hidden="true"
