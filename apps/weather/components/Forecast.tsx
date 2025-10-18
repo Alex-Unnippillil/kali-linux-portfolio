@@ -2,11 +2,11 @@
 
 import WeatherIcon from './WeatherIcon';
 import { ForecastDay } from '../state';
+import { formatDate } from '@/lib/intl';
 
 const formatDayLabel = (date: string) => {
-  const dt = new Date(date);
-  if (Number.isNaN(dt.getTime())) return date;
-  return dt.toLocaleDateString(undefined, { weekday: 'short' });
+  const formatted = formatDate(date, { weekday: 'short' });
+  return formatted === 'Invalid Date' ? date : formatted;
 };
 
 export default function Forecast({ days }: { days: ForecastDay[] }) {

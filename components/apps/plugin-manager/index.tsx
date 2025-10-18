@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { formatDate } from '@/lib/intl';
 
 interface PluginInfo {
   id: string;
@@ -37,7 +38,11 @@ const formatBytes = (bytes: number) => {
 
 const formatTimestamp = (timestamp: string) => {
   try {
-    return new Date(timestamp).toLocaleString();
+    const formatted = formatDate(timestamp, {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+    return formatted === 'Invalid Date' ? timestamp : formatted;
   } catch {
     return timestamp;
   }

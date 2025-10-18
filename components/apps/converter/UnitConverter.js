@@ -8,6 +8,7 @@ import {
   listUnits,
 } from './units';
 import usePersistentState from '../../../hooks/usePersistentState';
+import { formatCurrency, formatNumber } from '../../../lib/intl';
 
 const categories = allCategories;
 
@@ -138,18 +139,15 @@ const UnitConverter = () => {
 
   const format = (value, unit) => {
     if (category === 'currency') {
-      return new Intl.NumberFormat(undefined, {
-        style: 'currency',
-        currency: unit,
-      }).format(Number(value));
+      return formatCurrency(Number(value), unit);
     }
     const unitDef = getUnitDefinition(category, unit);
-    return new Intl.NumberFormat(undefined, {
+    return formatNumber(Number(value), {
       style: 'unit',
       unit,
       unitDisplay: 'long',
       maximumFractionDigits: unitDef?.precision ?? getDefaultPrecision(category, unit),
-    }).format(Number(value));
+    });
   };
 
   return (

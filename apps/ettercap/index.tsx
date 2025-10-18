@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import FilterEditor from './components/FilterEditor';
 import LogPane, { LogEntry } from './components/LogPane';
 import ArpDiagram from './components/ArpDiagram';
+import { formatDate } from '@/lib/intl';
 
 const MODES = ['Unified', 'Sniff', 'ARP'] as const;
 
@@ -66,7 +67,7 @@ export default function EttercapPage() {
     const id = setInterval(() => {
       const levels: LogEntry['level'][] = ['info', 'warn', 'error'];
       const level = levels[Math.floor(Math.random() * levels.length)];
-      const message = `Sample ${level} message ${new Date().toLocaleTimeString()}`;
+      const message = `Sample ${level} message ${formatDate(new Date(), { timeStyle: 'medium' })}`;
       setLogs((l) => [...l, { id: Date.now(), level, message }]);
     }, 2000);
     return () => clearInterval(id);

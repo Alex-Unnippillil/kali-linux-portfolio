@@ -4,6 +4,7 @@ import ReactGA from 'react-ga4';
 import emailjs from '@emailjs/browser';
 import ProgressBar from '../ui/ProgressBar';
 import { createDisplay } from '../../utils/createDynamicApp';
+import { createDateFormatter } from '../../lib/intl';
 
 export class Gedit extends Component {
 
@@ -53,12 +54,15 @@ export class Gedit extends Component {
     updateTime = () => {
         const { timezone } = this.state;
         if (timezone) {
-            const formatter = new Intl.DateTimeFormat([], {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                timeZone: timezone,
-            });
+            const formatter = createDateFormatter(
+                {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    timeZone: timezone,
+                },
+                []
+            );
             this.setState({ localTime: formatter.format(new Date()) });
         }
         this.timeFrame = requestAnimationFrame(this.updateTime);
