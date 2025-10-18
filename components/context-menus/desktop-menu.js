@@ -5,6 +5,8 @@ function DesktopMenu(props) {
 
     const [isFullScreen, setIsFullScreen] = useState(false)
     const iconSizePreset = props.iconSizePreset || 'medium'
+    const iconSizeBucket = props.iconSizeBucket
+    const iconSizeBucketLabel = props.iconSizeBucketLabel || 'current display'
     const setIconSizePreset = typeof props.setIconSizePreset === 'function' ? props.setIconSizePreset : () => { }
     const iconSizeOptions = [
         { value: 'small', label: 'Small Icons' },
@@ -79,12 +81,15 @@ function DesktopMenu(props) {
             <div className="px-5 pb-1 text-xs tracking-wide uppercase text-ub-warm-grey text-opacity-80">
                 View
             </div>
+            <div className="px-5 pb-2 text-[0.65rem] uppercase tracking-wide text-ub-warm-grey text-opacity-60">
+                {`Applies to ${iconSizeBucketLabel}`}
+            </div>
             {iconSizeOptions.map((option) => {
                 const isActive = iconSizePreset === option.value
                 return (
                     <button
                         key={option.value}
-                        onClick={() => setIconSizePreset(option.value)}
+                        onClick={() => setIconSizePreset(option.value, { bucketId: iconSizeBucket })}
                         type="button"
                         role="menuitemradio"
                         aria-checked={isActive}
