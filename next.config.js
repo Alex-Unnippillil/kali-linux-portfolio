@@ -198,9 +198,16 @@ function configureWebpack(config, { isServer }) {
 }
 
 try {
-  validateEnv?.(process.env);
-} catch {
-  console.warn('Missing env vars; running without validation');
+  const validated = validateEnv?.(process.env);
+  if (validated?.NODE_ENV === 'production') {
+    console.info('Environment variables validated for production build.');
+  }
+} catch (error) {
+  if (process.env.NODE_ENV === 'production') {
+    throw error;
+  }
+
+  console.warn('Missing env vars; running without validation', error);
 }
 
 module.exports = withBundleAnalyzer(
