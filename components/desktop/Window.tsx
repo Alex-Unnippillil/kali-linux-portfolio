@@ -74,15 +74,25 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
 
       const rect = node.getBoundingClientRect();
       const topOffset = measureWindowTopOffset();
+      const visualViewport = window.visualViewport;
+      const viewportWidth = visualViewport?.width ?? window.innerWidth;
+      const viewportHeight = visualViewport?.height ?? window.innerHeight;
+      const viewportLeft = visualViewport?.offsetLeft ?? 0;
+      const viewportTop = visualViewport?.offsetTop ?? 0;
+      const combinedTopOffset = viewportTop + topOffset;
       const storedPosition = readNodePosition(node);
       const fallbackPosition = {
-        x: typeof props.initialX === "number" ? props.initialX : 0,
-        y: clampWindowTopPosition(props.initialY, topOffset),
+        x: typeof props.initialX === "number"
+          ? props.initialX + viewportLeft
+          : viewportLeft,
+        y: clampWindowTopPosition(props.initialY, combinedTopOffset),
       };
       const currentPosition = storedPosition || fallbackPosition;
       const clamped = clampWindowPositionWithinViewport(currentPosition, rect, {
-        viewportWidth: window.innerWidth,
-        viewportHeight: window.innerHeight,
+        viewportWidth,
+        viewportHeight,
+        viewportLeft,
+        viewportTop,
         topOffset,
       });
       if (!clamped) return;

@@ -29,18 +29,47 @@ const isCorner = (value: unknown): value is PipCorner =>
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
+const getViewportBounds = () => {
+  if (typeof window === 'undefined') {
+    return { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT, left: 0, top: 0 };
+  }
+
+  const fallbackWidth = typeof window.innerWidth === 'number' ? window.innerWidth : DEFAULT_WIDTH;
+  const fallbackHeight = typeof window.innerHeight === 'number' ? window.innerHeight : DEFAULT_HEIGHT;
+  const visualViewport = window.visualViewport;
+
+  if (visualViewport) {
+    const width = Number.isFinite(visualViewport.width) ? visualViewport.width : fallbackWidth;
+    const height = Number.isFinite(visualViewport.height) ? visualViewport.height : fallbackHeight;
+    const left = Number.isFinite(visualViewport.offsetLeft) ? visualViewport.offsetLeft : 0;
+    const top = Number.isFinite(visualViewport.offsetTop) ? visualViewport.offsetTop : 0;
+    return {
+      width: width || fallbackWidth,
+      height: height || fallbackHeight,
+      left,
+      top,
+    };
+  }
+
+  return { width: fallbackWidth, height: fallbackHeight, left: 0, top: 0 };
+};
+
 const computeCornerPosition = (
   corner: PipCorner,
   width: number,
   height: number,
   viewportWidth: number,
   viewportHeight: number,
+  viewportLeft = 0,
+  viewportTop = 0,
 ) => {
-  const maxLeft = Math.max(SNAP_MARGIN, viewportWidth - width - SNAP_MARGIN);
-  const maxTop = Math.max(SNAP_MARGIN, viewportHeight - height - SNAP_MARGIN);
+  const minLeft = viewportLeft + SNAP_MARGIN;
+  const minTop = viewportTop + SNAP_MARGIN;
+  const maxLeft = Math.max(minLeft, viewportLeft + viewportWidth - width - SNAP_MARGIN);
+  const maxTop = Math.max(minTop, viewportTop + viewportHeight - height - SNAP_MARGIN);
 
-  const left = corner.endsWith('right') ? maxLeft : SNAP_MARGIN;
-  const top = corner.startsWith('bottom') ? maxTop : SNAP_MARGIN;
+  const left = corner.endsWith('right') ? maxLeft : minLeft;
+  const top = corner.startsWith('bottom') ? maxTop : minTop;
   return { left, top };
 };
 
@@ -83,13 +112,21 @@ const constrainSize = (width: number, height: number, viewportWidth: number, vie
   };
 };
 
-const clampFrame = (frame: FrameState, viewportWidth: number, viewportHeight: number): FrameState => {
+const clampFrame = (
+  frame: FrameState,
+  viewportWidth: number,
+  viewportHeight: number,
+  viewportLeft = 0,
+  viewportTop = 0,
+): FrameState => {
   const { width, height } = constrainSize(frame.width, frame.height, viewportWidth, viewportHeight);
-  const maxLeft = Math.max(SNAP_MARGIN, viewportWidth - width - SNAP_MARGIN);
-  const maxTop = Math.max(SNAP_MARGIN, viewportHeight - height - SNAP_MARGIN);
+  const minLeft = viewportLeft + SNAP_MARGIN;
+  const minTop = viewportTop + SNAP_MARGIN;
+  const maxLeft = Math.max(minLeft, viewportLeft + viewportWidth - width - SNAP_MARGIN);
+  const maxTop = Math.max(minTop, viewportTop + viewportHeight - height - SNAP_MARGIN);
   return {
-    left: clamp(frame.left, SNAP_MARGIN, maxLeft),
-    top: clamp(frame.top, SNAP_MARGIN, maxTop),
+    left: clamp(frame.left, minLeft, maxLeft),
+    top: clamp(frame.top, minTop, maxTop),
     width,
     height,
     corner: frame.corner,
@@ -100,14 +137,24 @@ const snapFrameToCorner = (
   frame: FrameState,
   viewportWidth: number,
   viewportHeight: number,
+  viewportLeft = 0,
+  viewportTop = 0,
 ): FrameState => {
   const centerX = frame.left + frame.width / 2;
   const centerY = frame.top + frame.height / 2;
-  const horizontal = centerX < viewportWidth / 2 ? 'left' : 'right';
-  const vertical = centerY < viewportHeight / 2 ? 'top' : 'bottom';
+  const horizontal = centerX < viewportLeft + viewportWidth / 2 ? 'left' : 'right';
+  const vertical = centerY < viewportTop + viewportHeight / 2 ? 'top' : 'bottom';
   const corner = `${vertical}-${horizontal}` as PipCorner;
   const { width, height } = constrainSize(frame.width, frame.height, viewportWidth, viewportHeight);
-  const { left, top } = computeCornerPosition(corner, width, height, viewportWidth, viewportHeight);
+  const { left, top } = computeCornerPosition(
+    corner,
+    width,
+    height,
+    viewportWidth,
+    viewportHeight,
+    viewportLeft,
+    viewportTop,
+  );
   return { left, top, width, height, corner };
 };
 
@@ -121,11 +168,18 @@ const getFallbackInitialFrame = (): FrameState => {
       corner: 'bottom-right',
     };
   }
-  const viewportWidth = window.innerWidth || DEFAULT_WIDTH;
-  const viewportHeight = window.innerHeight || DEFAULT_HEIGHT;
+  const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = getViewportBounds();
   const { width, height } = constrainSize(DEFAULT_WIDTH, DEFAULT_HEIGHT, viewportWidth, viewportHeight);
   const storedCorner = readStoredCorner();
-  const { left, top } = computeCornerPosition(storedCorner, width, height, viewportWidth, viewportHeight);
+  const { left, top } = computeCornerPosition(
+    storedCorner,
+    width,
+    height,
+    viewportWidth,
+    viewportHeight,
+    viewportLeft,
+    viewportTop,
+  );
   return { left, top, width, height, corner: storedCorner };
 };
 
@@ -155,7 +209,8 @@ const FallbackPipWindow: React.FC<FallbackPipWindowProps> = ({ children, onReque
   useEffect(() => {
     const handleResize = () => {
       if (typeof window === 'undefined') return;
-      setFrame((prev) => clampFrame(prev, window.innerWidth, window.innerHeight));
+      const { width, height, left, top } = getViewportBounds();
+      setFrame((prev) => clampFrame(prev, width, height, left, top));
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -173,8 +228,7 @@ const FallbackPipWindow: React.FC<FallbackPipWindowProps> = ({ children, onReque
     (event: PointerEvent) => {
       if (typeof window === 'undefined') return;
       if (!operationRef.current) return;
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
+      const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = getViewportBounds();
       const start = gestureStartRef.current;
       const deltaX = event.clientX - start.pointerX;
       const deltaY = event.clientY - start.pointerY;
@@ -182,10 +236,12 @@ const FallbackPipWindow: React.FC<FallbackPipWindowProps> = ({ children, onReque
       if (operationRef.current === 'drag') {
         const width = frameRef.current.width;
         const height = frameRef.current.height;
-        const maxLeft = Math.max(SNAP_MARGIN, viewportWidth - width - SNAP_MARGIN);
-        const maxTop = Math.max(SNAP_MARGIN, viewportHeight - height - SNAP_MARGIN);
-        const left = clamp(start.left + deltaX, SNAP_MARGIN, maxLeft);
-        const top = clamp(start.top + deltaY, SNAP_MARGIN, maxTop);
+        const minLeft = viewportLeft + SNAP_MARGIN;
+        const minTop = viewportTop + SNAP_MARGIN;
+        const maxLeft = Math.max(minLeft, viewportLeft + viewportWidth - width - SNAP_MARGIN);
+        const maxTop = Math.max(minTop, viewportTop + viewportHeight - height - SNAP_MARGIN);
+        const left = clamp(start.left + deltaX, minLeft, maxLeft);
+        const top = clamp(start.top + deltaY, minTop, maxTop);
         const next = { ...frameRef.current, left, top };
         frameRef.current = next;
         setFrame(next);
@@ -196,10 +252,12 @@ const FallbackPipWindow: React.FC<FallbackPipWindowProps> = ({ children, onReque
           viewportWidth,
           viewportHeight,
         );
-        const maxLeft = Math.max(SNAP_MARGIN, viewportWidth - width - SNAP_MARGIN);
-        const maxTop = Math.max(SNAP_MARGIN, viewportHeight - height - SNAP_MARGIN);
-        const left = clamp(frameRef.current.left, SNAP_MARGIN, maxLeft);
-        const top = clamp(frameRef.current.top, SNAP_MARGIN, maxTop);
+        const minLeft = viewportLeft + SNAP_MARGIN;
+        const minTop = viewportTop + SNAP_MARGIN;
+        const maxLeft = Math.max(minLeft, viewportLeft + viewportWidth - width - SNAP_MARGIN);
+        const maxTop = Math.max(minTop, viewportTop + viewportHeight - height - SNAP_MARGIN);
+        const left = clamp(frameRef.current.left, minLeft, maxLeft);
+        const top = clamp(frameRef.current.top, minTop, maxTop);
         const next = { ...frameRef.current, width, height, left, top };
         frameRef.current = next;
         setFrame(next);
@@ -217,7 +275,8 @@ const FallbackPipWindow: React.FC<FallbackPipWindowProps> = ({ children, onReque
     releaseUserSelect();
     operationRef.current = null;
     setFrame((current) => {
-      const snapped = snapFrameToCorner(current, window.innerWidth, window.innerHeight);
+      const { width, height, left, top } = getViewportBounds();
+      const snapped = snapFrameToCorner(current, width, height, left, top);
       persistCorner(snapped.corner);
       frameRef.current = snapped;
       return snapped;
