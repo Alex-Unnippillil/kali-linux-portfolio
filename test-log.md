@@ -37,3 +37,8 @@ Attempted to load each route under `/apps` in Chromium, Firefox, and WebKit. All
 
 - Development middleware now appends `'unsafe-eval'` to `script-src` when `NODE_ENV !== 'production'` so the Next.js dev bundle can run inside headless browsers (e.g., Playwright) and capture screenshots.
 - Removed the manual note that explained screenshots were unavailable due to the stricter dev CSP; the automation workaround is no longer needed.
+
+## Desktop app tile prefetch performance (2025-09-30)
+
+- `AppTile` hover/focus prefetch reduced the 95th percentile module load time from 20.069 ms to 0.028 ms (20.041 ms improvement) in local Jest-based measurement.
+- Command: `yarn test __tests__/prefetch.performance.test.ts --runInBand`

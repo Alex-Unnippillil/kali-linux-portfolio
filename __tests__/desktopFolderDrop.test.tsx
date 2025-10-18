@@ -2,12 +2,24 @@ import { Desktop } from '../components/screen/desktop';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('html-to-image', () => ({ toPng: jest.fn().mockResolvedValue('data:image/png;base64,') }));
-jest.mock('../components/util-components/background-image', () => () => null);
-jest.mock('../components/base/window', () => () => null);
-jest.mock('../components/base/ubuntu_app', () => () => null);
-jest.mock('../components/screen/all-applications', () => () => null);
-jest.mock('../components/screen/shortcut-selector', () => () => null);
-jest.mock('../components/screen/window-switcher', () => () => null);
+jest.mock('../components/util-components/background-image', () => function MockBackgroundImage() {
+  return null;
+});
+jest.mock('../components/base/window', () => function MockWindow() {
+  return null;
+});
+jest.mock('../components/base/app-tile', () => function MockAppTile() {
+  return null;
+});
+jest.mock('../components/screen/all-applications', () => function MockAllApplications() {
+  return null;
+});
+jest.mock('../components/screen/shortcut-selector', () => function MockShortcutSelector() {
+  return null;
+});
+jest.mock('../components/screen/window-switcher', () => function MockWindowSwitcher() {
+  return null;
+});
 jest.mock('../components/context-menus/desktop-menu', () => ({
   __esModule: true,
   default: () => null,
