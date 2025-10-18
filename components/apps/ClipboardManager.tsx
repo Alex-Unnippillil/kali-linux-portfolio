@@ -31,6 +31,25 @@ function getDB() {
 
 type PermissionState = 'granted' | 'denied' | 'prompt' | 'unknown' | 'unsupported';
 
+const fallbackCopyText = (text: string) => {
+  if (typeof document === 'undefined') return false;
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'absolute';
+    textarea.style.opacity = '0';
+    textarea.style.pointerEvents = 'none';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const result = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    return result;
+  } catch {
+    return false;
+  }
+};
+
 const formatPermissionState = (state: PermissionState) => {
   switch (state) {
     case 'granted':
@@ -85,15 +104,21 @@ const ClipboardManager: React.FC = () => {
     [loadItems]
   );
 
-  const evaluatePermissions = useCallback(async () => {
-    setStatusMessage(null);
+  const evaluatePermissions = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) {
+      setStatusMessage(null);
+    }
     const hasClipboard = typeof navigator !== 'undefined' && !!navigator.clipboard;
     setClipboardSupported(hasClipboard);
 
     if (!hasClipboard) {
       setReadPermission('unsupported');
       setWritePermission('unsupported');
-      setStatusMessage('Clipboard API not supported. Use manual copy/paste shortcuts.');
+      if (!silent) {
+        setStatusMessage(
+          'Clipboard API not supported. Fallback copy is available for manual actions.'
+        );
+      }
       return;
     }
 
@@ -122,7 +147,9 @@ const ClipboardManager: React.FC = () => {
       queryPermission('clipboard-write', setWritePermission),
     ]);
 
-    setStatusMessage('Clipboard permissions refreshed.');
+    if (!silent) {
+      setStatusMessage('Clipboard permissions refreshed.');
+    }
   }, []);
 
   useEffect(() => {
@@ -133,7 +160,7 @@ const ClipboardManager: React.FC = () => {
   const handleCopy = useCallback(async () => {
     try {
       if (!clipboardSupported) {
-        setStatusMessage('Clipboard API unavailable.');
+        setStatusMessage('Clipboard API unavailable. History will not update automatically.');
         return;
       }
       if (readPermission === 'denied') {
@@ -153,7 +180,7 @@ const ClipboardManager: React.FC = () => {
     } catch (err) {
       console.error('Clipboard read failed:', err);
       setStatusMessage('Clipboard read failed. Check browser permissions.');
-      evaluatePermissions();
+      await evaluatePermissions({ silent: true });
     }
   }, [items, addItem, clipboardSupported, readPermission, evaluatePermissions]);
 
@@ -163,29 +190,46 @@ const ClipboardManager: React.FC = () => {
     return () => document.removeEventListener('copy', handleCopy);
   }, [handleCopy, clipboardSupported, readPermission]);
 
-  const writeToClipboard = async (text: string) => {
-    try {
-      if (!clipboardSupported) {
-        setStatusMessage('Clipboard API unavailable.');
-        return;
+  const attemptFallbackWrite = useCallback(
+    async (text: string, reason: 'unsupported' | 'denied' | 'error') => {
+      const success = fallbackCopyText(text);
+      if (success) {
+        const detail =
+          reason === 'unsupported'
+            ? 'Copied using fallback clipboard support.'
+            : 'Copied using fallback clipboard support. Browser permissions may still apply.';
+        setStatusMessage(detail);
+        return true;
       }
-      if (writePermission === 'denied') {
-        setStatusMessage('Clipboard write blocked. Update browser permissions and retry.');
-        return;
+      setStatusMessage('Copy failed. Use manual copy/paste shortcuts.');
+      await evaluatePermissions({ silent: true });
+      return false;
+    },
+    [evaluatePermissions]
+  );
+
+  const writeToClipboard = useCallback(
+    async (text: string) => {
+      if (!text) return;
+      try {
+        const writer = navigator.clipboard?.writeText;
+        if (!writer || !clipboardSupported) {
+          await attemptFallbackWrite(text, 'unsupported');
+          return;
+        }
+        if (writePermission === 'denied') {
+          await attemptFallbackWrite(text, 'denied');
+          return;
+        }
+        await writer.call(navigator.clipboard, text);
+        setStatusMessage('Copied to clipboard.');
+      } catch (err) {
+        console.error('Clipboard write failed:', err);
+        await attemptFallbackWrite(text, 'error');
       }
-      const writer = navigator.clipboard?.writeText;
-      if (!writer) {
-        setStatusMessage('Clipboard write unsupported in this browser.');
-        return;
-      }
-      await writer.call(navigator.clipboard, text);
-      setStatusMessage('Copied to clipboard.');
-    } catch (err) {
-      console.error('Clipboard write failed:', err);
-      setStatusMessage('Clipboard write failed. Check browser permissions.');
-      evaluatePermissions();
-    }
-  };
+    },
+    [attemptFallbackWrite, clipboardSupported, writePermission]
+  );
 
   const clearHistory = async () => {
     try {
@@ -271,7 +315,7 @@ const ClipboardManager: React.FC = () => {
         )}
         <button
           className="inline-flex items-center rounded-md border border-gray-600 bg-gray-700 px-3 py-1.5 text-sm font-medium text-gray-100 shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-900"
-          onClick={evaluatePermissions}
+          onClick={() => evaluatePermissions()}
         >
           Retry permission check
         </button>
