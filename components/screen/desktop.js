@@ -37,6 +37,7 @@ import {
 
 const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
 const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
+const PINNED_APPS_STORAGE_KEY = 'pinnedApps';
 
 const sanitizeFolderItem = (item) => {
     if (!item) return null;
@@ -239,6 +240,10 @@ export class Desktop extends Component {
         };
 
         this.taskbarOrderKeyBase = 'taskbar-order';
+        this.pinnedStorageKey = PINNED_APPS_STORAGE_KEY;
+        this.hasStoredPinnedAppIds = false;
+        const initialPinnedAppIds = this.loadPinnedAppIds();
+        this.applyPinnedFlags(initialPinnedAppIds);
 
         const initialIconSizePreset = this.getStoredIconSizePreset();
         const initialPresetConfig = this.getIconSizePresetConfig(initialIconSizePreset);
@@ -263,6 +268,7 @@ export class Desktop extends Component {
             closed_windows: { ...initialOverlayClosed },
             disabled_apps: {},
             favourite_apps: {},
+            pinnedAppIds: initialPinnedAppIds,
             minimized_windows: { ...initialOverlayMinimized },
             window_positions: {},
             window_sizes: initialWindowSizes,
@@ -338,6 +344,10 @@ export class Desktop extends Component {
         this.windowPreviewCache = new Map();
         this.windowSwitcherRequestId = 0;
         this.refreshAppRegistry();
+
+        if (!this.hasStoredPinnedAppIds) {
+            this.persistPinnedAppIds(initialPinnedAppIds);
+        }
 
         this.openSettingsTarget = null;
         this.openSettingsClickHandler = null;
@@ -430,6 +440,200 @@ export class Desktop extends Component {
         } catch (e) {
             // ignore write errors (storage may be unavailable)
         }
+    };
+
+    normalizePinnedAppIds = (ids) => {
+        const availableIds = new Set(apps.map((app) => app.id));
+        const list = Array.isArray(ids) ? ids : [];
+        const normalized = [];
+        const seen = new Set();
+
+        list.forEach((id) => {
+            if (typeof id !== 'string') return;
+            if (seen.has(id)) return;
+            if (!availableIds.has(id)) return;
+            normalized.push(id);
+            seen.add(id);
+        });
+
+        return normalized;
+    };
+
+    loadPinnedAppIds = () => {
+        const defaultPinned = this.normalizePinnedAppIds(
+            apps.filter((app) => app.favourite).map((app) => app.id),
+        );
+
+        if (!safeLocalStorage) {
+            return defaultPinned;
+        }
+
+        let storedValue = null;
+        try {
+            storedValue = safeLocalStorage.getItem(this.pinnedStorageKey);
+        } catch (e) {
+            storedValue = null;
+        }
+
+        if (!storedValue) {
+            this.hasStoredPinnedAppIds = false;
+            return defaultPinned;
+        }
+
+        try {
+            const parsed = JSON.parse(storedValue);
+            if (Array.isArray(parsed)) {
+                const normalized = this.normalizePinnedAppIds(parsed);
+                this.hasStoredPinnedAppIds = true;
+                return normalized;
+            }
+        } catch (e) {
+            // ignore malformed entries and fall back to defaults
+        }
+
+        this.hasStoredPinnedAppIds = false;
+        return defaultPinned;
+    };
+
+    persistPinnedAppIds = (ids) => {
+        if (!safeLocalStorage) return;
+        try {
+            safeLocalStorage.setItem(this.pinnedStorageKey, JSON.stringify(Array.isArray(ids) ? ids : []));
+            this.hasStoredPinnedAppIds = true;
+        } catch (e) {
+            // ignore persistence errors
+        }
+    };
+
+    getPinnedAppIds = () => {
+        return Array.isArray(this.state?.pinnedAppIds)
+            ? [...this.state.pinnedAppIds]
+            : [];
+    };
+
+    applyPinnedFlags = (pinnedIds) => {
+        const pinnedSet = new Set(Array.isArray(pinnedIds) ? pinnedIds : []);
+        apps.forEach((app) => {
+            app.favourite = pinnedSet.has(app.id);
+        });
+    };
+
+    syncInitFavourite = (pinnedSet) => {
+        const next = {};
+        apps.forEach((app) => {
+            next[app.id] = pinnedSet.has(app.id);
+        });
+        this.initFavourite = next;
+    };
+
+    syncFavouriteAppsWithPinned = (pinnedSet) => {
+        const validAppIds = new Set(apps.map((app) => app.id));
+        this.setState((prevState) => {
+            const previous = prevState.favourite_apps || {};
+            const closed = prevState.closed_windows || {};
+            const next = { ...previous };
+            let changed = false;
+
+            validAppIds.forEach((id) => {
+                const isPinned = pinnedSet.has(id);
+                const isOpen = closed[id] === false;
+                const current = next[id];
+
+                if (isPinned) {
+                    if (current !== true) {
+                        next[id] = true;
+                        changed = true;
+                    }
+                } else if (!isOpen) {
+                    if (current !== false) {
+                        next[id] = false;
+                        changed = true;
+                    }
+                } else if (current === undefined && isOpen) {
+                    next[id] = true;
+                    changed = true;
+                }
+
+                if (current === undefined && !isPinned && !isOpen) {
+                    next[id] = false;
+                    changed = true;
+                }
+            });
+
+            Object.keys(next).forEach((id) => {
+                if (!validAppIds.has(id)) {
+                    delete next[id];
+                    changed = true;
+                }
+            });
+
+            if (!changed) return null;
+            return { favourite_apps: next };
+        }, () => {
+            this.saveSession();
+        });
+    };
+
+    setPinnedAppIds = (ids, options = {}) => {
+        const {
+            persist = true,
+            broadcast = true,
+            force = false,
+            syncFavourite = true,
+        } = options;
+        const normalized = this.normalizePinnedAppIds(ids);
+        const current = Array.isArray(this.state?.pinnedAppIds)
+            ? this.state.pinnedAppIds
+            : [];
+        const changed = force
+            || normalized.length !== current.length
+            || normalized.some((id, index) => current[index] !== id);
+        const pinnedSet = new Set(normalized);
+
+        const finalize = () => {
+            if (persist) {
+                this.persistPinnedAppIds(normalized);
+            }
+            this.applyPinnedFlags(normalized);
+            this.syncInitFavourite(pinnedSet);
+            if (syncFavourite) {
+                this.syncFavouriteAppsWithPinned(pinnedSet);
+            }
+            if (broadcast) {
+                this.broadcastWorkspaceState();
+            }
+        };
+
+        if (!changed) {
+            finalize();
+            return normalized;
+        }
+
+        this.setState({ pinnedAppIds: normalized }, finalize);
+        return normalized;
+    };
+
+    insertPinnedAppId = (list, id, targetId, insertAfter = false) => {
+        const base = Array.isArray(list)
+            ? list.filter((value) => value !== id)
+            : [];
+
+        let insertIndex;
+        if (!targetId) {
+            insertIndex = insertAfter ? base.length : 0;
+        } else {
+            const targetIndex = base.indexOf(targetId);
+            insertIndex = targetIndex === -1 ? base.length : targetIndex;
+            if (insertAfter && targetIndex !== -1) {
+                insertIndex = targetIndex + 1;
+            }
+        }
+
+        if (insertIndex < 0) insertIndex = 0;
+        if (insertIndex > base.length) insertIndex = base.length;
+
+        base.splice(insertIndex, 0, id);
+        return base;
     };
 
     getNormalizedTaskbarOrder = (runningIds, preferredOrder) => {
@@ -1001,6 +1205,32 @@ export class Desktop extends Component {
                 openWindows,
             };
         });
+    };
+
+    getPinnedAppSummaries = () => {
+        const pinnedIds = this.getPinnedAppIds();
+        if (!pinnedIds.length) return [];
+
+        const {
+            closed_windows = {},
+            minimized_windows = {},
+            focused_windows = {},
+        } = this.state;
+
+        return pinnedIds.map((id) => {
+            const app = this.getAppById(id);
+            if (!app) return null;
+            const icon = typeof app.icon === 'string' ? app.icon.replace('./', '/') : '';
+            const isRunning = closed_windows[id] === false;
+            return {
+                id,
+                title: app.title,
+                icon,
+                isRunning,
+                isFocused: Boolean(focused_windows[id]),
+                isMinimized: Boolean(minimized_windows[id]),
+            };
+        }).filter(Boolean);
     };
 
     getRunningAppSummaries = () => {
@@ -3005,6 +3235,7 @@ export class Desktop extends Component {
             workspaces: this.getWorkspaceSummaries(),
             activeWorkspace: this.state.activeWorkspace,
             runningApps: this.getRunningAppSummaries(),
+            pinnedApps: this.getPinnedAppSummaries(),
             iconSizePreset: this.state.iconSizePreset,
         };
         window.dispatchEvent(new CustomEvent('workspace-state', { detail }));
@@ -3197,6 +3428,35 @@ export class Desktop extends Component {
         const detail = event?.detail || {};
         const action = detail.action || 'toggle';
 
+        if (action === 'reorderPinned') {
+            if (Array.isArray(detail.order)) {
+                this.setPinnedAppIds(detail.order);
+            }
+            return;
+        }
+
+        const appId = detail.appId;
+
+        if (action === 'pin') {
+            if (appId) {
+                const targetId = typeof detail.targetId === 'string' ? detail.targetId : null;
+                const insertAfter = Boolean(detail.insertAfter);
+                this.pinAppAtPosition(appId, targetId, insertAfter);
+            }
+            return;
+        }
+
+        if (action === 'unpin') {
+            if (appId) {
+                const current = this.getPinnedAppIds();
+                if (current.includes(appId)) {
+                    const next = current.filter((id) => id !== appId);
+                    this.setPinnedAppIds(next);
+                }
+            }
+            return;
+        }
+
         if (action === 'reorder') {
             if (Array.isArray(detail.order)) {
                 const runningIds = this.getCurrentRunningAppIds();
@@ -3206,7 +3466,6 @@ export class Desktop extends Component {
             return;
         }
 
-        const appId = detail.appId;
         if (!appId || !this.validAppIds.has(appId)) return;
 
         if (this.isOverlayId(appId)) {
@@ -3876,14 +4135,14 @@ export class Desktop extends Component {
     fetchAppsData = (callback) => {
         this.refreshAppRegistry();
 
-        let pinnedApps = safeLocalStorage?.getItem('pinnedApps');
-        if (pinnedApps) {
-            pinnedApps = JSON.parse(pinnedApps);
-            apps.forEach(app => { app.favourite = pinnedApps.includes(app.id); });
-        } else {
-            pinnedApps = apps.filter(app => app.favourite).map(app => app.id);
-            safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps));
-        }
+        const currentPinned = this.getPinnedAppIds();
+        const pinnedAppIds = this.setPinnedAppIds(currentPinned, {
+            persist: true,
+            broadcast: false,
+            force: true,
+            syncFavourite: false,
+        });
+        const pinnedSet = new Set(pinnedAppIds);
 
         const focused_windows = {};
         const closed_windows = {};
@@ -3897,7 +4156,7 @@ export class Desktop extends Component {
             focused_windows[app.id] = false;
             closed_windows[app.id] = true;
             disabled_apps[app.id] = app.disabled;
-            favourite_apps[app.id] = app.favourite;
+            favourite_apps[app.id] = pinnedSet.has(app.id);
             minimized_windows[app.id] = false;
             if (app.desktop_shortcut && !hiddenIconIds.has(app.id)) desktop_apps.push(app.id);
         });
@@ -3919,12 +4178,22 @@ export class Desktop extends Component {
         }, () => {
             this.ensureIconPositions(desktop_apps);
             if (typeof callback === 'function') callback();
+            this.broadcastWorkspaceState();
         });
         this.initFavourite = { ...favourite_apps };
     }
 
     updateAppsData = () => {
         this.refreshAppRegistry();
+
+        const currentPinned = this.getPinnedAppIds();
+        const pinnedAppIds = this.setPinnedAppIds(currentPinned, {
+            persist: true,
+            broadcast: false,
+            force: true,
+            syncFavourite: false,
+        });
+        const pinnedSet = new Set(pinnedAppIds);
 
         const focused_windows = {};
         const closed_windows = {};
@@ -3939,7 +4208,7 @@ export class Desktop extends Component {
             minimized_windows[app.id] = this.state.minimized_windows[app.id] ?? false;
             disabled_apps[app.id] = app.disabled;
             closed_windows[app.id] = this.state.closed_windows[app.id] ?? true;
-            favourite_apps[app.id] = app.favourite;
+            favourite_apps[app.id] = pinnedSet.has(app.id);
             if (app.desktop_shortcut && !hiddenIconIds.has(app.id)) desktop_apps.push(app.id);
         });
 
@@ -3958,6 +4227,7 @@ export class Desktop extends Component {
             desktop_apps,
         }, () => {
             this.ensureIconPositions(desktop_apps);
+            this.broadcastWorkspaceState();
         });
         this.initFavourite = { ...favourite_apps };
     }
@@ -4615,32 +4885,33 @@ export class Desktop extends Component {
         this.clearAppBadge(objId, { force: true });
     }
 
+    pinAppAtPosition = (id, targetId = null, insertAfter = false) => {
+        if (!id) return;
+        const app = this.getAppById(id);
+        if (!app) return;
+        const currentPinned = this.getPinnedAppIds();
+        const alreadyPinned = currentPinned.includes(id);
+        const base = alreadyPinned ? currentPinned : [...currentPinned, id];
+        const nextOrder = this.insertPinnedAppId(base, id, targetId, insertAfter);
+        this.setPinnedAppIds(nextOrder);
+    };
+
     pinApp = (id) => {
-        let favourite_apps = { ...this.state.favourite_apps }
-        favourite_apps[id] = true
-        this.initFavourite[id] = true
-        const app = apps.find(a => a.id === id)
-        if (app) app.favourite = true
-        let pinnedApps = [];
-        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        if (!pinnedApps.includes(id)) pinnedApps.push(id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
-        this.setState({ favourite_apps }, () => { this.saveSession(); })
-        this.hideAllContextMenu()
+        if (!id) return;
+        this.pinAppAtPosition(id, null, true);
+        this.hideAllContextMenu();
     }
 
     unpinApp = (id) => {
-        let favourite_apps = { ...this.state.favourite_apps }
-        if (this.state.closed_windows[id]) favourite_apps[id] = false
-        this.initFavourite[id] = false
-        const app = apps.find(a => a.id === id)
-        if (app) app.favourite = false
-        let pinnedApps = [];
-        try { pinnedApps = JSON.parse(safeLocalStorage?.getItem('pinnedApps') || '[]'); } catch (e) { pinnedApps = []; }
-        pinnedApps = pinnedApps.filter(appId => appId !== id)
-        safeLocalStorage?.setItem('pinnedApps', JSON.stringify(pinnedApps))
-        this.setState({ favourite_apps }, () => { this.saveSession(); })
-        this.hideAllContextMenu()
+        if (!id) return;
+        const current = this.getPinnedAppIds();
+        if (!current.includes(id)) {
+            this.hideAllContextMenu();
+            return;
+        }
+        const next = current.filter((appId) => appId !== id);
+        this.setPinnedAppIds(next);
+        this.hideAllContextMenu();
     }
 
     focus = (objId) => {
