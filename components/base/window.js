@@ -1,7 +1,6 @@
 "use client";
 
 import React, { Component } from 'react';
-import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
@@ -1249,6 +1248,79 @@ export function WindowEditButtons(props) {
     const allowMaximize = props.allowMaximize !== false;
     const isMaximized = Boolean(props.isMaximised);
 
+    const iconProps = {
+        className: styles.windowControlIcon,
+        viewBox: '0 0 16 16',
+        'aria-hidden': true,
+        focusable: 'false',
+    };
+
+    const MinimizeIcon = () => (
+        <svg {...iconProps}>
+            <line x1="3" y1="8" x2="13" y2="8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+    );
+
+    const MaximizeIcon = () => (
+        <svg {...iconProps}>
+            <rect
+                x="3"
+                y="3"
+                width="10"
+                height="10"
+                rx="1.6"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                fill="none"
+            />
+        </svg>
+    );
+
+    const RestoreIcon = () => (
+        <svg {...iconProps}>
+            <rect
+                x="5"
+                y="3"
+                width="8"
+                height="6.5"
+                rx="1.4"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                fill="none"
+            />
+            <rect
+                x="3"
+                y="6.5"
+                width="8"
+                height="6.5"
+                rx="1.4"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                fill="none"
+            />
+        </svg>
+    );
+
+    const CloseIcon = () => (
+        <svg {...iconProps}>
+            <line x1="4" y1="4" x2="12" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            <line x1="12" y1="4" x2="4" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+    );
+
+    const PinIcon = () => (
+        <svg {...iconProps}>
+            <path
+                d="M8 2.75v4.5m0 0 2 2.5H6l2-2.5Zm0 2.5v3.5"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            <path d="M6 5.25h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        </svg>
+    );
+
     const handleMaximize = (event) => {
         if (!allowMaximize) {
             event?.preventDefault?.();
@@ -1261,7 +1333,7 @@ export function WindowEditButtons(props) {
 
     return (
         <div
-            className={`${styles.windowControls} absolute select-none right-0 top-0 mr-1 flex justify-center items-center min-w-[8.25rem]`}
+            className={`${styles.windowControls} absolute select-none right-2 top-1 flex items-center`}
             role="group"
             aria-label="Window controls"
             onPointerDown={(event) => event.stopPropagation()}
@@ -1271,71 +1343,41 @@ export function WindowEditButtons(props) {
                     type="button"
                     aria-label="Window pin"
                     title="Pin window"
-                    className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
+                    className={`${styles.windowControlButton}`}
                     onClick={togglePin}
                 >
-                    <NextImage
-                        src="/themes/Yaru/window/window-pin-symbolic.svg"
-                        alt="Kali window pin"
-                        className="h-4 w-4 inline"
-                        width={16}
-                        height={16}
-                        sizes="16px"
-                    />
+                    <PinIcon />
                 </button>
             )}
             <button
                 type="button"
-                aria-label="Window minimize"
+                aria-label="Minimize window"
                 title="Minimize"
-                className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6`}
+                className={styles.windowControlButton}
                 onClick={props.minimize}
             >
-                <NextImage
-                    src="/themes/Yaru/window/window-minimize-symbolic.svg"
-                    alt="Kali window minimize"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
-                />
+                <MinimizeIcon />
             </button>
             <button
                 type="button"
-                aria-label={isMaximized ? 'Window restore' : 'Window maximize'}
+                aria-label={isMaximized ? 'Restore window' : 'Maximize window'}
                 title={isMaximized ? 'Restore' : 'Maximize'}
-                className={`${styles.windowControlButton} mx-1 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-6 w-6 ${allowMaximize ? '' : styles.windowControlButtonDisabled}`.trim()}
+                className={`${styles.windowControlButton} ${allowMaximize ? '' : styles.windowControlButtonDisabled}`.trim()}
                 onClick={handleMaximize}
                 disabled={!allowMaximize}
                 aria-disabled={!allowMaximize}
             >
-                <NextImage
-                    src={isMaximized
-                        ? '/themes/Yaru/window/window-restore-symbolic.svg'
-                        : '/themes/Yaru/window/window-maximize-symbolic.svg'}
-                    alt={isMaximized ? 'Kali window restore' : 'Kali window maximize'}
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
-                />
+                {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
             </button>
             <button
                 type="button"
                 id={`close-${props.id}`}
-                aria-label="Window close"
+                aria-label="Close window"
                 title="Close"
-                className={`${styles.windowControlButton} mx-1 cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center items-center h-6 w-6`}
+                className={`${styles.windowControlButton} ${styles.windowControlButtonClose}`}
                 onClick={props.close}
             >
-                <NextImage
-                    src="/themes/Yaru/window/window-close-symbolic.svg"
-                    alt="Kali window close"
-                    className="h-4 w-4 inline"
-                    width={16}
-                    height={16}
-                    sizes="16px"
-                />
+                <CloseIcon />
             </button>
         </div>
     )
