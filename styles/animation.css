@@ -9,4 +9,21 @@
   --window-motion-ease-maximize: cubic-bezier(0.2, 0.8, 0.4, 1);
   --window-motion-duration-snap-preview: var(--window-motion-duration-snap);
   --window-motion-ease-snap-preview: var(--window-motion-ease-snap);
+  --quick-settings-motion-duration-enter: 200ms;
+  --quick-settings-motion-duration-exit: 200ms;
+  --quick-settings-motion-duration-reduced: 0ms;
+  --quick-settings-motion-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --quick-settings-motion-duration-enter: var(--quick-settings-motion-duration-reduced);
+    --quick-settings-motion-duration-exit: var(--quick-settings-motion-duration-reduced);
+  }
+}
+
+.reduce-motion,
+.reduced-motion {
+  --quick-settings-motion-duration-enter: var(--quick-settings-motion-duration-reduced);
+  --quick-settings-motion-duration-exit: var(--quick-settings-motion-duration-reduced);
 }
