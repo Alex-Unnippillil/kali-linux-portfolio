@@ -3,6 +3,7 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import {
@@ -64,6 +65,10 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
   const [notificationsByApp, setNotificationsByApp] = useState<
     Record<string, AppNotification[]>
   >({});
+  const politeAnnouncementRef = useRef(0);
+  const assertiveAnnouncementRef = useRef(0);
+  const [politeAnnouncement, setPoliteAnnouncement] = useState('');
+  const [assertiveAnnouncement, setAssertiveAnnouncement] = useState('');
 
   const pushNotification = useCallback((input: PushNotificationInput) => {
     const id = createId();
@@ -94,6 +99,19 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
         [input.appId]: [nextNotification, ...list],
       };
     });
+
+    const message = [input.title, input.body].filter(Boolean).join('. ');
+    if (classification.priority === 'critical' || classification.priority === 'high') {
+      assertiveAnnouncementRef.current += 1;
+      setAssertiveAnnouncement(
+        `${message} — priority ${classification.priority} #${assertiveAnnouncementRef.current}`,
+      );
+    } else {
+      politeAnnouncementRef.current += 1;
+      setPoliteAnnouncement(
+        `${message} — priority ${classification.priority} #${politeAnnouncementRef.current}`,
+      );
+    }
 
     return id;
   }, []);
@@ -187,6 +205,24 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
       }}
     >
       {children}
+      <div
+        aria-live="polite"
+        role="status"
+        aria-atomic="true"
+        data-testid="notification-live-region"
+        className="sr-only"
+      >
+        {politeAnnouncement}
+      </div>
+      <div
+        aria-live="assertive"
+        role="alert"
+        aria-atomic="true"
+        data-testid="notification-alert-region"
+        className="sr-only"
+      >
+        {assertiveAnnouncement}
+      </div>
     </NotificationsContext.Provider>
   );
 };
