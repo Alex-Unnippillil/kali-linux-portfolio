@@ -177,7 +177,8 @@ input[type=range].ubuntu-slider:focus-visible::-webkit-slider-thumb {
 }
 
 .closed-window {
-    animation: closeWindow 200ms 1 forwards;
+    animation: closeWindow var(--window-motion-duration-close, 180ms) var(--window-motion-ease-close, var(--window-motion-ease-minimize)) 1 forwards;
+    will-change: opacity, transform;
 }
 
 @keyframes closeWindow {
@@ -187,10 +188,22 @@ input[type=range].ubuntu-slider:focus-visible::-webkit-slider-thumb {
         visibility: visible;
     }
 
+    40% {
+        opacity: 0.55;
+        transform: translate(var(--window-transform-x), var(--window-transform-y)) scale(0.94);
+    }
+
     100% {
         opacity: 0;
-        transform: translate(var(--window-transform-x), var(--window-transform-y)) scale(0.85);
+        transform: translate(var(--window-transform-x), var(--window-transform-y)) scale(0.9);
         visibility: hidden;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .closed-window {
+        animation-duration: 1ms;
+        animation-timing-function: linear;
     }
 }
 

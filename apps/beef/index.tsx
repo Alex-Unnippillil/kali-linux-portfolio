@@ -345,6 +345,15 @@ const BeefPage: React.FC = () => {
             </button>
           </div>
         </header>
+        {isMinimized && (
+          <p
+            className="px-4 pt-2 text-xs font-medium uppercase tracking-wide text-kali-text/70"
+            role="status"
+            aria-live="polite"
+          >
+            BeEF Demo is minimized. Use the restore button to continue.
+          </p>
+        )}
 
       <div className="flex-1 overflow-auto bg-[color:color-mix(in_srgb,var(--kali-panel)_65%,transparent)] p-4 pt-2">
         <BeefApp />
