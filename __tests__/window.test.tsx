@@ -45,7 +45,11 @@ const computeLeftSnapTestTop = () => {
   return Math.round(clamped);
 };
 
-const getSnapTranslateTop = () => measureWindowTopOffset();
+const getSnapTranslateTop = () => {
+  const topOffset = measureWindowTopOffset();
+  const normalizedTopInset = Math.max(topOffset, DESKTOP_TOP_PADDING);
+  return Math.max(topOffset - normalizedTopInset, 0);
+};
 
 const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: width });
