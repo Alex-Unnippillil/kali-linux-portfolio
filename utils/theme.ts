@@ -3,12 +3,13 @@ export const THEME_KEY = 'app:theme';
 // Score required to unlock each theme
 export const THEME_UNLOCKS: Record<string, number> = {
   default: 0,
+  hc: 0,
   neon: 100,
   dark: 500,
   matrix: 1000,
 };
 
-const DARK_THEMES = ['dark', 'neon', 'matrix'] as const;
+const DARK_THEMES = ['dark', 'neon', 'matrix', 'hc'] as const;
 
 export const isDarkTheme = (theme: string): boolean =>
   DARK_THEMES.includes(theme as (typeof DARK_THEMES)[number]);
@@ -89,6 +90,11 @@ export const DESKTOP_THEME_PRESETS: Record<string, DesktopThemePreset> = {
     wallpaperName: 'wall-8',
     overlay: 'linear-gradient(140deg, rgba(0, 36, 16, 0.82) 0%, rgba(0, 0, 0, 0.85) 85%)',
     useKaliWallpaper: false,
+  },
+  hc: {
+    accent: '#ffde00',
+    overlay: 'linear-gradient(160deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.88) 65%, rgba(0,0,0,0.96) 100%)',
+    useKaliWallpaper: true,
   },
 };
 

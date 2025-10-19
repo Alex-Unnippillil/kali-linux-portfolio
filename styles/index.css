@@ -621,7 +621,8 @@ dialog {
 
 html[data-theme='dark'] .word-search-cell-default,
 html[data-theme='neon'] .word-search-cell-default,
-html[data-theme='matrix'] .word-search-cell-default {
+html[data-theme='matrix'] .word-search-cell-default,
+html[data-theme='hc'] .word-search-cell-default {
     background: color-mix(in srgb, var(--color-surface) 25%, rgba(15, 23, 42, 0.78));
     color: color-mix(in srgb, var(--color-text) 80%, #e2e8f0);
     border-color: color-mix(in srgb, rgba(148, 163, 184, 0.35), var(--color-border));
@@ -629,7 +630,8 @@ html[data-theme='matrix'] .word-search-cell-default {
 
 html[data-theme='dark'] .word-search-cell-selected,
 html[data-theme='neon'] .word-search-cell-selected,
-html[data-theme='matrix'] .word-search-cell-selected {
+html[data-theme='matrix'] .word-search-cell-selected,
+html[data-theme='hc'] .word-search-cell-selected {
     background: color-mix(in srgb, var(--color-selection) 55%, rgba(15, 23, 42, 0.85));
     color: color-mix(in srgb, var(--color-text) 85%, #f8fafc);
 }
@@ -641,7 +643,8 @@ html[data-theme='matrix'] .word-search-cell-selected {
 
 html[data-theme='dark'] .word-search-selection-line,
 html[data-theme='neon'] .word-search-selection-line,
-html[data-theme='matrix'] .word-search-selection-line {
+html[data-theme='matrix'] .word-search-selection-line,
+html[data-theme='hc'] .word-search-selection-line {
     mix-blend-mode: screen;
     opacity: 0.85;
 }
@@ -666,7 +669,8 @@ html[data-theme='matrix'] .word-search-selection-line {
 
 html[data-theme='dark'] .word-search-clue,
 html[data-theme='neon'] .word-search-clue,
-html[data-theme='matrix'] .word-search-clue {
+html[data-theme='matrix'] .word-search-clue,
+html[data-theme='hc'] .word-search-clue {
     background: color-mix(in srgb, var(--color-selection) 8%, rgba(15, 23, 42, 0.78));
     color: color-mix(in srgb, var(--color-text) 85%, #f8fafc);
 }
@@ -702,6 +706,7 @@ textarea:focus-visible {
 }
 
 /* High contrast overrides */
+html[data-theme='hc'] .bg-ub-orange,
 .high-contrast .bg-ub-orange {
     color: #000 !important;
 }

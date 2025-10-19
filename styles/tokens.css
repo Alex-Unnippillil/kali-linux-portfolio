@@ -91,22 +91,82 @@
   --focus-outline-width: 2px;
 }
 
-/* High contrast theme */
-.high-contrast {
+/* High contrast theme tokens */
+html[data-theme='hc'],
+:root.high-contrast {
+  color-scheme: dark;
   --color-bg: #000000;
+  --kali-bg: #000000;
   --color-text: #ffffff;
+  --kali-text: #ffffff;
+  --kali-text-muted: #f5f5f5;
+  --kali-text-subtle: #e6e6e6;
+  --kali-text-faint: #d9d9d9;
+  --color-primary: #ffde00;
+  --color-accent: #ffde00;
+  --color-secondary: #000000;
+  --color-muted: #121212;
+  --color-surface: #050505;
+  --color-surface-muted: #101010;
+  --color-surface-raised: #151515;
+  --color-inverse: #000000;
+  --color-border: #ffffff;
+  --kali-border: #ffffff;
+  --color-window-border: #ffffff;
+  --color-window-accent: #ffde00;
+  --color-terminal: #00ff9a;
+  --color-terminal-text: #ffffff;
+  --color-terminal-green: #00ff9a;
+  --color-error: #ff375f;
+  --color-success: #00ff9a;
+  --color-warning: #ffb700;
+  --color-danger: #ff375f;
+  --color-info: #00b8ff;
+  --color-severity-low: #00ff9a;
+  --color-severity-medium: #ffb700;
+  --color-severity-high: #ff7b00;
+  --color-severity-critical: #ff375f;
+  --color-selection: #ffde00;
+  --color-control-accent: #ffde00;
+  --focus-outline-color: #00f0ff;
+  --focus-outline-width: 2px;
+  --kali-blue: #00f0ff;
+  --kali-blue-dark: #0095b3;
+  --kali-blue-glow: rgba(0, 240, 255, 0.45);
+  --kali-bg-solid: #000000;
+  --kali-panel: #020202;
+  --kali-terminal: #000000;
+  --kali-panel-border: #ffffff;
+  --kali-panel-highlight: rgba(255, 255, 255, 0.2);
+  --kali-panel-highlight-strong: rgba(255, 255, 255, 0.3);
+  --kali-overlay: rgba(0, 0, 0, 0.86);
+  --kali-control: #ffde00;
+  --kali-control-surface: rgba(255, 222, 0, 0.18);
+  --kali-control-overlay: rgba(255, 222, 0, 0.3);
   --color-ub-grey: #000000;
+  --color-ub-warm-grey: #000000;
   --color-ub-cool-grey: #000000;
+  --color-ub-orange: #ffde00;
+  --color-ub-lite-abrgn: #000000;
+  --color-ub-med-abrgn: #020202;
+  --color-ub-drk-abrgn: #000000;
+  --color-ub-window-title: #000000;
+  --color-ub-gedit-dark: #000000;
+  --color-ub-gedit-light: #0f0f0f;
+  --color-ub-gedit-darker: #000000;
   --color-ubt-grey: #ffffff;
-  --color-ubt-cool-grey: #ffffff;
-  --color-ub-orange: #ffff00;
-  --color-ub-lite-abrgn: #00ffff;
-  --color-ub-border-orange: #ffff00;
-  --color-error: #ff0000;
-  --game-color-secondary: #ffff00;
-  --game-color-success: #00ffff;
-  --game-color-warning: #ff00ff;
-  --game-color-danger: #ff0000;
+  --color-ubt-warm-grey: #f8f8f8;
+  --color-ubt-cool-grey: #f5f5f5;
+  --color-ubt-blue: #00f0ff;
+  --color-ubt-green: #00ff9a;
+  --color-ubt-gedit-orange: #ffde00;
+  --color-ubt-gedit-blue: #00b8ff;
+  --color-ubt-gedit-dark: #000000;
+  --color-ub-border-orange: #ffde00;
+  --game-color-secondary: #00f0ff;
+  --game-color-success: #00ff9a;
+  --game-color-warning: #ffb700;
+  --game-color-danger: #ff375f;
 }
 
 /* Dyslexia-friendly fonts */
@@ -131,6 +191,45 @@
     --motion-fast: 0ms;
     --motion-medium: 0ms;
     --motion-slow: 0ms;
+  }
+}
+
+@media (forced-colors: active) {
+  :root {
+    color-scheme: light dark;
+    --color-bg: Canvas;
+    --kali-bg: Canvas;
+    --color-text: CanvasText;
+    --kali-text: CanvasText;
+    --kali-text-muted: CanvasText;
+    --kali-text-subtle: CanvasText;
+    --kali-text-faint: CanvasText;
+    --color-primary: Highlight;
+    --color-accent: Highlight;
+    --color-selection: Highlight;
+    --color-border: CanvasText;
+    --kali-border: CanvasText;
+    --color-window-border: CanvasText;
+    --color-window-accent: Highlight;
+    --focus-outline-color: Highlight;
+    --color-control-accent: Highlight;
+    --kali-control: Highlight;
+    --kali-control-surface: Highlight;
+    --kali-panel: Canvas;
+    --kali-panel-border: CanvasText;
+    --kali-panel-highlight: Highlight;
+    --color-error: CanvasText;
+    --color-success: CanvasText;
+    --color-warning: CanvasText;
+    --color-info: Highlight;
+  }
+
+  html[data-theme='hc'] {
+    --color-primary: Highlight;
+    --color-accent: Highlight;
+    --color-selection: Highlight;
+    --color-control-accent: Highlight;
+    --kali-control: Highlight;
   }
 }
 
