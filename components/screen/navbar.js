@@ -35,6 +35,17 @@ const areWorkspacesEqual = (next, prev) => {
 };
 
 const TASKBAR_PREVIEW_WIDTH = 280;
+const TASKBAR_TRAY_CLASSES =
+        'taskbar-tray flex items-center gap-2 overflow-x-auto rounded-full border border-white/10 bg-slate-950/65 px-3 py-1 shadow-[0_16px_40px_-28px_rgba(2,6,23,0.95)] backdrop-blur-md';
+const TASKBAR_PLACEHOLDER_CLASSES =
+        'pointer-events-none select-none whitespace-nowrap px-2 text-[0.65rem] font-medium uppercase tracking-[0.35em] text-white/35';
+const TASKBAR_BUTTON_BASE_CLASSES =
+        'taskbar-button relative flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 md:px-4';
+const TASKBAR_BUTTON_ACTIVE_CLASSES =
+        'border-cyan-300/70 bg-cyan-500/20 text-white shadow-[0_0_0_1px_rgba(148,210,255,0.35)]';
+const TASKBAR_BUTTON_IDLE_CLASSES =
+        'border-white/10 bg-slate-900/60 text-white/80 hover:border-white/25 hover:bg-slate-800/80';
+const QUICK_SETTINGS_ID = 'quick-settings-panel';
 const areBadgesEqual = (nextBadge, prevBadge) => {
         if (nextBadge === prevBadge) return true;
         if (!nextBadge || !prevBadge) return false;
@@ -442,11 +453,12 @@ export default class Navbar extends PureComponent {
                 return (
                         <ul
                                 ref={this.taskbarListRef}
-                                className="flex max-w-[40vw] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
+                                className={`${TASKBAR_TRAY_CLASSES} min-h-[2.75rem] max-w-[45vw]`}
                                 role="list"
                                 aria-label="Open applications"
                                 onDragOver={this.handleTaskbarDragOver}
                                 onDrop={this.handleTaskbarDrop}
+                                data-section="running"
                         >
                                 {visibleApps.map((app) => this.renderRunningAppItem(app))}
                         </ul>
@@ -475,16 +487,17 @@ export default class Navbar extends PureComponent {
 
                 return (
                         <ul
-                                className="flex min-h-[2.5rem] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
+                                className={`${TASKBAR_TRAY_CLASSES} min-h-[2.75rem]`}
                                 role="list"
                                 aria-label="Pinned applications"
                                 onDragOver={this.handlePinnedDragOver}
                                 onDrop={this.handlePinnedContainerDrop}
+                                data-section="pinned"
                         >
                                 {hasItems
                                         ? pinnedApps.map((app) => this.renderPinnedAppItem(app))
                                         : (
-                                                <li className="pointer-events-none select-none px-2 text-xs text-white/40">
+                                                <li className={TASKBAR_PLACEHOLDER_CLASSES}>
                                                         Drag apps here to pin
                                                 </li>
                                         )}
@@ -603,6 +616,11 @@ export default class Navbar extends PureComponent {
                 const badgeNode = this.renderAppBadge(badge);
                 const buttonLabel = badge?.label ? `${app.title} — ${badge.label}` : app.title;
 
+                const buttonClasses = [
+                        TASKBAR_BUTTON_BASE_CLASSES,
+                        isActive ? TASKBAR_BUTTON_ACTIVE_CLASSES : TASKBAR_BUTTON_IDLE_CLASSES,
+                ].join(' ');
+
                 return (
                         <button
                                 type="button"
@@ -617,7 +635,8 @@ export default class Navbar extends PureComponent {
                                 onMouseLeave={this.handleAppButtonMouseLeave}
                                 onFocus={(event) => this.handleAppButtonFocus(event, app)}
                                 onBlur={this.handleAppButtonBlur}
-                                className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
+                                className={buttonClasses}
+                                title={buttonLabel}
                         >
                                 <span className="relative inline-flex items-center justify-center">
                                         <Image
@@ -625,18 +644,20 @@ export default class Navbar extends PureComponent {
                                                 alt=""
                                                 width={28}
                                                 height={28}
-                                                className="h-6 w-6"
+                                                className="h-6 w-6 drop-shadow"
                                         />
                                         {badgeNode}
                                         {isActive && (
                                                 <span
                                                         aria-hidden="true"
                                                         data-testid="running-indicator"
-                                                        className="absolute -bottom-1 left-1/2 h-1 w-2 -translate-x-1/2 rounded-full bg-current"
+                                                        className="absolute -bottom-1 left-1/2 h-1.5 w-3 -translate-x-1/2 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.6)]"
                                                 />
                                         )}
                                 </span>
-                                <span className="hidden whitespace-nowrap text-white md:inline">{app.title}</span>
+                                <span className="hidden whitespace-nowrap text-white md:inline md:text-sm">
+                                        {app.title}
+                                </span>
                         </button>
                 );
         };
@@ -858,9 +879,23 @@ export default class Navbar extends PureComponent {
                 const { workspaces, activeWorkspace, preview } = this.state;
                 const pinnedApps = this.renderPinnedApps();
                 const runningApps = this.renderRunningApps();
+                const workspaceSwitcher = workspaces.length > 0
+                        ? (
+                                <WorkspaceSwitcher
+                                        workspaces={workspaces}
+                                        activeWorkspace={activeWorkspace}
+                                        onSelect={this.handleWorkspaceSelect}
+                                />
+                        )
+                        : null;
+                const quickSettingsOpen = Boolean(this.state.status_card);
+                const statusToggleClasses = quickSettingsOpen
+                        ? 'relative flex items-center gap-2 rounded-full border border-cyan-300/70 bg-cyan-500/15 px-3 py-1 text-xs font-semibold text-white shadow-[0_0_0_1px_rgba(148,210,255,0.35)] transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 md:text-sm'
+                        : 'relative flex items-center gap-2 rounded-full border border-white/10 bg-slate-900/60 px-3 py-1 text-xs font-semibold text-white/80 shadow-[0_18px_42px_-30px_rgba(2,6,23,0.95)] backdrop-blur-md transition-all duration-150 hover:border-white/25 hover:bg-slate-800/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 md:text-sm';
+
                 return (
                         <div
-                                className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
+                                className="main-navbar-vp relative fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between overflow-hidden border-b border-white/10 bg-slate-950/80 text-white shadow-[0_24px_65px_-40px_rgba(2,6,23,0.95)] backdrop-blur-xl"
                                 style={{
                                         minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
                                         paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
@@ -870,35 +905,42 @@ export default class Navbar extends PureComponent {
                                         '--desktop-navbar-height': `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px) + 0.375rem + 0.25rem)`,
                                 }}
                         >
-                                <div className="flex items-center gap-2 text-xs md:text-sm">
-                                        <WhiskerMenu />
-                                        {workspaces.length > 0 && (
-                                                <WorkspaceSwitcher
-                                                        workspaces={workspaces}
-                                                        activeWorkspace={activeWorkspace}
-                                                        onSelect={this.handleWorkspaceSelect}
-                                                />
-                                        )}
-                                        {pinnedApps}
-                                        {runningApps}
-                                        <PerformanceGraph />
-                                </div>
-                                <div className="flex items-center gap-4 text-xs md:text-sm">
-                                        <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
-                                        <div
-                                                id="status-bar"
-                                                role="button"
-                                                tabIndex={0}
-                                                aria-label="System status"
-                                                aria-expanded={this.state.status_card}
-                                                onClick={this.handleStatusToggle}
-                                                onKeyDown={this.handleStatusKeyDown}
-                                                className={
-                                                        'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
-                                                }
-                                        >
-                                                <Status />
-                                                <QuickSettings open={this.state.status_card} />
+                                <span
+                                        aria-hidden="true"
+                                        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(120%_180%_at_0%_0%,rgba(59,130,246,0.16),transparent_60%)] opacity-90"
+                                />
+                                <div className="flex w-full items-center justify-between gap-4 text-xs md:text-sm">
+                                        <div className="flex min-w-0 items-center gap-3">
+                                                <div className="flex items-center gap-2 rounded-full border border-white/10 bg-slate-950/60 px-2.5 py-1 shadow-[0_18px_42px_-28px_rgba(2,6,23,0.95)] backdrop-blur-md">
+                                                        <WhiskerMenu />
+                                                        {workspaceSwitcher}
+                                                </div>
+                                                <div className="flex min-w-0 items-center gap-2 text-xs md:text-sm">
+                                                        {pinnedApps}
+                                                        {runningApps}
+                                                </div>
+                                                <PerformanceGraph className="rounded-full border border-white/10 bg-slate-950/55 px-3 py-2 text-white/70 shadow-[0_18px_40px_-30px_rgba(2,6,23,0.95)] backdrop-blur-md" />
+                                        </div>
+                                        <div className="flex shrink-0 items-center gap-3">
+                                                <div className="flex items-center rounded-full border border-white/10 bg-slate-950/60 px-3 py-1 text-xs font-semibold text-white/80 shadow-[0_18px_42px_-30px_rgba(2,6,23,0.95)] backdrop-blur-md md:text-sm">
+                                                        <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
+                                                </div>
+                                                <div
+                                                        id="status-bar"
+                                                        role="button"
+                                                        tabIndex={0}
+                                                        aria-label="System status"
+                                                        aria-expanded={quickSettingsOpen}
+                                                        aria-pressed={quickSettingsOpen}
+                                                        aria-controls={QUICK_SETTINGS_ID}
+                                                        onClick={this.handleStatusToggle}
+                                                        onKeyDown={this.handleStatusKeyDown}
+                                                        className={statusToggleClasses}
+                                                        data-open={quickSettingsOpen ? 'true' : 'false'}
+                                                >
+                                                        <Status />
+                                                        <QuickSettings open={quickSettingsOpen} id={QUICK_SETTINGS_ID} />
+                                                </div>
                                         </div>
                                 </div>
                                 <TaskbarPreviewFlyout

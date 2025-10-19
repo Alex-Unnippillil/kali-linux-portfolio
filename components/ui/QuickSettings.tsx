@@ -5,11 +5,12 @@ import usePersistentState from '../../hooks/usePersistentState';
 
 interface Props {
   open: boolean;
+  id?: string;
 }
 
 const transitionDurationMs = 200;
 
-const QuickSettings = ({ open }: Props) => {
+const QuickSettings = ({ open, id }: Props) => {
   const [theme, setTheme] = usePersistentState('qs-theme', 'light');
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
@@ -196,6 +197,7 @@ const QuickSettings = ({ open }: Props) => {
 
   return (
     <div
+      id={id}
       ref={panelRef}
       role="menu"
       aria-label="Quick settings"
