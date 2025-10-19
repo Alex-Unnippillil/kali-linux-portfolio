@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import FormError from '../../ui/FormError';
 import { copyToClipboard } from '../../../utils/clipboard';
 import { openMailto } from '../../../utils/mailto';
@@ -9,6 +9,7 @@ import AttachmentUploader, {
   MAX_TOTAL_ATTACHMENT_SIZE,
 } from '../../../apps/contact/components/AttachmentUploader';
 import AttachmentCarousel from '../../../apps/contact/components/AttachmentCarousel';
+import { logContactFunnelStep } from '../../../utils/analytics';
 
 const sanitize = (str: string) =>
   str.replace(/[&<>"']/g, (c) => ({
@@ -154,14 +155,35 @@ const ContactApp: React.FC = () => {
   const [fallback, setFallback] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [messageError, setMessageError] = useState('');
+  const hasStartedFormRef = useRef(false);
+  const fallbackReasons = useRef<Set<string>>(new Set());
+
+  const surfaceDetails = useMemo(
+    () => ({ surface: 'desktop-contact-app' as const }),
+    [],
+  );
+
+  const markFormStarted = () => {
+    if (hasStartedFormRef.current) return;
+    hasStartedFormRef.current = true;
+    logContactFunnelStep('form_started', surfaceDetails);
+  };
+
+  const logFallback = (reason: string) => {
+    if (fallbackReasons.current.has(reason)) return;
+    fallbackReasons.current.add(reason);
+    logContactFunnelStep('fallback_presented', { ...surfaceDetails, reason });
+  };
 
   useEffect(() => {
+    logContactFunnelStep('view_contact_entry', surfaceDetails);
     (async () => {
       const draft = await readDraft();
       if (draft) {
         setName(draft.name || '');
         setEmail(draft.email || '');
         setMessage(draft.message || '');
+        logContactFunnelStep('draft_restored', surfaceDetails);
       }
     })();
     const meta = document.querySelector('meta[name="csrf-token"]');
@@ -169,6 +191,7 @@ const ContactApp: React.FC = () => {
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
     if (!siteKey || !(window as any).grecaptcha) {
       setFallback(true);
+      logFallback('captcha_unavailable');
     }
   }, []);
 
@@ -179,6 +202,7 @@ const ContactApp: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
+    markFormStarted();
     setSubmitting(true);
     setError('');
     setBanner(null);
@@ -191,14 +215,26 @@ const ContactApp: React.FC = () => {
     if (!emailResult.success) {
       setEmailError('Invalid email');
       hasValidationError = true;
+      logContactFunnelStep('validation_error', {
+        ...surfaceDetails,
+        field: 'email',
+      });
     }
     if (!messageResult.success) {
       setMessageError('1-1000 chars');
       hasValidationError = true;
+      logContactFunnelStep('validation_error', {
+        ...surfaceDetails,
+        field: 'message',
+      });
     }
     if (hasValidationError) {
       setBanner({ type: 'error', message: 'Failed to send' });
       setSubmitting(false);
+      logContactFunnelStep('submission_failure', {
+        ...surfaceDetails,
+        reason: 'validation',
+      });
       return;
     }
     const totalSize = attachments.reduce((s, f) => s + f.size, 0);
@@ -210,6 +246,14 @@ const ContactApp: React.FC = () => {
       );
       setBanner({ type: 'error', message: 'Failed to send' });
       setSubmitting(false);
+      logContactFunnelStep('attachment_rejected', {
+        ...surfaceDetails,
+        reason: 'total_limit',
+      });
+      logContactFunnelStep('submission_failure', {
+        ...surfaceDetails,
+        reason: 'attachment_limit',
+      });
       return;
     }
     let recaptchaToken = '';
@@ -226,6 +270,15 @@ const ContactApp: React.FC = () => {
       setError('Email service unavailable. Use the options above.');
       setBanner({ type: 'error', message: 'Failed to send' });
       setSubmitting(false);
+      logFallback('captcha_unavailable');
+      logContactFunnelStep('captcha_error', {
+        ...surfaceDetails,
+        reason: 'token_unavailable',
+      });
+      logContactFunnelStep('submission_failure', {
+        ...surfaceDetails,
+        reason: 'captcha',
+      });
       return;
     }
     const result = await processContactForm({
@@ -245,6 +298,8 @@ const ContactApp: React.FC = () => {
       await uploadAttachments(attachments);
       setAttachments([]);
       void deleteDraft();
+      logContactFunnelStep('submission_success', surfaceDetails);
+      logContactFunnelStep('draft_cleared', surfaceDetails);
     } else {
       const msg = result.error || 'Submission failed';
       setError(msg);
@@ -255,9 +310,44 @@ const ContactApp: React.FC = () => {
         result.error === 'Submission failed'
       ) {
         setFallback(true);
+        logFallback(result.code || 'server_not_configured');
+        logContactFunnelStep('captcha_error', {
+          ...surfaceDetails,
+          reason: result.error?.toLowerCase().includes('captcha')
+            ? 'server_response'
+            : 'server_not_configured',
+        });
       }
+      logContactFunnelStep('submission_failure', {
+        ...surfaceDetails,
+        reason: result.code || 'server',
+      });
     }
     setSubmitting(false);
+  };
+
+  const handleCopyEmail = (channel: 'primary' | 'fallback' = 'primary') => {
+    copyToClipboard(EMAIL);
+    logContactFunnelStep('cta_copy_email', {
+      ...surfaceDetails,
+      channel,
+    });
+  };
+
+  const handleCopyDraftMessage = () => {
+    copyToClipboard(message);
+    logContactFunnelStep('cta_copy_message', {
+      ...surfaceDetails,
+      via: 'draft',
+    });
+  };
+
+  const handleOpenMailClient = (via: 'fallback' | 'primary' = 'primary') => {
+    openMailto(EMAIL, '', via === 'fallback' ? message : '');
+    logContactFunnelStep('cta_open_mail_client', {
+      ...surfaceDetails,
+      via,
+    });
   };
 
   return (
@@ -277,21 +367,21 @@ const ContactApp: React.FC = () => {
           Service unavailable. You can{' '}
           <button
             type="button"
-            onClick={() => copyToClipboard(EMAIL)}
+            onClick={() => handleCopyEmail('fallback')}
             className="underline mr-2"
           >
             Copy address
           </button>
           <button
             type="button"
-            onClick={() => copyToClipboard(message)}
+            onClick={handleCopyDraftMessage}
             className="underline mr-2"
           >
             Copy message
           </button>
           <button
             type="button"
-            onClick={() => openMailto(EMAIL, '', message)}
+            onClick={() => handleOpenMailClient('fallback')}
             className="underline"
           >
             Open email app
@@ -304,7 +394,11 @@ const ContactApp: React.FC = () => {
             id="contact-name"
             className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              markFormStarted();
+              setName(e.target.value);
+            }}
+            onFocus={markFormStarted}
             required
             placeholder=" "
           />
@@ -321,7 +415,11 @@ const ContactApp: React.FC = () => {
             type="email"
             className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              markFormStarted();
+              setEmail(e.target.value);
+            }}
+            onFocus={markFormStarted}
             required
             aria-invalid={!!emailError}
             aria-describedby={emailError ? 'contact-email-error' : undefined}
@@ -345,7 +443,11 @@ const ContactApp: React.FC = () => {
             className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
             rows={4}
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={(e) => {
+              markFormStarted();
+              setMessage(e.target.value);
+            }}
+            onFocus={markFormStarted}
             required
             aria-invalid={!!messageError}
             aria-describedby={messageError ? 'contact-message-error' : undefined}
@@ -367,12 +469,14 @@ const ContactApp: React.FC = () => {
           attachments={attachments}
           setAttachments={setAttachments}
           onError={setError}
+          analyticsSurface="desktop-contact-app"
         />
         <AttachmentCarousel
           attachments={attachments}
           onRemove={(i) =>
             setAttachments((prev) => prev.filter((_, idx) => idx !== i))
           }
+          analyticsSurface="desktop-contact-app"
         />
         <input
           type="text"
