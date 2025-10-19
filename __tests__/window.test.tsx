@@ -2,7 +2,7 @@ import React, { act } from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import Window from '../components/desktop/Window';
 import windowStyles from '../components/base/window.module.css';
-import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET } from '../utils/uiConstants';
+import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../utils/uiConstants';
 import {
   DEFAULT_SNAP_BOTTOM_INSET,
   measureSafeAreaInset,
@@ -24,8 +24,15 @@ const measureSafeAreaInsetMock = measureSafeAreaInset as jest.MockedFunction<typ
 const measureWindowTopOffsetMock = measureWindowTopOffset as jest.MockedFunction<typeof measureWindowTopOffset>;
 const measureSnapBottomInsetMock = measureSnapBottomInset as jest.MockedFunction<typeof measureSnapBottomInset>;
 
+const normalizeTopInset = (value: number = DESKTOP_TOP_PADDING) => {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return WINDOW_TOP_INSET;
+  }
+  return Math.max(value - WINDOW_TOP_MARGIN, WINDOW_TOP_INSET);
+};
+
 const computeAvailableHeightPx = () => {
-  const topOffset = measureWindowTopOffset();
+  const topOffset = normalizeTopInset(measureWindowTopOffset());
   const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
   const snapBottomInset = measureSnapBottomInset();
   return window.innerHeight - topOffset - snapBottomInset - safeBottom;
@@ -37,7 +44,7 @@ const computeQuarterHeightPercent = () => computeSnappedHeightPercent() / 2;
 
 const computeLeftSnapTestTop = () => {
   const available = computeAvailableHeightPx();
-  const offset = DESKTOP_TOP_PADDING;
+  const offset = normalizeTopInset();
   const preferred = offset + available * 0.75;
   const upperBound = window.innerHeight - 120;
   const lowerBound = offset + 16;
@@ -45,7 +52,7 @@ const computeLeftSnapTestTop = () => {
   return Math.round(clamped);
 };
 
-const getSnapTranslateTop = () => measureWindowTopOffset();
+const getSnapTranslateTop = () => normalizeTopInset(measureWindowTopOffset());
 
 const setViewport = (width: number, height: number) => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: width });
@@ -382,7 +389,7 @@ describe('Window snapping preview', () => {
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toHaveStyle(`left: ${window.innerWidth / 2}px`);
     expect(preview).toHaveStyle(
-      `top: ${measureWindowTopOffset()}px`
+      `top: ${normalizeTopInset(measureWindowTopOffset())}px`
     );
     expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx()}px`);
     expect(preview).toHaveAttribute('aria-label', 'Snap right half');
@@ -728,6 +735,7 @@ describe('Window maximize behavior', () => {
   it('respects safe-area aware top offset when maximizing', () => {
     const safeTop = DESKTOP_TOP_PADDING + 48;
     measureWindowTopOffsetMock.mockReturnValue(safeTop);
+    const normalizedSafeTop = normalizeTopInset(safeTop);
 
     render(
       <Window
@@ -745,7 +753,7 @@ describe('Window maximize behavior', () => {
     fireEvent.click(maximizeButton);
 
     const winEl = document.getElementById('test-window') as HTMLElement | null;
-    expect(winEl?.style.transform).toBe(`translate(-1pt, ${safeTop - DESKTOP_TOP_PADDING}px)`);
+    expect(winEl?.style.transform).toBe(`translate(-1pt, ${normalizedSafeTop - DESKTOP_TOP_PADDING}px)`);
   });
 });
 
@@ -810,7 +818,7 @@ describe('Edge resistance', () => {
       ref.current!.handleDrag({}, { node: winEl, x: -100, y: -50 } as any);
     });
 
-    const expectedTop = ref.current!.state.safeAreaTop ?? 0;
+    const expectedTop = normalizeTopInset(ref.current!.state.safeAreaTop ?? DESKTOP_TOP_PADDING);
     expect(winEl.style.transform).toBe(`translate(0px, ${expectedTop}px)`);
   });
 });
@@ -909,7 +917,7 @@ describe('Window viewport constraints', () => {
       0,
     );
     const availableVertical = Math.max(
-      viewportHeight - measureWindowTopOffset() - SNAP_BOTTOM_INSET - Math.max(0, measureSafeAreaInset('bottom')),
+      viewportHeight - normalizeTopInset(measureWindowTopOffset()) - SNAP_BOTTOM_INSET - Math.max(0, measureSafeAreaInset('bottom')),
       0,
     );
     const expectedHeight = Math.max(
@@ -919,7 +927,7 @@ describe('Window viewport constraints', () => {
 
     expect(state.parentSize.width).toBeCloseTo(expectedWidth);
     expect(state.parentSize.height).toBeCloseTo(expectedHeight);
-    expect(state.safeAreaTop).toBe(DESKTOP_TOP_PADDING);
+    expect(state.safeAreaTop).toBe(measureWindowTopOffset());
     expect(state.viewportOffset).toEqual({ left: 0, top: 0 });
   });
 
@@ -964,7 +972,8 @@ describe('Window viewport constraints', () => {
 
     expect(ref.current!.state.viewportOffset).toEqual({ left: 40, top: 30 });
     const offset = ref.current!.state.viewportOffset;
-    const minY = offset.top + ref.current!.state.safeAreaTop;
+    const safeTop = normalizeTopInset(ref.current!.state.safeAreaTop ?? DESKTOP_TOP_PADDING);
+    const minY = offset.top + safeTop;
 
     expect(winEl.style.getPropertyValue('--window-transform-x')).toBe(`${offset.left.toFixed(1)}px`);
     expect(winEl.style.getPropertyValue('--window-transform-y')).toBe(`${minY.toFixed(1)}px`);
