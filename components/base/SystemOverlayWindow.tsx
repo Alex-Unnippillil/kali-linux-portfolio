@@ -118,14 +118,16 @@ export default function SystemOverlayWindow({
                     grabbed={false}
                     onPointerDown={undefined}
                     onDoubleClick={onMaximize ? handleMaximize : undefined}
-                />
-                <WindowEditButtons
-                    minimize={handleMinimize}
-                    maximize={handleMaximize}
-                    isMaximised={Boolean(maximized)}
-                    close={handleClose}
-                    id={id}
-                    allowMaximize={allowMaximize}
+                    controls={(
+                        <WindowEditButtons
+                            minimize={handleMinimize}
+                            maximize={handleMaximize}
+                            isMaximised={Boolean(maximized)}
+                            close={handleClose}
+                            id={id}
+                            allowMaximize={allowMaximize}
+                        />
+                    )}
                 />
                 <div className={bodyClasses}>{children}</div>
             </div>
