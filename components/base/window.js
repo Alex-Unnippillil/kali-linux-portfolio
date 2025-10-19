@@ -4,7 +4,6 @@ import React, { Component, useEffect, useRef } from 'react';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
-import useDocPiP from '../../hooks/useDocPiP';
 import {
     clampWindowTopPosition,
     DEFAULT_WINDOW_TOP_OFFSET,
@@ -1171,7 +1170,6 @@ export class Window extends Component {
                                     close={this.closeWindow}
                                     id={this.id}
                                     allowMaximize={this.props.allowMaximize !== false}
-                                    pip={() => this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
                                 />
                             )}
                         />
@@ -1257,12 +1255,9 @@ export class WindowXBorder extends Component {
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
-    const { togglePin, isPinned } = useDocPiP(props.pip || (() => null));
-    const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
     const allowMaximize = props.allowMaximize !== false;
     const isMaximized = Boolean(props.isMaximised);
     const controlsRef = useRef(null);
-    const pipHandlerEnabled = Boolean(props.pip);
 
     useEffect(() => {
         const node = controlsRef.current;
@@ -1296,7 +1291,7 @@ export function WindowEditButtons(props) {
             window.removeEventListener('resize', handleResize);
             titlebar.style.removeProperty('--window-controls-width');
         };
-    }, [pipSupported, pipHandlerEnabled]);
+    }, []);
 
     const iconProps = {
         className: styles.windowControlIcon,
@@ -1358,19 +1353,6 @@ export function WindowEditButtons(props) {
         </svg>
     );
 
-    const PinIcon = () => (
-        <svg {...iconProps}>
-            <path
-                d="M8 2.75v4.5m0 0 2 2.5H6l2-2.5Zm0 2.5v3.5"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-            <path d="M6 5.25h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-        </svg>
-    );
-
     const handleMaximize = (event) => {
         if (!allowMaximize) {
             event?.preventDefault?.();
@@ -1392,18 +1374,6 @@ export function WindowEditButtons(props) {
             onTouchStart={(event) => event.stopPropagation()}
             data-window-controls=""
         >
-            {pipSupported && props.pip && (
-                <button
-                    type="button"
-                    aria-label={isPinned ? 'Unpin window' : 'Pin window'}
-                    title={isPinned ? 'Unpin window' : 'Pin window'}
-                    aria-pressed={isPinned}
-                    className={`${styles.windowControlButton}`}
-                    onClick={togglePin}
-                >
-                    <PinIcon />
-                </button>
-            )}
             <button
                 type="button"
                 aria-label="Minimize window"
