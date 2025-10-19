@@ -6,9 +6,10 @@ import { City } from '../state';
 interface Props {
   city: City;
   onClose: () => void;
+  onDelete: (city: City) => void;
 }
 
-export default function CityDetail({ city, onClose }: Props) {
+export default function CityDetail({ city, onClose, onDelete }: Props) {
   const [unit, setUnit] = useState<'C' | 'F'>('C');
   const [hourly, setHourly] = useState<number[]>([]);
   const [precip, setPrecip] = useState<number | null>(null);
@@ -42,9 +43,24 @@ export default function CityDetail({ city, onClose }: Props) {
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4">
       <div className="bg-neutral-900 p-4 rounded w-full max-w-md text-white">
-        <div className="flex justify-between mb-4">
+        <div className="mb-4 flex items-center justify-between gap-3">
           <div className="font-bold">{city.name}</div>
-          <button onClick={onClose} className="px-1.5">Close</button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="rounded bg-red-600 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/80"
+              onClick={() => onDelete(city)}
+            >
+              Delete City
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded bg-white/10 px-2 py-1 text-xs font-medium uppercase tracking-wide text-white transition hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70"
+            >
+              Close
+            </button>
+          </div>
         </div>
         <div className="flex gap-1.5 mb-4">
           <button
