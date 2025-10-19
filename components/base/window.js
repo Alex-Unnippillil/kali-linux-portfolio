@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Component } from 'react';
+import React, { Component, useEffect, useRef } from 'react';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
@@ -1102,6 +1102,7 @@ export class Window extends Component {
                     nodeRef={this.windowRef}
                     axis="both"
                     handle=".bg-ub-window-title"
+                    cancel={`.${styles.windowControls}`}
                     grid={this.props.snapEnabled ? snapGrid : [1, 1]}
                     scale={1}
                     onStart={this.changeCursorToMove}
@@ -1156,15 +1157,17 @@ export class Window extends Component {
                             grabbed={this.state.grabbed}
                             onPointerDown={this.focusWindow}
                             onDoubleClick={this.handleTitleBarDoubleClick}
-                        />
-                        <WindowEditButtons
-                            minimize={this.minimizeWindow}
-                            maximize={this.maximizeWindow}
-                            isMaximised={this.state.maximized}
-                            close={this.closeWindow}
-                            id={this.id}
-                            allowMaximize={this.props.allowMaximize !== false}
-                            pip={() => this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
+                            controls={(
+                                <WindowEditButtons
+                                    minimize={this.minimizeWindow}
+                                    maximize={this.maximizeWindow}
+                                    isMaximised={this.state.maximized}
+                                    close={this.closeWindow}
+                                    id={this.id}
+                                    allowMaximize={this.props.allowMaximize !== false}
+                                    pip={() => this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
+                                />
+                            )}
                         />
                         {(this.id === "settings"
                             ? <Settings />
@@ -1182,10 +1185,10 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, controls }) {
     return (
         <div
-            className={`${styles.windowTitlebar} relative bg-ub-window-title px-3 text-white w-full select-none flex items-center`}
+            className={`${styles.windowTitlebar} bg-ub-window-title text-white select-none`}
             tabIndex={0}
             role="button"
             aria-grabbed={grabbed}
@@ -1193,8 +1196,13 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
             onBlur={onBlur}
             onPointerDown={onPointerDown}
             onDoubleClick={onDoubleClick}
+            data-window-titlebar=""
         >
-            <div className="flex justify-center w-full text-sm font-bold">{title}</div>
+            <span className={styles.windowTitlePlaceholder} aria-hidden="true" />
+            <div className={`${styles.windowTitle} text-sm font-bold`} title={title}>
+                {title}
+            </div>
+            {controls}
         </div>
     )
 }
@@ -1243,10 +1251,119 @@ export class WindowXBorder extends Component {
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
-    const { togglePin } = useDocPiP(props.pip || (() => null));
+    const { togglePin, isPinned } = useDocPiP(props.pip || (() => null));
     const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
     const allowMaximize = props.allowMaximize !== false;
     const isMaximized = Boolean(props.isMaximised);
+    const controlsRef = useRef(null);
+    const pipHandlerEnabled = Boolean(props.pip);
+
+    useEffect(() => {
+        const node = controlsRef.current;
+        if (typeof window === 'undefined' || !node) {
+            return undefined;
+        }
+
+        const titlebar = node.closest('[data-window-titlebar]');
+        if (!titlebar) {
+            return undefined;
+        }
+
+        const setWidth = () => {
+            titlebar.style.setProperty('--window-controls-width', `${node.offsetWidth}px`);
+        };
+
+        setWidth();
+
+        if (typeof ResizeObserver === 'function') {
+            const observer = new ResizeObserver(() => setWidth());
+            observer.observe(node);
+            return () => {
+                observer.disconnect();
+                titlebar.style.removeProperty('--window-controls-width');
+            };
+        }
+
+        const handleResize = () => setWidth();
+        window.addEventListener('resize', handleResize);
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            titlebar.style.removeProperty('--window-controls-width');
+        };
+    }, [pipSupported, pipHandlerEnabled]);
+
+    const iconProps = {
+        className: styles.windowControlIcon,
+        viewBox: '0 0 16 16',
+        'aria-hidden': true,
+        focusable: 'false',
+    };
+
+    const MinimizeIcon = () => (
+        <svg {...iconProps}>
+            <line x1="3" y1="8" x2="13" y2="8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+    );
+
+    const MaximizeIcon = () => (
+        <svg {...iconProps}>
+            <rect
+                x="3"
+                y="3"
+                width="10"
+                height="10"
+                rx="1.6"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                fill="none"
+            />
+        </svg>
+    );
+
+    const RestoreIcon = () => (
+        <svg {...iconProps}>
+            <rect
+                x="5"
+                y="3"
+                width="8"
+                height="6.5"
+                rx="1.4"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                fill="none"
+            />
+            <rect
+                x="3"
+                y="6.5"
+                width="8"
+                height="6.5"
+                rx="1.4"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                fill="none"
+            />
+        </svg>
+    );
+
+    const CloseIcon = () => (
+        <svg {...iconProps}>
+            <line x1="4" y1="4" x2="12" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            <line x1="12" y1="4" x2="4" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+    );
+
+    const PinIcon = () => (
+        <svg {...iconProps}>
+            <path
+                d="M8 2.75v4.5m0 0 2 2.5H6l2-2.5Zm0 2.5v3.5"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            <path d="M6 5.25h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        </svg>
+    );
 
     const iconProps = {
         className: styles.windowControlIcon,
@@ -1333,16 +1450,20 @@ export function WindowEditButtons(props) {
 
     return (
         <div
-            className={`${styles.windowControls} absolute select-none right-2 top-1 flex items-center`}
+            ref={controlsRef}
+            className={styles.windowControls}
             role="group"
             aria-label="Window controls"
             onPointerDown={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            onTouchStart={(event) => event.stopPropagation()}
         >
             {pipSupported && props.pip && (
                 <button
                     type="button"
-                    aria-label="Window pin"
-                    title="Pin window"
+                    aria-label={isPinned ? 'Unpin window' : 'Pin window'}
+                    title={isPinned ? 'Unpin window' : 'Pin window'}
+                    aria-pressed={isPinned}
                     className={`${styles.windowControlButton}`}
                     onClick={togglePin}
                 >
