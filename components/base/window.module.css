@@ -123,29 +123,108 @@
   border-top-right-radius: calc(var(--radius-6) - 1px);
   position: relative;
   z-index: 1;
+  display: grid;
+  grid-template-columns: var(--window-controls-width, 96px) 1fr auto;
+  align-items: center;
+  column-gap: 0.35rem;
+  padding: 0 0.75rem;
+}
+
+.windowTitlePlaceholder {
+  display: block;
+  width: var(--window-controls-width, 96px);
+  height: 100%;
+  pointer-events: none;
+}
+
+.windowTitle {
+  grid-column: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .windowControls {
-  height: 28px;
+  grid-column: 3;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  justify-self: end;
+  padding: 0 0.25rem;
+  height: 100%;
+  user-select: none;
 }
 
-.windowControlButton { 
+.windowControlButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid transparent;
   outline: none;
   box-shadow: none;
-  transition: box-shadow var(--motion-fast) ease;
+  background-color: rgba(148, 163, 184, 0.08);
+  color: rgba(226, 232, 240, 0.85);
+  transition:
+    background-color var(--motion-fast) ease,
+    color var(--motion-fast) ease,
+    border-color var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease,
+    transform var(--motion-fast) ease;
+}
+
+.windowControlButton:hover {
+  background-color: rgba(148, 163, 184, 0.2);
+  color: rgba(248, 250, 252, 0.95);
+}
+
+.windowControlButton:active {
+  background-color: rgba(148, 163, 184, 0.28);
+  transform: translateY(1px);
 }
 
 .windowControlButton:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--color-window-accent);
+  box-shadow: 0 0 0 2px rgba(125, 211, 252, 0.75);
 }
 
 .windowControlButton:disabled,
 .windowControlButtonDisabled {
   cursor: not-allowed;
   opacity: 0.45;
-  background-color: transparent !important;
+  background-color: rgba(148, 163, 184, 0.12) !important;
+  color: rgba(148, 163, 184, 0.6);
   box-shadow: none;
+}
+
+.windowControlButtonClose {
+  color: rgba(252, 165, 165, 0.85);
+}
+
+.windowControlButtonClose:hover {
+  background-color: rgba(248, 113, 113, 0.15);
+  border-color: rgba(248, 113, 113, 0.25);
+  color: rgba(254, 226, 226, 0.95);
+}
+
+.windowControlButtonClose:active {
+  background-color: rgba(248, 113, 113, 0.22);
+  color: rgba(254, 202, 202, 1);
+}
+
+.windowControlIcon {
+  width: 14px;
+  height: 14px;
+  display: block;
 }
 
 .windowYBorder {
