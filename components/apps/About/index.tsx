@@ -2,13 +2,14 @@ import React, { Component } from 'react';
 import Image from 'next/image';
 import Head from 'next/head';
 import ReactGA from 'react-ga4';
-import GitHubStars from '../../GitHubStars';
 import Certs from '../certs';
 import data from '../alex/data.json';
 import SafetyNote from './SafetyNote';
 import { getCspNonce } from '../../../utils/csp';
 import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
+import GitHubContributionHeatmap from './GitHubContributionHeatmap';
+import GitHubStars from '../../GitHubStars';
 
 class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
   screens: Record<string, React.ReactNode> = {};
@@ -355,6 +356,7 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
         className="mt-2 w-full px-2 py-1 rounded text-black"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
+        aria-label={`Filter ${title} badges`}
       />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map((badge) => (
@@ -411,9 +413,13 @@ function Skills({ skills }: { skills: any }) {
         <SkillSection title="Languages & Tools" badges={languagesTools} />
         <SkillSection title="Frameworks & Libraries" badges={frameworksLibraries} />
       </div>
-      <div className="w-full md:w-10/12 flex flex-col items-center mt-8">
-        <div className="font-bold text-sm md:text-base mb-2 text-center">GitHub Contributions</div>
-        <GitHubStars user="alex-unnippillil" repo="kali-linux-portfolio" />
+      <div className="w-full md:w-10/12 flex flex-col items-center mt-8 space-y-4">
+        <div className="font-bold text-sm md:text-base text-center">GitHub Contributions</div>
+        <GitHubContributionHeatmap username="alex-unnippillil" year={2025} />
+        <div className="text-xs text-gray-300">
+          <span className="mr-1 font-semibold text-white">Portfolio repo stars:</span>
+          <GitHubStars user="alex-unnippillil" repo="kali-linux-portfolio" />
+        </div>
       </div>
     </>
   );
