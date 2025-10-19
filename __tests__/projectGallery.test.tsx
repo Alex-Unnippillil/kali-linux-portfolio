@@ -7,6 +7,19 @@ jest.mock('@monaco-editor/react', () => function MonacoEditorMock() {
   return <div />;
 });
 
+beforeAll(() => {
+  class ResizeObserverMock {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  // @ts-expect-error jsdom polyfill
+  global.ResizeObserver = ResizeObserverMock;
+  if (!window.HTMLElement.prototype.scrollTo) {
+    window.HTMLElement.prototype.scrollTo = () => {};
+  }
+});
+
 describe('ProjectGallery', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -97,5 +110,30 @@ describe('ProjectGallery', () => {
     expect(tbl.getByText('TS')).toBeInTheDocument();
     expect(tbl.getByText('frontend, react')).toBeInTheDocument();
     expect(tbl.getByText('backend')).toBeInTheDocument();
+  });
+
+  it('virtualizes when the project list grows large', async () => {
+    const projects = Array.from({ length: 30 }, (_, index) => ({
+      id: index + 1,
+      title: `Project ${index + 1}`,
+      description: 'Synthetic project entry',
+      stack: ['JS'],
+      tags: ['demo'],
+      year: 2024,
+      type: 'web',
+      thumbnail: '/demo/thumb.png',
+      repo: `https://example.com/repo-${index + 1}`,
+      demo: '',
+      snippet: `console.log(${index});`,
+      language: 'javascript',
+    }));
+
+    render(<ProjectGallery projects={projects} />);
+
+    const virtualized = await screen.findByTestId('project-gallery-virtualized');
+    expect(virtualized).toBeInTheDocument();
+    expect(
+      within(virtualized).getByRole('list', { name: /project results/i }),
+    ).toBeInTheDocument();
   });
 });
