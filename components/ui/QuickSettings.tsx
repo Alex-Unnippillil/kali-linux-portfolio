@@ -33,8 +33,18 @@ const QuickSettings = ({ open }: Props) => {
   const focusableTabIndex = open ? 0 : -1;
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
+    const root = document.documentElement;
+    root.setAttribute('data-theme', theme);
+    root.classList.toggle('dark', theme === 'dark');
   }, [theme]);
+
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-sound-muted', !sound);
+  }, [sound]);
+
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-offline', !online);
+  }, [online]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('reduce-motion', reduceMotion);
@@ -100,12 +110,74 @@ const QuickSettings = ({ open }: Props) => {
     return null;
   }
 
-  const statusBadges = [
-    { id: 'theme', label: 'Theme', value: theme === 'light' ? 'Light' : 'Dark' },
-    { id: 'audio', label: 'Sound', value: sound ? 'On' : 'Muted' },
-    { id: 'network', label: 'Network', value: online ? 'Online' : 'Offline' },
-    { id: 'focus', label: 'Focus mode', value: focusMode ? 'On' : 'Off' },
-    { id: 'volume', label: 'Volume', value: `${volume}%` },
+  const statusToneStyles: Record<
+    'positive' | 'warning' | 'info' | 'muted',
+    { icon: string; value: string; ring: string }
+  > = {
+    positive: {
+      icon: 'bg-emerald-400/20 text-emerald-200',
+      value: 'text-emerald-100',
+      ring: 'shadow-[0_0_0_1px_rgba(16,185,129,0.25)]',
+    },
+    warning: {
+      icon: 'bg-amber-400/20 text-amber-200',
+      value: 'text-amber-100',
+      ring: 'shadow-[0_0_0_1px_rgba(217,119,6,0.25)]',
+    },
+    info: {
+      icon: 'bg-sky-400/20 text-sky-200',
+      value: 'text-sky-100',
+      ring: 'shadow-[0_0_0_1px_rgba(14,165,233,0.25)]',
+    },
+    muted: {
+      icon: 'bg-white/10 text-white/70',
+      value: 'text-white/70',
+      ring: 'shadow-[0_0_0_1px_rgba(148,163,184,0.18)]',
+    },
+  };
+
+  const statusBadges: Array<{
+    id: string;
+    label: string;
+    value: string;
+    icon: ReactNode;
+    tone: keyof typeof statusToneStyles;
+  }> = [
+    {
+      id: 'theme',
+      label: 'Theme',
+      value: theme === 'light' ? 'Light' : 'Dark',
+      icon: theme === 'light' ? <SunIcon /> : <MoonIcon />,
+      tone: 'info',
+    },
+    {
+      id: 'audio',
+      label: 'Sound',
+      value: sound ? 'On' : 'Muted',
+      icon: <SoundIcon />,
+      tone: sound ? 'positive' : 'muted',
+    },
+    {
+      id: 'network',
+      label: 'Network',
+      value: online ? 'Online' : 'Offline',
+      icon: <NetworkIcon />,
+      tone: online ? 'positive' : 'warning',
+    },
+    {
+      id: 'focus',
+      label: 'Focus mode',
+      value: focusMode ? 'On' : 'Off',
+      icon: <FocusIcon />,
+      tone: focusMode ? 'info' : 'muted',
+    },
+    {
+      id: 'volume',
+      label: 'Volume',
+      value: `${volume}%`,
+      icon: <VolumeIcon muted={!sound} />,
+      tone: sound ? 'info' : 'muted',
+    },
   ];
 
   const toggles: Array<{
@@ -200,50 +272,56 @@ const QuickSettings = ({ open }: Props) => {
       role="menu"
       aria-label="Quick settings"
       aria-hidden={!open}
-      className={`group/qs absolute top-9 right-3 w-[19rem] origin-top-right rounded-2xl border border-white/15 bg-kali-surface/95 p-4 text-sm text-white shadow-kali-panel backdrop-blur-lg transition-all duration-200 focus:outline-none ${
+      className={`group/qs absolute top-9 right-3 w-[17.5rem] origin-top-right rounded-xl border border-white/10 bg-slate-950/90 p-4 text-xs text-slate-100 shadow-[0_24px_48px_-28px_rgba(15,23,42,0.9)] backdrop-blur-lg transition-all duration-200 focus:outline-none ${
         isVisible
           ? 'pointer-events-auto translate-y-0 scale-100 opacity-100'
           : 'pointer-events-none -translate-y-2 scale-95 opacity-0'
       }`}
-      style={{
-        boxShadow:
-          '0 20px 45px -35px rgba(40,120,255,0.65), inset 0 0 0 1px rgba(255,255,255,0.06)',
-      }}
     >
-      <div className="pointer-events-none absolute inset-0 -z-10 rounded-[inherit] bg-[radial-gradient(140%_120%_at_50%_-10%,rgba(80,157,255,0.38),rgba(25,48,108,0.16)_45%,transparent)] opacity-100" />
-
       <div className="pb-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-kali-muted">Quick settings</p>
-        <p className="mt-1 text-xs text-white/70">Personalise the desktop in one place.</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-300">Quick settings</p>
+        <p className="mt-1 text-[11px] leading-snug text-slate-400">
+          Personalize key desktop controls in one tidy panel.
+        </p>
       </div>
 
-      <section
-        aria-label="System snapshot"
-        className="rounded-xl border border-white/[0.18] bg-white/[0.14] p-3 shadow-inner"
-      >
+      <section aria-label="System snapshot" className="rounded-lg border border-white/10 bg-white/5 p-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-white/80">Status</span>
-          <span className="text-[10px] uppercase tracking-[0.2em] text-white/50">Live</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-200">Status</span>
+          <span className="text-[10px] uppercase tracking-[0.24em] text-slate-400">Live</span>
         </div>
-        <div className="mt-3 flex flex-wrap gap-2" aria-live="polite">
-          {statusBadges.map(({ id, label, value }) => (
-            <span
-              key={id}
-              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/15 px-3 py-1 text-xs font-medium text-white/80 shadow-sm"
-            >
-              <span className="flex h-1.5 w-1.5 rounded-full bg-kali-control shadow-[0_0_0_2px_rgba(13,148,255,0.25)]" aria-hidden />
-              <span className="uppercase tracking-wide text-white/60">{label}</span>
-              <span className="font-semibold text-white">{value}</span>
-            </span>
-          ))}
+        <div className="mt-3 grid grid-cols-2 gap-2" aria-live="polite">
+          {statusBadges.map(({ id, label, value, icon, tone }) => {
+            const toneStyle = statusToneStyles[tone];
+            return (
+              <span
+                key={id}
+                className={`inline-flex items-center gap-2 rounded-lg border border-white/10 bg-slate-900/80 px-2.5 py-2 text-[11px] font-medium text-slate-200 ${toneStyle.ring}`}
+              >
+                <span
+                  className={`flex h-6 w-6 items-center justify-center rounded-md ${toneStyle.icon}`}
+                  aria-hidden
+                >
+                  <span className="scale-75">{icon}</span>
+                </span>
+                <span className="flex flex-col leading-tight">
+                  <span className="uppercase tracking-wide text-slate-400">{label}</span>
+                  <span className={`font-semibold ${toneStyle.value}`}>{value}</span>
+                </span>
+              </span>
+            );
+          })}
         </div>
       </section>
 
-      <section aria-label="Appearance" className="rounded-xl border border-white/[0.18] bg-white/[0.14] p-3 shadow-inner">
+      <section aria-label="Appearance" className="mt-3 rounded-lg border border-white/10 bg-white/5 p-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-white/80">Theme</span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-white/80">
-            <span className="h-1.5 w-1.5 rounded-full bg-white/70" aria-hidden />
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-200">Theme</span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.22em] text-slate-200">
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${theme === 'light' ? 'bg-amber-300' : 'bg-blue-400'}`}
+              aria-hidden
+            />
             {theme === 'light' ? 'Light mode' : 'Dark mode'}
           </span>
         </div>
@@ -259,10 +337,10 @@ const QuickSettings = ({ open }: Props) => {
                 type="button"
                 role="menuitemradio"
                 aria-checked={isActive}
-                className={`flex items-center justify-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm font-medium capitalize transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
+                className={`flex items-center justify-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm font-medium capitalize transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
                   isActive
-                    ? 'bg-kali-control text-black shadow-[0_0_0_1px_rgba(255,255,255,0.25)]'
-                    : 'bg-white/15 text-white hover:bg-white/25'
+                    ? 'bg-kali-control text-slate-900 shadow-[0_0_0_1px_rgba(15,23,42,0.18)]'
+                    : 'bg-slate-900/80 text-slate-200 hover:bg-slate-800'
                 }`}
                 onClick={() => setTheme(option)}
                 tabIndex={focusableTabIndex}
@@ -277,13 +355,10 @@ const QuickSettings = ({ open }: Props) => {
         </div>
       </section>
 
-      <section
-        aria-label="Device controls"
-        className="mt-4 space-y-3 rounded-xl border border-white/[0.18] bg-white/[0.14] p-3 shadow-inner"
-      >
+      <section aria-label="Device controls" className="mt-3 space-y-3 rounded-lg border border-white/10 bg-white/5 p-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-white/80">Device</span>
-          <span className="text-[10px] uppercase tracking-[0.2em] text-white/50">Fine tune</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-200">Device</span>
+          <span className="text-[10px] uppercase tracking-[0.24em] text-slate-400">Fine tune</span>
         </div>
         <div className="space-y-3">
           {sliderControls.map(
@@ -304,70 +379,70 @@ const QuickSettings = ({ open }: Props) => {
               return (
                 <div
                   key={id}
-                  className={`group flex items-start gap-3 rounded-lg border border-white/[0.18] bg-white/[0.16] p-3 transition duration-150 hover:border-white/25 hover:bg-white/[0.22] ${
-                    disabled ? 'opacity-70' : ''
+                  className={`group flex items-start gap-3 rounded-lg border border-white/10 bg-slate-900/70 p-3 transition duration-150 hover:border-white/20 hover:bg-slate-800 ${
+                    disabled ? 'opacity-60' : ''
                   }`}
-                aria-disabled={disabled}
-              >
-                <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.22] text-white/80">
-                  <span
-                    className={`absolute inset-0 rounded-xl bg-gradient-to-br ${accent} opacity-0 transition-opacity duration-200 group-hover:opacity-100`}
-                    aria-hidden
-                  />
-                  <span className="relative text-lg" aria-hidden>
-                    {icon}
-                  </span>
-                </span>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between gap-2 text-xs text-white/70">
-                    <div className="flex flex-col">
-                      <span id={labelId} className="font-semibold text-white">
-                        {label}
-                      </span>
-                      <span id={descriptionId}>{description}</span>
-                    </div>
-                    <span className="font-semibold text-white/80">
-                      {value}
-                      {unit}
-                    </span>
-                  </div>
-                  <div className="relative mt-3 h-2 w-full overflow-hidden rounded-full bg-white/[0.22]">
-                    <div
-                      className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${
-                        disabled
-                          ? 'from-white/80 via-white/50 to-transparent'
-                          : 'from-white via-white/80 to-transparent'
-                      }`}
-                      style={{ width: `${value}%` }}
+                  aria-disabled={disabled}
+                >
+                  <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-slate-200">
+                    <span
+                      className={`absolute inset-0 rounded-lg bg-gradient-to-br ${accent} opacity-0 transition-opacity duration-200 group-hover:opacity-100`}
                       aria-hidden
                     />
-                    <input
-                      id={id}
-                      type="range"
-                      min={0}
-                      max={100}
-                      value={value}
-                      onChange={(event) => onChange(Number(event.target.value))}
-                      className="relative h-2 w-full cursor-pointer appearance-none bg-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
-                      tabIndex={focusableTabIndex}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-valuenow={value}
-                      aria-valuetext={ariaValueText}
-                      aria-labelledby={labelId}
-                      aria-describedby={descriptionId}
-                      disabled={disabled}
-                    />
+                    <span className="relative text-base" aria-hidden>
+                      {icon}
+                    </span>
+                  </span>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between gap-2 text-[11px] text-slate-300">
+                      <div className="flex flex-col">
+                        <span id={labelId} className="font-semibold text-slate-100">
+                          {label}
+                        </span>
+                        <span id={descriptionId}>{description}</span>
+                      </div>
+                      <span className="font-semibold text-slate-200">
+                        {value}
+                        {unit}
+                      </span>
+                    </div>
+                    <div className="relative mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.2]">
+                      <div
+                        className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${
+                          disabled
+                            ? 'from-white/60 via-white/30 to-transparent'
+                            : 'from-sky-300 via-sky-200/80 to-transparent'
+                        }`}
+                        style={{ width: `${value}%` }}
+                        aria-hidden
+                      />
+                      <input
+                        id={id}
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={value}
+                        onChange={(event) => onChange(Number(event.target.value))}
+                        className="relative h-1.5 w-full cursor-pointer appearance-none bg-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                        tabIndex={focusableTabIndex}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={value}
+                        aria-valuetext={ariaValueText}
+                        aria-labelledby={labelId}
+                        aria-describedby={descriptionId}
+                        disabled={disabled}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
               );
             },
           )}
         </div>
       </section>
 
-      <div className="mt-4 space-y-2" role="none">
+      <div className="mt-3 space-y-2" role="none">
         {toggles.map(({ id, label, description, value, onToggle, icon, accent }) => {
           const labelId = `${id}-label`;
           const descriptionId = `${id}-description`;
@@ -375,23 +450,23 @@ const QuickSettings = ({ open }: Props) => {
             <div
               key={id}
               role="presentation"
-              className="group flex items-center justify-between gap-3 rounded-xl border border-white/[0.18] bg-white/[0.16] px-3 py-3 transition duration-150 hover:border-white/25 hover:bg-white/[0.22] focus-within:border-white/25 focus-within:bg-white/[0.22]"
+              className="group flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-slate-900/70 px-3 py-3 transition duration-150 hover:border-white/20 hover:bg-slate-800 focus-within:border-white/20 focus-within:bg-slate-800"
             >
               <div className="flex items-start gap-3">
-                <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.22] text-white/80">
+                <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-slate-200">
                   <span
-                    className={`absolute inset-0 rounded-xl bg-gradient-to-br ${accent} opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100`}
+                    className={`absolute inset-0 rounded-lg bg-gradient-to-br ${accent} opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100`}
                     aria-hidden
                   />
-                  <span className="relative text-lg" aria-hidden>
+                  <span className="relative text-base" aria-hidden>
                     {icon}
                   </span>
                 </span>
                 <label htmlFor={id} className="flex flex-col">
-                  <span id={labelId} className="font-semibold text-white">
+                  <span id={labelId} className="font-semibold text-slate-100">
                     {label}
                   </span>
-                  <span id={descriptionId} className="text-xs text-white/80">
+                  <span id={descriptionId} className="text-xs text-slate-300">
                     {description}
                   </span>
                 </label>
@@ -400,7 +475,7 @@ const QuickSettings = ({ open }: Props) => {
                 <span
                   aria-hidden
                   className={`inline-flex items-center rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                    value ? 'bg-kali-control text-black' : 'bg-white/10 text-white/70'
+                    value ? 'bg-kali-control text-slate-900' : 'bg-white/10 text-slate-300'
                   }`}
                 >
                   {value ? 'On' : 'Off'}
@@ -412,8 +487,10 @@ const QuickSettings = ({ open }: Props) => {
                   aria-checked={value}
                   aria-labelledby={labelId}
                   aria-describedby={descriptionId}
-                  className={`relative inline-flex h-6 w-12 shrink-0 items-center rounded-full border border-white/15 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
-                    value ? 'bg-kali-control shadow-[0_0_18px_rgba(120,190,255,0.55)]' : 'bg-white/30'
+                  className={`relative inline-flex h-6 w-12 shrink-0 items-center rounded-full border border-white/10 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
+                    value
+                      ? 'bg-kali-control shadow-[0_10px_24px_-12px_rgba(56,189,248,0.85)]'
+                      : 'bg-slate-800'
                   }`}
                   onClick={onToggle}
                   tabIndex={focusableTabIndex}
