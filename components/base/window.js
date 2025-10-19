@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Component, useEffect, useRef } from 'react';
+import React, { Component, useCallback, useEffect, useRef, useState } from 'react';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
@@ -130,6 +130,53 @@ const computeSnapRegions = (
     };
 };
 
+const parseDurationToMs = (value, fallback) => {
+    if (typeof value !== 'string') return fallback;
+    const trimmed = value.trim();
+    if (!trimmed) return fallback;
+    const number = parseFloat(trimmed);
+    if (!Number.isFinite(number)) return fallback;
+    if (trimmed.endsWith('ms')) {
+        return number;
+    }
+    if (trimmed.endsWith('s')) {
+        return number * 1000;
+    }
+    return number;
+};
+
+const readMotionDuration = (customProperty, fallback) => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+        return fallback;
+    }
+    const root = document.documentElement;
+    if (!root || typeof window.getComputedStyle !== 'function') {
+        return fallback;
+    }
+    const computed = window.getComputedStyle(root).getPropertyValue(customProperty);
+    if (!computed) {
+        return fallback;
+    }
+    const first = computed.split(',')[0];
+    return parseDurationToMs(first, fallback);
+};
+
+const scheduleTimeout = (callback, delay) => {
+    if (typeof window !== 'undefined' && typeof window.setTimeout === 'function') {
+        return window.setTimeout(callback, delay);
+    }
+    return setTimeout(callback, delay);
+};
+
+const clearScheduledTimeout = (handle) => {
+    if (handle == null) return;
+    if (typeof window !== 'undefined' && typeof window.clearTimeout === 'function') {
+        window.clearTimeout(handle);
+    } else {
+        clearTimeout(handle);
+    }
+};
+
 export class Window extends Component {
     static defaultProps = {
         snapGrid: [8, 8],
@@ -182,6 +229,7 @@ export class Window extends Component {
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
+        this._closeTimeout = null;
     }
 
     notifySizeChange = () => {
@@ -282,6 +330,10 @@ export class Window extends Component {
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+        if (this._closeTimeout) {
+            clearScheduledTimeout(this._closeTimeout);
+            this._closeTimeout = null;
         }
     }
 
@@ -913,12 +965,21 @@ export class Window extends Component {
         this.setWinowsPosition();
         this.setState({ closed: true, preMaximizeBounds: null }, () => {
             this.deactivateOverlay();
-            setTimeout(() => {
+            const prefersReducedMotion = typeof window !== 'undefined'
+                && typeof window.matchMedia === 'function'
+                && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const duration = readMotionDuration('--window-motion-duration-close', 180);
+            const delay = prefersReducedMotion ? 0 : Math.max(0, Math.round(duration));
+            if (this._closeTimeout) {
+                clearScheduledTimeout(this._closeTimeout);
+            }
+            this._closeTimeout = scheduleTimeout(() => {
                 const targetId = this.id ?? this.props.id;
                 if (typeof this.props.closed === 'function' && targetId) {
                     this.props.closed(targetId);
                 }
-            }, 300); // after 300ms this window will be unmounted from parent (Desktop)
+                this._closeTimeout = null;
+            }, delay);
         });
     }
 
@@ -1257,7 +1318,12 @@ export class WindowXBorder extends Component {
 export function WindowEditButtons(props) {
     const allowMaximize = props.allowMaximize !== false;
     const isMaximized = Boolean(props.isMaximised);
+    const minimizeAriaLabel = 'Window minimize';
+    const maximizeAriaLabel = isMaximized ? 'Restore window size' : 'Window maximize';
+    const closeAriaLabel = 'Window close';
     const controlsRef = useRef(null);
+    const [pressedControl, setPressedControl] = useState(null);
+    const pointerActiveRef = useRef(null);
 
     useEffect(() => {
         const node = controlsRef.current;
@@ -1353,6 +1419,11 @@ export function WindowEditButtons(props) {
         </svg>
     );
 
+    const resetPressedControl = useCallback(() => {
+        pointerActiveRef.current = null;
+        setPressedControl(null);
+    }, []);
+
     const handleMaximize = (event) => {
         if (!allowMaximize) {
             event?.preventDefault?.();
@@ -1362,6 +1433,42 @@ export function WindowEditButtons(props) {
             props.maximize(event);
         }
     };
+
+    const handlePointerDown = useCallback((control) => (event) => {
+        event.stopPropagation();
+        pointerActiveRef.current = 'pointer';
+        if (typeof event.pointerId === 'number' && typeof event.currentTarget?.setPointerCapture === 'function') {
+            event.currentTarget.setPointerCapture(event.pointerId);
+        }
+        setPressedControl(control);
+    }, []);
+
+    const handlePointerUp = useCallback((control, handler) => (event) => {
+        event.stopPropagation();
+        if (typeof event.pointerId === 'number'
+            && typeof event.currentTarget?.releasePointerCapture === 'function'
+            && (!event.currentTarget.hasPointerCapture
+                || event.currentTarget.hasPointerCapture(event.pointerId))) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+        setPressedControl((current) => (current === control ? null : current));
+        pointerActiveRef.current = 'pointer-handled';
+        if (typeof handler === 'function') {
+            handler(event);
+        }
+    }, []);
+
+    const handleButtonClick = useCallback((handler) => (event) => {
+        if (pointerActiveRef.current === 'pointer' || pointerActiveRef.current === 'pointer-handled') {
+            pointerActiveRef.current = null;
+            event.stopPropagation();
+            event.preventDefault();
+            return;
+        }
+        if (typeof handler === 'function') {
+            handler(event);
+        }
+    }, []);
 
     return (
         <div
@@ -1376,31 +1483,50 @@ export function WindowEditButtons(props) {
         >
             <button
                 type="button"
-                aria-label="Minimize window"
+                aria-label={minimizeAriaLabel}
                 title="Minimize"
-                className={styles.windowControlButton}
-                onClick={props.minimize}
+                className={`${styles.windowControlButton} ${pressedControl === 'minimize' ? styles.windowControlButtonPressed : ''}`.trim()}
+                onPointerDown={handlePointerDown('minimize')}
+                onPointerUp={handlePointerUp('minimize', props.minimize)}
+                onPointerLeave={resetPressedControl}
+                onPointerCancel={resetPressedControl}
+                onBlur={resetPressedControl}
+                onClick={handleButtonClick(props.minimize)}
             >
                 <MinimizeIcon />
             </button>
             <button
                 type="button"
-                aria-label={isMaximized ? 'Restore window' : 'Maximize window'}
+                aria-label={maximizeAriaLabel}
                 title={isMaximized ? 'Restore' : 'Maximize'}
-                className={`${styles.windowControlButton} ${allowMaximize ? '' : styles.windowControlButtonDisabled}`.trim()}
-                onClick={handleMaximize}
+                className={[
+                    styles.windowControlButton,
+                    allowMaximize ? '' : styles.windowControlButtonDisabled,
+                    pressedControl === 'maximize' ? styles.windowControlButtonPressed : '',
+                ].filter(Boolean).join(' ')}
+                onClick={handleButtonClick(handleMaximize)}
                 disabled={!allowMaximize}
                 aria-disabled={!allowMaximize}
+                onPointerDown={allowMaximize ? handlePointerDown('maximize') : undefined}
+                onPointerUp={allowMaximize ? handlePointerUp('maximize', handleMaximize) : undefined}
+                onPointerLeave={resetPressedControl}
+                onPointerCancel={resetPressedControl}
+                onBlur={resetPressedControl}
             >
                 {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
             </button>
             <button
                 type="button"
                 id={`close-${props.id}`}
-                aria-label="Close window"
+                aria-label={closeAriaLabel}
                 title="Close"
-                className={`${styles.windowControlButton} ${styles.windowControlButtonClose}`}
-                onClick={props.close}
+                className={[styles.windowControlButton, styles.windowControlButtonClose, pressedControl === 'close' ? styles.windowControlButtonPressed : ''].filter(Boolean).join(' ')}
+                onPointerDown={handlePointerDown('close')}
+                onPointerUp={handlePointerUp('close', props.close)}
+                onPointerLeave={resetPressedControl}
+                onPointerCancel={resetPressedControl}
+                onBlur={resetPressedControl}
+                onClick={handleButtonClick(props.close)}
             >
                 <CloseIcon />
             </button>
