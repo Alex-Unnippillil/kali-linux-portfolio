@@ -42,12 +42,27 @@
   --kali-control: var(--color-control-accent);
   --kali-control-surface: color-mix(in srgb, var(--kali-control) 18%, var(--kali-surface));
   --kali-control-overlay: color-mix(in srgb, var(--kali-control) 24%, var(--kali-overlay));
+  --qs-brightness: 75;
+  --qs-volume: 70;
   accent-color: var(--color-control-accent);
 }
 
 body {
   background: var(--kali-bg);
   color: var(--kali-text);
+  filter: brightness(calc(0.55 + (var(--qs-brightness, 75) / 100) * 0.45));
+  transition: filter 200ms ease;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: rgba(8, 15, 30, calc((100 - var(--qs-brightness, 75)) / 150));
+  mix-blend-mode: multiply;
+  transition: background-color 200ms ease;
+  z-index: 999;
 }
 
 /* Dark theme */
