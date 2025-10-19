@@ -1365,6 +1365,79 @@ export function WindowEditButtons(props) {
         </svg>
     );
 
+    const iconProps = {
+        className: styles.windowControlIcon,
+        viewBox: '0 0 16 16',
+        'aria-hidden': true,
+        focusable: 'false',
+    };
+
+    const MinimizeIcon = () => (
+        <svg {...iconProps}>
+            <line x1="3" y1="8" x2="13" y2="8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+    );
+
+    const MaximizeIcon = () => (
+        <svg {...iconProps}>
+            <rect
+                x="3"
+                y="3"
+                width="10"
+                height="10"
+                rx="1.6"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                fill="none"
+            />
+        </svg>
+    );
+
+    const RestoreIcon = () => (
+        <svg {...iconProps}>
+            <rect
+                x="5"
+                y="3"
+                width="8"
+                height="6.5"
+                rx="1.4"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                fill="none"
+            />
+            <rect
+                x="3"
+                y="6.5"
+                width="8"
+                height="6.5"
+                rx="1.4"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                fill="none"
+            />
+        </svg>
+    );
+
+    const CloseIcon = () => (
+        <svg {...iconProps}>
+            <line x1="4" y1="4" x2="12" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            <line x1="12" y1="4" x2="4" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+    );
+
+    const PinIcon = () => (
+        <svg {...iconProps}>
+            <path
+                d="M8 2.75v4.5m0 0 2 2.5H6l2-2.5Zm0 2.5v3.5"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+            <path d="M6 5.25h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        </svg>
+    );
+
     const handleMaximize = (event) => {
         if (!allowMaximize) {
             event?.preventDefault?.();
