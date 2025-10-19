@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from 'react';
+import App, { type AppContext, type AppProps } from 'next/app';
+import { useEffect, useMemo } from 'react';
 import type { ReactElement } from 'react';
-import type { AppProps } from 'next/app';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -20,6 +20,16 @@ import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 import { Rajdhani } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
+import { FlagsProvider } from '../hooks/useFlags';
+import {
+  ensureServerSeed,
+  evaluateFlags,
+  flagDefinitions,
+  FlagEvaluation,
+  FlagOverrides,
+  generateFlagSeed,
+  parseFlagOverridesFromQuery,
+} from '../lib/flags';
 
 type PeriodicSyncPermissionDescriptor = PermissionDescriptor & {
   name: 'periodic-background-sync';
@@ -72,6 +82,8 @@ const resolveServiceWorkerPath = (): string => {
 
 interface MyAppProps extends AppProps {}
 
+type PagePropsWithFlags = { __flags?: FlagEvaluation } & Record<string, unknown>;
+
 type AnalyticsEventWithMetadata = BeforeSendEvent & {
   metadata?: (Record<string, unknown> & { email?: unknown }) | undefined;
 };
@@ -82,6 +94,19 @@ const kaliSans = Rajdhani({
 });
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
+  const { __flags, ...restPageProps } = (pageProps as PagePropsWithFlags) ?? {};
+
+  const bootstrap = useMemo<FlagEvaluation>(() => {
+    if (__flags) return __flags;
+    const seed = generateFlagSeed();
+    const overrides: FlagOverrides = {};
+    return {
+      seed,
+      overrides,
+      decisions: evaluateFlags(flagDefinitions, seed, overrides),
+    };
+  }, [__flags]);
+
   useEffect(() => {
     const initAnalytics = async (): Promise<void> => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
@@ -204,40 +229,84 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
   }, []);
 
   return (
-    <ErrorBoundary>
-      <div className={kaliSans.className}>
-        <a
-          href="#app-grid"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
-        >
-          Skip to app grid
-        </a>
-        <SettingsProvider>
-          <NotificationCenter>
-            <PipPortalProvider>
-              <div aria-live="polite" id="live-region" />
-              <Component {...pageProps} />
-              <ShortcutOverlay />
-              <Analytics
-                beforeSend={(event) => {
-                  if (event.url.includes('/admin') || event.url.includes('/private')) return null;
-                  const evt = event as AnalyticsEventWithMetadata;
-                  if (evt.metadata && 'email' in evt.metadata) {
-                    delete evt.metadata.email;
-                  }
-                  return evt;
-                }}
-              />
+    <FlagsProvider
+      initialSeed={bootstrap.seed}
+      initialDecisions={bootstrap.decisions}
+      initialOverrides={bootstrap.overrides}
+    >
+      <ErrorBoundary>
+        <div className={kaliSans.className}>
+          <a
+            href="#app-grid"
+            className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
+          >
+            Skip to app grid
+          </a>
+          <SettingsProvider>
+            <NotificationCenter>
+              <PipPortalProvider>
+                <div aria-live="polite" id="live-region" />
+                <Component {...restPageProps} />
+                <ShortcutOverlay />
+                <Analytics
+                  beforeSend={(event) => {
+                    if (event.url.includes('/admin') || event.url.includes('/private')) return null;
+                    const evt = event as AnalyticsEventWithMetadata;
+                    if (evt.metadata && 'email' in evt.metadata) {
+                      delete evt.metadata.email;
+                    }
+                    return evt;
+                  }}
+                />
 
-              {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
-            </PipPortalProvider>
-          </NotificationCenter>
-        </SettingsProvider>
-      </div>
-    </ErrorBoundary>
+                {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+              </PipPortalProvider>
+            </NotificationCenter>
+          </SettingsProvider>
+        </div>
+      </ErrorBoundary>
+    </FlagsProvider>
   );
 }
 
 export default MyApp;
+
+const appendSetCookieHeader = (existing: string | string[] | number | undefined, value: string): string | string[] => {
+  if (!existing) return value;
+  if (Array.isArray(existing)) return [...existing, value];
+  if (typeof existing === 'number') return [String(existing), value];
+  return [existing, value];
+};
+
+MyApp.getInitialProps = async (appContext: AppContext) => {
+  const appProps = await App.getInitialProps(appContext);
+  const { ctx } = appContext;
+  const res = ctx.res;
+
+  const seed = ensureServerSeed(
+    ctx.req?.headers?.cookie,
+    (cookieValue) => {
+      if (!res) return;
+      const current = res.getHeader('Set-Cookie');
+      res.setHeader('Set-Cookie', appendSetCookieHeader(current, cookieValue));
+    },
+    ((appProps.pageProps as PagePropsWithFlags | undefined)?.__flags?.seed) ?? undefined,
+  );
+
+  const overrides = parseFlagOverridesFromQuery(ctx.query);
+  const decisions = evaluateFlags(flagDefinitions, seed, overrides);
+
+  return {
+    ...appProps,
+    pageProps: {
+      ...appProps.pageProps,
+      __flags: {
+        seed,
+        overrides,
+        decisions,
+      } satisfies FlagEvaluation,
+    },
+  };
+};
 
 export { reportWebVitalsUtil as reportWebVitals };
