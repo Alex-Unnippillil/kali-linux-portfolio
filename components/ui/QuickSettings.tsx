@@ -7,6 +7,7 @@ import { isDarkTheme } from '../../utils/theme';
 
 interface Props {
   open: boolean;
+  id?: string;
 }
 
 const transitionDurationMs = 200;
@@ -33,6 +34,14 @@ const QuickSettings = ({ open }: Props) => {
   const [shouldRender, setShouldRender] = useState(open);
   const [isVisible, setIsVisible] = useState(open);
   const focusableTabIndex = open ? 0 : -1;
+
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-sound-muted', !sound);
+  }, [sound]);
+
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-offline', !online);
+  }, [online]);
 
   useEffect(() => {
     document.documentElement.toggleAttribute('data-sound-muted', !sound);
@@ -267,6 +276,7 @@ const QuickSettings = ({ open }: Props) => {
 
   return (
     <div
+      id={id}
       ref={panelRef}
       role="menu"
       aria-label="Quick settings"
