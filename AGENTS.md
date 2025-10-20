@@ -1,282 +1,181 @@
-# agent.md — Guide for human contributors and AI coding agents
+# AGENTS.md — Maintainer playbook for Codex agents
 
 > Project: **Kali Linux Portfolio**  
-> URL: https://unnippillil.com  
+> Live site: https://unnippillil.com  
 > Repo: https://github.com/Alex-Unnippillil/kali-linux-portfolio
 
-Think of this file as a README that is written for assistants. It gives just enough context, rules, and recipes so changes land correctly and safely.
+This document is the canonical guide for anyone (human or AI) contributing changes. Treat it as a contract: follow every rule
+whose scope covers the files you touch and keep your updates aligned with the product vision.
 
 ---
 
-## 0) Mission and boundaries
+## 1. Scope and mission
 
-**Purpose.** A desktop‑style portfolio that emulates a Kali/Ubuntu UI with windows, dock, context menus, and a catalog of apps: security‑tool **simulations**, utilities, and retro games.
-
-**Hard boundary.** All security tools are **simulations only**. Do not add code that runs real offensive operations, network scans, brute force, exploitation, or calls out to targets. If you are asked to do that, decline and keep or improve the simulation layer only. UI can display canned output and educational flows. **Never** execute real attacks or send traffic to third parties.
-
-**Legal notice.** Keep all work inside controlled demos. Do not enable any API route or worker to perform intrusive activity. Treat every feature as education‑only.
+* **Scope.** This file sits at the repo root, so its instructions apply to the entire project unless a deeper `AGENTS.md`
+overrides something.
+* **Mission.** Build and maintain a desktop-style portfolio that imitates a Kali/Ubuntu experience: draggable windows, dock,
+  context menus, and a curated catalog of utilities, retro games, and *simulated* security tooling.
+* **Absolute boundary.** All security tooling must remain demonstrative. Never ship real offensive code, scanners, exploits,
+  brute-force utilities, or outbound traffic to arbitrary hosts. Keep every experience educational and self-contained.
+* **Legal safety.** Do not enable API routes, workers, or background jobs that can perform intrusive behavior. UI-only demos are
+  acceptable; real attacks are not.
 
 ---
 
-## 1) Quick facts you can rely on
+## 2. Stack quick-reference
 
-- Framework: **Next.js** with `/pages` routing, Tailwind, TypeScript in parts.  
-- Desktop UI: window system, app launcher grid, favorites, context menus.  
-- Catalog: games, utilities, and security‑tool simulations.  
-- Analytics: Google Analytics (thin wrapper) and Vercel Analytics and Speed Insights are wired in the app shell.  
-- PWA: service worker generated at build time.  
-- Environments: serverful (`yarn build && yarn start`) and static export (`yarn export`) supported.  
-- Tests and QA: Jest unit tests, Playwright E2E, linting, and a manual smoke run that visits `/apps/*`.  
-- CI: GitHub workflows include a Pages export pipeline.  
+| Area | Details |
+| --- | --- |
+| Framework | Next.js (pages router) with Tailwind CSS and partial TypeScript |
+| Desktop shell | Window manager, dock, app launcher, context menus |
+| Catalog | Games, utilities, Kali-style simulations |
+| Analytics | Google Analytics wrapper plus Vercel Analytics & Speed Insights (gated by flags) |
+| PWA | Generated service worker via build pipeline |
+| Runtimes | `yarn dev` (SSR), `yarn build && yarn start` (serverful prod), `yarn export` (static) |
+| QA toolbelt | Jest, Playwright, linting, manual smoke that walks `/apps/*` |
 
-> These facts mirror the repo’s own README and file layout. Prefer them over guesswork. See Appendix A for structure.
-  
+Refer to Appendix B for directory hints before you go spelunking.
+
 ---
 
-## 2) Setup and run
-
-### 2.1 Prereqs
-
-- Node: use the version declared in `.nvmrc`.  
-- Package manager: Yarn (repo uses a lockfile).  
-- Copy envs:
+## 3. Local setup & commands
 
 ```bash
-cp .env.local.example .env.local
-```
+nvm install && nvm use   # Honor the version in .nvmrc
+yarn install             # Always use Yarn (lockfile controlled)
+yarn dev                 # Development server
 
-Populate keys you actually use. See the **Environment** section.
-
-### 2.2 Commands
-
-```bash
-# Install and run
-nvm install && nvm use
-yarn install
-yarn dev
-
-# Production (serverful)
+# Production preview
 yarn build && yarn start
 
-# Static export
+# Static export and optional local serve
 yarn export
-# Optional, serve locally
 npx serve out
-```
 
-**Smoke check after serverful start**
-
-```bash
-# Exercise any API stub to verify server routes are alive
+# Quick API stub check when serverful build is running
 curl -X POST http://localhost:3000/api/dummy
 ```
 
-> In static export, `/api/*` will not be present. The UI must degrade to demo data.
+> In static export mode there is no `/api/*`. Make sure UI features degrade gracefully.
 
 ---
 
-## 3) Environment
+## 4. Environment configuration
 
-Copy from `.env.local.example` and fill as needed.
+Duplicate `.env.local.example` → `.env.local` and populate only the keys you actually use. Relevant variables:
 
-* `NEXT_PUBLIC_ENABLE_ANALYTICS`: `"true"` to emit client analytics.
-* `FEATURE_TOOL_APIS`: `"enabled"` or `"disabled"` to toggle simulated tool APIs.
-* `RECAPTCHA_SECRET`, `NEXT_PUBLIC_RECAPTCHA_*`: if contact form protection is enabled.
-* `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`: only if Supabase features are used.
-* EmailJS public keys if the “Gedit” contact app is configured.
+* `NEXT_PUBLIC_ENABLE_ANALYTICS` — set to `"true"` to send client analytics.
+* `FEATURE_TOOL_APIS` — `"enabled"` or `"disabled"` toggles simulated tool APIs.
+* `RECAPTCHA_SECRET`, `NEXT_PUBLIC_RECAPTCHA_*` — required if the contact form uses reCAPTCHA.
+* `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` —
+  used only when Supabase features are active.
+* EmailJS public keys if you configure the "Gedit" contact app.
 
-**Rules for assistants**
-
-* Never hardcode secrets.
-* Prefer feature flags.
-* For static builds, ensure features that need `/api/*` hide or swap to demo data.
+**Never** hardcode secrets. Prefer feature flags and ensure static-export modes fall back to demo data when server APIs are
+unavailable.
 
 ---
 
-## 4) Quality gates
-
-Always make these pass before opening a PR.
+## 5. Quality gates before you commit
 
 ```bash
-yarn lint      # ESLint
-yarn test      # Jest
-# If present:
-yarn smoke     # Manual smoke script that crawls /apps/* during dev
-# E2E (if configured on the machine/CI):
-npx playwright test
+yarn lint       # ESLint
+yarn test       # Jest unit tests
+yarn smoke      # Optional manual crawler over /apps/* during dev
+npx playwright test   # E2E, if tooling is available locally
 ```
 
-Notes
-
-* Keep unit tests close to code in `__tests__/` or the project’s test folders.
-* Add tests for any logic you change.
-* Fix type and lint errors rather than silencing them.
+* Fix lint/type issues; do not silence them.
+* Add or update tests covering any logic you touch.
+* Record every command you ran in your PR summary.
 
 ---
 
-## 5) Architecture you should respect
+## 6. Architecture guardrails
 
-### 5.1 App shell
-
-* **`pages/_app.jsx`** initializes analytics, shows the legal banner, and renders Speed Insights.
-* **`components/`** holds the windowing system, screens (boot, lock, desktop), app base, meta, shared UI.
-* **`pages/apps/*`** contains a subset of pages. Most feature apps live under `components/apps/*`.
-* **`apps.config.js`** registers apps and uses `next/dynamic` to keep bundles lean.
-* **`public/`** contains images, wallpapers, icons, and static assets for games.
-
-### 5.2 PWA
-
-* Service worker is generated at build time and placed under `public/`.
-* Only content under `public/` is precached. Dynamic routes or API responses are not cached.
-* When editing SW behavior, prefer the plugin’s config rather than hand‑patching generated files.
-
-### 5.3 Simulated “security” tools
-
-* API stubs live in `pages/api/` and return canned output for tools like hydra, john, metasploit, radare2.
-* The UI should render educational flows and static examples.
-* Never add code that targets live hosts.
-
-### 5.4 Games
-
-* Games share a `GameLayout`.
-* Gamepad input is normalized and persisted per game. Bindings are stored in the browser’s Origin Private File System so profiles survive refreshes.
+* Keep window state logic centralized in the desktop manager; avoid bespoke window managers per app.
+* Follow existing patterns for simulated tools: deterministic outputs, offline datasets, no outbound requests.
+* Co-locate feature-specific assets; large static items belong under `public/`.
+* Maintain the dynamic app registry used by launchers, favorites, and the window system.
+* Respect analytics gating — wrappers should no-op unless flags are enabled.
 
 ---
 
-## 6) Task recipes
+## 7. Code style & UX expectations
 
-Use these step‑by‑step guides to avoid breaking conventions.
-
-### 6.1 Add a new desktop app
-
-1. Create a component under `components/apps/<id>/index.tsx` or `.jsx`.
-
-2. Export a default React component that can mount in a window.
-
-3. Register the app in `apps.config.js` using a **dynamic import**:
-
-   ```ts
-   import dynamic from 'next/dynamic';
-
-   export const Apps = {
-     sudoku: {
-       title: 'Sudoku',
-       category: 'Games',
-       icon: '/images/apps/sudoku.png',
-       mount: dynamic(() => import('./components/apps/sudoku')),
-     },
-     // your new app here
-     '<id>': {
-       title: '<Name>',
-       category: 'Utilities' | 'Games' | 'Security Sim',
-       icon: '/images/apps/<id>.png',
-       mount: dynamic(() => import('./components/apps/<id>')),
-     },
-   };
-   ```
-
-4. If the app needs assets, place them in `public/apps/<id>/` and reference with absolute paths.
-
-5. Add help text and a minimal test that the window opens and renders.
-
-6. If it uses API stubs, see 6.2.
-
-### 6.2 Create a **simulation** for a security tool
-
-1. Add `pages/api/<tool>.js` and return a **static** payload that matches the UI’s expectations.
-2. In your app component, call the route during **serverful** dev or load a local demo JSON during **static export**.
-3. Gate behavior behind `FEATURE_TOOL_APIS`.
-4. Include conspicuous labels in the UI like “Simulation output. Not from a live target.”
-
-**Do not** add network calls to external IPs or command execution.
-
-### 6.3 Add a new game
-
-1. Create the game under `components/apps/Games/<GameName>/`.
-2. Render inside the shared `GameLayout`.
-3. Wire controls to the gamepad manager and expose a binding map in the input‑remap UI.
-4. Provide a short “How to play” overlay.
-
-### 6.4 Contact form via EmailJS
-
-1. Ensure EmailJS public keys exist in `.env.local`.
-2. Use the EmailJS React snippet in a controlled component and submit via the SDK.
-3. Add reCAPTCHA only if keys are configured.
-4. On failure, show non‑technical feedback and never leak keys or raw errors.
-
-### 6.5 PWA checks
-
-1. Confirm the plugin wraps Next config.
-2. After `yarn build`, verify a `sw.js` is present under `public/`.
-3. In a served production build, confirm installability.
+* Follow the repo ESLint config and TypeScript guidelines where applicable.
+* Prefer functional React components and hooks; avoid legacy class components.
+* Keep imports relative within the current feature area.
+* Document props for shared components and keep TS types accurate.
+* Preserve keyboard accessibility for the desktop shell: focus handling, menu navigation, and app grid traversal.
 
 ---
 
-## 7) Code style
+## 8. Analytics, privacy, and performance
 
-* Use the repo’s ESLint configuration.
-* Prefer functional React components.
-* Keep imports relative within the feature area.
-* Co-locate small assets. Large static files go under `public/`.
-* Document props for shared components.
-* Keep window state logic centralized in the desktop manager rather than per app.
+* GA4 wrapper should remain inert unless `NEXT_PUBLIC_ENABLE_ANALYTICS` is truthy.
+* Vercel Analytics and Speed Insights live in the app shell; avoid double-initializing.
+* Introduce no new trackers without explicit flags and visible disclosure.
+* Guard performance-sensitive code paths—window interactions should stay snappy.
 
 ---
 
-## 8) Analytics and privacy
+## 9. Accessibility & performance checklist
 
-* A thin GA4 wrapper exists. It should be a no‑op unless `NEXT_PUBLIC_ENABLE_ANALYTICS` is truthy.
-* Vercel Analytics and Speed Insights are included in the app shell.
-* Do not add new trackers without a setting and clear labeling.
-
----
-
-## 9) Accessibility and performance
-
-* Use semantic roles for window controls and menus.
-* Keep keyboard navigation working for the app grid and window focus.
-* Run an accessibility check locally before PR if you change global UI.
-* Speed Insights data should improve over time. Avoid regressions in interaction latency.
+* Use semantic roles/ARIA for window chrome, menus, and interactive controls.
+* Validate keyboard navigation (Tab/Shift+Tab, arrow keys) whenever you touch desktop UI.
+* Run an accessibility check locally if you change global UI structure.
+* Watch for interaction latency regressions; Speed Insights trends should improve over time.
 
 ---
 
-## 10) CI, deploy, and environments
+## 10. Deploy & environment notes
 
-* GitHub workflow exists for static exports to Pages.
-* Vercel deployment can run the serverful build so API stubs respond.
-* For forks or contributors without keys, prefer disabled code paths and demo data.
-* Never commit `.env*` files.
-
----
-
-## 11) Troubleshooting
-
-* **Blank app grid in static export:** you are hitting a feature that expects `/api/*`. Ensure demo mode is active.
-* **SW not picking up new assets:** clear site data or bump the SW cache version in config.
-* **Gamepad not detected:** check `navigator.getGamepads()` and update the bindings in input‑remap.
-* **Analytics not showing:** confirm flags and the packages are rendered in `_app.jsx`.
+* GitHub Actions handle static exports to GitHub Pages.
+* Vercel can run the serverful build so API stubs respond.
+* Contributors without keys must leave sensitive features disabled and rely on demo data.
+* Never commit `.env*` or other secret-bearing files.
 
 ---
 
-## 12) Pull requests
+## 11. Troubleshooting quick hits
 
-* Title format: `[area] short description`
-* Include a short checklist of tests run and flags you toggled.
-* Link to any design reference if you changed visuals.
-* Keep commits scoped and readable.
+* **Empty app grid in static export:** enable demo mode for features expecting `/api/*`.
+* **Stale assets in service worker:** clear site data or bump the SW cache version.
+* **Gamepad not detected:** inspect `navigator.getGamepads()` and adjust bindings in `input-remap`.
+* **Missing analytics events:** confirm flags and wrapper rendering in `_app.jsx`.
+
+---
+
+## 12. Contribution workflow expectations
+
+1. Read nested `AGENTS.md` files for any directory you modify.
+2. Keep diffs scoped—no drive-by formatting outside the task.
+3. Prefer Yarn scripts over raw binaries.
+4. Document commands run (lint/tests/build) in the PR message.
+5. Update any shorthand docs (`agent.md`, README pointers) when you change global guidance like this file.
+
+### Commit & PR rules
+
+* Keep commits focused and descriptive.
+* PR title format: `[area] short description`.
+* In the PR body, include a checklist of tests you executed and any feature flags toggled.
+* Attach screenshots or clips for UI changes.
+* Ensure reviewers can test both serverful and static builds when `/api/*` behavior is affected.
 
 ---
 
 ## Appendix A — Directory map (high level)
 
-* `.github/workflows/` — includes GitHub Pages export pipeline.
-* `pages/` — `_app.jsx`, `_document.jsx`, `index.jsx`, `apps/`, `api/` (stubs).
+* `.github/workflows/` — CI including Pages export pipeline.
+* `pages/` — `_app.jsx`, `_document.jsx`, `index.jsx`, `apps/`, `api/` stubs.
 * `components/` — `ubuntu.tsx` shell, `screen/*`, `base/*`, `apps/*`, `SEO/Meta.js`, `util-components/*`.
-* `public/` — images, wallpapers, icons, and game assets.
-* `hooks/` — persistent state, asset loader, canvas resize, and more.
+* `public/` — images, wallpapers, icons, game assets.
+* `hooks/` — persistent state, asset loader, canvas resize, etc.
 * `__tests__/` — unit tests and smoke tests.
-* `playwright/` — end‑to‑end test helpers.
-* Config at root: `apps.config.js`, `tailwind.config.js`, `jest.config.js`, `playwright.config.ts`, `vercel.json`, `pa11yci.json`, `tsconfig*.json`.
+* `playwright/` — end-to-end test helpers.
+* Root configs: `apps.config.js`, `tailwind.config.js`, `jest.config.js`, `playwright.config.ts`, `vercel.json`, `pa11yci.json`,
+  `tsconfig*.json`.
 
 ---
 
@@ -284,41 +183,24 @@ Use these step‑by‑step guides to avoid breaking conventions.
 
 **Before commit**
 
-* [ ] `yarn lint` passes
-* [ ] `yarn test` passes
-* [ ] Static export still loads critical screens
-* [ ] No new secrets or network calls
+- [ ] `yarn lint`
+- [ ] `yarn test`
+- [ ] Static export still renders key screens
+- [ ] No new secrets or network calls
 
 **Before merge**
 
-* [ ] Screenshots or short clip added for UI changes
-* [ ] Docs updated if you added a flag or app
-* [ ] PR reviewed on both serverful and static builds if the feature touches `/api/*`
-
-```
+- [ ] Screenshots or clip added for UI changes
+- [ ] Docs updated for new flags/apps
+- [ ] Reviewed in both serverful and static builds when `/api/*` is involved
 
 ---
 
-## 13) Agent workflow expectations
+## Source notes for maintainers
 
-These notes help both human contributors and AI agents keep their updates consistent with the maintainer workflow:
-
-1. **Document commands run.** When preparing a pull request, list each lint, test, or build command executed so reviewers understand the coverage without digging through logs.
-2. **Prefer Yarn scripts.** If a command is available as a Yarn script, invoke it with `yarn <script>` so that the lockfile tooling stays in control.
-3. **Respect scoped instructions.** If an `AGENTS.md` exists deeper in the tree, follow its rules for any file you touch in that subtree before committing changes.
-4. **Keep diffs focused.** Group related changes in a single commit and avoid drive‑by formatting updates outside the task at hand.
-5. **Update sibling docs.** When you change global guidance like this file, ensure any shorthand pointers (for example `agent.md`) still accurately describe the latest instructions.
-
----
-
-### Source notes for maintainers
-
-- Project description, setup, service‑worker behavior, environment keys, and the dynamic app registry pattern are drawn from your repository’s README and file list which document Next.js pages routing, PWA generation, analytics, and directory structure. :contentReference[oaicite:1]{index=1}  
-- The formatting and intent of this file follow the open **AGENTS.md** convention created to guide coding agents. The official repo shows structure and sample sections that informed this layout. :contentReference[oaicite:2]{index=2}  
-- PWA behavior and expectations reflect `@ducanh2912/next-pwa` docs and package references. Use them if you need to adjust SW generation. :contentReference[oaicite:3]{index=3}  
-- Speed Insights usage and placement in the app shell align with Vercel’s docs and package guidance. :contentReference[oaicite:4]{index=4}  
-- If you enable the contact app, EmailJS integration patterns for React are here. Keys must remain client‑safe. :contentReference[oaicite:5]{index=5}  
-- If you turn on Supabase features later, initialize and use the JS client per the official docs. Keep it disabled when keys are not present. :contentReference[oaicite:6]{index=6}
-
-If you want this in uppercase and plural to match the ecosystem convention, save the same content as `AGENTS.md` too, then keep `agent.md` as a stub that points to it.
-::contentReference[oaicite:7]{index=7}
+* Project description, service worker behavior, analytics wiring, and directory structure mirror the repo README and file layout.
+* Formatting and intent align with the AGENTS.md convention for guiding coding agents.
+* PWA guidance references `@ducanh2912/next-pwa` documentation.
+* Speed Insights usage follows Vercel docs and package recommendations.
+* EmailJS notes cover the React integration pattern required when enabling the contact app.
+* Supabase instructions follow the official client docs; keep the feature disabled without keys.
