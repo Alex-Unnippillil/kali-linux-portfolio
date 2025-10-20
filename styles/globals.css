@@ -50,8 +50,8 @@
 body {
   background: var(--kali-bg);
   color: var(--kali-text);
-  filter: brightness(calc(0.55 + (var(--qs-brightness, 75) / 100) * 0.45));
-  transition: filter 200ms ease;
+  filter: brightness(calc(0.65 + (var(--qs-brightness, 75) / 100) * 0.35));
+  transition: filter 200ms ease-out;
 }
 
 body::after {
@@ -59,10 +59,10 @@ body::after {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: rgba(8, 15, 30, calc((100 - var(--qs-brightness, 75)) / 150));
+  background: rgba(8, 15, 30, calc((100 - var(--qs-brightness, 75)) / 220));
   mix-blend-mode: multiply;
-  transition: background-color 200ms ease;
-  z-index: 999;
+  transition: background-color 200ms ease-out;
+  z-index: 50;
 }
 
 /* Dark theme */

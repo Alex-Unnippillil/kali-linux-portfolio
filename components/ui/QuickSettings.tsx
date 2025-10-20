@@ -2,6 +2,8 @@
 
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
+import { useTheme } from '../../hooks/useTheme';
+import { isDarkTheme } from '../../utils/theme';
 
 interface Props {
   open: boolean;
@@ -10,8 +12,8 @@ interface Props {
 
 const transitionDurationMs = 200;
 
-const QuickSettings = ({ open, id }: Props) => {
-  const [theme, setTheme] = usePersistentState('qs-theme', 'light');
+const QuickSettings = ({ open }: Props) => {
+  const { theme: activeTheme, setTheme: updateTheme } = useTheme();
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
@@ -34,8 +36,12 @@ const QuickSettings = ({ open, id }: Props) => {
   const focusableTabIndex = open ? 0 : -1;
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-  }, [theme]);
+    document.documentElement.toggleAttribute('data-sound-muted', !sound);
+  }, [sound]);
+
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-offline', !online);
+  }, [online]);
 
   useEffect(() => {
     document.documentElement.toggleAttribute('data-sound-muted', !sound);
@@ -111,25 +117,32 @@ const QuickSettings = ({ open, id }: Props) => {
 
   const statusToneStyles: Record<
     'positive' | 'warning' | 'info' | 'muted',
-    { icon: string; value: string }
+    { icon: string; value: string; ring: string }
   > = {
     positive: {
-      icon: 'bg-emerald-400/20 text-emerald-100',
+      icon: 'bg-emerald-400/20 text-emerald-200',
       value: 'text-emerald-100',
+      ring: 'shadow-[0_0_0_1px_rgba(16,185,129,0.25)]',
     },
     warning: {
-      icon: 'bg-amber-400/20 text-amber-100',
+      icon: 'bg-amber-400/20 text-amber-200',
       value: 'text-amber-100',
+      ring: 'shadow-[0_0_0_1px_rgba(217,119,6,0.25)]',
     },
     info: {
-      icon: 'bg-sky-400/20 text-sky-100',
+      icon: 'bg-sky-400/20 text-sky-200',
       value: 'text-sky-100',
+      ring: 'shadow-[0_0_0_1px_rgba(14,165,233,0.25)]',
     },
     muted: {
-      icon: 'bg-white/15 text-white/70',
+      icon: 'bg-white/10 text-white/70',
       value: 'text-white/70',
+      ring: 'shadow-[0_0_0_1px_rgba(148,163,184,0.18)]',
     },
   };
+
+  const isDarkMode = isDarkTheme(activeTheme);
+  const quickTheme = isDarkMode ? 'dark' : 'light';
 
   const statusBadges: Array<{
     id: string;
@@ -141,8 +154,8 @@ const QuickSettings = ({ open, id }: Props) => {
     {
       id: 'theme',
       label: 'Theme',
-      value: theme === 'light' ? 'Light' : 'Dark',
-      icon: theme === 'light' ? <SunIcon /> : <MoonIcon />,
+      value: isDarkMode ? 'Dark' : 'Light',
+      icon: isDarkMode ? <MoonIcon /> : <SunIcon />,
       tone: 'info',
     },
     {
@@ -268,30 +281,23 @@ const QuickSettings = ({ open, id }: Props) => {
       role="menu"
       aria-label="Quick settings"
       aria-hidden={!open}
-      className={`group/qs absolute top-9 right-3 w-[18.5rem] origin-top-right rounded-2xl border border-white/10 bg-[linear-gradient(160deg,rgba(19,31,58,0.95)_0%,rgba(12,22,40,0.92)_45%,rgba(6,12,24,0.88)_100%)] p-3 text-sm text-white shadow-[0_18px_40px_-28px_rgba(15,91,193,0.8)] backdrop-blur-xl transition-all duration-200 focus:outline-none ${
+      className={`group/qs absolute top-9 right-3 w-[17.5rem] origin-top-right rounded-xl border border-white/10 bg-slate-950/90 p-4 text-xs text-slate-100 shadow-[0_24px_48px_-28px_rgba(15,23,42,0.9)] backdrop-blur-lg transition-all duration-200 focus:outline-none ${
         isVisible
           ? 'pointer-events-auto translate-y-0 scale-100 opacity-100'
           : 'pointer-events-none -translate-y-2 scale-95 opacity-0'
       }`}
-      style={{
-        boxShadow:
-          '0 28px 60px -40px rgba(36,128,255,0.55), inset 0 0 0 1px rgba(255,255,255,0.04)',
-      }}
     >
-      <div className="pointer-events-none absolute inset-0 -z-10 rounded-[inherit] border border-white/5 bg-[radial-gradient(140%_120%_at_50%_-10%,rgba(80,157,255,0.42),rgba(23,43,84,0.2)_48%,rgba(7,14,31,0.6)_100%)] opacity-100" />
-
       <div className="pb-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">Quick settings</p>
-        <p className="mt-1 text-[11px] leading-snug text-white/60">Personalise the desktop in one place.</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-300">Quick settings</p>
+        <p className="mt-1 text-[11px] leading-snug text-slate-400">
+          Personalize key desktop controls in one tidy panel.
+        </p>
       </div>
 
-      <section
-        aria-label="System snapshot"
-        className="rounded-xl border border-white/10 bg-white/[0.08] p-3 shadow-inner"
-      >
+      <section aria-label="System snapshot" className="rounded-lg border border-white/10 bg-white/5 p-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/80">Status</span>
-          <span className="text-[10px] uppercase tracking-[0.24em] text-white/50">Live</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-200">Status</span>
+          <span className="text-[10px] uppercase tracking-[0.24em] text-slate-400">Live</span>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2" aria-live="polite">
           {statusBadges.map(({ id, label, value, icon, tone }) => {
@@ -299,7 +305,7 @@ const QuickSettings = ({ open, id }: Props) => {
             return (
               <span
                 key={id}
-                className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/10 px-2.5 py-2 text-[11px] font-medium text-white/80 shadow-sm"
+                className={`inline-flex items-center gap-2 rounded-lg border border-white/10 bg-slate-900/80 px-2.5 py-2 text-[11px] font-medium text-slate-200 ${toneStyle.ring}`}
               >
                 <span
                   className={`flex h-6 w-6 items-center justify-center rounded-md ${toneStyle.icon}`}
@@ -308,7 +314,7 @@ const QuickSettings = ({ open, id }: Props) => {
                   <span className="scale-75">{icon}</span>
                 </span>
                 <span className="flex flex-col leading-tight">
-                  <span className="uppercase tracking-wide text-white/60">{label}</span>
+                  <span className="uppercase tracking-wide text-slate-400">{label}</span>
                   <span className={`font-semibold ${toneStyle.value}`}>{value}</span>
                 </span>
               </span>
@@ -317,12 +323,15 @@ const QuickSettings = ({ open, id }: Props) => {
         </div>
       </section>
 
-      <section aria-label="Appearance" className="mt-3 rounded-xl border border-white/10 bg-white/[0.08] p-3 shadow-inner">
+      <section aria-label="Appearance" className="mt-3 rounded-lg border border-white/10 bg-white/5 p-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/80">Theme</span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.22em] text-white/80">
-            <span className="h-1.5 w-1.5 rounded-full bg-white/70" aria-hidden />
-            {theme === 'light' ? 'Light mode' : 'Dark mode'}
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-200">Theme</span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.22em] text-slate-200">
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${quickTheme === 'light' ? 'bg-amber-300' : 'bg-blue-400'}`}
+              aria-hidden
+            />
+            {quickTheme === 'light' ? 'Light mode' : 'Dark mode'}
           </span>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2" role="group" aria-label="Theme options">
@@ -330,7 +339,7 @@ const QuickSettings = ({ open, id }: Props) => {
             { option: 'light', label: 'Light', icon: <SunIcon /> },
             { option: 'dark', label: 'Dark', icon: <MoonIcon /> },
           ].map(({ option, label, icon }) => {
-            const isActive = theme === option;
+            const isActive = quickTheme === option;
             return (
               <button
                 key={option}
@@ -339,10 +348,10 @@ const QuickSettings = ({ open, id }: Props) => {
                 aria-checked={isActive}
                 className={`flex items-center justify-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm font-medium capitalize transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
                   isActive
-                    ? 'bg-kali-control text-black shadow-[0_0_0_1px_rgba(255,255,255,0.15)]'
-                    : 'bg-white/10 text-white hover:bg-white/20'
+                    ? 'bg-kali-control text-slate-900 shadow-[0_0_0_1px_rgba(15,23,42,0.18)]'
+                    : 'bg-slate-900/80 text-slate-200 hover:bg-slate-800'
                 }`}
-                onClick={() => setTheme(option)}
+                onClick={() => updateTheme(option === 'light' ? 'default' : 'dark')}
                 tabIndex={focusableTabIndex}
               >
                 <span className="text-lg" aria-hidden>
@@ -355,13 +364,10 @@ const QuickSettings = ({ open, id }: Props) => {
         </div>
       </section>
 
-      <section
-        aria-label="Device controls"
-        className="mt-3 space-y-3 rounded-xl border border-white/10 bg-white/[0.08] p-3 shadow-inner"
-      >
+      <section aria-label="Device controls" className="mt-3 space-y-3 rounded-lg border border-white/10 bg-white/5 p-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/80">Device</span>
-          <span className="text-[10px] uppercase tracking-[0.24em] text-white/50">Fine tune</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-200">Device</span>
+          <span className="text-[10px] uppercase tracking-[0.24em] text-slate-400">Fine tune</span>
         </div>
         <div className="space-y-3">
           {sliderControls.map(
@@ -382,12 +388,12 @@ const QuickSettings = ({ open, id }: Props) => {
               return (
                 <div
                   key={id}
-                  className={`group flex items-start gap-3 rounded-lg border border-white/10 bg-white/[0.12] p-3 transition duration-150 hover:border-white/20 hover:bg-white/[0.18] ${
-                    disabled ? 'opacity-70' : ''
+                  className={`group flex items-start gap-3 rounded-lg border border-white/10 bg-slate-900/70 p-3 transition duration-150 hover:border-white/20 hover:bg-slate-800 ${
+                    disabled ? 'opacity-60' : ''
                   }`}
                   aria-disabled={disabled}
                 >
-                  <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.16] text-white/80">
+                  <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-slate-200">
                     <span
                       className={`absolute inset-0 rounded-lg bg-gradient-to-br ${accent} opacity-0 transition-opacity duration-200 group-hover:opacity-100`}
                       aria-hidden
@@ -397,14 +403,14 @@ const QuickSettings = ({ open, id }: Props) => {
                     </span>
                   </span>
                   <div className="flex-1">
-                    <div className="flex items-center justify-between gap-2 text-[11px] text-white/70">
+                    <div className="flex items-center justify-between gap-2 text-[11px] text-slate-300">
                       <div className="flex flex-col">
-                        <span id={labelId} className="font-semibold text-white">
+                        <span id={labelId} className="font-semibold text-slate-100">
                           {label}
                         </span>
                         <span id={descriptionId}>{description}</span>
                       </div>
-                      <span className="font-semibold text-white/80">
+                      <span className="font-semibold text-slate-200">
                         {value}
                         {unit}
                       </span>
@@ -413,8 +419,8 @@ const QuickSettings = ({ open, id }: Props) => {
                       <div
                         className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${
                           disabled
-                            ? 'from-white/70 via-white/40 to-transparent'
-                            : 'from-white via-white/80 to-transparent'
+                            ? 'from-white/60 via-white/30 to-transparent'
+                            : 'from-sky-300 via-sky-200/80 to-transparent'
                         }`}
                         style={{ width: `${value}%` }}
                         aria-hidden
@@ -453,10 +459,10 @@ const QuickSettings = ({ open, id }: Props) => {
             <div
               key={id}
               role="presentation"
-              className="group flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.12] px-3 py-3 transition duration-150 hover:border-white/20 hover:bg-white/[0.18] focus-within:border-white/20 focus-within:bg-white/[0.18]"
+              className="group flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-slate-900/70 px-3 py-3 transition duration-150 hover:border-white/20 hover:bg-slate-800 focus-within:border-white/20 focus-within:bg-slate-800"
             >
               <div className="flex items-start gap-3">
-                <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.16] text-white/80">
+                <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-slate-200">
                   <span
                     className={`absolute inset-0 rounded-lg bg-gradient-to-br ${accent} opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100`}
                     aria-hidden
@@ -466,10 +472,10 @@ const QuickSettings = ({ open, id }: Props) => {
                   </span>
                 </span>
                 <label htmlFor={id} className="flex flex-col">
-                  <span id={labelId} className="font-semibold text-white">
+                  <span id={labelId} className="font-semibold text-slate-100">
                     {label}
                   </span>
-                  <span id={descriptionId} className="text-xs text-white/80">
+                  <span id={descriptionId} className="text-xs text-slate-300">
                     {description}
                   </span>
                 </label>
@@ -478,7 +484,7 @@ const QuickSettings = ({ open, id }: Props) => {
                 <span
                   aria-hidden
                   className={`inline-flex items-center rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                    value ? 'bg-kali-control text-black' : 'bg-white/10 text-white/70'
+                    value ? 'bg-kali-control text-slate-900' : 'bg-white/10 text-slate-300'
                   }`}
                 >
                   {value ? 'On' : 'Off'}
@@ -491,7 +497,9 @@ const QuickSettings = ({ open, id }: Props) => {
                   aria-labelledby={labelId}
                   aria-describedby={descriptionId}
                   className={`relative inline-flex h-6 w-12 shrink-0 items-center rounded-full border border-white/10 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
-                    value ? 'bg-kali-control shadow-[0_0_18px_rgba(120,190,255,0.55)]' : 'bg-white/30'
+                    value
+                      ? 'bg-kali-control shadow-[0_10px_24px_-12px_rgba(56,189,248,0.85)]'
+                      : 'bg-slate-800'
                   }`}
                   onClick={onToggle}
                   tabIndex={focusableTabIndex}
