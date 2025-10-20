@@ -2,6 +2,8 @@
 
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
+import { useTheme } from '../../hooks/useTheme';
+import { isDarkTheme } from '../../utils/theme';
 
 interface Props {
   open: boolean;
@@ -10,7 +12,7 @@ interface Props {
 const transitionDurationMs = 200;
 
 const QuickSettings = ({ open }: Props) => {
-  const [theme, setTheme] = usePersistentState('qs-theme', 'light');
+  const { theme: activeTheme, setTheme: updateTheme } = useTheme();
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
@@ -31,12 +33,6 @@ const QuickSettings = ({ open }: Props) => {
   const [shouldRender, setShouldRender] = useState(open);
   const [isVisible, setIsVisible] = useState(open);
   const focusableTabIndex = open ? 0 : -1;
-
-  useEffect(() => {
-    const root = document.documentElement;
-    root.setAttribute('data-theme', theme);
-    root.classList.toggle('dark', theme === 'dark');
-  }, [theme]);
 
   useEffect(() => {
     document.documentElement.toggleAttribute('data-sound-muted', !sound);
@@ -136,6 +132,9 @@ const QuickSettings = ({ open }: Props) => {
     },
   };
 
+  const isDarkMode = isDarkTheme(activeTheme);
+  const quickTheme = isDarkMode ? 'dark' : 'light';
+
   const statusBadges: Array<{
     id: string;
     label: string;
@@ -146,8 +145,8 @@ const QuickSettings = ({ open }: Props) => {
     {
       id: 'theme',
       label: 'Theme',
-      value: theme === 'light' ? 'Light' : 'Dark',
-      icon: theme === 'light' ? <SunIcon /> : <MoonIcon />,
+      value: isDarkMode ? 'Dark' : 'Light',
+      icon: isDarkMode ? <MoonIcon /> : <SunIcon />,
       tone: 'info',
     },
     {
@@ -319,10 +318,10 @@ const QuickSettings = ({ open }: Props) => {
           <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-200">Theme</span>
           <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.22em] text-slate-200">
             <span
-              className={`h-1.5 w-1.5 rounded-full ${theme === 'light' ? 'bg-amber-300' : 'bg-blue-400'}`}
+              className={`h-1.5 w-1.5 rounded-full ${quickTheme === 'light' ? 'bg-amber-300' : 'bg-blue-400'}`}
               aria-hidden
             />
-            {theme === 'light' ? 'Light mode' : 'Dark mode'}
+            {quickTheme === 'light' ? 'Light mode' : 'Dark mode'}
           </span>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-2" role="group" aria-label="Theme options">
@@ -330,7 +329,7 @@ const QuickSettings = ({ open }: Props) => {
             { option: 'light', label: 'Light', icon: <SunIcon /> },
             { option: 'dark', label: 'Dark', icon: <MoonIcon /> },
           ].map(({ option, label, icon }) => {
-            const isActive = theme === option;
+            const isActive = quickTheme === option;
             return (
               <button
                 key={option}
@@ -342,7 +341,7 @@ const QuickSettings = ({ open }: Props) => {
                     ? 'bg-kali-control text-slate-900 shadow-[0_0_0_1px_rgba(15,23,42,0.18)]'
                     : 'bg-slate-900/80 text-slate-200 hover:bg-slate-800'
                 }`}
-                onClick={() => setTheme(option)}
+                onClick={() => updateTheme(option === 'light' ? 'default' : 'dark')}
                 tabIndex={focusableTabIndex}
               >
                 <span className="text-lg" aria-hidden>
