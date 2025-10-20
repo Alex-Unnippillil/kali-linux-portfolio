@@ -5,7 +5,7 @@ interface ToastProps {
   actionLabel?: string;
   onAction?: () => void;
   onClose?: () => void;
-  duration?: number;
+  duration?: number | null;
 }
 
 const Toast: React.FC<ToastProps> = ({
@@ -13,18 +13,39 @@ const Toast: React.FC<ToastProps> = ({
   actionLabel,
   onAction,
   onClose,
-  duration = 6000,
+  duration,
 }) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     setVisible(true);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    const resolvedDuration = duration ?? 6000;
+    const shouldAutoClose =
+      duration !== null && Number.isFinite(resolvedDuration) && resolvedDuration > 0;
+
+    if (!shouldAutoClose) {
+      return () => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+      };
+    }
+
     timeoutRef.current = setTimeout(() => {
-      onClose && onClose();
-    }, duration);
+      onClose?.();
+    }, resolvedDuration);
     return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
     };
   }, [duration, onClose]);
 
