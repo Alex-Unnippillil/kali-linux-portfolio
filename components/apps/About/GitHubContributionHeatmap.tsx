@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { MouseEvent as ReactMouseEvent } from 'react';
+import type {
+  FocusEvent as ReactFocusEvent,
+  MouseEvent as ReactMouseEvent,
+} from 'react';
 
 type ContributionDay = {
   date: string;
@@ -202,7 +205,7 @@ export default function GitHubContributionHeatmap({ username, year }: Props) {
 
   const handleMouseEnter = (
     day: ContributionDay,
-    event: ReactMouseEvent<HTMLButtonElement>
+    event: ReactMouseEvent<HTMLButtonElement> | ReactFocusEvent<HTMLButtonElement>
   ) => {
     if (!gridRef.current) {
       return;
