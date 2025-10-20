@@ -5268,7 +5268,7 @@ export class Desktop extends Component {
         const wallpaperCss = wallpaperSource ? `url("${wallpaperSource}")` : 'none';
         const overlayValue = theme && theme.overlay ? theme.overlay : 'none';
         const baseNavbarHeight = DESKTOP_TOP_PADDING - (WINDOW_TOP_MARGIN + WINDOW_TOP_INSET);
-        const windowTopSpacing = WINDOW_TOP_MARGIN + WINDOW_TOP_INSET;
+        const windowTopSpacing = WINDOW_TOP_INSET;
         const desktopStyle = {
             paddingTop: `calc(var(--desktop-navbar-height, ${baseNavbarHeight}px) + ${windowTopSpacing}px)`,
             minHeight: '100dvh',
