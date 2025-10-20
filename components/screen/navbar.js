@@ -442,7 +442,7 @@ export default class Navbar extends PureComponent {
                 return (
                         <ul
                                 ref={this.taskbarListRef}
-                                className="flex max-w-[40vw] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
+                                className="flex w-full items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1 md:w-auto md:max-w-[40vw]"
                                 role="list"
                                 aria-label="Open applications"
                                 onDragOver={this.handleTaskbarDragOver}
@@ -475,7 +475,7 @@ export default class Navbar extends PureComponent {
 
                 return (
                         <ul
-                                className="flex min-h-[2.5rem] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
+                                className="flex w-full min-h-[2.5rem] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1 md:w-auto"
                                 role="list"
                                 aria-label="Pinned applications"
                                 onDragOver={this.handlePinnedDragOver}
@@ -860,7 +860,7 @@ export default class Navbar extends PureComponent {
                 const runningApps = this.renderRunningApps();
                 return (
                         <div
-                                className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
+                                className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full flex-col gap-2 bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md md:flex-row md:items-center md:justify-between"
                                 style={{
                                         minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
                                         paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
@@ -870,7 +870,7 @@ export default class Navbar extends PureComponent {
                                         '--desktop-navbar-height': `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px) + 0.375rem + 0.25rem)`,
                                 }}
                         >
-                                <div className="flex items-center gap-2 text-xs md:text-sm">
+                                <div className="flex w-full flex-wrap items-center gap-2 text-xs md:w-auto md:flex-nowrap md:text-sm">
                                         <WhiskerMenu />
                                         {workspaces.length > 0 && (
                                                 <WorkspaceSwitcher
@@ -883,7 +883,7 @@ export default class Navbar extends PureComponent {
                                         {runningApps}
                                         <PerformanceGraph />
                                 </div>
-                                <div className="flex items-center gap-4 text-xs md:text-sm">
+                                <div className="flex w-full flex-wrap items-center justify-between gap-3 text-xs md:w-auto md:flex-nowrap md:justify-end md:gap-4 md:text-sm">
                                         <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
                                         <div
                                                 id="status-bar"
