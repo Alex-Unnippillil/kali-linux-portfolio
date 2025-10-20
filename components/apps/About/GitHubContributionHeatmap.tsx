@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { MouseEvent as ReactMouseEvent } from 'react';
 
 type ContributionDay = {
   date: string;
@@ -199,13 +200,16 @@ export default function GitHubContributionHeatmap({ username, year }: Props) {
     };
   }, [data, year]);
 
-  const handleMouseEnter = (day: ContributionDay, target: HTMLButtonElement) => {
+  const handleMouseEnter = (
+    day: ContributionDay,
+    event: ReactMouseEvent<HTMLButtonElement>
+  ) => {
     if (!gridRef.current) {
       return;
     }
 
     const gridRect = gridRef.current.getBoundingClientRect();
-    const cellRect = target.getBoundingClientRect();
+    const cellRect = event.currentTarget.getBoundingClientRect();
 
     setHoverInfo({
       day,
@@ -313,13 +317,9 @@ export default function GitHubContributionHeatmap({ username, year }: Props) {
                         key={`${weekIndex}-${day.date}`}
                         type="button"
                         className={`${levelClass} h-3 w-3 rounded-sm transition-transform duration-150 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-surface)]`}
-                        onMouseEnter={({ currentTarget }) =>
-                          handleMouseEnter(day, currentTarget)
-                        }
+                        onMouseEnter={(event) => handleMouseEnter(day, event)}
                         onMouseLeave={handleMouseLeave}
-                        onFocus={({ currentTarget }) =>
-                          handleMouseEnter(day, currentTarget)
-                        }
+                        onFocus={(event) => handleMouseEnter(day, event)}
                         onBlur={handleMouseLeave}
                         aria-label={ariaLabel}
                         tabIndex={-1}
