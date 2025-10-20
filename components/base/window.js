@@ -12,7 +12,7 @@ import {
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
-import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET } from '../../utils/uiConstants';
+import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
 
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
@@ -103,8 +103,8 @@ const computeSnapRegions = (
     topInset = DEFAULT_WINDOW_TOP_OFFSET,
     bottomInset,
 ) => {
-    const normalizedTopInset = typeof topInset === 'number'
-        ? Math.max(topInset, DESKTOP_TOP_PADDING)
+    const normalizedTopInset = typeof topInset === 'number' && Number.isFinite(topInset)
+        ? Math.max(topInset, WINDOW_TOP_INSET + WINDOW_TOP_MARGIN)
         : DEFAULT_WINDOW_TOP_OFFSET;
     const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
     const snapBottomInset = typeof bottomInset === 'number' && Number.isFinite(bottomInset)
