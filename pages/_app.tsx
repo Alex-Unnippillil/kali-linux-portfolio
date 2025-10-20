@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import type { AppProps } from 'next/app';
 import { Analytics } from '@vercel/analytics/next';
@@ -20,6 +20,7 @@ import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 import { Rajdhani } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
+import Toast from '../components/ui/Toast';
 
 type PeriodicSyncPermissionDescriptor = PermissionDescriptor & {
   name: 'periodic-background-sync';
@@ -82,6 +83,29 @@ const kaliSans = Rajdhani({
 });
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
+  const [waitingRegistration, setWaitingRegistration] = useState<ServiceWorkerRegistration | null>(null);
+
+  const handleDismissUpdateToast = useCallback(() => {
+    setWaitingRegistration(null);
+  }, []);
+
+  const handleTriggerUpdate = useCallback(async () => {
+    const registration = waitingRegistration;
+    if (!registration) return;
+
+    setWaitingRegistration(null);
+
+    try {
+      await registration.update();
+    } catch (err) {
+      console.error('Service worker update failed', err);
+    } finally {
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+    }
+  }, [waitingRegistration]);
+
   useEffect(() => {
     const initAnalytics = async (): Promise<void> => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
@@ -97,6 +121,46 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
 
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
       const swPath = resolveServiceWorkerPath();
+      let cleanupRegistrationListener: (() => void) | undefined;
+      let isMounted = true;
+
+      const showWaitingToast = (registration: ServiceWorkerRegistration | null | undefined): void => {
+        if (!isMounted || !registration) return;
+        if (!navigator.serviceWorker.controller) return;
+        if (registration.waiting) {
+          setWaitingRegistration(registration);
+        }
+      };
+
+      const attachUpdateListener = (registration: ServiceWorkerRegistration): void => {
+        const handleUpdateFound = (): void => {
+          const installingWorker = registration.installing;
+          if (!installingWorker) return;
+
+          const handleStateChange = (): void => {
+            if (!isMounted) return;
+            if (installingWorker.state === 'installed') {
+              showWaitingToast(registration);
+            }
+
+            if (
+              installingWorker.state === 'installed' ||
+              installingWorker.state === 'redundant' ||
+              installingWorker.state === 'activated'
+            ) {
+              installingWorker.removeEventListener('statechange', handleStateChange);
+            }
+          };
+
+          installingWorker.addEventListener('statechange', handleStateChange);
+        };
+
+        registration.addEventListener('updatefound', handleUpdateFound);
+        cleanupRegistrationListener = () => {
+          registration.removeEventListener('updatefound', handleUpdateFound);
+        };
+      };
+
       const register = async (): Promise<void> => {
         try {
           const registration = await navigator.serviceWorker.register(swPath);
@@ -110,6 +174,9 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
               console.error('Service worker manual refresh failed', manualRefreshError);
             }
           };
+
+          attachUpdateListener(registration);
+          showWaitingToast(registration);
 
           if ('periodicSync' in registration && registration.periodicSync) {
             try {
@@ -137,8 +204,14 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
       void register().catch((err) => {
         console.error('Service worker setup failed', err);
       });
+
+      return () => {
+        isMounted = false;
+        cleanupRegistrationListener?.();
+      };
     }
 
+    return undefined;
   }, []);
 
   useEffect(() => {
@@ -218,6 +291,15 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
               <ShortcutOverlay />
+              {waitingRegistration && (
+                <Toast
+                  message="A new version is available."
+                  actionLabel="Reload now"
+                  onAction={handleTriggerUpdate}
+                  onClose={handleDismissUpdateToast}
+                  duration={null}
+                />
+              )}
               <Analytics
                 beforeSend={(event) => {
                   if (event.url.includes('/admin') || event.url.includes('/private')) return null;
