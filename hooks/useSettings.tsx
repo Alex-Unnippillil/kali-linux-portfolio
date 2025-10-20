@@ -67,6 +67,15 @@ const shadeColor = (color: string, percent: number): string => {
     .slice(1)}`;
 };
 
+const getReadableTextColor = (color: string): string => {
+  const hex = color.replace('#', '');
+  const r = parseInt(hex.substring(0, 2), 16) / 255;
+  const g = parseInt(hex.substring(2, 4), 16) / 255;
+  const b = parseInt(hex.substring(4, 6), 16) / 255;
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return luminance > 0.45 ? '#000000' : '#ffffff';
+};
+
 interface SettingsContextValue {
   accent: string;
   wallpaper: string;
@@ -172,14 +181,21 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
+    const focus = shadeColor(accent, 0.2);
+    const contrast = getReadableTextColor(accent);
     const vars: Record<string, string> = {
       '--color-ub-orange': accent,
       '--color-ub-border-orange': border,
       '--color-primary': accent,
       '--color-accent': accent,
-      '--color-focus-ring': accent,
+      '--color-focus-ring': focus,
       '--color-selection': accent,
       '--color-control-accent': accent,
+      '--primary': accent,
+      '--accent': accent,
+      '--focus-ring': focus,
+      '--primary-contrast': contrast,
+      '--color-window-accent': accent,
     };
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
@@ -198,20 +214,38 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
       regular: {
-        '--space-1': '0.25rem',
-        '--space-2': '0.5rem',
-        '--space-3': '0.75rem',
-        '--space-4': '1rem',
-        '--space-5': '1.5rem',
-        '--space-6': '2rem',
+        '--space-hairline': '2px',
+        '--space-1': '4px',
+        '--space-2': '8px',
+        '--space-3': '12px',
+        '--space-4': '16px',
+        '--space-5': '24px',
+        '--space-6': '32px',
+        '--space-7': '48px',
+        '--space-8': '64px',
+        '--space-mobile-1': '8px',
+        '--space-mobile-2': '12px',
+        '--space-mobile-3': '16px',
+        '--space-mobile-4': '20px',
+        '--space-mobile-5': '24px',
+        '--space-mobile-6': '32px',
       },
       compact: {
-        '--space-1': '0.125rem',
-        '--space-2': '0.25rem',
-        '--space-3': '0.5rem',
-        '--space-4': '0.75rem',
-        '--space-5': '1rem',
-        '--space-6': '1.5rem',
+        '--space-hairline': '2px',
+        '--space-1': '3px',
+        '--space-2': '6px',
+        '--space-3': '9px',
+        '--space-4': '12px',
+        '--space-5': '18px',
+        '--space-6': '24px',
+        '--space-7': '36px',
+        '--space-8': '48px',
+        '--space-mobile-1': '6px',
+        '--space-mobile-2': '9px',
+        '--space-mobile-3': '12px',
+        '--space-mobile-4': '16px',
+        '--space-mobile-5': '20px',
+        '--space-mobile-6': '24px',
       },
     };
     const vars = spacing[density];
