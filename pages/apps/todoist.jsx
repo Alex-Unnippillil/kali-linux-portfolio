@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 
-const TodoistWorkspace = dynamic(() => import('../../apps/todoist'), {
+const TodoistApp = dynamic(() => import('../../apps/todoist'), {
   ssr: false,
   loading: () => (
     <div className="flex h-full w-full items-center justify-center bg-slate-950/80 text-slate-300">
@@ -9,8 +9,6 @@ const TodoistWorkspace = dynamic(() => import('../../apps/todoist'), {
   ),
 });
 
-export default function Todoist() {
-  return <TodoistWorkspace />;
+export default function TodoistPage() {
+  return <TodoistApp />;
 }
-
-export const displayTodoist = () => <Todoist />;
