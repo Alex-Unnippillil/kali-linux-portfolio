@@ -20,6 +20,33 @@
   }
 }
 
+@layer components {
+  .kali-heading-lg {
+    @apply text-xl sm:text-2xl font-semibold tracking-tight text-white;
+  }
+  .kali-heading-md {
+    @apply text-lg sm:text-xl font-semibold text-white tracking-tight;
+  }
+  .kali-heading-sm {
+    @apply text-base font-semibold text-slate-200 uppercase tracking-[0.14em];
+  }
+  .kali-body {
+    @apply text-sm sm:text-base leading-relaxed text-slate-100;
+  }
+  .kali-body-muted {
+    @apply text-xs sm:text-sm leading-relaxed text-slate-300;
+  }
+  .kali-link {
+    @apply inline-flex items-center gap-1 font-semibold text-ubt-blue transition-colors duration-200 ease-out hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus;
+  }
+  .kali-cta {
+    @apply inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-ub-gedit-light via-ub-gedit-light to-ubt-gedit-blue px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-black/40 transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-black/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus active:translate-y-0;
+  }
+  .kali-chip {
+    @apply inline-flex items-center gap-2 rounded-full border border-kali-border/50 bg-kali-panel-dark/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-100 shadow-inner transition-colors duration-200 ease-out hover:bg-kali-panel-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus;
+  }
+}
+
 @layer base {
   button {
     @apply transition-hover transition-active;
