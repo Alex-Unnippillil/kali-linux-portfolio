@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "title": "Alpha",
+    "description": "Example project Alpha",
+    "stack": ["JS"],
+    "tags": ["frontend", "react"],
+    "year": 2021,
+    "type": "web",
+    "thumbnail": "/demo/alpha.png",
+    "repo": "https://example.com/alpha",
+    "demo": "https://example.com/alpha-demo",
+    "snippet": "console.log('Alpha');",
+    "language": "javascript"
+  },
+  {
+    "id": 2,
+    "title": "Beta",
+    "description": "Example project Beta",
+    "stack": ["TS"],
+    "tags": ["backend"],
+    "year": 2022,
+    "type": "app",
+    "thumbnail": "/demo/beta.png",
+    "repo": "https://example.com/beta",
+    "demo": "https://example.com/beta-demo",
+    "snippet": "console.log('Beta');",
+    "language": "typescript"
+  }
+]
