@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import {
   wrap,
   createBulletPool,
@@ -115,6 +115,14 @@ const Asteroids = () => {
   const pausedRef = useRef(false);
   const [restartKey, setRestartKey] = useState(0);
   const [liveText, setLiveText] = useState('');
+  const [hud, setHud] = useState({
+    score: 0,
+    lives: 3,
+    level: 1,
+    multiplier: 1,
+    warning: '',
+    shield: false,
+  });
   const HIGH_KEY = 'asteroids-highscore';
   const LAST_KEY = 'asteroids-lastscore';
   const [highScore, setHighScore] = useState(0);
@@ -129,6 +137,29 @@ const Asteroids = () => {
   useEffect(() => { inventoryRef.current = inventory; }, [inventory]);
   const [selectingLevel, setSelectingLevel] = useState(true);
   const [startLevelNum, setStartLevelNum] = useState(1);
+  const [muted, setMuted] = useState(false);
+  const audioEnabledRef = useRef(true);
+  const [showControls, setShowControls] = useState(false);
+
+  const updateHud = useCallback((next) => {
+    setHud((prev) => {
+      if (
+        prev.score === next.score &&
+        prev.lives === next.lives &&
+        prev.level === next.level &&
+        prev.multiplier === next.multiplier &&
+        prev.warning === next.warning &&
+        prev.shield === next.shield
+      ) {
+        return prev;
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    audioEnabledRef.current = !muted;
+  }, [muted]);
 
   useEffect(() => {
     const hs = Number(localStorage.getItem(HIGH_KEY) || 0);
@@ -140,6 +171,19 @@ const Asteroids = () => {
   }, []);
   useEffect(() => { highScoreRef.current = highScore; }, [highScore]);
   useEffect(() => { lastScoreRef.current = lastScore; }, [lastScore]);
+
+  useEffect(() => {
+    if (selectingLevel) {
+      updateHud({
+        score: 0,
+        lives: 3,
+        level: startLevelNum,
+        multiplier: 1,
+        warning: '',
+        shield: false,
+      });
+    }
+  }, [selectingLevel, startLevelNum, updateHud]);
 
   useEffect(() => {
     if (!saveReady || selectingLevel) return;
@@ -263,6 +307,7 @@ const Asteroids = () => {
 
     // Audio using WebAudio lazily
     const playSound = (freq) => {
+      if (!audioEnabledRef.current) return;
       if (!audioCtx.current) audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
       const ctxAudio = audioCtx.current;
       const osc = ctxAudio.createOscillator();
@@ -402,10 +447,19 @@ const Asteroids = () => {
         lives = 3;
         score = 0;
         level = startLevelNum;
+        multiplier = 1;
         asteroids.length = 0;
         powerUps.length = 0;
         inventoryRef.current = [];
         setInventory([]);
+        updateHud({
+          score,
+          lives,
+          level,
+          multiplier,
+          warning: '',
+          shield: false,
+        });
         setSelectingLevel(true);
         return;
       }
@@ -758,23 +812,21 @@ const Asteroids = () => {
         ctx.restore();
       }
 
-      // HUD
-      ctx.fillStyle = 'white';
-      ctx.font = '16px monospace';
-      ctx.fillText(`Score: ${score} x${multiplier}`, 10, 20);
-      ctx.fillText(`Lives: ${lives}`, 10, 40);
-      ctx.fillText(`High: ${highScoreRef.current} Last: ${lastScoreRef.current}`, 10, 60);
-
-      inventoryRef.current.forEach((type, i) => {
-        ctx.beginPath();
-        ctx.strokeStyle =
-          type === POWER_UPS.SHIELD
-            ? 'cyan'
-            : type === POWER_UPS.RAPID_FIRE
-              ? 'yellow'
-              : 'lime';
-        ctx.arc(10 + i * 20, 80, 8, 0, Math.PI * 2);
-        ctx.stroke();
+      const warning =
+        ship.hitCooldown > COLLISION_COOLDOWN - 10
+          ? 'Impact detected'
+          : lives <= 1
+            ? 'Critical hull integrity'
+            : multiplier > 1 && multiplierTimer < 60
+              ? 'Multiplier unstable'
+              : '';
+      updateHud({
+        score,
+        lives,
+        level,
+        multiplier,
+        warning,
+        shield: ship.shield > 0,
       });
 
       if (waveBannerTimer > 0) {
@@ -800,11 +852,11 @@ const Asteroids = () => {
 
     requestRef.current = requestAnimationFrame(update);
     return cleanup;
-  }, [controlsRef, dpr, restartKey, saveReady, selectingLevel, startLevelNum, setSaveData]);
-  const togglePause = () => {
+  }, [controlsRef, dpr, restartKey, saveReady, selectingLevel, startLevelNum, setSaveData, updateHud]);
+  const togglePause = useCallback(() => {
     pausedRef.current = !pausedRef.current;
     setPaused(pausedRef.current);
-  };
+  }, [setPaused]);
 
   const restartGame = () => {
     pausedRef.current = false;
@@ -822,8 +874,21 @@ const Asteroids = () => {
     restartGame();
   };
 
+  useEffect(() => {
+    const handlePauseHotkey = (e) => {
+      const target = e.target;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      if (e.key === 'Escape' || e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        togglePause();
+      }
+    };
+    window.addEventListener('keydown', handlePauseHotkey);
+    return () => window.removeEventListener('keydown', handlePauseHotkey);
+  }, [togglePause]);
+
   return (
-    <GameLayout paused={paused} onPause={togglePause} onRestart={restartGame}>
+    <GameLayout gameId="asteroids">
       {selectingLevel && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-75 text-white space-y-2 z-50">
           <div>Select Starting Level</div>
@@ -843,19 +908,172 @@ const Asteroids = () => {
           ))}
         </div>
       )}
-      <canvas ref={canvasRef} className="bg-black w-full h-full touch-none" />
+      <canvas
+        ref={canvasRef}
+        className="bg-black w-full h-full touch-none"
+        aria-label="Asteroids playfield"
+      />
       <div aria-live="polite" className="sr-only">
         {liveText}
       </div>
-      <div className="absolute bottom-2 right-2 z-40">
-        <button
-          type="button"
-          onClick={resetProgress}
-          className="px-2 py-1 bg-gray-700 text-white rounded"
-        >
-          Reset Progress
-        </button>
+      <div className="pointer-events-none absolute inset-0 z-30 flex flex-col justify-between p-4">
+        <div className="flex justify-between gap-4 flex-wrap">
+          <div className="pointer-events-auto bg-black/70 border border-cyan-400 text-cyan-200 px-4 py-3 rounded-md shadow-[0_0_20px_rgba(34,211,238,0.45)] backdrop-blur-sm font-mono uppercase tracking-wide space-y-1 min-w-[12rem]">
+            <div className="flex items-center justify-between text-xs">
+              <span>Score</span>
+              <span className="text-lg text-cyan-100">{hud.score.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span>Lives</span>
+              <span className="text-lg text-cyan-100">{hud.lives}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span>Multiplier</span>
+              <span className="text-lg text-cyan-100">x{hud.multiplier}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span>High</span>
+              <span>{highScore.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span>Last</span>
+              <span>{lastScore.toLocaleString()}</span>
+            </div>
+            {hud.shield && <div className="text-xs text-emerald-300">Shield Active</div>}
+            {inventory.length > 0 && (
+              <div className="pt-2 text-xs space-y-1">
+                <div className="text-cyan-300">Inventory</div>
+                <div className="flex flex-wrap gap-2">
+                  {inventory.map((type, idx) => (
+                    <span
+                      key={`${type}-${idx}`}
+                      className={
+                        type === POWER_UPS.SHIELD
+                          ? 'px-2 py-0.5 rounded-full border border-cyan-400 text-cyan-100'
+                          : type === POWER_UPS.RAPID_FIRE
+                            ? 'px-2 py-0.5 rounded-full border border-amber-300 text-amber-200'
+                            : 'px-2 py-0.5 rounded-full border border-lime-300 text-lime-200'
+                      }
+                    >
+                      {type}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="pointer-events-auto flex flex-col items-end gap-3 ml-auto">
+            <div className="bg-black/70 border border-cyan-400 text-cyan-200 px-4 py-3 rounded-md shadow-[0_0_20px_rgba(34,211,238,0.45)] backdrop-blur-sm font-mono uppercase tracking-wide">
+              <div className="flex items-center justify-between gap-4">
+                <span>Level</span>
+                <span className="text-lg text-cyan-100">{hud.level}</span>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 justify-end">
+              <button
+                type="button"
+                onClick={togglePause}
+                className="pointer-events-auto px-3 py-1 text-xs uppercase tracking-widest border border-cyan-400 text-cyan-200 rounded-md bg-black/70 shadow-[0_0_15px_rgba(34,211,238,0.5)] hover:text-white focus:outline-none focus:ring focus:ring-cyan-300"
+              >
+                {paused ? 'Resume' : 'Pause'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMuted((m) => !m)}
+                className="pointer-events-auto px-3 py-1 text-xs uppercase tracking-widest border border-cyan-400 text-cyan-200 rounded-md bg-black/70 shadow-[0_0_15px_rgba(34,211,238,0.5)] hover:text-white focus:outline-none focus:ring focus:ring-cyan-300"
+                aria-pressed={muted}
+              >
+                Audio {muted ? 'Off' : 'On'}
+              </button>
+              <button
+                type="button"
+                onClick={restartGame}
+                className="pointer-events-auto px-3 py-1 text-xs uppercase tracking-widest border border-cyan-400 text-cyan-200 rounded-md bg-black/70 shadow-[0_0_15px_rgba(34,211,238,0.5)] hover:text-white focus:outline-none focus:ring focus:ring-cyan-300"
+              >
+                Restart
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-between items-end gap-4 flex-wrap">
+          <div className="pointer-events-auto">
+            <button
+              type="button"
+              onClick={() => setShowControls((v) => !v)}
+              className="px-3 py-1 text-xs uppercase tracking-widest border border-cyan-400 text-cyan-200 rounded-md bg-black/70 shadow-[0_0_15px_rgba(34,211,238,0.5)] hover:text-white focus:outline-none focus:ring focus:ring-cyan-300"
+              aria-expanded={showControls}
+            >
+              {showControls ? 'Hide Controls' : 'Show Controls'}
+            </button>
+            {showControls && (
+              <div className="mt-3 bg-black/70 border border-cyan-400 text-cyan-200 px-4 py-3 rounded-md shadow-[0_0_20px_rgba(34,211,238,0.45)] backdrop-blur-sm max-w-sm text-xs space-y-2">
+                <div className="uppercase tracking-wide text-cyan-100">Keyboard</div>
+                <ul className="space-y-1 list-disc list-inside">
+                  <li>Arrow Keys / WASD — Steer &amp; Thrust</li>
+                  <li>Space — Fire</li>
+                  <li>H — Hyperspace jump</li>
+                  <li>P or Esc — Pause</li>
+                </ul>
+                <div className="uppercase tracking-wide text-cyan-100 pt-2">Gamepad</div>
+                <ul className="space-y-1 list-disc list-inside">
+                  <li>Left Stick — Steering</li>
+                  <li>Hold Up / Trigger — Thrust</li>
+                  <li>A / South Button — Fire</li>
+                  <li>B / East Button — Hyperspace</li>
+                </ul>
+              </div>
+            )}
+          </div>
+          {hud.warning && (
+            <div className="pointer-events-none ml-auto text-rose-200 text-sm font-mono uppercase tracking-widest bg-black/70 border border-rose-400 px-4 py-2 rounded-md shadow-[0_0_25px_rgba(244,63,94,0.45)] animate-pulse">
+              {hud.warning}
+            </div>
+          )}
+        </div>
       </div>
+      {paused && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur">
+          <div className="pointer-events-auto bg-black/80 border border-cyan-400 text-cyan-200 px-6 py-5 rounded-lg shadow-[0_0_30px_rgba(34,211,238,0.6)] space-y-4 w-full max-w-md">
+            <div className="text-center font-mono uppercase tracking-[0.4em] text-cyan-100 text-sm">Game Paused</div>
+            <div className="flex flex-wrap gap-2 justify-center">
+              <button
+                type="button"
+                onClick={togglePause}
+                className="px-4 py-2 text-xs uppercase tracking-widest border border-cyan-400 text-cyan-100 rounded-md bg-black/70 shadow-[0_0_15px_rgba(34,211,238,0.5)] hover:text-white focus:outline-none focus:ring focus:ring-cyan-300"
+                autoFocus
+              >
+                Resume
+              </button>
+              <button
+                type="button"
+                onClick={restartGame}
+                className="px-4 py-2 text-xs uppercase tracking-widest border border-cyan-400 text-cyan-100 rounded-md bg-black/70 shadow-[0_0_15px_rgba(34,211,238,0.5)] hover:text-white focus:outline-none focus:ring focus:ring-cyan-300"
+              >
+                Restart
+              </button>
+              <button
+                type="button"
+                onClick={() => setMuted((m) => !m)}
+                className="px-4 py-2 text-xs uppercase tracking-widest border border-cyan-400 text-cyan-100 rounded-md bg-black/70 shadow-[0_0_15px_rgba(34,211,238,0.5)] hover:text-white focus:outline-none focus:ring focus:ring-cyan-300"
+                aria-pressed={muted}
+              >
+                Audio {muted ? 'Off' : 'On'}
+              </button>
+              <button
+                type="button"
+                onClick={resetProgress}
+                className="px-4 py-2 text-xs uppercase tracking-widest border border-cyan-400 text-cyan-100 rounded-md bg-black/70 shadow-[0_0_15px_rgba(34,211,238,0.5)] hover:text-white focus:outline-none focus:ring focus:ring-cyan-300"
+              >
+                Reset Progress
+              </button>
+            </div>
+            <p className="text-[0.65rem] leading-5 text-center text-cyan-200/80">
+              Scores auto-save locally. High scores persist between sessions and gamepad or keyboard bindings are active while the
+              window is focused.
+            </p>
+          </div>
+        </div>
+      )}
     </GameLayout>
   );
 };
