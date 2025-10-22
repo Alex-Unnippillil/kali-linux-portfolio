@@ -4,6 +4,7 @@ import { vibrate } from './Games/common/haptics';
 import {
   generateLaneConfig,
   SKINS,
+  SKIN_GROUPS,
   getRandomSkin,
 } from '../../apps/games/frogger/config';
 import { getLevelConfig } from '../../apps/games/frogger/levels';
@@ -13,12 +14,33 @@ const HEIGHT = 8;
 const SUB_STEP = 0.5;
 const CELL = 32;
 const RIPPLE_DURATION = 0.5;
+const FROG_HOP_DURATION = 0.18;
+const TIME_PER_DIFF = {
+  easy: 72,
+  normal: 60,
+  hard: 50,
+};
+const MIN_LEVEL_TIME = 25;
+const DEFAULT_COLOR_MODE = 'vibrant';
+
+const getLevelTime = (diff, lvl) =>
+  Math.max(MIN_LEVEL_TIME, TIME_PER_DIFF[diff] - (lvl - 1) * 2);
 
 const PAD_POSITIONS = [1, 3, 5];
 const DIFFICULTY_MULTIPLIERS = {
   easy: 0.8,
   normal: 1,
   hard: 1.2,
+};
+
+const smoothStep = (t) => t * t * (3 - 2 * t);
+const withAlpha = (hex, alpha) => {
+  const raw = hex.replace('#', '');
+  const bigint = parseInt(raw, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r},${g},${b},${alpha})`;
 };
 
 const makeRng = (seed) => {
@@ -115,6 +137,7 @@ const updateLogs = (prev, frogPos, dt) => {
 };
 
 const Frogger = () => {
+  const initialTime = getLevelTime('normal', 1);
   const [frog, setFrog] = useState(initialFrog);
   const frogRef = useRef(frog);
   const initialLanes = generateLaneConfig(
@@ -152,8 +175,11 @@ const Frogger = () => {
   const splashesRef = useRef([]);
   const [slowTime, setSlowTime] = useState(false);
   const slowTimeRef = useRef(slowTime);
-  const [skin, setSkin] = useState(getRandomSkin);
+  const [colorMode, setColorMode] = useState(DEFAULT_COLOR_MODE);
+  const [skin, setSkin] = useState(() => getRandomSkin(DEFAULT_COLOR_MODE));
   const [showHitboxes, setShowHitboxes] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(initialTime);
+  const [goals, setGoals] = useState(0);
   const deathStreakRef = useRef(0);
   const safeFlashRef = useRef(0);
   const livesRef = useRef(lives);
@@ -161,12 +187,24 @@ const Frogger = () => {
   const statusRef = useRef(status);
   const hitFlashRef = useRef(0);
   const pendingDeathRef = useRef(null);
+  const gradientCacheRef = useRef({});
+  const frogAnimationRef = useRef({
+    start: { ...initialFrog },
+    end: { ...initialFrog },
+    progress: 1,
+  });
+  const lightingRef = useRef(0);
+  const timeRef = useRef(initialTime);
+  const lastTimerBroadcastRef = useRef(initialTime);
 
 
   useEffect(() => { frogRef.current = frog; }, [frog]);
   useEffect(() => { carsRef.current = cars; }, [cars]);
   useEffect(() => { logsRef.current = logs; }, [logs]);
   useEffect(() => { padsRef.current = pads; }, [pads]);
+  useEffect(() => {
+    setGoals(pads.filter(Boolean).length);
+  }, [pads]);
   useEffect(() => { pausedRef.current = paused; }, [paused]);
   useEffect(() => { soundRef.current = sound; }, [sound]);
   useEffect(() => { reduceMotionRef.current = reduceMotion; }, [reduceMotion]);
@@ -174,6 +212,15 @@ const Frogger = () => {
   useEffect(() => { livesRef.current = lives; }, [lives]);
   useEffect(() => { levelRef.current = level; }, [level]);
   useEffect(() => { statusRef.current = status; }, [status]);
+  useEffect(() => { timeRef.current = timeLeft; }, [timeLeft]);
+  useEffect(() => { lastTimerBroadcastRef.current = timeLeft; }, [timeLeft]);
+  useEffect(() => { gradientCacheRef.current = {}; }, [skin]);
+  useEffect(() => {
+    const available = SKIN_GROUPS[colorMode];
+    if (available && !available.includes(skin)) {
+      setSkin(available[0]);
+    }
+  }, [colorMode, skin]);
 
   useEffect(() => {
     const saved = Number(localStorage.getItem('frogger-highscore') || 0);
@@ -213,18 +260,51 @@ const Frogger = () => {
     osc.stop(ctx.currentTime + duration);
   };
 
+  const syncTimer = useCallback(
+    (diff, lvl) => {
+      const nextTime = getLevelTime(diff, lvl);
+      timeRef.current = nextTime;
+      lastTimerBroadcastRef.current = nextTime;
+      setTimeLeft(nextTime);
+    },
+    [setTimeLeft],
+  );
+
+  const alignFrogToStart = useCallback(() => {
+    frogRef.current = { ...initialFrog };
+    frogAnimationRef.current = {
+      start: { ...initialFrog },
+      end: { ...initialFrog },
+      progress: 1,
+    };
+  }, []);
+
   const moveFrog = useCallback((dx, dy) => {
     if (pausedRef.current) return;
     setFrog((prev) => {
       const x = prev.x + dx;
       const y = prev.y + dy;
       if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return prev;
+      const next = { x, y };
+      if (!reduceMotionRef.current) {
+        frogAnimationRef.current = {
+          start: { ...prev },
+          end: next,
+          progress: 0,
+        };
+      } else {
+        frogAnimationRef.current = {
+          start: next,
+          end: next,
+          progress: 1,
+        };
+      }
       vibrate(50);
       if (dy === -1) setScore((s) => s + 10);
       playTone(440, 0.05);
-      return { x, y };
+      return next;
     });
-  }, [setFrog, setScore]);
+  }, [setScore]);
 
   const startHold = useCallback(
     (dx, dy) => {
@@ -285,6 +365,7 @@ const Frogger = () => {
 
   const reset = useCallback(
     (full = false, diff = difficulty, lvl = level) => {
+      alignFrogToStart();
       setFrog(initialFrog);
       const mult = DIFFICULTY_MULTIPLIERS[diff];
       const base = getLevelConfig(lvl);
@@ -292,12 +373,15 @@ const Frogger = () => {
       setCars(lanes.cars.map((l, i) => initLane(l, i + 1)));
       setLogs(lanes.logs.map((l, i) => initLane(l, i + 101)));
       setStatus('');
+      const targetLevel = full ? 1 : lvl;
+      syncTimer(diff, targetLevel);
       if (full) {
         setScore(0);
         setLives(3);
         setPads(PAD_POSITIONS.map(() => false));
         setLevel(1);
-        setSkin(getRandomSkin());
+        setGoals(0);
+        setSkin(getRandomSkin(colorMode));
         nextLife.current = 500;
         deathStreakRef.current = 0;
         ReactGA.event({
@@ -307,7 +391,7 @@ const Frogger = () => {
         });
       }
     },
-    [difficulty, level]
+    [alignFrogToStart, colorMode, difficulty, level, syncTimer]
   );
 
   const loseLife = useCallback(
@@ -345,163 +429,341 @@ const Frogger = () => {
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       const colors = SKINS[skin];
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const widthPx = canvas.width;
+      const heightPx = canvas.height;
+      ctx.clearRect(0, 0, widthPx, heightPx);
       const phase = rippleRef.current;
+      const lightingPhase = lightingRef.current;
+      const sparkle = (Math.sin(lightingPhase) + 1) / 2;
+      const gradientCache = gradientCacheRef.current;
+      const ensureGradient = (key, factory) => {
+        if (!gradientCache[key]) gradientCache[key] = factory();
+        return gradientCache[key];
+      };
+
+      const waterBase = colors.water || '#0f172a';
+      const waterHighlight = colors.waterHighlight || waterBase;
+      const waterShadow = colors.waterShadow || waterBase;
+      const rippleColor = colors.ripple || waterHighlight;
+      const grassBase = colors.grass || '#14532d';
+      const grassHighlight = colors.grassHighlight || grassBase;
+      const padBase = colors.pad || grassHighlight;
+      const padHighlight = colors.padHighlight || grassHighlight;
+      const padShadow = colors.padShadow || grassBase;
+      const laneStripe = colors.laneStripe || '#cbd5f5';
+      const laneEdge = colors.laneEdge || '#0b1120';
+      const roadDark = colors.roadDark || '#111827';
+      const roadLight = colors.roadLight || roadDark;
+      const hudAccent = colors.hudAccent || colors.frog || '#facc15';
+
+      ctx.fillStyle = roadDark;
+      ctx.fillRect(0, 0, widthPx, heightPx);
+      const ambient = ensureGradient('ambient', () => {
+        const grad = ctx.createLinearGradient(0, 0, 0, heightPx);
+        grad.addColorStop(0, withAlpha(waterHighlight, 0.35));
+        grad.addColorStop(1, withAlpha(roadDark, 0.9));
+        return grad;
+      });
+      ctx.fillStyle = ambient;
+      ctx.fillRect(0, 0, widthPx, heightPx);
+
       for (let y = 0; y < HEIGHT; y += 1) {
-        for (let x = 0; x < WIDTH; x += 1) {
-          if (y === 0) {
-            ctx.fillStyle = colors.water;
-            ctx.fillRect(x * CELL, 0, CELL, CELL);
-            const idx = PAD_POSITIONS.indexOf(x);
-            if (idx >= 0) {
-              const padColor = padsRef.current[idx]
-                ? colors.frog
-                : colors.grass;
-              const bob = Math.sin(phase + x) * 2;
-              ctx.fillStyle = padColor;
-              ctx.fillRect(x * CELL, bob, CELL, CELL);
+        const top = y * CELL;
+        if (y === 3 || y === 6) {
+          const gradient = ensureGradient(`grass-${y}`, () => {
+            const grad = ctx.createLinearGradient(0, top, 0, top + CELL);
+            grad.addColorStop(0, grassHighlight);
+            grad.addColorStop(1, grassBase);
+            return grad;
+          });
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, top, widthPx, CELL);
+          ctx.fillStyle = withAlpha(hudAccent, 0.08 + safeFlashRef.current * 0.1);
+          ctx.fillRect(0, top, widthPx, 3);
+          ctx.fillRect(0, top + CELL - 3, widthPx, 3);
+          if (safeFlashRef.current > 0 && Math.floor(phase * 8) % 2 === 0) {
+            ctx.fillStyle = withAlpha(hudAccent, 0.25);
+            ctx.fillRect(0, top, widthPx, CELL);
+          }
+        } else if (y >= 4 && y <= 5) {
+          const gradient = ensureGradient(`road-${y}`, () => {
+            const grad = ctx.createLinearGradient(0, top, 0, top + CELL);
+            grad.addColorStop(0, roadLight);
+            grad.addColorStop(0.6, roadDark);
+            grad.addColorStop(1, laneEdge);
+            return grad;
+          });
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, top, widthPx, CELL);
+          ctx.fillStyle = withAlpha(laneStripe, 0.55 + sparkle * 0.25);
+          ctx.fillRect(0, top + CELL / 2 - 1, widthPx, 2);
+          ctx.fillStyle = withAlpha(laneEdge, 0.35);
+          ctx.fillRect(0, top, widthPx, 2);
+          ctx.fillRect(0, top + CELL - 2, widthPx, 2);
+        } else {
+          const gradient = ensureGradient(`water-${y}`, () => {
+            const grad = ctx.createLinearGradient(0, top, 0, top + CELL);
+            grad.addColorStop(0, waterHighlight);
+            grad.addColorStop(0.5, waterBase);
+            grad.addColorStop(1, waterShadow);
+            return grad;
+          });
+          ctx.fillStyle = gradient;
+          ctx.fillRect(0, top, widthPx, CELL);
+          if (!reduceMotionRef.current) {
+            ctx.save();
+            ctx.globalAlpha = 0.4;
+            ctx.strokeStyle = rippleColor;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let x = 0; x <= WIDTH; x += 1) {
+              const px = x * CELL;
+              const wave = Math.sin(phase * 1.6 + x * 0.9 + y * 0.6) * 3;
+              const py = top + CELL * 0.5 + wave;
+              if (x === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
             }
-          } else if (y === 3 || y === 6) {
-            ctx.fillStyle = colors.grass;
-            ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
-            if (safeFlashRef.current > 0 && Math.floor(phase * 8) % 2 === 0) {
-              ctx.fillStyle = 'rgba(251,191,36,0.5)';
-              ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
-            }
-          } else if (y >= 4 && y <= 5) {
-            ctx.fillStyle = '#374151';
-            ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
-            ctx.fillStyle = '#9ca3af';
-            ctx.fillRect(x * CELL, y * CELL, CELL, 4);
-            ctx.fillStyle = '#111827';
-            ctx.fillRect(x * CELL, y * CELL + CELL - 4, CELL, 4);
+            ctx.stroke();
+            ctx.restore();
           } else {
-            ctx.fillStyle = colors.water;
-            ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+            ctx.fillStyle = withAlpha(rippleColor, 0.2);
+            ctx.fillRect(0, top + CELL * 0.45, widthPx, 2);
           }
         }
       }
-      const rippleColor = '#93c5fd';
-      if (reduceMotionRef.current) {
-        ctx.fillStyle = rippleColor;
-        for (let x = 0; x < WIDTH; x += 1) {
-          ctx.fillRect(x * CELL, CELL, CELL, 4);
-          ctx.fillRect(x * CELL, CELL * 3 - 4, CELL, 4);
+
+      PAD_POSITIONS.forEach((padX, idx) => {
+        const padActive = padsRef.current[idx];
+        const baseX = padX * CELL;
+        const bob = reduceMotionRef.current ? 0 : Math.sin(phase * 1.4 + padX) * 2;
+        ctx.save();
+        ctx.translate(baseX + CELL / 2, CELL / 2 + bob);
+        const padGradient = ctx.createRadialGradient(0, 0, CELL * 0.1, 0, 0, CELL * 0.45);
+        padGradient.addColorStop(0, padActive ? colors.frogLight || colors.frog : padHighlight);
+        padGradient.addColorStop(1, padActive ? colors.frogShadow || colors.frog : padShadow);
+        ctx.fillStyle = padGradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, CELL * 0.45, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = withAlpha(padShadow, 0.4);
+        ctx.beginPath();
+        ctx.arc(0, 0, CELL * 0.38, 0, Math.PI * 2);
+        ctx.stroke();
+        if (padActive) {
+          ctx.fillStyle = withAlpha(hudAccent, 0.6 + sparkle * 0.2);
+          ctx.beginPath();
+          ctx.arc(0, 0, CELL * 0.2, 0, Math.PI * 2);
+          ctx.fill();
         }
-      } else {
-        ctx.fillStyle = rippleColor;
-        for (let x = 0; x < WIDTH; x += 1) {
-          const offset = Math.sin(phase + x) * 2;
-          ctx.fillRect(x * CELL, CELL + offset, CELL, 4);
-          ctx.fillRect(x * CELL, CELL * 3 - 4 + offset, CELL, 4);
-        }
-      }
-      // parallax background for logs
-      logsRef.current.forEach((lane) => {
-        const bgOffset =
-          ((rippleRef.current * lane.speed * lane.dir * 20) % CELL) - CELL;
-        ctx.fillStyle = 'rgba(255,255,255,0.05)';
-        for (let x = bgOffset; x < WIDTH * CELL + CELL; x += CELL) {
-          ctx.fillRect(x, lane.y * CELL, CELL / 8, CELL);
-        }
+        ctx.restore();
       });
-      // parallax background for car lanes
-      carsRef.current.forEach((lane) => {
-        const bgOffset =
-          ((rippleRef.current * lane.speed * lane.dir * 20) % CELL) - CELL;
-        ctx.fillStyle = 'rgba(255,255,255,0.1)';
-        for (let x = bgOffset; x < WIDTH * CELL + CELL; x += CELL) {
-          ctx.fillRect(x, lane.y * CELL, CELL / 4, CELL);
-        }
-      });
-      // draw logs and cars
+
       logsRef.current.forEach((lane) => {
-        ctx.fillStyle = colors.log;
         lane.entities.forEach((e) => {
-          ctx.fillRect(e.x * CELL, lane.y * CELL, lane.length * CELL, CELL);
+          const x = e.x * CELL;
+          const y = lane.y * CELL;
+          const width = lane.length * CELL;
+          const logLight = colors.logLight || colors.log;
+          const logShadow = colors.logShadow || colors.log;
+          const gradient = ctx.createLinearGradient(x, y, x, y + CELL);
+          gradient.addColorStop(0, logLight);
+          gradient.addColorStop(0.7, colors.log);
+          gradient.addColorStop(1, logShadow);
+          ctx.fillStyle = gradient;
+          ctx.fillRect(x, y, width, CELL);
+          ctx.fillStyle = withAlpha(logShadow, 0.35);
+          ctx.fillRect(x, y + CELL * 0.3, width, 2);
+          ctx.fillRect(x, y + CELL * 0.7, width, 2);
+          const reflectionTop = y + CELL;
+          if (reflectionTop < heightPx) {
+            const reflectionGradient = ctx.createLinearGradient(
+              x,
+              reflectionTop,
+              x,
+              reflectionTop + CELL * 0.9,
+            );
+            reflectionGradient.addColorStop(0, withAlpha(logLight, 0.25));
+            reflectionGradient.addColorStop(1, 'rgba(0,0,0,0)');
+            const offset = reduceMotionRef.current
+              ? 0
+              : Math.sin(phase * 1.2 + e.x * 0.8) * 2;
+            ctx.save();
+            ctx.translate(0, offset);
+            ctx.fillStyle = reflectionGradient;
+            ctx.fillRect(x, reflectionTop, width, CELL * 0.9);
+            ctx.restore();
+          }
         });
       });
+
       carsRef.current.forEach((lane) => {
         lane.entities.forEach((e) => {
           const x = e.x * CELL;
           const y = lane.y * CELL;
-          ctx.fillStyle = colors.car;
-          ctx.fillRect(x, y, lane.length * CELL, CELL);
-          ctx.globalAlpha = 0.3;
-          ctx.fillRect(x - lane.dir * 8, y, lane.length * CELL, CELL);
-          ctx.globalAlpha = 1;
+          const width = lane.length * CELL;
+          const carLight = colors.carLight || colors.car;
+          const carShadow = colors.carShadow || colors.car;
+          const gradient = ctx.createLinearGradient(x, y, x, y + CELL);
+          gradient.addColorStop(0, carLight);
+          gradient.addColorStop(0.6, colors.car);
+          gradient.addColorStop(1, carShadow);
+          ctx.fillStyle = gradient;
+          ctx.fillRect(x, y, width, CELL);
+          ctx.fillStyle = withAlpha(colors.carAccent || carLight, 0.35 + sparkle * 0.2);
+          ctx.fillRect(x + 4, y + CELL * 0.25, width - 8, 3);
+          ctx.save();
+          const lightLength = CELL * 0.6;
+          ctx.globalAlpha = 0.3 + sparkle * 0.2;
+          ctx.fillStyle = withAlpha(colors.carAccent || carLight, 1);
+          if (lane.dir === 1) {
+            ctx.fillRect(x + width - 2, y + CELL * 0.35, lightLength, 4);
+          } else {
+            ctx.fillRect(x - lightLength + 2, y + CELL * 0.35, lightLength, 4);
+          }
+          ctx.restore();
         });
       });
+
       splashesRef.current.forEach((sp) => {
         const progress = sp.t / RIPPLE_DURATION;
         const radius = progress * CELL;
-        ctx.strokeStyle = rippleColor;
-        ctx.globalAlpha = 1 - progress;
+        ctx.strokeStyle = withAlpha(rippleColor, 1 - progress);
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(sp.x, sp.y, radius, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.globalAlpha = 1;
       });
-      ctx.fillStyle = colors.frog;
-      ctx.fillRect(frogRef.current.x * CELL, frogRef.current.y * CELL, CELL, CELL);
-      // HUD
+
+      const anim = frogAnimationRef.current;
+      let frogX = frogRef.current.x;
+      let frogY = frogRef.current.y;
+      if (anim.progress < 1) {
+        const t = smoothStep(anim.progress);
+        frogX = anim.start.x + (anim.end.x - anim.start.x) * t;
+        frogY = anim.start.y + (anim.end.y - anim.start.y) * t;
+      }
+      const hopHeight =
+        anim.progress < 1 && !reduceMotionRef.current
+          ? Math.sin(anim.progress * Math.PI) * CELL * 0.35
+          : 0;
+      const frogPixelX = frogX * CELL + CELL / 2;
+      const frogPixelY = frogY * CELL + CELL / 2;
+      const isOnWater = frogY <= 2 || frogY === 7 || frogY === 0;
+      if (!isOnWater) {
+        ctx.save();
+        ctx.globalAlpha = 0.35 * (1 - hopHeight / (CELL * 0.35 || 1));
+        ctx.fillStyle = withAlpha(colors.frogShadow || colors.frog, 1);
+        ctx.beginPath();
+        ctx.ellipse(
+          frogPixelX,
+          frogPixelY + CELL * 0.25,
+          CELL * 0.28,
+          CELL * 0.14,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.save();
+      ctx.translate(frogPixelX, frogPixelY - hopHeight);
+      const tilt = anim.progress < 1 ? (anim.end.x - anim.start.x) * 0.25 : 0;
+      ctx.rotate(tilt);
+      const frogGradient = ctx.createLinearGradient(0, -CELL * 0.35, 0, CELL * 0.35);
+      frogGradient.addColorStop(0, colors.frogLight || colors.frog);
+      frogGradient.addColorStop(1, colors.frogShadow || colors.frog);
+      ctx.fillStyle = frogGradient;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, CELL * 0.32, CELL * 0.3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = colors.frogOutline || withAlpha(colors.frog, 0.8);
+      ctx.beginPath();
+      ctx.arc(-CELL * 0.12, -CELL * 0.12, CELL * 0.1, 0, Math.PI * 2);
+      ctx.arc(CELL * 0.12, -CELL * 0.12, CELL * 0.1, 0, Math.PI * 2);
+      ctx.fill();
       ctx.fillStyle = '#fff';
-      ctx.font = '12px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(`Lives: ${livesRef.current}`, 4, 12);
-      ctx.textAlign = 'right';
-      ctx.fillText(`Level: ${levelRef.current}`, canvas.width - 4, 12);
+      ctx.beginPath();
+      ctx.arc(-CELL * 0.12, -CELL * 0.12, CELL * 0.055, 0, Math.PI * 2);
+      ctx.arc(CELL * 0.12, -CELL * 0.12, CELL * 0.055, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(-CELL * 0.12, -CELL * 0.12, CELL * 0.025, 0, Math.PI * 2);
+      ctx.arc(CELL * 0.12, -CELL * 0.12, CELL * 0.025, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
       if (showHitboxes) {
         ctx.strokeStyle = 'rgba(255,255,255,0.7)';
         logsRef.current.forEach((lane) => {
           lane.entities.forEach((e) => {
-            ctx.strokeRect(
-              e.x * CELL,
-              lane.y * CELL,
-              lane.length * CELL,
-              CELL,
-            );
+            ctx.strokeRect(e.x * CELL, lane.y * CELL, lane.length * CELL, CELL);
           });
         });
         carsRef.current.forEach((lane) => {
           lane.entities.forEach((e) => {
-            ctx.strokeRect(
-              e.x * CELL,
-              lane.y * CELL,
-              lane.length * CELL,
-              CELL,
-            );
+            ctx.strokeRect(e.x * CELL, lane.y * CELL, lane.length * CELL, CELL);
           });
         });
-        ctx.strokeRect(
-          frogRef.current.x * CELL,
-          frogRef.current.y * CELL,
-          CELL,
-          CELL,
-        );
+        ctx.strokeRect(frogRef.current.x * CELL, frogRef.current.y * CELL, CELL, CELL);
       }
+
       if (hitFlashRef.current > 0) {
         ctx.fillStyle = `rgba(255,255,255,${hitFlashRef.current / 0.2})`;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, widthPx, heightPx);
       }
+
       if (pausedRef.current || statusRef.current) {
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(0, 0, widthPx, heightPx);
         ctx.fillStyle = '#fff';
         ctx.font = '20px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(
           pausedRef.current ? 'Paused' : statusRef.current,
-          canvas.width / 2,
-          canvas.height / 2,
+          widthPx / 2,
+          heightPx / 2,
         );
+      }
+
+      if (timeRef.current <= 10 && !pausedRef.current) {
+        const urgency = Math.min(0.45, (10 - timeRef.current) / 20);
+        ctx.fillStyle = withAlpha('#f87171', urgency);
+        ctx.fillRect(0, 0, widthPx, heightPx);
       }
     };
     const loop = (time) => {
       const rawDt = (time - last) / 1000;
       last = time;
       const dt = rawDt * (slowTimeRef.current ? 0.7 : 1);
-      rippleRef.current += dt * 4;
+      const rippleSpeed = reduceMotionRef.current ? 1.6 : 4;
+      rippleRef.current += dt * rippleSpeed;
+      lightingRef.current = (lightingRef.current + dt * 0.6) % (Math.PI * 2);
+      if (frogAnimationRef.current.progress < 1) {
+        const hopDuration = reduceMotionRef.current
+          ? FROG_HOP_DURATION * 0.6
+          : FROG_HOP_DURATION;
+        frogAnimationRef.current.progress = Math.min(
+          1,
+          frogAnimationRef.current.progress + dt / hopDuration,
+        );
+      }
+      if (!pausedRef.current) {
+        const nextTime = Math.max(0, timeRef.current - dt);
+        if (nextTime !== timeRef.current) {
+          timeRef.current = nextTime;
+          if (Math.floor(nextTime) !== Math.floor(lastTimerBroadcastRef.current)) {
+            lastTimerBroadcastRef.current = nextTime;
+            setTimeLeft(nextTime);
+          }
+        }
+        if (nextTime <= 0 && !pendingDeathRef.current && livesRef.current > 0) {
+          hitFlashRef.current = 0.2;
+          pendingDeathRef.current = { ...frogRef.current };
+        }
+      }
       if (safeFlashRef.current > 0) safeFlashRef.current -= dt;
       if (hitFlashRef.current > 0) hitFlashRef.current -= dt;
       splashesRef.current = splashesRef.current
@@ -510,7 +772,7 @@ const Frogger = () => {
       if (pendingDeathRef.current) {
         if (hitFlashRef.current <= 0) {
           loseLife(pendingDeathRef.current);
-          frogRef.current = { ...initialFrog };
+          alignFrogToStart();
           pendingDeathRef.current = null;
         }
         draw();
@@ -532,13 +794,13 @@ const Frogger = () => {
         frogRef.current.x >= WIDTH
       ) {
         loseLife(frogRef.current);
-        frogRef.current = { ...initialFrog };
+        alignFrogToStart();
       } else {
         const padResult = handlePads(frogRef.current, padsRef.current);
         padsRef.current = padResult.pads;
         if (padResult.dead) {
           loseLife(frogRef.current);
-          frogRef.current = { ...initialFrog };
+          alignFrogToStart();
         } else if (padResult.levelComplete) {
           setStatus('Level Complete!');
           setScore((s) => s + 100);
@@ -558,13 +820,13 @@ const Frogger = () => {
           setPads(PAD_POSITIONS.map(() => false));
           reset(false, difficulty, newLevel);
           deathStreakRef.current = 0;
-          frogRef.current = { ...initialFrog };
+          alignFrogToStart();
         } else if (padResult.padHit) {
           setScore((s) => s + 100);
           setPads([...padsRef.current]);
           playTone(660, 0.1);
           deathStreakRef.current = 0;
-          frogRef.current = { ...initialFrog };
+          alignFrogToStart();
         }
       }
       setFrog({ ...frogRef.current });
@@ -575,7 +837,7 @@ const Frogger = () => {
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [difficulty, level, loseLife, reset, skin, showHitboxes]);
+  }, [alignFrogToStart, difficulty, level, loseLife, reset, skin, showHitboxes]);
 
   useEffect(() => {
     if (score >= nextLife.current) {
@@ -598,99 +860,224 @@ const Frogger = () => {
     null,
   ];
 
+  const activeColors = SKINS[skin];
+  const hudBg = activeColors.hudBg || 'rgba(15,23,42,0.85)';
+  const hudText = activeColors.hudText || '#e2e8f0';
+  const accentColor = activeColors.hudAccent || '#38bdf8';
+  const labelColor = 'rgba(226,232,240,0.75)';
+  const timerMax = getLevelTime(difficulty, level);
+  const liveTime = timeRef.current;
+  const timerSeconds = Math.max(0, Math.ceil(timeLeft));
+  const timerColor = timerSeconds <= 10 ? '#fca5a5' : hudText;
+  const timerProgress = timerMax ? Math.max(0, Math.min(1, liveTime / timerMax)) : 0;
+  const availableSkinList =
+    SKIN_GROUPS[colorMode] && SKIN_GROUPS[colorMode].length
+      ? SKIN_GROUPS[colorMode]
+      : Object.keys(SKINS);
+  const displayDifficulty = `${difficulty.charAt(0).toUpperCase()}${difficulty.slice(1)}`;
+  const displaySkin = `${skin.charAt(0).toUpperCase()}${skin.slice(1)}`;
+  const buttonClasses =
+    'px-3 py-1.5 rounded-lg border border-slate-600/60 bg-slate-800/70 text-sm font-medium shadow hover:bg-slate-700/70 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-300 focus:ring-offset-slate-900 transition-colors';
+  const selectClasses =
+    'px-3 py-1.5 rounded-lg border border-slate-600/60 bg-slate-900/70 text-sm shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-300 focus:ring-offset-slate-900';
+
+  const primaryStats = [
+    { label: 'Lives', value: lives, color: hudText },
+    {
+      label: 'Goals',
+      value: `${goals}/${PAD_POSITIONS.length}`,
+      color: goals === PAD_POSITIONS.length ? accentColor : hudText,
+    },
+    { label: 'Timer', value: `${timerSeconds}s`, color: timerColor, progress: timerProgress },
+    { label: 'Level', value: level, color: hudText },
+  ];
+  const secondaryStats = [
+    { label: 'Score', value: score, color: hudText },
+    { label: 'High Score', value: highScore, color: hudText },
+    { label: 'Difficulty', value: displayDifficulty, color: accentColor },
+    { label: 'Skin', value: displaySkin, color: accentColor },
+  ];
+
   return (
-    <div
-      id="frogger-container"
-      className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4"
-    >
-      <canvas
-        ref={canvasRef}
-        width={WIDTH * CELL}
-        height={HEIGHT * CELL}
-        className="border border-gray-700"
-      />
-      <div className="mt-4" aria-live="polite">
-        Score: {score} High: {highScore} Lives: {lives} Level: {level}
-      </div>
-      <div className="mt-1" role="status" aria-live="polite">
-        {status}
-      </div>
-      <div className="mt-2 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setPaused((p) => !p)}
-          className="px-2 py-1 bg-gray-700 rounded"
+    <div id="frogger-container" className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
+      <div className="mx-auto flex h-full w-full max-w-4xl flex-col items-center gap-5 px-4 py-6">
+        <div className="w-full">
+          <div className="relative overflow-hidden rounded-2xl border border-slate-700/70 bg-black/50 shadow-2xl">
+            <canvas
+              ref={canvasRef}
+              width={WIDTH * CELL}
+              height={HEIGHT * CELL}
+              className="block h-full w-full"
+              role="img"
+              aria-label="Frogger playfield"
+              style={{ width: '100%', height: 'auto' }}
+            />
+            <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/40" />
+          </div>
+        </div>
+
+        <div className="w-full space-y-3 text-sm">
+          <div
+            className="grid grid-cols-2 gap-3 sm:grid-cols-4 rounded-2xl border border-slate-700/60 p-3 shadow-lg backdrop-blur"
+            style={{ background: hudBg }}
+          >
+            {primaryStats.map((stat) => (
+              <div
+                key={stat.label}
+                className="rounded-lg border border-slate-600/40 bg-black/30 px-3 py-2 text-center shadow-sm"
+              >
+                <p className="text-[0.65rem] uppercase tracking-wide" style={{ color: labelColor }}>
+                  {stat.label}
+                </p>
+                <p className="text-lg font-semibold" style={{ color: stat.color }}>
+                  {stat.value}
+                </p>
+                {stat.label === 'Timer' && (
+                  <div className="mt-1 h-1.5 w-full rounded-full bg-slate-700/60" aria-hidden="true">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        background: accentColor,
+                        width: `${Math.max(5, Math.min(100, stat.progress * 100))}%`,
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div
+            className="grid grid-cols-2 gap-3 sm:grid-cols-4 rounded-2xl border border-slate-700/60 p-3 shadow-lg backdrop-blur"
+            style={{ background: hudBg }}
+          >
+            {secondaryStats.map((stat) => (
+              <div
+                key={stat.label}
+                className="rounded-lg border border-slate-600/40 bg-black/30 px-3 py-2 text-center shadow-sm"
+              >
+                <p className="text-[0.65rem] uppercase tracking-wide" style={{ color: labelColor }}>
+                  {stat.label}
+                </p>
+                <p className="text-lg font-semibold" style={{ color: stat.color }}>
+                  {stat.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div
+          className="w-full rounded-2xl border border-slate-700/60 p-4 shadow-lg backdrop-blur"
+          style={{ background: hudBg, color: hudText }}
         >
-          {paused ? 'Resume' : 'Pause'}
-        </button>
-        <button
-          type="button"
-          onClick={() => setSound((s) => !s)}
-          className="px-2 py-1 bg-gray-700 rounded"
-        >
-          Sound: {sound ? 'On' : 'Off'}
-        </button>
-        <button
-          type="button"
-          onClick={() => setSlowTime((s) => !s)}
-          className="px-2 py-1 bg-gray-700 rounded"
-        >
-          Time: {slowTime ? 'Slow' : 'Normal'}
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowHitboxes((h) => !h)}
-          className="px-2 py-1 bg-gray-700 rounded"
-        >
-          Hitboxes: {showHitboxes ? 'On' : 'Off'}
-        </button>
-        <label htmlFor="difficulty">Difficulty:</label>
-        <select
-          id="difficulty"
-          className="bg-gray-700"
-          value={difficulty}
-          onChange={(e) => {
-            const diff = e.target.value;
-            setDifficulty(diff);
-            reset(true, diff);
-          }}
-        >
-          <option value="easy">Easy</option>
-          <option value="normal">Normal</option>
-          <option value="hard">Hard</option>
-        </select>
-        <label htmlFor="skin">Skin:</label>
-        <select
-          id="skin"
-          className="bg-gray-700"
-          value={skin}
-          onChange={(e) => setSkin(e.target.value)}
-        >
-          {Object.keys(SKINS).map((s) => (
-            <option key={s} value={s}>
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="grid grid-cols-3 gap-1 mt-4 sm:hidden">
-        {mobileControls.map((c, i) =>
-          c ? (
-            <button
-              key={i}
-              className="w-12 h-12 bg-gray-700 opacity-50 flex items-center justify-center"
-              onTouchStart={() => startHold(c.dx, c.dy)}
-              onTouchEnd={endHold}
-              onMouseDown={() => startHold(c.dx, c.dy)}
-              onMouseUp={endHold}
-              onMouseLeave={endHold}
-            >
-              {c.label}
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button type="button" onClick={() => setPaused((p) => !p)} className={buttonClasses}>
+              {paused ? 'Resume' : 'Pause'}
             </button>
-          ) : (
-            <div key={i} className="w-12 h-12" />
-          ),
-        )}
+            <button type="button" onClick={() => setSound((s) => !s)} className={buttonClasses}>
+              Sound: {sound ? 'On' : 'Off'}
+            </button>
+            <button type="button" onClick={() => setSlowTime((s) => !s)} className={buttonClasses}>
+              Time: {slowTime ? 'Slow' : 'Normal'}
+            </button>
+            <button type="button" onClick={() => setShowHitboxes((h) => !h)} className={buttonClasses}>
+              Hitboxes: {showHitboxes ? 'On' : 'Off'}
+            </button>
+            <label
+              htmlFor="frogger-difficulty"
+              className="flex flex-col text-left text-xs uppercase tracking-wide"
+              style={{ color: labelColor }}
+            >
+              <span>Difficulty</span>
+              <select
+                id="frogger-difficulty"
+                className={`${selectClasses} mt-1`}
+                style={{ color: hudText }}
+                value={difficulty}
+                onChange={(e) => {
+                  const diff = e.target.value;
+                  setDifficulty(diff);
+                  reset(true, diff);
+                }}
+              >
+                <option value="easy">Easy</option>
+                <option value="normal">Normal</option>
+                <option value="hard">Hard</option>
+              </select>
+            </label>
+            <label
+              htmlFor="frogger-color-mode"
+              className="flex flex-col text-left text-xs uppercase tracking-wide"
+              style={{ color: labelColor }}
+            >
+              <span>Palette Mode</span>
+              <select
+                id="frogger-color-mode"
+                className={`${selectClasses} mt-1`}
+                style={{ color: hudText }}
+                value={colorMode}
+                onChange={(e) => {
+                  const mode = e.target.value;
+                  setColorMode(mode);
+                }}
+              >
+                <option value="vibrant">Vibrant</option>
+                <option value="accessible">Accessible</option>
+              </select>
+            </label>
+            <label
+              htmlFor="frogger-skin"
+              className="flex flex-col text-left text-xs uppercase tracking-wide"
+              style={{ color: labelColor }}
+            >
+              <span>Palette</span>
+              <select
+                id="frogger-skin"
+                className={`${selectClasses} mt-1`}
+                style={{ color: hudText }}
+                value={skin}
+                onChange={(e) => setSkin(e.target.value)}
+              >
+                {availableSkinList.map((s) => (
+                  <option key={s} value={s}>
+                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div
+          className="w-full rounded-2xl border border-slate-700/60 px-4 py-3 text-center text-sm shadow-lg backdrop-blur"
+          role="status"
+          aria-live="polite"
+          style={{ background: hudBg, color: hudText }}
+        >
+          {status || 'Hop across the river and claim each glowing pad!'}
+        </div>
+
+        <div className="grid w-full grid-cols-3 gap-2 sm:hidden">
+          {mobileControls.map((c, i) =>
+            c ? (
+              <button
+                key={i}
+                className="flex h-14 w-14 items-center justify-center rounded-xl border border-slate-700/60 bg-slate-800/70 text-lg font-semibold shadow focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2 focus:ring-offset-slate-900"
+                style={{ color: hudText }}
+                onTouchStart={() => startHold(c.dx, c.dy)}
+                onTouchEnd={endHold}
+                onMouseDown={() => startHold(c.dx, c.dy)}
+                onMouseUp={endHold}
+                onMouseLeave={endHold}
+              >
+                {c.label}
+              </button>
+            ) : (
+              <div key={i} className="h-14 w-14" />
+            ),
+          )}
+        </div>
       </div>
     </div>
   );
