@@ -942,18 +942,39 @@ export class Window extends Component {
             this.setWinowsPosition();
             // translate window to maximize position
             const { height: viewportHeight, top: viewportTop } = getViewportMetrics();
-            const topOffset = measureWindowTopOffset();
+            const measuredTopOffset = measureWindowTopOffset();
             const snapBottomInset = measureSnapBottomInset();
+            const safeAreaBottom = Math.max(0, measureSafeAreaInset('bottom'));
+            let containerTopOffset = measuredTopOffset;
+            let translateBase = viewportTop + DESKTOP_TOP_PADDING;
+            const offsetParent = node && node.offsetParent && typeof node.offsetParent.getBoundingClientRect === 'function'
+                ? node.offsetParent
+                : null;
+            const parentRect = offsetParent?.getBoundingClientRect();
+            if (parentRect) {
+                const parentTopOffset = Math.max(parentRect.top - viewportTop, 0);
+                containerTopOffset = Math.max(containerTopOffset, parentTopOffset);
+                translateBase = parentRect.top;
+            }
             const availableHeight = Math.max(
                 0,
-                viewportHeight - topOffset - snapBottomInset - Math.max(0, measureSafeAreaInset('bottom')),
+                viewportHeight - containerTopOffset - snapBottomInset - safeAreaBottom,
             );
             const heightPercent = percentOf(availableHeight, viewportHeight);
             const preBounds = this.getCurrentBounds();
             if (node) {
                 this.setTransformMotionPreset(node, 'maximize');
-                const translateYOffset = viewportTop + topOffset - DESKTOP_TOP_PADDING;
-                node.style.transform = `translate(-1pt, ${translateYOffset}px)`;
+                const translateYOffset = Math.max(0, (viewportTop + containerTopOffset) - translateBase);
+                const transformValue = `translate(-1pt, ${translateYOffset}px)`;
+                node.style.transform = transformValue;
+                const { style } = node;
+                if (style && typeof style.setProperty === 'function') {
+                    style.setProperty('--window-transform-x', '-1pt');
+                    style.setProperty('--window-transform-y', `${translateYOffset}px`);
+                } else if (style) {
+                    style['--window-transform-x'] = '-1pt';
+                    style['--window-transform-y'] = `${translateYOffset}px`;
+                }
             }
             this.setState({ maximized: true, height: heightPercent, width: 100.2, preMaximizeBounds: preBounds }, () => {
                 this.notifySizeChange();
