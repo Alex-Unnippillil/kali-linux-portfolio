@@ -480,6 +480,67 @@ describe('Window snapping finalize and release', () => {
     expect(winEl.style.transform).toBe(`translate(${window.innerWidth / 2}px, ${rightSnapTop}px)`);
   });
 
+  it('aligns snapped window with offset parent inset', () => {
+    setViewport(1920, 1080);
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    const offsetParentRect = {
+      left: 0,
+      top: DESKTOP_TOP_PADDING,
+      right: window.innerWidth,
+      bottom: window.innerHeight,
+      width: window.innerWidth,
+      height: window.innerHeight,
+      x: 0,
+      y: DESKTOP_TOP_PADDING,
+      toJSON: () => ({}),
+    };
+    const offsetParent = {
+      getBoundingClientRect: jest.fn(() => offsetParentRect),
+    } as any;
+    Object.defineProperty(winEl, 'offsetParent', {
+      configurable: true,
+      value: offsetParent,
+    });
+
+    winEl.getBoundingClientRect = () => ({
+      left: window.innerWidth - 100,
+      top: DESKTOP_TOP_PADDING + 180,
+      right: window.innerWidth,
+      bottom: DESKTOP_TOP_PADDING + 280,
+      width: 100,
+      height: 100,
+      x: window.innerWidth - 100,
+      y: DESKTOP_TOP_PADDING + 180,
+      toJSON: () => ({}),
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(ref.current!.state.snapped).toBe('right');
+    expect(winEl.style.transform).toBe(`translate(${window.innerWidth / 2}px, 0px)`);
+
+    delete (winEl as any).offsetParent;
+  });
+
   it('snaps window on drag stop near top edge', () => {
     setViewport(1366, 768);
     const ref = React.createRef<any>();

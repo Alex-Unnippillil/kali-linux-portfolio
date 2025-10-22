@@ -5,6 +5,7 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import {
+    clampWindowPositionWithinViewport,
     clampWindowTopPosition,
     DEFAULT_WINDOW_TOP_OFFSET,
     measureSafeAreaInset,
@@ -703,18 +704,77 @@ export class Window extends Component {
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         if (!viewportWidth || !viewportHeight) return;
         const snapBottomInset = measureSnapBottomInset();
+        const safeAreaBottom = Math.max(0, measureSafeAreaInset('bottom'));
         const regions = computeSnapRegions(viewportWidth, viewportHeight, viewportLeft, viewportTop, topInset, snapBottomInset);
         const region = regions[resolvedPosition];
         if (!region) return;
         const previousWidth = Math.max(this.state.width, this.state.minWidth);
         const previousHeight = Math.max(this.state.height, this.state.minHeight);
         const node = this.getWindowNode();
+        const clampedPosition = clampWindowPositionWithinViewport(
+            { x: region.left, y: region.top },
+            { width: region.width, height: region.height },
+            {
+                viewportWidth,
+                viewportHeight,
+                viewportLeft,
+                viewportTop,
+                topOffset: topInset,
+                bottomInset: safeAreaBottom,
+                snapBottomInset,
+            },
+        ) || { x: region.left, y: region.top };
+
+        let translateX = clampedPosition.x;
+        let translateY = clampedPosition.y;
+        let containerWidth = viewportWidth;
+        let containerHeight = viewportHeight;
+        let parentRect = null;
+
+        if (node) {
+            const offsetParent = node.offsetParent;
+            if (offsetParent && typeof offsetParent.getBoundingClientRect === 'function') {
+                parentRect = offsetParent.getBoundingClientRect();
+            }
+        }
+
+        const parentLeft = parentRect && Number.isFinite(parentRect.left) ? parentRect.left : 0;
+        const parentTop = parentRect && Number.isFinite(parentRect.top) ? parentRect.top : 0;
+        const parentWidth = parentRect && Number.isFinite(parentRect.width) && parentRect.width > 0
+            ? parentRect.width
+            : null;
+        const parentHeight = parentRect && Number.isFinite(parentRect.height) && parentRect.height > 0
+            ? parentRect.height
+            : null;
+
+        translateX -= parentLeft;
+        translateY -= parentTop;
+
+        if (parentWidth) {
+            containerWidth = parentWidth;
+        }
+        if (parentHeight) {
+            containerHeight = parentHeight;
+        }
+
+        const minTranslateX = viewportLeft - parentLeft;
+        const maxTranslateX = minTranslateX + Math.max(viewportWidth - region.width, 0);
+        const minTranslateY = viewportTop + topInset - parentTop;
+        const availableVertical = Math.max(viewportHeight - topInset - snapBottomInset - safeAreaBottom, 0);
+        const maxTranslateY = minTranslateY + Math.max(availableVertical - region.height, 0);
+
+        translateX = clamp(translateX, minTranslateX, maxTranslateX);
+        translateY = clamp(translateY, minTranslateY, maxTranslateY);
+
         if (node) {
             this.setTransformMotionPreset(node, 'snap');
-            node.style.transform = `translate(${region.left}px, ${region.top}px)`;
+            node.style.transform = `translate(${translateX}px, ${translateY}px)`;
         }
-        const snappedWidthPercent = Math.max(percentOf(region.width, viewportWidth), this.state.minWidth);
-        const snappedHeightPercent = Math.max(percentOf(region.height, viewportHeight), this.state.minHeight);
+
+        const widthBase = containerWidth || viewportWidth || region.width || 1;
+        const heightBase = containerHeight || viewportHeight || region.height || 1;
+        const snappedWidthPercent = Math.max(percentOf(region.width, widthBase), this.state.minWidth);
+        const snappedHeightPercent = Math.max(percentOf(region.height, heightBase), this.state.minHeight);
         this.setState({
             snapPreview: null,
             snapPosition: null,
