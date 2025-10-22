@@ -747,6 +747,53 @@ describe('Window maximize behavior', () => {
     const winEl = document.getElementById('test-window') as HTMLElement | null;
     expect(winEl?.style.transform).toBe(`translate(-1pt, ${safeTop - DESKTOP_TOP_PADDING}px)`);
   });
+
+  it('keeps maximized windows within the desktop padding when navbar height is under-reported', () => {
+    measureWindowTopOffsetMock.mockReturnValue(DESKTOP_TOP_PADDING - 12);
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const winEl = document.getElementById('test-window') as HTMLElement | null;
+    expect(winEl).not.toBeNull();
+    const offsetParent = document.createElement('div');
+    Object.defineProperty(offsetParent, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({
+        top: DESKTOP_TOP_PADDING,
+        left: 0,
+        bottom: DESKTOP_TOP_PADDING + 720,
+        right: 1280,
+        width: 1280,
+        height: 720,
+      }),
+    });
+    if (winEl) {
+      Object.defineProperty(winEl, 'offsetParent', {
+        configurable: true,
+        get: () => offsetParent,
+      });
+    }
+
+    const maximizeButton = screen.getByRole('button', { name: /window maximize/i });
+    fireEvent.click(maximizeButton);
+
+    expect(winEl?.style.transform).toBe('translate(-1pt, 0px)');
+
+    if (winEl) {
+      delete (winEl as any).offsetParent;
+    }
+    measureWindowTopOffsetMock.mockReturnValue(DESKTOP_TOP_PADDING);
+  });
 });
 
 describe('Window keyboard dragging', () => {
