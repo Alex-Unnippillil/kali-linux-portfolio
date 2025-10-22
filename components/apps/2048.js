@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState, useRef } from 'react';
+import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import useOPFS from '../../hooks/useOPFS.js';
 import GameLayout, { useInputRecorder } from './GameLayout';
@@ -11,6 +11,7 @@ import {
   deserialize as deserializeRng,
 } from '../../apps/games/rng';
 import { useSettings } from '../../hooks/useSettings';
+import GameShell from '../games/GameShell';
 
 // Basic 2048 game logic with tile merging mechanics.
 
@@ -145,45 +146,45 @@ const hasMoves = (board) => {
 };
 
 const tileColors = {
-  2: 'bg-gray-300 text-gray-800',
-  4: 'bg-gray-400 text-gray-800',
-  8: 'bg-yellow-400 text-white',
-  16: 'bg-yellow-500 text-white',
-  32: 'bg-orange-500 text-white',
-  64: 'bg-orange-600 text-white',
-  128: 'bg-red-500 text-white',
-  256: 'bg-red-600 text-white',
-  512: 'bg-red-700 text-white',
-  1024: 'bg-green-500 text-white',
-  2048: 'bg-green-600 text-white',
+  2: 'bg-gradient-to-br from-amber-100 via-amber-200 to-amber-300 text-slate-900',
+  4: 'bg-gradient-to-br from-amber-200 via-amber-300 to-amber-400 text-slate-900',
+  8: 'bg-gradient-to-br from-orange-300 via-orange-400 to-orange-500 text-white',
+  16: 'bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600 text-white',
+  32: 'bg-gradient-to-br from-rose-400 via-rose-500 to-rose-600 text-white',
+  64: 'bg-gradient-to-br from-rose-500 via-rose-600 to-rose-700 text-white',
+  128: 'bg-gradient-to-br from-amber-300 via-amber-400 to-amber-500 text-slate-900',
+  256: 'bg-gradient-to-br from-lime-300 via-lime-400 to-lime-500 text-slate-900',
+  512: 'bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 text-white',
+  1024: 'bg-gradient-to-br from-teal-500 via-teal-600 to-teal-700 text-white',
+  2048: 'bg-gradient-to-br from-cyan-500 via-blue-500 to-indigo-600 text-white',
 };
 
 const colorBlindColors = {
-  2: 'bg-blue-300 text-gray-800',
-  4: 'bg-blue-400 text-gray-800',
-  8: 'bg-blue-500 text-white',
-  16: 'bg-indigo-500 text-white',
-  32: 'bg-purple-500 text-white',
-  64: 'bg-pink-500 text-white',
-  128: 'bg-green-500 text-white',
-  256: 'bg-green-600 text-white',
-  512: 'bg-green-700 text-white',
-  1024: 'bg-yellow-500 text-white',
-  2048: 'bg-yellow-600 text-white',
+  2: 'bg-gradient-to-br from-sky-200 via-sky-300 to-sky-400 text-slate-900',
+  4: 'bg-gradient-to-br from-sky-300 via-sky-400 to-sky-500 text-slate-900',
+  8: 'bg-gradient-to-br from-indigo-300 via-indigo-400 to-indigo-500 text-white',
+  16: 'bg-gradient-to-br from-indigo-400 via-indigo-500 to-indigo-600 text-white',
+  32: 'bg-gradient-to-br from-violet-400 via-violet-500 to-violet-600 text-white',
+  64: 'bg-gradient-to-br from-purple-500 via-purple-600 to-purple-700 text-white',
+  128: 'bg-gradient-to-br from-green-300 via-green-400 to-green-500 text-slate-900',
+  256: 'bg-gradient-to-br from-green-400 via-green-500 to-green-600 text-white',
+  512: 'bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700 text-white',
+  1024: 'bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 text-slate-900',
+  2048: 'bg-gradient-to-br from-yellow-500 via-amber-500 to-orange-500 text-slate-900',
 };
 
 const neonColors = {
-  2: 'bg-pink-500 text-white',
-  4: 'bg-fuchsia-500 text-white',
-  8: 'bg-purple-500 text-white',
-  16: 'bg-indigo-500 text-white',
-  32: 'bg-blue-500 text-white',
-  64: 'bg-cyan-500 text-white',
-  128: 'bg-teal-500 text-white',
-  256: 'bg-lime-500 text-white',
-  512: 'bg-yellow-500 text-white',
-  1024: 'bg-orange-500 text-white',
-  2048: 'bg-red-500 text-white',
+  2: 'bg-gradient-to-br from-pink-400 via-pink-500 to-pink-600 text-white',
+  4: 'bg-gradient-to-br from-fuchsia-400 via-fuchsia-500 to-fuchsia-600 text-white',
+  8: 'bg-gradient-to-br from-purple-500 via-purple-600 to-purple-700 text-white',
+  16: 'bg-gradient-to-br from-indigo-500 via-indigo-600 to-indigo-700 text-white',
+  32: 'bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 text-white',
+  64: 'bg-gradient-to-br from-cyan-500 via-cyan-600 to-cyan-700 text-white',
+  128: 'bg-gradient-to-br from-teal-500 via-teal-600 to-teal-700 text-white',
+  256: 'bg-gradient-to-br from-lime-400 via-lime-500 to-lime-600 text-slate-900',
+  512: 'bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 text-slate-900',
+  1024: 'bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700 text-white',
+  2048: 'bg-gradient-to-br from-rose-500 via-rose-600 to-red-600 text-white',
 };
 
 const SKINS = {
@@ -191,6 +192,20 @@ const SKINS = {
   colorblind: colorBlindColors,
   neon: neonColors,
 };
+
+const MILESTONES = [256, 512, 1024, 2048, 4096];
+
+const validateHistory = (value) =>
+  Array.isArray(value) &&
+  value.every(
+    (entry) =>
+      entry &&
+      typeof entry === 'object' &&
+      typeof entry.score === 'number' &&
+      typeof entry.bestTile === 'number' &&
+      typeof entry.moves === 'number' &&
+      typeof entry.date === 'string',
+  );
 
 const tileSymbols = {
   2: '●',
@@ -229,6 +244,16 @@ const Game2048 = () => {
     0,
     (v) => typeof v === 'number',
   );
+  const [highScore, setHighScore] = usePersistentState(
+    '2048-best-score',
+    0,
+    (v) => typeof v === 'number',
+  );
+  const [scoreHistory, setScoreHistory] = usePersistentState(
+    '2048-history',
+    [],
+    validateHistory,
+  );
   const [scorePop, setScorePop] = useState(false);
   const [combo, setCombo] = useState(0);
   const [hint, setHint] = useState(null);
@@ -238,10 +263,36 @@ const Game2048 = () => {
   const [bestMap, setBestMap, bestReady] = useOPFS('2048-best.json', {});
   const [best, setBest] = useState(0);
   const [undosLeft, setUndosLeft] = useState(UNDO_LIMIT);
+  const [glowCells, setGlowCells] = useState(new Set());
+  const [milestoneValue, setMilestoneValue] = useState(0);
+  const [paused, setPaused] = useState(false);
   const moveLock = useRef(false);
   const workerRef = useRef(null);
   const { highContrast } = useSettings();
   const { record, registerReplay } = useInputRecorder();
+  const outcomeLoggedRef = useRef(false);
+  const triggerConfetti = useCallback((options = {}) => {
+    if (typeof window === 'undefined') return;
+    import('canvas-confetti')
+      .then((m) => {
+        try {
+          m.default({
+            particleCount: 120,
+            spread: 70,
+            disableForReducedMotion: true,
+            origin: { y: 0.8 },
+            ...options,
+          });
+        } catch {
+          /* ignore animation errors */
+        }
+      })
+      .catch(() => {
+        /* ignore load errors */
+      });
+  }, []);
+
+  const highestTile = useMemo(() => Math.max(...board.flat()), [board]);
 
   useEffect(() => {
     if (animCells.size > 0) {
@@ -283,6 +334,19 @@ const Game2048 = () => {
   }, [scorePop]);
 
   useEffect(() => {
+    if (glowCells.size > 0) {
+      let frame;
+      const t = setTimeout(() => {
+        frame = requestAnimationFrame(() => setGlowCells(new Set()));
+      }, 900);
+      return () => {
+        clearTimeout(t);
+        frame && cancelAnimationFrame(frame);
+      };
+    }
+  }, [glowCells]);
+
+  useEffect(() => {
     if (moveLock.current && animCells.size === 0 && mergeCells.size === 0) {
       moveLock.current = false;
     }
@@ -316,6 +380,11 @@ const Game2048 = () => {
       setScore(0);
       setUndosLeft(UNDO_LIMIT);
       setBest(bestMap[today] || 0);
+      setGlowCells(new Set());
+      setMilestoneValue(0);
+      setCombo(0);
+      setPaused(false);
+      outcomeLoggedRef.current = false;
     } else {
       resetRng(seed);
       setBest(bestMap[seed] || 0);
@@ -331,18 +400,40 @@ const Game2048 = () => {
   }, [board, coach]);
 
   useEffect(() => {
-    const hi = Math.max(...board.flat());
-    if (hi > best) {
-      setBest(hi);
+    if (highestTile > best) {
+      setBest(highestTile);
       if (bestReady && seed) {
-        setBestMap({ ...bestMap, [seed]: hi });
+        setBestMap({ ...bestMap, [seed]: highestTile });
       }
     }
-  }, [board, best, seed, bestReady, bestMap, setBestMap]);
+  }, [highestTile, best, seed, bestReady, bestMap, setBestMap]);
+
+  useEffect(() => {
+    if (!won && !lost) {
+      outcomeLoggedRef.current = false;
+    }
+  }, [won, lost]);
+
+  useEffect(() => {
+    if ((won || lost) && !outcomeLoggedRef.current) {
+      outcomeLoggedRef.current = true;
+      const entry = {
+        score,
+        bestTile: highestTile,
+        moves,
+        date: new Date().toISOString(),
+      };
+      setScoreHistory((prev) =>
+        [...prev, entry]
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 5),
+      );
+    }
+  }, [won, lost, score, highestTile, moves, setScoreHistory]);
 
   const handleDirection = useCallback(
     ({ x, y }) => {
-      if (won || lost || moveLock.current) return;
+      if (won || lost || moveLock.current || paused) return;
       record({ x, y });
       let result;
       if (x === -1) result = moveLeft(board);
@@ -362,8 +453,13 @@ const Game2048 = () => {
         setAnimCells(new Set(added));
         setMergeCells(new Set(mergedCells));
         if (gained > 0) {
-          setScore((s) => s + gained);
+          const newScore = score + gained;
+          setScore(newScore);
           setScorePop(true);
+          if (newScore > highScore) {
+            setHighScore(newScore);
+            triggerConfetti({ particleCount: 160, spread: 75, origin: { y: 0.7 } });
+          }
         }
         setBoard(cloneBoard(moved));
         setMoves((m) => m + 1);
@@ -374,18 +470,20 @@ const Game2048 = () => {
             setBestMap({ ...bestMap, [seed]: hi });
           }
         }
+        if (MILESTONES.includes(hi) && hi > milestoneValue) {
+          const highlight = new Set();
+          moved.forEach((row, r) =>
+            row.forEach((val, c) => {
+              if (val === hi) highlight.add(`${r}-${c}`);
+            }),
+          );
+          setGlowCells(highlight);
+          setMilestoneValue(hi);
+        }
         if (merged) vibrate(50);
         if (mergedCells.length > 1) {
           setCombo((c) => c + 1);
-          if (typeof window !== 'undefined') {
-            import('canvas-confetti').then((m) => {
-              try {
-                m.default({ particleCount: 80, spread: 60 });
-              } catch {
-                /* ignore */
-              }
-            });
-          }
+          triggerConfetti({ particleCount: 90, spread: 65, origin: { y: 0.75 } });
         } else {
           setCombo(0);
         }
@@ -398,12 +496,15 @@ const Game2048 = () => {
       won,
       lost,
       hardMode,
+      paused,
       score,
       moves,
       setBoard,
       setLost,
       setWon,
       setScore,
+      highScore,
+      setHighScore,
       best,
       setBest,
       bestReady,
@@ -411,6 +512,10 @@ const Game2048 = () => {
       bestMap,
       setBestMap,
       record,
+      milestoneValue,
+      setGlowCells,
+      setMilestoneValue,
+      triggerConfetti,
     ],
   );
 
@@ -423,7 +528,7 @@ const Game2048 = () => {
   }, []);
 
   useEffect(() => {
-    if (!demo || !hint) return;
+    if (!demo || !hint || paused) return;
     const dirMap = {
       ArrowLeft: { x: -1, y: 0 },
       ArrowRight: { x: 1, y: 0 },
@@ -438,7 +543,7 @@ const Game2048 = () => {
       handleDirection(dirMap[hint]);
     }, 400);
     return () => clearTimeout(id);
-  }, [demo, hint, handleDirection]);
+  }, [demo, hint, handleDirection, paused]);
 
   useEffect(() => {
     const esc = (e) => {
@@ -461,6 +566,11 @@ const Game2048 = () => {
     setMergeCells(new Set());
     setScore(0);
     setUndosLeft(UNDO_LIMIT);
+    setGlowCells(new Set());
+    setMilestoneValue(0);
+    setCombo(0);
+    setPaused(false);
+    outcomeLoggedRef.current = false;
   }, [
     hardMode,
     seed,
@@ -474,6 +584,10 @@ const Game2048 = () => {
     setMergeCells,
     setScore,
     setUndosLeft,
+    setGlowCells,
+    setMilestoneValue,
+    setCombo,
+    setPaused,
   ]);
 
   useEffect(() => {
@@ -482,10 +596,6 @@ const Game2048 = () => {
       handleDirection(dir);
     });
   }, [registerReplay, handleDirection, reset]);
-
-  const close = () => {
-    document.getElementById('close-2048')?.click();
-  };
 
   const undo = useCallback(() => {
     if (!history.length || undosLeft === 0) return;
@@ -500,6 +610,10 @@ const Game2048 = () => {
     setMergeCells(new Set());
     setHistory((h) => h.slice(0, -1));
     setUndosLeft((u) => u - 1);
+    setGlowCells(new Set());
+    setMilestoneValue((value) => Math.min(value, Math.max(...prev.board.flat())));
+    setCombo(0);
+    setPaused(false);
   }, [
     history,
     undosLeft,
@@ -512,6 +626,10 @@ const Game2048 = () => {
     setMergeCells,
     setHistory,
     setUndosLeft,
+    setGlowCells,
+    setMilestoneValue,
+    setCombo,
+    setPaused,
   ]);
 
   useEffect(() => {
@@ -529,145 +647,272 @@ const Game2048 = () => {
     return () => window.removeEventListener('keydown', handler);
   }, [undo, reset]);
 
+  const sortedHistory = useMemo(
+    () => [...scoreHistory].sort((a, b) => b.score - a.score),
+    [scoreHistory],
+  );
+  const hintLabel = hint ? hint.replace('Arrow', '') : '—';
+  const milestoneDisplay = milestoneValue >= 256 ? milestoneValue : '—';
+  const statusMessage = useMemo(() => {
+    if (won) return '2048 achieved! Continue playing or start a new run.';
+    if (lost) return 'No more moves left. Reset to chase a new high score.';
+    if (paused) return 'Game paused.';
+    if (demo) return 'Autoplay demo is exploring moves.';
+    return 'Combine matching tiles to climb the power ladder.';
+  }, [won, lost, paused, demo]);
+  const colors = SKINS[skin] || tileColors;
+  const tileBaseClasses =
+    'relative flex aspect-square w-full items-center justify-center rounded-xl border border-white/5 text-2xl font-bold shadow-[0_18px_35px_rgba(15,23,42,0.55)] transition-transform duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform backdrop-blur-sm';
+  const infoCardClass =
+    'rounded-2xl border border-white/5 bg-slate-900/60 p-4 shadow-[0_35px_60px_rgba(2,6,23,0.45)] backdrop-blur';
+  const boardContainerClass =
+    'relative aspect-square w-full max-w-[min(90vw,28rem)] overflow-hidden rounded-3xl border border-white/5 bg-slate-950/80 p-4 shadow-[0_40px_80px_rgba(2,6,23,0.6)] backdrop-blur';
+  const instructionsCopy =
+    'Use arrow keys, swipe gestures, or a connected gamepad to slide tiles. Press U to undo and R to reset.';
+
+  const controls = (
+    <div className="flex w-full flex-wrap items-center gap-2 rounded-2xl border border-white/5 bg-slate-900/60 p-3 text-sm text-slate-100 shadow-[0_25px_50px_rgba(2,6,23,0.55)] backdrop-blur">
+      <button
+        type="button"
+        onClick={reset}
+        aria-label="Reset game"
+        className="rounded-xl bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 px-4 py-2 font-semibold text-slate-100 shadow-[0_12px_24px_rgba(15,23,42,0.45)] transition hover:from-slate-600 hover:to-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+      >
+        Reset
+      </button>
+      <button
+        type="button"
+        onClick={undo}
+        aria-label="Undo last move"
+        disabled={history.length === 0 || undosLeft === 0}
+        className="rounded-xl bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 px-4 py-2 font-semibold text-slate-100 shadow-[0_12px_24px_rgba(15,23,42,0.45)] transition hover:from-slate-600 hover:to-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        Undo ({undosLeft})
+      </button>
+      <button
+        type="button"
+        onClick={() => setDemo((d) => !d)}
+        aria-label={demo ? 'Stop autoplay demo' : 'Start autoplay demo'}
+        className={`rounded-xl px-4 py-2 font-semibold shadow-[0_12px_24px_rgba(15,23,42,0.45)] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+          demo
+            ? 'bg-gradient-to-br from-cyan-500 via-cyan-600 to-sky-600 text-slate-900'
+            : 'bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 text-slate-100 hover:from-slate-600 hover:to-slate-800'
+        }`}
+      >
+        {demo ? 'Stop demo' : 'Play demo'}
+      </button>
+      <div className="flex items-center gap-2 rounded-xl border border-white/5 bg-slate-800/60 px-3 py-1 text-xs uppercase tracking-wide text-slate-300 md:ml-auto">
+        <span>Hint</span>
+        <span className="text-base font-semibold text-slate-100">{hintLabel}</span>
+      </div>
+    </div>
+  );
+
+  const settingsPanel = (
+    <div className="flex flex-col gap-3 text-sm text-slate-100">
+      <label className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-slate-900/60 px-3 py-2">
+        <span>
+          <span className="block font-semibold">Hard mode</span>
+          <span className="text-xs text-slate-400">Adds an extra tile after every move.</span>
+        </span>
+        <input
+          type="checkbox"
+          checked={hardMode}
+          onChange={() => setHardMode(!hardMode)}
+          aria-label="Toggle hard mode"
+          className="h-4 w-4 accent-cyan-400"
+        />
+      </label>
+      <label className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-slate-900/60 px-3 py-2">
+        <span>
+          <span className="block font-semibold">Coach overlay</span>
+          <span className="text-xs text-slate-400">Shows heuristic scores for each direction.</span>
+        </span>
+        <input
+          type="checkbox"
+          checked={coach}
+          onChange={() => setCoach(!coach)}
+          aria-label="Toggle coach overlay"
+          className="h-4 w-4 accent-cyan-400"
+        />
+      </label>
+      <label className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-slate-900/60 px-3 py-2">
+        <span className="font-semibold">Skin</span>
+        <select
+          value={skin}
+          onChange={(e) => setSkin(e.target.value)}
+          className="rounded-lg border border-white/10 bg-slate-800/80 px-2 py-1 text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+        >
+          {Object.keys(SKINS).map((k) => (
+            <option key={k} value={k}>
+              {k}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+
   return (
-    <GameLayout gameId="2048" score={score} highScore={best}>
-      <>
-        <div className="mb-2 flex flex-wrap gap-2 items-center">
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={reset}
-          >
-            Reset
-          </button>
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50"
-            onClick={undo}
-            disabled={history.length === 0 || undosLeft === 0}
-          >
-            Undo ({undosLeft})
-          </button>
-          <label className="flex items-center space-x-1 px-2">
-            <input
-              type="checkbox"
-              checked={hardMode}
-              onChange={() => setHardMode(!hardMode)}
-            />
-            <span>Hard</span>
-          </label>
-          <label className="flex items-center space-x-1 px-2">
-            <input
-              type="checkbox"
-              checked={coach}
-              onChange={() => setCoach(!coach)}
-            />
-            <span>Coach</span>
-          </label>
-          <label className="flex items-center space-x-1 px-2">
-            <span>Skin</span>
-            <select
-              className="text-black px-1 rounded"
-              value={skin}
-              onChange={(e) => setSkin(e.target.value)}
+    <GameLayout gameId="2048" score={score} highScore={highScore}>
+      <GameShell
+        game="2048"
+        controls={controls}
+        settings={settingsPanel}
+        onPause={() => setPaused(true)}
+        onResume={() => setPaused(false)}
+      >
+        <div className="flex flex-col gap-4 text-slate-100">
+          <div className={`${infoCardClass} space-y-4`} aria-live="polite" aria-atomic="true">
+            <div className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Score</p>
+                <p className={`text-2xl font-bold text-white ${scorePop ? 'score-pop' : ''}`}>
+                  {score.toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">High score</p>
+                <p className="text-2xl font-bold text-cyan-200">{highScore.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Best tile</p>
+                <p className="text-2xl font-bold text-emerald-300">{highestTile}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Milestone</p>
+                <p className="text-2xl font-bold text-amber-300">{milestoneDisplay}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Moves</p>
+                <p className="text-xl font-semibold">{moves}</p>
+              </div>
+              <div data-testid="combo-meter">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Combo</p>
+                <p className="text-xl font-semibold">{combo}</p>
+              </div>
+              <div data-testid="hint-display">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Hint</p>
+                <p className="text-xl font-semibold">{hintLabel}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Undos left</p>
+                <p className="text-xl font-semibold">{undosLeft}</p>
+              </div>
+            </div>
+            <p className="text-xs uppercase tracking-wide text-slate-500">Daily record: tile {best}</p>
+            <p
+              className={`text-sm font-medium ${
+                won
+                  ? 'text-emerald-300'
+                  : lost
+                  ? 'text-rose-300'
+                  : paused
+                  ? 'text-amber-300'
+                  : 'text-slate-200'
+              }`}
             >
-              {Object.keys(SKINS).map((k) => (
-                <option key={k} value={k}>
-                  {k}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={() => setDemo((d) => !d)}
-          >
-            {demo ? 'Stop' : 'Demo'}
-          </button>
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={close}
-          >
-            Close
-          </button>
-          <div
-            className="px-4 py-2 bg-gray-700 rounded ml-auto"
-            aria-live="polite" aria-atomic="true"
-          >
-            Score: <span className={scorePop ? 'score-pop' : ''}>{score}</span>
+              {statusMessage}
+            </p>
           </div>
-          <div className="px-4 py-2 bg-gray-700 rounded">Best: {best}</div>
-          <div className="px-4 py-2 bg-gray-700 rounded">Moves: {moves}</div>
-          <div className="px-4 py-2 bg-gray-700 rounded" data-testid="combo-meter">
-            Combo: {combo}
-          </div>
-          <div className="px-4 py-2 bg-gray-700 rounded" data-testid="hint-display">
-            Hint: {hint ? hint.replace('Arrow', '') : ''}
-          </div>
-        </div>
-        <div className="relative inline-block">
-          <div
-            className="grid grid-cols-4 gap-2"
-            data-combo={combo}
-            style={{ filter: combo ? `hue-rotate(${combo * 45}deg)` : undefined }}
-          >
-            {board.map((row, rIdx) =>
-              row.map((cell, cIdx) => {
-                const key = `${rIdx}-${cIdx}`;
-                const colors = SKINS[skin] || tileColors;
-                return (
-                  <div
-                    key={key}
-                    className={`relative overflow-hidden h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
-                      cell ? colors[cell] || 'bg-gray-700' : 'bg-gray-800'
-                    } ${animCells.has(key) ? 'tile-pop' : ''}`}
-                  >
-                    {highContrast && cell !== 0 && (
-                      <span
-                        aria-hidden="true"
-                        className="absolute inset-0 flex items-center justify-center text-4xl text-white opacity-50 mix-blend-difference pointer-events-none"
-                      >
-                        {tileSymbols[cell] || ''}
-                      </span>
-                    )}
-                    <span className="relative z-10">{cell !== 0 ? cell : ''}</span>
-                    {mergeCells.has(key) && <span className="merge-ripple" />}
+          <div className="flex flex-col items-center gap-4">
+            <div className={boardContainerClass}>
+              <div
+                className="grid h-full w-full grid-cols-4 auto-rows-fr gap-2 sm:gap-3"
+                role="grid"
+                aria-label="2048 board"
+              >
+                {board.map((row, rIdx) =>
+                  row.map((cell, cIdx) => {
+                    const key = `${rIdx}-${cIdx}`;
+                    const classes = `${tileBaseClasses} ${
+                      cell
+                        ? colors[cell] || 'bg-slate-700/80 text-slate-100'
+                        : 'bg-slate-900/40 text-transparent shadow-inner border border-slate-800/60'
+                    } ${animCells.has(key) ? 'tile-pop' : ''} ${
+                      mergeCells.has(key) ? 'tile-merge' : ''
+                    } ${glowCells.has(key) ? 'tile-glow' : ''}`;
+                    return (
+                      <div key={key} className="relative">
+                        <div
+                          role="gridcell"
+                          aria-label={
+                            cell
+                              ? `Tile ${cell}`
+                              : `Empty tile row ${rIdx + 1} column ${cIdx + 1}`
+                          }
+                          className={classes}
+                          data-value={cell}
+                        >
+                          {highContrast && cell !== 0 && (
+                            <span
+                              aria-hidden="true"
+                              className="pointer-events-none absolute inset-0 flex items-center justify-center text-4xl text-white/60 mix-blend-plus-lighter"
+                            >
+                              {tileSymbols[cell] || ''}
+                            </span>
+                          )}
+                          <span className="relative z-10">{cell || ''}</span>
+                          {mergeCells.has(key) && <span className="merge-ripple" />}
+                        </div>
+                      </div>
+                    );
+                  }),
+                )}
+              </div>
+              {coach && moveScores && (
+                <div className="pointer-events-none absolute inset-0">
+                  <div className="absolute left-1/2 top-3 -translate-x-1/2 text-xs font-semibold text-cyan-200">
+                    ↑ {moveScores.ArrowUp !== undefined ? Math.round(moveScores.ArrowUp) : ''}
                   </div>
-                );
-              })
-            )}
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs font-semibold text-cyan-200">
+                    ↓ {moveScores.ArrowDown !== undefined ? Math.round(moveScores.ArrowDown) : ''}
+                  </div>
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-cyan-200">
+                    ← {moveScores.ArrowLeft !== undefined ? Math.round(moveScores.ArrowLeft) : ''}
+                  </div>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-cyan-200">
+                    → {moveScores.ArrowRight !== undefined ? Math.round(moveScores.ArrowRight) : ''}
+                  </div>
+                </div>
+              )}
+              {(won || lost) && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-3xl bg-slate-950/80 text-2xl font-semibold text-white">
+                  {won ? 'You reached 2048!' : 'Game over'}
+                </div>
+              )}
+            </div>
+            <div className="text-xs text-slate-300 sm:text-sm">{instructionsCopy}</div>
           </div>
-          {coach && moveScores && (
-            <>
-              <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-sm">
-                ↑{' '}
-                {moveScores.ArrowUp !== undefined
-                  ? Math.round(moveScores.ArrowUp)
-                  : ''}
-              </div>
-              <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-sm">
-                ↓{' '}
-                {moveScores.ArrowDown !== undefined
-                  ? Math.round(moveScores.ArrowDown)
-                  : ''}
-              </div>
-              <div className="absolute top-1/2 -left-6 -translate-y-1/2 text-sm">
-                ←{' '}
-                {moveScores.ArrowLeft !== undefined
-                  ? Math.round(moveScores.ArrowLeft)
-                  : ''}
-              </div>
-              <div className="absolute top-1/2 -right-6 -translate-y-1/2 text-sm">
-                →{' '}
-                {moveScores.ArrowRight !== undefined
-                  ? Math.round(moveScores.ArrowRight)
-                  : ''}
-              </div>
-            </>
+          {sortedHistory.length > 0 && (
+            <div className={infoCardClass}>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                High score ledger
+              </h3>
+              <ol className="mt-3 space-y-2 text-sm text-slate-200">
+                {sortedHistory.map((entry, index) => (
+                  <li
+                    key={`${entry.date}-${index}`}
+                    className="flex items-center justify-between gap-3 rounded-xl bg-slate-900/40 px-3 py-2"
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-800/80 text-xs font-semibold text-slate-300">
+                        {index + 1}
+                      </span>
+                      <span>
+                        {new Date(entry.date).toLocaleDateString()} · Tile {entry.bestTile}
+                      </span>
+                    </span>
+                    <span className="font-semibold text-slate-100">
+                      {entry.score.toLocaleString()}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
           )}
         </div>
-        {(won || lost) && (
-          <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
-        )}
-      </>
+      </GameShell>
     </GameLayout>
   );
 };
