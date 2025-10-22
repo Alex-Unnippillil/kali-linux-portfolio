@@ -7,6 +7,7 @@ import {
   applyMove,
   countPieces,
   getBookMove,
+  bestMove,
 } from './reversiLogic';
 
 const DIFFICULTIES = {
@@ -15,11 +16,29 @@ const DIFFICULTIES = {
   hard: { depth: 4, weights: { mobility: 5, corners: 25, edges: 10 } },
 };
 
-const BOARD_SIZE = 400;
-const CELL = BOARD_SIZE / SIZE;
+const DEFAULT_BOARD_SIZE = 420;
+const MIN_BOARD_SIZE = 240;
+const MAX_BOARD_SIZE = 520;
+
+const BOARD_THEME = {
+  boardStart: '#1a463b',
+  boardMid: '#236457',
+  boardEnd: '#2f7d67',
+  ambientHighlight: 'rgba(255, 255, 255, 0.15)',
+  ambientShadow: 'rgba(0, 0, 0, 0.45)',
+  gridLight: 'rgba(255,255,255,0.35)',
+  gridDark: 'rgba(0,0,0,0.5)',
+  legalGlow: 'rgba(255, 240, 200, 0.45)',
+  legalCore: 'rgba(255, 255, 255, 0.75)',
+  hintGlow: 'rgba(120, 190, 255, 0.6)',
+  hintCore: 'rgba(210, 240, 255, 0.95)',
+  lastMove: 'rgba(255, 215, 0, 0.55)',
+};
 
 const Reversi = () => {
   const canvasRef = useRef(null);
+  const containerRef = useRef(null);
+  const boardSizeRef = useRef(DEFAULT_BOARD_SIZE);
   const boardRef = useRef(createBoard());
   const legalRef = useRef({});
   const playerRef = useRef('B');
@@ -31,8 +50,13 @@ const Reversi = () => {
   const reduceMotionRef = useRef(false);
   const flippingRef = useRef([]);
   const previewRef = useRef(null);
+  const lastMoveRef = useRef(null);
+  const hintRef = useRef(null);
+  const focusedCellRef = useRef({ r: 3, c: 3 });
+  const boardFocusRef = useRef(false);
 
   const [board, setBoard] = useState(() => createBoard());
+  const [boardSize, setBoardSize] = useState(DEFAULT_BOARD_SIZE);
   const [player, setPlayer] = useState('B');
   const [paused, setPaused] = useState(false);
   const [sound, setSound] = useState(true);
@@ -47,8 +71,32 @@ const Reversi = () => {
   const [diskTheme, setDiskTheme] = useState('dark');
   const [aiProgress, setAiProgress] = useState(null);
   const [isAiThinking, setIsAiThinking] = useState(false);
+  const [focusedCell, setFocusedCell] = useState({ r: 3, c: 3 });
+  const [isBoardFocused, setIsBoardFocused] = useState(false);
+  const [hintMove, setHintMove] = useState(null);
+  const [lastMove, setLastMove] = useState(null);
   const themeRef = useRef('dark');
   const bookEnabled = React.useMemo(() => useBook, [useBook]);
+
+  useEffect(() => {
+    boardSizeRef.current = boardSize;
+  }, [boardSize]);
+
+  useEffect(() => {
+    lastMoveRef.current = lastMove;
+  }, [lastMove]);
+
+  useEffect(() => {
+    hintRef.current = hintMove;
+  }, [hintMove]);
+
+  useEffect(() => {
+    focusedCellRef.current = focusedCell;
+  }, [focusedCell]);
+
+  useEffect(() => {
+    boardFocusRef.current = isBoardFocused;
+  }, [isBoardFocused]);
 
   // keep refs in sync
   useEffect(() => { boardRef.current = board; }, [board]);
@@ -87,15 +135,46 @@ const Reversi = () => {
           const prev = boardRef.current.map((row) => row.slice());
           const next = applyMove(prev, r, c, 'W', flips);
           queueFlips(r, c, 'W', prev);
-          setHistory((h) => [...h, { board: prev, player: 'W' }]);
+          setHistory((h) => [
+            ...h,
+            { board: prev, player: 'W', move: { r, c }, flips },
+          ]);
           setBoard(next);
           playSound();
           setPlayer('B');
+          setLastMove({ r, c, player: 'W' });
         };
       }
     }
     return () => workerRef.current?.terminate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const el = containerRef.current;
+    if (!el) return;
+    const updateSize = () => {
+      const rect = el.getBoundingClientRect();
+      if (!rect.width) return;
+      const newSize = Math.min(
+        Math.max(rect.width - 16, MIN_BOARD_SIZE),
+        MAX_BOARD_SIZE,
+      );
+      setBoardSize(newSize);
+    };
+    updateSize();
+    let observer;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(updateSize);
+      observer.observe(el);
+    } else {
+      window.addEventListener('resize', updateSize);
+    }
+    return () => {
+      if (observer) observer.disconnect();
+      else window.removeEventListener('resize', updateSize);
+    };
   }, []);
 
   // load wins from storage
@@ -150,7 +229,7 @@ const Reversi = () => {
           from: prevBoard[sr][sc],
           to: player,
           start: start + idx * 80,
-          duration: 300,
+          duration: 360,
         });
       });
     });
@@ -162,42 +241,121 @@ const Reversi = () => {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const draw = () => {
-      ctx.clearRect(0, 0, BOARD_SIZE, BOARD_SIZE);
-      ctx.fillStyle = '#0a7e07';
-      ctx.fillRect(0, 0, BOARD_SIZE, BOARD_SIZE);
-      ctx.strokeStyle = '#000';
+      const size = boardSizeRef.current;
+      const cellSize = size / SIZE;
+      const currentLastMove = lastMoveRef.current;
+      const currentHint = hintRef.current;
+      const focused = focusedCellRef.current;
+      const boardFocused = boardFocusRef.current;
+      ctx.clearRect(0, 0, size, size);
+
+      const boardGradient = ctx.createLinearGradient(0, 0, size, size);
+      boardGradient.addColorStop(0, BOARD_THEME.boardStart);
+      boardGradient.addColorStop(0.45, BOARD_THEME.boardMid);
+      boardGradient.addColorStop(1, BOARD_THEME.boardEnd);
+      ctx.fillStyle = boardGradient;
+      ctx.fillRect(0, 0, size, size);
+
+      const ambient = ctx.createRadialGradient(
+        size * 0.2,
+        size * 0.2,
+        size * 0.1,
+        size * 0.5,
+        size * 0.5,
+        size * 0.8,
+      );
+      ambient.addColorStop(0, BOARD_THEME.ambientHighlight);
+      ambient.addColorStop(1, BOARD_THEME.ambientShadow);
+      ctx.fillStyle = ambient;
+      ctx.fillRect(0, 0, size, size);
+
+      ctx.lineWidth = 2;
       for (let i = 0; i <= SIZE; i += 1) {
+        const offset = i * cellSize;
+        const horizontal = ctx.createLinearGradient(0, offset, size, offset);
+        horizontal.addColorStop(0, BOARD_THEME.gridDark);
+        horizontal.addColorStop(0.5, BOARD_THEME.gridLight);
+        horizontal.addColorStop(1, BOARD_THEME.gridDark);
+        ctx.strokeStyle = horizontal;
         ctx.beginPath();
-        ctx.moveTo(0, i * CELL);
-        ctx.lineTo(BOARD_SIZE, i * CELL);
-        ctx.moveTo(i * CELL, 0);
-        ctx.lineTo(i * CELL, BOARD_SIZE);
+        ctx.moveTo(0, offset);
+        ctx.lineTo(size, offset);
+        ctx.stroke();
+
+        const vertical = ctx.createLinearGradient(offset, 0, offset, size);
+        vertical.addColorStop(0, BOARD_THEME.gridDark);
+        vertical.addColorStop(0.5, BOARD_THEME.gridLight);
+        vertical.addColorStop(1, BOARD_THEME.gridDark);
+        ctx.strokeStyle = vertical;
+        ctx.beginPath();
+        ctx.moveTo(offset, 0);
+        ctx.lineTo(offset, size);
         ctx.stroke();
       }
+
+      ctx.lineWidth = 4;
+      const frame = ctx.createLinearGradient(0, 0, size, size);
+      frame.addColorStop(0, 'rgba(0,0,0,0.6)');
+      frame.addColorStop(0.5, 'rgba(255,255,255,0.2)');
+      frame.addColorStop(1, 'rgba(0,0,0,0.6)');
+      ctx.strokeStyle = frame;
+      ctx.strokeRect(2, 2, size - 4, size - 4);
+
       const b = boardRef.current;
       const now = performance.now();
       const colors = themeRef.current === 'dark'
-        ? { B: '#000', W: '#fff' }
-        : { B: '#333', W: '#ddd' };
-      const drawDisk = (x, y, color, scaleY = 1) => {
+        ? { B: '#1b263b', W: '#f8fafc' }
+        : { B: '#2f3e46', W: '#e0fbfc' };
+      const drawDisk = (x, y, color, options = {}) => {
+        const { scaleY = 1, tilt = 0, highlight = false } = options;
         ctx.save();
         ctx.translate(x, y);
         ctx.scale(1, scaleY);
+        ctx.translate(0, tilt);
+        const radius = cellSize / 2 - 6;
+        const gradient = ctx.createRadialGradient(0, -radius * 0.4, radius * 0.2, 0, 0, radius);
+        gradient.addColorStop(0, highlight ? '#ffffff' : '#f1f5f9');
+        gradient.addColorStop(0.4, color);
+        gradient.addColorStop(1, '#0f172a');
         ctx.beginPath();
-        ctx.shadowColor = 'rgba(0,0,0,0.5)';
-        ctx.shadowBlur = 4;
-        ctx.shadowOffsetY = 2;
-        ctx.arc(0, 0, CELL / 2 - 4, 0, Math.PI * 2);
-        ctx.fillStyle = color;
+        ctx.shadowColor = 'rgba(0,0,0,0.6)';
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetY = 4;
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
         ctx.fill();
+        ctx.lineWidth = 1.6;
+        ctx.strokeStyle = themeRef.current === 'dark' ? '#0f172a' : '#1e293b';
+        ctx.stroke();
         ctx.restore();
       };
       for (let r = 0; r < SIZE; r += 1) {
         for (let c = 0; c < SIZE; c += 1) {
           const cell = b[r][c];
           const anim = flippingRef.current.find((a) => a.key === `${r}-${c}`);
-          const x = c * CELL + CELL / 2;
-          const y = r * CELL + CELL / 2;
+          const x = c * cellSize + cellSize / 2;
+          const y = r * cellSize + cellSize / 2;
+          if (currentLastMove && currentLastMove.r === r && currentLastMove.c === c) {
+            ctx.save();
+            const lastGlow = ctx.createRadialGradient(
+              x,
+              y,
+              cellSize * 0.1,
+              x,
+              y,
+              cellSize * 0.6,
+            );
+            lastGlow.addColorStop(0, BOARD_THEME.lastMove);
+            lastGlow.addColorStop(1, 'rgba(255, 215, 0, 0)');
+            ctx.fillStyle = lastGlow;
+            ctx.fillRect(
+              c * cellSize,
+              r * cellSize,
+              cellSize,
+              cellSize,
+            );
+            ctx.restore();
+          }
           if (anim) {
             const t = (now - anim.start) / anim.duration;
             if (t <= 0) {
@@ -207,8 +365,20 @@ const Reversi = () => {
               if (idx !== -1) flippingRef.current.splice(idx, 1);
               drawDisk(x, y, colors[anim.to]);
             } else {
-              const scale = Math.abs(1 - 2 * t);
-              drawDisk(x, y, t < 0.5 ? colors[anim.from] : colors[anim.to], scale);
+              const angle = Math.min(Math.max(t, 0), 1) * Math.PI;
+              const perspective = Math.max(Math.abs(Math.cos(angle)), 0.08);
+              const isSecondHalf = t >= 0.5;
+              const tilt = Math.sin(angle) * (cellSize * 0.08);
+              drawDisk(
+                x,
+                y,
+                isSecondHalf ? colors[anim.to] : colors[anim.from],
+                {
+                  scaleY: perspective,
+                  tilt,
+                  highlight: isSecondHalf,
+                },
+              );
             }
             continue;
           }
@@ -219,29 +389,69 @@ const Reversi = () => {
       }
       if (!pausedRef.current && previewRef.current) {
         const { r, c, flips } = previewRef.current;
-        const x = c * CELL + CELL / 2;
-        const y = r * CELL + CELL / 2;
+        const x = c * cellSize + cellSize / 2;
+        const y = r * cellSize + cellSize / 2;
         ctx.save();
-        ctx.globalAlpha = 0.5;
+        ctx.globalAlpha = 0.65;
         drawDisk(x, y, playerRef.current === 'B' ? colors.B : colors.W);
         ctx.restore();
-        ctx.strokeStyle = '#ffff00';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+        ctx.lineWidth = 1.5;
         flips.forEach(([fr, fc]) => {
           ctx.beginPath();
-          ctx.arc(fc * CELL + CELL / 2, fr * CELL + CELL / 2, CELL / 2 - 4, 0, Math.PI * 2);
+          ctx.arc(
+            fc * cellSize + cellSize / 2,
+            fr * cellSize + cellSize / 2,
+            cellSize / 2 - 6,
+            0,
+            Math.PI * 2,
+          );
           ctx.stroke();
         });
       }
-      if (!pausedRef.current) {
+      if (!pausedRef.current && playerRef.current === 'B') {
         ctx.save();
-        ctx.globalAlpha = 0.4;
-        ctx.fillStyle = playerRef.current === 'B' ? colors.B : colors.W;
         Object.keys(legalRef.current).forEach((key) => {
           const [r, c] = key.split('-').map(Number);
-          ctx.beginPath();
-          ctx.arc(c * CELL + CELL / 2, r * CELL + CELL / 2, 4, 0, Math.PI * 2);
-          ctx.fill();
+          const cx = c * cellSize + cellSize / 2;
+          const cy = r * cellSize + cellSize / 2;
+          const gradient = ctx.createRadialGradient(
+            cx,
+            cy,
+            cellSize * 0.1,
+            cx,
+            cy,
+            cellSize * 0.45,
+          );
+          const isHint = currentHint && currentHint.r === r && currentHint.c === c;
+          gradient.addColorStop(0, isHint ? BOARD_THEME.hintCore : BOARD_THEME.legalCore);
+          gradient.addColorStop(1, isHint ? BOARD_THEME.hintGlow : BOARD_THEME.legalGlow);
+          ctx.fillStyle = gradient;
+          ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+        });
+        if (focused && boardFocused) {
+          const { r, c } = focused;
+          const focusPadding = 3;
+          ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+          ctx.lineWidth = 2.5;
+          ctx.strokeRect(
+            c * cellSize + focusPadding,
+            r * cellSize + focusPadding,
+            cellSize - focusPadding * 2,
+            cellSize - focusPadding * 2,
+          );
+        }
+        Object.keys(legalRef.current).forEach((key) => {
+          const [r, c] = key.split('-').map(Number);
+          if (currentHint && currentHint.r === r && currentHint.c === c) {
+            const cx = c * cellSize + cellSize / 2;
+            const cy = r * cellSize + cellSize / 2;
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(120, 190, 255, 0.9)';
+            ctx.lineWidth = 2;
+            ctx.arc(cx, cy, cellSize / 2 - 10, 0, Math.PI * 2);
+            ctx.stroke();
+          }
         });
         ctx.restore();
       }
@@ -304,10 +514,14 @@ const Reversi = () => {
           const prev = boardRef.current.map((row) => row.slice());
           const next = applyMove(prev, r, c, 'W', flips);
           queueFlips(r, c, 'W', prev);
-          setHistory((h) => [...h, { board: prev, player: 'W' }]);
+          setHistory((h) => [
+            ...h,
+            { board: prev, player: 'W', move: { r, c }, flips },
+          ]);
           setBoard(next);
           playSound();
           setPlayer('B');
+          setLastMove({ r, c, player: 'W' });
         }
       } else {
         aiThinkingRef.current = true;
@@ -328,14 +542,8 @@ const Reversi = () => {
     }
   }, [board, player, paused, difficulty, playSound, bookEnabled]);
 
-  const handleClick = (e) => {
+  const tryMove = useCallback((r, c) => {
     if (paused || player !== 'B') return;
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const r = Math.floor(y / CELL);
-    const c = Math.floor(x / CELL);
     const key = `${r}-${c}`;
     const flips = legalRef.current[key];
     if (!flips) return;
@@ -343,10 +551,29 @@ const Reversi = () => {
     const prev = boardRef.current.map((row) => row.slice());
     const next = applyMove(prev, r, c, 'B', flips);
     queueFlips(r, c, 'B', prev);
-    setHistory((h) => [...h, { board: prev, player: 'B' }]);
+    setHistory((h) => [
+      ...h,
+      { board: prev, player: 'B', move: { r, c }, flips },
+    ]);
     setBoard(next);
     playSound();
     setPlayer('W');
+    setLastMove({ r, c, player: 'B' });
+    setHintMove(null);
+  }, [paused, player, playSound]);
+
+  const handleClick = (e) => {
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const size = boardSizeRef.current;
+    const cellSize = size / SIZE;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const r = Math.floor(y / cellSize);
+    const c = Math.floor(x / cellSize);
+    if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) return;
+    setFocusedCell({ r, c });
+    tryMove(r, c);
   };
 
   const handleMouseMove = (e) => {
@@ -356,13 +583,20 @@ const Reversi = () => {
     }
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
+    const size = boardSizeRef.current;
+    const cellSize = size / SIZE;
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const r = Math.floor(y / CELL);
-    const c = Math.floor(x / CELL);
+    const r = Math.floor(y / cellSize);
+    const c = Math.floor(x / cellSize);
+    if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) {
+      previewRef.current = null;
+      return;
+    }
     const key = `${r}-${c}`;
     const flips = legalRef.current[key];
     previewRef.current = flips ? { r, c, flips } : null;
+    setFocusedCell({ r, c });
   };
 
   const handleMouseLeave = () => {
@@ -379,6 +613,9 @@ const Reversi = () => {
     setAiProgress(null);
     setIsAiThinking(false);
     aiThinkingRef.current = false;
+    setHintMove(null);
+    setLastMove(null);
+    setFocusedCell({ r: 3, c: 3 });
   };
 
   const undo = useCallback(() => {
@@ -393,6 +630,11 @@ const Reversi = () => {
     aiThinkingRef.current = false;
     setIsAiThinking(false);
     setAiProgress(null);
+    setLastMove(null);
+    setHintMove(null);
+    if (last.move) {
+      setFocusedCell({ r: last.move.r, c: last.move.c });
+    }
   }, [history]);
 
   useEffect(() => {
@@ -406,108 +648,295 @@ const Reversi = () => {
     return () => window.removeEventListener('keydown', handler);
   }, [undo]);
 
+  useEffect(() => {
+    setHintMove(null);
+  }, [player, board]);
+
+  const requestHint = useCallback(() => {
+    if (player !== 'B' || paused) return;
+    const { weights } = DIFFICULTIES[difficulty] || DIFFICULTIES.medium;
+    const hint = bestMove(boardRef.current, 'B', 3, weights) || null;
+    if (hint) {
+      const [r, c] = hint;
+      const flips = legalRef.current[`${r}-${c}`];
+      setHintMove({ r, c, flips: flips || [] });
+      setFocusedCell({ r, c });
+    } else {
+      setHintMove(null);
+    }
+  }, [difficulty, paused, player]);
+
+  const handleKeyDown = (e) => {
+    if (paused) return;
+    const { key } = e;
+    if (!focusedCell) return;
+    const moveFocus = (dr, dc) => {
+      e.preventDefault();
+      setFocusedCell((prev) => {
+        const nextR = (prev.r + dr + SIZE) % SIZE;
+        const nextC = (prev.c + dc + SIZE) % SIZE;
+        const keyPos = `${nextR}-${nextC}`;
+        if (player === 'B' && legalRef.current[keyPos]) {
+          previewRef.current = {
+            r: nextR,
+            c: nextC,
+            flips: legalRef.current[keyPos],
+          };
+        } else {
+          previewRef.current = null;
+        }
+        return { r: nextR, c: nextC };
+      });
+    };
+    if (key === 'ArrowUp') {
+      moveFocus(-1, 0);
+      return;
+    }
+    if (key === 'ArrowDown') {
+      moveFocus(1, 0);
+      return;
+    }
+    if (key === 'ArrowLeft') {
+      moveFocus(0, -1);
+      return;
+    }
+    if (key === 'ArrowRight') {
+      moveFocus(0, 1);
+      return;
+    }
+    if (key === 'Enter' || key === ' ') {
+      e.preventDefault();
+      tryMove(focusedCell.r, focusedCell.c);
+      return;
+    }
+    if (key === 'h' || key === 'H') {
+      e.preventDefault();
+      requestHint();
+    }
+  };
+
+  const formatMove = (entry, index) => {
+    if (!entry.move) return `Move ${index + 1}`;
+    const { r, c } = entry.move;
+    const col = String.fromCharCode(65 + c);
+    const row = r + 1;
+    return `${index + 1}. ${entry.player === 'B' ? 'You' : 'AI'} → ${col}${row}`;
+  };
+
+  const totalPieces = score.black + score.white || 1;
+  const playerRatio = (score.black / totalPieces) * 100;
+
+  const instructionsId = 'reversi-instructions';
+
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
-      <div className="relative">
-        <canvas
-          ref={canvasRef}
-          width={BOARD_SIZE}
-          height={BOARD_SIZE}
-          onClick={handleClick}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-          className="bg-green-700"
-          aria-label="Reversi board"
-        />
-        <div className="absolute top-1 left-1 flex items-center space-x-1 text-sm">
-          <div
-            className={`w-4 h-4 rounded-full ${diskTheme === 'dark' ? 'bg-black' : 'bg-gray-700'} shadow`}
-          />
-          <span>{score.black}</span>
-        </div>
-        <div className="absolute top-1 right-1 flex items-center space-x-1 text-sm">
-          <div
-            className={`w-4 h-4 rounded-full ${diskTheme === 'dark' ? 'bg-white' : 'bg-gray-200'} shadow`}
-          />
-          <span>{score.white}</span>
-        </div>
-      </div>
-      <div className="mt-2">Wins - You: {wins.player} | AI: {wins.ai}</div>
-      <div className="mt-1">Mobility - You: {mobility.player} | AI: {mobility.ai}</div>
-      <div className="mt-1" role="status" aria-live="polite">{message}</div>
-      {isAiThinking && (
+    <div className="h-full w-full overflow-y-auto bg-ub-cool-grey text-white">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:flex-row">
         <div
-          className="mt-2 flex items-center text-sm text-gray-300"
-          role="status"
-          aria-live="polite"
+          ref={containerRef}
+          className="flex flex-1 flex-col items-center gap-3"
         >
-          <span
-            aria-hidden="true"
-            className="mr-2 inline-flex h-3 w-3 animate-spin rounded-full border border-white/30 border-t-transparent"
-          />
-          <span>
-            {aiProgress && aiProgress.total
-              ? `AI evaluating moves (${aiProgress.evaluated}/${aiProgress.total})`
-              : 'AI evaluating moves...'}
-          </span>
+          <div
+            role="application"
+            aria-roledescription="Reversi board"
+            aria-describedby={instructionsId}
+            tabIndex={0}
+            onFocus={() => setIsBoardFocused(true)}
+            onBlur={() => setIsBoardFocused(false)}
+            onKeyDown={handleKeyDown}
+            className="relative focus:outline-none"
+          >
+            <canvas
+              ref={canvasRef}
+              width={boardSize}
+              height={boardSize}
+              onClick={handleClick}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+              className="rounded-lg shadow-[0_35px_60px_-15px_rgba(0,0,0,0.45)]"
+              aria-label="Reversi board"
+            />
+            <div className="pointer-events-none absolute inset-x-3 top-3 flex justify-between text-xs font-semibold uppercase tracking-widest text-slate-200/80">
+              <span className="flex items-center gap-1">
+                <span
+                  className={`h-3 w-3 rounded-full ${diskTheme === 'dark' ? 'bg-slate-900' : 'bg-slate-600'}`}
+                  aria-hidden="true"
+                />
+                You {score.black}
+              </span>
+              <span className="flex items-center gap-1">
+                <span
+                  className={`h-3 w-3 rounded-full ${diskTheme === 'dark' ? 'bg-slate-100' : 'bg-slate-300'}`}
+                  aria-hidden="true"
+                />
+                AI {score.white}
+              </span>
+            </div>
+            <p id={instructionsId} className="sr-only">
+              Use arrow keys to move around the board and press Enter or Space to place a disk. Press H for a hint, U to undo, or click cells directly.
+            </p>
+          </div>
+          <div className="w-full space-y-3 rounded-lg bg-slate-900/60 p-4 shadow-inner">
+            <div className="text-sm font-semibold uppercase tracking-widest text-slate-200">
+              Score Balance
+            </div>
+            <div className="h-3 w-full overflow-hidden rounded-full bg-slate-800" aria-hidden="true">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-sky-500 via-cyan-400 to-emerald-400 transition-all"
+                style={{ width: `${playerRatio}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-slate-300">
+              <span>You • {score.black}</span>
+              <span>AI • {score.white}</span>
+            </div>
+            <div className="text-sm font-semibold uppercase tracking-widest text-slate-200">
+              Mobility
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs text-slate-300">
+              <div className="rounded border border-slate-700/70 bg-slate-900/80 p-2 text-center">
+                <div className="font-semibold text-slate-100">You</div>
+                <div className="text-lg font-bold text-sky-300">{mobility.player}</div>
+              </div>
+              <div className="rounded border border-slate-700/70 bg-slate-900/80 p-2 text-center">
+                <div className="font-semibold text-slate-100">AI</div>
+                <div className="text-lg font-bold text-rose-300">{mobility.ai}</div>
+              </div>
+            </div>
+          </div>
         </div>
-      )}
-      <div className="mt-1 text-sm text-gray-300">{tip}</div>
-      <div className="mt-2 flex space-x-2 items-center">
-        <button
-          className="w-6 h-6 bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center"
-          onClick={reset}
-          aria-label="Reset"
-        >
-          <img src="/themes/Yaru/status/chrome_refresh.svg" width="24" height="24" alt="" />
-        </button>
-        <button
-          className="w-6 h-6 bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center disabled:opacity-50"
-          onClick={undo}
-          disabled={!history.length}
-          aria-label="Undo"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
-            <path d="M9 15L3 9l6-6" />
-            <path d="M3 9h11a4 4 0 0 1 0 8h-1" />
-          </svg>
-        </button>
-        <button
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={() => setPaused((p) => !p)}
-        >
-          {paused ? 'Resume' : 'Pause'}
-        </button>
-        <button
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={() => setSound((s) => !s)}
-        >
-          {sound ? 'Sound: On' : 'Sound: Off'}
-        </button>
-        <button
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={() => setDiskTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
-        >
-          {diskTheme === 'dark' ? 'Theme: Dark' : 'Theme: Light'}
-        </button>
-        <select
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          value={difficulty}
-          onChange={(e) => setDifficulty(e.target.value)}
-          aria-label="Select difficulty"
-        >
-          {Object.keys(DIFFICULTIES).map((d) => (
-            <option key={d} value={d}>
-              {`Difficulty: ${d.charAt(0).toUpperCase()}${d.slice(1)}`}
-            </option>
-          ))}
-        </select>
-        <button
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={() => setUseBook((b) => !b)}
-        >
-          {useBook ? 'Book: On' : 'Book: Off'}
-        </button>
+        <div className="flex w-full max-w-md flex-col gap-4 rounded-lg bg-slate-950/70 p-4 text-slate-100 shadow-lg">
+          <div className="space-y-2">
+            <div className="text-lg font-semibold tracking-wide text-slate-50">Reversi Control Center</div>
+            <div className="text-sm" role="status" aria-live="polite">
+              {message}
+            </div>
+            {isAiThinking && (
+              <div
+                className="flex items-center gap-2 text-xs text-slate-300"
+                role="status"
+                aria-live="polite"
+              >
+                <span
+                  aria-hidden="true"
+                  className="inline-flex h-3 w-3 animate-spin rounded-full border border-slate-400/30 border-t-transparent"
+                />
+                <span>
+                  {aiProgress && aiProgress.total
+                    ? `AI evaluating moves (${aiProgress.evaluated}/${aiProgress.total})`
+                    : 'AI evaluating moves...'}
+                </span>
+              </div>
+            )}
+            <div className="text-xs uppercase tracking-wider text-slate-400">
+              {tip}
+            </div>
+            <div className="flex flex-wrap gap-2 text-xs text-slate-300">
+              <span className="rounded border border-slate-700/70 bg-slate-900/60 px-2 py-1 font-semibold uppercase tracking-widest">
+                Wins • You {wins.player} / AI {wins.ai}
+              </span>
+              <span className="rounded border border-slate-700/70 bg-slate-900/60 px-2 py-1 font-semibold uppercase tracking-widest">
+                Turn • {player === 'B' ? 'You' : 'AI'}
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <button
+              className="flex items-center justify-center gap-2 rounded border border-slate-700 bg-slate-900/70 px-3 py-2 font-semibold text-slate-100 transition hover:border-sky-400 hover:text-sky-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+              onClick={reset}
+            >
+              <img src="/themes/Yaru/status/chrome_refresh.svg" width="18" height="18" alt="" />
+              Reset
+            </button>
+            <button
+              className="flex items-center justify-center gap-2 rounded border border-slate-700 bg-slate-900/70 px-3 py-2 font-semibold text-slate-100 transition hover:border-sky-400 hover:text-sky-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={undo}
+              disabled={!history.length}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18" aria-hidden="true">
+                <path d="M9 15L3 9l6-6" />
+                <path d="M3 9h11a4 4 0 0 1 0 8h-1" />
+              </svg>
+              Undo
+            </button>
+            <button
+              className="flex items-center justify-center gap-2 rounded border border-slate-700 bg-slate-900/70 px-3 py-2 font-semibold transition hover:border-emerald-400 hover:text-emerald-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+              onClick={() => setPaused((p) => !p)}
+            >
+              {paused ? 'Resume' : 'Pause'}
+            </button>
+            <button
+              className="flex items-center justify-center gap-2 rounded border border-slate-700 bg-slate-900/70 px-3 py-2 font-semibold transition hover:border-emerald-400 hover:text-emerald-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+              onClick={() => setSound((s) => !s)}
+            >
+              {sound ? 'Sound: On' : 'Sound: Off'}
+            </button>
+            <button
+              className="flex items-center justify-center gap-2 rounded border border-slate-700 bg-slate-900/70 px-3 py-2 font-semibold transition hover:border-violet-400 hover:text-violet-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
+              onClick={() => setDiskTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+            >
+              {diskTheme === 'dark' ? 'Theme: Dark' : 'Theme: Light'}
+            </button>
+            <button
+              className="flex items-center justify-center gap-2 rounded border border-slate-700 bg-slate-900/70 px-3 py-2 font-semibold transition hover:border-sky-400 hover:text-sky-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+              onClick={requestHint}
+              disabled={player !== 'B' || paused}
+            >
+              Hint
+            </button>
+          </div>
+          <div className="flex flex-col gap-2 text-sm">
+            <label className="text-xs font-semibold uppercase tracking-widest text-slate-300" htmlFor="reversi-difficulty">
+              Difficulty
+            </label>
+            <select
+              id="reversi-difficulty"
+              className="rounded border border-slate-700 bg-slate-900/70 px-3 py-2 font-semibold text-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+              value={difficulty}
+              onChange={(e) => setDifficulty(e.target.value)}
+            >
+              {Object.keys(DIFFICULTIES).map((d) => (
+                <option key={d} value={d}>
+                  {`Difficulty: ${d.charAt(0).toUpperCase()}${d.slice(1)}`}
+                </option>
+              ))}
+            </select>
+            <button
+              className="w-full rounded border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm font-semibold uppercase tracking-widest text-slate-100 transition hover:border-amber-400 hover:text-amber-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+              onClick={() => setUseBook((b) => !b)}
+            >
+              {useBook ? 'Opening Book: Enabled' : 'Opening Book: Disabled'}
+            </button>
+          </div>
+          <div className="space-y-2">
+            <div className="text-xs font-semibold uppercase tracking-widest text-slate-300">
+              Move History
+            </div>
+            <ul className="max-h-40 space-y-1 overflow-y-auto rounded border border-slate-800/80 bg-slate-900/60 p-3 text-xs font-mono text-slate-200">
+              {history.length ? (
+                history.map((entry, index) => (
+                  <li
+                    key={`${entry.player}-${index}-${entry.move ? `${entry.move.r}-${entry.move.c}` : 'na'}`}
+                  >
+                    {formatMove(entry, index)}
+                  </li>
+                ))
+              ) : (
+                <li>No moves yet. Claim a corner to start strong!</li>
+              )}
+            </ul>
+            {hintMove && (
+              <div className="rounded border border-sky-500/50 bg-sky-500/10 px-3 py-2 text-xs text-sky-200">
+                Suggested move: {String.fromCharCode(65 + hintMove.c)}{hintMove.r + 1}. Press Enter or click to place.
+              </div>
+            )}
+          </div>
+          <div className="space-y-1 text-xs text-slate-400">
+            <div className="font-semibold uppercase tracking-widest text-slate-300">Accessibility & Tips</div>
+            <p>
+              Color palette is tuned for high contrast and colorblind-friendly play. Navigate with keyboard arrows, use Tab to focus the board, and toggle hints with the H key.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
