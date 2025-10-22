@@ -14,6 +14,7 @@ import {
   createDeck,
   findHint,
   suits,
+  Suit,
 } from './engine';
 import { solve } from './solver';
 
