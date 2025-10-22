@@ -23,6 +23,9 @@ interface GameLayoutProps {
   score?: number;
   highScore?: number;
   editor?: React.ReactNode;
+  showToolbar?: boolean;
+  onPauseChange?: (paused: boolean) => void;
+  showHud?: boolean;
 }
 
 interface RecordedInput {
@@ -51,6 +54,9 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   score,
   highScore,
   editor,
+  showToolbar = true,
+  onPauseChange,
+  showHud = true,
 }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -209,6 +215,28 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 
   const contextValue = { record, registerReplay };
 
+  useEffect(() => {
+    if (!onPauseChange) return;
+    onPauseChange(paused);
+  }, [onPauseChange, paused]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const toggle = () => setPaused((p) => !p);
+    const set = (event: Event) => {
+      const custom = event as CustomEvent<boolean>;
+      if (typeof custom.detail === 'boolean') {
+        setPaused(custom.detail);
+      }
+    };
+    window.addEventListener('game-layout:toggle-pause', toggle);
+    window.addEventListener('game-layout:set-pause', set);
+    return () => {
+      window.removeEventListener('game-layout:toggle-pause', toggle);
+      window.removeEventListener('game-layout:set-pause', set);
+    };
+  }, []);
+
   return (
     <RecorderContext.Provider value={contextValue}>
       <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
@@ -229,61 +257,65 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           </button>
         </div>
       )}
-      <div className="absolute top-2 right-2 z-40 flex space-x-2">
-        <button
-          type="button"
-          onClick={() => setPaused((p) => !p)}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          {paused ? 'Resume' : 'Pause'}
-        </button>
-        <button
-          type="button"
-          onClick={snapshot}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          Snapshot
-        </button>
-        <button
-          type="button"
-          onClick={replay}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          Replay
-        </button>
-        <button
-          type="button"
-          onClick={shareApp}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          Share
-        </button>
-        {highScore !== undefined && (
+      {showToolbar && (
+        <div className="absolute top-2 right-2 z-40 flex space-x-2">
           <button
             type="button"
-            onClick={shareScore}
+            onClick={() => setPaused((p) => !p)}
             className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
           >
-            Share Score
+            {paused ? 'Resume' : 'Pause'}
           </button>
-        )}
-        <button
-          type="button"
-          aria-label="Help"
-          aria-expanded={showHelp}
-          onClick={toggle}
-          className="bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
-        >
-          ?
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={snapshot}
+            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          >
+            Snapshot
+          </button>
+          <button
+            type="button"
+            onClick={replay}
+            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          >
+            Replay
+          </button>
+          <button
+            type="button"
+            onClick={shareApp}
+            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          >
+            Share
+          </button>
+          {highScore !== undefined && (
+            <button
+              type="button"
+              onClick={shareScore}
+              className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            >
+              Share Score
+            </button>
+          )}
+          <button
+            type="button"
+            aria-label="Help"
+            aria-expanded={showHelp}
+            onClick={toggle}
+            className="bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
+          >
+            ?
+          </button>
+        </div>
+      )}
       {children}
-      <div className="absolute top-2 left-2 z-10 text-sm space-y-1">
-        {stage !== undefined && <div>Stage: {stage}</div>}
-        {lives !== undefined && <div>Lives: {lives}</div>}
-        {score !== undefined && <div>Score: {score}</div>}
-        {highScore !== undefined && <div>High: {highScore}</div>}
-      </div>
+      {showHud && (
+        <div className="absolute top-2 left-2 z-10 text-sm space-y-1">
+          {stage !== undefined && <div>Stage: {stage}</div>}
+          {lives !== undefined && <div>Lives: {lives}</div>}
+          {score !== undefined && <div>Score: {score}</div>}
+          {highScore !== undefined && <div>High: {highScore}</div>}
+        </div>
+      )}
       {!prefersReducedMotion && <PerfOverlay />}
       {editor && (
         <div className="absolute bottom-2 left-2 z-30">{editor}</div>

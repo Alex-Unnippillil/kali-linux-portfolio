@@ -45,7 +45,14 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   breakout: {
     objective: "Clear all bricks with the ball.",
-    controls: "Move the paddle with the arrow keys.",
+    controls:
+      "Use the arrow keys or mouse to steer the paddle, Space/Click to launch, and P to pause.",
+    actions: {
+      left: "ArrowLeft / Move mouse left",
+      right: "ArrowRight / Move mouse right",
+      launch: "Space / Click",
+      pause: "P",
+    },
   },
   "car-racer": {
     objective: "Avoid other cars and stay on the road.",
