@@ -70,7 +70,7 @@ function WindowStateShelf({
     onRemove,
 }: WindowShelfProps) {
     const containerClasses = clsx(
-        'pointer-events-auto fixed bottom-4 z-[70] w-[18rem] max-w-[92vw] text-sm text-white drop-shadow-xl',
+        'pointer-events-auto fixed bottom-4 z-[240] w-[18rem] max-w-[92vw] text-sm text-white drop-shadow-xl',
         anchor === 'left' ? 'left-4' : 'right-4',
     );
 
