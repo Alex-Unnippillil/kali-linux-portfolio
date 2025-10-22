@@ -7,6 +7,7 @@ import React, {
   createContext,
   useContext,
 } from 'react';
+import clsx from 'clsx';
 import HelpOverlay from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
@@ -59,6 +60,8 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     ((input: any, index: number) => void) | undefined
   >(undefined);
   const [replaying, setReplaying] = useState(false);
+  const [scorePulse, setScorePulse] = useState(false);
+  const [highScorePulse, setHighScorePulse] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
 
   const close = useCallback(() => setShowHelp(false), []);
@@ -144,6 +147,20 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     };
     step();
   }, [log, replayHandler]);
+
+  useEffect(() => {
+    if (score === undefined || prefersReducedMotion) return;
+    setScorePulse(true);
+    const timeout = window.setTimeout(() => setScorePulse(false), 320);
+    return () => window.clearTimeout(timeout);
+  }, [score, prefersReducedMotion]);
+
+  useEffect(() => {
+    if (highScore === undefined || prefersReducedMotion) return;
+    setHighScorePulse(true);
+    const timeout = window.setTimeout(() => setHighScorePulse(false), 360);
+    return () => window.clearTimeout(timeout);
+  }, [highScore, prefersReducedMotion]);
 
   // Keyboard shortcut to toggle help overlay
   useEffect(() => {
@@ -278,11 +295,43 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         </button>
       </div>
       {children}
-      <div className="absolute top-2 left-2 z-10 text-sm space-y-1">
-        {stage !== undefined && <div>Stage: {stage}</div>}
-        {lives !== undefined && <div>Lives: {lives}</div>}
-        {score !== undefined && <div>Score: {score}</div>}
-        {highScore !== undefined && <div>High: {highScore}</div>}
+      <div
+        className="absolute top-2 left-2 z-10 text-sm flex flex-col gap-1"
+        role="status"
+        aria-live="polite"
+      >
+        {stage !== undefined && (
+          <div className="rounded px-2 py-1 bg-slate-900/60 border border-slate-700/70 backdrop-blur">
+            Stage: {stage}
+          </div>
+        )}
+        {lives !== undefined && (
+          <div className="rounded px-2 py-1 bg-slate-900/60 border border-slate-700/70 backdrop-blur">
+            Lives: {lives}
+          </div>
+        )}
+        {score !== undefined && (
+          <div
+            className={clsx(
+              'rounded px-2 py-1 bg-slate-900/70 border border-emerald-500/20 backdrop-blur shadow-sm transition-transform duration-300 ease-out',
+              !prefersReducedMotion && scorePulse &&
+                'scale-110 text-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.45)]',
+            )}
+          >
+            Score: {score}
+          </div>
+        )}
+        {highScore !== undefined && (
+          <div
+            className={clsx(
+              'rounded px-2 py-1 bg-slate-900/70 border border-indigo-400/20 backdrop-blur shadow-sm transition-transform duration-300 ease-out',
+              !prefersReducedMotion && highScorePulse &&
+                'scale-105 text-indigo-300 shadow-[0_0_16px_rgba(129,140,248,0.35)]',
+            )}
+          >
+            High: {highScore}
+          </div>
+        )}
       </div>
       {!prefersReducedMotion && <PerfOverlay />}
       {editor && (
