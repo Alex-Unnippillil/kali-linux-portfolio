@@ -120,6 +120,10 @@ export default class Navbar extends PureComponent {
                 this.previewFocusPending = false;
                 this.pendingPinnedReorder = null;
                 this.draggingSection = null;
+                this.navRef = React.createRef();
+                this.navResizeObserver = null;
+                this.cachedNavbarHeight = null;
+                this.windowResizeListenerAttached = false;
         }
 
         componentDidMount() {
@@ -131,6 +135,7 @@ export default class Navbar extends PureComponent {
                 if (typeof document !== 'undefined') {
                         document.addEventListener('keydown', this.handleDocumentKeyDown);
                 }
+                this.setupNavbarHeightTracking();
         }
 
         componentWillUnmount() {
@@ -142,7 +147,69 @@ export default class Navbar extends PureComponent {
                         document.removeEventListener('keydown', this.handleDocumentKeyDown);
                 }
                 this.clearPreviewHideTimeout();
+                this.teardownNavbarHeightTracking();
         }
+
+        componentDidUpdate() {
+                this.updateNavbarHeightVariable();
+        }
+
+        setupNavbarHeightTracking = () => {
+                if (typeof window === 'undefined') return;
+                if (!this.navRef?.current) {
+                        if (typeof document !== 'undefined') {
+                                document.documentElement.style.removeProperty('--desktop-navbar-height');
+                        }
+                        return;
+                }
+
+                this.updateNavbarHeightVariable();
+
+                if (typeof ResizeObserver === 'function') {
+                        this.navResizeObserver = new ResizeObserver(() => {
+                                this.updateNavbarHeightVariable();
+                        });
+                        this.navResizeObserver.observe(this.navRef.current);
+                }
+
+                if (!this.windowResizeListenerAttached) {
+                        window.addEventListener('resize', this.handleWindowResize);
+                        this.windowResizeListenerAttached = true;
+                }
+        };
+
+        teardownNavbarHeightTracking = () => {
+                if (this.navResizeObserver && this.navRef?.current) {
+                        this.navResizeObserver.unobserve(this.navRef.current);
+                        this.navResizeObserver.disconnect();
+                        this.navResizeObserver = null;
+                }
+                if (typeof window !== 'undefined' && this.windowResizeListenerAttached) {
+                        window.removeEventListener('resize', this.handleWindowResize);
+                        this.windowResizeListenerAttached = false;
+                }
+        };
+
+        handleWindowResize = () => {
+                this.updateNavbarHeightVariable();
+        };
+
+        updateNavbarHeightVariable = () => {
+                if (typeof document === 'undefined') return;
+                const element = this.navRef?.current;
+                if (!element) return;
+
+                const rect = typeof element.getBoundingClientRect === 'function' ? element.getBoundingClientRect() : null;
+                const height = rect && typeof rect.height === 'number' ? rect.height : element.offsetHeight || 0;
+                if (!height) return;
+
+                if (typeof this.cachedNavbarHeight === 'number' && Math.abs(this.cachedNavbarHeight - height) < 0.5) {
+                        return;
+                }
+
+                this.cachedNavbarHeight = height;
+                document.documentElement.style.setProperty('--desktop-navbar-height', `${height}px`);
+        };
 
         escapeAttributeValue = (value) => {
                 if (typeof value !== 'string') return '';
@@ -868,6 +935,7 @@ export default class Navbar extends PureComponent {
                 const runningApps = this.renderRunningApps();
                 return (
                         <nav
+                                ref={this.navRef}
                                 className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full flex-col items-center text-slate-100"
                                 style={{
                                         minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
