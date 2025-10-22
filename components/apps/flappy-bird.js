@@ -1219,3 +1219,5 @@ const FlappyBird = () => {
   );
 
 };
+
+export default FlappyBird;
