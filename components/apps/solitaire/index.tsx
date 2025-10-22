@@ -772,10 +772,6 @@ const Solitaire = () => {
     });
   }, [updateStats]);
 
-  const handleAutoCompleteClick = useCallback(() => {
-    startAutoComplete(game, true);
-  }, [game, startAutoComplete]);
-
   const handleStockKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -918,6 +914,10 @@ const Solitaire = () => {
       autoCompleteNext,
     ],
   );
+
+  const handleAutoCompleteClick = useCallback(() => {
+    startAutoComplete(game, true);
+  }, [game, startAutoComplete]);
 
   useEffect(() => {
     if (
