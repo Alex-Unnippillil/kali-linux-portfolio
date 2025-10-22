@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import useCanvasResize from "../../hooks/useCanvasResize";
 import {
   BIRD_SKINS,
-  BIRD_ASSETS,
+  BIRD_ANIMATION_FRAMES,
   PIPE_SKINS,
 } from "../../apps/games/flappy-bird/skins";
 
@@ -13,13 +13,107 @@ const FlappyBird = () => {
   const canvasRef = useCanvasResize(WIDTH, HEIGHT);
   const liveRef = useRef(null);
   const [started, setStarted] = useState(false);
+  const [gameState, setGameState] = useState("menu");
   const [skin, setSkin] = useState(0);
   const [pipeSkinIndex, setPipeSkinIndex] = useState(0);
   const birdImages = useRef([]);
+  const birdFrames = useRef([]);
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
+  const startGameRef = useRef(null);
   const scoreRef = useRef(0);
   const bestRef = useRef(0);
+  const [milestoneMessage, setMilestoneMessage] = useState(null);
+  const milestoneTimeoutRef = useRef(null);
+  const streakRef = useRef(0);
+  const [streakCount, setStreakCount] = useState(0);
+  const [showTouchControls, setShowTouchControls] = useState(false);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [bestOverall, setBestOverall] = useState(0);
+
+  const resumeGame = useCallback(() => {
+    pausedRef.current = false;
+    setPaused(false);
+    setGameState("running");
+  }, []);
+
+  const pauseGame = useCallback(() => {
+    pausedRef.current = true;
+    setPaused(true);
+    setGameState("paused");
+  }, []);
+
+  const goToMenu = useCallback(() => {
+    pausedRef.current = false;
+    setPaused(false);
+    setGameState("menu");
+    setStarted(false);
+  }, []);
+
+  const restartGame = useCallback(() => {
+    if (startGameRef.current) {
+      startGameRef.current();
+    }
+  }, []);
+
+  const triggerPointer = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const event = new MouseEvent("mousedown", {
+      view: window,
+      bubbles: true,
+      cancelable: true,
+    });
+    canvas.dispatchEvent(event);
+  }, [canvasRef]);
+
+  const syncLeaderboard = useCallback(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const stored = JSON.parse(
+        localStorage.getItem("flappy-records") || "{}",
+      );
+      const entries = Object.entries(stored)
+        .map(([mode, value]) => ({
+          mode,
+          score: value?.score ? Number(value.score) : 0,
+        }))
+        .filter((entry) => Number.isFinite(entry.score))
+        .sort((a, b) => b.score - a.score);
+      setLeaderboard(entries);
+      setBestOverall(entries.length ? entries[0].score : 0);
+    } catch {
+      setLeaderboard([]);
+      setBestOverall(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    syncLeaderboard();
+  }, [syncLeaderboard]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const query = window.matchMedia("(pointer: coarse)");
+    const handleChange = () => setShowTouchControls(query.matches);
+    handleChange();
+    if (typeof query.addEventListener === "function") {
+      query.addEventListener("change", handleChange);
+      return () => query.removeEventListener("change", handleChange);
+    }
+    query.addListener(handleChange);
+    return () => query.removeListener(handleChange);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (milestoneTimeoutRef.current) {
+        clearTimeout(milestoneTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -37,11 +131,14 @@ const FlappyBird = () => {
   }, []);
 
   useEffect(() => {
-    birdImages.current = BIRD_ASSETS.map((src) => {
-      const img = new Image();
-      img.src = src;
-      return img;
-    });
+    birdFrames.current = BIRD_ANIMATION_FRAMES.map((frames) =>
+      frames.map((src) => {
+        const img = new Image();
+        img.src = src;
+        return img;
+      }),
+    );
+    birdImages.current = birdFrames.current.map((frames) => frames[0]);
   }, []);
 
   useEffect(() => {
@@ -58,10 +155,8 @@ const FlappyBird = () => {
       localStorage.getItem("flappy-reduced-motion") === "1" ||
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    // mode flags
     let practiceMode = localStorage.getItem("flappy-practice") === "1";
 
-    // gravity variants
     const GRAVITY_VARIANTS = [
       { name: "Easy", value: 0.2 },
       { name: "Normal", value: 0.4 },
@@ -71,19 +166,23 @@ const FlappyBird = () => {
       localStorage.getItem("flappy-gravity-variant") || "1",
       10,
     );
-    if (gravityVariant < 0 || gravityVariant >= GRAVITY_VARIANTS.length)
+    if (gravityVariant < 0 || gravityVariant >= GRAVITY_VARIANTS.length) {
       gravityVariant = 1;
+    }
 
-    // skins
-    const birdSkins = birdImages.current;
+    const skinFrames =
+      birdFrames.current.length > 0
+        ? birdFrames.current
+        : birdImages.current.map((img) => [img]);
     const pipeSkins = PIPE_SKINS;
     let birdSkin = skin;
     let pipeSkin = pipeSkinIndex;
+    let birdFrameIndex = 0;
+    let birdFrameTimer = 0;
+    const birdFrameDelay = 6;
 
-    // hitbox preview
     let showHitbox = localStorage.getItem("flappy-hitbox") === "1";
 
-    // physics constants
     let bird = { x: 50, y: height / 2, vy: 0 };
     let gravity = GRAVITY_VARIANTS[gravityVariant].value;
     const jump = -7;
@@ -97,19 +196,20 @@ const FlappyBird = () => {
     const pipeSpeed = 2;
     let nextPipeFrame = pipeInterval;
 
-    // game state
     let pipes = [];
     let frame = 0;
     let score = 0;
     let running = true;
     let crashing = false;
     let crashTimer = 0;
+    let crashParticlesSpawned = false;
     let birdAngle = 0;
     let loopId = 0;
     let highHz = localStorage.getItem("flappy-120hz") === "1";
     let fps = highHz ? 120 : 60;
 
-    // sky, clouds, and wind
+    let particles = [];
+
     let skyFrame = 0;
     let skyProgress = 0;
     let cloudsBack = [];
@@ -117,8 +217,11 @@ const FlappyBird = () => {
     let gust = 0;
     let gustTimer = 0;
     let foliage = [];
-    let hillsBack = [];
-    let hillsFront = [];
+    let skylineBack = [];
+    let skylineFront = [];
+    let starfield = [];
+    let groundTiles = [];
+    let pipeGlowPhase = 0;
 
     function mixColor(c1, c2, t) {
       return `rgb(${Math.round(c1[0] + (c2[0] - c1[0]) * t)},${Math.round(
@@ -140,33 +243,120 @@ const FlappyBird = () => {
       cloudsFront = Array.from({ length: 3 }, () => makeCloud(0.5));
     }
 
-    function initHills() {
-      hillsBack = Array.from({ length: 2 }, (_, i) => ({
+    function createPeakSet(count, minHeight, maxHeight) {
+      return Array.from({ length: count }, () =>
+        minHeight + rand() * (maxHeight - minHeight),
+      );
+    }
+
+    function initSkyline() {
+      const tilesNeeded = Math.ceil(width / 24) + 2;
+      skylineBack = Array.from({ length: 2 }, (_, i) => ({
         x: i * width,
-        speed: 0.3,
+        speed: reduceMotion ? 0 : 0.2,
+        peaks: createPeakSet(6, height * 0.25, height * 0.45),
       }));
-      hillsFront = Array.from({ length: 2 }, (_, i) => ({
+      skylineFront = Array.from({ length: 2 }, (_, i) => ({
         x: i * width,
-        speed: 0.6,
+        speed: reduceMotion ? 0 : 0.45,
+        peaks: createPeakSet(6, height * 0.4, height * 0.6),
+      }));
+      groundTiles = Array.from({ length: tilesNeeded }, (_, i) => ({
+        x: i * 24,
+        speed: 1.2,
       }));
     }
 
-    function drawHills() {
-      ctx.fillStyle = "#228B22";
-      for (const h of hillsBack) ctx.fillRect(h.x, height - 30, width, 30);
-      ctx.fillStyle = "#006400";
-      for (const h of hillsFront) ctx.fillRect(h.x, height - 15, width, 15);
-    }
-
-    function updateHills() {
-      if (reduceMotion) return;
-      for (const h of hillsBack) {
-        h.x -= h.speed;
-        if (h.x <= -width) h.x += width * 2;
+    function drawSkylineLayer(layer, color, alpha) {
+      if (!layer.length) return;
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.globalAlpha = alpha;
+      for (const skyline of layer) {
+        ctx.save();
+        ctx.translate(skyline.x, 0);
+        ctx.beginPath();
+        ctx.moveTo(0, height);
+        const step =
+          skyline.peaks.length > 1 ? width / (skyline.peaks.length - 1) : width;
+        skyline.peaks.forEach((peak, index) => {
+          ctx.lineTo(index * step, height - peak);
+        });
+        ctx.lineTo(width, height);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
       }
-      for (const h of hillsFront) {
-        h.x -= h.speed;
-        if (h.x <= -width) h.x += width * 2;
+      ctx.restore();
+    }
+
+    function updateSkylineLayer(layer) {
+      if (reduceMotion) return;
+      for (const skyline of layer) {
+        skyline.x -= skyline.speed;
+        if (skyline.x <= -width) {
+          skyline.x += width * layer.length;
+        }
+      }
+    }
+
+    function initStarfield() {
+      starfield = reduceMotion
+        ? []
+        : Array.from({ length: 24 }, () => ({
+            x: rand() * width,
+            y: rand() * height * 0.4,
+            speed: 0.1 + rand() * 0.1,
+            size: rand() * 1.2 + 0.6,
+            twinkle: rand() * Math.PI * 2,
+          }));
+    }
+
+    function updateStarfield() {
+      if (!starfield.length) return;
+      for (const star of starfield) {
+        star.x -= star.speed;
+        star.twinkle += 0.04;
+        if (star.x < -2) {
+          star.x = width + rand() * 20;
+          star.y = rand() * height * 0.4;
+        }
+      }
+    }
+
+    function drawStarfield() {
+      if (!starfield.length) return;
+      ctx.save();
+      ctx.fillStyle = "rgba(255,255,255,0.8)";
+      for (const star of starfield) {
+        const alpha = 0.5 + Math.sin(star.twinkle) * 0.5;
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawGround() {
+      ctx.save();
+      const groundY = height - 10;
+      ctx.fillStyle = "#2f1c0d";
+      ctx.fillRect(0, groundY, width, 10);
+      ctx.fillStyle = "#3b2815";
+      for (const tile of groundTiles) {
+        ctx.fillRect(tile.x, groundY - 3, 20, 3);
+      }
+      ctx.restore();
+    }
+
+    function updateGround() {
+      if (reduceMotion) return;
+      for (const tile of groundTiles) {
+        tile.x -= tile.speed;
+        if (tile.x <= -24) {
+          tile.x += 24 * groundTiles.length;
+        }
       }
     }
 
@@ -200,11 +390,11 @@ const FlappyBird = () => {
     function updateClouds() {
       if (reduceMotion) return;
       for (const c of cloudsBack) {
-        c.x -= c.speed + gust * 0.2;
+        c.x -= c.speed + gust * 0.15;
         if (c.x < -50) c.x = width + rand() * 50;
       }
       for (const c of cloudsFront) {
-        c.x -= c.speed + gust * 0.4;
+        c.x -= c.speed + gust * 0.3;
         if (c.x < -50) c.x = width + rand() * 50;
       }
     }
@@ -225,19 +415,17 @@ const FlappyBird = () => {
     }
 
     function drawBackground() {
-      if (reduceMotion) {
-        ctx.fillStyle = "#87CEEB";
-        ctx.fillRect(0, 0, width, height);
-        skyProgress = 0;
-        return;
-      }
       const cycle = fps * 20;
       skyProgress = (Math.sin((skyFrame / cycle) * Math.PI * 2) + 1) / 2;
       const grad = ctx.createLinearGradient(0, 0, 0, height);
-      grad.addColorStop(0, mixColor([135, 206, 235], [0, 0, 64], skyProgress));
-      grad.addColorStop(1, mixColor([135, 206, 235], [0, 0, 32], skyProgress));
+      grad.addColorStop(0, mixColor([135, 206, 235], [24, 32, 72], skyProgress));
+      grad.addColorStop(
+        1,
+        mixColor([135, 206, 235], [16, 22, 48], skyProgress),
+      );
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, width, height);
+      drawStarfield();
       skyFrame += 1;
     }
 
@@ -249,21 +437,20 @@ const FlappyBird = () => {
     function drawFoliage() {
       if (reduceMotion) return;
       ctx.save();
-      ctx.strokeStyle = "green";
+      ctx.strokeStyle = "#2c5f2d";
       ctx.lineWidth = 3;
       for (const f of foliage) {
-        const sway = gust * 0.5 + Math.sin((frame + f.x) / 20) * 0.2;
+        const sway = gust * 0.5 + Math.sin((frame + f.x) / 18) * 0.3;
         const tipX = f.x + sway * f.h;
-        const tipY = height - 5 - f.h;
+        const tipY = height - 12 - f.h;
         ctx.beginPath();
-        ctx.moveTo(f.x, height - 5);
+        ctx.moveTo(f.x, height - 12);
         ctx.lineTo(tipX, tipY);
         ctx.stroke();
       }
       ctx.restore();
     }
 
-    // seeded rng
     function createRandom(seed) {
       let s = seed % 2147483647;
       if (s <= 0) s += 2147483646;
@@ -276,11 +463,55 @@ const FlappyBird = () => {
     function initFoliage() {
       foliage = Array.from({ length: 6 }, () => ({
         x: rand() * width,
-        h: rand() * 20 + 20,
+        h: rand() * 24 + 20,
       }));
     }
 
-    // medals
+    function initDecor() {
+      initClouds();
+      initSkyline();
+      initStarfield();
+      initFoliage();
+    }
+
+    function spawnParticles(x, y, color, count = 14, speed = 2) {
+      particles.push(
+        ...Array.from({ length: count }, () => ({
+          x,
+          y,
+          vx: (rand() - 0.5) * speed * 2,
+          vy: (rand() - 0.2) * speed * 1.5,
+          life: 30 + rand() * 15,
+          color,
+        })),
+      );
+    }
+
+    function updateParticles() {
+      particles = particles
+        .map((p) => ({
+          ...p,
+          x: p.x + p.vx,
+          y: p.y + p.vy,
+          vy: p.vy + 0.05,
+          life: p.life - 1,
+        }))
+        .filter((p) => p.life > 0);
+    }
+
+    function drawParticles() {
+      if (!particles.length) return;
+      ctx.save();
+      for (const p of particles) {
+        ctx.globalAlpha = Math.max(p.life / 45, 0);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
     const medalThresholds = [
       { name: "bronze", distance: 10 },
       { name: "silver", distance: 20 },
@@ -293,7 +524,6 @@ const FlappyBird = () => {
       medals = {};
     }
 
-    // records per gravity variant
     let records = {};
     try {
       records = JSON.parse(localStorage.getItem("flappy-records") || "{}");
@@ -325,7 +555,6 @@ const FlappyBird = () => {
       }
     }
 
-    // replay data
     let flapFrames = [];
     let lastRun = null;
     let isReplaying = false;
@@ -334,9 +563,34 @@ const FlappyBird = () => {
     let runPositions = [];
     let ghostFrame = 0;
 
+    function pipeExtents(pipe) {
+      const wobble = reduceMotion ? 0 : Math.sin(frame / 18 + pipe.phase) * pipe.amplitude;
+      let top = pipe.baseTop + wobble;
+      let bottom = pipe.baseBottom + wobble;
+      const clampOffset = Math.max(0, 20 - top);
+      if (clampOffset) {
+        top += clampOffset;
+        bottom += clampOffset;
+      }
+      if (bottom > height - 20) {
+        const diff = bottom - (height - 20);
+        top -= diff;
+        bottom -= diff;
+      }
+      return { top, bottom };
+    }
+
     function addPipe() {
-      const top = rand() * (height - gap - 40) + 20;
-      pipes.push({ x: width, top, bottom: top + gap });
+      const topBase = rand() * (height - gap - 40) + 20;
+      const amplitude = reduceMotion ? 0 : rand() * 6 + 4;
+      const phase = rand() * Math.PI * 2;
+      pipes.push({
+        x: width,
+        baseTop: topBase,
+        baseBottom: topBase + gap,
+        amplitude,
+        phase,
+      });
     }
 
     function reset(newSeed = Date.now()) {
@@ -349,6 +603,7 @@ const FlappyBird = () => {
       running = true;
       crashing = false;
       crashTimer = 0;
+      crashParticlesSpawned = false;
       birdAngle = 0;
       flapFrames = [];
       runPositions = [];
@@ -357,18 +612,22 @@ const FlappyBird = () => {
       gap = practiceMode ? practiceGap : baseGap;
       pipeInterval = 100;
       nextPipeFrame = pipeInterval;
-      initClouds();
-      initHills();
-      initFoliage();
+      particles = [];
+      initDecor();
       gust = 0;
       gustTimer = 0;
       scoreRef.current = 0;
       bestRef.current = best;
+      streakRef.current = 0;
+      setStreakCount(0);
+      if (milestoneTimeoutRef.current) {
+        clearTimeout(milestoneTimeoutRef.current);
+      }
+      setMilestoneMessage(null);
     }
 
     function startGame(newSeed = Date.now()) {
-      pausedRef.current = false;
-      setPaused(false);
+      resumeGame();
       reset(newSeed);
       addPipe();
       startLoop();
@@ -377,47 +636,48 @@ const FlappyBird = () => {
 
     function flap(record = true) {
       bird.vy = jump;
+      birdFrameTimer = 0;
       if (record) flapFrames.push(frame);
     }
 
     function draw() {
       drawBackground();
-      drawHills();
+      drawSkylineLayer(skylineBack, "#18324a", 0.6);
+      drawSkylineLayer(skylineFront, "#234c63", 0.85);
       drawClouds();
+      drawGround();
       drawFoliage();
 
-      // pipes / practice gates
       const [pipeC1, pipeC2] = pipeSkins[pipeSkin % pipeSkins.length];
       const pipeColor = mixColor(pipeC1, pipeC2, skyProgress);
       ctx.fillStyle = pipeColor;
       for (const pipe of pipes) {
+        const { top, bottom } = pipeExtents(pipe);
         if (practiceMode) ctx.globalAlpha = 0.4;
-        ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
-        ctx.fillRect(pipe.x, pipe.bottom, pipeWidth, height - pipe.bottom);
-        // bevel
-        ctx.fillStyle = "rgba(255,255,255,0.2)";
-        ctx.fillRect(pipe.x, 0, 4, pipe.top);
-        ctx.fillRect(pipe.x, pipe.bottom, 4, height - pipe.bottom);
-        ctx.fillStyle = "rgba(0,0,0,0.3)";
-        ctx.fillRect(pipe.x + pipeWidth - 4, 0, 4, pipe.top);
-        ctx.fillRect(
-          pipe.x + pipeWidth - 4,
-          pipe.bottom,
-          4,
-          height - pipe.bottom,
-        );
-        ctx.fillRect(pipe.x, pipe.top - 2, pipeWidth, 2);
-        ctx.fillRect(pipe.x, pipe.bottom, pipeWidth, 2);
+        ctx.fillRect(pipe.x, 0, pipeWidth, top);
+        ctx.fillRect(pipe.x, bottom, pipeWidth, height - bottom);
+        const glowStrength = reduceMotion
+          ? 0.2
+          : (Math.sin(pipeGlowPhase + pipe.x / 40) + 1) / 2;
+        const bevel = ctx.createLinearGradient(pipe.x, 0, pipe.x + pipeWidth, 0);
+        bevel.addColorStop(0, `rgba(255,255,255,${0.2 + glowStrength * 0.1})`);
+        bevel.addColorStop(1, `rgba(0,0,0,${0.4 - glowStrength * 0.1})`);
+        ctx.fillStyle = bevel;
+        ctx.fillRect(pipe.x, 0, pipeWidth, top);
+        ctx.fillRect(pipe.x, bottom, pipeWidth, height - bottom);
         ctx.fillStyle = pipeColor;
+        ctx.fillRect(pipe.x, top - 2, pipeWidth, 2);
+        ctx.fillRect(pipe.x, bottom, pipeWidth, 2);
         if (showHitbox) {
           ctx.strokeStyle = "red";
-          ctx.strokeRect(pipe.x, 0, pipeWidth, pipe.top);
-          ctx.strokeRect(pipe.x, pipe.bottom, pipeWidth, height - pipe.bottom);
+          ctx.strokeRect(pipe.x, 0, pipeWidth, top);
+          ctx.strokeRect(pipe.x, bottom, pipeWidth, height - bottom);
         }
         if (practiceMode) ctx.globalAlpha = 1;
       }
 
-      // ghost bird
+      drawParticles();
+
       if (ghostRun && ghostFrame < ghostRun.pos.length) {
         ctx.save();
         ctx.globalAlpha = 0.3;
@@ -428,13 +688,13 @@ const FlappyBird = () => {
         ctx.restore();
       }
 
-      // bird
-      const img = birdSkins[birdSkin % birdSkins.length];
+      const frames = skinFrames[birdSkin % skinFrames.length];
+      const img = frames[birdFrameIndex % frames.length];
       ctx.save();
       ctx.translate(bird.x, bird.y);
       ctx.rotate(birdAngle);
       if (img && img.complete) {
-        ctx.drawImage(img, -10, -10, 20, 20);
+        ctx.drawImage(img, -12, -10, 24, 20);
       } else {
         ctx.fillStyle = "yellow";
         ctx.beginPath();
@@ -447,15 +707,14 @@ const FlappyBird = () => {
       }
       ctx.restore();
 
-      // HUD
-      ctx.fillStyle = "rgba(0,0,0,0.5)";
-      ctx.fillRect(5, 5, 160, 140);
+      ctx.fillStyle = "rgba(0,0,0,0.45)";
+      ctx.fillRect(8, 8, 200, 160);
       ctx.fillStyle = "#fff";
       ctx.font = "16px sans-serif";
       ctx.textAlign = "left";
-      let hudY = 20;
+      let hudY = 28;
       const hudLine = (text) => {
-        ctx.fillText(text, 10, hudY);
+        ctx.fillText(text, 16, hudY);
         hudY += 20;
       };
       hudLine(`Score: ${score}`);
@@ -521,11 +780,15 @@ const FlappyBird = () => {
               };
               localStorage.setItem("flappy-records", JSON.stringify(records));
               ghostRun = records[GRAVITY_VARIANTS[gravityVariant].name].run;
+              syncLeaderboard();
             }
             lastRun = { seed, flaps: flapFrames };
           }
           isReplaying = false;
           stopLoop();
+          setGameState("gameover");
+          streakRef.current = 0;
+          setStreakCount(0);
           if (liveRef.current)
             liveRef.current.textContent = `Game over. Final score: ${score}`;
         }
@@ -533,10 +796,15 @@ const FlappyBird = () => {
       }
 
       frame += 1;
+      pipeGlowPhase += reduceMotion ? 0 : 0.05;
 
       updateWind();
       updateClouds();
-      updateHills();
+      updateSkylineLayer(skylineBack);
+      updateSkylineLayer(skylineFront);
+      updateStarfield();
+      updateGround();
+      updateParticles();
 
       if (frame >= nextPipeFrame) {
         gap = practiceMode
@@ -560,27 +828,41 @@ const FlappyBird = () => {
       bird.y += bird.vy;
       runPositions.push(bird.y);
 
-      // top/bottom collision
-      if (bird.y + 10 > height || bird.y - 10 < 0) {
-        crashing = true;
-        crashTimer = 10;
+      birdAngle = Math.max(-0.5, Math.min(0.7, bird.vy / 10));
+      birdFrameTimer += 1;
+      if (birdFrameTimer >= birdFrameDelay) {
+        birdFrameTimer = 0;
+        const totalFrames = skinFrames[birdSkin % skinFrames.length].length;
+        birdFrameIndex = (birdFrameIndex + 1) % totalFrames;
       }
 
-      // move pipes and track passed ones
+      if (bird.y + 10 > height || bird.y - 10 < 0) {
+        crashing = true;
+        crashTimer = 18;
+        if (!crashParticlesSpawned) {
+          spawnParticles(bird.x, bird.y, "#fbd34d", 24, 3);
+          crashParticlesSpawned = true;
+        }
+      }
+
       let passed = 0;
       for (let i = 0; i < pipes.length; i++) {
         const pipe = pipes[i];
         pipe.x -= pipeSpeed;
+        const { top, bottom } = pipeExtents(pipe);
 
-        // collision with current pipe
         if (
           !practiceMode &&
           pipe.x < bird.x + 10 &&
           pipe.x + pipeWidth > bird.x - 10 &&
-          (bird.y - 10 < pipe.top || bird.y + 10 > pipe.bottom)
+          (bird.y - 10 < top || bird.y + 10 > bottom)
         ) {
           crashing = true;
-          crashTimer = 10;
+          crashTimer = 18;
+          if (!crashParticlesSpawned) {
+            spawnParticles(bird.x, bird.y, "#fbd34d", 24, 3);
+            crashParticlesSpawned = true;
+          }
         }
 
         if (pipe.x + pipeWidth < 0) {
@@ -593,6 +875,19 @@ const FlappyBird = () => {
         pipes = pipes.filter((p) => p.x + pipeWidth >= 0);
         if (liveRef.current) liveRef.current.textContent = `Score: ${score}`;
         scoreRef.current = score;
+        streakRef.current += passed;
+        setStreakCount(streakRef.current);
+        if (score > 0 && score % 10 === 0) {
+          const message = `Milestone! ${score} points`;
+          setMilestoneMessage(message);
+          if (milestoneTimeoutRef.current) {
+            clearTimeout(milestoneTimeoutRef.current);
+          }
+          milestoneTimeoutRef.current = setTimeout(() => {
+            setMilestoneMessage(null);
+          }, 2400);
+          spawnParticles(bird.x + 10, height / 2, "#8ff7ff", 18, 3);
+        }
       }
 
       draw();
@@ -623,15 +918,13 @@ const FlappyBird = () => {
     function handleKey(e) {
       if (pausedRef.current) {
         if (e.code === "Escape" || e.code === "Space") {
-          pausedRef.current = false;
-          setPaused(false);
+          resumeGame();
         }
         return;
       }
 
       if (e.code === "Escape" && running) {
-        pausedRef.current = true;
-        setPaused(true);
+        pauseGame();
         return;
       }
 
@@ -665,6 +958,7 @@ const FlappyBird = () => {
         localStorage.setItem("flappy-reduced-motion", reduceMotion ? "1" : "0");
         if (liveRef.current)
           liveRef.current.textContent = `Reduced motion ${reduceMotion ? "on" : "off"}`;
+        initDecor();
       } else if (e.code === "KeyP") {
         practiceMode = !practiceMode;
         localStorage.setItem("flappy-practice", practiceMode ? "1" : "0");
@@ -684,9 +978,10 @@ const FlappyBird = () => {
         delete records[key];
         localStorage.setItem("flappy-records", JSON.stringify(records));
         loadRecord();
+        syncLeaderboard();
         if (liveRef.current) liveRef.current.textContent = "Record reset";
       } else if (e.code === "KeyB") {
-        birdSkin = (birdSkin + 1) % birdSkins.length;
+        birdSkin = (birdSkin + 1) % skinFrames.length;
         setSkin(birdSkin);
         localStorage.setItem("flappy-bird-skin", String(birdSkin));
         if (liveRef.current)
@@ -707,14 +1002,15 @@ const FlappyBird = () => {
 
     function handlePointer() {
       if (pausedRef.current) {
-        pausedRef.current = false;
-        setPaused(false);
+        resumeGame();
       } else if (running) {
         flap();
       } else {
         startGame();
       }
     }
+
+    startGameRef.current = startGame;
 
     window.addEventListener("keydown", handleKey, { passive: false });
     canvas.addEventListener("mousedown", handlePointer);
@@ -723,47 +1019,112 @@ const FlappyBird = () => {
     startGame();
 
     return () => {
+      startGameRef.current = null;
       window.removeEventListener("keydown", handleKey);
       canvas.removeEventListener("mousedown", handlePointer);
       canvas.removeEventListener("touchstart", handlePointer);
       stopLoop();
     };
-  }, [canvasRef, started, pipeSkinIndex, skin]);
+  }, [canvasRef, started, pipeSkinIndex, skin, pauseGame, resumeGame, syncLeaderboard]);
+
+  const leaderboardItems = leaderboard.slice(0, 5);
 
   return (
-    <div className="relative w-full h-full">
-      {!started && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center space-y-4 bg-black bg-opacity-70 text-white">
-          <label className="flex flex-col items-center">
-            Bird Skin
-            <select
-              className="text-black mt-1"
-              value={skin}
-              onChange={(e) => setSkin(parseInt(e.target.value, 10))}
-            >
-              {BIRD_SKINS.map((name, i) => (
-                <option key={name} value={i}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col items-center">
-            Pipe Skin
-            <select
-              className="text-black mt-1"
-              value={pipeSkinIndex}
-              onChange={(e) => setPipeSkinIndex(parseInt(e.target.value, 10))}
-            >
-              {PIPE_SKINS.map((_, i) => (
-                <option key={i} value={i}>
-                  {`Skin ${i + 1}`}
-                </option>
-              ))}
-            </select>
-          </label>
+    <div className="relative h-full w-full">
+      {started && (
+        <button
+          type="button"
+          className="absolute right-3 top-3 z-30 rounded-md bg-black/60 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white shadow transition hover:bg-black/70 focus:outline-none focus:ring-2 focus:ring-sky-400"
+          onClick={() => {
+            if (paused) {
+              resumeGame();
+            } else {
+              pauseGame();
+            }
+          }}
+        >
+          {paused ? "Resume" : "Pause"}
+        </button>
+      )}
+
+      {streakCount > 0 && (
+        <div className="absolute left-3 top-3 z-20 rounded-md bg-black/60 px-3 py-1 text-sm font-semibold text-teal-200 shadow">
+          Streak: {streakCount}
+        </div>
+      )}
+
+      {milestoneMessage && (
+        <div className="pointer-events-none absolute left-1/2 top-8 z-30 -translate-x-1/2 rounded-full bg-white/20 px-4 py-2 text-sm font-semibold uppercase tracking-widest text-yellow-200 shadow-lg backdrop-blur transition-opacity duration-300">
+          {milestoneMessage}
+        </div>
+      )}
+
+      <canvas
+        ref={canvasRef}
+        className="h-full w-full bg-black"
+        role="img"
+        aria-label="Flappy Bird game"
+      />
+
+      {gameState === "menu" && (
+        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center space-y-6 bg-black/80 p-6 text-white transition-opacity duration-300">
+          <div className="grid w-full max-w-3xl gap-6 md:grid-cols-2">
+            <div className="space-y-4 text-left">
+              <label className="flex flex-col text-sm">
+                <span className="text-xs uppercase tracking-widest text-white/60">Bird Skin</span>
+                <select
+                  className="mt-1 rounded border border-white/20 bg-white/90 px-3 py-2 text-black"
+                  value={skin}
+                  onChange={(e) => setSkin(parseInt(e.target.value, 10))}
+                >
+                  {BIRD_SKINS.map((name, i) => (
+                    <option key={name} value={i}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col text-sm">
+                <span className="text-xs uppercase tracking-widest text-white/60">Pipe Skin</span>
+                <select
+                  className="mt-1 rounded border border-white/20 bg-white/90 px-3 py-2 text-black"
+                  value={pipeSkinIndex}
+                  onChange={(e) => setPipeSkinIndex(parseInt(e.target.value, 10))}
+                >
+                  {PIPE_SKINS.map((_, i) => (
+                    <option key={i} value={i}>
+                      {`Skin ${i + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="rounded-lg bg-white/10 p-4 text-xs uppercase tracking-widest text-white/70">
+                <p>Space / tap to flap</p>
+                <p className="mt-1">Esc to pause · R to replay · G to cycle gravity</p>
+                <p className="mt-1">B to change bird · O to change pipes</p>
+              </div>
+            </div>
+            <div className="rounded-lg bg-white/10 p-4 backdrop-blur">
+              <h3 className="text-lg font-semibold">High Scores</h3>
+              <p className="text-sm text-white/70">
+                Best overall: <span className="font-semibold text-white">{bestOverall}</span>
+              </p>
+              <ul className="mt-3 space-y-1 text-sm">
+                {leaderboardItems.length ? (
+                  leaderboardItems.map(({ mode, score }) => (
+                    <li key={mode} className="flex items-center justify-between rounded bg-black/30 px-3 py-1">
+                      <span className="font-semibold uppercase tracking-wide text-white/80">{mode}</span>
+                      <span>{score}</span>
+                    </li>
+                  ))
+                ) : (
+                  <li className="rounded bg-black/30 px-3 py-2 text-white/60">No runs recorded yet.</li>
+                )}
+              </ul>
+            </div>
+          </div>
           <button
-            className="px-6 py-3 w-32 bg-gray-700 hover:bg-gray-600 rounded"
+            className="w-40 rounded-full bg-sky-500 px-6 py-3 text-sm font-semibold uppercase tracking-widest text-white shadow-lg transition hover:bg-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-300"
             onClick={() => {
               try {
                 localStorage.setItem("flappy-bird-skin", String(skin));
@@ -771,41 +1132,90 @@ const FlappyBird = () => {
               } catch {
                 /* ignore */
               }
+              resumeGame();
               setStarted(true);
             }}
           >
-            Start
+            Start Flight
           </button>
         </div>
       )}
-      <canvas
-        ref={canvasRef}
-        className="w-full h-full bg-black"
-        role="img"
-        aria-label="Flappy Bird game"
-      />
-      {paused && (
-        <div
-          className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black bg-opacity-50 text-white"
-          onClick={() => {
-            pausedRef.current = false;
-            setPaused(false);
-          }}
-          onTouchStart={() => {
-            pausedRef.current = false;
-            setPaused(false);
-          }}
-        >
-          <div className="mb-4 text-center">
-            <p>Score: {scoreRef.current}</p>
-            <p>Best: {bestRef.current}</p>
+
+      {gameState === "paused" && (
+        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center space-y-4 bg-black/60 p-6 text-white transition-opacity duration-300">
+          <div className="rounded-lg bg-white/10 px-6 py-4 text-center shadow-lg backdrop-blur">
+            <h3 className="text-2xl font-semibold">Paused</h3>
+            <p className="mt-2 text-sm text-white/80">Score: {scoreRef.current}</p>
+            <p className="text-sm text-white/60">Best this mode: {bestRef.current}</p>
           </div>
-          <button className="px-6 py-3 w-32 bg-gray-700 rounded">Resume</button>
+          <button
+            className="w-36 rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold uppercase tracking-widest text-white shadow hover:bg-emerald-400 focus:outline-none focus:ring-4 focus:ring-emerald-300"
+            onClick={resumeGame}
+          >
+            Resume
+          </button>
         </div>
       )}
+
+      {gameState === "gameover" && (
+        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center space-y-6 bg-black/75 p-6 text-white transition-opacity duration-300">
+          <div className="w-full max-w-md rounded-lg bg-white/10 p-6 text-center shadow-xl backdrop-blur">
+            <h3 className="text-3xl font-semibold">Game Over</h3>
+            <p className="mt-4 text-lg">Final score: {scoreRef.current}</p>
+            <p className="text-sm text-white/70">Best this mode: {bestRef.current}</p>
+            <p className="text-sm text-white/60">Global best: {bestOverall}</p>
+            <div className="mt-4 text-left">
+              <h4 className="text-sm font-semibold uppercase tracking-widest text-white/70">Leaderboard</h4>
+              <ul className="mt-2 space-y-1 text-sm">
+                {leaderboardItems.length ? (
+                  leaderboardItems.map(({ mode, score }) => (
+                    <li key={mode} className="flex items-center justify-between rounded bg-black/30 px-3 py-1">
+                      <span className="font-semibold uppercase tracking-wide text-white/80">{mode}</span>
+                      <span>{score}</span>
+                    </li>
+                  ))
+                ) : (
+                  <li className="rounded bg-black/30 px-3 py-2 text-white/60">No scores yet.</li>
+                )}
+              </ul>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              className="rounded-full bg-sky-500 px-5 py-2 text-sm font-semibold uppercase tracking-widest text-white shadow hover:bg-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-300"
+              onClick={restartGame}
+            >
+              Play Again
+            </button>
+            <button
+              className="rounded-full bg-white/20 px-5 py-2 text-sm font-semibold uppercase tracking-widest text-white hover:bg-white/30 focus:outline-none focus:ring-4 focus:ring-white/40"
+              onClick={goToMenu}
+            >
+              Change Skins
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showTouchControls && gameState === "running" && (
+        <div className="absolute inset-x-0 bottom-4 z-30 flex justify-center gap-4 px-4">
+          <button
+            className="flex-1 rounded-full bg-white/20 px-4 py-3 text-sm font-semibold uppercase tracking-widest text-white shadow backdrop-blur hover:bg-white/30 focus:outline-none focus:ring-4 focus:ring-white/40"
+            onClick={triggerPointer}
+          >
+            Flap
+          </button>
+          <button
+            className="flex-1 rounded-full bg-white/20 px-4 py-3 text-sm font-semibold uppercase tracking-widest text-white shadow backdrop-blur hover:bg-white/30 focus:outline-none focus:ring-4 focus:ring-white/40"
+            onClick={pauseGame}
+          >
+            Pause
+          </button>
+        </div>
+      )}
+
       <div ref={liveRef} className="sr-only" aria-live="polite" />
     </div>
   );
-};
 
-export default FlappyBird;
+};
