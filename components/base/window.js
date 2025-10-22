@@ -22,6 +22,51 @@ const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 const DEFAULT_MIN_WIDTH = 20;
 const DEFAULT_MIN_HEIGHT = 20;
+const MAX_WIDTH_PERCENT = 100;
+
+const clampWidthToViewport = (widthPercent, minWidth = DEFAULT_MIN_WIDTH) => {
+    const normalizedWidth = Math.max(widthPercent, minWidth);
+    if (typeof window === 'undefined') {
+        return Math.min(normalizedWidth, MAX_WIDTH_PERCENT);
+    }
+    const { width: viewportWidth } = getViewportMetrics();
+    if (!viewportWidth) {
+        return Math.min(normalizedWidth, MAX_WIDTH_PERCENT);
+    }
+    const safeLeft = Math.max(0, measureSafeAreaInset('left'));
+    const safeRight = Math.max(0, measureSafeAreaInset('right'));
+    const safeWidth = Math.max(viewportWidth - safeLeft - safeRight, 0);
+    const maxPercent = safeWidth > 0 ? percentOf(safeWidth, viewportWidth) : MAX_WIDTH_PERCENT;
+    const clampedMax = Math.max(minWidth, Math.min(maxPercent, MAX_WIDTH_PERCENT));
+    return Math.min(normalizedWidth, clampedMax);
+};
+
+const clampHeightToViewport = (heightPercent, minHeight = DEFAULT_MIN_HEIGHT) => {
+    const normalizedHeight = Math.max(heightPercent, minHeight);
+    if (typeof window === 'undefined') {
+        return normalizedHeight;
+    }
+    const { height: viewportHeight } = getViewportMetrics();
+    if (!viewportHeight) {
+        return normalizedHeight;
+    }
+    const topInset = measureWindowTopOffset();
+    const snapBottomInset = measureSnapBottomInset();
+    const safeAreaBottom = Math.max(0, measureSafeAreaInset('bottom'));
+    const availableHeight = Math.max(viewportHeight - topInset - snapBottomInset - safeAreaBottom, 0);
+    if (!availableHeight) {
+        return normalizedHeight;
+    }
+    const maxPercent = percentOf(availableHeight, viewportHeight);
+    if (maxPercent <= 0) {
+        return normalizedHeight;
+    }
+    const constrained = Math.min(normalizedHeight, maxPercent);
+    if (constrained < minHeight) {
+        return Math.max(constrained, Math.min(maxPercent, minHeight));
+    }
+    return constrained;
+};
 
 const parsePxValue = (value) => {
     if (typeof value !== 'string') return null;
@@ -205,10 +250,13 @@ export class Window extends Component {
             (isPortrait ? window.innerWidth * 0.05 : 60);
         this.startY = clampWindowTopPosition(props.initialY, initialTopInset);
 
+        const initialWidth = clampWidthToViewport(Math.max(requestedWidth, minWidth), minWidth);
+        const initialHeight = clampHeightToViewport(Math.max(requestedHeight, minHeight), minHeight);
+
         this.state = {
             cursorType: "cursor-default",
-            width: Math.max(requestedWidth, minWidth),
-            height: Math.max(requestedHeight, minHeight),
+            width: initialWidth,
+            height: initialHeight,
             closed: false,
             maximized: false,
             preMaximizeBounds: null,
@@ -293,22 +341,22 @@ export class Window extends Component {
                 updates.minHeight = minHeight;
             }
             if (widthNeedsUpdate) {
-                updates.width = Math.max(prevState.width, minWidth);
+                updates.width = clampWidthToViewport(prevState.width, minWidth);
             }
             if (heightNeedsUpdate) {
-                updates.height = Math.max(prevState.height, minHeight);
+                updates.height = clampHeightToViewport(prevState.height, minHeight);
             }
             if (lastSizeNeedsUpdate && prevState.lastSize) {
                 updates.lastSize = {
-                    width: Math.max(prevState.lastSize.width, minWidth),
-                    height: Math.max(prevState.lastSize.height, minHeight),
+                    width: clampWidthToViewport(prevState.lastSize.width, minWidth),
+                    height: clampHeightToViewport(prevState.lastSize.height, minHeight),
                 };
             }
             if (preBoundsNeedsUpdate && prevState.preMaximizeBounds) {
                 updates.preMaximizeBounds = {
                     ...prevState.preMaximizeBounds,
-                    width: Math.max(prevState.preMaximizeBounds.width, minWidth),
-                    height: Math.max(prevState.preMaximizeBounds.height, minHeight),
+                    width: clampWidthToViewport(prevState.preMaximizeBounds.width, minWidth),
+                    height: clampHeightToViewport(prevState.preMaximizeBounds.height, minHeight),
                 };
             }
             return updates;
@@ -339,8 +387,8 @@ export class Window extends Component {
 
     setDefaultWindowDimenstion = () => {
         if (typeof this.props.defaultHeight === 'number' && typeof this.props.defaultWidth === 'number') {
-            const width = Math.max(this.props.defaultWidth, this.state.minWidth);
-            const height = Math.max(this.props.defaultHeight, this.state.minHeight);
+            const width = clampWidthToViewport(this.props.defaultWidth, this.state.minWidth);
+            const height = clampHeightToViewport(this.props.defaultHeight, this.state.minHeight);
             this.setState(
                 { height, width, preMaximizeBounds: null },
                 () => {
@@ -356,8 +404,8 @@ export class Window extends Component {
         if (isPortrait) {
             this.startX = window.innerWidth * 0.05;
             this.setState({
-                height: Math.max(85, this.state.minHeight),
-                width: Math.max(90, this.state.minWidth),
+                height: clampHeightToViewport(85, this.state.minHeight),
+                width: clampWidthToViewport(90, this.state.minWidth),
                 preMaximizeBounds: null,
             }, () => {
                 this.resizeBoundries();
@@ -365,8 +413,8 @@ export class Window extends Component {
             });
         } else if (window.innerWidth < 640) {
             this.setState({
-                height: Math.max(60, this.state.minHeight),
-                width: Math.max(85, this.state.minWidth),
+                height: clampHeightToViewport(60, this.state.minHeight),
+                width: clampWidthToViewport(85, this.state.minWidth),
                 preMaximizeBounds: null,
             }, () => {
                 this.resizeBoundries();
@@ -374,8 +422,8 @@ export class Window extends Component {
             });
         } else {
             this.setState({
-                height: Math.max(85, this.state.minHeight),
-                width: Math.max(60, this.state.minWidth),
+                height: clampHeightToViewport(85, this.state.minHeight),
+                width: clampWidthToViewport(60, this.state.minWidth),
                 preMaximizeBounds: null,
             }, () => {
                 this.resizeBoundries();
@@ -450,8 +498,8 @@ export class Window extends Component {
             const usage = this.computeContentUsage();
             if (usage >= 80) return;
             this.setState(prev => ({
-                width: Math.max(prev.width - 1, prev.minWidth),
-                height: Math.max(prev.height - 1, prev.minHeight),
+                width: clampWidthToViewport(prev.width - 1, prev.minWidth),
+                height: clampHeightToViewport(prev.height - 1, prev.minHeight),
                 preMaximizeBounds: null,
             }), () => {
                 this.notifySizeChange();
@@ -520,8 +568,8 @@ export class Window extends Component {
         }
 
         return {
-            width: Math.max(this.state.width, this.state.minWidth),
-            height: Math.max(this.state.height, this.state.minHeight),
+            width: clampWidthToViewport(this.state.width, this.state.minWidth),
+            height: clampHeightToViewport(this.state.height, this.state.minHeight),
             x,
             y,
         };
@@ -613,7 +661,7 @@ export class Window extends Component {
         const px = (this.state.height / 100) * viewportHeight + 1;
         const snapped = this.snapToGrid(px, 'y');
         const heightPercent = snapped / window.innerHeight * 100;
-        const clampedHeight = Math.max(heightPercent, this.state.minHeight);
+        const clampedHeight = clampHeightToViewport(heightPercent, this.state.minHeight);
         this.setState({ height: clampedHeight, preMaximizeBounds: null }, () => {
             this.resizeBoundries();
             this.notifySizeChange();
@@ -627,7 +675,7 @@ export class Window extends Component {
         const px = (this.state.width / 100) * viewportWidth + 1;
         const snapped = this.snapToGrid(px, 'x');
         const widthPercent = snapped / window.innerWidth * 100;
-        const clampedWidth = Math.max(widthPercent, this.state.minWidth);
+        const clampedWidth = clampWidthToViewport(widthPercent, this.state.minWidth);
         this.setState({ width: clampedWidth, preMaximizeBounds: null }, () => {
             this.resizeBoundries();
             this.notifySizeChange();
@@ -674,8 +722,8 @@ export class Window extends Component {
             }
         }
         if (this.state.lastSize) {
-            const lastWidth = Math.max(this.state.lastSize.width, this.state.minWidth);
-            const lastHeight = Math.max(this.state.lastSize.height, this.state.minHeight);
+            const lastWidth = clampWidthToViewport(this.state.lastSize.width, this.state.minWidth);
+            const lastHeight = clampHeightToViewport(this.state.lastSize.height, this.state.minHeight);
             this.setState({
                 width: lastWidth,
                 height: lastHeight,
@@ -706,22 +754,24 @@ export class Window extends Component {
         const regions = computeSnapRegions(viewportWidth, viewportHeight, viewportLeft, viewportTop, topInset, snapBottomInset);
         const region = regions[resolvedPosition];
         if (!region) return;
-        const previousWidth = Math.max(this.state.width, this.state.minWidth);
-        const previousHeight = Math.max(this.state.height, this.state.minHeight);
+        const previousWidth = clampWidthToViewport(this.state.width, this.state.minWidth);
+        const previousHeight = clampHeightToViewport(this.state.height, this.state.minHeight);
         const node = this.getWindowNode();
         if (node) {
             this.setTransformMotionPreset(node, 'snap');
             node.style.transform = `translate(${region.left}px, ${region.top}px)`;
         }
-        const snappedWidthPercent = Math.max(percentOf(region.width, viewportWidth), this.state.minWidth);
-        const snappedHeightPercent = Math.max(percentOf(region.height, viewportHeight), this.state.minHeight);
+        const snappedWidthPercent = percentOf(region.width, viewportWidth);
+        const snappedHeightPercent = percentOf(region.height, viewportHeight);
+        const widthPercent = clampWidthToViewport(snappedWidthPercent, this.state.minWidth);
+        const heightPercent = clampHeightToViewport(snappedHeightPercent, this.state.minHeight);
         this.setState({
             snapPreview: null,
             snapPosition: null,
             snapped: resolvedPosition,
             lastSize: { width: previousWidth, height: previousHeight },
-            width: snappedWidthPercent,
-            height: snappedHeightPercent,
+            width: widthPercent,
+            height: heightPercent,
             preMaximizeBounds: null,
         }, () => {
             this.resizeBoundries();
@@ -896,8 +946,8 @@ export class Window extends Component {
         const targetY = clampWindowTopPosition(targetYRaw, safeTop);
 
         if (hasStoredBounds) {
-            const width = Math.max(storedBounds.width, this.state.minWidth);
-            const height = Math.max(storedBounds.height, this.state.minHeight);
+            const width = clampWidthToViewport(storedBounds.width, this.state.minWidth);
+            const height = clampHeightToViewport(storedBounds.height, this.state.minHeight);
             this.setState({
                 width,
                 height,
@@ -976,7 +1026,9 @@ export class Window extends Component {
                     style['--window-transform-y'] = `${translateYOffset}px`;
                 }
             }
-            this.setState({ maximized: true, height: heightPercent, width: 100.2, preMaximizeBounds: preBounds }, () => {
+            const constrainedHeight = clampHeightToViewport(heightPercent, this.state.minHeight);
+            const constrainedWidth = clampWidthToViewport(MAX_WIDTH_PERCENT, this.state.minWidth);
+            this.setState({ maximized: true, height: constrainedHeight, width: constrainedWidth, preMaximizeBounds: preBounds }, () => {
                 this.notifySizeChange();
             });
         }
@@ -1080,7 +1132,7 @@ export class Window extends Component {
                 e.preventDefault();
                 e.stopPropagation();
                 this.setState(prev => ({
-                    width: Math.max(prev.width - step, prev.minWidth),
+                    width: clampWidthToViewport(prev.width - step, prev.minWidth),
                     preMaximizeBounds: null,
                 }), () => {
                     this.resizeBoundries();
@@ -1090,7 +1142,7 @@ export class Window extends Component {
                 e.preventDefault();
                 e.stopPropagation();
                 this.setState(prev => ({
-                    width: Math.min(prev.width + step, 100),
+                    width: clampWidthToViewport(prev.width + step, prev.minWidth),
                     preMaximizeBounds: null,
                 }), () => {
                     this.resizeBoundries();
@@ -1100,7 +1152,7 @@ export class Window extends Component {
                 e.preventDefault();
                 e.stopPropagation();
                 this.setState(prev => ({
-                    height: Math.max(prev.height - step, prev.minHeight),
+                    height: clampHeightToViewport(prev.height - step, prev.minHeight),
                     preMaximizeBounds: null,
                 }), () => {
                     this.resizeBoundries();
@@ -1110,7 +1162,7 @@ export class Window extends Component {
                 e.preventDefault();
                 e.stopPropagation();
                 this.setState(prev => ({
-                    height: Math.min(prev.height + step, 100),
+                    height: clampHeightToViewport(prev.height + step, prev.minHeight),
                     preMaximizeBounds: null,
                 }), () => {
                     this.resizeBoundries();
