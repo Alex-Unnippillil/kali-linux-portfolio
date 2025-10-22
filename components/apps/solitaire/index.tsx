@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
 import {
@@ -25,6 +25,9 @@ type Stats = {
   bestTime: number;
   dailyStreak: number;
   lastDaily: string | null;
+  totalHints: number;
+  totalUndos: number;
+  autoFinishes: number;
 };
 
 const getStatsKey = (v: Variant, mode: 1 | 3, passes: number) =>
@@ -40,22 +43,77 @@ type AnimatedCard = Card & {
 };
 
 const controlButtonClasses =
-  'rounded border border-kali-border/60 bg-kali-dark px-2 py-1 text-sm font-medium text-kali-text transition-colors duration-150 hover:bg-[color:color-mix(in_srgb,var(--color-surface)_70%,rgba(15,148,210,0.18)_30%)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus';
+  'group relative rounded-md border border-kali-border/60 bg-[color:color-mix(in_srgb,var(--color-surface-muted)_80%,rgba(9,34,52,0.92)_20%)] px-3 py-1.5 text-sm font-semibold text-kali-text shadow-[0_3px_6px_rgba(0,0,0,0.35)] transition-all duration-200 hover:-translate-y-[1px] hover:border-kali-accent/70 hover:bg-[color:color-mix(in_srgb,var(--color-surface)_75%,rgba(25,116,186,0.35)_25%)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus disabled:cursor-not-allowed disabled:opacity-60';
 
-const renderCard = (card: Card) => (
-  <div className="w-16 h-24 min-w-[24px] min-h-[24px] rounded border border-black/80 bg-white flex items-center justify-center transition-transform duration-300 shadow-[0_1px_0_rgba(0,0,0,0.5)]">
-    <span className={card.color === 'red' ? 'text-red-500' : 'text-slate-900'}>
-      {valueToString(card.value)}{card.suit}
-    </span>
-  </div>
-);
+const CARD_FACE_TEXTURE = '/apps/solitaire/card-front.svg';
+const CARD_BACK_TEXTURE = '/apps/solitaire/card-back.svg';
+const TABLE_FELT_TEXTURE = '/apps/solitaire/felt-texture.svg';
+const suitLabels: Record<Suit, string> = {
+  '♠': 'spades',
+  '♥': 'hearts',
+  '♦': 'diamonds',
+  '♣': 'clubs',
+};
 
-const renderFaceDown = () => (
-  <div className="relative w-16 h-24 min-w-[24px] min-h-[24px] overflow-hidden rounded border border-kali-accent/70 shadow-[0_1px_0_rgba(0,0,0,0.5)]">
-    <div className="pointer-events-none absolute inset-0 rounded bg-[radial-gradient(circle_at_30%_30%,rgba(15,148,210,0.28),rgba(6,18,30,0.65) 70%,rgba(4,10,18,0.85))]" />
-    <div className="pointer-events-none absolute inset-[4px] rounded border border-kali-accent/30" />
-  </div>
-);
+const CardView: React.FC<{
+  card: Card;
+  faceDown?: boolean;
+  reducedMotion: boolean;
+  style?: React.CSSProperties;
+  className?: string;
+  disableFlip?: boolean;
+}> = ({
+  card,
+  faceDown = false,
+  reducedMotion,
+  style,
+  className = '',
+  disableFlip = false,
+}) => {
+  const [showFront, setShowFront] = useState(!faceDown);
+  const prev = useRef(!faceDown);
+
+  useEffect(() => {
+    if (disableFlip || reducedMotion) {
+      setShowFront(!faceDown);
+      prev.current = !faceDown;
+      return;
+    }
+    const next = !faceDown;
+    if (prev.current !== next) {
+      requestAnimationFrame(() => {
+        setShowFront(next);
+      });
+      prev.current = next;
+    }
+  }, [faceDown, disableFlip, reducedMotion]);
+
+  return (
+    <div
+      className={`sol-card ${showFront ? 'sol-card-front' : 'sol-card-back'} ${
+        card.color === 'red' ? 'sol-card-red' : 'sol-card-black'
+      } ${className}`}
+      style={style}
+    >
+      <div className="sol-card-inner">
+        <div className="sol-card-face sol-card-face-front">
+          <div className="sol-card-corner sol-card-corner--top">
+            <span>{valueToString(card.value)}</span>
+            <span aria-hidden="true">{card.suit}</span>
+          </div>
+          <div className="sol-card-suit" aria-hidden="true">
+            {card.suit}
+          </div>
+          <div className="sol-card-corner sol-card-corner--bottom">
+            <span>{valueToString(card.value)}</span>
+            <span aria-hidden="true">{card.suit}</span>
+          </div>
+        </div>
+        <div className="sol-card-face sol-card-face-back" />
+      </div>
+    </div>
+  );
+};
 
 const Solitaire = () => {
   const [drawMode, setDrawMode] = useState<1 | 3>(1);
@@ -76,6 +134,9 @@ const Solitaire = () => {
     bestTime: 0,
     dailyStreak: 0,
     lastDaily: null,
+    totalHints: 0,
+    totalUndos: 0,
+    autoFinishes: 0,
   });
   const prefersReducedMotion = usePrefersReducedMotion();
   const [cascade, setCascade] = useState<AnimatedCard[]>([]);
@@ -96,6 +157,80 @@ const Solitaire = () => {
   const [bankroll, setBankroll] = useState(0);
   const [bankrollReady, setBankrollReady] = useState(false);
   const foundationCountRef = useRef(0);
+  const [history, setHistory] = useState<GameState[]>([]);
+  const historyGuardRef = useRef(false);
+  const [isShuffling, setIsShuffling] = useState(false);
+  const [confettiSeed, setConfettiSeed] = useState(0);
+  const statsKey = useMemo(
+    () => getStatsKey(variant, drawMode, passLimit),
+    [variant, drawMode, passLimit],
+  );
+
+  const cardVerticalOffset = useMemo(() => {
+    if (scale < 0.7) return 18;
+    if (scale < 0.85) return 24;
+    if (scale < 0.95) return 28;
+    return 32;
+  }, [scale]);
+
+  const confettiPieces = useMemo(() => {
+    if (prefersReducedMotion) return [] as { id: string; left: number; delay: number; hue: number }[];
+    const total = 24;
+    const pieces: { id: string; left: number; delay: number; hue: number }[] = [];
+    for (let i = 0; i < total; i += 1) {
+      pieces.push({
+        id: `${confettiSeed}-${i}`,
+        left: ((confettiSeed * 19 + i * 37) % 90) + 5,
+        delay: (i * 90) % 900,
+        hue: (confettiSeed * 11 + i * 23) % 360,
+      });
+    }
+    return pieces;
+  }, [confettiSeed, prefersReducedMotion]);
+
+  const updateStats = useCallback(
+    (updater: (prev: Stats) => Stats) => {
+      setStats((prev) => {
+        const next = updater(prev);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(statsKey, JSON.stringify(next));
+        }
+        return next;
+      });
+    },
+    [statsKey],
+  );
+
+  const applyMove = useCallback(
+    (
+      updater: (state: GameState) => GameState,
+      options: { countMove?: boolean; trackHistory?: boolean } = {},
+    ) => {
+      const { countMove = true, trackHistory = true } = options;
+      let changed = false;
+      setGame((prev) => {
+        const next = updater(prev);
+        if (next !== prev) {
+          changed = true;
+          if (!historyGuardRef.current && trackHistory) {
+            setHistory((h) => [...h.slice(-99), prev]);
+          }
+          if (countMove && !historyGuardRef.current) {
+            setMoves((m) => m + 1);
+          }
+        }
+        historyGuardRef.current = false;
+        return next;
+      });
+      return changed;
+    },
+    [],
+  );
+
+  const recordManualMove = useCallback((snapshot: GameState, moveCount = 1) => {
+    setHistory((h) => [...h.slice(-99), snapshot]);
+    setMoves((m) => m + moveCount);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -109,9 +244,7 @@ const Solitaire = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const saved = JSON.parse(
-      localStorage.getItem(getStatsKey(variant, drawMode, passLimit)) || '{}',
-    );
+    const saved = JSON.parse(localStorage.getItem(statsKey) || '{}');
     setStats({
       gamesPlayed: 0,
       gamesWon: 0,
@@ -119,9 +252,12 @@ const Solitaire = () => {
       bestTime: 0,
       dailyStreak: 0,
       lastDaily: null,
+      totalHints: 0,
+      totalUndos: 0,
+      autoFinishes: 0,
       ...saved,
     });
-  }, [variant, drawMode, passLimit]);
+  }, [statsKey]);
 
   useEffect(() => {
     const updateScale = () => {
@@ -172,12 +308,22 @@ const Solitaire = () => {
           }
         }
       }
+      if (!prefersReducedMotion && typeof window !== 'undefined') {
+        setIsShuffling(true);
+        window.setTimeout(() => setIsShuffling(false), 900);
+      }
+      historyGuardRef.current = true;
       setGame(initializeGame(mode, deck, seed, passLimit));
       setWon(false);
       setCascade([]);
+      setConfettiSeed((s) => s + 1);
       setTime(0);
       setMoves(0);
+      setHistory([]);
+      setHint(null);
+      setAutoCompleting(false);
       setIsDaily(daily);
+      setAriaMessage('New game started');
       setBankroll((b) => {
         const nb = b - 52;
         if (typeof window !== 'undefined') {
@@ -186,18 +332,16 @@ const Solitaire = () => {
         return nb;
       });
       foundationCountRef.current = 0;
-      setStats((s) => {
-        const ns = { ...s, gamesPlayed: s.gamesPlayed + 1 };
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(
-            getStatsKey(v, mode, passLimit),
-            JSON.stringify(ns),
-          );
-        }
-        return ns;
-      });
+      updateStats((s) => ({ ...s, gamesPlayed: s.gamesPlayed + 1 }));
     },
-    [drawMode, variant, winnableOnly, passLimit],
+    [
+      drawMode,
+      variant,
+      winnableOnly,
+      passLimit,
+      prefersReducedMotion,
+      updateStats,
+    ],
   );
 
   useEffect(() => {
@@ -210,7 +354,7 @@ const Solitaire = () => {
   useEffect(() => {
     if (won) {
       if (timer.current) clearInterval(timer.current);
-      setStats((s) => {
+      updateStats((s) => {
         const bestScore = vegasScore > s.bestScore ? vegasScore : s.bestScore;
         const bestTime = s.bestTime === 0 || time < s.bestTime ? time : s.bestTime;
         let { dailyStreak, lastDaily } = s;
@@ -228,7 +372,7 @@ const Solitaire = () => {
           }
           lastDaily = today;
         }
-        const ns = {
+        return {
           ...s,
           gamesWon: s.gamesWon + 1,
           bestScore,
@@ -236,14 +380,8 @@ const Solitaire = () => {
           dailyStreak,
           lastDaily,
         };
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(
-            getStatsKey(variant, drawMode, passLimit),
-            JSON.stringify(ns),
-          );
-        }
-        return ns;
       });
+      setConfettiSeed((s) => s + 1);
       return;
     }
     if (paused) {
@@ -254,7 +392,18 @@ const Solitaire = () => {
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
-  }, [won, paused, game, time, isDaily, variant, drawMode, passLimit, setStats, vegasScore]);
+  }, [
+    won,
+    paused,
+    game,
+    time,
+    isDaily,
+    variant,
+    drawMode,
+    passLimit,
+    vegasScore,
+    updateStats,
+  ]);
 
   useEffect(() => {
     if (game.foundations.every((p) => p.length === 13)) {
@@ -329,19 +478,37 @@ const Solitaire = () => {
     if (won) setAriaMessage('You win!');
   }, [won]);
 
-  const draw = () =>
-    setGame((g) => {
-      const n = drawFromStock(g);
-      if (n !== g) {
-        ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
-        setMoves((m) => m + 1);
-      }
-      return n;
-    });
+  const draw = () => {
+    const changed = applyMove((g) => drawFromStock(g));
+    if (changed) {
+      ReactGA.event({ category: 'Solitaire', action: 'move', label: 'draw' });
+      setAriaMessage('Drew cards from stock');
+    } else if (!game.stock.length && game.redeals === 0) {
+      setAriaMessage('No redeals remaining');
+    }
+  };
+
+  const describeCard = useCallback((card: Card) => {
+    const valueMap: Record<string, string> = {
+      A: 'Ace',
+      J: 'Jack',
+      Q: 'Queen',
+      K: 'King',
+    };
+    const text = valueToString(card.value);
+    const prefix = valueMap[text] || text;
+    return `${prefix} of ${suitLabels[card.suit]}`;
+  }, []);
 
   const showHint = () => {
     const h = findHint(game);
-    if (h) setHint(h);
+    if (h) {
+      setHint(h);
+      updateStats((s) => ({ ...s, totalHints: s.totalHints + 1 }));
+      setAriaMessage('Hint highlighted a possible move');
+    } else {
+      setAriaMessage('No hints available');
+    }
   };
 
 
@@ -416,6 +583,7 @@ const Solitaire = () => {
     ) => {
       const root = rootRef.current;
       if (!root) {
+        historyGuardRef.current = true;
         setGame(toState);
         cb();
         return;
@@ -458,6 +626,7 @@ const Solitaire = () => {
         foundations: tempFoundations,
         score: toState.score - 10,
       };
+      historyGuardRef.current = true;
       setGame(tempState);
       const anim: AnimatedCard = {
         ...card,
@@ -475,6 +644,7 @@ const Solitaire = () => {
       });
       setTimeout(() => {
         setFlying((f) => f.filter((c) => c !== anim));
+        historyGuardRef.current = true;
         setGame(toState);
         cb();
       }, 300);
@@ -490,18 +660,21 @@ const Solitaire = () => {
       let next = g;
       if (m.type === 'draw') {
         next = drawFromStock(g);
+        historyGuardRef.current = true;
         setGame(next);
         setTimeout(() => play(index + 1, next), 300);
         return;
       }
       if (m.type === 'wasteToTableau') {
         next = moveWasteToTableau(g, m.to);
+        historyGuardRef.current = true;
         setGame(next);
         setTimeout(() => play(index + 1, next), 300);
         return;
       }
       if (m.type === 'tableauToTableau') {
         next = moveTableauToTableau(g, m.from, m.index, m.to);
+        historyGuardRef.current = true;
         setGame(next);
         setTimeout(() => play(index + 1, next), 300);
         return;
@@ -521,24 +694,15 @@ const Solitaire = () => {
 
   const dropToTableau = (pileIndex: number) => {
     if (!drag) return;
+    let moved = false;
     if (drag.source === 'tableau') {
-      setGame((g) => {
-        const n = moveTableauToTableau(g, drag.pile, drag.index, pileIndex);
-        if (n !== g) {
-          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
-          setMoves((m) => m + 1);
-        }
-        return n;
-      });
+      moved = applyMove((g) => moveTableauToTableau(g, drag.pile, drag.index, pileIndex));
     } else {
-      setGame((g) => {
-        const n = moveWasteToTableau(g, pileIndex);
-        if (n !== g) {
-          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
-          setMoves((m) => m + 1);
-        }
-        return n;
-      });
+      moved = applyMove((g) => moveWasteToTableau(g, pileIndex));
+    }
+    if (moved) {
+      ReactGA.event({ category: 'Solitaire', action: 'move', label: 'tableau' });
+      setAriaMessage('Moved cards to tableau');
     }
     finishDrag();
   };
@@ -546,23 +710,25 @@ const Solitaire = () => {
   const dropToFoundation = (pileIndex: number) => {
     if (!drag) return;
     if (drag.source === 'tableau') {
-      setGame((g) => {
-        const n = moveToFoundation(g, 'tableau', drag.pile);
-        if (n !== g) {
-          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
-          setMoves((m) => m + 1);
-        }
-        return n;
-      });
+      const current = game;
+      const next = moveToFoundation(current, 'tableau', drag.pile);
+      if (next !== current) {
+        recordManualMove(current);
+        ReactGA.event({ category: 'Solitaire', action: 'move', label: 'foundation' });
+        flyMove(current, next, 'tableau', drag.pile, () =>
+          setAriaMessage('Moved card to foundation'),
+        );
+      }
     } else {
-      setGame((g) => {
-        const n = moveToFoundation(g, 'waste', null);
-        if (n !== g) {
-          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
-          setMoves((m) => m + 1);
-        }
-        return n;
-      });
+      const current = game;
+      const next = moveToFoundation(current, 'waste', null);
+      if (next !== current) {
+        recordManualMove(current);
+        ReactGA.event({ category: 'Solitaire', action: 'move', label: 'foundation' });
+        flyMove(current, next, 'waste', null, () =>
+          setAriaMessage('Moved card to foundation'),
+        );
+      }
     }
     finishDrag();
   };
@@ -576,7 +742,7 @@ const Solitaire = () => {
     );
     if (next !== current) {
       ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
-      setMoves((m) => m + 1);
+      recordManualMove(current);
       flyMove(
         current,
         next,
@@ -586,12 +752,118 @@ const Solitaire = () => {
     }
   };
 
+  const undo = useCallback(() => {
+    setHistory((h) => {
+      if (!h.length) {
+        setAriaMessage('Nothing to undo');
+        return h;
+      }
+      const prevState = h[h.length - 1];
+      historyGuardRef.current = true;
+      setGame(prevState);
+      setMoves((m) => (m > 0 ? m - 1 : 0));
+      setWon(false);
+      setCascade([]);
+      setConfettiSeed((s) => s + 1);
+      updateStats((s) => ({ ...s, totalUndos: s.totalUndos + 1 }));
+      setAriaMessage('Undid last move');
+      return h.slice(0, -1);
+    });
+  }, [updateStats]);
+
+  const handleAutoCompleteClick = useCallback(() => {
+    startAutoComplete(game, true);
+  }, [game, startAutoComplete]);
+
+  const handleStockKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      draw();
+    }
+  };
+
+  const handleWasteKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!game.waste.length) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleDoubleClick('waste', 0);
+      return;
+    }
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      for (let i = 0; i < game.tableau.length; i += 1) {
+        const moved = applyMove((state) => moveWasteToTableau(state, i));
+        if (moved) {
+          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'keyboard' });
+          setAriaMessage('Moved waste card to tableau');
+          return;
+        }
+      }
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      handleDoubleClick('waste', 0);
+    }
+  };
+
+  const handleTableauKeyDown = (pileIndex: number) =>
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      const pile = game.tableau[pileIndex];
+      if (!pile.length) return;
+      const top = pile[pile.length - 1];
+      if (!top.faceUp) return;
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleDoubleClick('tableau', pileIndex);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        handleDoubleClick('tableau', pileIndex);
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        for (let i = 0; i < game.tableau.length; i += 1) {
+          if (i === pileIndex) continue;
+          const moved = applyMove((state) => {
+            const length = state.tableau[pileIndex].length;
+            if (length === 0) return state;
+            return moveTableauToTableau(state, pileIndex, length - 1, i);
+          });
+          if (moved) {
+            ReactGA.event({ category: 'Solitaire', action: 'move', label: 'keyboard' });
+            setAriaMessage('Moved tableau card to another pile');
+            return;
+          }
+        }
+      }
+    };
+
+  const bestSummary = stats.bestScore
+    ? `${stats.bestScore} (${stats.bestTime || 0}s)`
+    : 'N/A';
+  const redealLabel = game.redeals === Infinity ? '∞' : game.redeals;
+  const modeLabel = winnableOnly ? 'Winnable deals' : 'Random deals';
+  const statChips = [
+    { label: 'Score', value: vegasScore },
+    { label: 'Bankroll', value: bankroll },
+    { label: 'Redeals', value: redealLabel },
+    { label: 'Mode', value: modeLabel },
+    { label: 'Best', value: bestSummary },
+    { label: 'Wins', value: `${stats.gamesWon}/${stats.gamesPlayed}` },
+    { label: 'Daily Streak', value: stats.dailyStreak },
+    { label: 'Hints', value: stats.totalHints },
+    { label: 'Undos', value: stats.totalUndos },
+    { label: 'Auto-finish', value: stats.autoFinishes },
+  ];
+
   const autoCompleteNext = useCallback(
     (g: GameState) => {
       let next = moveToFoundation(g, 'waste', null);
       if (next !== g) {
         ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
-        setMoves((m) => m + 1);
+        recordManualMove(g);
         flyMove(g, next, 'waste', null, () => autoCompleteNext(next));
         return;
       }
@@ -599,14 +871,51 @@ const Solitaire = () => {
         next = moveToFoundation(g, 'tableau', i);
         if (next !== g) {
           ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
-          setMoves((m) => m + 1);
+          recordManualMove(g);
           flyMove(g, next, 'tableau', i, () => autoCompleteNext(next));
           return;
         }
       }
       setAutoCompleting(false);
     },
-    [flyMove],
+    [flyMove, recordManualMove],
+  );
+
+  const startAutoComplete = useCallback(
+    (state: GameState, manual: boolean) => {
+      if (autoCompleting) return;
+      if (prefersReducedMotion) {
+        const next = autoComplete(state);
+        if (next !== state) {
+          const movedCards =
+            next.foundations.reduce((sum, pile) => sum + pile.length, 0) -
+            state.foundations.reduce((sum, pile) => sum + pile.length, 0);
+          if (movedCards > 0) {
+            recordManualMove(state, movedCards);
+          }
+          if (manual) {
+            updateStats((s) => ({ ...s, autoFinishes: s.autoFinishes + 1 }));
+          }
+          historyGuardRef.current = true;
+          setGame(next);
+          setAriaMessage('Auto-complete finished the game');
+        }
+        return;
+      }
+      if (manual) {
+        updateStats((s) => ({ ...s, autoFinishes: s.autoFinishes + 1 }));
+      }
+      setAutoCompleting(true);
+      setAriaMessage('Auto-completing remaining moves');
+      autoCompleteNext(state);
+    },
+    [
+      autoCompleting,
+      prefersReducedMotion,
+      recordManualMove,
+      updateStats,
+      autoCompleteNext,
+    ],
   );
 
   useEffect(() => {
@@ -615,42 +924,38 @@ const Solitaire = () => {
       game.stock.length === 0 &&
       game.tableau.every((p) => p.every((c) => c.faceUp))
     ) {
-      if (prefersReducedMotion) {
-        // When animations are disabled we can instantly finish the game using
-        // the engine's autoComplete helper.
-        setGame((g) => autoComplete(g));
-        return;
-      }
-      setAutoCompleting(true);
-      autoCompleteNext(game);
+      startAutoComplete(game, false);
     }
-  }, [
-    game,
-    autoCompleteNext,
-    autoCompleting,
-    prefersReducedMotion,
-    setGame,
-  ]);
+  }, [autoCompleting, game, startAutoComplete]);
   if (variant !== 'klondike') {
     return (
-      <div className="h-full w-full select-none p-2 text-kali-text bg-[color:color-mix(in_srgb,var(--color-surface-muted)_88%,rgba(8,16,24,0.88)_12%)]">
-        <div className="flex justify-end mb-2">
+      <div className="h-full w-full select-none bg-[color:color-mix(in_srgb,var(--color-surface-muted)_88%,rgba(8,16,24,0.9)_12%)] p-3 text-kali-text">
+        <div className="mb-4 flex justify-end">
           <select
-          className={`${controlButtonClasses} px-2 py-1`}
-          aria-label="Change solitaire variant"
-          value={variant}
-          onChange={(e) => {
-            const v = e.target.value as Variant;
-            setVariant(v);
-          }}
+            className={`${controlButtonClasses} px-3 py-1`}
+            aria-label="Change solitaire variant"
+            value={variant}
+            onChange={(e) => {
+              const v = e.target.value as Variant;
+              setVariant(v);
+            }}
           >
             <option value="klondike">Klondike</option>
             <option value="spider">Spider</option>
             <option value="freecell">FreeCell</option>
           </select>
         </div>
-        <div className="flex items-center justify-center h-full text-xl text-kali-accent">
-          {`${variant.charAt(0).toUpperCase() + variant.slice(1)} coming soon!`}
+        <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+          <p className="text-xl font-semibold text-kali-accent">
+            {`${variant.charAt(0).toUpperCase() + variant.slice(1)} is loading soon.`}
+          </p>
+          <button
+            type="button"
+            className={controlButtonClasses}
+            onClick={() => setVariant('klondike')}
+          >
+            Return to Klondike
+          </button>
         </div>
       </div>
     );
@@ -659,16 +964,18 @@ const Solitaire = () => {
   return (
     <div
       ref={rootRef}
-      className="h-full w-full select-none p-2 pt-8 text-kali-text relative overflow-hidden bg-[color:color-mix(in_srgb,var(--color-surface-muted)_85%,rgba(6,12,20,0.92)_15%)]"
-      style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
+      className="relative h-full w-full overflow-hidden text-kali-text"
+      style={{
+        transform: `scale(${scale})`,
+        transformOrigin: 'top left',
+        backgroundImage: `linear-gradient(120deg, rgba(4,10,18,0.88), rgba(9,40,62,0.85)), url(${TABLE_FELT_TEXTURE})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
     >
-      <div className="absolute top-0 left-0 right-0 flex justify-between px-2 text-xs sm:text-sm pointer-events-none">
-        <span className="rounded bg-black/30 px-2 py-1 font-semibold text-kali-accent shadow-sm">
-          Moves: {moves}
-        </span>
-        <span className="rounded bg-black/30 px-2 py-1 font-semibold text-kali-accent shadow-sm">
-          Time: {time}s
-        </span>
+      <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-between px-4 py-2 text-xs font-semibold sm:text-sm">
+        <span className="rounded-full bg-black/35 px-3 py-1 shadow-sm">Moves: {moves}</span>
+        <span className="rounded-full bg-black/35 px-3 py-1 shadow-sm">Time: {time}s</span>
       </div>
       <div aria-live="polite" className="sr-only">
         {ariaMessage}
@@ -695,218 +1002,455 @@ const Solitaire = () => {
           className="absolute transition-transform duration-300"
           style={{ transform: `translate(${c.x}px, ${c.y}px)` }}
         >
-          {renderCard(c)}
+          <CardView card={c} reducedMotion={prefersReducedMotion} disableFlip />
         </div>
       ))}
       {won && !prefersReducedMotion &&
         cascade.map((c, i) => (
           <div
-            key={i}
-            className="absolute transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]"
+            key={`cascade-${i}`}
+            className="absolute transition-transform duration-[1200ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
             style={{
               transform: `translate(${c.x}px, ${c.y}px) rotate(${c.angle}deg)`,
-              boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
             }}
           >
-            {renderCard(c)}
+            <CardView card={c} reducedMotion={prefersReducedMotion} disableFlip />
           </div>
+        ))}
+      {won && !prefersReducedMotion &&
+        confettiPieces.map((piece) => (
+          <span
+            key={piece.id}
+            className="sol-confetti"
+            style={{
+              left: `${piece.left}%`,
+              animationDelay: `${piece.delay}ms`,
+              background: `linear-gradient(135deg, hsl(${piece.hue} 85% 65%), hsl(${(piece.hue + 40) % 360} 85% 55%))`,
+            }}
+          />
         ))}
       {won && (
-        <div
-          className={`absolute inset-0 flex items-center justify-center bg-kali-overlay/95 text-2xl font-semibold text-kali-accent ${
-            !prefersReducedMotion ? 'animate-pulse' : ''
-          }`}
-          role="alert"
-        >
-          You win!
+        <div className="sol-victory-overlay" role="alert" aria-live="assertive">
+          <div className="sol-victory-card">
+            <h2 className="text-2xl font-semibold text-kali-accent">You win!</h2>
+            <p className="mt-2 text-sm text-kali-subtle">
+              Vegas score {vegasScore} • {time}s • {moves} moves
+            </p>
+            <div className="mt-4 flex flex-wrap justify-center gap-3">
+              <button
+                type="button"
+                className={controlButtonClasses}
+                onClick={() => start(drawMode, variant, isDaily)}
+              >
+                New Deal
+              </button>
+              <button
+                type="button"
+                className={controlButtonClasses}
+                onClick={() => start(drawMode, variant, true)}
+              >
+                Daily Deal
+              </button>
+            </div>
+          </div>
         </div>
       )}
-      <div className="flex justify-between mb-2 flex-wrap gap-2 text-xs sm:text-sm font-semibold">
-        <div className="rounded bg-black/30 px-2 py-1 shadow-inner shadow-black/40">
-          Score: <span className="text-kali-accent">{vegasScore}</span>
-        </div>
-        <div className="rounded bg-black/30 px-2 py-1 shadow-inner shadow-black/40">
-          Bankroll: <span className="text-kali-accent">{bankroll}</span>
-        </div>
-        <div className="rounded bg-black/30 px-2 py-1 shadow-inner shadow-black/40">
-          Redeals: <span className="text-kali-accent">{game.redeals === Infinity ? '∞' : game.redeals}</span>
-        </div>
-        <div className="rounded bg-black/30 px-2 py-1 shadow-inner shadow-black/40">
-          Mode: <span className="text-kali-accent">{winnableOnly ? 'Winnable' : 'Random'}</span>
-        </div>
-        <div className="rounded bg-black/30 px-2 py-1 shadow-inner shadow-black/40">
-          Best: <span className="text-kali-accent">{stats.bestScore ? `${stats.bestScore} (${stats.bestTime}s)` : 'N/A'}</span>
-        </div>
-        <div className="rounded bg-black/30 px-2 py-1 shadow-inner shadow-black/40">
-          Wins: <span className="text-kali-accent">{stats.gamesWon}/{stats.gamesPlayed}</span>
-        </div>
-        <div className="rounded bg-black/30 px-2 py-1 shadow-inner shadow-black/40">
-          Daily Streak: <span className="text-kali-accent">{stats.dailyStreak}</span>
-        </div>
-        <select
-          className={`${controlButtonClasses} px-2 py-1`}
-          aria-label="Set solitaire variant"
-          value={variant}
-          onChange={(e) => {
-            const v = e.target.value as Variant;
-            ReactGA.event({ category: 'Solitaire', action: 'variant_select', label: v });
-            setVariant(v);
-          }}
-        >
-          <option value="klondike">Klondike</option>
-          <option value="spider">Spider</option>
-          <option value="freecell">FreeCell</option>
-        </select>
-        <button
-          className={controlButtonClasses}
-          onClick={() => start(drawMode, variant, true)}
-        >
-          Daily Deal
-        </button>
-        <button
-          className={controlButtonClasses}
-          onClick={showHint}
-        >
-          Hint
-        </button>
-        <button
-          className={controlButtonClasses}
-          onClick={runSolver}
-        >
-          Solve
-        </button>
-        <button
-          className={controlButtonClasses}
-          onClick={() => {
-            const mode = drawMode === 1 ? 3 : 1;
-            ReactGA.event({
-              category: 'Solitaire',
-              action: 'variant_select',
-              label: mode === 1 ? 'draw1' : 'draw3',
-            });
-            setDrawMode(mode);
-          }}
-        >
-          Draw {drawMode === 1 ? '1' : '3'}
-        </button>
-        <button
-          className={controlButtonClasses}
-          onClick={() => {
-            const opts = [3, 1, Infinity];
-            const next = opts[(opts.indexOf(passLimit) + 1) % opts.length];
-            ReactGA.event({
-              category: 'Solitaire',
-              action: 'variant_select',
-              label: `passes_${next === Infinity ? 'unlimited' : next}`,
-            });
-            setPassLimit(next);
-          }}
-        >
-          Passes {passLimit === Infinity ? '∞' : passLimit}
-        </button>
-        <label className="flex items-center space-x-1 text-kali-text">
-          <input
-            type="checkbox"
-            checked={winnableOnly}
-            onChange={(e) => setWinnableOnly(e.target.checked)}
-            aria-label="Toggle winnable deals only"
-          />
-          <span className="select-none">Winnable Only</span>
-        </label>
-      </div>
-      <div className="flex space-x-4 mb-4">
-        <div className="w-16 h-24 min-w-[24px] min-h-[24px]" onClick={draw}>
-          {game.stock.length ? renderFaceDown() : <div />}
-        </div>
-        <div className="w-16 h-24 min-w-[24px] min-h-[24px]" onDragOver={(e) => e.preventDefault()}>
-          {game.waste.length ? (
-            <div
-              ref={wasteRef}
-              draggable
-              onDoubleClick={() => handleDoubleClick('waste', 0)}
-              onDragStart={(e) => handleDragStart('waste', -1, game.waste.length - 1, e)}
-              onDragEnd={handleDragEnd}
-              className={`${
-                drag && drag.source === 'waste'
-                  ? 'opacity-0'
-                  : ''
-              } ${hint && hint.source === 'waste' ? 'ring-4 ring-yellow-400' : ''} ${
-                !prefersReducedMotion ? 'transition-transform' : ''
-              }`}
-            >
-              {renderCard(game.waste[game.waste.length - 1])}
-            </div>
-          ) : (
-            <div className="w-16 h-24 min-w-[24px] min-h-[24px]" />
-          )}
-        </div>
-        {game.foundations.map((pile, i) => (
-          <div
-            key={`f-${i}`}
-            className="w-16 h-24 min-w-[24px] min-h-[24px]"
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => dropToFoundation(i)}
-            ref={(el) => {
-              foundationRefs.current[i] = el;
-            }}
-          >
-            {pile.length ? renderCard(pile[pile.length - 1]) : (
-              <div className="w-16 h-24 min-w-[24px] min-h-[24px] rounded border border-dashed border-kali-accent/50 bg-black/20" />
-            )}
-          </div>
-        ))}
-      </div>
-      <div className="flex space-x-4">
-        {game.tableau.map((pile, i) => (
-          <div
-            key={`t-${i}`}
-            className="relative w-16 h-96 min-w-[24px] rounded border border-kali-accent/40 bg-black/20 shadow-inner shadow-black/60"
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => dropToTableau(i)}
-              ref={(el) => {
-                tableauRefs.current[i] = el;
-              }}
-          >
-            {pile.map((card, idx) => (
+      <div className="relative flex h-full flex-col gap-4 pt-12">
+        <div className="rounded-xl bg-black/30 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-sm">
+          <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+            {statChips.map((chip) => (
               <div
-                key={idx}
-                className={`absolute ${
-                  !prefersReducedMotion ? 'transition-transform duration-300' : ''
-                } ${
-                  drag &&
-                  drag.source === 'tableau' &&
-                  drag.pile === i &&
-                  idx >= drag.index
-                    ? 'opacity-0'
-                    : ''
-                } ${
-                  hint &&
-                  hint.source === 'tableau' &&
-                  hint.pile === i &&
-                  hint.index === idx
-                    ? 'ring-4 ring-yellow-400'
-                    : ''
-                }`}
-                style={{ top: idx * 24, filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.3))' }}
-                draggable={card.faceUp}
-                onDoubleClick={() => handleDoubleClick('tableau', i)}
-                onDragStart={(e) => handleDragStart('tableau', i, idx, e)}
-                onDragEnd={handleDragEnd}
+                key={chip.label}
+                className="rounded-full bg-black/35 px-3 py-1 font-semibold shadow-inner shadow-black/60"
               >
-                {card.faceUp ? renderCard(card) : renderFaceDown()}
+                {chip.label}:{' '}
+                <span className="text-kali-accent">{chip.value}</span>
               </div>
             ))}
           </div>
-        ))}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <select
+              className={`${controlButtonClasses} px-3 py-1`}
+              aria-label="Set solitaire variant"
+              value={variant}
+              onChange={(e) => {
+                const v = e.target.value as Variant;
+                ReactGA.event({ category: 'Solitaire', action: 'variant_select', label: v });
+                setVariant(v);
+              }}
+            >
+              <option value="klondike">Klondike</option>
+              <option value="spider">Spider</option>
+              <option value="freecell">FreeCell</option>
+            </select>
+            <button
+              type="button"
+              className={controlButtonClasses}
+              onClick={() => start(drawMode, variant, true)}
+              title="Deal the daily seed"
+            >
+              Daily Deal
+            </button>
+            <button
+              type="button"
+              className={controlButtonClasses}
+              onClick={showHint}
+              title="Highlight a playable move"
+            >
+              Hint
+            </button>
+            <button
+              type="button"
+              className={controlButtonClasses}
+              onClick={undo}
+              disabled={!history.length}
+              title="Undo the last move"
+            >
+              Undo
+            </button>
+            <button
+              type="button"
+              className={controlButtonClasses}
+              onClick={handleAutoCompleteClick}
+              disabled={autoCompleting}
+              title="Move all remaining cards to the foundations"
+            >
+              Auto-complete
+            </button>
+            <button
+              type="button"
+              className={controlButtonClasses}
+              onClick={runSolver}
+              title="Let the solver demonstrate a win"
+            >
+              Solve
+            </button>
+            <button
+              type="button"
+              className={controlButtonClasses}
+              onClick={() => {
+                const mode = drawMode === 1 ? 3 : 1;
+                ReactGA.event({
+                  category: 'Solitaire',
+                  action: 'variant_select',
+                  label: mode === 1 ? 'draw1' : 'draw3',
+                });
+                setDrawMode(mode);
+              }}
+              title="Toggle draw mode"
+            >
+              Draw {drawMode === 1 ? '1' : '3'}
+            </button>
+            <button
+              type="button"
+              className={controlButtonClasses}
+              onClick={() => {
+                const opts = [3, 1, Infinity];
+                const next = opts[(opts.indexOf(passLimit) + 1) % opts.length];
+                ReactGA.event({
+                  category: 'Solitaire',
+                  action: 'variant_select',
+                  label: `passes_${next === Infinity ? 'unlimited' : next}`,
+                });
+                setPassLimit(next);
+              }}
+              title="Cycle redeal limit"
+            >
+              Passes {passLimit === Infinity ? '∞' : passLimit}
+            </button>
+            <label className="flex items-center space-x-1 text-xs font-semibold uppercase tracking-wider text-kali-subtle">
+              <input
+                type="checkbox"
+                checked={winnableOnly}
+                onChange={(e) => setWinnableOnly(e.target.checked)}
+                aria-label="Toggle winnable deals only"
+              />
+              <span className="select-none">Winnable Only</span>
+            </label>
+            <button
+              type="button"
+              className={controlButtonClasses}
+              onClick={() => start(drawMode, variant, isDaily)}
+              title="Restart this deal"
+            >
+              Restart
+            </button>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-start gap-4 rounded-xl bg-black/25 p-4 shadow-inner shadow-black/70">
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-[0.7rem] uppercase tracking-widest text-kali-subtle">Stock</span>
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={draw}
+              onKeyDown={handleStockKeyDown}
+              aria-label={game.stock.length ? `${game.stock.length} cards in stock` : 'Empty stock pile'}
+              className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+            >
+              {game.stock.length ? (
+                <CardView
+                  card={{ ...game.stock[game.stock.length - 1], faceUp: false }}
+                  faceDown
+                  reducedMotion={prefersReducedMotion}
+                  disableFlip
+                  className={isShuffling ? 'sol-card-shuffle' : ''}
+                />
+              ) : (
+                <div className="sol-slot" aria-hidden="true" />
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-[0.7rem] uppercase tracking-widest text-kali-subtle">Waste</span>
+            <div
+              ref={wasteRef}
+              role="button"
+              tabIndex={game.waste.length ? 0 : -1}
+              aria-label={game.waste.length ? `Waste card ${describeCard(game.waste[game.waste.length - 1])}` : 'Empty waste pile'}
+              onKeyDown={handleWasteKeyDown}
+              onDoubleClick={() => handleDoubleClick('waste', 0)}
+              draggable={!!game.waste.length}
+              onDragStart={(e) => handleDragStart('waste', -1, game.waste.length - 1, e)}
+              onDragEnd={handleDragEnd}
+              className={`focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
+                drag && drag.source === 'waste' ? 'opacity-0' : ''
+              } ${
+                hint && hint.source === 'waste' ? 'ring-4 ring-yellow-400/80' : ''
+              }`}
+            >
+              {game.waste.length ? (
+                <CardView
+                  card={game.waste[game.waste.length - 1]}
+                  reducedMotion={prefersReducedMotion}
+                />
+              ) : (
+                <div className="sol-slot" aria-hidden="true" />
+              )}
+            </div>
+          </div>
+          <div className="ml-auto flex flex-wrap gap-4">
+            {game.foundations.map((pile, i) => (
+              <div key={`f-${i}`} className="flex flex-col items-center gap-2">
+                <span className="text-[0.7rem] uppercase tracking-widest text-kali-subtle">Foundation {i + 1}</span>
+                <div
+                  ref={(el) => {
+                    foundationRefs.current[i] = el;
+                  }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => dropToFoundation(i)}
+                  className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                >
+                  {pile.length ? (
+                    <CardView
+                      card={pile[pile.length - 1]}
+                      reducedMotion={prefersReducedMotion}
+                      disableFlip
+                    />
+                  ) : (
+                    <div className="sol-slot" aria-label={`Empty foundation slot ${i + 1}`} />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-1 flex-wrap items-start gap-4 rounded-xl bg-black/20 p-4 shadow-inner shadow-black/70">
+          {game.tableau.map((pile, i) => (
+            <div
+              key={`t-${i}`}
+              ref={(el) => {
+                tableauRefs.current[i] = el;
+              }}
+              className="relative flex-1 rounded-xl border border-white/5 bg-black/25 px-1 pb-4 pt-2 shadow-[0_18px_30px_rgba(0,0,0,0.45)]"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => dropToTableau(i)}
+            >
+              {pile.length === 0 && (
+                <div className="sol-slot mx-auto" aria-label={`Empty tableau pile ${i + 1}`} />
+              )}
+              {pile.map((card, idx) => {
+                const isTop = idx === pile.length - 1;
+                const highlighted =
+                  hint &&
+                  hint.source === 'tableau' &&
+                  hint.pile === i &&
+                  hint.index === idx;
+                return (
+                  <div
+                    key={`${card.suit}-${card.value}-${idx}`}
+                    className={`absolute ${
+                      !prefersReducedMotion ? 'transition-transform duration-300' : ''
+                    } ${
+                      drag &&
+                      drag.source === 'tableau' &&
+                      drag.pile === i &&
+                      idx >= drag.index
+                        ? 'opacity-0'
+                        : ''
+                    } ${highlighted ? 'ring-4 ring-yellow-400/80' : ''}`}
+                    style={{
+                      top: idx * cardVerticalOffset,
+                      filter: 'drop-shadow(0 12px 18px rgba(0,0,0,0.45))',
+                    }}
+                    draggable={card.faceUp}
+                    onDoubleClick={() => handleDoubleClick('tableau', i)}
+                    onDragStart={(e) => handleDragStart('tableau', i, idx, e)}
+                    onDragEnd={handleDragEnd}
+                    role={card.faceUp && isTop ? 'button' : undefined}
+                    tabIndex={card.faceUp && isTop ? 0 : -1}
+                    onKeyDown={card.faceUp && isTop ? handleTableauKeyDown(i) : undefined}
+                    aria-label={
+                      card.faceUp && isTop
+                        ? `Tableau ${i + 1} card ${describeCard(card)}`
+                        : undefined
+                    }
+                  >
+                    <CardView
+                      card={card}
+                      faceDown={!card.faceUp}
+                      reducedMotion={prefersReducedMotion}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="mt-4">
-        <button
-          className="rounded border border-kali-border/60 bg-kali-dark px-4 py-2 text-sm font-semibold text-kali-text shadow transition-colors hover:bg-[color:color-mix(in_srgb,var(--color-surface)_70%,rgba(15,148,210,0.2)_30%)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
-          onClick={() => start(drawMode, variant, isDaily)}
-        >
-          Restart
-        </button>
-      </div>
+      <style jsx>{`
+        .sol-card {
+          width: 4.5rem;
+          height: 6.5rem;
+          perspective: 1200px;
+        }
+        .sol-card-inner {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          border-radius: 0.65rem;
+          transform-style: preserve-3d;
+          transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+          box-shadow: 0 18px 36px rgba(0, 0, 0, 0.45);
+          background: transparent;
+        }
+        .sol-card-back .sol-card-inner {
+          transform: rotateY(180deg);
+        }
+        .sol-card-face {
+          position: absolute;
+          inset: 0;
+          border-radius: 0.65rem;
+          backface-visibility: hidden;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          padding: 0.55rem;
+        }
+        .sol-card-face-front {
+          background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(234, 241, 250, 0.9)),
+            url(${CARD_FACE_TEXTURE});
+          background-size: cover;
+        }
+        .sol-card-red .sol-card-face-front {
+          color: #fca5a5;
+        }
+        .sol-card-black .sol-card-face-front {
+          color: #e2e8f0;
+        }
+        .sol-card-face-back {
+          background: url(${CARD_BACK_TEXTURE});
+          background-size: cover;
+          transform: rotateY(180deg);
+        }
+        .sol-card-corner {
+          font-size: 0.95rem;
+          font-weight: 700;
+          line-height: 1.1;
+          text-align: center;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+        }
+        .sol-card-corner span:first-child {
+          display: block;
+        }
+        .sol-card-corner--bottom {
+          transform: rotate(180deg);
+        }
+        .sol-card-suit {
+          font-size: 2.6rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-shadow: 0 8px 16px rgba(0, 0, 0, 0.45);
+        }
+        .sol-card-shuffle .sol-card-inner {
+          animation: sol-shuffle 0.8s ease-in-out;
+        }
+        .sol-slot {
+          width: 4.5rem;
+          height: 6.5rem;
+          border-radius: 0.65rem;
+          border: 2px dashed rgba(148, 210, 255, 0.4);
+          background: rgba(8, 16, 24, 0.42);
+          box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.5);
+        }
+        .sol-confetti {
+          position: absolute;
+          top: -4%;
+          width: 0.45rem;
+          height: 1.4rem;
+          opacity: 0;
+          border-radius: 0.25rem;
+          animation: sol-confetti-fall 1.8s linear infinite;
+          z-index: 45;
+        }
+        .sol-victory-overlay {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(2, 10, 18, 0.78);
+          backdrop-filter: blur(10px);
+          z-index: 40;
+        }
+        .sol-victory-card {
+          padding: 2rem 2.5rem;
+          border-radius: 1.25rem;
+          background: linear-gradient(140deg, rgba(18, 52, 86, 0.95), rgba(4, 20, 36, 0.95));
+          box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
+          text-align: center;
+          max-width: 20rem;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        @keyframes sol-shuffle {
+          0% {
+            transform: rotateY(0deg) translate3d(0, 0, 0);
+          }
+          30% {
+            transform: rotateY(-12deg) translate3d(-4px, -6px, 12px);
+          }
+          60% {
+            transform: rotateY(8deg) translate3d(3px, -10px, -8px);
+          }
+          100% {
+            transform: rotateY(0deg) translate3d(0, 0, 0);
+          }
+        }
+        @keyframes sol-confetti-fall {
+          0% {
+            opacity: 0;
+            transform: translate3d(0, -10vh, 0) rotateZ(0deg);
+          }
+          10% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+            transform: translate3d(0, 90vh, 0) rotateZ(360deg);
+          }
+        }
+      `}</style>
     </div>
   );
 };
