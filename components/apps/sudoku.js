@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { generateSudoku, isValidPlacement } from '../../apps/games/sudoku';
 import { getHint } from '../../workers/sudokuSolver';
 import {
@@ -31,6 +31,8 @@ const Sudoku = () => {
   const [hintCells, setHintCells] = useState([]);
   const [ariaMessage, setAriaMessage] = useState('');
   const [selectedCell, setSelectedCell] = useState(null);
+  const [mistakes, setMistakes] = useState(0);
+  const [hintsUsed, setHintsUsed] = useState(0);
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -58,6 +60,8 @@ const Sudoku = () => {
     setHintCells([]);
     setSelectedCell(null);
     setTime(0);
+    setMistakes(0);
+    setHintsUsed(0);
   };
 
   const handleValue = (r, c, value, forcePencil = false) => {
@@ -69,19 +73,24 @@ const Sudoku = () => {
       if (v >= 1 && v <= 9) toggleCandidate(cell, v);
     } else {
       const val = !v || v < 1 || v > 9 ? 0 : v;
-      if (val !== 0 && !isValidPlacement(cellsToBoard(newBoard), r, c, val)) {
-        setAriaMessage(`Move at row ${r + 1}, column ${c + 1} invalid`);
-        return;
-      }
       cell.value = val;
       cell.candidates = [];
+      let countedMistake = false;
+      if (val !== 0 && !isValidPlacement(cellsToBoard(newBoard), r, c, val)) {
+        setMistakes((m) => m + 1);
+        countedMistake = true;
+        setAriaMessage(`Move at row ${r + 1}, column ${c + 1} invalid`);
+      }
       if (hasConflict(newBoard, r, c, cell.value)) {
+        if (!countedMistake) setMistakes((m) => m + 1);
+        countedMistake = true;
         setAriaMessage(`Conflict at row ${r + 1}, column ${c + 1}`);
       } else if (
         solution.length > 0 &&
         cell.value !== 0 &&
         cell.value !== solution[r][c]
       ) {
+        if (!countedMistake) setMistakes((m) => m + 1);
         setAriaMessage(`Incorrect value at row ${r + 1}, column ${c + 1}`);
       }
       if (isBoardComplete(newBoard)) {
@@ -120,6 +129,7 @@ const Sudoku = () => {
   const getHintHandler = () => {
     const h = getHint(cellsToBoard(board));
     if (h) {
+      setHintsUsed((count) => count + 1);
       if (h.type === 'pair') {
         setHint(
           `Cells (${h.cells[0].r + 1},${h.cells[0].c + 1}) and (${h.cells[1].r + 1},${h.cells[1].c + 1}) form ${h.values.join(", ")}`,
@@ -184,6 +194,49 @@ const Sudoku = () => {
     return true;
   };
 
+  const filledCells = useMemo(() => {
+    if (!board || board.length === 0) return 0;
+    return board.reduce(
+      (sum, row) =>
+        sum +
+        row.reduce((rowSum, cell) => {
+          if (cell.value !== 0) return rowSum + 1;
+          return rowSum;
+        }, 0),
+      0,
+    );
+  }, [board]);
+
+  const formattedTime = useMemo(() => {
+    const minutes = Math.floor(time / 60);
+    const seconds = time % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }, [time]);
+
+  const handleNumberPadInput = (value, { pencil = false } = {}) => {
+    if (!selectedCell) {
+      setAriaMessage('Select a cell before entering a value');
+      return;
+    }
+    if (value === 'clear') {
+      handleValue(selectedCell.r, selectedCell.c, '');
+      return;
+    }
+    const shouldPencil = pencilMode || pencil;
+    if (shouldPencil && value === '') return;
+    if (shouldPencil) {
+      handleValue(selectedCell.r, selectedCell.c, value, true);
+    } else {
+      handleValue(selectedCell.r, selectedCell.c, value);
+    }
+    inputRefs.current[selectedCell.r][selectedCell.c]?.focus();
+  };
+
+  const progressPercent = useMemo(
+    () => Math.round((filledCells / (SIZE * SIZE)) * 100),
+    [filledCells],
+  );
+
   if (board.length === 0)
     return (
       <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
@@ -192,127 +245,288 @@ const Sudoku = () => {
     );
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 select-none overflow-y-auto">
-      <div className="sr-only" aria-live="polite">{ariaMessage}</div>
-      <div className="mb-2 flex space-x-2">
-        <select
-          className="text-black p-1"
-          value={difficulty}
-          onChange={(e) => {
-            setDifficulty(e.target.value);
-            startGame(useDaily ? dailySeed() : Date.now());
-          }}
-        >
-          <option value="easy">Easy</option>
-          <option value="medium">Medium</option>
-          <option value="hard">Hard</option>
-        </select>
-        <label className="flex items-center space-x-1">
-          <input type="checkbox" checked={pencilMode} onChange={(e) => setPencilMode(e.target.checked)} />
-          <span>Pencil</span>
-        </label>
-        <button className="px-2 py-1 bg-gray-700 rounded" onClick={getHintHandler}>
-          Hint
-        </button>
-        <button
-          className="px-2 py-1 bg-gray-700 rounded"
-          onClick={() => startGame(useDaily ? dailySeed() : Date.now())}
-        >
-          New Game
-        </button>
-        <button
-          className="px-2 py-1 bg-gray-700 rounded"
-          onClick={() => {
-            setUseDaily(!useDaily);
-            startGame(!useDaily ? dailySeed() : Date.now());
-          }}
-        >
-          {useDaily ? 'Daily' : 'Random'}
-        </button>
+    <div className="h-full w-full overflow-y-auto bg-ub-cool-grey text-white">
+      <div className="sr-only" aria-live="polite">
+        {ariaMessage}
       </div>
-      <div className="mb-2">
-        Time: {Math.floor(time / 60)}:{('0' + (time % 60)).slice(-2)}
-      </div>
-      <div className="grid grid-cols-9" style={{ gap: '2px' }}>
-        {board.map((row, r) =>
-          row.map((cell, c) => {
-            const original = puzzle[r][c] !== 0;
-            const val = cell.value;
-            const isHint = hintCells.some((h) => h.r === r && h.c === c);
-            const isSelected = selectedCell && selectedCell.r === r && selectedCell.c === c;
-            const inHighlight =
-              selectedCell &&
-              (selectedCell.r === r ||
-                selectedCell.c === c ||
-                (Math.floor(selectedCell.r / 3) === Math.floor(r / 3) &&
-                  Math.floor(selectedCell.c / 3) === Math.floor(c / 3)));
-            const sameDigit =
-              selectedCell &&
-              board[selectedCell.r][selectedCell.c].value !== 0 &&
-              board[selectedCell.r][selectedCell.c].value === val;
-            const conflict = hasConflict(board, r, c, val);
-            const wrong =
-              !original && solution.length > 0 && val !== 0 && val !== solution[r][c];
-            return (
-              <div
-                key={`${r}-${c}`}
-                className={`relative overflow-hidden w-8 h-8 sm:w-10 sm:h-10 focus-within:ring-2 focus-within:ring-blue-500 ${
-                  original ? 'bg-gray-300' : 'bg-white'
-                } ${inHighlight ? 'bg-yellow-100' : ''} ${
-                  isSelected ? 'bg-yellow-200' : ''
-                } ${sameDigit ? 'match-glow' : ''} ${
-                  conflict
-                    ? 'bg-red-700 error-pulse'
-                    : wrong
-                    ? 'bg-red-600'
-                    : ''
-                } ${isHint ? 'ring-2 ring-yellow-400' : ''}`}
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-6 sm:px-6">
+        <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-black/30 p-4 shadow-lg backdrop-blur">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-3 text-sm sm:text-base">
+              <label className="flex items-center gap-2" title="Select puzzle difficulty">
+                <span className="text-white/70">Difficulty</span>
+                <select
+                  className="rounded-md border border-white/10 bg-white/10 px-2 py-1 font-medium text-white transition hover:bg-white/20 focus:border-sky-400 focus:outline-none"
+                  value={difficulty}
+                  onChange={(e) => {
+                    setDifficulty(e.target.value);
+                    startGame(useDaily ? dailySeed() : Date.now());
+                  }}
+                >
+                  <option className="text-black" value="easy">
+                    Easy
+                  </option>
+                  <option className="text-black" value="medium">
+                    Medium
+                  </option>
+                  <option className="text-black" value="hard">
+                    Hard
+                  </option>
+                </select>
+              </label>
+              <button
+                type="button"
+                className={`rounded-full border px-3 py-1 text-sm font-semibold uppercase tracking-wide transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-sky-400 focus-visible:ring-offset-black/60 ${
+                  useDaily
+                    ? 'border-amber-400 bg-amber-400/20 text-amber-200'
+                    : 'border-white/20 bg-white/5 text-white/80'
+                }`}
+                onClick={() => {
+                  setUseDaily(!useDaily);
+                  startGame(!useDaily ? dailySeed() : Date.now());
+                }}
+                title={useDaily ? 'Switch to a random puzzle' : 'Play today\'s daily puzzle'}
               >
-                <input
-                  className={`w-full h-full text-center bg-transparent outline-none focus:outline-none ${
-                    conflict || wrong ? 'text-white' : 'text-black'
-                  }`}
-                  ref={(el) => (inputRefs.current[r][c] = el)}
-                  onKeyDown={(e) => handleKeyDown(e, r, c)}
-                  aria-label={`Row ${r + 1} Column ${c + 1}`}
-                  value={val === 0 ? '' : val}
-                  onChange={(e) => handleValue(r, c, e.target.value)}
-                  onFocus={() => setSelectedCell({ r, c })}
-                  onBlur={() => setSelectedCell(null)}
-                  maxLength={1}
-                  disabled={original}
-                  inputMode="numeric"
-                />
-                {cell.candidates.length > 0 && val === 0 && (
-                  <div className="absolute inset-0 grid grid-cols-3 text-[8px] leading-3 pointer-events-none">
-                    {range(9).map((n) => (
-                      <div
-                        key={n}
-                        className="flex items-center justify-center text-gray-700"
-                      >
-                        {cell.candidates.includes(n + 1) ? n + 1 : ''}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {useDaily ? 'Daily Challenge' : 'Random Puzzle'}
+              </button>
+              <button
+                type="button"
+                className={`rounded-full px-3 py-1 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-sky-400 focus-visible:ring-offset-black/60 ${
+                  pencilMode
+                    ? 'bg-sky-500/30 text-sky-200 ring-1 ring-sky-400'
+                    : 'bg-white/10 text-white/80 hover:bg-white/20'
+                }`}
+                onClick={() => setPencilMode((prev) => !prev)}
+                aria-pressed={pencilMode}
+                title="Toggle candidate pencil mode (Shift+number also toggles)"
+              >
+                Pencil Mode
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                className="group flex items-center gap-2 rounded-lg border border-white/10 bg-white/10 px-3 py-1 text-sm font-semibold text-white transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                onClick={getHintHandler}
+                title="Reveal a logical hint with highlighted cells"
+              >
+                <span className="inline-block h-2 w-2 rounded-full bg-amber-300 group-hover:animate-pulse" aria-hidden="true" />
+                Hint
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-sky-400/30 bg-sky-500/20 px-3 py-1 text-sm font-semibold text-sky-100 transition hover:bg-sky-500/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                onClick={() => startGame(useDaily ? dailySeed() : Date.now())}
+                title="Restart with a fresh puzzle"
+              >
+                New Game
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4 lg:flex-row">
+            <div className="flex flex-1 flex-col items-center gap-4">
+              <div
+                className="w-full overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60 p-3 shadow-inner"
+                role="grid"
+                aria-label="Sudoku board"
+              >
+                <div className="grid grid-cols-9 gap-[2px]">
+                  {board.map((row, r) => (
+                    <React.Fragment key={`row-${r}`}>
+                      {row.map((cell, c) => {
+                        const original = puzzle[r][c] !== 0;
+                        const val = cell.value;
+                        const isHint = hintCells.some((h) => h.r === r && h.c === c);
+                        const isSelected = selectedCell && selectedCell.r === r && selectedCell.c === c;
+                        const inHighlight =
+                          selectedCell &&
+                          (selectedCell.r === r ||
+                            selectedCell.c === c ||
+                            (Math.floor(selectedCell.r / 3) === Math.floor(r / 3) &&
+                              Math.floor(selectedCell.c / 3) === Math.floor(c / 3)));
+                        const sameDigit =
+                          selectedCell &&
+                          board[selectedCell.r][selectedCell.c].value !== 0 &&
+                          board[selectedCell.r][selectedCell.c].value === val;
+                        const conflict = hasConflict(board, r, c, val);
+                        const wrong =
+                          !original && solution.length > 0 && val !== 0 && val !== solution[r][c];
+
+                        const borderClasses = [
+                          r % 3 === 0 ? 'border-t border-white/10' : 'border-t border-white/5',
+                          c % 3 === 0 ? 'border-l border-white/10' : 'border-l border-white/5',
+                          r === SIZE - 1 ? 'border-b border-white/10' : '',
+                          c === SIZE - 1 ? 'border-r border-white/10' : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ');
+
+                        return (
+                          <div
+                            key={`${r}-${c}`}
+                            className={`relative flex h-10 w-10 items-center justify-center rounded-lg bg-white/95 font-mono text-lg transition duration-200 ease-out sm:h-12 sm:w-12 ${
+                              original ? 'text-slate-800' : 'text-slate-900'
+                            } ${
+                              isSelected
+                                ? 'ring-2 ring-offset-2 ring-offset-slate-900/70 ring-sky-400'
+                                : inHighlight
+                                ? 'bg-sky-100/80'
+                                : ''
+                            } ${sameDigit ? 'same-digit-glow' : ''} ${
+                              conflict
+                                ? 'conflict-cell'
+                                : wrong
+                                ? 'bg-rose-200/90 text-rose-900'
+                                : ''
+                            } ${isHint ? 'hint-cell' : ''} ${borderClasses}`}
+                            role="gridcell"
+                            aria-selected={isSelected}
+                            aria-label={`Row ${r + 1} Column ${c + 1}${original ? ' given value' : ''}`}
+                          >
+                            <input
+                              className={`peer h-full w-full ${
+                                original ? 'cursor-not-allowed' : 'cursor-text'
+                              } bg-transparent text-center text-xl font-semibold leading-none outline-none transition focus:outline-none sm:text-2xl ${
+                                conflict ? 'text-rose-100' : ''
+                              } ${wrong ? 'text-rose-900' : ''}`}
+                              ref={(el) => (inputRefs.current[r][c] = el)}
+                              onKeyDown={(e) => handleKeyDown(e, r, c)}
+                              aria-label={`Row ${r + 1} Column ${c + 1}${original ? ' given value' : ''}`}
+                              aria-invalid={conflict || wrong}
+                              value={val === 0 ? '' : val}
+                              onChange={(e) => handleValue(r, c, e.target.value)}
+                              onFocus={() => setSelectedCell({ r, c })}
+                              onClick={() => setSelectedCell({ r, c })}
+                              maxLength={1}
+                              disabled={original}
+                              inputMode="numeric"
+                            />
+                            {cell.candidates.length > 0 && val === 0 && (
+                              <div className="pointer-events-none absolute inset-[2px] grid grid-cols-3 gap-[1px] rounded-md bg-white/60 text-[10px] font-semibold leading-3 text-slate-600">
+                                {range(9).map((n) => (
+                                  <div key={n} className="flex items-center justify-center">
+                                    {cell.candidates.includes(n + 1) ? n + 1 : ''}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
+                </div>
               </div>
-            );
-          })
-        )}
+
+              {hint && (
+                <div
+                  className="w-full rounded-xl border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-sm text-amber-200 transition-opacity"
+                  aria-live="polite"
+                >
+                  {hint}
+                </div>
+              )}
+            </div>
+
+            <aside className="flex w-full flex-col gap-4 rounded-2xl border border-white/10 bg-slate-900/40 p-4 text-sm sm:text-base lg:w-72">
+              <div className="flex items-center justify-between text-xs uppercase tracking-[0.2em] text-white/50">
+                <span>Statistics</span>
+                {completed && <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-200">Solved</span>}
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-base">
+                <div className="flex flex-col rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white/80">
+                  <span className="text-xs uppercase tracking-wide text-white/50">Timer</span>
+                  <span className="text-lg font-semibold text-white">{formattedTime}</span>
+                </div>
+                <div className="flex flex-col rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white/80">
+                  <span className="text-xs uppercase tracking-wide text-white/50">Mistakes</span>
+                  <span className="text-lg font-semibold text-rose-200">{mistakes}</span>
+                </div>
+                <div className="flex flex-col rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white/80">
+                  <span className="text-xs uppercase tracking-wide text-white/50">Hints Used</span>
+                  <span className="text-lg font-semibold text-amber-200">{hintsUsed}</span>
+                </div>
+                <div className="flex flex-col rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-white/80">
+                  <span className="text-xs uppercase tracking-wide text-white/50">Progress</span>
+                  <span className="text-lg font-semibold text-emerald-200">{progressPercent}%</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs uppercase tracking-wider text-white/50">
+                  <span>Number Pad</span>
+                  <span>Tap or press keys</span>
+                </div>
+                <div className="grid grid-cols-5 gap-2" role="group" aria-label="Number pad">
+                  {range(9).map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      className="rounded-lg border border-white/10 bg-white/10 py-2 font-semibold text-white transition hover:translate-y-[-1px] hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                      onClick={() => handleNumberPadInput(String(n + 1))}
+                      title={`Enter ${n + 1}`}
+                    >
+                      {n + 1}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className={`col-span-2 rounded-lg border px-3 py-2 font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
+                      pencilMode
+                        ? 'border-sky-400/40 bg-sky-500/30 text-sky-100'
+                        : 'border-white/10 bg-white/10 text-white hover:bg-white/20'
+                    }`}
+                    onClick={() => setPencilMode((prev) => !prev)}
+                    aria-pressed={pencilMode}
+                    title="Toggle pencil mode for number pad entries"
+                  >
+                    Notes
+                  </button>
+                  <button
+                    type="button"
+                    className="col-span-3 rounded-lg border border-white/10 bg-white/10 py-2 font-semibold text-white transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+                    onClick={() => handleNumberPadInput('clear')}
+                    title="Clear selected cell"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs leading-relaxed text-white/60">
+                <p>
+                  Navigate with arrow keys, toggle pencil mode with Shift or the Pencil button, and use hints to discover logical
+                  moves. Conflicts glow red, matched digits shimmer softly, and hints highlight the best next step.
+                </p>
+              </div>
+            </aside>
+          </div>
+        </div>
       </div>
-      {completed && <div className="mt-2">Completed!</div>}
-      {hint && <div className="mt-2 text-yellow-300">{hint}</div>}
       <style jsx>{`
-        @keyframes errorPulse {
-          0% { box-shadow: 0 0 0 0 rgba(248,113,113,0.7); }
-          70% { box-shadow: 0 0 0 4px rgba(248,113,113,0); }
-          100% { box-shadow: 0 0 0 0 rgba(248,113,113,0); }
+        .conflict-cell {
+          background: rgba(248, 113, 113, 0.85);
+          color: #fff;
+          box-shadow: 0 0 12px rgba(248, 113, 113, 0.55);
         }
-        .error-pulse {
-          animation: errorPulse 1s ease-in-out infinite;
+        .hint-cell {
+          box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.5);
+          animation: hintPulse 1.6s ease-in-out infinite;
+        }
+        .same-digit-glow {
+          box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.6);
+        }
+        @keyframes hintPulse {
+          0%, 100% {
+            box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.4);
+          }
+          50% {
+            box-shadow: 0 0 0 6px rgba(251, 191, 36, 0);
+          }
         }
         @media (prefers-reduced-motion: reduce) {
-          .error-pulse { animation: none; }
+          .hint-cell {
+            animation: none;
+          }
         }
       `}</style>
     </div>
