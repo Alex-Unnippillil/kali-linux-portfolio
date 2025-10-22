@@ -711,7 +711,10 @@ export class Window extends Component {
         const node = this.getWindowNode();
         if (node) {
             this.setTransformMotionPreset(node, 'snap');
-            node.style.transform = `translate(${region.left}px, ${region.top}px)`;
+            const normalizedTopInset = Math.max(topInset, DESKTOP_TOP_PADDING);
+            const translateX = region.left - viewportLeft;
+            const translateY = region.top - (viewportTop + normalizedTopInset);
+            node.style.transform = `translate(${translateX}px, ${translateY}px)`;
         }
         const snappedWidthPercent = Math.max(percentOf(region.width, viewportWidth), this.state.minWidth);
         const snappedHeightPercent = Math.max(percentOf(region.height, viewportHeight), this.state.minHeight);
@@ -756,7 +759,9 @@ export class Window extends Component {
         const snapBottomInset = measureSnapBottomInset();
         const regions = computeSnapRegions(viewportWidth, viewportHeight, viewportLeft, viewportTop, topInset, snapBottomInset);
 
-        const topEdge = viewportTop + topInset;
+        const normalizedTopInset = Math.max(topInset, DESKTOP_TOP_PADDING);
+
+        const topEdge = viewportTop + normalizedTopInset;
         const bottomEdge = viewportTop + viewportHeight;
         const leftEdge = viewportLeft;
         const rightEdge = viewportLeft + viewportWidth;
