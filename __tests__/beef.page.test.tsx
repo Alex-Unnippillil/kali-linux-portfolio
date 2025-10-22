@@ -1,38 +1,52 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+
 import BeefPage from '../apps/beef/index';
 
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: function MockedImage(props: React.ImgHTMLAttributes<HTMLImageElement>) {
-    const { src, alt, ...rest } = props;
+  default: function MockedImage({ priority: _priority, src, alt, ...rest }: any) {
     return <img src={typeof src === 'string' ? src : ''} alt={alt ?? ''} {...rest} />;
   },
 }));
 
-describe('BeEF page chrome', () => {
-  test('renders summary metrics and timeline badges', () => {
+const enableLab = () => {
+  fireEvent.click(screen.getByRole('checkbox', { name: /self-contained/i }));
+  fireEvent.click(screen.getByRole('button', { name: /enable lab mode/i }));
+};
+
+describe('BeEF desktop window dashboard', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  test('renders summary metrics and scenario walkthroughs', () => {
     render(<BeefPage />);
 
     expect(screen.getByText(/Active hooks/i)).toBeInTheDocument();
-    expect(screen.getByText(/Campaign status/i)).toBeInTheDocument();
-    expect(screen.getByText(/Last check-in/i)).toBeInTheDocument();
+    expect(screen.getByText(/Modules loaded/i)).toBeInTheDocument();
+    expect(screen.getByText(/Lab safety/i)).toBeInTheDocument();
 
-    expect(screen.getByText('Recon')).toBeInTheDocument();
-    expect(screen.getByText('Delivery')).toBeInTheDocument();
-    expect(screen.getByText('Post-Exploitation')).toBeInTheDocument();
+    const walkthroughCards = screen.getAllByRole('article');
+    expect(walkthroughCards).toHaveLength(3);
+    expect(walkthroughCards[0]).toHaveTextContent(/Reconnaissance/i);
   });
 
-  test('shows severity chips with relative timestamps', () => {
+  test('displays module risk and command history after enabling lab mode', () => {
     render(<BeefPage />);
+    enableLab();
 
-    expect(screen.getByText('Informational')).toBeInTheDocument();
-    expect(screen.getByText('Warning')).toBeInTheDocument();
-    expect(screen.getByText('Critical')).toBeInTheDocument();
+    const hookList = screen.getByRole('list', { name: /Hooked clients/i });
+    expect(within(hookList).getAllByRole('button')).toHaveLength(3);
 
-    expect(screen.getByText('+0s')).toBeInTheDocument();
-    expect(screen.getByText('+2s')).toBeInTheDocument();
-    expect(screen.getByText('+6s')).toBeInTheDocument();
-    expect(screen.getByText(/6s ago/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Training Portal/i }));
+    const moduleExplorer = screen.getByRole('list', { name: /module explorer/i });
+    expect(moduleExplorer).toHaveTextContent(/Low risk/i);
+
+    fireEvent.change(screen.getByRole('combobox', { name: /module/i }), { target: { value: 'network-scan' } });
+    fireEvent.click(screen.getByRole('button', { name: /run command/i }));
+    const history = screen.getByRole('list', { name: /command history/i });
+    expect(within(history).getByText(/Network discovery returns lab placeholder hosts/i)).toBeInTheDocument();
   });
 });
+
