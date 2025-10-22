@@ -1,4 +1,10 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, {
+  useRef,
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+} from 'react';
 import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
 import { useSaveSlots, useGameLoop } from './Games/common';
@@ -14,10 +20,107 @@ import {
 
 const CELL_SIZE = 16; // pixels
 const DEFAULT_SPEED = 120; // ms per move
+const BOARD_SIZE = GRID_SIZE * CELL_SIZE;
+const SKINS = {
+  classic: {
+    label: 'Neon Classic',
+    background: ['#020617', '#0f172a', '#1e293b'],
+    snake: {
+      head: '#4ade80',
+      mid: '#22c55e',
+      tail: '#14532d',
+    },
+    colorblindSnake: {
+      head: '#facc15',
+      mid: '#fbbf24',
+      tail: '#b45309',
+    },
+    food: '#fb7185',
+    colorblindFood: '#60a5fa',
+    particles: '#f97316',
+    milestone: '#fde047',
+    gridAccent: 'rgba(45,212,191,0.25)',
+  },
+  midnight: {
+    label: 'Midnight Alloy',
+    background: ['#020617', '#111827', '#0f172a'],
+    snake: {
+      head: '#38bdf8',
+      mid: '#0ea5e9',
+      tail: '#075985',
+    },
+    colorblindSnake: {
+      head: '#f97316',
+      mid: '#ea580c',
+      tail: '#9a3412',
+    },
+    food: '#facc15',
+    colorblindFood: '#f472b6',
+    particles: '#38bdf8',
+    milestone: '#a78bfa',
+    gridAccent: 'rgba(56,189,248,0.22)',
+  },
+  dusk: {
+    label: 'Solar Dusk',
+    background: ['#111827', '#1f2937', '#0f172a'],
+    snake: {
+      head: '#f87171',
+      mid: '#f97316',
+      tail: '#b45309',
+    },
+    colorblindSnake: {
+      head: '#34d399',
+      mid: '#22c55e',
+      tail: '#166534',
+    },
+    food: '#38bdf8',
+    colorblindFood: '#a855f7',
+    particles: '#fbbf24',
+    milestone: '#f472b6',
+    gridAccent: 'rgba(248,113,113,0.2)',
+  },
+};
+
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+const hexToRgb = (hex) => {
+  const clean = hex.replace('#', '');
+  const bigint = parseInt(clean, 16);
+  return {
+    r: (bigint >> 16) & 255,
+    g: (bigint >> 8) & 255,
+    b: bigint & 255,
+  };
+};
+
+const hexToRgba = (hex, alpha) => {
+  const { r, g, b } = hexToRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+const rgbToHex = ({ r, g, b }) =>
+  `#${[r, g, b]
+    .map((val) => {
+      const clamped = clamp(Math.round(val), 0, 255);
+      return clamped.toString(16).padStart(2, '0');
+    })
+    .join('')}`;
+
+const lerpColor = (a, b, t) => {
+  const colorA = hexToRgb(a);
+  const colorB = hexToRgb(b);
+  return rgbToHex({
+    r: colorA.r + (colorB.r - colorA.r) * t,
+    g: colorA.g + (colorB.g - colorA.g) * t,
+    b: colorA.b + (colorB.b - colorA.b) * t,
+  });
+};
 
 const Snake = () => {
   const canvasRef = useCanvasResize(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
   const ctxRef = useRef(null);
+  const particlesRef = useRef([]);
+  const milestoneTimeoutRef = useRef(null);
   const [obstaclePack] = usePersistentState(
     'snake:obstacles',
     [],
@@ -51,6 +154,16 @@ const Snake = () => {
     false,
     (v) => typeof v === 'boolean',
   );
+  const [skinId, setSkinId] = usePersistentState(
+    'snake_skin',
+    'classic',
+    (v) => typeof v === 'string' && Object.prototype.hasOwnProperty.call(SKINS, v),
+  );
+  const [colorblindMode, setColorblindMode] = usePersistentState(
+    'snake_colorblind_mode',
+    false,
+    (v) => typeof v === 'boolean',
+  );
   const [sound, setSound] = useState(true);
   const [speed, setSpeed] = useState(DEFAULT_SPEED);
   const [score, setScore] = useState(0);
@@ -72,6 +185,76 @@ const Snake = () => {
   const playbackRef = useRef([]);
   const playbackIndexRef = useRef(0);
   const recordingRef = useRef([]);
+  const [milestoneFlash, setMilestoneFlash] = useState(false);
+
+  const skinConfig = useMemo(() => {
+    const base = SKINS[skinId] || SKINS.classic;
+    const snakePalette = colorblindMode
+      ? base.colorblindSnake || base.snake
+      : base.snake;
+    return {
+      ...base,
+      snakePalette,
+      foodColor: colorblindMode ? base.colorblindFood || base.food : base.food,
+    };
+  }, [skinId, colorblindMode]);
+
+  const triggerMilestoneFlash = useCallback(() => {
+    if (prefersReducedMotion) return;
+    setMilestoneFlash(true);
+    if (milestoneTimeoutRef.current) {
+      clearTimeout(milestoneTimeoutRef.current);
+    }
+    milestoneTimeoutRef.current = setTimeout(() => {
+      setMilestoneFlash(false);
+      milestoneTimeoutRef.current = null;
+    }, 900);
+  }, [prefersReducedMotion]);
+
+  const spawnParticles = useCallback(
+    (position, { milestone = false } = {}) => {
+      if (prefersReducedMotion) return;
+      const count = milestone ? 56 : 28;
+      const spread = milestone ? 2.6 : 1.6;
+      const centerX = position.x * CELL_SIZE + CELL_SIZE / 2;
+      const centerY = position.y * CELL_SIZE + CELL_SIZE / 2;
+      const color = milestone ? skinConfig.milestone : skinConfig.particles;
+      for (let i = 0; i < count; i += 1) {
+        const angle = (Math.PI * 2 * i) / count + Math.random() * Math.PI * 0.25;
+        const speed = (Math.random() * 0.5 + 0.4) * spread;
+        particlesRef.current.push({
+          x: centerX,
+          y: centerY,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: milestone ? 1.4 + Math.random() * 0.4 : 0.7 + Math.random() * 0.3,
+          initialLife: milestone ? 1.8 : 0.9,
+          size: milestone ? Math.random() * 2.5 + 2 : Math.random() * 1.8 + 1,
+          color,
+          glow: milestone,
+          gravity: milestone ? 0.25 : 0.4,
+        });
+      }
+    },
+    [prefersReducedMotion, skinConfig],
+  );
+
+  const updateParticles = useCallback((delta) => {
+    if (!particlesRef.current.length) return;
+    const dt = clamp(delta * 60, 0, 3);
+    for (let i = particlesRef.current.length - 1; i >= 0; i -= 1) {
+      const p = particlesRef.current[i];
+      p.life -= delta;
+      if (p.life <= 0) {
+        particlesRef.current.splice(i, 1);
+        continue;
+      }
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vx *= 0.96;
+      p.vy = p.vy * 0.94 + p.gravity * dt * 0.6;
+    }
+  }, []);
 
   useEffect(() => {
     const handleBlur = () => {
@@ -103,6 +286,12 @@ const Snake = () => {
         score: 0,
       },
     ];
+  }, []);
+
+  useEffect(() => () => {
+    if (milestoneTimeoutRef.current) {
+      clearTimeout(milestoneTimeoutRef.current);
+    }
   }, []);
 
   // Respect prefers-reduced-motion by pausing automatic movement
@@ -149,10 +338,31 @@ const Snake = () => {
     const ctx = ctxRef.current;
     if (!ctx) return;
 
-    ctx.fillStyle = '#111827';
-    ctx.fillRect(0, 0, GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+    ctx.clearRect(0, 0, BOARD_SIZE, BOARD_SIZE);
+    const [bgTop, bgMid, bgBottom] = skinConfig.background;
+    const gradient = ctx.createLinearGradient(0, 0, 0, BOARD_SIZE);
+    gradient.addColorStop(0, bgTop);
+    gradient.addColorStop(0.5, bgMid);
+    gradient.addColorStop(1, bgBottom);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, BOARD_SIZE, BOARD_SIZE);
 
-    // Ghost path preview
+    // Subtle grid overlay for depth perception
+    ctx.save();
+    ctx.lineWidth = 0.35;
+    ctx.strokeStyle = skinConfig.gridAccent;
+    ctx.beginPath();
+    for (let i = 1; i < GRID_SIZE; i += 1) {
+      const pos = i * CELL_SIZE + 0.5;
+      ctx.moveTo(pos, 0);
+      ctx.lineTo(pos, BOARD_SIZE);
+      ctx.moveTo(0, pos);
+      ctx.lineTo(BOARD_SIZE, pos);
+    }
+    ctx.stroke();
+    ctx.restore();
+
+    // Ghost path preview with adaptive color
     const ghost = [];
     let gx = snakeRef.current[0].x;
     let gy = snakeRef.current[0].y;
@@ -171,35 +381,143 @@ const Snake = () => {
       ghost.push({ x: gx, y: gy });
     }
     if (ghost.length) {
-      ctx.fillStyle = 'rgba(74,222,128,0.5)';
+      ctx.fillStyle = colorblindMode
+        ? 'rgba(125,211,252,0.35)'
+        : 'rgba(74,222,128,0.35)';
       ghost.forEach((g) => {
         ctx.fillRect(g.x * CELL_SIZE, g.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
       });
     }
 
-    // Obstacles
-    ctx.fillStyle = '#6b7280';
+    // Obstacles with beveled shading
     obstaclesRef.current.forEach((o) => {
-      ctx.fillRect(o.x * CELL_SIZE, o.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+      const x = o.x * CELL_SIZE;
+      const y = o.y * CELL_SIZE;
+      const obsGrad = ctx.createLinearGradient(x, y, x + CELL_SIZE, y + CELL_SIZE);
+      obsGrad.addColorStop(0, 'rgba(148,163,184,0.75)');
+      obsGrad.addColorStop(1, 'rgba(71,85,105,0.95)');
+      ctx.fillStyle = obsGrad;
+      ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+      ctx.strokeStyle = 'rgba(15,23,42,0.6)';
+      ctx.strokeRect(x + 0.5, y + 0.5, CELL_SIZE - 1, CELL_SIZE - 1);
     });
 
-    // Food
-    ctx.fillStyle = '#ef4444';
+    // Food with halo
     const food = foodRef.current;
-    ctx.fillRect(food.x * CELL_SIZE, food.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+    const fx = food.x * CELL_SIZE + CELL_SIZE / 2;
+    const fy = food.y * CELL_SIZE + CELL_SIZE / 2;
+    const foodGradient = ctx.createRadialGradient(
+      fx,
+      fy,
+      CELL_SIZE * 0.2,
+      fx,
+      fy,
+      CELL_SIZE * 0.8,
+    );
+    foodGradient.addColorStop(0, '#fff9');
+    foodGradient.addColorStop(0.45, skinConfig.foodColor);
+    foodGradient.addColorStop(1, hexToRgba(skinConfig.foodColor, 0.1));
+    ctx.fillStyle = foodGradient;
+    ctx.beginPath();
+    ctx.arc(fx, fy, CELL_SIZE * 0.45, 0, Math.PI * 2);
+    ctx.fill();
+    if (colorblindMode) {
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(fx - CELL_SIZE * 0.2, fy);
+      ctx.lineTo(fx + CELL_SIZE * 0.2, fy);
+      ctx.moveTo(fx, fy - CELL_SIZE * 0.2);
+      ctx.lineTo(fx, fy + CELL_SIZE * 0.2);
+      ctx.stroke();
+    }
 
-    // Snake segments
-    ctx.fillStyle = '#22c55e';
-    snakeRef.current.forEach((seg) => {
+    // Snake segments with dynamic shading
+    const segments = snakeRef.current;
+    segments.forEach((seg, index) => {
       const scale = seg.scale ?? 1;
       const size = CELL_SIZE * scale;
       const offset = (CELL_SIZE - size) / 2;
-      ctx.fillRect(seg.x * CELL_SIZE + offset, seg.y * CELL_SIZE + offset, size, size);
+      const x = seg.x * CELL_SIZE + offset;
+      const y = seg.y * CELL_SIZE + offset;
+      const ratio = segments.length <= 1 ? 0 : index / (segments.length - 1 || 1);
+      const fill = lerpColor(skinConfig.snakePalette.mid, skinConfig.snakePalette.tail, ratio);
+      const highlight = lerpColor(skinConfig.snakePalette.head, skinConfig.snakePalette.mid, Math.sqrt(ratio));
+      const bodyGradient = ctx.createLinearGradient(x, y, x + size, y + size);
+      bodyGradient.addColorStop(0, highlight);
+      bodyGradient.addColorStop(1, fill);
+      ctx.fillStyle = bodyGradient;
+      ctx.fillRect(x, y, size, size);
+      ctx.strokeStyle = hexToRgba('#0f172a', 0.25);
+      ctx.lineWidth = 0.8;
+      ctx.strokeRect(x + 0.4, y + 0.4, size - 0.8, size - 0.8);
+      if (colorblindMode) {
+        ctx.strokeStyle = hexToRgba('#0f172a', 0.5);
+        ctx.setLineDash([2, 2]);
+        ctx.beginPath();
+        ctx.moveTo(x, y + size / 2);
+        ctx.lineTo(x + size, y + size / 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
       if (scale < 1) {
         seg.scale = Math.min(1, scale + 0.1);
       }
     });
-  }, [wrap]);
+
+    // Dynamic lighting around the head
+    const head = segments[0];
+    if (head && !prefersReducedMotion) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const cx = head.x * CELL_SIZE + CELL_SIZE / 2;
+      const cy = head.y * CELL_SIZE + CELL_SIZE / 2;
+      const glow = ctx.createRadialGradient(
+        cx,
+        cy,
+        CELL_SIZE * 0.3,
+        cx,
+        cy,
+        CELL_SIZE * 5,
+      );
+      glow.addColorStop(0, hexToRgba(skinConfig.snakePalette.head, 0.55));
+      glow.addColorStop(0.4, hexToRgba(skinConfig.snakePalette.mid, 0.25));
+      glow.addColorStop(1, 'rgba(15,23,42,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, BOARD_SIZE, BOARD_SIZE);
+      ctx.restore();
+    }
+
+    // Particles overlay
+    if (particlesRef.current.length) {
+      ctx.save();
+      particlesRef.current.forEach((p) => {
+        const lifeRatio = clamp(p.life / p.initialLife, 0, 1);
+        const alpha = clamp(lifeRatio + 0.1, 0, 1);
+        if (p.glow) {
+          const glowParticle = ctx.createRadialGradient(
+            p.x,
+            p.y,
+            0,
+            p.x,
+            p.y,
+            p.size * 4,
+          );
+          glowParticle.addColorStop(0, hexToRgba(p.color, alpha));
+          glowParticle.addColorStop(1, 'rgba(255,255,255,0)');
+          ctx.fillStyle = glowParticle;
+          ctx.globalAlpha = 0.6 * alpha;
+          ctx.fillRect(p.x - p.size * 4, p.y - p.size * 4, p.size * 8, p.size * 8);
+        }
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = hexToRgba(p.color, clamp(alpha + 0.2, 0, 1));
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+  }, [wrap, colorblindMode, skinConfig, prefersReducedMotion]);
 
   useEffect(() => {
     const ctx = canvasRef.current?.getContext('2d');
@@ -239,6 +557,7 @@ const Snake = () => {
       }
     }
 
+    const consumedFood = { ...foodRef.current };
     const result = stepSnake(
       {
         snake: snakeRef.current.map((seg) => ({ x: seg.x, y: seg.y })),
@@ -273,6 +592,13 @@ const Snake = () => {
       haptics.score();
       beep(440);
       setSpeed((s) => Math.max(50, s * 0.95));
+      spawnParticles(consumedFood);
+      if (nextScore > 0 && nextScore % 5 === 0) {
+        triggerMilestoneFlash();
+        if (nextSnake.length) {
+          spawnParticles(nextSnake[0], { milestone: true });
+        }
+      }
     }
 
     recordingRef.current.push({
@@ -285,10 +611,20 @@ const Snake = () => {
       obstacles: obstaclesRef.current.map((o) => ({ ...o })),
       score: scoreRef.current,
     });
-  }, [wrap, beep, haptics, prefersReducedMotion, setRunning, setSpeed]);
+  }, [
+    wrap,
+    beep,
+    haptics,
+    prefersReducedMotion,
+    setRunning,
+    setSpeed,
+    spawnParticles,
+    triggerMilestoneFlash,
+  ]);
 
   const tick = useCallback(
     (delta) => {
+      updateParticles(delta);
       accumulatorRef.current += delta * 1000;
       if (accumulatorRef.current < speedRef.current) {
         draw();
@@ -301,7 +637,7 @@ const Snake = () => {
       }
       draw();
     },
-    [advanceGame, draw],
+    [advanceGame, draw, updateParticles],
   );
 
   useEffect(() => {
@@ -357,6 +693,12 @@ const Snake = () => {
     setRunning(true);
     setSpeed(DEFAULT_SPEED);
     speedRef.current = DEFAULT_SPEED;
+    particlesRef.current = [];
+    setMilestoneFlash(false);
+    if (milestoneTimeoutRef.current) {
+      clearTimeout(milestoneTimeoutRef.current);
+      milestoneTimeoutRef.current = null;
+    }
     recordingRef.current = [
       {
         snake: snakeRef.current.map((s) => ({
@@ -399,11 +741,11 @@ const Snake = () => {
 
   return (
     <GameLayout gameId="snake" score={score} highScore={highScore}>
-      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
-        <div className="relative">
+      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none px-3 pb-4">
+        <div className="relative flex flex-col items-center">
           <canvas
             ref={canvasRef}
-            className="bg-gray-800 border border-gray-700 w-full h-full"
+            className="bg-gray-900/80 border border-gray-700/70 shadow-xl w-full h-full rounded"
             tabIndex={0}
             aria-label="Snake game board"
           />
@@ -416,76 +758,119 @@ const Snake = () => {
               Game Over
             </div>
           )}
+          {milestoneFlash && (
+            <div
+              className="absolute -top-10 left-1/2 -translate-x-1/2 rounded-full bg-emerald-500/80 px-4 py-1 text-sm font-semibold text-slate-900 shadow-lg backdrop-blur"
+              role="status"
+              aria-live="polite"
+            >
+              Milestone {score}!
+            </div>
+          )}
         </div>
-        <div className="mt-2 space-x-2">
+        <div className="mt-4 flex flex-wrap justify-center gap-2 text-sm">
           <button
-            className="px-2 py-1 bg-gray-700 rounded"
+            className="px-3 py-1 bg-gray-700/80 rounded shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring"
             onClick={reset}
           >
             Reset
           </button>
           <button
-            className="px-2 py-1 bg-gray-700 rounded"
+            className="px-3 py-1 bg-gray-700/80 rounded shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring"
             onClick={() => setRunning((r) => !r)}
           >
             {running ? 'Pause' : 'Resume'}
           </button>
           <button
-            className="px-2 py-1 bg-gray-700 rounded"
+            className="px-3 py-1 bg-gray-700/80 rounded shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring"
             onClick={() => setWrap((w) => !w)}
           >
             {wrap ? 'Wrap' : 'No Wrap'}
           </button>
           <button
-            className="px-2 py-1 bg-gray-700 rounded"
+            className="px-3 py-1 bg-gray-700/80 rounded shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring"
             onClick={() => setSound((s) => !s)}
           >
             {sound ? 'Sound On' : 'Sound Off'}
           </button>
           <button
-            className="px-2 py-1 bg-gray-700 rounded"
+            className="px-3 py-1 bg-gray-700/80 rounded shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring"
             onClick={haptics.toggle}
           >
             {haptics.enabled ? 'Haptics On' : 'Haptics Off'}
           </button>
         </div>
-        <div className="mt-2 flex items-center space-x-2">
-          <label htmlFor="speed">Speed</label>
-          <input
-            id="speed"
-            type="range"
-            min="50"
-            max="300"
-            step="10"
-            value={speed}
-            onChange={(e) => setSpeed(Number(e.target.value))}
-            aria-label="Speed"
-          />
-        </div>
-        <div className="mt-2 flex items-center space-x-2">
-          <label htmlFor="replay">Replay</label>
-          <select
-            id="replay"
-            className="bg-gray-700 rounded"
-            value={selectedReplay}
-            onChange={(e) => setSelectedReplay(e.target.value)}
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-sm">
+          <label htmlFor="skin" className="flex items-center gap-2">
+            <span className="whitespace-nowrap">Skin</span>
+            <select
+              id="skin"
+              className="bg-gray-800/80 rounded px-2 py-1 focus:outline-none focus:ring"
+              value={skinId}
+              onChange={(e) => setSkinId(e.target.value)}
+            >
+              {Object.entries(SKINS).map(([key, skin]) => (
+                <option key={key} value={key}>
+                  {skin.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label
+            htmlFor="snake-colorblind-toggle"
+            className="inline-flex items-center gap-2"
           >
-            <option value="">Select</option>
-            {listReplays().map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
+            <input
+              id="snake-colorblind-toggle"
+              type="checkbox"
+              className="h-4 w-4"
+              checked={colorblindMode}
+              onChange={(e) => setColorblindMode(e.target.checked)}
+              aria-label="Toggle colorblind assist"
+            />
+            <span>Colorblind assist</span>
+          </label>
+          <label htmlFor="speed" className="flex items-center gap-2">
+            <span className="whitespace-nowrap">Speed</span>
+            <input
+              id="speed"
+              type="range"
+              min="50"
+              max="300"
+              step="10"
+              value={speed}
+              onChange={(e) => setSpeed(Number(e.target.value))}
+              aria-label="Speed"
+              className="accent-emerald-400"
+            />
+          </label>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm">
+          <label htmlFor="replay" className="flex items-center gap-2">
+            <span>Replay</span>
+            <select
+              id="replay"
+              className="bg-gray-800/80 rounded px-2 py-1 focus:outline-none focus:ring"
+              value={selectedReplay}
+              onChange={(e) => setSelectedReplay(e.target.value)}
+            >
+              <option value="">Select</option>
+              {listReplays().map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
-            className="px-2 py-1 bg-gray-700 rounded"
+            className="px-3 py-1 bg-gray-700/80 rounded shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring"
             onClick={() => startReplay(selectedReplay)}
             disabled={!selectedReplay}
           >
             Play
           </button>
           <button
-            className="px-2 py-1 bg-gray-700 rounded"
+            className="px-3 py-1 bg-gray-700/80 rounded shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring disabled:opacity-50"
             onClick={() => {
               removeReplay(selectedReplay);
               setSelectedReplay('');
