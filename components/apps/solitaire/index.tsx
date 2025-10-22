@@ -11,6 +11,7 @@ import {
   valueToString,
   GameState,
   Card,
+  Suit,
   createDeck,
   findHint,
   suits,
