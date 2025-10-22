@@ -414,7 +414,7 @@ const Solitaire = () => {
 
   useEffect(() => {
     const count = game.foundations.reduce((sum, p) => sum + p.length, 0);
-    if (count > foundationCountRef.current) {
+    if (count !== foundationCountRef.current) {
       const diff = count - foundationCountRef.current;
       setBankroll((b) => {
         const nb = b + diff * 5;
