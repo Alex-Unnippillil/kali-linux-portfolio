@@ -1,146 +1,152 @@
-import { useEffect, useRef, useState } from 'react';
+const PLAYLIST_EMBED_URL =
+  'https://open.spotify.com/embed/playlist/37i9dQZF1E8NOMDYRneOXj?utm_source=generator';
 
-const SAMPLE_TRACKS = [
-  { title: 'Song 1', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
-  { title: 'Song 2', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
-  { title: 'Song 3', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
+const PRIMARY_NAV = [
+  { label: 'Home' },
+  { label: 'Search' },
+  { label: 'Your Library' },
 ];
 
-export default function SpotifyApp() {
-  const [connected, setConnected] = useState(false);
-  const [player, setPlayer] = useState(null);
-  const [index, setIndex] = useState(0);
-  const audioRef = useRef(null);
+const SECONDARY_NAV = [
+  'Create Playlist',
+  'Liked Songs',
+  'Synthwave Sessions',
+  'Night Run FM',
+  'Lo-Fi Debugger',
+];
 
-  useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('spotify-token') : null;
-    if (!token) return;
+const QUEUE = [
+  { title: 'Neon Heartbeat', artist: 'Vanta Pulse', duration: '3:42' },
+  { title: 'Rain on Fiber', artist: 'Datastream Kids', duration: '4:05' },
+  { title: 'Terminal Bloom', artist: 'Echo Sector', duration: '3:58' },
+  { title: 'Skyline Overclock', artist: 'Aurora Grid', duration: '4:23' },
+  { title: 'Packet Trails', artist: 'Bitwise', duration: '3:47' },
+  { title: 'Circuit Avenue', artist: 'MonoGlass', duration: '4:11' },
+];
 
-    const script = document.createElement('script');
-    script.src = 'https://sdk.scdn.co/spotify-player.js';
-    script.async = true;
-    document.body.appendChild(script);
+export function SpotifyWebPlayerLayout({ description, className = '' }) {
+  return (
+    <div className={`flex flex-1 flex-col ${className}`}>
+      <div className="flex flex-1 min-h-[18rem] overflow-hidden rounded-3xl border border-white/10 bg-[#121212] text-white shadow-[0_40px_80px_rgba(5,8,15,0.6)]">
+        <aside className="hidden w-60 flex-col justify-between border-r border-white/5 bg-white/5 p-6 lg:flex">
+          <div className="space-y-6">
+            <div>
+              <p className="text-xs uppercase tracking-[0.35em] text-white/50">Spotify</p>
+              <h2 className="mt-2 text-2xl font-semibold">Kali Control Room</h2>
+            </div>
+            <nav aria-label="Primary" className="space-y-2 text-sm font-medium text-white/80">
+              {PRIMARY_NAV.map(item => (
+                <button
+                  key={item.label}
+                  type="button"
+                  className="flex w-full items-center justify-between rounded-full border border-white/5 bg-white/5 px-4 py-2 text-left transition hover:border-[#1DB954]/50 hover:bg-[#1DB954]/10 hover:text-white"
+                >
+                  <span>{item.label}</span>
+                  <span aria-hidden className="text-xs text-white/40">
+                    ↵
+                  </span>
+                </button>
+              ))}
+            </nav>
+          </div>
+          <div className="space-y-3 text-xs text-white/50">
+            <p className="font-semibold uppercase tracking-[0.3em] text-white/60">Playlists</p>
+            <ul className="space-y-2">
+              {SECONDARY_NAV.map(item => (
+                <li key={item} className="truncate rounded-md px-3 py-1.5 transition hover:bg-white/5">
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </aside>
 
-    window.onSpotifyWebPlaybackSDKReady = () => {
-      const p = new window.Spotify.Player({
-        name: 'Portfolio Player',
-        getOAuthToken: cb => cb(token),
-      });
+        <main className="flex min-w-0 flex-1 flex-col">
+          <header className="relative border-b border-white/5 bg-gradient-to-br from-[#1DB954]/20 via-[#121212] to-[#050505] px-8 py-8">
+            <div className="absolute right-8 top-4 hidden rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/70 md:block">
+              Live mix
+            </div>
+            <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+              <div className="flex items-center gap-6">
+                <div className="flex h-32 w-32 items-center justify-center rounded-xl bg-[#1DB954]/15 ring-2 ring-[#1DB954]/40">
+                  <span className="text-xl font-semibold tracking-[0.5em] text-white/80">KALI</span>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs uppercase tracking-[0.35em] text-white/60">Playlist</p>
+                  <h1 className="text-3xl font-bold">Synthwave Control Room</h1>
+                  <p className="text-sm text-white/60">Hand-picked neon instrumentals for midnight debugging sessions.</p>
+                </div>
+              </div>
+              <div className="flex gap-3 text-sm">
+                <button
+                  type="button"
+                  className="rounded-full border border-white/10 px-5 py-2 font-semibold text-white/80 transition hover:border-[#1DB954] hover:bg-[#1DB954] hover:text-black"
+                >
+                  Follow
+                </button>
+                <button
+                  type="button"
+                  className="hidden items-center gap-2 rounded-full border border-white/10 px-5 py-2 font-semibold text-white/80 transition hover:border-white/30 hover:bg-white/10 md:flex"
+                >
+                  <span aria-hidden>⋯</span>
+                  More
+                </button>
+              </div>
+            </div>
+          </header>
 
-      p.addListener('ready', () => setConnected(true));
-      p.addListener('not_ready', () => setConnected(false));
+          <div className="relative flex-1 overflow-hidden bg-black/40">
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent" />
+            <iframe
+              src={PLAYLIST_EMBED_URL}
+              title="Spotify playlist embed"
+              className="absolute inset-0 h-full w-full"
+              frameBorder="0"
+              style={{ border: 'none', borderRadius: 0 }}
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              allowFullScreen
+              loading="lazy"
+            />
+          </div>
+        </main>
 
-      p.connect();
-      setPlayer(p);
-    };
-
-    return () => {
-      player?.disconnect();
-      delete window.onSpotifyWebPlaybackSDKReady;
-    };
-  }, [player]);
-
-  const nextSample = () => setIndex(i => (i + 1) % SAMPLE_TRACKS.length);
-  const prevSample = () => setIndex(i => (i - 1 + SAMPLE_TRACKS.length) % SAMPLE_TRACKS.length);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (audio) {
-      audio.load();
-    }
-  }, [index]);
-
-  const toggleSample = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (audio.paused) audio.play();
-    else audio.pause();
-  };
-
-  const containerClasses =
-    'relative flex h-full w-full flex-col items-center justify-center gap-5 overflow-hidden rounded-2xl border border-white/10 bg-kali-surface/90 px-6 py-8 text-white shadow-kali-panel';
-
-  const controlButtonClasses =
-    'group relative flex h-12 w-12 items-center justify-center rounded-full border border-kali-accent/45 bg-kali-accent/15 text-xl text-kali-accent shadow-[0_10px_30px_rgba(15,148,210,0.18)] transition hover:bg-kali-accent/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:border-white/10 disabled:bg-white/5 disabled:text-white/35 disabled:shadow-none disabled:hover:bg-white/5 disabled:hover:text-white/35';
-
-  const accentOverlays = (
-    <>
-      <div className="pointer-events-none absolute inset-x-10 top-0 h-1 bg-gradient-to-r from-transparent via-kali-accent/80 to-transparent" />
-      <div className="pointer-events-none absolute left-0 top-10 h-24 w-1 bg-gradient-to-b from-transparent via-kali-accent/70 to-transparent" />
-      <div className="pointer-events-none absolute bottom-0 right-0 h-40 w-40 translate-x-16 translate-y-16 rounded-full bg-[radial-gradient(circle_at_center,var(--color-accent)_0%,transparent_70%)] opacity-30" />
-      <div className="pointer-events-none absolute -left-24 -top-24 h-48 w-48 rounded-full bg-[radial-gradient(circle_at_center,var(--color-accent)_0%,transparent_70%)] opacity-20" />
-    </>
-  );
-
-  return connected && player ? (
-    <div className={containerClasses}>
-      {accentOverlays}
-      <div className="relative z-10 flex flex-col items-center gap-5 text-center">
-        <p className="text-sm uppercase tracking-[0.3em] text-kali-accent">Spotify Connected</p>
-        <p className="text-base text-white/80">Control playback from any active device linked to your account.</p>
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            className={controlButtonClasses}
-            onClick={() => player.previousTrack()}
-            aria-label="Previous track"
-          >
-            ⏮
-          </button>
-          <button
-            type="button"
-            className={controlButtonClasses}
-            onClick={() => player.togglePlay()}
-            aria-label="Play or pause"
-          >
-            ⏯
-          </button>
-          <button
-            type="button"
-            className={controlButtonClasses}
-            onClick={() => player.nextTrack()}
-            aria-label="Next track"
-          >
-            ⏭
-          </button>
-        </div>
+        <aside className="hidden w-72 flex-col gap-6 border-l border-white/5 bg-white/5 p-6 xl:flex">
+          <div>
+            <p className="text-xs uppercase tracking-[0.35em] text-white/60">Next in queue</p>
+            <ul className="mt-4 space-y-3 text-sm">
+              {QUEUE.map(track => (
+                <li key={track.title} className="flex items-start justify-between gap-4 rounded-xl bg-white/5 px-3 py-2 text-white/80">
+                  <div className="space-y-1">
+                    <p className="font-semibold text-white">{track.title}</p>
+                    <p className="text-xs text-white/50">{track.artist}</p>
+                  </div>
+                  <span className="text-xs text-white/40">{track.duration}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-black/40 p-4 text-xs text-white/60">
+            <p className="font-semibold uppercase tracking-[0.3em] text-white/70">Tip</p>
+            <p className="mt-2 leading-relaxed">
+              Drag this window anywhere on the desktop and keep the playlist running while you multitask with other tools.
+            </p>
+          </div>
+        </aside>
       </div>
+
+      {description ? (
+        <p className="mt-5 text-xs leading-relaxed text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
+          {description}
+        </p>
+      ) : null}
     </div>
-  ) : (
-    <div className={containerClasses}>
-      {accentOverlays}
-      <div className="relative z-10 flex flex-col items-center gap-5 text-center">
-        <p className="text-sm uppercase tracking-[0.3em] text-kali-accent">Sample Deck</p>
-        <p className="text-base text-white/80">Preview CC‑licensed tracks while the Spotify Web SDK is disconnected.</p>
-        <audio ref={audioRef} src={SAMPLE_TRACKS[index].url} onEnded={nextSample} className="hidden" />
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            className={controlButtonClasses}
-            onClick={prevSample}
-            aria-label="Previous sample"
-          >
-            ⏮
-          </button>
-          <button
-            type="button"
-            className={controlButtonClasses}
-            onClick={toggleSample}
-            aria-label="Play or pause sample"
-          >
-            ⏯
-          </button>
-          <button
-            type="button"
-            className={controlButtonClasses}
-            onClick={nextSample}
-            aria-label="Next sample"
-          >
-            ⏭
-          </button>
-        </div>
-        <p className="text-xs uppercase tracking-[0.25em] text-white/60">{SAMPLE_TRACKS[index].title}</p>
-      </div>
+  );
+}
+
+export default function SpotifyApp() {
+  return (
+    <div className="flex h-full w-full flex-col gap-4 bg-[var(--color-bg)] p-5 text-[color:var(--color-text)]">
+      <SpotifyWebPlayerLayout description="Stream a curated synthwave playlist inside a Kali-inspired Spotify shell. Resize, minimise, or pin the window alongside your other desktop apps while the embedded player keeps the beats flowing." />
     </div>
   );
 }
