@@ -1,17 +1,26 @@
 import usePersistentState from '../../hooks/usePersistentState';
 
 export const BOARD_WIDTH = 8;
-export const CANDY_COLORS = ['#38bdf8', '#22d3ee', '#6366f1', '#0ea5e9', '#f472b6'];
 
 export interface Cascade {
   matches: number[][];
 }
 
+export interface CandyCell {
+  id: string;
+  gem: string;
+}
+
 export interface ResolveResult {
-  board: string[];
+  board: CandyCell[];
   cascades: Cascade[];
   cleared: number;
 }
+
+export const GEM_IDS = ['aurora', 'solstice', 'abyss', 'ion', 'pulse'] as const;
+export type GemId = (typeof GEM_IDS)[number];
+
+const DEFAULT_POOL: readonly GemId[] = GEM_IDS;
 
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0;
@@ -19,19 +28,34 @@ const isNonEmptyString = (value: unknown): value is string =>
 const isNonNegativeNumber = (value: unknown): value is number =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0;
 
-const randomColor = (colors: string[], rng: () => number): string => {
-  const idx = Math.floor(rng() * colors.length) % colors.length;
-  return colors[idx];
+const isGemId = (value: unknown): value is GemId =>
+  typeof value === 'string' && DEFAULT_POOL.includes(value as GemId);
+
+let candyIdCounter = 0;
+
+const nextCandyId = () => {
+  candyIdCounter += 1;
+  return `gem-${candyIdCounter}`;
 };
+
+const randomGem = (pool: readonly GemId[], rng: () => number): GemId => {
+  const idx = Math.floor(rng() * pool.length) % pool.length;
+  return pool[idx];
+};
+
+const createCandyCell = (gem: GemId): CandyCell => ({
+  id: `${gem}-${nextCandyId()}`,
+  gem,
+});
 
 export const createBoard = (
   width = BOARD_WIDTH,
-  colors: string[] = CANDY_COLORS,
+  pool: readonly GemId[] = DEFAULT_POOL,
   rng: () => number = Math.random,
-): string[] => Array.from({ length: width * width }, () => randomColor(colors, rng));
+): CandyCell[] => Array.from({ length: width * width }, () => createCandyCell(randomGem(pool, rng)));
 
 export const findMatches = (
-  board: readonly string[],
+  board: readonly CandyCell[],
   width = BOARD_WIDTH,
   minMatch = 3,
 ): number[][] => {
@@ -44,13 +68,13 @@ export const findMatches = (
     const end = start + width;
     let index = start;
     while (index < end) {
-      const color = board[index];
+      const color = board[index]?.gem;
       if (!isNonEmptyString(color)) {
         index += 1;
         continue;
       }
       let next = index + 1;
-      while (next < end && board[next] === color) {
+      while (next < end && board[next]?.gem === color) {
         next += 1;
       }
       const length = next - index;
@@ -68,14 +92,14 @@ export const findMatches = (
   for (let col = 0; col < width; col += 1) {
     let index = col;
     while (index < size) {
-      const color = board[index];
+      const color = board[index]?.gem;
       if (!isNonEmptyString(color)) {
         index += width;
         continue;
       }
       const group: number[] = [index];
       let next = index + width;
-      while (next < size && board[next] === color) {
+      while (next < size && board[next]?.gem === color) {
         group.push(next);
         next += width;
       }
@@ -90,12 +114,12 @@ export const findMatches = (
 };
 
 const collapseColumns = (
-  board: readonly string[],
+  board: readonly (CandyCell | null)[],
   width = BOARD_WIDTH,
-  colors: string[] = CANDY_COLORS,
+  pool: readonly GemId[] = DEFAULT_POOL,
   rng: () => number = Math.random,
-): string[] => {
-  const result = Array(board.length).fill('');
+): CandyCell[] => {
+  const result: (CandyCell | null)[] = Array(board.length).fill(null);
   const rows = Math.floor(board.length / width);
 
   for (let col = 0; col < width; col += 1) {
@@ -103,38 +127,38 @@ const collapseColumns = (
     for (let row = rows - 1; row >= 0; row -= 1) {
       const index = row * width + col;
       const value = board[index];
-      if (isNonEmptyString(value)) {
+      if (value) {
         result[write * width + col] = value;
         write -= 1;
       }
     }
     while (write >= 0) {
-      result[write * width + col] = randomColor(colors, rng);
+      result[write * width + col] = createCandyCell(randomGem(pool, rng));
       write -= 1;
     }
   }
 
-  return result;
+  return result.map((cell) => cell ?? createCandyCell(randomGem(pool, rng)));
 };
 
 export const resolveBoard = (
-  board: readonly string[],
+  board: readonly CandyCell[],
   width = BOARD_WIDTH,
-  colors: string[] = CANDY_COLORS,
+  pool: readonly GemId[] = DEFAULT_POOL,
   rng: () => number = Math.random,
 ): ResolveResult => {
   const cascades: Cascade[] = [];
-  let current = board.slice();
+  let current: (CandyCell | null)[] = board.map((cell) => ({ ...cell }));
 
   while (true) {
-    const matches = findMatches(current, width);
+    const matches = findMatches(current as CandyCell[], width);
     if (matches.length === 0) break;
     cascades.push({ matches });
     const unique = new Set(matches.flat());
     unique.forEach((index) => {
-      current[index] = '';
+      current[index] = null;
     });
-    current = collapseColumns(current, width, colors, rng);
+    current = collapseColumns(current, width, pool, rng);
   }
 
   if (cascades.length === 0) {
@@ -147,7 +171,7 @@ export const resolveBoard = (
     return total + unique.size;
   }, 0);
 
-  return { board: current, cascades, cleared };
+  return { board: current as CandyCell[], cascades, cleared };
 };
 
 export const scoreCascade = (cascade: Cascade, chain: number): number => {
@@ -165,9 +189,9 @@ export const scoreCascade = (cascade: Cascade, chain: number): number => {
 };
 
 export const shuffleBoard = (
-  board: readonly string[],
+  board: readonly CandyCell[],
   rng: () => number = Math.random,
-): string[] => {
+): CandyCell[] => {
   const next = board.slice();
   for (let i = next.length - 1; i > 0; i -= 1) {
     const j = Math.floor(rng() * (i + 1));
@@ -177,21 +201,21 @@ export const shuffleBoard = (
 };
 
 export interface ColorBombResult {
-  board: string[];
+  board: CandyCell[];
   removed: number;
-  color: string | null;
+  color: GemId | null;
 }
 
 export const detonateColorBomb = (
-  board: readonly string[],
+  board: readonly CandyCell[],
   width = BOARD_WIDTH,
-  colors: string[] = CANDY_COLORS,
+  pool: readonly GemId[] = DEFAULT_POOL,
   rng: () => number = Math.random,
 ): ColorBombResult => {
-  const counts = new Map<string, number>();
-  board.forEach((color) => {
-    if (isNonEmptyString(color)) {
-      counts.set(color, (counts.get(color) ?? 0) + 1);
+  const counts = new Map<GemId, number>();
+  board.forEach((cell) => {
+    if (isGemId(cell?.gem)) {
+      counts.set(cell.gem, (counts.get(cell.gem) ?? 0) + 1);
     }
   });
 
@@ -205,25 +229,25 @@ export const detonateColorBomb = (
   const target = choice?.[0] ?? null;
   let removed = 0;
 
-  const cleared = board.map((color) => {
-    if (target && color === target) {
+  const cleared = board.map((cell) => {
+    if (target && cell.gem === target) {
       removed += 1;
-      return '';
+      return null;
     }
-    return color;
+    return cell;
   });
 
-  const collapsed = collapseColumns(cleared, width, colors, rng);
+  const collapsed = collapseColumns(cleared, width, pool, rng);
   return { board: collapsed, removed, color: target ?? null };
 };
 
 export const initialBoosters = Object.freeze({ shuffle: 2, colorBomb: 1 });
 
 export const swapCandies = (
-  board: readonly string[],
+  board: readonly CandyCell[],
   a: number,
   b: number,
-): string[] => {
+): CandyCell[] => {
   const next = board.slice();
   [next[a], next[b]] = [next[b], next[a]];
   return next;
