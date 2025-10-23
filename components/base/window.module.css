@@ -87,6 +87,19 @@
   transition-delay: 0s, 0s, 0s, 0s, 0s, 0s, var(--window-motion-opacity-duration);
 }
 
+.windowFrame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  transition: box-shadow var(--motion-fast) ease;
+}
+
+.windowFrameActive::after {
+  box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.25);
+}
+
 .snapPreview {
   transition: opacity var(--window-motion-duration-snap-preview) var(--window-motion-ease-snap-preview);
 }
@@ -109,6 +122,29 @@
   -webkit-backdrop-filter: brightness(1.1) saturate(1.2);
 }
 
+@media (max-width: 768px) {
+  .windowFrame {
+    border-radius: clamp(12px, 4vw, 18px);
+  }
+
+  .windowFrameActive {
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.38),
+      0 14px 32px rgba(15, 23, 42, 0.4),
+      0 0 0 1px rgba(56, 189, 248, 0.35);
+  }
+}
+
+@media (max-width: 480px) {
+  .windowFrame {
+    border-radius: clamp(10px, 5vw, 16px);
+    box-shadow:
+      0 6px 14px rgba(15, 23, 42, 0.35),
+      0 18px 38px rgba(15, 23, 42, 0.38),
+      0 0 0 1px rgba(12, 74, 110, 0.4);
+  }
+}
+
 .snapPreviewLabel {
   color: rgba(15, 23, 42, 0.92);
   font-weight: 600;
@@ -123,24 +159,28 @@
 }
 
 .windowTitlebar {
-  --window-titlebar-gutter: clamp(0.45rem, 1.4vw, 0.75rem);
-  --window-titlebar-gap: clamp(0.25rem, 1vw, 0.5rem);
-  height: clamp(28px, 5.2vw, 34px);
-  min-height: 36px;
+  --window-titlebar-height: clamp(34px, 4.5vw, 44px);
+  --window-titlebar-gutter: clamp(0.6rem, 1.8vw, 1rem);
+  --window-titlebar-gap: clamp(0.35rem, 1.2vw, 0.75rem);
+  height: var(--window-titlebar-height);
+  min-height: var(--window-titlebar-height);
   border-top-left-radius: calc(var(--radius-6) - 1px);
   border-top-right-radius: calc(var(--radius-6) - 1px);
   position: relative;
   z-index: 1;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--window-titlebar-gap);
-  padding: 0 var(--window-titlebar-gutter);
+  padding-inline: var(--window-titlebar-gutter);
+  padding-block: clamp(0.35rem, 1.6vw, 0.55rem);
   flex-wrap: nowrap;
-  column-gap: 0.35rem;
-  padding: 0.35rem 0.85rem;
+  column-gap: var(--window-titlebar-gap);
   cursor: grab;
   cursor: -webkit-grab;
   touch-action: none;
+  backdrop-filter: saturate(1.05);
+  -webkit-backdrop-filter: saturate(1.05);
 }
 
 .windowTitlebar:active,
@@ -159,6 +199,7 @@
   min-width: 0;
   height: 100%;
   pointer-events: none;
+  transition: width var(--motion-fast) ease;
 }
 
 .windowTitle {
@@ -177,27 +218,32 @@
 
 .windowControls {
   flex: 0 0 auto;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: clamp(0.25rem, 1vw, 0.45rem);
-  padding: 0 clamp(0.25rem, 1vw, 0.35rem);
+  padding-inline: clamp(0.25rem, 1vw, 0.4rem);
   height: 100%;
   user-select: none;
   flex-shrink: 0;
+  border-radius: calc(var(--radius-6) - 2px);
+  background: rgba(15, 23, 42, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.15);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .windowControlButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: clamp(24px, 4.6vw, 28px);
-  height: clamp(22px, 4.2vw, 24px);
-  border-radius: clamp(4px, 1.2vw, 6px);
-  border: 1px solid transparent;
+  width: clamp(24px, 4.6vw, 32px);
+  height: clamp(22px, 4.2vw, 28px);
+  border-radius: clamp(5px, 1.4vw, 8px);
+  border: 1px solid rgba(148, 163, 184, 0.24);
   outline: none;
-  box-shadow: none;
-  background-color: rgba(148, 163, 184, 0.08);
-  color: rgba(226, 232, 240, 0.85);
+  box-shadow: 0 1px 1px rgba(15, 23, 42, 0.32);
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.22), rgba(100, 116, 139, 0.18));
+  color: rgba(226, 232, 240, 0.9);
   transition:
     background-color var(--motion-fast) cubic-bezier(0.4, 0, 0.2, 1),
     color var(--motion-fast) cubic-bezier(0.4, 0, 0.2, 1),
@@ -205,17 +251,22 @@
     box-shadow var(--motion-fast) cubic-bezier(0.4, 0, 0.2, 1),
     transform var(--motion-fast) cubic-bezier(0.25, 0.8, 0.25, 1);
   will-change: transform, background-color, color, border-color, box-shadow;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .windowControlButton:hover {
-  background-color: rgba(148, 163, 184, 0.2);
-  color: rgba(248, 250, 252, 0.95);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.28);
+  background: linear-gradient(180deg, rgba(191, 219, 254, 0.35), rgba(148, 163, 184, 0.28));
+  color: rgba(248, 250, 252, 0.97);
+  transform: translateY(-1px) scale(1.01);
+  box-shadow:
+    0 8px 18px rgba(15, 23, 42, 0.35),
+    0 0 0 1px rgba(148, 163, 184, 0.35);
 }
 
 .windowControlButton:active {
-  background-color: rgba(148, 163, 184, 0.24);
+  background: linear-gradient(180deg, rgba(148, 163, 184, 0.34), rgba(100, 116, 139, 0.28));
+  border-color: rgba(148, 163, 184, 0.35);
 }
 
 .windowControlButton:active,
@@ -234,7 +285,8 @@
 .windowControlButtonDisabled {
   cursor: not-allowed;
   opacity: 0.45;
-  background-color: rgba(148, 163, 184, 0.12) !important;
+  background: rgba(148, 163, 184, 0.12) !important;
+  border-color: rgba(148, 163, 184, 0.18);
   color: rgba(148, 163, 184, 0.6);
   box-shadow: none;
 }
@@ -262,18 +314,52 @@
     transform: none;
     box-shadow: none;
   }
+
+  .windowResizeHandle,
+  .windowResizeHandle::after {
+    transition-duration: 0ms;
+  }
 }
 
 .windowControlIcon {
-  width: clamp(12px, 3.2vw, 14px);
-  height: clamp(12px, 3.2vw, 14px);
+  width: clamp(12px, 3vw, 16px);
+  height: clamp(12px, 3vw, 16px);
   display: block;
+  pointer-events: none;
+}
+
+@media (max-width: 1024px) {
+  .windowTitlebar {
+    --window-titlebar-gutter: clamp(0.5rem, 1.6vw, 0.85rem);
+  }
+
+  .windowControls {
+    gap: clamp(0.2rem, 1vw, 0.4rem);
+  }
+}
+
+@media (max-width: 768px) {
+  .windowTitlebar {
+    --window-titlebar-height: clamp(32px, 6vw, 38px);
+    --window-titlebar-gutter: clamp(0.45rem, 2vw, 0.7rem);
+    --window-titlebar-gap: clamp(0.25rem, 1.6vw, 0.5rem);
+  }
+
+  .windowTitle {
+    font-size: clamp(0.85rem, 2.3vw, 0.95rem);
+    letter-spacing: 0.01em;
+  }
+
+  .windowControls {
+    padding-inline: clamp(0.2rem, 1.4vw, 0.35rem);
+  }
 }
 
 @media (max-width: 640px) {
   .windowTitlebar {
-    --window-titlebar-gutter: clamp(0.35rem, 2.4vw, 0.6rem);
-    --window-titlebar-gap: clamp(0.2rem, 1.6vw, 0.35rem);
+    --window-titlebar-height: clamp(30px, 8vw, 36px);
+    --window-titlebar-gutter: clamp(0.35rem, 2.6vw, 0.55rem);
+    --window-titlebar-gap: clamp(0.2rem, 1.8vw, 0.4rem);
   }
 
   .windowTitleBalancer {
@@ -285,14 +371,57 @@
   }
 
   .windowControls {
-    padding: 0 clamp(0.2rem, 1.6vw, 0.3rem);
-    gap: clamp(0.2rem, 1.6vw, 0.35rem);
+    padding-inline: clamp(0.18rem, 2vw, 0.3rem);
+    gap: clamp(0.18rem, 2vw, 0.32rem);
+  }
+}
+
+@media (max-width: 480px) {
+  .windowTitlebar {
+    --window-titlebar-height: clamp(28px, 9vw, 34px);
+    --window-titlebar-gap: clamp(0.2rem, 3vw, 0.35rem);
+  }
+
+  .windowControls {
+    gap: clamp(0.16rem, 3vw, 0.28rem);
+  }
+
+  .windowControlButton {
+    width: clamp(22px, 10vw, 28px);
+    height: clamp(20px, 9vw, 24px);
+    border-radius: clamp(5px, 2vw, 7px);
+  }
+
+  .windowControlIcon {
+    width: clamp(10px, 3vw, 14px);
+    height: clamp(10px, 3vw, 14px);
+  }
+}
+
+@media (pointer: coarse) {
+  .windowControlButton {
+    width: clamp(28px, 9vw, 36px);
+    height: clamp(26px, 8vw, 32px);
   }
 }
 
 .windowYBorder {
-  height: calc(100% - 10px);
-  width: calc(100% + 10px);
+  position: absolute;
+  inset: -5px;
+  border-radius: calc(var(--radius-6) + 6px);
+  pointer-events: none;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  box-shadow: 0 0 0 1px rgba(14, 116, 233, 0.18);
+  opacity: 0;
+  transition: opacity var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+}
+
+.windowFrameActive .windowYBorder,
+.windowFrameResizing .windowYBorder {
+  opacity: 1;
+  box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.35);
+}
+
 .windowResizeHandle {
   position: absolute;
   z-index: 60;
@@ -398,4 +527,35 @@
   bottom: 0;
   left: 0;
   cursor: nesw-resize;
+}
+
+@media (max-width: 640px) {
+  .windowResizeHandleNorth,
+  .windowResizeHandleSouth {
+    left: 12px;
+    right: 12px;
+  }
+
+  .windowResizeHandleEast,
+  .windowResizeHandleWest {
+    top: 12px;
+    bottom: 12px;
+  }
+}
+
+@media (pointer: coarse) {
+  .windowResizeHandleNorth,
+  .windowResizeHandleSouth {
+    height: 18px;
+  }
+
+  .windowResizeHandleEast,
+  .windowResizeHandleWest {
+    width: 18px;
+  }
+
+  .windowResizeHandleCorner {
+    width: 20px;
+    height: 20px;
+  }
 }
