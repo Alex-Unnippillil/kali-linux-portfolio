@@ -293,6 +293,8 @@
 .windowYBorder {
   height: calc(100% - 10px);
   width: calc(100% + 10px);
+}
+
 .windowResizeHandle {
   position: absolute;
   z-index: 60;
