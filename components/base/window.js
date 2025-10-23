@@ -1344,7 +1344,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
             onDoubleClick={onDoubleClick}
             data-window-titlebar=""
         >
-            <span className={styles.windowTitlePlaceholder} aria-hidden="true" />
+            <span className={styles.windowTitleBalancer} aria-hidden="true" />
             <div className={`${styles.windowTitle} text-sm font-bold`} title={title}>
                 {title}
             </div>
