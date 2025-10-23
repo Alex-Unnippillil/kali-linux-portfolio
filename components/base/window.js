@@ -103,11 +103,14 @@ const computeSnapRegions = (
     viewportTop = 0,
     topInset = DEFAULT_WINDOW_TOP_OFFSET,
     bottomInset,
+    safeBottomOverride,
 ) => {
     const normalizedTopInset = typeof topInset === 'number' && Number.isFinite(topInset)
         ? Math.max(topInset, WINDOW_TOP_INSET + WINDOW_TOP_MARGIN)
         : DEFAULT_WINDOW_TOP_OFFSET;
-    const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
+    const safeBottom = typeof safeBottomOverride === 'number' && Number.isFinite(safeBottomOverride)
+        ? Math.max(safeBottomOverride, 0)
+        : Math.max(0, measureSafeAreaInset('bottom'));
     const snapBottomInset = typeof bottomInset === 'number' && Number.isFinite(bottomInset)
         ? Math.max(bottomInset, 0)
         : measureSnapBottomInset();
@@ -178,6 +181,22 @@ const clearScheduledTimeout = (handle) => {
     }
 };
 
+const scheduleAnimationFrame = (callback) => {
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+        return window.requestAnimationFrame(callback);
+    }
+    return setTimeout(() => callback(Date.now()), 16);
+};
+
+const cancelScheduledAnimationFrame = (handle) => {
+    if (handle == null) return;
+    if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+        window.cancelAnimationFrame(handle);
+    } else {
+        clearTimeout(handle);
+    }
+};
+
 export class Window extends Component {
     static defaultProps = {
         snapGrid: [8, 8],
@@ -233,6 +252,12 @@ export class Window extends Component {
         this._menuOpener = null;
         this._closeTimeout = null;
         this._resizeSession = null;
+        this._dragFrame = null;
+        this._pendingDragUpdate = null;
+        this._lastViewportMetrics = null;
+        this._lastSnapBottomInset = null;
+        this._lastSafeAreaBottom = null;
+        this._isUnmounted = false;
     }
 
     notifySizeChange = () => {
@@ -243,6 +268,7 @@ export class Window extends Component {
     }
 
     componentDidMount() {
+        this._isUnmounted = false;
         this.id = this.props.id;
         this.setDefaultWindowDimenstion();
 
@@ -324,6 +350,7 @@ export class Window extends Component {
     }
 
     componentWillUnmount() {
+        this._isUnmounted = true;
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
         window.removeEventListener('resize', this.resizeBoundries);
@@ -338,6 +365,11 @@ export class Window extends Component {
             clearScheduledTimeout(this._closeTimeout);
             this._closeTimeout = null;
         }
+        if (this._dragFrame) {
+            cancelScheduledAnimationFrame(this._dragFrame);
+            this._dragFrame = null;
+        }
+        this._pendingDragUpdate = null;
         this.cancelResizeSession();
         this._resizeSession = null;
     }
@@ -402,6 +434,15 @@ export class Window extends Component {
         const availableVertical = Math.max(viewportHeight - topInset - snapBottomInset - safeAreaBottom, 0);
         const availableHorizontal = Math.max(viewportWidth - windowWidthPx, 0);
         const maxTop = Math.max(availableVertical - windowHeightPx, 0);
+
+        this._lastViewportMetrics = {
+            width: viewportWidth,
+            height: viewportHeight,
+            left: viewportLeft,
+            top: viewportTop,
+        };
+        this._lastSnapBottomInset = snapBottomInset;
+        this._lastSafeAreaBottom = safeAreaBottom;
 
         this.setState({
             parentSize: {
@@ -486,6 +527,33 @@ export class Window extends Component {
             return document.getElementById(this.id);
         }
         return null;
+    }
+
+    getCachedViewportMetrics = () => {
+        if (this._lastViewportMetrics) {
+            return this._lastViewportMetrics;
+        }
+        const metrics = getViewportMetrics();
+        this._lastViewportMetrics = metrics;
+        return metrics;
+    }
+
+    getCachedSnapBottomInset = () => {
+        if (typeof this._lastSnapBottomInset === 'number') {
+            return this._lastSnapBottomInset;
+        }
+        const measured = measureSnapBottomInset();
+        this._lastSnapBottomInset = measured;
+        return measured;
+    }
+
+    getCachedSafeAreaBottom = () => {
+        if (typeof this._lastSafeAreaBottom === 'number') {
+            return this._lastSafeAreaBottom;
+        }
+        const measured = Math.max(0, measureSafeAreaInset('bottom'));
+        this._lastSafeAreaBottom = measured;
+        return measured;
     }
 
     getCurrentBounds = () => {
@@ -676,12 +744,20 @@ export class Window extends Component {
             : position;
         this.setWinowsPosition();
         this.focusWindow();
-        const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = getViewportMetrics();
+        const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = this.getCachedViewportMetrics();
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         if (!viewportWidth || !viewportHeight) return;
-        const snapBottomInset = measureSnapBottomInset();
-        const safeAreaBottom = Math.max(0, measureSafeAreaInset('bottom'));
-        const regions = computeSnapRegions(viewportWidth, viewportHeight, viewportLeft, viewportTop, topInset, snapBottomInset);
+        const snapBottomInset = this.getCachedSnapBottomInset();
+        const safeAreaBottom = this.getCachedSafeAreaBottom();
+        const regions = computeSnapRegions(
+            viewportWidth,
+            viewportHeight,
+            viewportLeft,
+            viewportTop,
+            topInset,
+            snapBottomInset,
+            safeAreaBottom,
+        );
         const region = regions[resolvedPosition];
         if (!region) return;
         const previousWidth = Math.max(this.state.width, this.state.minWidth);
@@ -779,21 +855,32 @@ export class Window extends Component {
         }
     }
 
-    checkSnapPreview = () => {
-        const node = this.getWindowNode();
-        if (!node) return;
-        const rect = node.getBoundingClientRect();
-        const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = getViewportMetrics();
+    checkSnapPreview = (nodeOverride, rectOverride) => {
+        if (this._isUnmounted) return;
+        const node = nodeOverride || this.getWindowNode();
+        if (!node || typeof node.getBoundingClientRect !== 'function') return;
+        const rect = rectOverride || node.getBoundingClientRect();
+        if (!rect) return;
+        const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = this.getCachedViewportMetrics();
         if (!viewportWidth || !viewportHeight) return;
 
         const horizontalThreshold = computeEdgeThreshold(viewportWidth);
         const verticalThreshold = computeEdgeThreshold(viewportHeight);
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
-        const snapBottomInset = measureSnapBottomInset();
-        const regions = computeSnapRegions(viewportWidth, viewportHeight, viewportLeft, viewportTop, topInset, snapBottomInset);
+        const snapBottomInset = this.getCachedSnapBottomInset();
+        const safeAreaBottom = this.getCachedSafeAreaBottom();
+        const regions = computeSnapRegions(
+            viewportWidth,
+            viewportHeight,
+            viewportLeft,
+            viewportTop,
+            topInset,
+            snapBottomInset,
+            safeAreaBottom,
+        );
 
         const topEdge = viewportTop + topInset;
-        const bottomEdge = viewportTop + viewportHeight;
+        const bottomEdge = viewportTop + viewportHeight - safeAreaBottom;
         const leftEdge = viewportLeft;
         const rightEdge = viewportLeft + viewportWidth;
 
@@ -837,6 +924,52 @@ export class Window extends Component {
         }
     }
 
+    scheduleDragUpdate = (dragData) => {
+        if (this._isUnmounted) return;
+        if (!dragData || !dragData.node) {
+            this.checkSnapPreview();
+            return;
+        }
+
+        if (this._dragFrame !== null) {
+            this._pendingDragUpdate = {
+                node: dragData.node,
+                x: dragData.x,
+                y: dragData.y,
+            };
+            return;
+        }
+
+        this._pendingDragUpdate = null;
+        this.applyEdgeResistance(dragData.node, dragData);
+        this.checkSnapPreview(dragData.node);
+
+        this._dragFrame = scheduleAnimationFrame(() => {
+            this._dragFrame = null;
+            const update = this._pendingDragUpdate;
+            this._pendingDragUpdate = null;
+            if (!update || !update.node || this._isUnmounted) {
+                return;
+            }
+            this.applyEdgeResistance(update.node, update);
+            this.checkSnapPreview(update.node);
+        });
+    }
+
+    flushPendingDragUpdate = () => {
+        if (this._dragFrame !== null) {
+            cancelScheduledAnimationFrame(this._dragFrame);
+            this._dragFrame = null;
+        }
+        const update = this._pendingDragUpdate;
+        this._pendingDragUpdate = null;
+        if (!update || !update.node || this._isUnmounted) {
+            return;
+        }
+        this.applyEdgeResistance(update.node, update);
+        this.checkSnapPreview(update.node);
+    }
+
     applyEdgeResistance = (node, data) => {
         if (!node || !data) return;
         const threshold = 30;
@@ -859,17 +992,18 @@ export class Window extends Component {
 
         x = resist(x, viewportLeft, maxX);
         y = resist(y, topBound, maxY);
-        node.style.transform = `translate(${x}px, ${y}px)`;
+        const nextTransform = `translate(${x}px, ${y}px)`;
+        if (node.style.transform !== nextTransform) {
+            node.style.transform = nextTransform;
+        }
     }
 
     handleDrag = (e, data) => {
-        if (data && data.node) {
-            this.applyEdgeResistance(data.node, data);
-        }
-        this.checkSnapPreview();
+        this.scheduleDragUpdate(data);
     }
 
     handleStop = () => {
+        this.flushPendingDragUpdate();
         this.changeCursorToDefault();
         const snapPos = this.state.snapPosition;
         if (snapPos) {
@@ -1326,7 +1460,7 @@ export class Window extends Component {
                     x += dx;
                     y += dy;
                     node.style.transform = `translate(${x}px, ${y}px)`;
-                    this.checkSnapPreview();
+                    this.checkSnapPreview(node);
                     this.setWinowsPosition();
                 }
             }
