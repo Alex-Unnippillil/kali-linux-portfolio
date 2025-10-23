@@ -1,4 +1,4 @@
-const PLAYLIST_URL = 'https://open.spotify.com/playlist/37i9dQZF1DXaf6XmhwlgC6?si=sEgyseKUTUOSgEtLBCKKzA';
+const PLAYLIST_URL = 'https://open.spotify.com/embed/playlist/37i9dQZF1DXaf6XmhwlgC6?utm_source=generator';
 
 export function SpotifyWebPlayerLayout({ description, className = '' }) {
   return (
