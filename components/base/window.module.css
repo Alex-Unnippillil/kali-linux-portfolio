@@ -255,3 +255,41 @@
   height: calc(100% + 10px);
   width: calc(100% - 10px);
 }
+
+.windowCornerHandle {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  z-index: 5;
+  touch-action: none;
+  pointer-events: auto;
+  background: transparent;
+}
+
+.windowCornerHandleTopLeft {
+  top: 0;
+  left: 0;
+  transform: translate(-50%, -50%);
+  cursor: nwse-resize;
+}
+
+.windowCornerHandleTopRight {
+  top: 0;
+  right: 0;
+  transform: translate(50%, -50%);
+  cursor: nesw-resize;
+}
+
+.windowCornerHandleBottomLeft {
+  bottom: 0;
+  left: 0;
+  transform: translate(-50%, 50%);
+  cursor: nesw-resize;
+}
+
+.windowCornerHandleBottomRight {
+  bottom: 0;
+  right: 0;
+  transform: translate(50%, 50%);
+  cursor: nwse-resize;
+}
