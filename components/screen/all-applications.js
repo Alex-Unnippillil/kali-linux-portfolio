@@ -323,7 +323,7 @@ class AllApplications extends React.Component {
                             {apps.length} {apps.length === 1 ? 'app' : 'apps'}
                         </span>
                     </div>
-                    <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                    <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
                         {apps.map((app) => this.renderAppTile(app))}
                     </div>
                 </div>
@@ -351,7 +351,7 @@ class AllApplications extends React.Component {
                 style={containerStyles}
             >
                 <summary
-                    className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl px-3 py-2 text-left transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                    className="flex cursor-pointer flex-col gap-4 rounded-2xl px-3 py-2 text-left transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:flex-row sm:items-center sm:justify-between"
                     style={summaryStyles}
                 >
                     <span className="flex items-center gap-3">
@@ -372,7 +372,7 @@ class AllApplications extends React.Component {
                         {countLabel}
                     </span>
                 </summary>
-                <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
                     {folder.items.map((app) => this.renderAppTile(app))}
                 </div>
             </details>
@@ -445,7 +445,7 @@ class AllApplications extends React.Component {
 
         return (
             <div className="flex w-full flex-col items-center text-white">
-                <header className="w-full">
+                <header className="w-full px-4 sm:px-6 md:px-8">
                     <div
                         className="mx-auto flex w-full max-w-5xl flex-col gap-6 rounded-3xl border bg-slate-900/70 p-6 backdrop-blur-xl"
                         style={headerAccentStyles}
@@ -479,11 +479,11 @@ class AllApplications extends React.Component {
                         </div>
                     </div>
                 </header>
-                <div className="mt-10 flex w-full max-w-6xl flex-col items-stretch px-4 pb-12 sm:px-6 md:px-8">
+                <div className="mx-auto mt-10 flex w-full max-w-6xl flex-col items-stretch px-4 pb-12 sm:px-6 md:px-8 lg:px-10 xl:px-0">
                     {this.renderSection('Favorites', favoriteApps)}
                     {this.renderSection('Recent', recentApps)}
                     {folderSections.length ? (
-                        <div className="space-y-6">
+                        <div className="mx-auto w-full space-y-6">
                             {folderSections.map((folder) =>
                                 this.renderFolder(folder, forceOpenFolders)
                             )}
