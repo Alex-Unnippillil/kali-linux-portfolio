@@ -18,6 +18,7 @@ import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
 const EDGE_THRESHOLD_RATIO = 0.05;
+const DRAG_BOUNDS_PADDING = 96;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
@@ -1477,7 +1478,7 @@ export class Window extends Component {
                 <Draggable
                     nodeRef={this.windowRef}
                     axis="both"
-                    handle=".bg-ub-window-title"
+                    handle="[data-window-drag-handle]"
                     cancel={`.${styles.windowControls}`}
                     grid={this.props.snapEnabled ? snapGrid : [1, 1]}
                     scale={1}
@@ -1487,10 +1488,10 @@ export class Window extends Component {
                     allowAnyClick={false}
                     defaultPosition={{ x: this.startX, y: this.startY }}
                     bounds={{
-                        left: viewportLeft,
-                        top: boundsTop,
-                        right: boundsRight,
-                        bottom: boundsBottom,
+                        left: viewportLeft - DRAG_BOUNDS_PADDING,
+                        top: boundsTop - DRAG_BOUNDS_PADDING,
+                        right: boundsRight + DRAG_BOUNDS_PADDING,
+                        bottom: boundsBottom + DRAG_BOUNDS_PADDING,
                     }}
                 >
                     <div
@@ -1583,6 +1584,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
             onPointerDown={onPointerDown}
             onDoubleClick={onDoubleClick}
             data-window-titlebar=""
+            data-window-drag-handle=""
         >
             <span className={styles.windowTitlePlaceholder} aria-hidden="true" />
             <div className={`${styles.windowTitle} text-sm font-bold`} title={title}>
