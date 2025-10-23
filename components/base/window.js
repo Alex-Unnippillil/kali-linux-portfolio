@@ -231,6 +231,9 @@ export class Window extends Component {
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
         this._closeTimeout = null;
+        this._resizeSession = null;
+        this._resizePointerTarget = null;
+        this._restoreUserSelect = null;
     }
 
     notifySizeChange = () => {
@@ -327,6 +330,7 @@ export class Window extends Component {
         window.removeEventListener('resize', this.resizeBoundries);
         window.removeEventListener('context-menu-open', this.setInertBackground);
         window.removeEventListener('context-menu-close', this.removeInertBackground);
+        this.teardownCornerResize();
         const root = this.getWindowNode();
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
         if (this._usageTimeout) {
@@ -578,6 +582,256 @@ export class Window extends Component {
 
     changeCursorToDefault = () => {
         this.setState({ cursorType: "cursor-default", grabbed: false })
+    }
+
+    getCornerCursor = (corner) => {
+        if (corner === 'top-left' || corner === 'bottom-right') {
+            return 'cursor-nwse-resize';
+        }
+        if (corner === 'top-right' || corner === 'bottom-left') {
+            return 'cursor-nesw-resize';
+        }
+        return null;
+    }
+
+    beginCornerResize = (event, corner) => {
+        if (this.props.resizable === false) return;
+        if (!event) return;
+        if (typeof event.preventDefault === 'function') {
+            event.preventDefault();
+        }
+        if (typeof event.stopPropagation === 'function') {
+            event.stopPropagation();
+        }
+
+        if (this.state.maximized) {
+            this.restoreWindow();
+            return;
+        }
+        if (this.state.snapped) {
+            this.unsnapWindow();
+            return;
+        }
+
+        const node = this.getWindowNode();
+        if (!node || typeof node.getBoundingClientRect !== 'function') {
+            return;
+        }
+
+        const rect = node.getBoundingClientRect();
+        const metrics = getViewportMetrics();
+        const topInset = this.state.safeAreaTop ?? measureWindowTopOffset();
+
+        this.focusWindow();
+
+        const pointerId = typeof event.pointerId === 'number' ? event.pointerId : null;
+
+        this._resizeSession = {
+            corner,
+            pointerId,
+            startPointerX: event.clientX,
+            startPointerY: event.clientY,
+            startLeft: rect.left,
+            startTop: rect.top,
+            startRight: rect.right,
+            startBottom: rect.bottom,
+            viewportWidth: metrics.width,
+            viewportHeight: metrics.height,
+            viewportLeft: metrics.left,
+            viewportTop: metrics.top,
+            topInset,
+        };
+
+        if (typeof document !== 'undefined' && document.body) {
+            this._restoreUserSelect = document.body.style.userSelect || '';
+            document.body.style.userSelect = 'none';
+        }
+
+        if (event.currentTarget && typeof event.currentTarget.setPointerCapture === 'function' && pointerId !== null) {
+            event.currentTarget.setPointerCapture(pointerId);
+            this._resizePointerTarget = event.currentTarget;
+        } else {
+            this._resizePointerTarget = null;
+        }
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('pointermove', this.handleCornerResizeMove, { passive: false });
+            window.addEventListener('pointerup', this.handleCornerResizeEnd);
+            window.addEventListener('pointercancel', this.handleCornerResizeEnd);
+            window.addEventListener('blur', this.handleCornerResizeEnd);
+        }
+
+        const cursor = this.getCornerCursor(corner);
+        if (cursor) {
+            this.setState({ cursorType: cursor });
+        }
+    }
+
+    handleCornerResizeMove = (event) => {
+        if (!this._resizeSession) return;
+        if (this.props.resizable === false) return;
+        const session = this._resizeSession;
+        if (session.pointerId !== null && typeof event.pointerId === 'number' && event.pointerId !== session.pointerId) {
+            return;
+        }
+        if (typeof event.preventDefault === 'function') {
+            event.preventDefault();
+        }
+
+        const deltaX = event.clientX - session.startPointerX;
+        const deltaY = event.clientY - session.startPointerY;
+
+        let left = session.startLeft;
+        let right = session.startRight;
+        let top = session.startTop;
+        let bottom = session.startBottom;
+
+        if (session.corner.includes('left')) {
+            left = session.startLeft + deltaX;
+        } else {
+            right = session.startRight + deltaX;
+        }
+
+        if (session.corner.includes('top')) {
+            top = session.startTop + deltaY;
+        } else {
+            bottom = session.startBottom + deltaY;
+        }
+
+        const baseWidth = session.viewportWidth || (typeof window !== 'undefined' ? window.innerWidth : 0) || 1;
+        const baseHeight = session.viewportHeight || (typeof window !== 'undefined' ? window.innerHeight : 0) || 1;
+        const minWidthPx = Math.max((this.state.minWidth / 100) * baseWidth, 0);
+        const minHeightPx = Math.max((this.state.minHeight / 100) * baseHeight, 0);
+
+        let widthPx = right - left;
+        let heightPx = bottom - top;
+
+        if (widthPx < minWidthPx) {
+            widthPx = minWidthPx;
+            if (session.corner.includes('left')) {
+                left = right - widthPx;
+            } else {
+                right = left + widthPx;
+            }
+        }
+
+        if (heightPx < minHeightPx) {
+            heightPx = minHeightPx;
+            if (session.corner.includes('top')) {
+                top = bottom - heightPx;
+            } else {
+                bottom = top + heightPx;
+            }
+        }
+
+        const snappedWidthPx = this.snapToGrid(widthPx, 'x');
+        const snappedHeightPx = this.snapToGrid(heightPx, 'y');
+        widthPx = Math.max(snappedWidthPx, minWidthPx);
+        heightPx = Math.max(snappedHeightPx, minHeightPx);
+
+        if (session.corner.includes('left')) {
+            left = right - widthPx;
+        } else {
+            right = left + widthPx;
+        }
+
+        if (session.corner.includes('top')) {
+            top = bottom - heightPx;
+        } else {
+            bottom = top + heightPx;
+        }
+
+        const clamped = clampWindowPositionWithinViewport(
+            { x: left, y: top },
+            { width: widthPx, height: heightPx },
+            {
+                viewportWidth: session.viewportWidth,
+                viewportHeight: session.viewportHeight,
+                viewportLeft: session.viewportLeft,
+                viewportTop: session.viewportTop,
+                topOffset: session.topInset,
+            },
+        );
+
+        if (clamped) {
+            const deltaClampX = clamped.x - left;
+            const deltaClampY = clamped.y - top;
+            left = clamped.x;
+            top = clamped.y;
+            right += deltaClampX;
+            bottom += deltaClampY;
+        }
+
+        widthPx = Math.max(right - left, minWidthPx);
+        heightPx = Math.max(bottom - top, minHeightPx);
+
+        const widthPercentBase = baseWidth || 1;
+        const heightPercentBase = baseHeight || 1;
+        const widthPercent = Math.max((widthPx / widthPercentBase) * 100, this.state.minWidth);
+        const heightPercent = Math.max((heightPx / heightPercentBase) * 100, this.state.minHeight);
+
+        const node = this.getWindowNode();
+        if (node) {
+            const transformValue = `translate(${left}px, ${top}px)`;
+            node.style.transform = transformValue;
+            const { style } = node;
+            if (style && typeof style.setProperty === 'function') {
+                style.setProperty('--window-transform-x', `${left}px`);
+                style.setProperty('--window-transform-y', `${top}px`);
+            } else if (style) {
+                style['--window-transform-x'] = `${left}px`;
+                style['--window-transform-y'] = `${top}px`;
+            }
+        }
+
+        const widthChanged = Math.abs(widthPercent - this.state.width) > 0.05;
+        const heightChanged = Math.abs(heightPercent - this.state.height) > 0.05;
+
+        if (widthChanged || heightChanged) {
+            this.setState({
+                width: widthPercent,
+                height: heightPercent,
+                preMaximizeBounds: null,
+            }, () => {
+                this.resizeBoundries();
+                this.notifySizeChange();
+            });
+        }
+    }
+
+    handleCornerResizeEnd = (event) => {
+        if (!this._resizeSession) return;
+        const pointerId = this._resizeSession.pointerId;
+        if (pointerId !== null && event && typeof event.pointerId === 'number' && event.pointerId !== pointerId) {
+            return;
+        }
+        this.teardownCornerResize();
+        this.changeCursorToDefault();
+    }
+
+    teardownCornerResize = () => {
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('pointermove', this.handleCornerResizeMove);
+            window.removeEventListener('pointerup', this.handleCornerResizeEnd);
+            window.removeEventListener('pointercancel', this.handleCornerResizeEnd);
+            window.removeEventListener('blur', this.handleCornerResizeEnd);
+        }
+        if (this._resizePointerTarget && this._resizeSession && typeof this._resizeSession.pointerId === 'number') {
+            const pointerId = this._resizeSession.pointerId;
+            if (this._resizePointerTarget.hasPointerCapture?.(pointerId)) {
+                try {
+                    this._resizePointerTarget.releasePointerCapture(pointerId);
+                } catch (error) {
+                    // ignore if pointer already released
+                }
+            }
+        }
+        if (typeof document !== 'undefined' && document.body && this._restoreUserSelect !== null) {
+            document.body.style.userSelect = this._restoreUserSelect;
+        }
+        this._restoreUserSelect = null;
+        this._resizePointerTarget = null;
+        this._resizeSession = null;
     }
 
     getSnapGrid = () => {
@@ -1295,8 +1549,28 @@ export class Window extends Component {
                         onPointerDown={this.focusWindow}
                         onFocus={this.focusWindow}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        {this.props.resizable !== false && (
+                            <>
+                                <WindowYBorder resize={this.handleHorizontalResize} />
+                                <WindowXBorder resize={this.handleVerticleResize} />
+                                <WindowCornerHandle
+                                    position="top-left"
+                                    onPointerDown={(event) => this.beginCornerResize(event, 'top-left')}
+                                />
+                                <WindowCornerHandle
+                                    position="top-right"
+                                    onPointerDown={(event) => this.beginCornerResize(event, 'top-right')}
+                                />
+                                <WindowCornerHandle
+                                    position="bottom-left"
+                                    onPointerDown={(event) => this.beginCornerResize(event, 'bottom-left')}
+                                />
+                                <WindowCornerHandle
+                                    position="bottom-right"
+                                    onPointerDown={(event) => this.beginCornerResize(event, 'bottom-right')}
+                                />
+                            </>
+                        )}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -1394,6 +1668,33 @@ export class WindowXBorder extends Component {
             )
         }
     }
+
+export function WindowCornerHandle({ position, onPointerDown }) {
+    const positionClasses = {
+        'top-left': styles.windowCornerHandleTopLeft,
+        'top-right': styles.windowCornerHandleTopRight,
+        'bottom-left': styles.windowCornerHandleBottomLeft,
+        'bottom-right': styles.windowCornerHandleBottomRight,
+    };
+    const resolvedClass = positionClasses[position] || '';
+    const className = [styles.windowCornerHandle, resolvedClass].filter(Boolean).join(' ');
+
+    const handlePointerDown = (event) => {
+        if (typeof onPointerDown === 'function') {
+            onPointerDown(event);
+        }
+    };
+
+    return (
+        <div
+            className={className}
+            onPointerDown={handlePointerDown}
+            role="presentation"
+            aria-hidden="true"
+            tabIndex={-1}
+        />
+    );
+}
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
