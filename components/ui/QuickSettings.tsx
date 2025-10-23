@@ -14,8 +14,6 @@ const transitionDurationMs = 200;
 
 const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
   const { theme: activeTheme, setTheme: updateTheme } = useTheme();
-  const [sound, setSound] = usePersistentState('qs-sound', true);
-  const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
   const [focusMode, setFocusMode] = usePersistentState('qs-focus-mode', false);
   const [brightness, setBrightness] = usePersistentState(
@@ -24,32 +22,10 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
     (value): value is number =>
       typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100,
   );
-  const [volume, setVolume] = usePersistentState(
-    'qs-volume',
-    70,
-    (value): value is number =>
-      typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100,
-  );
   const panelRef = useRef<HTMLDivElement>(null);
   const [shouldRender, setShouldRender] = useState(open);
   const [isVisible, setIsVisible] = useState(open);
   const focusableTabIndex = open ? 0 : -1;
-
-  useEffect(() => {
-    document.documentElement.toggleAttribute('data-sound-muted', !sound);
-  }, [sound]);
-
-  useEffect(() => {
-    document.documentElement.toggleAttribute('data-offline', !online);
-  }, [online]);
-
-  useEffect(() => {
-    document.documentElement.toggleAttribute('data-sound-muted', !sound);
-  }, [sound]);
-
-  useEffect(() => {
-    document.documentElement.toggleAttribute('data-offline', !online);
-  }, [online]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('reduce-motion', reduceMotion);
@@ -103,31 +79,18 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
     };
   }, [brightness]);
 
-  useEffect(() => {
-    document.documentElement.style.setProperty('--qs-volume', `${volume}`);
-
-    return () => {
-      document.documentElement.style.removeProperty('--qs-volume');
-    };
-  }, [volume]);
-
   if (!shouldRender) {
     return null;
   }
 
   const statusToneStyles: Record<
-    'positive' | 'warning' | 'info' | 'muted',
+    'positive' | 'info' | 'muted',
     { icon: string; value: string; ring: string }
   > = {
     positive: {
       icon: 'bg-emerald-400/20 text-emerald-200',
       value: 'text-emerald-100',
       ring: 'shadow-[0_0_0_1px_rgba(16,185,129,0.25)]',
-    },
-    warning: {
-      icon: 'bg-amber-400/20 text-amber-200',
-      value: 'text-amber-100',
-      ring: 'shadow-[0_0_0_1px_rgba(217,119,6,0.25)]',
     },
     info: {
       icon: 'bg-sky-400/20 text-sky-200',
@@ -159,18 +122,11 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
       tone: 'info',
     },
     {
-      id: 'audio',
-      label: 'Sound',
-      value: sound ? 'On' : 'Muted',
-      icon: <SoundIcon />,
-      tone: sound ? 'positive' : 'muted',
-    },
-    {
-      id: 'network',
-      label: 'Network',
-      value: online ? 'Online' : 'Offline',
-      icon: <NetworkIcon />,
-      tone: online ? 'positive' : 'warning',
+      id: 'brightness',
+      label: 'Brightness',
+      value: `${brightness}%`,
+      icon: <SunIcon />,
+      tone: 'info',
     },
     {
       id: 'focus',
@@ -180,11 +136,11 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
       tone: focusMode ? 'info' : 'muted',
     },
     {
-      id: 'volume',
-      label: 'Volume',
-      value: `${volume}%`,
-      icon: <VolumeIcon muted={!sound} />,
-      tone: sound ? 'info' : 'muted',
+      id: 'motion',
+      label: 'Motion',
+      value: reduceMotion ? 'Reduced' : 'Full',
+      icon: <MotionIcon />,
+      tone: reduceMotion ? 'muted' : 'positive',
     },
   ];
 
@@ -197,24 +153,6 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
     icon: ReactNode;
     accent: string;
   }> = [
-    {
-      id: 'quick-settings-sound',
-      label: 'Sound',
-      description: 'Play system alerts and feedback.',
-      value: sound,
-      onToggle: () => setSound(!sound),
-      accent: 'from-sky-400/30 via-sky-500/10 to-transparent',
-      icon: <SoundIcon />,
-    },
-    {
-      id: 'quick-settings-network',
-      label: 'Network',
-      description: 'Keep simulated network online.',
-      value: online,
-      onToggle: () => setOnline(!online),
-      accent: 'from-emerald-400/30 via-emerald-500/10 to-transparent',
-      icon: <NetworkIcon />,
-    },
     {
       id: 'quick-settings-reduced-motion',
       label: 'Reduced motion',
@@ -257,20 +195,6 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
       accent: 'from-sky-400 via-sky-500 to-transparent',
       unit: '%',
       ariaValueText: `${brightness}% brightness`,
-    },
-    {
-      id: 'quick-settings-volume',
-      label: 'Master volume',
-      description: sound ? 'Adjust feedback alerts.' : 'Sound is muted — enable it above to hear alerts.',
-      value: volume,
-      onChange: (value) => setVolume(Math.min(100, Math.max(0, value))),
-      icon: <VolumeIcon muted={!sound} />,
-      accent: sound
-        ? 'from-emerald-400 via-emerald-500 to-transparent'
-        : 'from-slate-400 via-slate-500 to-transparent',
-      unit: '%',
-      ariaValueText: sound ? `${volume}% volume` : 'Muted',
-      disabled: !sound,
     },
   ];
 
@@ -557,45 +481,6 @@ const MoonIcon = () => (
   </svg>
 );
 
-const SoundIcon = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className="text-white"
-  >
-    <path
-      d="M5.5 9.5v5H8l4 3V6.5l-4 3H5.5ZM16.5 9a3 3 0 0 1 0 6M18.5 6a6 6 0 0 1 0 12"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const NetworkIcon = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className="text-white"
-  >
-    <path
-      d="M4 18.5a12 12 0 0 1 16 0M7.5 14a7 7 0 0 1 9 0M10.5 9.5a3 3 0 0 1 3 0"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <circle cx="12" cy="6" r="1.5" fill="currentColor" />
-  </svg>
-);
-
 const MotionIcon = () => (
   <svg
     width="18"
@@ -631,42 +516,6 @@ const FocusIcon = () => (
       strokeLinecap="round"
       strokeLinejoin="round"
     />
-  </svg>
-);
-
-const VolumeIcon = ({ muted }: { muted: boolean }) => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className="text-white"
-  >
-    <path
-      d="M6 9.5v5h2.5l3.5 3V6.5l-3.5 3H6Z"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    {muted ? (
-      <path
-        d="m16 15 3 3m0-3-3 3"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    ) : (
-      <path
-        d="M16.5 9a3 3 0 0 1 0 6M18.5 6a6 6 0 0 1 0 12"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    )}
   </svg>
 );
 
