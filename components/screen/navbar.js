@@ -118,6 +118,11 @@ export default class Navbar extends PureComponent {
                 this.previewFocusPending = false;
                 this.pendingPinnedReorder = null;
                 this.draggingSection = null;
+                this.navbarRef = React.createRef();
+                this.resizeObserver = null;
+                this.observedNavbarElement = null;
+                this.pendingOffsetUpdate = null;
+                this.lastNavbarHeight = null;
         }
 
         componentDidMount() {
@@ -125,6 +130,10 @@ export default class Navbar extends PureComponent {
                         window.addEventListener('workspace-state', this.handleWorkspaceStateUpdate);
                         window.addEventListener('taskbar-preview-response', this.handlePreviewResponse);
                         window.dispatchEvent(new CustomEvent('workspace-request'));
+                        window.addEventListener('resize', this.handleWindowResize);
+                        window.addEventListener('orientationchange', this.handleWindowResize);
+                        this.initializeResizeObserver();
+                        this.scheduleDesktopOffsetUpdate();
                 }
                 if (typeof document !== 'undefined') {
                         document.addEventListener('keydown', this.handleDocumentKeyDown);
@@ -135,12 +144,105 @@ export default class Navbar extends PureComponent {
                 if (typeof window !== 'undefined') {
                         window.removeEventListener('workspace-state', this.handleWorkspaceStateUpdate);
                         window.removeEventListener('taskbar-preview-response', this.handlePreviewResponse);
+                        window.removeEventListener('resize', this.handleWindowResize);
+                        window.removeEventListener('orientationchange', this.handleWindowResize);
                 }
                 if (typeof document !== 'undefined') {
                         document.removeEventListener('keydown', this.handleDocumentKeyDown);
                 }
                 this.clearPreviewHideTimeout();
+                this.teardownResizeObserver();
+                this.resetDesktopOffset();
         }
+
+        componentDidUpdate() {
+                this.initializeResizeObserver();
+                this.scheduleDesktopOffsetUpdate();
+        }
+
+        initializeResizeObserver = () => {
+                if (typeof window === 'undefined') return;
+                const ResizeObserverCtor = window.ResizeObserver;
+                if (typeof ResizeObserverCtor !== 'function') return;
+                const target = this.navbarRef?.current;
+                if (!target) return;
+                if (!this.resizeObserver) {
+                        this.resizeObserver = new ResizeObserverCtor(() => {
+                                this.scheduleDesktopOffsetUpdate();
+                        });
+                }
+                if (this.observedNavbarElement && this.observedNavbarElement !== target && typeof this.resizeObserver.unobserve === 'function') {
+                        this.resizeObserver.unobserve(this.observedNavbarElement);
+                }
+                if (typeof this.resizeObserver.observe === 'function') {
+                        this.resizeObserver.observe(target);
+                        this.observedNavbarElement = target;
+                }
+        };
+
+        teardownResizeObserver = () => {
+                if (this.resizeObserver && typeof this.resizeObserver.disconnect === 'function') {
+                        this.resizeObserver.disconnect();
+                        this.resizeObserver = null;
+                }
+                this.observedNavbarElement = null;
+                if (this.pendingOffsetUpdate && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+                        window.cancelAnimationFrame(this.pendingOffsetUpdate);
+                }
+                this.pendingOffsetUpdate = null;
+        };
+
+        handleWindowResize = () => {
+                this.scheduleDesktopOffsetUpdate();
+        };
+
+        scheduleDesktopOffsetUpdate = () => {
+                if (typeof window === 'undefined') return;
+                if (this.pendingOffsetUpdate !== null && typeof window.cancelAnimationFrame === 'function') {
+                        window.cancelAnimationFrame(this.pendingOffsetUpdate);
+                        this.pendingOffsetUpdate = null;
+                }
+                if (typeof window.requestAnimationFrame === 'function') {
+                        this.pendingOffsetUpdate = window.requestAnimationFrame(() => {
+                                this.pendingOffsetUpdate = null;
+                                this.updateDesktopOffset();
+                        });
+                } else {
+                        this.updateDesktopOffset();
+                }
+        };
+
+        resetDesktopOffset = () => {
+                if (typeof document !== 'undefined' && document.documentElement?.style) {
+                        document.documentElement.style.removeProperty('--desktop-navbar-height');
+                }
+                if (this.navbarRef?.current?.parentElement?.style) {
+                        this.navbarRef.current.parentElement.style.removeProperty('--desktop-navbar-height');
+                }
+                this.lastNavbarHeight = null;
+        };
+
+        updateDesktopOffset = () => {
+                if (typeof window === 'undefined') return;
+                const element = this.navbarRef?.current;
+                if (!element || typeof element.getBoundingClientRect !== 'function') return;
+                const rect = element.getBoundingClientRect();
+                if (!rect) return;
+                const height = rect.height;
+                if (!Number.isFinite(height) || height <= 0) return;
+                const normalizedHeight = Math.round(height * 1000) / 1000;
+                if (this.lastNavbarHeight !== null && Math.abs(this.lastNavbarHeight - normalizedHeight) < 0.5) {
+                        return;
+                }
+                this.lastNavbarHeight = normalizedHeight;
+                const value = `${normalizedHeight}px`;
+                if (element.parentElement && element.parentElement.style && typeof element.parentElement.style.setProperty === 'function') {
+                        element.parentElement.style.setProperty('--desktop-navbar-height', value);
+                }
+                if (typeof document !== 'undefined' && document.documentElement?.style && typeof document.documentElement.style.setProperty === 'function') {
+                        document.documentElement.style.setProperty('--desktop-navbar-height', value);
+                }
+        };
 
         escapeAttributeValue = (value) => {
                 if (typeof value !== 'string') return '';
@@ -860,6 +962,7 @@ export default class Navbar extends PureComponent {
                 const runningApps = this.renderRunningApps();
                 return (
                         <div
+                                ref={this.navbarRef}
                                 className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
                                 style={{
                                         minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
@@ -867,7 +970,6 @@ export default class Navbar extends PureComponent {
                                         paddingBottom: '0.25rem',
                                         paddingLeft: `calc(0.75rem + var(--safe-area-left, 0px))`,
                                         paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
-                                        '--desktop-navbar-height': `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px) + 0.375rem + 0.25rem)`,
                                 }}
                         >
                                 <div className="flex items-center gap-2 text-xs md:text-sm">
