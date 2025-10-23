@@ -40,12 +40,7 @@ const metadataOverrides: Partial<Record<string, Partial<AppMetadata>>> = {
     ],
   },
   spotify: {
-    description: 'Spotify-inspired player that streams curated demo playlists without external calls.',
-    keyboard: [
-      'Space — Play or pause',
-      'ArrowRight — Skip forward',
-      'ArrowLeft — Skip backward',
-    ],
+    description: "Spotify's official embedded playlist running inside a Kali-styled window with a quick link out to the full app.",
   },
   settings: {
     description: 'Desktop settings hub with themes, key bindings, and personalization options.',
