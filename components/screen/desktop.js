@@ -4592,7 +4592,7 @@ export class Desktop extends Component {
             const overlayActive = launcherState.open && !launcherState.minimized;
             if (shouldRender) {
                 const overlayClasses = [
-                    'fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto px-4 py-12 sm:py-16',
+                    'fixed inset-0 z-[600] flex items-center justify-center overflow-y-auto px-4 py-12 sm:py-16',
                     'bg-slate-950/70 backdrop-blur-xl transition-opacity duration-200 ease-out',
                     overlayActive ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
                 ].join(' ');
