@@ -529,6 +529,68 @@ export class Window extends Component {
         return null;
     }
 
+    resolveDragNode = (dragData) => {
+        if (dragData && dragData.node) {
+            return dragData.node;
+        }
+        return this.getWindowNode();
+    }
+
+    resolveDragCoordinates = (dragData, node) => {
+        let x = typeof dragData?.x === 'number' && Number.isFinite(dragData.x) ? dragData.x : null;
+        let y = typeof dragData?.y === 'number' && Number.isFinite(dragData.y) ? dragData.y : null;
+
+        if (x !== null && y !== null) {
+            return { x, y };
+        }
+
+        if (node) {
+            const style = node.style;
+            if (style && typeof style.getPropertyValue === 'function') {
+                const storedX = parsePxValue(style.getPropertyValue('--window-transform-x'));
+                const storedY = parsePxValue(style.getPropertyValue('--window-transform-y'));
+                if (storedX !== null) {
+                    x = storedX;
+                }
+                if (storedY !== null) {
+                    y = storedY;
+                }
+            }
+            const transform = node.style?.transform;
+            if ((x === null || y === null) && typeof transform === 'string' && transform.includes('translate')) {
+                const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(transform);
+                if (match) {
+                    const parsedX = parseFloat(match[1]);
+                    const parsedY = parseFloat(match[2]);
+                    if (x === null && Number.isFinite(parsedX)) {
+                        x = parsedX;
+                    }
+                    if (y === null && Number.isFinite(parsedY)) {
+                        y = parsedY;
+                    }
+                }
+            }
+        }
+
+        return {
+            x: Number.isFinite(x) ? x : 0,
+            y: Number.isFinite(y) ? y : 0,
+        };
+    }
+
+    readNodeRect = (node) => {
+        if (!node || typeof node.getBoundingClientRect !== 'function') return null;
+        const rect = node.getBoundingClientRect();
+        return {
+            left: rect.left,
+            top: rect.top,
+            right: rect.right,
+            bottom: rect.bottom,
+            width: rect.width,
+            height: rect.height,
+        };
+    }
+
     getCachedViewportMetrics = () => {
         if (this._lastViewportMetrics) {
             return this._lastViewportMetrics;
@@ -926,33 +988,38 @@ export class Window extends Component {
 
     scheduleDragUpdate = (dragData) => {
         if (this._isUnmounted) return;
-        if (!dragData || !dragData.node) {
-            this.checkSnapPreview();
+        const node = this.resolveDragNode(dragData);
+        if (!node) {
+            this._pendingDragUpdate = null;
+            const fallbackNode = this.getWindowNode();
+            const rect = this.readNodeRect(fallbackNode);
+            this.checkSnapPreview(fallbackNode, rect);
             return;
         }
+
+        const coordinates = this.resolveDragCoordinates(dragData, node);
+        const update = {
+            node,
+            x: coordinates.x,
+            y: coordinates.y,
+        };
+        this._pendingDragUpdate = update;
+        this.applyEdgeResistance(node, update);
 
         if (this._dragFrame !== null) {
-            this._pendingDragUpdate = {
-                node: dragData.node,
-                x: dragData.x,
-                y: dragData.y,
-            };
             return;
         }
-
-        this._pendingDragUpdate = null;
-        this.applyEdgeResistance(dragData.node, dragData);
-        this.checkSnapPreview(dragData.node);
 
         this._dragFrame = scheduleAnimationFrame(() => {
             this._dragFrame = null;
-            const update = this._pendingDragUpdate;
+            const pending = this._pendingDragUpdate;
             this._pendingDragUpdate = null;
-            if (!update || !update.node || this._isUnmounted) {
+            if (!pending || !pending.node || this._isUnmounted) {
                 return;
             }
-            this.applyEdgeResistance(update.node, update);
-            this.checkSnapPreview(update.node);
+            this.applyEdgeResistance(pending.node, pending);
+            const rect = this.readNodeRect(pending.node);
+            this.checkSnapPreview(pending.node, rect);
         });
     }
 
@@ -961,13 +1028,14 @@ export class Window extends Component {
             cancelScheduledAnimationFrame(this._dragFrame);
             this._dragFrame = null;
         }
-        const update = this._pendingDragUpdate;
+        const pending = this._pendingDragUpdate;
         this._pendingDragUpdate = null;
-        if (!update || !update.node || this._isUnmounted) {
+        if (!pending || !pending.node || this._isUnmounted) {
             return;
         }
-        this.applyEdgeResistance(update.node, update);
-        this.checkSnapPreview(update.node);
+        this.applyEdgeResistance(pending.node, pending);
+        const rect = this.readNodeRect(pending.node);
+        this.checkSnapPreview(pending.node, rect);
     }
 
     applyEdgeResistance = (node, data) => {
@@ -1033,6 +1101,18 @@ export class Window extends Component {
         const storedY = parsePxValue(node.style?.getPropertyValue?.('--window-transform-y'));
         const baseX = storedX !== null ? storedX : rect.left;
         const baseY = storedY !== null ? storedY : rect.top;
+        const topOffset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const safeAreaBottom = Math.max(0, measureSafeAreaInset('bottom'));
+        const snapBottomInset = measureSnapBottomInset();
+
+        this._lastViewportMetrics = {
+            width: viewportWidth,
+            height: viewportHeight,
+            left: viewportLeft,
+            top: viewportTop,
+        };
+        this._lastSafeAreaBottom = safeAreaBottom;
+        this._lastSnapBottomInset = snapBottomInset;
 
         this.focusWindow();
         this.setState({
@@ -1060,6 +1140,9 @@ export class Window extends Component {
             viewportTop,
             handle: event.currentTarget,
             didResize: false,
+            topOffset,
+            safeAreaBottom,
+            snapBottomInset,
         };
 
         if (typeof event.preventDefault === 'function') {
@@ -1118,6 +1201,9 @@ export class Window extends Component {
             viewportHeight,
             viewportLeft,
             viewportTop,
+            topOffset,
+            safeAreaBottom,
+            snapBottomInset,
         } = this._resizeSession;
 
         if (!viewportWidth || !viewportHeight) {
@@ -1165,9 +1251,15 @@ export class Window extends Component {
             translateY = startY + (startHeight - heightPx);
         }
 
-        const topOffset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
-        const bottomInset = Math.max(0, measureSafeAreaInset('bottom'));
-        const snapBottomInset = measureSnapBottomInset();
+        const sessionTopOffset = typeof topOffset === 'number' && Number.isFinite(topOffset)
+            ? topOffset
+            : (this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET);
+        const sessionSafeBottom = typeof safeAreaBottom === 'number' && Number.isFinite(safeAreaBottom)
+            ? safeAreaBottom
+            : this.getCachedSafeAreaBottom();
+        const sessionSnapBottomInset = typeof snapBottomInset === 'number' && Number.isFinite(snapBottomInset)
+            ? snapBottomInset
+            : this.getCachedSnapBottomInset();
 
         const clampedPosition = clampWindowPositionWithinViewport(
             { x: translateX, y: translateY },
@@ -1177,9 +1269,9 @@ export class Window extends Component {
                 viewportHeight,
                 viewportLeft,
                 viewportTop,
-                topOffset,
-                bottomInset,
-                snapBottomInset,
+                topOffset: sessionTopOffset,
+                bottomInset: sessionSafeBottom,
+                snapBottomInset: sessionSnapBottomInset,
             },
         );
 
@@ -1460,7 +1552,8 @@ export class Window extends Component {
                     x += dx;
                     y += dy;
                     node.style.transform = `translate(${x}px, ${y}px)`;
-                    this.checkSnapPreview(node);
+                    const rect = this.readNodeRect(node);
+                    this.checkSnapPreview(node, rect);
                     this.setWinowsPosition();
                 }
             }
