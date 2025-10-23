@@ -29,6 +29,9 @@ type CategoryDefinitionBase = {
 
 const TRANSITION_DURATION = 180;
 const CATEGORY_STORAGE_KEY = 'whisker-menu-category';
+const DESKTOP_VERTICAL_PADDING = 120;
+const DESKTOP_MIN_HEIGHT = 480;
+const DESKTOP_MAX_HEIGHT = 780;
 
 const CATEGORY_DEFINITIONS = [
   {
@@ -143,6 +146,7 @@ const WhiskerMenu: React.FC = () => {
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [category, setCategory] = useState<CategoryDefinition['id']>('all');
   const [isDesktop, setIsDesktop] = useState(false);
+  const [desktopMenuMaxHeight, setDesktopMenuMaxHeight] = useState<number | null>(null);
 
   const [query, setQuery] = useState('');
   const [recentIds, setRecentIds] = useState<string[]>([]);
@@ -400,6 +404,7 @@ const WhiskerMenu: React.FC = () => {
   useEffect(() => {
     if (!isVisible) {
       setMenuStyle({});
+      setDesktopMenuMaxHeight(null);
       return;
     }
 
@@ -442,6 +447,41 @@ const WhiskerMenu: React.FC = () => {
     window.addEventListener('resize', updateMenuPosition);
     return () => {
       window.removeEventListener('resize', updateMenuPosition);
+    };
+  }, [isVisible]);
+
+  useEffect(() => {
+    if (!isVisible) {
+      setDesktopMenuMaxHeight(null);
+      return;
+    }
+
+    const updateDesktopHeight = () => {
+      if (typeof window === 'undefined') {
+        return;
+      }
+
+      if (window.innerWidth < 640) {
+        setDesktopMenuMaxHeight(null);
+        return;
+      }
+
+      const viewportHeight = window.innerHeight;
+      const computedHeight = Math.min(
+        Math.max(viewportHeight - DESKTOP_VERTICAL_PADDING, DESKTOP_MIN_HEIGHT),
+        DESKTOP_MAX_HEIGHT,
+      );
+
+      setDesktopMenuMaxHeight(computedHeight);
+    };
+
+    updateDesktopHeight();
+    window.addEventListener('resize', updateDesktopHeight);
+    window.addEventListener('orientationchange', updateDesktopHeight);
+
+    return () => {
+      window.removeEventListener('resize', updateDesktopHeight);
+      window.removeEventListener('orientationchange', updateDesktopHeight);
     };
   }, [isVisible]);
 
@@ -519,10 +559,17 @@ const WhiskerMenu: React.FC = () => {
         <div
           ref={menuRef}
           data-testid="whisker-menu-dropdown"
-          className={`fixed z-[260] flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:absolute sm:top-full sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:flex-row sm:overflow-hidden ${
+          className={`fixed z-[260] flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:absolute sm:top-full sm:left-0 sm:mt-1 sm:w-[680px] sm:flex-row sm:overflow-hidden ${
             isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
           }`}
-          style={{ ...menuStyle, transitionDuration: `${TRANSITION_DURATION}ms` }}
+          style={{
+            ...menuStyle,
+            transitionDuration: `${TRANSITION_DURATION}ms`,
+            maxHeight:
+              desktopMenuMaxHeight !== null && isDesktop
+                ? `${desktopMenuMaxHeight}px`
+                : undefined,
+          }}
           tabIndex={-1}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
@@ -530,7 +577,14 @@ const WhiskerMenu: React.FC = () => {
             }
           }}
         >
-          <div className="flex w-full max-h-[36vh] flex-col overflow-y-auto bg-gradient-to-b from-[#111c2b] via-[#101a27] to-[#0d1622] sm:max-h-[420px] sm:w-[260px] sm:overflow-visible">
+          <div
+            className="flex w-full max-h-[36vh] flex-col overflow-y-auto bg-gradient-to-b from-[#111c2b] via-[#101a27] to-[#0d1622] sm:w-[260px] sm:overflow-visible"
+            style={
+              desktopMenuMaxHeight !== null && isDesktop
+                ? { maxHeight: `${desktopMenuMaxHeight}px` }
+                : undefined
+            }
+          >
             <div className="flex items-center gap-2 border-b border-[#1d2a3c] px-4 py-3 text-xs uppercase tracking-[0.2em] text-[#4aa8ff]">
               <span className="inline-flex h-2 w-2 rounded-full bg-[#4aa8ff]" aria-hidden />
               Categories
