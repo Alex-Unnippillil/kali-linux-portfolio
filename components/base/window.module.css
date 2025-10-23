@@ -118,7 +118,7 @@
 }
 
 .windowTitlebar {
-  height: 28px;
+  min-height: 36px;
   border-top-left-radius: calc(var(--radius-6) - 1px);
   border-top-right-radius: calc(var(--radius-6) - 1px);
   position: relative;
@@ -127,7 +127,16 @@
   grid-template-columns: var(--window-controls-width, 96px) 1fr auto;
   align-items: center;
   column-gap: 0.35rem;
-  padding: 0 0.75rem;
+  padding: 0.35rem 0.85rem;
+  cursor: grab;
+  cursor: -webkit-grab;
+  touch-action: none;
+}
+
+.windowTitlebar:active,
+.windowTitlebar[aria-grabbed='true'] {
+  cursor: grabbing;
+  cursor: -webkit-grabbing;
 }
 
 .windowTitlePlaceholder {

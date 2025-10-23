@@ -10,7 +10,7 @@ async function openTerminalWindow(page) {
 
 module.exports = async page => {
   const windowSelector = await openTerminalWindow(page);
-  const titleBarSelector = `${windowSelector} .bg-ub-window-title`;
+  const titleBarSelector = `${windowSelector} [data-window-drag-handle]`;
 
   const titleBar = await page.waitForSelector(titleBarSelector, {
     visible: true,
