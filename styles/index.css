@@ -80,6 +80,17 @@ button:focus-visible {
     outline-offset: 2px;
 }
 
+@media (max-width:640px) {
+    html[data-theme="kali"] {
+        --win-mobile-titlebar-height: 40px;
+        --hit-area: 44px;
+    }
+
+    html[data-theme="kali"] .bg-ub-window-title {
+        height: var(--win-mobile-titlebar-height);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
         animation-duration: 0.01ms !important;
