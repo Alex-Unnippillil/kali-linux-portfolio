@@ -98,6 +98,15 @@ button:focus-visible {
 
 /* Top NavBar styling */
 
+/* Sticky global navigation panel */
+.kali-panel {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--color-surface);
+    padding: var(--space-2) var(--space-4);
+}
+
 .top-arrow-up {
     border-inline-start: 5px solid transparent;
     border-inline-end: 5px solid transparent;
