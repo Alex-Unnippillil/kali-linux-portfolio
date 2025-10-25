@@ -3,6 +3,10 @@
 // Update README (section "CSP External Domains") when editing domains below.
 
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+const { logEnvVars } = require('./lib/log-env.js');
+
+// Log non-secret environment variables during build
+logEnvVars(process.env);
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -211,6 +215,9 @@ module.exports = withBundleAnalyzer(
     // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
     eslint: {
       ignoreDuringBuilds: true,
+    },
+    experimental: {
+      outputFileTracing: true,
     },
     images: {
       unoptimized: true,
