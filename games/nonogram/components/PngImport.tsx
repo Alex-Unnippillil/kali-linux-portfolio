@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import type { Clue, Grid } from "../../../apps/games/nonogram/logic";
 import { lineToClues } from "../../../apps/games/nonogram/logic";
 import Board from "./Board";
@@ -86,6 +86,15 @@ const dataToPuzzle = (data: ByteArray, width: number, height: number) => {
 const PngImport: React.FC = () => {
   const [puzzle, setPuzzle] = useState<ParsedPuzzle | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [grid, setGrid] = useState<Grid>([]);
+
+  useEffect(() => {
+    if (puzzle) {
+      const h = puzzle.rows.length;
+      const w = puzzle.cols.length;
+      setGrid(Array.from({ length: h }, () => Array(w).fill(0)) as Grid);
+    }
+  }, [puzzle]);
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -110,7 +119,13 @@ const PngImport: React.FC = () => {
       {error && <p className="text-red-600 mt-2">{error}</p>}
       {puzzle && (
         <div className="mt-4">
-          <Board rows={puzzle.rows} cols={puzzle.cols} solution={puzzle.grid} />
+          <Board
+            rows={puzzle.rows}
+            cols={puzzle.cols}
+            solution={puzzle.grid}
+            grid={grid}
+            onChange={setGrid}
+          />
         </div>
       )}
     </div>
