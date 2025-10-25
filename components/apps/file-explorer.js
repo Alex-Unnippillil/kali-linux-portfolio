@@ -66,6 +66,8 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const [content, setContent] = useState('');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [selected, setSelected] = useState(new Set());
+  const [pattern, setPattern] = useState('{name}_{n}');
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
 
@@ -188,6 +190,46 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     void goBackNav();
   };
 
+  const toggleSelect = (index) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
+  const computeNewName = (name, n) => {
+    const dot = name.lastIndexOf('.');
+    const base = dot === -1 ? name : name.slice(0, dot);
+    const ext = dot === -1 ? '' : name.slice(dot);
+    const newBase = pattern
+      .replace(/\{name\}/g, base)
+      .replace(/\{n\}/g, n + 1);
+    return newBase + ext;
+  };
+
+  const applyBulkRename = () => {
+    const renames = Array.from(selected).map((idx, i) => ({
+      idx,
+      newName: computeNewName(files[idx].name, i),
+      handle: files[idx].handle,
+    }));
+    setFiles((prev) => {
+      const updated = [...prev];
+      renames.forEach(({ idx, newName }) => {
+        const f = updated[idx];
+        updated[idx] = { ...f, name: newName };
+      });
+      return updated;
+    });
+    if (currentFile) {
+      const match = renames.find((r) => r.handle === currentFile.handle);
+      if (match) setCurrentFile({ ...currentFile, name: match.newName });
+    }
+    setSelected(new Set());
+  };
+
   const saveFile = async () => {
     if (!currentFile) return;
     try {
@@ -228,7 +270,13 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+          <input
+            ref={fallbackInputRef}
+            type="file"
+            onChange={openFallback}
+            className="hidden"
+            aria-label="file upload"
+          />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -239,11 +287,12 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         )}
         {currentFile && (
           <>
-            <textarea
-              className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
-              value={content}
-              onChange={onChange}
-            />
+              <textarea
+                className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
+                value={content}
+                onChange={onChange}
+                aria-label="file content"
+              />
             <button
               onClick={async () => {
                 const handle = await saveFileDialog({ suggestedName: currentFile.name });
@@ -310,16 +359,57 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           {files.map((f, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
+              className="flex items-center px-2 hover:bg-black hover:bg-opacity-30"
             >
-              {f.name}
+              <input
+                type="checkbox"
+                className="mr-1"
+                checked={selected.has(i)}
+                onChange={() => toggleSelect(i)}
+                aria-label={`Select ${f.name}`}
+              />
+              <span className="flex-1 cursor-pointer" onClick={() => openFile(f)}>
+                {f.name}
+              </span>
             </div>
           ))}
         </div>
         <div className="flex-1 flex flex-col">
+          {selected.size > 1 && (
+            <div className="p-2 border-b border-gray-600">
+              <div className="font-bold">Bulk Rename</div>
+                <input
+                  value={pattern}
+                  onChange={(e) => setPattern(e.target.value)}
+                  className="px-1 py-0.5 text-black"
+                  aria-label="rename pattern"
+                />
+              <ul className="max-h-32 overflow-auto mt-2">
+                {Array.from(selected).map((idx, i) => {
+                  const f = files[idx];
+                  const newName = computeNewName(f.name, i);
+                  return (
+                    <li key={i}>
+                      {f.name} → {newName}
+                    </li>
+                  );
+                })}
+              </ul>
+              <button
+                onClick={applyBulkRename}
+                className="mt-2 px-2 py-1 bg-black bg-opacity-50 rounded"
+              >
+                Apply
+              </button>
+            </div>
+          )}
           {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+            <textarea
+              className="flex-1 p-2 bg-ub-cool-grey outline-none"
+              value={content}
+              onChange={onChange}
+              aria-label="editor"
+            />
           )}
           <div className="p-2 border-t border-gray-600">
             <input
@@ -327,6 +417,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find in files"
               className="px-1 py-0.5 text-black"
+              aria-label="search"
             />
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
