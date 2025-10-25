@@ -1,12 +1,39 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+
+interface Field {
+  key: string;
+  value: string;
+  start: number;
+  end: number;
+}
 
 interface Props {
   name: string;
-  fields: Record<string, string>;
+  fields: Field[];
+  onHoverRange?: (range: [number, number] | null) => void;
+  onRegisterField?: (range: [number, number], el: HTMLLIElement) => void;
+  selectedRange?: [number, number] | null;
 }
 
-const LayerView: React.FC<Props> = ({ name, fields }) => {
+const LayerView: React.FC<Props> = ({
+  name,
+  fields,
+  onHoverRange,
+  onRegisterField,
+  selectedRange,
+}) => {
   const [open, setOpen] = useState(true);
+  const refs = useRef<(HTMLLIElement | null)[]>([]);
+
+  useEffect(() => {
+    if (!selectedRange) return;
+    const idx = fields.findIndex(
+      (f) => selectedRange[0] >= f.start && selectedRange[1] <= f.end
+    );
+    if (idx !== -1 && refs.current[idx]) {
+      refs.current[idx]?.scrollIntoView({ block: 'nearest' });
+    }
+  }, [selectedRange, fields]);
 
   return (
     <div className="text-xs">
@@ -26,9 +53,24 @@ const LayerView: React.FC<Props> = ({ name, fields }) => {
       </button>
       {open && (
         <ul className="pl-5 mt-1 space-y-0.5">
-          {Object.entries(fields).map(([k, v]) => (
-            <li key={k} className="whitespace-pre-wrap">
-              {k}: {v}
+          {fields.map((field, i) => (
+            <li
+              key={field.key}
+              ref={(el) => {
+                refs.current[i] = el;
+                if (el) onRegisterField?.([field.start, field.end], el);
+              }}
+              onMouseEnter={() => onHoverRange?.([field.start, field.end])}
+              onMouseLeave={() => onHoverRange?.(null)}
+              className={`whitespace-pre-wrap ${
+                selectedRange &&
+                selectedRange[0] >= field.start &&
+                selectedRange[1] <= field.end
+                  ? 'bg-yellow-800'
+                  : ''
+              }`}
+            >
+              {field.key}: {field.value}
             </li>
           ))}
         </ul>
