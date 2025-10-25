@@ -70,6 +70,10 @@ const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
 const SubnetCalculatorApp = createDynamicApp('subnet-calculator', 'Subnet Calculator');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
+const EnvironmentComparisonApp = createDynamicApp(
+  'environment-comparison',
+  'Environment Comparison'
+);
 
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
 const TrashApp = createDynamicApp('trash', 'Trash');
@@ -165,6 +169,7 @@ const displayInputLab = createDisplay(InputLabApp);
 const displaySubnetCalculator = createDisplay(SubnetCalculatorApp);
 
 const displayGhidra = createDisplay(GhidraApp);
+const displayEnvironmentComparison = createDisplay(EnvironmentComparisonApp);
 
 const displayAutopsy = createDisplay(AutopsyApp);
 const displayPluginManager = createDisplay(PluginManagerApp);
@@ -255,6 +260,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayProjectGallery,
+  },
+  {
+    id: 'environment-comparison',
+    title: 'Environment Comparison',
+    icon: '/themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayEnvironmentComparison,
   },
   {
     id: 'input-lab',
