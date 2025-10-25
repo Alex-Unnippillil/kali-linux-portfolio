@@ -1,4 +1,4 @@
-import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
+import { createDynamicAppWithRetry as createDynamicApp, createDisplay } from './utils/createDynamicApp';
 
 import { DEFAULT_DESKTOP_FOLDERS } from './data/desktopFolders';
 import { displayDesktopFolder } from './components/apps/desktop-folder';
