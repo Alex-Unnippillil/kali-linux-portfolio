@@ -96,6 +96,36 @@ button:focus-visible {
     scroll-behavior: auto !important;
 }
 
+/* Splash screen overlay */
+.splash-screen {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg);
+    z-index: 10000;
+}
+
+.splash-screen--hide {
+    animation: splash-fade 300ms forwards;
+}
+
+@keyframes splash-fade {
+    to {
+        opacity: 0;
+        visibility: hidden;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .splash-screen--hide {
+        animation: none;
+        opacity: 0;
+        visibility: hidden;
+    }
+}
+
 /* Top NavBar styling */
 
 .top-arrow-up {
