@@ -1,7 +1,9 @@
-import React, { Component } from 'react';
+import React from 'react';
 import Image from 'next/image';
 import Head from 'next/head';
+import clsx from 'clsx';
 import ReactGA from 'react-ga4';
+
 import Certs from '../certs';
 import data from '../alex/data.json';
 import SafetyNote from './SafetyNote';
@@ -10,245 +12,258 @@ import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
 import GitHubContributionHeatmap from './GitHubContributionHeatmap';
 import GitHubStars from '../../GitHubStars';
+import SectionPanel from '../alex/SectionPanel';
+import HeroHeader from './HeroHeader';
 
-class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
-  screens: Record<string, React.ReactNode> = {};
+const sections = data.sections;
 
-  constructor(props: unknown) {
-    super(props);
-    this.state = {
-      screen: <></>,
-      active_screen: 'about',
-      navbar: false,
-    };
-  }
+type SectionId = (typeof sections)[number]['id'];
 
-  componentDidMount() {
-    this.screens = {
-      about: <About />,
-      education: <Education />,
-      skills: <Skills skills={data.skills} />,
-      certs: <Certs />,
-      projects: <Projects projects={data.projects} />,
-      resume: <Resume />,
-    };
+const heroChips = [
+  { label: 'Cybersecurity Specialist', icon: '🛡️' },
+  { label: 'Network Defender', icon: '🌐' },
+  { label: 'Lifelong Learner', icon: '📚' },
+];
 
-    let lastVisitedScreen = localStorage.getItem('about-section');
-    if (!lastVisitedScreen) {
-      lastVisitedScreen = 'about';
-    }
-
-    this.changeScreen({ id: lastVisitedScreen } as unknown as EventTarget & { id: string });
-  }
-
-  changeScreen = (e: any) => {
-    const screen = e.id || e.target.id;
-    localStorage.setItem('about-section', screen);
-    ReactGA.send({ hitType: 'pageview', page: `/${screen}`, title: 'Custom Title' });
-    this.setState({ screen: this.screens[screen], active_screen: screen });
-  };
-
-  showNavBar = () => {
-    this.setState({ navbar: !this.state.navbar });
-  };
-
-  renderNavLinks = () => (
-    <>
-      {data.sections.map((section) => (
-        <div
-          key={section.id}
-          id={section.id}
-          role="tab"
-          aria-selected={this.state.active_screen === section.id}
-          tabIndex={this.state.active_screen === section.id ? 0 : -1}
-          onFocus={this.changeScreen}
-          className={
-            (this.state.active_screen === section.id
-              ? ' bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95'
-              : ' hover:bg-gray-50 hover:bg-opacity-5 ') +
-            ' w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5'
-          }
-        >
-          <Image
-            className="w-3 md:w-4 rounded border border-gray-600"
-            alt={section.alt}
-            src={section.icon}
-            width={16}
-            height={16}
-            sizes="16px"
-          />
-          <span className=" ml-1 md:ml-2 text-gray-50 ">{section.label}</span>
-        </div>
-      ))}
-    </>
+const navButtonClasses = (isActive: boolean) =>
+  clsx(
+    'flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus',
+    isActive
+      ? 'bg-gradient-to-r from-ub-gedit-light to-ubt-gedit-blue text-white shadow-lg shadow-black/40'
+      : 'text-slate-200/80 hover:bg-white/5 hover:text-white',
   );
 
-  handleNavKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    const tabs = Array.from(
-      e.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]')
-    );
+const AboutApp: React.FC = () => {
+  const [activeScreen, setActiveScreen] = React.useState<SectionId>('about');
+  const [navbarOpen, setNavbarOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = localStorage.getItem('about-section') as SectionId | null;
+    if (stored && sections.some((section) => section.id === stored)) {
+      setActiveScreen(stored);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('about-section', activeScreen);
+    }
+    ReactGA.send({ hitType: 'pageview', page: `/${activeScreen}`, title: `About - ${activeScreen}` });
+  }, [activeScreen]);
+
+  const handleActivate = React.useCallback((id: SectionId) => {
+    setActiveScreen(id);
+    setNavbarOpen(false);
+  }, []);
+
+  const handleNavKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const tabs = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]'));
     let index = tabs.indexOf(document.activeElement as HTMLElement);
-    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-      e.preventDefault();
+    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+      event.preventDefault();
       index = (index + 1) % tabs.length;
-    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-      e.preventDefault();
+    } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+      event.preventDefault();
       index = (index - 1 + tabs.length) % tabs.length;
     } else {
       return;
     }
-    tabs.forEach((tab, i) => (tab.tabIndex = i === index ? 0 : -1));
+    tabs.forEach((tab, i) => {
+      tab.tabIndex = i === index ? 0 : -1;
+    });
     tabs[index].focus();
   };
 
-  render() {
-    const structured = {
-      '@context': 'https://schema.org',
-      '@type': 'Person',
-      name: 'Alex Unnippillil',
-      url: 'https://unnippillil.com',
-    };
-    const nonce = getCspNonce();
+  const renderScreen = React.useMemo(() => {
+    switch (activeScreen) {
+      case 'about':
+        return <Biography />;
+      case 'education':
+        return <Education />;
+      case 'skills':
+        return <Skills skills={data.skills} />;
+      case 'certs':
+        return <Certs />;
+      case 'projects':
+        return <Projects projects={data.projects} />;
+      case 'resume':
+        return <Resume />;
+      default:
+        return <Biography />;
+    }
+  }, [activeScreen]);
 
-    return (
-      <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
-        <Head>
-          <title>About</title>
-          <script
-            type="application/ld+json"
-            nonce={nonce}
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
-          />
-        </Head>
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: 'Alex Unnippillil',
+    url: 'https://unnippillil.com',
+  };
+  const nonce = getCspNonce();
+
+  return (
+    <main className="relative flex h-full w-full select-none bg-ub-cool-grey text-white">
+      <Head>
+        <title>About</title>
+        <script type="application/ld+json" nonce={nonce} dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+      </Head>
+      <aside
+        className="hidden h-full w-1/4 min-w-[12rem] flex-col border-r border-black bg-kali-panel-dark/40 px-2 py-4 md:flex"
+        role="tablist"
+        aria-orientation="vertical"
+        onKeyDown={handleNavKeyDown}
+      >
+        {sections.map((section) => {
+          const isActive = activeScreen === section.id;
+          return (
+            <button
+              key={section.id}
+              id={section.id}
+              role="tab"
+              type="button"
+              tabIndex={isActive ? 0 : -1}
+              aria-selected={isActive}
+              onClick={() => handleActivate(section.id)}
+              className={navButtonClasses(isActive)}
+            >
+              <Image
+                className="h-5 w-5 rounded border border-gray-600"
+                alt={section.alt}
+                src={section.icon}
+                width={20}
+                height={20}
+                sizes="20px"
+              />
+              <span className="truncate text-left">{section.label}</span>
+            </button>
+          );
+        })}
+      </aside>
+      <button
+        type="button"
+        onClick={() => setNavbarOpen((open) => !open)}
+        className="absolute left-2 top-2 flex h-8 w-8 items-center justify-center rounded-md border border-white/10 bg-kali-panel-dark/70 text-white shadow-md shadow-black/40 transition hover:bg-kali-panel-dark md:hidden"
+        aria-label="Toggle navigation"
+        aria-expanded={navbarOpen}
+      >
+        <span className="block h-0.5 w-4 bg-current" />
+        <span className="sr-only">Menu</span>
+      </button>
+      {navbarOpen && (
         <div
-          className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black"
+          className="absolute left-2 top-12 z-30 flex w-48 flex-col gap-2 rounded-xl border border-kali-border/40 bg-kali-panel-dark/95 p-3 shadow-xl shadow-black/60 md:hidden"
           role="tablist"
           aria-orientation="vertical"
-          onKeyDown={this.handleNavKeyDown}
+          onKeyDown={handleNavKeyDown}
         >
-          {this.renderNavLinks()}
+          {sections.map((section) => {
+            const isActive = activeScreen === section.id;
+            return (
+              <button
+                key={section.id}
+                id={`${section.id}-mobile`}
+                type="button"
+                role="tab"
+                tabIndex={isActive ? 0 : -1}
+                aria-selected={isActive}
+                onClick={() => handleActivate(section.id)}
+                className={navButtonClasses(isActive)}
+              >
+                <Image
+                  className="h-5 w-5 rounded border border-gray-600"
+                  alt={section.alt}
+                  src={section.icon}
+                  width={20}
+                  height={20}
+                  sizes="20px"
+                />
+                <span className="truncate text-left">{section.label}</span>
+              </button>
+            );
+          })}
         </div>
-        <div
-          onClick={this.showNavBar}
-          className="md:hidden flex flex-col items-center justify-center absolute bg-ub-cool-grey rounded w-6 h-6 top-1 left-1"
-        >
-          <div className=" w-3.5 border-t border-white" />
-          <div className=" w-3.5 border-t border-white" style={{ marginTop: '2pt', marginBottom: '2pt' }} />
-          <div className=" w-3.5 border-t border-white" />
-          <div
-            className={
-              (this.state.navbar ? ' visible animateShow z-30 ' : ' invisible ') +
-              ' md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20'
-            }
-            role="tablist"
-            aria-orientation="vertical"
-            onKeyDown={this.handleNavKeyDown}
-          >
-            {this.renderNavLinks()}
-          </div>
-        </div>
-        <div className="flex flex-col w-3/4 md:w-4/5 justify-start items-center flex-grow bg-ub-grey overflow-y-auto windowMainScreen">
-          {this.state.screen}
-        </div>
-      </main>
-    );
-  }
-}
-
-export default function AboutApp() {
-  return (
-    <>
-      <AboutAlex />
+      )}
+      <section className="flex h-full w-full flex-col items-center overflow-y-auto bg-ub-grey px-3 py-6 md:w-3/4 md:px-6">
+        <div className="flex w-full max-w-5xl flex-col gap-6 pb-10">{renderScreen}</div>
+      </section>
       <AboutSlides />
-    </>
+    </main>
   );
+};
+
+export default function AboutAppWrapper() {
+  return <AboutApp />;
 }
 
 export { default as SafetyNote } from './SafetyNote';
 
-function About() {
+function Biography() {
   return (
-    <>
-      <div className="w-20 md:w-28 my-4 full">
-        <Image
-          className="w-full rounded border border-gray-600"
-          src="/images/logos/bitmoji.png"
-          alt="Alex Unnippillil Logo"
-          width={256}
-          height={256}
-          sizes="(max-width: 768px) 50vw, 25vw"
-          priority
+    <div className="flex flex-col gap-6">
+      <SectionPanel spacing="lg" className="items-center text-center">
+        <HeroHeader
+          name="Alex Unnippillil"
+          title="Cybersecurity Specialist"
+          subtitle="Technology enthusiast focused on resilient systems and human-first defenses."
+          imageSrc="/images/logos/bitmoji.png"
+          imageAlt="Alex Unnippillil logo"
+          chips={heroChips}
         />
-      </div>
-      <div className=" mt-4 md:mt-8 text-lg md:text-2xl text-center px-1">
-        <div>
-          My name is <span className="font-bold">Alex Unnippillil</span>,{' '}
-        </div>
-        <div className="font-normal ml-1">
-          I&apos;m a <span className="text-ubt-blue font-bold"> Cybersecurity Specialist!</span>
-        </div>
-      </div>
-      <div className=" mt-4 relative md:my-8 pt-px bg-white w-32 md:w-48">
-        <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-0" />
-        <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-0" />
-      </div>
-      <ul className=" mt-4 leading-tight tracking-tight text-sm md:text-base w-5/6 md:w-3/4 emoji-list">
-        <li className="list-pc">
-          I&apos;m a <span className=" font-medium">Technology Enthusiast</span> who thrives on learning and mastering the rapidly
-          evolving world of tech. I completed four years of a{' '}
-          <a
-            className=" underline cursor-pointer"
-            href="https://shared.ontariotechu.ca/shared/faculty/fesns/documents/FESNS%20Program%20Maps/2018_nuclear_engineering_map_2017_entry.pdf"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Nuclear Engineering
-          </a>{' '}
-          degree at Ontario Tech University before deciding to change my career goals and pursue my passion for{' '}
-          <a
-            className=" underline cursor-pointer"
-            href="https://businessandit.ontariotechu.ca/undergraduate/bachelor-of-information-technology/networking-and-information-technology-security/networking-and-i.t-security-bit-2023-2024_.pdf"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Networking and I.T. Security
-          </a>
-          .
-        </li>
-        <li className="mt-3 list-building">
-          If you&apos;re looking for someone who always wants to help others and will put in the work 24/7, feel free to email{' '}
-          <a className=" underline" href="mailto:alex.unnippillil@hotmail.com">
-            alex.unnippillil@hotmail.com
-          </a>
-          .
-        </li>
-        <li className="mt-3 list-time">
-          When I&apos;m not learning new technical skills, I enjoy reading books, rock climbing, or watching{' '}
-          <a
-            className=" underline cursor-pointer"
-            href="https://www.youtube.com/@Alex-Unnippillil/playlists"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            YouTube videos
-          </a>{' '}
-          and{' '}
-            <a
-              className=" underline cursor-pointer"
-              href="https://myanimelist.net/animelist/alex_u"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              anime
-            </a>
-          .
-        </li>
-        <li className="mt-3 list-star">I also have interests in deep learning, software development, and animation.</li>
-      </ul>
-      <WorkerStatus />
-      <SafetyNote />
-      <Timeline />
-    </>
+      </SectionPanel>
+      <SectionPanel title="Background" subtitle="Curiosity, community, and continuous learning" spacing="md">
+        <ul className="kali-body space-y-3 text-left">
+          <li className="flex gap-2">
+            <span aria-hidden="true">💻</span>
+            <span>
+              I&apos;m a <strong className="text-white">Technology Enthusiast</strong> dedicated to learning and mastering the rapidly evolving world of tech. I completed four years of a{' '}
+              <a className="kali-link" href="https://shared.ontariotechu.ca/shared/faculty/fesns/documents/FESNS%20Program%20Maps/2018_nuclear_engineering_map_2017_entry.pdf" target="_blank" rel="noopener noreferrer">
+                Nuclear Engineering
+              </a>{' '}
+              degree at Ontario Tech University before redirecting my career toward{' '}
+              <a className="kali-link" href="https://businessandit.ontariotechu.ca/undergraduate/bachelor-of-information-technology/networking-and-information-technology-security/networking-and-i.t-security-bit-2023-2024_.pdf" target="_blank" rel="noopener noreferrer">
+                Networking and I.T. Security
+              </a>
+              .
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span aria-hidden="true">🤝</span>
+            <span>
+              I love teaming up with people who care about collaboration and mentorship. If that resonates with you, reach out at{' '}
+              <a className="kali-link" href="mailto:alex.unnippillil@hotmail.com">alex.unnippillil@hotmail.com</a>.
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span aria-hidden="true">🧠</span>
+            <span>
+              Away from the keyboard you&apos;ll find me reading, rock climbing, or diving into{' '}
+              <a className="kali-link" href="https://www.youtube.com/@Alex-Unnippillil/playlists" target="_blank" rel="noopener noreferrer">
+                YouTube rabbit holes
+              </a>{' '}
+              and{' '}
+              <a className="kali-link" href="https://myanimelist.net/animelist/alex_u" target="_blank" rel="noopener noreferrer">
+                anime storytelling
+              </a>
+              .
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span aria-hidden="true">⭐</span>
+            <span>
+              I&apos;m fascinated by deep learning, software craftsmanship, and animation—fields that constantly challenge me to adapt and grow.
+            </span>
+          </li>
+        </ul>
+        <SafetyNote />
+      </SectionPanel>
+      <SectionPanel title="Worker App Availability" subtitle="Simulated tooling keeps things safe and educational" spacing="md">
+        <WorkerStatus />
+      </SectionPanel>
+      <SectionPanel title="Career Timeline" subtitle="Milestones that shaped my security journey" spacing="md">
+        <Timeline />
+      </SectionPanel>
+    </div>
   );
 }
 
@@ -267,42 +282,49 @@ function WorkerStatus() {
     workerApps.forEach((app) => {
       fetch(`/api/${app.id}`, { method: 'HEAD' })
         .then((res) => {
-          setStatus((s) => ({ ...s, [app.id]: res.status < 500 ? 'Online' : 'Offline' }));
+          setStatus((prev) => ({ ...prev, [app.id]: res.status < 500 ? 'Online' : 'Offline' }));
         })
         .catch(() => {
-          setStatus((s) => ({ ...s, [app.id]: 'Offline' }));
+          setStatus((prev) => ({ ...prev, [app.id]: 'Offline' }));
         });
     });
   }, []);
 
   return (
-    <section aria-labelledby="app-status-heading" className="mt-8 w-5/6 md:w-3/4">
-      <h2 id="app-status-heading" className="text-lg font-bold text-center">
-        Worker App Availability
-      </h2>
-      <ul role="list" className="mt-2">
-        {workerApps.map((app) => (
-          <li key={app.id} className="flex justify-between items-center py-1 border-b border-gray-600">
-            <span className="capitalize">{app.label}</span>
-            <span aria-live="polite">{status[app.id] || 'Checking...'}</span>
+    <ul role="list" className="grid gap-3 sm:grid-cols-2">
+      {workerApps.map((app) => {
+        const state = status[app.id] || 'Checking...';
+        const isOnline = state === 'Online';
+        return (
+          <li key={app.id} className="flex items-center justify-between rounded-xl border border-kali-border/40 bg-kali-panel-dark/60 px-3 py-2">
+            <span className="kali-body font-semibold text-white">{app.label}</span>
+            <span
+              className={clsx('kali-chip px-3 py-1 normal-case', {
+                'bg-emerald-500/20 text-emerald-300': isOnline,
+                'bg-amber-500/20 text-amber-200': state === 'Checking...',
+                'bg-rose-500/20 text-rose-200': !isOnline && state !== 'Checking...',
+              })}
+            >
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: isOnline ? '#34d399' : state === 'Checking...' ? '#fbbf24' : '#f87171' }} aria-hidden="true" />
+              {state}
+            </span>
           </li>
-        ))}
-      </ul>
-    </section>
+        );
+      })}
+    </ul>
   );
 }
 
 function Timeline() {
   return (
-    <div className="w-5/6 md:w-1/2 mt-8">
+    <div className="space-y-4">
       <ScrollableTimeline />
-      <div className="no-print mt-4 text-right">
-        <a
-          href="/assets/timeline.pdf"
-          download
-          className="px-2 py-1 rounded bg-ub-gedit-light text-sm"
-        >
-          Download Timeline PDF
+      <div className="no-print flex justify-end">
+        <a href="/assets/timeline.pdf" download className="kali-cta">
+          <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v14m0 0 4-4m-4 4-4-4M5 21h14" />
+          </svg>
+          Download timeline
         </a>
       </div>
     </div>
@@ -310,191 +332,226 @@ function Timeline() {
 }
 
 function Education() {
-  return (
-    <>
-      <div className=" font-medium relative text-2xl mt-2 md:mt-4 mb-4">
-        Education
-        <div className="absolute pt-px bg-white mt-px top-full w-full">
-          <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-full" />
-          <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-full" />
-        </div>
-      </div>
-      <ul className=" w-10/12  mt-4 ml-4 px-0 md:px-1">
-        <li className="list-disc mt-5">
-          <div className=" text-lg md:text-xl text-left font-bold leading-tight">Ontario Tech University</div>
-          <div className=" text-sm text-gray-400 mt-0.5">2020 - 2024</div>
-          <div className=" text-sm md:text-base">Networking and Information Technology Security</div>
-          <div className="text-sm text-gray-300 font-bold mt-1"> </div>
-        </li>
-        <li className="list-disc mt-5">
-          <div className=" text-lg md:text-xl text-left font-bold leading-tight">Ontario Tech University</div>
-          <div className=" text-sm text-gray-400 mt-0.5">2012 - 2016</div>
-          <div className=" text-sm md:text-base">Nuclear Engineering</div>
-          <div className="text-sm text-gray-300 font-bold mt-1" />
-        </li>
-        <li className="list-disc mt-5">
-          <div className=" text-lg md:text-xl text-left font-bold leading-tight">St. John Paul II Catholic Secondary School</div>
-          <div className=" text-sm text-gray-400 mt-0.5">2008 - 2012</div>
-          <div className=" text-sm md:text-base"> </div>
-          <div className="text-sm text-gray-300 font-bold mt-1"> </div>
-        </li>
-      </ul>
-    </>
-  );
-}
+  const educationHistory = [
+    {
+      school: 'Ontario Tech University',
+      years: '2020 - 2024',
+      program: 'Networking and Information Technology Security',
+    },
+    {
+      school: 'Ontario Tech University',
+      years: '2012 - 2016',
+      program: 'Nuclear Engineering',
+    },
+    {
+      school: 'St. John Paul II Catholic Secondary School',
+      years: '2008 - 2012',
+      program: 'Ontario Secondary School Diploma',
+    },
+  ];
 
-const SkillSection = ({ title, badges }: { title: string; badges: { src: string; alt: string; description: string }[] }) => {
-  const [filter, setFilter] = React.useState('');
-  const [selected, setSelected] = React.useState<any>(null);
-  const filteredBadges = badges.filter((b) => b.alt.toLowerCase().includes(filter.toLowerCase()));
   return (
-    <div className="px-2 w-full">
-      <div className="text-sm text-center md:text-base font-bold">{title}</div>
-      <input
-        type="text"
-        placeholder="Filter..."
-        className="mt-2 w-full px-2 py-1 rounded text-black"
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-        aria-label={`Filter ${title} badges`}
-      />
-      <div className="flex flex-wrap justify-center items-start w-full mt-2">
-        {filteredBadges.map((badge) => (
-          <img
-            key={badge.alt}
-            className="m-1 cursor-pointer"
-            src={badge.src}
-            alt={badge.alt}
-            title={badge.description}
-            onClick={() => setSelected(badge)}
-          />
-        ))}
-      </div>
-      {selected && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" onClick={() => setSelected(null)}>
-          <div className="bg-ub-cool-grey p-4 rounded max-w-xs" onClick={(e) => e.stopPropagation()}>
-            <div className="font-bold mb-2 text-center">{selected.alt}</div>
-            <p className="text-sm text-center">{selected.description}</p>
-            <button className="mt-2 px-2 py-1 bg-ubt-blue rounded" onClick={() => setSelected(null)}>
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+    <div className="flex flex-col gap-6">
+      <SectionPanel title="Education" subtitle="Formal training that underpins my practice" spacing="lg">
+        <ol className="flex flex-col gap-5">
+          {educationHistory.map((entry) => (
+            <li key={entry.school} className="rounded-2xl border border-kali-border/40 bg-kali-panel-dark/60 p-4 shadow-inner shadow-black/20">
+              <h3 className="kali-heading-md">{entry.school}</h3>
+              <p className="kali-body-muted">{entry.years}</p>
+              <p className="kali-body text-slate-100">{entry.program}</p>
+            </li>
+          ))}
+        </ol>
+      </SectionPanel>
     </div>
   );
-};
-
-function Skills({ skills }: { skills: any }) {
-  const { networkingSecurity, softwaresOperating, languagesTools, frameworksLibraries } = skills;
-  return (
-    <>
-      <div className=" font-medium relative text-2xl mt-2 md:mt-4 mb-4">
-        Technical Skills
-        <div className="absolute pt-px bg-white mt-px top-full w-full">
-          <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-full" />
-          <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-full" />
-        </div>
-      </div>
-      <ul className=" tracking-tight text-sm md:text-base w-10/12 emoji-list">
-        <li className=" list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight">
-          <div>
-            I&apos;ve learned a variety of programming languages and frameworks while{' '}
-            <strong className="text-ubt-gedit-blue">specializing in network security</strong>
-          </div>
-        </li>
-        <li className=" list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight">
-          <div>Below are some skills I&apos;ve learned over the years</div>
-        </li>
-      </ul>
-      <div className="w-full md:w-10/12 grid grid-cols-1 md:grid-cols-2 mt-4 gap-4">
-        <SkillSection title="Networking & Security" badges={networkingSecurity} />
-        <SkillSection title="Softwares & Operating Systems" badges={softwaresOperating} />
-        <SkillSection title="Languages & Tools" badges={languagesTools} />
-        <SkillSection title="Frameworks & Libraries" badges={frameworksLibraries} />
-      </div>
-      <div className="w-full md:w-10/12 flex flex-col items-center mt-8 space-y-4">
-        <div className="font-bold text-sm md:text-base text-center">GitHub Contributions</div>
-        <GitHubContributionHeatmap username="alex-unnippillil" year={2025} />
-        <div className="text-xs text-gray-300">
-          <span className="mr-1 font-semibold text-white">Portfolio repo stars:</span>
-          <GitHubStars user="alex-unnippillil" repo="kali-linux-portfolio" />
-        </div>
-      </div>
-    </>
-  );
 }
 
-function Projects({ projects }: { projects: any[] }) {
-  const tag_colors: Record<string, string> = {
-    python: 'green-400',
-    javascript: 'yellow-300',
-    html5: 'red-400',
-    css: 'blue-400',
-    'c++': 'purple-400',
-    c: 'purple-400',
-    react: 'blue-300',
-    tailwindcss: 'blue-300',
-    'next.js': 'purple-600',
+type SkillGroup = {
+  title: string;
+  items: { src: string; alt: string; description: string }[];
+};
+
+type SkillsProps = {
+  skills: {
+    networkingSecurity: SkillGroup['items'];
+    softwaresOperating: SkillGroup['items'];
+    languagesTools: SkillGroup['items'];
+    frameworksLibraries: SkillGroup['items'];
+  };
+};
+
+function Skills({ skills }: SkillsProps) {
+  const groups: SkillGroup[] = [
+    { title: 'Networking & Security', items: skills.networkingSecurity },
+    { title: 'Softwares & Operating Systems', items: skills.softwaresOperating },
+    { title: 'Languages & Tools', items: skills.languagesTools },
+    { title: 'Frameworks & Libraries', items: skills.frameworksLibraries },
+  ];
+  const [filter, setFilter] = React.useState('');
+  const [selected, setSelected] = React.useState<SkillGroup['items'][number] | null>(null);
+
+  const handleSelect = (skill: SkillGroup['items'][number]) => {
+    setSelected(skill);
   };
 
   return (
-    <>
-      <div className=" font-medium relative text-2xl mt-2 md:mt-4 mb-4">
-        Projects
-        <div className="absolute pt-px bg-white mt-px top-full w-full">
-          <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-full" />
-          <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-full" />
-        </div>
-      </div>
-      {projects.map((project) => {
-        const projectNameFromLink = project.link.split('/');
-        const projectName = projectNameFromLink[projectNameFromLink.length - 1];
-        return (
-          <div key={project.link} className="flex w-full flex-col px-4">
-            <div className="w-full py-1 px-2 my-2 border border-gray-50 border-opacity-10 rounded hover:bg-gray-50 hover:bg-opacity-5">
-              <div className="flex flex-wrap justify-between items-center">
-                <div className="flex justify-center items-center">
-                  <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-base md:text-lg mr-2">
-                    {project.name.toLowerCase()}
-                  </a>
-                  <GitHubStars user="alex-unnippillil" repo={projectName} />
-                </div>
-                <div className="text-gray-300 font-light text-sm">{project.date}</div>
-              </div>
-              <ul className=" tracking-normal leading-tight text-sm font-light ml-4 mt-1">
-                {project.description.map((desc: string) => (
-                  <li key={desc} className="list-disc mt-1 text-gray-100">
-                    {desc}
-                  </li>
+    <div className="flex flex-col gap-6">
+      <SectionPanel title="Explore the toolkit" subtitle="Filter to quickly find the stacks you&apos;re curious about" spacing="md">
+        <label className="flex w-full items-center gap-3 rounded-xl border border-kali-border/40 bg-kali-panel-dark/60 px-4 py-3">
+          <svg aria-hidden="true" className="h-4 w-4 text-ubt-blue" fill="none" stroke="currentColor" strokeWidth={1.6} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" />
+          </svg>
+          <input
+            type="search"
+            value={filter}
+            onChange={(event) => setFilter(event.target.value)}
+            placeholder="Search skills"
+            className="flex-1 bg-transparent text-sm text-white placeholder:text-slate-400 focus:outline-none"
+            aria-label="Search skills"
+          />
+        </label>
+      </SectionPanel>
+      <div className="grid gap-6 lg:grid-cols-2">
+        {groups.map((group) => {
+          const filteredItems = group.items.filter((item) => item.alt.toLowerCase().includes(filter.toLowerCase()));
+          return (
+            <SectionPanel key={group.title} title={group.title} spacing="md">
+              <div className="flex flex-wrap gap-2">
+                {filteredItems.map((item) => (
+                  <SkillChip key={item.alt} skill={item} onSelect={handleSelect} isActive={selected?.alt === item.alt} />
                 ))}
-              </ul>
-              <div className="flex flex-wrap items-start justify-start text-xs py-2">
-                {project.domains
-                  ? project.domains.map((domain: string) => {
-                      const borderColorClass = `border-${tag_colors[domain]}`;
-                      const textColorClass = `text-${tag_colors[domain]}`;
-                      return (
-                        <a
-                          key={domain}
-                          href={project.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`px-1.5 py-0.5 w-max border ${borderColorClass} ${textColorClass} m-1 rounded-full`}
-                        >
-                          {domain}
-                        </a>
-                      );
-                    })
-                  : null}
+                {filteredItems.length === 0 && <p className="kali-body-muted">No results. Try another term.</p>}
               </div>
-            </div>
+            </SectionPanel>
+          );
+        })}
+      </div>
+      {selected && (
+        <SectionPanel title={selected.alt} subtitle="Skill snapshot" spacing="sm">
+          <p className="kali-body">{selected.description}</p>
+        </SectionPanel>
+      )}
+      <SectionPanel title="GitHub Contributions" subtitle="Recent activity and stars" spacing="md">
+        <div className="flex flex-col items-center gap-4">
+          <GitHubContributionHeatmap username="alex-unnippillil" year={2025} />
+          <div className="kali-body-muted flex items-center gap-2 text-xs">
+            <span className="font-semibold text-white">Portfolio repo stars:</span>
+            <GitHubStars user="alex-unnippillil" repo="kali-linux-portfolio" />
           </div>
-        );
-      })}
-    </>
+        </div>
+      </SectionPanel>
+    </div>
   );
 }
+
+type SkillChipProps = {
+  skill: SkillGroup['items'][number];
+  isActive: boolean;
+  onSelect: (skill: SkillGroup['items'][number]) => void;
+};
+
+const SkillChip: React.FC<SkillChipProps> = ({ skill, onSelect, isActive }) => {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(skill)}
+      className={clsx(
+        'kali-chip cursor-pointer bg-gradient-to-r from-kali-panel-dark/80 via-kali-panel-dark/70 to-kali-panel-dark/60 px-3 py-1.5 text-[0.7rem] capitalize hover:from-ub-gedit-light/30 hover:to-ubt-gedit-blue/30',
+        isActive && 'ring-2 ring-offset-2 ring-offset-kali-panel-dark ring-ubt-blue',
+      )}
+    >
+      <span className="flex h-4 w-4 items-center justify-center overflow-hidden rounded-full bg-black/40">
+        <img src={skill.src} alt="" loading="lazy" className="h-4 w-4 object-contain" />
+      </span>
+      {skill.alt}
+    </button>
+  );
+};
+
+type ProjectsProps = {
+  projects: {
+    name: string;
+    date: string;
+    link: string;
+    description: string[];
+    domains: string[];
+  }[];
+};
+
+const domainPalette: Record<string, { bg: string; dot: string }> = {
+  python: { bg: 'from-emerald-500/20 via-emerald-500/10 to-emerald-500/30', dot: '#34d399' },
+  javascript: { bg: 'from-amber-400/20 via-amber-400/10 to-amber-400/30', dot: '#facc15' },
+  html5: { bg: 'from-rose-500/20 via-rose-500/10 to-rose-500/30', dot: '#fb7185' },
+  css: { bg: 'from-sky-500/20 via-sky-500/10 to-sky-500/30', dot: '#38bdf8' },
+  'c++': { bg: 'from-indigo-500/20 via-indigo-500/10 to-indigo-500/30', dot: '#a5b4fc' },
+  c: { bg: 'from-violet-500/20 via-violet-500/10 to-violet-500/30', dot: '#c4b5fd' },
+  react: { bg: 'from-cyan-500/20 via-cyan-500/10 to-cyan-500/30', dot: '#5eead4' },
+  tailwindcss: { bg: 'from-teal-500/20 via-teal-500/10 to-teal-500/30', dot: '#14b8a6' },
+  'next.js': { bg: 'from-slate-500/20 via-slate-500/10 to-slate-500/30', dot: '#cbd5f5' },
+};
+
+function Projects({ projects }: ProjectsProps) {
+  return (
+    <div className="flex flex-col gap-6">
+      <SectionPanel title="Projects" subtitle="Open-source and academic explorations" spacing="lg">
+        <div className="flex flex-col gap-5">
+          {projects.map((project) => {
+            const projectNameFromLink = project.link.split('/');
+            const projectName = projectNameFromLink[projectNameFromLink.length - 1];
+            return (
+              <article key={project.link} className="rounded-2xl border border-kali-border/40 bg-kali-panel-dark/60 p-5 shadow-inner shadow-black/20">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <a href={project.link} target="_blank" rel="noopener noreferrer" className="kali-link text-base sm:text-lg capitalize">
+                      {project.name.toLowerCase()}
+                    </a>
+                    <GitHubStars user="alex-unnippillil" repo={projectName} />
+                  </div>
+                  <span className="kali-body-muted">{project.date}</span>
+                </div>
+                <ul className="kali-body-muted mt-3 space-y-2 pl-4">
+                  {project.description.map((desc) => (
+                    <li key={desc} className="list-disc text-slate-200">
+                      {desc}
+                    </li>
+                  ))}
+                </ul>
+                {project.domains?.length ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {project.domains.map((domain) => (
+                      <ProjectChip key={`${project.link}-${domain}`} domain={domain} href={project.link} />
+                    ))}
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
+        </div>
+      </SectionPanel>
+    </div>
+  );
+}
+
+type ProjectChipProps = {
+  domain: string;
+  href: string;
+};
+
+const ProjectChip: React.FC<ProjectChipProps> = ({ domain, href }) => {
+  const palette = domainPalette[domain.toLowerCase()] ?? { bg: 'from-slate-500/10 via-slate-500/5 to-slate-500/20', dot: '#cbd5f5' };
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={clsx('kali-chip cursor-pointer bg-gradient-to-r text-[0.68rem] lowercase hover:from-ub-gedit-light/30 hover:to-ubt-gedit-blue/30', palette.bg)}
+    >
+      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: palette.dot }} aria-hidden="true" />
+      {domain}
+    </a>
+  );
+};
 
 function Resume() {
   const handleDownload = () => {
@@ -509,8 +566,8 @@ function Resume() {
           title: 'Alex Unnippillil Contact',
           url: window.location.origin + vcardUrl,
         });
-      } catch (err) {
-        console.error('Share failed', err);
+      } catch (error) {
+        console.error('Share failed', error);
       }
     } else {
       window.location.href = vcardUrl;
@@ -518,38 +575,39 @@ function Resume() {
   };
 
   return (
-    <div className="h-full w-full flex flex-col">
-      <div className="p-2 text-right no-print space-x-2">
-        <a
-          href="/assets/Alex-Unnippillil-Resume.pdf"
-          download
-          onClick={handleDownload}
-          className="px-2 py-1 rounded bg-ub-gedit-light text-sm"
-        >
-          Download
-        </a>
-        <a href="/assets/alex-unnippillil.vcf" download className="px-2 py-1 rounded bg-ub-gedit-light text-sm">
-          vCard
-        </a>
-        <button onClick={shareContact} className="px-2 py-1 rounded bg-ub-gedit-light text-sm">
-          Share contact
-        </button>
-      </div>
-      <object className="h-full w-full flex-1" data="/assets/Alex-Unnippillil-Resume.pdf" type="application/pdf">
-        <p className="p-4 text-center">
-          Unable to display PDF.&nbsp;
-          <a
-            href="/assets/Alex-Unnippillil-Resume.pdf"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline text-ubt-blue"
-            onClick={handleDownload}
-          >
-            Download the resume
+    <div className="flex flex-col gap-6">
+      <SectionPanel title="Resume" subtitle="Download, share, or explore right in the window" spacing="lg">
+        <div className="no-print flex flex-wrap gap-3">
+          <a href="/assets/Alex-Unnippillil-Resume.pdf" download onClick={handleDownload} className="kali-cta">
+            <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v14m0 0 4-4m-4 4-4-4M5 21h14" />
+            </svg>
+            Download PDF
           </a>
-        </p>
-      </object>
+          <a href="/assets/alex-unnippillil.vcf" download className="kali-cta">
+            <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4h16v16H4z" />
+            </svg>
+            Save vCard
+          </a>
+          <button type="button" onClick={shareContact} className="kali-cta">
+            <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 8a3 3 0 1 0-6 0v8a3 3 0 1 0 6 0V8ZM8 12H5m14 0h-3" />
+            </svg>
+            Share contact
+          </button>
+        </div>
+        <div className="overflow-hidden rounded-2xl border border-kali-border/40 bg-kali-panel-dark/70 shadow-inner shadow-black/40">
+          <object className="h-[60vh] w-full" data="/assets/Alex-Unnippillil-Resume.pdf" type="application/pdf">
+            <p className="kali-body p-4 text-center">
+              Unable to display PDF.&nbsp;
+              <a href="/assets/Alex-Unnippillil-Resume.pdf" target="_blank" rel="noopener noreferrer" className="kali-link" onClick={handleDownload}>
+                Download the resume
+              </a>
+            </p>
+          </object>
+        </div>
+      </SectionPanel>
     </div>
   );
 }
-
