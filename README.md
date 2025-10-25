@@ -384,6 +384,10 @@ CSP whitelists hosts such as `*.twitter.com`, `embed.x.com`, `cdn.jsdelivr.net`,
 
 Distributed under the [MIT License](./LICENSE).
 
+### Trademarks
+
+"Kali Linux" and the Kali dragon logo are trademarks of Offensive Security. Their use in this project is for identification purposes only and does not imply any endorsement.
+
 ---
 
 _Last updated: 2025-10-12_
