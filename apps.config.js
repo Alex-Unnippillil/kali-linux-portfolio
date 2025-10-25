@@ -109,6 +109,8 @@ const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
 const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
 const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
 const ContactApp = createDynamicApp('contact', 'Contact');
+const ParoleApp = createDynamicApp('parole', 'Parole');
+const RistrettoApp = createDynamicApp('ristretto', 'Ristretto');
 
 
 
@@ -195,6 +197,8 @@ const displaySSH = createDisplay(SSHApp);
 const displayHTTP = createDisplay(HTTPApp);
 const displayHtmlRewrite = createDisplay(HtmlRewriteApp);
 const displayContact = createDisplay(ContactApp);
+const displayParole = createDisplay(ParoleApp);
+const displayRistretto = createDisplay(RistrettoApp);
 
 const displayHashcat = createDisplay(HashcatApp);
 
@@ -237,6 +241,24 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayFiglet,
+  },
+  {
+    id: 'parole',
+    title: 'Parole',
+    icon: '/themes/Yaru/apps/parole.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayParole,
+  },
+  {
+    id: 'ristretto',
+    title: 'Ristretto',
+    icon: '/themes/Yaru/apps/ristretto.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayRistretto,
   },
   {
     id: 'quote',
