@@ -5,6 +5,15 @@ import useOPFS from '../../hooks/useOPFS';
 import useFileSystemNavigator from '../../hooks/useFileSystemNavigator';
 import { ensureHandlePermission } from '../../services/fileExplorer/permissions';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import Modal from '../base/Modal';
+import usePersistentState from '../../hooks/usePersistentState';
+
+const AVAILABLE_EMBLEMS = [
+  { id: 'star', icon: '⭐', label: 'Starred' },
+  { id: 'heart', icon: '❤️', label: 'Favorite' },
+  { id: 'work', icon: '💼', label: 'Work' },
+  { id: 'important', icon: '⚠️', label: 'Important' },
+];
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -69,8 +78,21 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
 
+  const [emblems, setEmblems] = usePersistentState(
+    'file-explorer-emblems',
+    {},
+    (v) => v && typeof v === 'object'
+  );
+  const [showEmblems, setShowEmblems] = usePersistentState(
+    'file-explorer-show-emblems',
+    true,
+    (v) => typeof v === 'boolean'
+  );
+  const [propFile, setPropFile] = useState(null);
+  const [propTab, setPropTab] = useState('general');
+
   const hasWorker = typeof Worker !== 'undefined';
-  const {
+  const { 
     supported: opfsSupported,
     root,
     getDir,
@@ -93,6 +115,25 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setLocationError,
   } = useFileSystemNavigator();
   const [unsavedDir, setUnsavedDir] = useState(null);
+
+  const getPathKey = (name) => `${path.map((p) => p.name).join('/')}/${name}`;
+  const iconFor = (id) => AVAILABLE_EMBLEMS.find((e) => e.id === id)?.icon;
+  const openProps = (e, file, kind) => {
+    e.preventDefault();
+    const key = getPathKey(file.name);
+    setPropFile({ ...file, kind, key });
+    setPropTab('general');
+  };
+  const closeProps = () => setPropFile(null);
+  const selectEmblem = (id) => {
+    if (!propFile) return;
+    setEmblems((prev) => {
+      const next = { ...prev };
+      if (!id) delete next[propFile.key];
+      else next[propFile.key] = id;
+      return next;
+    });
+  };
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
@@ -228,7 +269,13 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+          <input
+            ref={fallbackInputRef}
+            type="file"
+            onChange={openFallback}
+            className="hidden"
+            aria-label="Open file"
+          />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -243,6 +290,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
               value={content}
               onChange={onChange}
+              aria-label="File contents"
             />
             <button
               onClick={async () => {
@@ -300,9 +348,13 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           {dirs.map((d, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openDir(d)}
-            >
+                className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30 flex items-center"
+                onClick={() => openDir(d)}
+                onContextMenu={(e) => openProps(e, d, 'directory')}
+              >
+              {showEmblems && emblems[getPathKey(d.name)] && (
+                <span className="mr-1">{iconFor(emblems[getPathKey(d.name)])}</span>
+              )}
               {d.name}
             </div>
           ))}
@@ -310,24 +362,45 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           {files.map((f, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
-            >
+                className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30 flex items-center"
+                onClick={() => openFile(f)}
+                onContextMenu={(e) => openProps(e, f, 'file')}
+              >
+              {showEmblems && emblems[getPathKey(f.name)] && (
+                <span className="mr-1">{iconFor(emblems[getPathKey(f.name)])}</span>
+              )}
               {f.name}
             </div>
           ))}
+          <div className="p-2 border-t border-gray-600">
+            <label className="flex items-center space-x-1">
+              <input
+                type="checkbox"
+                checked={showEmblems}
+                onChange={(e) => setShowEmblems(e.target.checked)}
+                aria-label="Show emblems"
+              />
+              <span>Show emblems</span>
+            </label>
+          </div>
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+            <textarea
+              className="flex-1 p-2 bg-ub-cool-grey outline-none"
+              value={content}
+              onChange={onChange}
+              aria-label="File contents"
+            />
           )}
           <div className="p-2 border-t border-gray-600">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Find in files"
-              className="px-1 py-0.5 text-black"
-            />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Find in files"
+                className="px-1 py-0.5 text-black"
+                aria-label="Search query"
+              />
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
             </button>
@@ -341,6 +414,61 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           </div>
         </div>
       </div>
+      {propFile && (
+        <Modal isOpen={!!propFile} onClose={closeProps}>
+          <div className="bg-ub-cool-grey text-white p-4 rounded shadow-lg min-w-[250px]">
+            <div className="mb-2 flex space-x-2 border-b border-gray-600 pb-1">
+              <button
+                className={propTab === 'general' ? 'font-bold' : ''}
+                onClick={() => setPropTab('general')}
+              >
+                General
+              </button>
+              <button
+                className={propTab === 'emblems' ? 'font-bold' : ''}
+                onClick={() => setPropTab('emblems')}
+              >
+                Emblems
+              </button>
+            </div>
+            {propTab === 'general' && <div>Name: {propFile.name}</div>}
+            {propTab === 'emblems' && (
+              <div className="flex space-x-2">
+                {AVAILABLE_EMBLEMS.map((em) => (
+                  <button
+                    key={em.id}
+                    onClick={() => selectEmblem(em.id)}
+                    className={`text-2xl ${
+                      emblems[propFile.key] === em.id
+                        ? 'ring-2 ring-blue-500 rounded'
+                        : ''
+                    }`}
+                    aria-label={em.label}
+                  >
+                    {em.icon}
+                  </button>
+                ))}
+                <button
+                  onClick={() => selectEmblem(null)}
+                  className={`px-1 border ${
+                    !emblems[propFile.key] ? 'border-blue-500' : ''
+                  }`}
+                >
+                  None
+                </button>
+              </div>
+            )}
+            <div className="mt-4 text-right">
+              <button
+                onClick={closeProps}
+                className="px-2 py-1 bg-black bg-opacity-50 rounded"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
