@@ -64,6 +64,7 @@ const AboutAlexApp = createDynamicApp('alex', 'About Alex');
 
 const QrApp = createDynamicApp('qr', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
+const TextToAsciiApp = createDynamicApp('text-to-ascii', 'Text to ASCII');
 const QuoteApp = createDynamicApp('quote', 'Quote');
 const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
 const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
@@ -155,6 +156,7 @@ const displayAboutAlex = createDisplay(AboutAlexApp);
 
 const displayQr = createDisplay(QrApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
+const displayTextToAscii = createDisplay(TextToAsciiApp);
 const displayQuote = createDisplay(QuoteApp);
 const displayProjectGallery = createDisplay(ProjectGalleryApp);
 const displayTrash = createDisplay(TrashApp);
@@ -219,6 +221,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayAsciiArt,
+  },
+  {
+    id: 'text-to-ascii',
+    title: 'Text to ASCII',
+    icon: '/themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTextToAscii,
   },
   {
     id: 'clipboard-manager',
