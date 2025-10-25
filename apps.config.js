@@ -78,6 +78,7 @@ const SerialTerminalApp = createDynamicApp('serial-terminal', 'Serial Terminal')
 
 const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
 const BleSensorApp = createDynamicApp('ble-sensor', 'BLE Sensor');
+const BluetoothReconApp = createDynamicApp('bluetooth', 'Bluetooth Recon');
 const DsniffApp = createDynamicApp('dsniff', 'dsniff');
 const BeefApp = createDynamicApp('beef', 'BeEF');
 const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
@@ -171,6 +172,7 @@ const displayPluginManager = createDisplay(PluginManagerApp);
 
 const displayWireshark = createDisplay(WiresharkApp);
 const displayBleSensor = createDisplay(BleSensorApp);
+const displayBluetoothRecon = createDisplay(BluetoothReconApp);
 const displayBeef = createDisplay(BeefApp);
 const displayMetasploit = createDisplay(MetasploitApp);
 const displayDsniff = createDisplay(DsniffApp);
@@ -760,6 +762,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayBleSensor,
+  },
+  {
+    id: 'bluetooth',
+    title: 'Bluetooth Recon',
+    icon: '/themes/Yaru/apps/bluetooth.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: true,
+    screen: displayBluetoothRecon,
   },
   {
     id: 'metasploit',
