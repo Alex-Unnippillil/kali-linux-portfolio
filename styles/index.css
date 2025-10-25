@@ -1,6 +1,53 @@
 @import './globals.css';
 @import './animation.css';
 
+html[data-theme="kali"] {
+    --kali-accent-50: color-mix(in oklch, #1793d1 10%, white);
+    --kali-accent-100: color-mix(in oklch, #1793d1 20%, white);
+    --kali-accent-200: color-mix(in oklch, #1793d1 30%, white);
+    --kali-accent-300: color-mix(in oklch, #1793d1 40%, white);
+    --kali-accent-400: color-mix(in oklch, #1793d1 50%, white);
+    --kali-accent-500: #1793d1;
+    --kali-accent-600: color-mix(in oklch, #1793d1 90%, black);
+    --kali-accent-700: color-mix(in oklch, #1793d1 80%, black);
+    --kali-accent-800: color-mix(in oklch, #1793d1 70%, black);
+    --kali-accent-900: color-mix(in oklch, #1793d1 60%, black);
+
+    --color-primary: var(--kali-accent-500);
+    --color-accent: var(--kali-accent-500);
+    --color-focus-ring: var(--kali-accent-600);
+    --color-selection: var(--kali-accent-200);
+    --color-control-accent: var(--kali-accent-500);
+    accent-color: var(--color-control-accent);
+}
+
+html[data-theme="kali"] a {
+    color: var(--kali-accent-500);
+    transition: color 0.2s;
+}
+
+html[data-theme="kali"] a:hover {
+    color: var(--kali-accent-600);
+}
+
+html[data-theme="kali"] a:active {
+    color: var(--kali-accent-700);
+}
+
+html[data-theme="kali"] button {
+    background-color: var(--kali-accent-500);
+    color: var(--color-text);
+    transition: background-color 0.2s;
+}
+
+html[data-theme="kali"] button:hover {
+    background-color: var(--kali-accent-600);
+}
+
+html[data-theme="kali"] button:active {
+    background-color: var(--kali-accent-700);
+}
+
 html {
     font-size: clamp(12px, calc(16px * var(--font-multiplier)), 24px);
 }
