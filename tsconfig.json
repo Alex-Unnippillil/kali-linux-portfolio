@@ -18,6 +18,7 @@
     "noEmit": true,
     "plugins": [{ "name": "next" }],
     "types": [],
+    "typeRoots": ["./types", "./node_modules/@types"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
