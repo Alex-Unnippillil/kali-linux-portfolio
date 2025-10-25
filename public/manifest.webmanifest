@@ -4,6 +4,7 @@
   "start_url": "/",
   "offline_page": "/offline.html",
   "display": "standalone",
+  "display_override": ["window-controls-overlay"],
   "background_color": "#0f1317",
   "theme_color": "#0f1317",
   "icons": [
@@ -16,6 +17,28 @@
       "src": "/images/logos/logo_1024.png",
       "sizes": "512x512",
       "type": "image/png"
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+foo",
+      "url": "/protocol?url=%s"
+    }
+  ],
+  "url_handlers": [
+    {
+      "origin": "https://*.yourdomain.tld"
+    }
+  ],
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "file_handlers": [
+    {
+      "action": "/open-foobar",
+      "accept": {
+        "application/x-foobar": [".foo"]
+      }
     }
   ],
   "share_target": {
