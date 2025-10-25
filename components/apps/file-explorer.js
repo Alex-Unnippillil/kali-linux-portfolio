@@ -5,6 +5,8 @@ import useOPFS from '../../hooks/useOPFS';
 import useFileSystemNavigator from '../../hooks/useFileSystemNavigator';
 import { ensureHandlePermission } from '../../services/fileExplorer/permissions';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import ContextMenu from '../common/ContextMenu';
+import FilePropertiesDialog from './FilePropertiesDialog';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -68,6 +70,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const fileRefs = useRef([]);
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -93,6 +96,28 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setLocationError,
   } = useFileSystemNavigator();
   const [unsavedDir, setUnsavedDir] = useState(null);
+  const [permissions, setPermissions] = useState({});
+  const [propsFile, setPropsFile] = useState(null);
+
+  const DEFAULT_PERMS = {
+    owner: { read: true, write: true, execute: false },
+    group: { read: true, write: false, execute: false },
+    other: { read: true, write: false, execute: false },
+  };
+
+  const getPerms = (name) => permissions[name] || DEFAULT_PERMS;
+  const setPerms = (name, perms) =>
+    setPermissions((p) => ({ ...p, [name]: perms }));
+  const makeExecutable = (file) => {
+    const perms = getPerms(file.name);
+    const updated = {
+      owner: { ...perms.owner, execute: true },
+      group: { ...perms.group, execute: true },
+      other: { ...perms.other, execute: true },
+    };
+    setPerms(file.name, updated);
+  };
+  const openProperties = (file) => setPropsFile(file);
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
@@ -262,7 +287,8 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
+    <>
+      <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
       <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
         <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
           Open Folder
@@ -307,15 +333,41 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             </div>
           ))}
           <div className="p-2 font-bold">Files</div>
-          {files.map((f, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
-            >
-              {f.name}
-            </div>
-          ))}
+          {files.map((f, i) => {
+            const ref = fileRefs.current[i] || React.createRef();
+            fileRefs.current[i] = ref;
+            const perms = getPerms(f.name);
+            const isExec =
+              perms.owner.execute || perms.group.execute || perms.other.execute;
+            const items = [
+              {
+                label: isExec ? 'Run' : 'Open',
+                onSelect: () => openFile(f),
+              },
+            ];
+            if (!isExec) {
+              items.push({
+                label: 'Make executable',
+                onSelect: () => makeExecutable(f),
+              });
+            }
+            items.push({
+              label: 'Properties',
+              onSelect: () => openProperties(f),
+            });
+            return (
+              <div key={i} className="relative">
+                <div
+                  ref={ref}
+                  className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+                  onClick={() => openFile(f)}
+                >
+                  {f.name}
+                </div>
+                <ContextMenu targetRef={ref} items={items} />
+              </div>
+            );
+          })}
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
@@ -341,6 +393,14 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           </div>
         </div>
       </div>
-    </div>
+      {propsFile && (
+        <FilePropertiesDialog
+          file={propsFile}
+          permissions={getPerms(propsFile.name)}
+          onChange={(perms) => setPerms(propsFile.name, perms)}
+          onClose={() => setPropsFile(null)}
+        />
+      )}
+    </>
   );
 }
