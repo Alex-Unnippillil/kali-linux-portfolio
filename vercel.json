@@ -4,5 +4,9 @@
   "functions": {
     "pages/api/**/*.{js,ts}": { "runtime": "@vercel/node@5.3.20" },
     "app/api/**/route.{js,ts}": { "runtime": "@vercel/node@5.3.20" }
-  }
+  },
+  "routes": [
+    { "handle": "error" },
+    { "status": 500, "dest": "/500.html" }
+  ]
 }
