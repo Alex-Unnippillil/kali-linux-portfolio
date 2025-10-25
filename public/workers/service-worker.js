@@ -4,6 +4,7 @@ const ASSETS = [
   '/feeds',
   '/about',
   '/projects',
+  '/projects/compare',
   '/projects.json',
   '/apps',
   '/apps/weather',
