@@ -9,6 +9,7 @@ import rawMilestones from '../data/milestones.json';
 interface Milestone {
   date: string; // YYYY-MM
   title: string;
+  summary: string;
   image: string;
   link: string;
   tags: string[];
@@ -123,20 +124,21 @@ const ScrollableTimeline: React.FC = () => {
                         setView('month');
                         setSelectedYear(year);
                       }}
-                      className="text-left w-full focus:outline-none"
-                    >
-                      <div className="text-ubt-blue font-bold text-lg mb-2">{year}</div>
-                      <img
-                        src={first.image}
-                        alt={first.title}
-                        className="w-full h-32 object-cover mb-2 rounded"
-                      />
-                      <p className="text-sm md:text-base mb-2">{first.title}</p>
-                      {renderTags(first.tags)}
-                    </button>
-                  </li>
-                );
-              })
+                    className="text-left w-full focus:outline-none"
+                  >
+                    <div className="text-ubt-blue font-bold text-lg mb-2">{year}</div>
+                    <img
+                      src={first.image}
+                      alt={first.title}
+                      className="w-full h-32 object-cover mb-2 rounded"
+                    />
+                    <p className="text-sm md:text-base">{first.title}</p>
+                    <p className="text-xs text-gray-400 mb-2 truncate">{first.summary}</p>
+                    {renderTags(first.tags)}
+                  </button>
+                </li>
+              );
+            })
             : monthItems.map((m, index) => (
                 <li
                   key={`${selectedYear}-${m.month}`}
@@ -161,6 +163,7 @@ const ScrollableTimeline: React.FC = () => {
                       className="w-full h-32 object-cover mb-2 rounded"
                     />
                     <p className="text-sm md:text-base">{m.title}</p>
+                    <p className="text-xs text-gray-400 truncate">{m.summary}</p>
                   </a>
                   {renderTags(m.tags)}
                 </li>
