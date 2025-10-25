@@ -1,0 +1,47 @@
+[
+  {
+    "bssid": "66:77:88:00:00:01",
+    "ssid": "CoffeeShopWiFi",
+    "x": 22,
+    "y": 38,
+    "floor": "Concourse Cafe",
+    "signal": -47,
+    "type": "Public AP"
+  },
+  {
+    "bssid": "AA:BB:CC:00:00:01",
+    "ssid": "FreeAirport",
+    "x": 62,
+    "y": 28,
+    "floor": "Terminal Gate 12",
+    "signal": -72,
+    "type": "Public AP"
+  },
+  {
+    "bssid": "AA:BB:CC:00:00:02",
+    "ssid": "Airport5G",
+    "x": 74,
+    "y": 64,
+    "floor": "Terminal Gate 8",
+    "signal": -60,
+    "type": "Backhaul"
+  },
+  {
+    "bssid": "00:11:22:00:00:01",
+    "ssid": "HomeWiFi",
+    "x": 12,
+    "y": 72,
+    "floor": "Residential Loft",
+    "signal": -30,
+    "type": "Private AP"
+  },
+  {
+    "bssid": "00:11:22:00:00:02",
+    "ssid": "Office5G",
+    "x": 42,
+    "y": 58,
+    "floor": "Security Lab",
+    "signal": -55,
+    "type": "Lab AP"
+  }
+]
