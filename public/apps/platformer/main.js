@@ -190,7 +190,7 @@ function pollRemap() {
 Object.keys(padButtons).forEach(a => {
   padButtons[a].addEventListener('click', () => {
     waitingPad = a;
-    padButtons[a].textContent = '...';
+    padButtons[a].textContent = 'Press a button';
     requestAnimationFrame(pollRemap);
   });
 });
