@@ -1744,6 +1744,7 @@ export class Window extends Component {
                             this.state.resizing ? styles.windowFrameResizing : '',
                         ].filter(Boolean).join(' ')}
                         id={this.id}
+                        data-active={this.props.isFocused}
                         role="dialog"
                         data-window-state={windowState}
                         aria-hidden={this.props.minimized ? true : false}
