@@ -195,7 +195,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(contentRef.current).catch(() => {});
+    const text = contentRef.current;
+    if (text.length > 5000 && !window.confirm('Copy large output to clipboard?')) {
+      return;
+    }
+    navigator.clipboard.writeText(text).catch(() => {});
   };
 
   const handlePaste = async () => {
