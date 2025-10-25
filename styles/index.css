@@ -10,6 +10,18 @@ body{
     font-display: swap;
     background-color: var(--color-bg);
     color: var(--color-text);
+    --wp-opacity: 1;
+    --wp-blur: 0px;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: var(--wp-opacity);
+    filter: blur(var(--wp-blur));
+    z-index: -1;
 }
 
 :root {
