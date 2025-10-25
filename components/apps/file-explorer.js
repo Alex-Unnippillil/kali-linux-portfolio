@@ -5,6 +5,7 @@ import useOPFS from '../../hooks/useOPFS';
 import useFileSystemNavigator from '../../hooks/useFileSystemNavigator';
 import { ensureHandlePermission } from '../../services/fileExplorer/permissions';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import ProgressModal from '../ui/ProgressModal';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -93,6 +94,10 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setLocationError,
   } = useFileSystemNavigator();
   const [unsavedDir, setUnsavedDir] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const [progressOpen, setProgressOpen] = useState(false);
+  const [progressTitle, setProgressTitle] = useState('');
+  const abortRef = useRef(null);
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
@@ -188,6 +193,87 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     void goBackNav();
   };
 
+  const startProgress = (title) => {
+    setProgress(0);
+    setProgressTitle(title);
+    setProgressOpen(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    return controller;
+  };
+
+  const cancelOperation = () => {
+    abortRef.current?.abort();
+  };
+
+  const copyFileWithProgress = async (
+    handle,
+    newName,
+    dir,
+    signal,
+  ) => {
+    const file = await handle.getFile();
+    const total = file.size || 1;
+    const dest = await dir.getFileHandle(newName, { create: true });
+    const writable = await dest.createWritable();
+    const reader = file.stream().getReader();
+    let written = 0;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+        await writable.write(value);
+        written += value.length;
+        setProgress((written / total) * 100);
+        await new Promise((r) => setTimeout(r, 0));
+      }
+      await writable.close();
+    } catch (err) {
+      await reader.cancel().catch(() => {});
+      await writable.abort().catch(() => {});
+      await dir.removeEntry(newName).catch(() => {});
+      throw err;
+    }
+  };
+
+  const deleteFileWithProgress = async (name, dir, signal) => {
+    setProgress(0);
+    await new Promise((r) => setTimeout(r, 0));
+    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+    await dir.removeEntry(name);
+    setProgress(100);
+  };
+
+  const copyItem = async (file) => {
+    if (!dirHandle) return;
+    const controller = startProgress(`Copying ${file.name}`);
+    try {
+      const copyName = `${file.name}.copy`;
+      await copyFileWithProgress(file.handle, copyName, dirHandle, controller.signal);
+    } catch (err) {
+      if (err.name !== 'AbortError') console.error('Copy failed:', err);
+    } finally {
+      setProgressOpen(false);
+      abortRef.current = null;
+      await readDir(dirHandle);
+    }
+  };
+
+  const deleteItem = async (file) => {
+    if (!dirHandle) return;
+    const controller = startProgress(`Deleting ${file.name}`);
+    try {
+      await deleteFileWithProgress(file.name, dirHandle, controller.signal);
+    } catch (err) {
+      if (err.name !== 'AbortError') console.error('Delete failed:', err);
+    } finally {
+      setProgressOpen(false);
+      abortRef.current = null;
+      await readDir(dirHandle);
+    }
+  };
+
   const saveFile = async () => {
     if (!currentFile) return;
     try {
@@ -262,11 +348,12 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
-      <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
-        <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-          Open Folder
-        </button>
+    <>
+      <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
+        <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
+          <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
+            Open Folder
+          </button>
         {path.length > 1 && (
           <button onClick={goBack} className="px-2 py-1 bg-black bg-opacity-50 rounded">
             Back
@@ -310,10 +397,30 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           {files.map((f, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              className="px-2 flex items-center justify-between hover:bg-black hover:bg-opacity-30"
               onClick={() => openFile(f)}
             >
-              {f.name}
+              <span className="cursor-pointer">{f.name}</span>
+              <span className="space-x-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    copyItem(f);
+                  }}
+                  className="text-xs px-1 py-0.5 bg-black bg-opacity-50 rounded"
+                >
+                  Copy
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteItem(f);
+                  }}
+                  className="text-xs px-1 py-0.5 bg-black bg-opacity-50 rounded"
+                >
+                  Delete
+                </button>
+              </span>
             </div>
           ))}
         </div>
@@ -341,6 +448,12 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           </div>
         </div>
       </div>
-    </div>
+      <ProgressModal
+        open={progressOpen}
+        progress={progress}
+        onCancel={cancelOperation}
+        title={progressTitle}
+      />
+    </>
   );
 }
