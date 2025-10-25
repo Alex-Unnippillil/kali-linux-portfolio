@@ -1,787 +1,774 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
 import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
 import pcapFixture from '../../../public/demo-data/dsniff/pcap.json';
-import TerminalOutput from '../../TerminalOutput';
 
-// Simple parser that attempts to extract protocol, host and remaining details
-// Each parsed line is also given a synthetic timestamp for display purposes
-const parseLines = (text) =>
-  text
-    .split('\n')
-    .filter(Boolean)
-    .map((line, i) => {
-      const parts = line.trim().split(/\s+/);
-      let protocol = parts[0] || '';
-      let host = parts[1] || '';
-      let rest = parts.slice(2);
-      if (protocol === 'ARP' && parts[1] === 'reply') {
-        host = parts[2] || '';
-        rest = parts.slice(3);
-      }
-      // use deterministic timestamp based on line index
-      const timestamp = new Date(i * 1000).toISOString().split('T')[1].split('.')[0];
-      return {
-        raw: line,
-        protocol,
-        host,
-        details: rest.join(' '),
-        timestamp,
-
-      };
-    });
-
-const protocolInfo = {
-  HTTP: 'Hypertext Transfer Protocol',
-  HTTPS: 'HTTP over TLS/SSL',
-  ARP: 'Address Resolution Protocol',
-  FTP: 'File Transfer Protocol',
-  SSH: 'Secure Shell',
+const severityBadgeStyles = {
+  high: 'bg-rose-500/15 text-rose-100 ring-1 ring-rose-400/40',
+  medium: 'bg-amber-500/15 text-amber-100 ring-1 ring-amber-400/40',
+  low: 'bg-emerald-500/15 text-emerald-100 ring-1 ring-emerald-400/40',
 };
 
-const protocolIcons = {
-  HTTP: '🌐',
-  HTTPS: '🔒',
-  ARP: '🔁',
-  FTP: '📁',
-  SSH: '🔐',
+const severityLabels = {
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
 };
 
-const protocolAccents = {
-  HTTP: 'from-blue-500/70 via-blue-400/60 to-blue-500/40 text-blue-200',
-  HTTPS: 'from-emerald-500/70 via-emerald-400/60 to-emerald-500/40 text-emerald-200',
-  ARP: 'from-amber-500/70 via-amber-400/60 to-amber-500/40 text-amber-200',
-  FTP: 'from-rose-500/70 via-rose-400/60 to-rose-500/40 text-rose-200',
-  SSH: 'from-violet-500/70 via-violet-400/60 to-violet-500/40 text-violet-200',
+const escapeHtml = (value) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+const highlightJson = (payload) => {
+  const json = JSON.stringify(payload, null, 2);
+  const escaped = escapeHtml(json);
+  return escaped
+    .replace(/(&quot;.*?&quot;)(?=\s*:)/g, '<span class="text-sky-300">$1</span>')
+    .replace(/: (&quot;.*?&quot;)/g, ': <span class="text-emerald-200">$1</span>')
+    .replace(/\b(true|false|null)\b/g, '<span class="text-amber-200">$1</span>')
+    .replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="text-rose-200">$1</span>');
 };
 
-const protocolRisks = {
-  HTTP: 'High',
-  HTTPS: 'Low',
-  ARP: 'Medium',
-  FTP: 'High',
-  SSH: 'Medium',
-};
-
-const riskBadgeStyles = {
-  High: 'bg-red-500/20 text-red-200 ring-1 ring-inset ring-red-500/40',
-  Medium: 'bg-amber-500/20 text-amber-200 ring-1 ring-inset ring-amber-500/40',
-  Low: 'bg-emerald-500/15 text-emerald-200 ring-1 ring-inset ring-emerald-400/40',
-};
-
-const suiteTools = [
-  {
-    tool: 'arpspoof',
-    description: 'Intercept packets on a switched LAN via ARP replies',
-    risk: 'Facilitates man-in-the-middle attacks',
-    reference: 'https://linux.die.net/man/8/arpspoof',
-  },
-  {
-    tool: 'urlsnarf',
-    description: 'Log HTTP requests in a Common Log Format',
-    risk: 'Captures web activity and cleartext credentials',
-    reference: 'https://linux.die.net/man/8/urlsnarf',
-  },
-  {
-    tool: 'macof',
-    description: 'Flood switch tables with random MAC addresses',
-    risk: 'May force switches into hub mode exposing traffic',
-    reference: 'https://linux.die.net/man/8/macof',
-  },
-  {
-    tool: 'webmitm',
-    description: 'Transparent HTTP/SSL proxy for MITM attacks',
-    risk: 'Intercepts and modifies encrypted sessions',
-    reference: 'https://linux.die.net/man/8/webmitm',
-  },
-];
-
-
-const LogRow = ({ log, prefersReduced }) => {
-  const rowRef = useRef(null);
-
-  useEffect(() => {
-    const el = rowRef.current;
-    if (!el || prefersReduced) return;
-    el.style.opacity = '0';
-    el.style.transition = 'opacity 0.5s ease-in';
-    requestAnimationFrame(() => {
-      el.style.opacity = '1';
-    });
-  }, [prefersReduced]);
-
-  return (
-    <tr
-      ref={rowRef}
-      className="odd:bg-slate-950/40 even:bg-slate-950/70 transition-colors"
-    >
-      <td className="whitespace-nowrap px-3 py-2 text-[11px] uppercase tracking-wide text-slate-500">
-        {log.timestamp}
-      </td>
-      <td className="px-3 py-2 text-xs font-semibold text-emerald-300">
-        <abbr
-          title={protocolInfo[log.protocol] || log.protocol}
-          className="cursor-help underline decoration-dotted decoration-emerald-400/70"
-          tabIndex={0}
-        >
-          {log.protocol}
-        </abbr>
-      </td>
-      <td className="px-3 py-2 text-sm text-slate-100">{log.host}</td>
-      <td className="px-3 py-2 font-mono text-xs leading-5 text-emerald-300">
-        {log.details}
-      </td>
-    </tr>
-  );
-};
-
-const TimelineItem = ({ log, prefersReduced }) => {
-  const itemRef = useRef(null);
-  useEffect(() => {
-    const el = itemRef.current;
-    if (!el || prefersReduced) return;
-    el.style.opacity = '0';
-    el.style.transition = 'opacity 0.5s ease-in';
-    requestAnimationFrame(() => {
-      el.style.opacity = '1';
-    });
-  }, [prefersReduced]);
-
-  return (
-    <li
-      ref={itemRef}
-      className="rounded-lg border border-slate-800/70 bg-slate-950/60 px-3 py-2 text-xs leading-5 text-slate-200 shadow-sm"
-    >
-      <span className="font-semibold text-emerald-300">{log.protocol}</span> {log.host}{' '}
-      <span className="text-emerald-200/80">{log.details}</span>
-    </li>
-  );
-};
-
-const Credential = ({ cred }) => {
-  const [show, setShow] = useState(false);
-  const hidden = cred.password && !show;
-  return (
-    <span className="mr-2 inline-flex items-center gap-1 rounded-full border border-slate-800 bg-slate-950/60 px-2 py-1 text-[11px] text-slate-100 shadow-sm">
-      <span aria-hidden>{protocolIcons[cred.protocol] || '❓'}</span>
-      <span className="font-medium">{cred.username}</span>
-      {cred.password && (
-        <>
-          <span className="text-slate-500">•</span>
-          <span>{hidden ? '•••' : cred.password}</span>
-          <button
-            className="ml-1 rounded px-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-300 transition hover:text-emerald-200"
-            onClick={() => setShow(!show)}
-          >
-            {hidden ? 'Show' : 'Hide'}
-          </button>
-        </>
-      )}
-    </span>
-  );
-};
-
-const SessionTile = ({ session, onView }) => (
-  <div className="group flex items-start gap-3 rounded-xl border border-slate-800/80 bg-slate-900/70 p-3 shadow-sm transition hover:border-slate-700 hover:bg-slate-900">
-    <div
-      className={`flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br text-xl font-semibold ${
-        protocolAccents[session.protocol] || 'from-slate-600 via-slate-500 to-slate-600 text-slate-100'
-      }`}
-      aria-hidden
-    >
-      {protocolIcons[session.protocol] || '❓'}
-    </div>
-    <div className="flex-1 space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="text-sm font-medium text-slate-100">
-          {session.protocol} session
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-700 bg-slate-800/70 text-xs text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
-            title="Copy session"
-            onClick={() =>
-              navigator.clipboard?.writeText(
-                `${session.src}\t${session.dst}\t${session.protocol}\t${session.info}`,
-              )
-            }
-          >
-            📋
-          </button>
-          <button
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-700 bg-slate-800/70 text-xs text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
-            title="View details"
-            onClick={onView}
-          >
-            🔍
-          </button>
-        </div>
-      </div>
-      <div className="space-y-1 text-xs leading-relaxed text-slate-300">
-        <div className="flex flex-wrap items-center gap-1 text-[11px] uppercase tracking-wide text-slate-400">
-          <span className="rounded-full bg-slate-800/80 px-2 py-0.5 text-slate-200 shadow-inner">
-            {session.src}
-          </span>
-          <span className="text-slate-500">→</span>
-          <span className="rounded-full bg-slate-800/80 px-2 py-0.5 text-slate-200 shadow-inner">
-            {session.dst}
-          </span>
-        </div>
-        <div className="rounded-lg bg-slate-950/60 px-3 py-2 font-mono text-[11px] text-emerald-300 shadow-inner">
-          {session.info}
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const Dsniff = () => {
-  const [urlsnarfLogs, setUrlsnarfLogs] = useState([]);
-  const [arpspoofLogs, setArpspoofLogs] = useState([]);
-  const [activeTab, setActiveTab] = useState('urlsnarf');
-  const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState([]); // { field: 'host' | 'protocol', value: string }
-  const [newField, setNewField] = useState('host');
-  const [newValue, setNewValue] = useState('');
-  const [prefersReduced, setPrefersReduced] = useState(false);
-  const [selectedPacket, setSelectedPacket] = useState(null);
-  const [domainSummary, setDomainSummary] = useState([]);
-  const [timeline, setTimeline] = useState([]);
-  const [protocolFilter, setProtocolFilter] = useState([]);
-
-  const { summary: pcapSummary, remediation } = pcapFixture;
-
-  const sampleCommand = 'urlsnarf -i eth0';
-  const sampleOutput = urlsnarfFixture.slice(0, 1).join('\n');
-
-  const copySampleCommand = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(sampleCommand);
-    }
-  };
-
-  const copySelectedPacket = () => {
-    if (selectedPacket !== null && navigator.clipboard) {
-      const pkt = pcapSummary[selectedPacket];
-      const text = `${pkt.src}\t${pkt.dst}\t${pkt.protocol}\t${pkt.info}`;
-      navigator.clipboard.writeText(text);
-    }
-  };
-
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const handler = () => setPrefersReduced(media.matches);
-    handler();
-    media.addEventListener('change', handler);
-    return () => media.removeEventListener('change', handler);
-  }, []);
-
-  useEffect(() => {
-    const urlsnarfData = parseLines(urlsnarfFixture.join('\n'));
-    const arpspoofData = parseLines(arpspoofFixture.join('\n'));
-    setUrlsnarfLogs(urlsnarfData);
-    setArpspoofLogs(arpspoofData);
-  }, []);
-
-  useEffect(() => {
-    if (!urlsnarfLogs.length) return;
-
-    const domainMap = {};
-    urlsnarfLogs.forEach((log) => {
-      const path = log.details.split(' ')[0] || '';
-      if (!domainMap[log.host])
-        domainMap[log.host] = { urls: new Set(), credentials: [], risk: 'Low' };
-      domainMap[log.host].urls.add(path);
-      if (log.protocol === 'HTTP') domainMap[log.host].risk = 'High';
-    });
-
-    pcapSummary.forEach((pkt) => {
-      const domain = pkt.dst;
-      if (!domainMap[domain])
-        domainMap[domain] = { urls: new Set(), credentials: [], risk: 'Low' };
-      const pathMatch = pkt.info.match(/\s(\/[^\s]*)/);
-      if (pathMatch) domainMap[domain].urls.add(pathMatch[1]);
-      const uMatch = pkt.info.match(/username=([^\s]+)/);
-      const pMatch = pkt.info.match(/password=([^\s]+)/);
-      if (uMatch || pMatch) {
-        domainMap[domain].credentials.push({
-          protocol: pkt.protocol,
-          username: uMatch ? uMatch[1] : '',
-          password: pMatch ? pMatch[1] : '',
-        });
-        domainMap[domain].risk = 'High';
-      }
-    });
-
-    const summary = Object.entries(domainMap).map(([domain, data]) => ({
-      domain,
-      urls: Array.from(data.urls),
-      credentials: data.credentials,
-      risk: data.risk,
-    }));
-    setDomainSummary(summary);
-
-    if (prefersReduced) {
-      setTimeline(urlsnarfLogs);
-    } else {
-      setTimeline([]);
-      urlsnarfLogs.forEach((log, idx) => {
-        setTimeout(() => {
-          setTimeline((prev) => [...prev, log]);
-        }, idx * 1000);
-      });
-    }
-  }, [urlsnarfLogs, prefersReduced, pcapSummary]);
-
-  const addFilter = () => {
-    if (newValue.trim()) {
-      setFilters([...filters, { field: newField, value: newValue.trim() }]);
-      setNewValue('');
-    }
-  };
-
-  const removeFilter = (idx) => {
-    setFilters(filters.filter((_, i) => i !== idx));
-  };
-
-  const exportSummary = () => {
-    const data = domainSummary.map((d) => ({
-      domain: d.domain,
-      urls: d.urls,
-      credentials: d.credentials.map((c) => ({
-        protocol: c.protocol,
-        username: c.username,
-        password: c.password,
-      })),
-      risk: d.risk,
-    }));
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(JSON.stringify(data, null, 2));
-    }
-  };
-
-  const logs = activeTab === 'urlsnarf' ? urlsnarfLogs : arpspoofLogs;
-  const filteredLogs = logs.filter((log) => {
-    const searchMatch = log.raw
-      .toLowerCase()
-      .includes(search.toLowerCase());
-    const filterMatch = filters.every((f) =>
-      log[f.field].toLowerCase().includes(f.value.toLowerCase())
-    );
-    const protocolMatch =
-      protocolFilter.length === 0 || protocolFilter.includes(log.protocol);
-    return searchMatch && filterMatch && protocolMatch;
+const parseFixtures = () => {
+  const urlsnarfRecords = urlsnarfFixture.map((line, index) => {
+    const [protocol = 'HTTP', host = '', path = '/'] = line.split(/\s+/);
+    return {
+      id: `url-${index}`,
+      dataset: 'urlsnarf',
+      protocol,
+      endpoint: `${host}${path || ''}`.trim(),
+      detail: `Captured ${protocol} request targeting ${host}${path || ''}`.trim(),
+      severity: protocol === 'HTTP' ? 'high' : 'medium',
+      raw: line,
+    };
   });
 
-  return (
-    <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 md:px-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-xl font-semibold text-slate-100 md:text-2xl">dsniff capture console</h1>
-            <p className="max-w-xl text-sm leading-relaxed text-slate-300/90">
-              Review simulated urlsnarf and arpspoof captures alongside analyst-friendly summaries and mitigations.
-            </p>
-          </div>
-          <button
-            onClick={exportSummary}
-            className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-emerald-200 shadow-sm transition hover:border-emerald-400/70 hover:bg-emerald-500/20 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 focus:ring-offset-2 focus:ring-offset-slate-900"
+  const arpspoofRecords = arpspoofFixture.map((line, index) => {
+    const parts = line.split(/\s+/);
+    const target = parts[2] ?? '';
+    const mac = parts[4] ?? '';
+    return {
+      id: `arp-${index}`,
+      dataset: 'arpspoof',
+      protocol: 'ARP',
+      endpoint: target,
+      detail: mac ? `Broadcast claims ${target} is at ${mac}` : line,
+      severity: 'medium',
+      raw: line,
+    };
+  });
+
+  const { summary: pcapSummary = [] } = pcapFixture;
+  const pcapRecords = pcapSummary.map((row, index) => ({
+    id: `pcap-${index}`,
+    dataset: 'pcap',
+    protocol: row.protocol || 'HTTP',
+    endpoint: `${row.src ?? 'unknown'} → ${row.dst ?? 'unknown'}`,
+    detail: row.info || 'Captured packet metadata',
+    severity: row.protocol === 'HTTPS' ? 'low' : 'high',
+    raw: JSON.stringify(row),
+  }));
+
+  return [...urlsnarfRecords, ...arpspoofRecords, ...pcapRecords];
+};
+
+const TabButton = ({ id, label, description, isActive, onSelect }) => (
+  <button
+    type="button"
+    onClick={() => onSelect(id)}
+    className={`flex flex-1 flex-col gap-1 rounded-xl border px-4 py-3 text-left transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+      isActive
+        ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-100 focus:ring-emerald-400'
+        : 'border-white/10 bg-white/5 text-slate-100/80 hover:border-emerald-400/50 hover:text-emerald-100 focus:ring-emerald-400'
+    }`}
+    aria-pressed={isActive}
+  >
+    <span className="text-sm font-semibold uppercase tracking-wide">{label}</span>
+    <span className="text-xs text-slate-300/80">{description}</span>
+  </button>
+);
+
+const Step = ({ index, title, description, severity, guidance, warning }) => (
+  <li className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 shadow-inner lg:flex-row lg:items-start">
+    <div className="flex items-center gap-3">
+      <span
+        className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20 text-base font-semibold text-emerald-200"
+        aria-hidden
+      >
+        {index + 1}
+      </span>
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-base font-semibold text-white">{title}</h3>
+          <span
+            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${
+              severityBadgeStyles[severity] || severityBadgeStyles.medium
+            }`}
+            aria-label={`Severity ${severityLabels[severity] || severity}`}
           >
-            <span>Export summary</span>
-          </button>
+            {severityLabels[severity] || severity}
+          </span>
         </div>
+        <p className="text-sm leading-relaxed text-slate-200/90">{description}</p>
+        {guidance ? (
+          <p className="text-xs text-emerald-200/90">{guidance}</p>
+        ) : null}
+      </div>
+    </div>
+    {warning ? (
+      <div
+        className="mt-3 rounded-xl border border-amber-400/50 bg-amber-500/10 p-3 text-xs text-amber-100 lg:ml-auto lg:mt-0 lg:max-w-sm"
+        role="alert"
+      >
+        <p className="font-semibold uppercase tracking-wide text-amber-200/80">
+          Warning
+        </p>
+        <p className="leading-relaxed text-amber-100/90">{warning}</p>
+      </div>
+    ) : null}
+  </li>
+);
+
+const ChipButton = ({ active, label, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+      active
+        ? 'border-emerald-400/70 bg-emerald-400/20 text-emerald-100 focus:ring-emerald-400'
+        : 'border-white/10 bg-white/5 text-slate-200 hover:border-emerald-400/60 hover:text-emerald-100 focus:ring-emerald-400'
+    }`}
+    aria-pressed={active}
+  >
+    {label}
+  </button>
+);
+
+const CommandField = ({
+  label,
+  value,
+  onChange,
+  disabled,
+  placeholder,
+  description,
+  type = 'text',
+}) => (
+  <label className="flex flex-col gap-1 text-xs text-slate-200/90">
+    <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-300/90">
+      {label}
+    </span>
+    <input
+      type={type}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      disabled={disabled}
+      placeholder={placeholder}
+      aria-label={label}
+      className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 disabled:cursor-not-allowed disabled:border-white/5 disabled:text-slate-400"
+    />
+    {description ? (
+      <span className="text-[11px] text-slate-400">{description}</span>
+    ) : null}
+  </label>
+);
+
+const ToggleField = ({ label, checked, onChange, disabled, description }) => (
+  <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-200/90">
+    <input
+      type="checkbox"
+      className="h-4 w-4 rounded border border-slate-500 bg-slate-800 text-emerald-400 focus:ring-emerald-400"
+      checked={checked}
+      onChange={(event) => onChange(event.target.checked)}
+      disabled={disabled}
+      aria-label={label}
+    />
+    <div className="flex flex-col">
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-300/90">
+        {label}
+      </span>
+      {description ? (
+        <span className="text-[11px] text-slate-400">{description}</span>
+      ) : null}
+    </div>
+  </label>
+);
+
+const DsniffLab = () => {
+  const [activeTab, setActiveTab] = useState('command');
+  const [labMode, setLabMode] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedProtocols, setSelectedProtocols] = useState([]);
+  const [statusMessage, setStatusMessage] = useState('');
+  const [urlsnarfOptions, setUrlsnarfOptions] = useState({
+    interface: 'eth0',
+    output: 'captures/urlsnarf.log',
+    verbose: true,
+    keepHeaders: true,
+  });
+  const [arpspoofOptions, setArpspoofOptions] = useState({
+    interface: 'eth0',
+    target: '192.168.0.10',
+    gateway: '192.168.0.1',
+    repeat: true,
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = window.localStorage.getItem('lab-mode');
+      setLabMode(stored === 'true');
+    } catch {
+      setLabMode(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!statusMessage) return;
+    const timer = window.setTimeout(() => setStatusMessage(''), 2400);
+    return () => window.clearTimeout(timer);
+  }, [statusMessage]);
+
+  const records = useMemo(() => parseFixtures(), []);
+
+  const protocols = useMemo(() => {
+    const set = new Set(records.map((record) => record.protocol));
+    return Array.from(set).sort();
+  }, [records]);
+
+  const filteredRecords = useMemo(() => {
+    const lowered = searchTerm.trim().toLowerCase();
+    const active = new Set(selectedProtocols);
+    return records.filter((record) => {
+      const matchesProtocol = active.size === 0 || active.has(record.protocol);
+      const matchesSearch =
+        !lowered ||
+        record.endpoint.toLowerCase().includes(lowered) ||
+        record.detail.toLowerCase().includes(lowered) ||
+        record.dataset.toLowerCase().includes(lowered);
+      return matchesProtocol && matchesSearch;
+    });
+  }, [records, searchTerm, selectedProtocols]);
+
+  const { remediation = [] } = pcapFixture;
+
+  const walkthroughSteps = useMemo(() => {
+    const firstHttp = records.find((record) => record.dataset === 'urlsnarf');
+    const credentialLeak = records.find((record) =>
+      record.dataset === 'pcap' && record.detail.toLowerCase().includes('password'),
+    );
+    return [
+      {
+        id: 'collect',
+        title: 'Collect cleartext requests',
+        description:
+          firstHttp?.detail ||
+          'urlsnarf fixtures highlight how HTTP requests appear during a capture session.',
+        severity: 'medium',
+        guidance:
+          'Confirm the capture interface aligns with the monitored segment before replaying commands.',
+      },
+      {
+        id: 'triage',
+        title: 'Triaging captured credentials',
+        description:
+          credentialLeak?.detail ||
+          'Review captured packets for parameters that include usernames or passwords.',
+        severity: 'high',
+        guidance: 'Mark credential findings for privileged escalation workflows.',
+        warning:
+          'These fixtures demonstrate a credential leak. Treat the workflow as sensitive and share only in lab environments.',
+      },
+      {
+        id: 'remediate',
+        title: 'Remediation playbook',
+        description:
+          remediation.length
+            ? 'Apply layered defenses from the recommended mitigation list.'
+            : 'Document findings and push follow-up controls such as HTTPS, MFA, and network monitoring.',
+        severity: 'low',
+        guidance:
+          remediation.length
+            ? remediation.join(' • ')
+            : 'Plan layered defenses: encryption, credential hygiene, and traffic monitoring.',
+      },
+    ];
+  }, [records, remediation]);
+
+  const copyToClipboard = (label, value) => {
+    if (!value) return;
+    if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+      setStatusMessage('Clipboard unavailable');
+      return;
+    }
+    navigator.clipboard
+      .writeText(value)
+      .then(() => setStatusMessage(`${label} copied to clipboard`))
+      .catch(() => setStatusMessage('Clipboard unavailable'));
+  };
+
+  const toggleProtocol = (protocol) => {
+    setSelectedProtocols((prev) => {
+      if (prev.includes(protocol)) {
+        return prev.filter((entry) => entry !== protocol);
+      }
+      return [...prev, protocol];
+    });
+  };
+
+  const enableLabMode = () => {
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem('lab-mode', 'true');
+      } catch {
+        /* ignore */
+      }
+    }
+    setLabMode(true);
+  };
+
+  const disableLabMode = () => {
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.removeItem('lab-mode');
+      } catch {
+        /* ignore */
+      }
+    }
+    setLabMode(false);
+  };
+
+  const urlsnarfCommand = useMemo(() => {
+    const segments = ['urlsnarf'];
+    if (urlsnarfOptions.interface) segments.push(`-i ${urlsnarfOptions.interface}`);
+    if (urlsnarfOptions.verbose) segments.push('-v');
+    if (urlsnarfOptions.keepHeaders) segments.push('-n');
+    if (urlsnarfOptions.output) segments.push(`-w ${urlsnarfOptions.output}`);
+    return segments.join(' ');
+  }, [urlsnarfOptions]);
+
+  const arpspoofCommand = useMemo(() => {
+    const segments = ['arpspoof'];
+    if (arpspoofOptions.interface) segments.push(`-i ${arpspoofOptions.interface}`);
+    if (arpspoofOptions.target) segments.push(`-t ${arpspoofOptions.target}`);
+    if (arpspoofOptions.gateway) segments.push(arpspoofOptions.gateway);
+    if (arpspoofOptions.repeat) segments.push('--repeat');
+    return segments.join(' ');
+  }, [arpspoofOptions]);
+
+  const jsonPreview = useMemo(() => highlightJson(filteredRecords), [filteredRecords]);
+
+  return (
+    <div className="flex h-full w-full overflow-auto bg-[color-mix(in_srgb,var(--kali-panel)_92%,#020617_95%)] text-white">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 lg:px-8 lg:py-8">
+        <header className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-300/80">
+            dsniff laboratory
+          </p>
+          <h1 className="text-3xl font-semibold tracking-tight text-white lg:text-4xl">
+            Traffic capture and credential triage
+          </h1>
+          <p className="max-w-3xl text-sm leading-relaxed text-slate-200/90">
+            Explore simulated urlsnarf and arpspoof captures in a safe lab. Use the command builders to rehearse workflows,
+            inspect captured datasets, and follow the guided remediation storyline—all sourced from offline fixtures.
+          </p>
+        </header>
 
         <div
-          className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 shadow-inner"
-          role="alert"
+          className={`flex flex-col gap-3 rounded-2xl border px-4 py-4 text-sm shadow-inner sm:flex-row sm:items-center sm:justify-between ${
+            labMode
+              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-100'
+              : 'border-amber-400/40 bg-amber-500/10 text-amber-100'
+          }`}
+          role="status"
         >
-          <div className="flex items-start gap-3">
-            <span className="mt-0.5 text-lg" aria-hidden>
-              ⚠️
-            </span>
-            <div className="space-y-1">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-amber-200/90">
-                Lab notice
-              </p>
-              <p className="leading-relaxed text-amber-100/90">
-                For lab use only – simulated traffic
-              </p>
-            </div>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em]">
+              Lab mode {labMode ? 'enabled' : 'off'}
+            </p>
+            <p className="text-sm leading-relaxed">
+              {labMode
+                ? 'Interactive builders are unlocked. All actions remain offline and scoped to demo data.'
+                : 'Enable lab mode to unlock interactive command builders while keeping every action simulated.'}
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={labMode ? disableLabMode : enableLabMode}
+              className="inline-flex items-center justify-center rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:border-white/40 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-emerald-400"
+            >
+              {labMode ? 'Disable lab mode' : 'Enable lab mode'}
+            </button>
+            <span className="hidden text-xs text-slate-200/80 sm:block">Offline fixtures preloaded</span>
           </div>
         </div>
 
-        <section className="space-y-3" data-testid="suite-tools">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
-            Suite tools
-          </h2>
-          <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/50 shadow-sm">
-            <table className="w-full table-fixed text-left text-xs md:text-sm">
-              <thead className="bg-slate-900/60 text-[11px] uppercase tracking-[0.25em] text-slate-400">
-                <tr>
-                  <th className="px-4 py-3">Tool</th>
-                  <th className="px-4 py-3">Description</th>
-                  <th className="px-4 py-3">Risk</th>
-                  <th className="px-4 py-3">Reference</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/70">
-                {suiteTools.map((t) => (
-                  <tr key={t.tool} className="transition hover:bg-slate-900/40">
-                    <td className="px-4 py-3 font-semibold text-emerald-300">{t.tool}</td>
-                    <td className="px-4 py-3 text-slate-200">{t.description}</td>
-                    <td className="px-4 py-3 text-rose-200/90">{t.risk}</td>
-                    <td className="px-4 py-3">
-                      <a
-                        href={t.reference}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-ubt-blue underline decoration-dotted underline-offset-4 hover:text-blue-200"
-                      >
-                        man page ↗
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="grid gap-4 md:grid-cols-2" data-testid="how-it-works">
-          <div className="rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">How it works</h2>
-            <svg
-              viewBox="0 0 200 80"
-              role="img"
-              aria-label="Attacker intercepting traffic between victim and server"
-              className="mt-4 h-32 w-full"
-            >
-              <title>dsniff flow</title>
-              <desc>Attacker positioned between victim and server capturing HTTP requests</desc>
-              <defs>
-                <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
-                  <polygon points="0 0,10 3.5,0 7" fill="#fbbf24" />
-                </marker>
-              </defs>
-              <rect x="10" y="25" width="50" height="30" fill="#1f2937" />
-              <text x="35" y="43" fontSize="10" fill="#fff" textAnchor="middle">
-                Victim
-              </text>
-              <rect x="140" y="25" width="50" height="30" fill="#1f2937" />
-              <text x="165" y="43" fontSize="10" fill="#fff" textAnchor="middle">
-                Server
-              </text>
-              <rect x="80" y="10" width="40" height="60" fill="#374151" />
-              <text x="100" y="43" fontSize="10" fill="#fff" textAnchor="middle">
-                Attacker
-              </text>
-              <line x1="60" y1="40" x2="80" y2="40" stroke="#fbbf24" strokeWidth="2" markerEnd="url(#arrow)" />
-              <line x1="120" y1="40" x2="140" y2="40" stroke="#fbbf24" strokeWidth="2" markerEnd="url(#arrow)" />
-            </svg>
-            <p className="mt-3 text-xs leading-relaxed text-slate-300">
-              Tools like <code>urlsnarf</code> sniff traffic and log requests for analysis.
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/60 p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold uppercase tracking-wide text-slate-300">Sample command</span>
-              <button
-                onClick={copySampleCommand}
-                className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-xs font-medium text-slate-100 transition hover:border-slate-500 hover:bg-slate-900"
-              >
-                Copy sample command
-              </button>
-            </div>
-            <div className="overflow-hidden rounded-lg border border-slate-800 bg-black/60">
-              <TerminalOutput text={`${sampleCommand}\n${sampleOutput}`} ariaLabel="sample command output" />
-            </div>
-          </div>
-        </section>
-
-        <section className="space-y-4" data-testid="pcap-demo">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
-            PCAP credential leakage demo
-          </h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-            {pcapSummary.map((pkt, i) => (
-              <SessionTile key={`tile-${i}`} session={pkt} onView={() => setSelectedPacket(i)} />
-            ))}
-          </div>
-          <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/50 shadow-sm">
-            <table className="w-full text-left text-xs md:text-sm">
-              <thead className="bg-slate-900/60 text-[11px] uppercase tracking-[0.25em] text-slate-400">
-                <tr>
-                  <th className="px-4 py-3">Src</th>
-                  <th className="px-4 py-3">Dst</th>
-                  <th className="px-4 py-3">Protocol</th>
-                  <th className="px-4 py-3">Info</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/70">
-                {pcapSummary.map((pkt, i) => (
-                  <tr
-                    key={i}
-                    tabIndex={0}
-                    onClick={() => setSelectedPacket(i)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') setSelectedPacket(i);
-                    }}
-                    className={`cursor-pointer transition ${
-                      selectedPacket === i
-                        ? 'bg-emerald-500/10'
-                        : 'hover:bg-slate-900/40'
-                    }`}
-                  >
-                    <td className="px-4 py-3 text-slate-100">{pkt.src}</td>
-                    <td className="px-4 py-3 text-slate-100">{pkt.dst}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-wide ${
-                        protocolAccents[pkt.protocol] || 'from-slate-600 via-slate-500 to-slate-600 text-slate-100'
-                      } bg-gradient-to-br`}
-                      >
-                        {pkt.protocol}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 font-mono text-xs leading-5 text-emerald-300">{pkt.info}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <button
-              onClick={copySelectedPacket}
-              disabled={selectedPacket === null}
-              className="inline-flex items-center gap-2 rounded-md border border-slate-700 bg-slate-900/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-100 transition hover:border-slate-500 hover:bg-slate-900 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-500"
-            >
-              Copy selected row
-            </button>
-            <div className="rounded-xl border border-slate-800/80 bg-slate-950/60 p-4">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Remediation</h3>
-              <ul className="mt-2 space-y-1 text-xs leading-relaxed text-slate-200">
-                {remediation.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        <section className="space-y-3" data-testid="domain-summary">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
-            Parsed credentials/URLs by domain
-          </h2>
-          <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/50 shadow-sm">
-            <table className="w-full text-left text-xs md:text-sm">
-              <thead className="bg-slate-900/60 text-[11px] uppercase tracking-[0.25em] text-slate-400">
-                <tr>
-                  <th className="px-4 py-3">Domain</th>
-                  <th className="px-4 py-3">URLs</th>
-                  <th className="px-4 py-3">Credentials</th>
-                  <th className="px-4 py-3">Risk</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/70">
-                {domainSummary.map((d) => (
-                  <tr key={d.domain} className="transition hover:bg-slate-900/40">
-                    <td className="px-4 py-3 text-slate-100">{d.domain}</td>
-                    <td className="px-4 py-3 text-emerald-300">
-                      {d.urls.length ? d.urls.join(', ') : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-slate-100">
-                      {d.credentials.length ? (
-                        <div className="flex flex-wrap gap-2">
-                          {d.credentials.map((c, i) => (
-                            <Credential cred={c} key={i} />
-                          ))}
-                        </div>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${
-                          riskBadgeStyles[d.risk] || 'bg-slate-800 text-slate-200'
-                        }`}
-                      >
-                        {d.risk}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="space-y-3" data-testid="capture-timeline">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Capture timeline</h2>
-          <ol className="space-y-2 text-xs">
-            {timeline.map((log, i) => (
-              <TimelineItem key={i} log={log} prefersReduced={prefersReduced} />
-            ))}
-          </ol>
-        </section>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex rounded-full border border-slate-700 bg-slate-900/60 p-1">
-            <button
-              className={`rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-wide transition ${
-                activeTab === 'urlsnarf'
-                  ? 'bg-slate-800 text-emerald-300'
-                  : 'text-slate-300 hover:text-emerald-200'
-              }`}
-              onClick={() => setActiveTab('urlsnarf')}
-            >
-              urlsnarf
-            </button>
-            <button
-              className={`rounded-full px-4 py-1 text-xs font-semibold uppercase tracking-wide transition ${
-                activeTab === 'arpspoof'
-                  ? 'bg-slate-800 text-emerald-300'
-                  : 'text-slate-300 hover:text-emerald-200'
-              }`}
-              onClick={() => setActiveTab('arpspoof')}
-            >
-              arpspoof
-            </button>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {Object.entries(protocolRisks).map(([proto, risk]) => (
-              <button
-                key={proto}
-                className={`inline-flex items-center rounded-full border border-slate-700 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide transition ${
-                  protocolFilter.includes(proto)
-                    ? 'bg-slate-800 text-emerald-300'
-                    : 'bg-slate-900/60 text-slate-300 hover:text-emerald-200'
-                } ${riskBadgeStyles[risk] || ''}`}
-                onClick={() =>
-                  setProtocolFilter((prev) =>
-                    prev.includes(proto)
-                      ? prev.filter((p) => p !== proto)
-                      : [...prev, proto]
-                  )
-                }
-              >
-                {proto}
-              </button>
-            ))}
-          </div>
+        <div className="flex flex-col gap-3 sm:flex-row" role="tablist" aria-label="dsniff views">
+          <TabButton
+            id="command"
+            label="Command builder"
+            description="Compose urlsnarf and arpspoof invocations"
+            isActive={activeTab === 'command'}
+            onSelect={setActiveTab}
+          />
+          <TabButton
+            id="captured"
+            label="Captured data"
+            description="Inspect fixture datasets with filters"
+            isActive={activeTab === 'captured'}
+            onSelect={setActiveTab}
+          />
+          <TabButton
+            id="interpret"
+            label="Interpretations"
+            description="Follow the guided remediation walkthrough"
+            isActive={activeTab === 'interpret'}
+            onSelect={setActiveTab}
+          />
         </div>
 
-        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <div>
-            <label
-              id="dsniff-search-label"
-              className="text-[11px] font-semibold uppercase tracking-wide text-slate-400"
-              htmlFor="dsniff-search"
-            >
-              Search logs
-            </label>
-            <input
-              id="dsniff-search"
-              type="search"
-              className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
-              placeholder="Filter captured lines"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              aria-labelledby="dsniff-search-label"
-            />
-          </div>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400" id="dsniff-advanced-filter">
-              Advanced filter
-            </p>
-            <div className="mt-1 flex flex-wrap gap-2" aria-labelledby="dsniff-advanced-filter">
-              <label className="sr-only" htmlFor="dsniff-filter-field">
-                Filter field
-              </label>
-              <select
-                id="dsniff-filter-field"
-                value={newField}
-                onChange={(e) => setNewField(e.target.value)}
-                className="rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1 text-sm text-white focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-xl backdrop-blur-xl" role="tabpanel">
+          {activeTab === 'command' ? (
+            <div className="space-y-6">
+              <div className="grid gap-6 lg:grid-cols-2">
+                <section className="space-y-4 rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <header className="space-y-1">
+                    <h2 className="text-lg font-semibold text-white">urlsnarf builder</h2>
+                    <p className="text-xs text-slate-300/90">
+                      Adjust capture options and copy the assembled command for lab rehearsals.
+                    </p>
+                  </header>
+                  <div className="grid gap-4">
+                    <CommandField
+                      label="Interface"
+                      value={urlsnarfOptions.interface}
+                      onChange={(value) =>
+                        setUrlsnarfOptions((prev) => ({ ...prev, interface: value }))
+                      }
+                      disabled={!labMode}
+                      placeholder="eth0"
+                      description="Network interface to monitor"
+                    />
+                    <CommandField
+                      label="Output file"
+                      value={urlsnarfOptions.output}
+                      onChange={(value) =>
+                        setUrlsnarfOptions((prev) => ({ ...prev, output: value }))
+                      }
+                      disabled={!labMode}
+                      placeholder="captures/urlsnarf.log"
+                      description="Logs remain inside the sandbox"
+                    />
+                    <ToggleField
+                      label="Verbose logging"
+                      checked={urlsnarfOptions.verbose}
+                      onChange={(checked) =>
+                        setUrlsnarfOptions((prev) => ({ ...prev, verbose: checked }))
+                      }
+                      disabled={!labMode}
+                      description="Include HTTP method and response code"
+                    />
+                    <ToggleField
+                      label="Preserve headers"
+                      checked={urlsnarfOptions.keepHeaders}
+                      onChange={(checked) =>
+                        setUrlsnarfOptions((prev) => ({ ...prev, keepHeaders: checked }))
+                      }
+                      disabled={!labMode}
+                      description="Show host and user-agent metadata"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">
+                        Built command
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard('urlsnarf command', urlsnarfCommand)}
+                        className="inline-flex items-center rounded-md border border-emerald-400/60 bg-emerald-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-100 transition hover:border-emerald-400 hover:bg-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <pre className="overflow-x-auto rounded-xl border border-white/10 bg-black/70 p-3 font-mono text-sm text-emerald-200">
+                      {urlsnarfCommand}
+                    </pre>
+                  </div>
+                </section>
+                <section className="space-y-4 rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <header className="space-y-1">
+                    <h2 className="text-lg font-semibold text-white">arpspoof builder</h2>
+                    <p className="text-xs text-slate-300/90">
+                      Configure the simulated man-in-the-middle posture. Settings persist locally in lab mode.
+                    </p>
+                  </header>
+                  <div className="grid gap-4">
+                    <CommandField
+                      label="Interface"
+                      value={arpspoofOptions.interface}
+                      onChange={(value) =>
+                        setArpspoofOptions((prev) => ({ ...prev, interface: value }))
+                      }
+                      disabled={!labMode}
+                      placeholder="eth0"
+                      description="Switch to the appropriate VLAN in live exercises"
+                    />
+                    <CommandField
+                      label="Target host"
+                      value={arpspoofOptions.target}
+                      onChange={(value) =>
+                        setArpspoofOptions((prev) => ({ ...prev, target: value }))
+                      }
+                      disabled={!labMode}
+                      placeholder="192.168.0.10"
+                      description="Victim IP to poison"
+                    />
+                    <CommandField
+                      label="Gateway"
+                      value={arpspoofOptions.gateway}
+                      onChange={(value) =>
+                        setArpspoofOptions((prev) => ({ ...prev, gateway: value }))
+                      }
+                      disabled={!labMode}
+                      placeholder="192.168.0.1"
+                      description="Network gateway observed in fixtures"
+                    />
+                    <ToggleField
+                      label="Repeat broadcasts"
+                      checked={arpspoofOptions.repeat}
+                      onChange={(checked) =>
+                        setArpspoofOptions((prev) => ({ ...prev, repeat: checked }))
+                      }
+                      disabled={!labMode}
+                      description="Send updates periodically to hold MITM position"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">
+                        Built command
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard('arpspoof command', arpspoofCommand)}
+                        className="inline-flex items-center rounded-md border border-emerald-400/60 bg-emerald-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-100 transition hover:border-emerald-400 hover:bg-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <pre className="overflow-x-auto rounded-xl border border-white/10 bg-black/70 p-3 font-mono text-sm text-emerald-200">
+                      {arpspoofCommand}
+                    </pre>
+                  </div>
+                </section>
+              </div>
+              <div
+                className="rounded-2xl border border-slate-400/40 bg-slate-400/10 p-4 text-xs text-slate-100"
+                role="alert"
               >
-                <option value="host">host</option>
-                <option value="protocol">protocol</option>
-              </select>
-              <label className="sr-only" htmlFor="dsniff-filter-value">
-                Filter value
-              </label>
-              <input
-                id="dsniff-filter-value"
-                className="flex-1 rounded-md border border-slate-700 bg-slate-950/60 px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
-                placeholder="Value"
-                value={newValue}
-                onChange={(e) => setNewValue(e.target.value)}
-                aria-labelledby="dsniff-advanced-filter"
-              />
-              <button
-                className="inline-flex items-center rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-200 transition hover:border-emerald-400/70 hover:bg-emerald-500/20"
-                onClick={addFilter}
-              >
-                Add filter
-              </button>
+                <p className="font-semibold uppercase tracking-wide text-slate-200">
+                  Simulation notice
+                </p>
+                <p className="leading-relaxed text-slate-100/90">
+                  Commands execute against fixtures only. The builders do not initiate any live network changes, keeping the
+                  experience safe for offline review and classroom walkthroughs.
+                </p>
+              </div>
             </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {filters.map((f, i) => (
-                <span
-                  key={i}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-[11px] text-slate-100"
+          ) : null}
+
+          {activeTab === 'captured' ? (
+            <div className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                <div className="space-y-3">
+                  <label className="flex flex-col gap-1 text-xs text-slate-200/90" htmlFor="dsniff-search">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-300/90">
+                      Search captures
+                    </span>
+                    <input
+                      id="dsniff-search"
+                      type="search"
+                      value={searchTerm}
+                      onChange={(event) => setSearchTerm(event.target.value)}
+                      placeholder="Search host, dataset, or detail"
+                      aria-label="Search captures"
+                      className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                    />
+                  </label>
+                  <div className="flex flex-wrap gap-2" role="group" aria-label="Protocol filters">
+                    <ChipButton
+                      label="All protocols"
+                      active={selectedProtocols.length === 0}
+                      onClick={() => setSelectedProtocols([])}
+                    />
+                    {protocols.map((protocol) => (
+                      <ChipButton
+                        key={protocol}
+                        label={protocol}
+                        active={selectedProtocols.includes(protocol)}
+                        onClick={() => toggleProtocol(protocol)}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div
+                  className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-xs text-slate-200/90"
+                  role="note"
                 >
-                  {`${f.field}:${f.value}`}
-                  <button
-                    className="rounded-full bg-slate-800/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-200 transition hover:text-rose-100"
-                    onClick={() => removeFilter(i)}
-                    aria-label={`Remove filter ${f.field}:${f.value}`}
+                  <p className="font-semibold uppercase tracking-wide text-slate-200/80">
+                    Offline fixture summary
+                  </p>
+                  <p className="mt-2 leading-relaxed text-slate-200/80">
+                    {records.length} records loaded across urlsnarf, arpspoof, and PCAP summaries. Filters run entirely in the
+                    browser for offline readiness.
+                  </p>
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/70">
+                <table className="min-w-full divide-y divide-white/10 text-left text-sm">
+                  <thead className="bg-black/60 text-[11px] uppercase tracking-[0.3em] text-slate-400">
+                    <tr>
+                      <th className="px-4 py-3">Dataset</th>
+                      <th className="px-4 py-3">Protocol</th>
+                      <th className="px-4 py-3">Endpoint</th>
+                      <th className="px-4 py-3">Details</th>
+                      <th className="px-4 py-3 text-right">Risk</th>
+                      <th className="px-4 py-3 text-right">Copy</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 text-xs">
+                    {filteredRecords.length ? (
+                      filteredRecords.map((record) => (
+                        <tr key={record.id} className="transition hover:bg-white/5">
+                          <td className="px-4 py-3 font-semibold uppercase tracking-wide text-slate-200/90">
+                            {record.dataset}
+                          </td>
+                          <td className="px-4 py-3 text-slate-200/80">{record.protocol}</td>
+                          <td className="px-4 py-3 font-mono text-[11px] text-emerald-200/90">
+                            {record.endpoint}
+                          </td>
+                          <td className="px-4 py-3 text-slate-200/80">{record.detail}</td>
+                          <td className="px-4 py-3 text-right">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                                severityBadgeStyles[record.severity] || severityBadgeStyles.medium
+                              }`}
+                              aria-label={`Risk ${severityLabels[record.severity] || record.severity}`}
+                            >
+                              {severityLabels[record.severity] || record.severity}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(`${record.dataset} record`, record.raw)}
+                              className="inline-flex items-center rounded-md border border-emerald-400/60 bg-emerald-500/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-100 transition hover:border-emerald-400 hover:bg-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+                            >
+                              Copy
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td className="px-4 py-8 text-center text-sm text-slate-400" colSpan={6}>
+                          No captures match the filters.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+                <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-200/80">
+                      JSON preview
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyToClipboard('filtered dataset', JSON.stringify(filteredRecords, null, 2))
+                      }
+                      className="inline-flex items-center rounded-md border border-emerald-400/60 bg-emerald-500/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-100 transition hover:border-emerald-400 hover:bg-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+                    >
+                      Copy JSON
+                    </button>
+                  </div>
+                  <pre
+                    className="mt-3 max-h-64 overflow-auto rounded-xl border border-white/10 bg-black/80 p-4 text-xs leading-relaxed text-slate-100"
                   >
-                    ✕
-                  </button>
-                </span>
-              ))}
+                    <code
+                      className="block whitespace-pre text-left"
+                      dangerouslySetInnerHTML={{ __html: jsonPreview }}
+                    />
+                  </pre>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-xs text-slate-200/90">
+                  <p className="font-semibold uppercase tracking-wide text-slate-200/80">
+                    Fixture highlights
+                  </p>
+                  <ul className="mt-3 space-y-2 list-disc pl-5">
+                    <li>Dataset sources never leave the browser, keeping the lab fully offline.</li>
+                    <li>Filter chips support protocol-focused drills for HTTP, HTTPS, and ARP traffic.</li>
+                    <li>Use the copy controls to drop snippets into runbooks or slide decks.</li>
+                  </ul>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : null}
+
+          {activeTab === 'interpret' ? (
+            <div className="space-y-6">
+              <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-200/90">
+                <p className="font-semibold uppercase tracking-[0.3em] text-slate-200/70">
+                  Guided walkthrough
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-slate-200/80">
+                  Step through the credential exposure narrative. Each milestone mirrors how defenders triage captures while the
+                  warnings reinforce safe handling guidelines for lab operators.
+                </p>
+              </div>
+              <ol className="space-y-4" role="list">
+                {walkthroughSteps.map((step, index) => (
+                  <Step key={step.id} index={index} {...step} />
+                ))}
+              </ol>
+              {remediation.length ? (
+                <div className="rounded-2xl border border-emerald-400/40 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+                  <p className="font-semibold uppercase tracking-wide text-emerald-200/80">
+                    Recommended remediation sequence
+                  </p>
+                  <ol className="mt-3 space-y-2 list-decimal pl-5">
+                    {remediation.map((item, index) => (
+                      <li key={index} className="leading-relaxed text-emerald-100/90">
+                        {item}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <div
-          className="h-56 overflow-auto rounded-2xl border border-slate-800/80 bg-black/70 text-emerald-300 shadow-inner"
+          className="sr-only"
           aria-live="polite"
-          role="log"
+          aria-atomic="true"
         >
-          {filteredLogs.length ? (
-            <table className="w-full text-left text-sm">
-              <thead className="sticky top-0 bg-black/80 text-[11px] uppercase tracking-[0.25em] text-slate-500">
-                <tr>
-                  <th className="px-3 py-2">Time</th>
-                  <th className="px-3 py-2">Protocol</th>
-                  <th className="px-3 py-2">Host</th>
-                  <th className="px-3 py-2">Details</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredLogs.map((log, i) => (
-                  <LogRow
-                    key={`${log.raw}-${i}`}
-                    log={log}
-                    prefersReduced={prefersReduced}
-                  />
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="flex h-full items-center justify-center text-sm text-slate-400">
-              No data
-            </div>
-          )}
+          {statusMessage}
         </div>
       </div>
     </div>
   );
 };
 
-export default Dsniff;
+export default DsniffLab;
 
-export const displayDsniff = (addFolder, openApp) => (
-  <Dsniff addFolder={addFolder} openApp={openApp} />
-);
+export const displayDsniff = (addFolder, openApp) => <DsniffLab addFolder={addFolder} openApp={openApp} />;
