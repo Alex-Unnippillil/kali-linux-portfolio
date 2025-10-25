@@ -99,6 +99,7 @@ const MimikatzOfflineApp = createDynamicApp('mimikatz/offline', 'Mimikatz Offlin
 const EttercapApp = createDynamicApp('ettercap', 'Ettercap');
 const ReaverApp = createDynamicApp('reaver', 'Reaver');
 const HydraApp = createDynamicApp('hydra', 'Hydra');
+const KaliContainerApp = createDynamicApp('kali-container', 'Kali Container');
 const JohnApp = createDynamicApp('john', 'John the Ripper');
 const NessusApp = createDynamicApp('nessus', 'Nessus');
 const NmapNSEApp = createDynamicApp('nmap-nse', 'Nmap NSE');
@@ -185,6 +186,7 @@ const displayMimikatzOffline = createDisplay(MimikatzOfflineApp);
 const displayEttercap = createDisplay(EttercapApp);
 const displayReaver = createDisplay(ReaverApp);
 const displayHydra = createDisplay(HydraApp);
+const displayKaliContainer = createDisplay(KaliContainerApp);
 const displayJohn = createDisplay(JohnApp);
 const displayNessus = createDisplay(NessusApp);
 const displayNmapNSE = createDisplay(NmapNSEApp);
@@ -1047,6 +1049,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayJohn,
+  },
+  {
+    id: 'kali-container',
+    title: 'Kali Container',
+    icon: '/themes/Yaru/apps/bash.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayKaliContainer,
   },
   {
     id: 'openvas',
