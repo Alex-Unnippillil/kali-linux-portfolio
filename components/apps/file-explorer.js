@@ -70,7 +70,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const fallbackInputRef = useRef(null);
 
   const hasWorker = typeof Worker !== 'undefined';
-  const {
+  const { 
     supported: opfsSupported,
     root,
     getDir,
@@ -93,10 +93,30 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setLocationError,
   } = useFileSystemNavigator();
   const [unsavedDir, setUnsavedDir] = useState(null);
+  const [shares, setShares] = useState({});
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
     setSupported(ok);
+  }, []);
+
+  useEffect(() => {
+    const load = () => {
+      try {
+        const data = JSON.parse(localStorage.getItem('shares') || '{}');
+        setShares(data);
+      } catch {
+        setShares({});
+      }
+    };
+    load();
+    const handler = () => load();
+    window.addEventListener('shares-updated', handler);
+    window.addEventListener('storage', handler);
+    return () => {
+      window.removeEventListener('shares-updated', handler);
+      window.removeEventListener('storage', handler);
+    };
   }, []);
 
   useEffect(() => {
@@ -290,20 +310,30 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           {recent.map((r, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30 flex items-center"
               onClick={() => openRecent(r)}
             >
               {r.name}
+              {shares[r.name] && (
+                <span className="ml-1 text-xs text-green-400" aria-label="Shared">
+                  LAN
+                </span>
+              )}
             </div>
           ))}
           <div className="p-2 font-bold">Directories</div>
           {dirs.map((d, i) => (
             <div
               key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30 flex items-center"
               onClick={() => openDir(d)}
             >
               {d.name}
+              {shares[d.name] && (
+                <span className="ml-1 text-xs text-green-400" aria-label="Shared">
+                  LAN
+                </span>
+              )}
             </div>
           ))}
           <div className="p-2 font-bold">Files</div>
