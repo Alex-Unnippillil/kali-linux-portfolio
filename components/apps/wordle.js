@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import usePersistentState from '../../hooks/usePersistentState';
 import {
   getWordOfTheDay,
   buildResultMosaic,
@@ -9,30 +10,6 @@ import {
 const todayKey = new Date().toISOString().split('T')[0];
 
 const dictionaries = wordleDictionaries;
-
-// Persist state to localStorage so that refreshes keep progress/history
-// and games reset each day.
-function usePersistentState(key, defaultValue) {
-  const [state, setState] = useState(defaultValue);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const stored = localStorage.getItem(key);
-      setState(stored ? JSON.parse(stored) : defaultValue);
-    } catch {
-      setState(defaultValue);
-    }
-  }, [key, defaultValue]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(key, JSON.stringify(state));
-    }
-  }, [key, state]);
-
-  return [state, setState];
-}
 
 // Evaluate a guess against the solution producing statuses for each letter.
 const evaluateGuess = (guess, answer) => {
