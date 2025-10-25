@@ -80,6 +80,21 @@ button:focus-visible {
     outline-offset: 2px;
 }
 
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    padding: 0.5rem 1rem;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    z-index: 1000;
+    text-decoration: underline;
+}
+
+.skip-link:focus {
+    top: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
         animation-duration: 0.01ms !important;

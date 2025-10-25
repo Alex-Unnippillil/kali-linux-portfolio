@@ -21,6 +21,8 @@ class MyDocument extends Document {
           <script nonce={nonce} src="/theme.js" />
         </Head>
         <body>
+          <a href="#desktop" className="skip-link">Skip to desktop canvas</a>
+          <a href="#dock" className="skip-link">Skip to dock</a>
           <Main />
           <NextScript nonce={nonce} />
         </body>
