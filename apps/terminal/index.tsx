@@ -129,6 +129,25 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     '#FFFFFF',
   ];
 
+  const ariaLiveRef = useRef<HTMLDivElement | null>(null);
+  const liveBufferRef = useRef<string[]>([]);
+  const liveTimerRef = useRef<number>();
+
+  const announce = useCallback((line: string) => {
+    liveBufferRef.current.push(line);
+    if (liveTimerRef.current) return;
+    liveTimerRef.current = window.setTimeout(() => {
+      if (ariaLiveRef.current) {
+        ariaLiveRef.current.textContent = liveBufferRef.current.join('\n');
+        setTimeout(() => {
+          if (ariaLiveRef.current) ariaLiveRef.current.textContent = '';
+        }, 1000);
+      }
+      liveBufferRef.current = [];
+      liveTimerRef.current = undefined;
+    }, 500);
+  }, []);
+
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
     if (!term || !term.buffer) return;
@@ -148,9 +167,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       if (opfsSupported && dirRef.current) {
         writeFile('history.txt', contentRef.current, dirRef.current);
       }
+      announce(text);
       updateOverflow();
     },
-    [opfsSupported, updateOverflow, writeFile],
+    [opfsSupported, updateOverflow, writeFile, announce],
   );
 
   contextRef.current.writeLine = writeLine;
@@ -530,6 +550,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               lineHeight: 1.4,
             }}
           />
+          <div ref={ariaLiveRef} aria-live="polite" className="sr-only" />
           {overflow.top && (
             <div className="pointer-events-none absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-slate-950/80" />
           )}
