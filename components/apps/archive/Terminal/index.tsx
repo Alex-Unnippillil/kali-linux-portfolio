@@ -9,6 +9,9 @@ import React, {
 
 const promptText = 'alex@kali:~$ ';
 
+const MIN_FONT_SIZE = 8;
+const MAX_FONT_SIZE = 32;
+
 const TerminalPaneInner = (
   { onSplit, onClose, onFocus }: { onSplit: () => void; onClose: () => void; onFocus: () => void },
   ref: any,
@@ -384,16 +387,26 @@ const TerminalPaneInner = (
           }
           if (domEvent.ctrlKey && (domEvent.key === '+' || domEvent.key === '=')) {
             domEvent.preventDefault();
-            fontSizeRef.current += 1;
-            term.options.fontSize = fontSizeRef.current;
-            fitAddon.fit();
+            if (fontSizeRef.current < MAX_FONT_SIZE) {
+              fontSizeRef.current = Math.min(
+                MAX_FONT_SIZE,
+                fontSizeRef.current + 1,
+              );
+              term.options.fontSize = fontSizeRef.current;
+              fitAddon.fit();
+            }
             return;
           }
           if (domEvent.ctrlKey && domEvent.key === '-') {
             domEvent.preventDefault();
-            fontSizeRef.current = Math.max(8, fontSizeRef.current - 1);
-            term.options.fontSize = fontSizeRef.current;
-            fitAddon.fit();
+            if (fontSizeRef.current > MIN_FONT_SIZE) {
+              fontSizeRef.current = Math.max(
+                MIN_FONT_SIZE,
+                fontSizeRef.current - 1,
+              );
+              term.options.fontSize = fontSizeRef.current;
+              fitAddon.fit();
+            }
             return;
           }
           if (domEvent.ctrlKey && domEvent.key === 'r') {
