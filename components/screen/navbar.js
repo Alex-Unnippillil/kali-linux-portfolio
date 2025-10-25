@@ -1,6 +1,6 @@
 import React, { PureComponent } from 'react';
 import Image from 'next/image';
-import Clock from '../util-components/clock';
+import Clock from './navbar/panel/Clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
