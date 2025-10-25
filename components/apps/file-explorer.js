@@ -64,6 +64,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const [supported, setSupported] = useState(true);
   const [currentFile, setCurrentFile] = useState(null);
   const [content, setContent] = useState('');
+  const [fileInfo, setFileInfo] = useState(null);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
@@ -165,13 +166,20 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const openFile = async (file) => {
     setCurrentFile(file);
     let text = '';
+    let fObj = null;
     if (opfsSupported) {
       const unsaved = await loadBuffer(file.name);
       if (unsaved !== null) text = unsaved;
     }
-    if (!text) {
-      const f = await file.handle.getFile();
-      text = await f.text();
+    try {
+      fObj = await file.handle.getFile();
+      if (!text) text = await fObj.text();
+      const perm = await file.handle.queryPermission({ mode: 'readwrite' });
+      const mime = fObj.type || '';
+      const type = mime.split('/')[1] || mime || 'unknown';
+      setFileInfo({ permissions: perm, type, mime, checksum: null });
+    } catch {
+      setFileInfo(null);
     }
     setContent(text);
   };
@@ -195,6 +203,34 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       await writable.write(content);
       await writable.close();
       if (opfsSupported) await removeBuffer(currentFile.name);
+    } catch {}
+  };
+
+  const computeChecksum = async () => {
+    if (!currentFile) return;
+    try {
+      const f = await currentFile.handle.getFile();
+      const buf = await f.arrayBuffer();
+      const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+      const hashArr = Array.from(new Uint8Array(hashBuf));
+      const checksum = hashArr
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+      setFileInfo((info) => ({ ...(info || {}), checksum }));
+    } catch {}
+  };
+
+  const setExecutableBit = async () => {
+    if (!currentFile) return;
+    try {
+      // Placeholder: the File System Access API currently does not allow
+      // modifying POSIX permissions. If a compatible API becomes available,
+      // attempt to use it; otherwise notify the user.
+      if (typeof currentFile.handle?.chmod === 'function') {
+        await currentFile.handle.chmod(0o755);
+      } else {
+        alert('Setting executable bit not supported in this environment');
+      }
     } catch {}
   };
 
@@ -228,7 +264,13 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+        <input
+          ref={fallbackInputRef}
+          type="file"
+          onChange={openFallback}
+          className="hidden"
+          aria-label="open file"
+        />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -243,6 +285,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
               value={content}
               onChange={onChange}
+              aria-label="file contents"
             />
             <button
               onClick={async () => {
@@ -319,15 +362,35 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+            <>
+              <div className="p-2 border-b border-gray-600 flex flex-wrap items-center gap-2">
+                <span>Permissions: {fileInfo?.permissions || 'unknown'}</span>
+                <span>Type: {fileInfo?.type || 'unknown'}</span>
+                <span>MIME: {fileInfo?.mime || 'unknown'}</span>
+                {fileInfo?.checksum && <span>Checksum: {fileInfo.checksum}</span>}
+                <button onClick={computeChecksum} className="px-2 py-0.5 bg-black bg-opacity-50 rounded">
+                  Checksum
+                </button>
+                <button onClick={setExecutableBit} className="px-2 py-0.5 bg-black bg-opacity-50 rounded">
+                  Set executable bit
+                </button>
+              </div>
+              <textarea
+                className="flex-1 p-2 bg-ub-cool-grey outline-none"
+                value={content}
+                onChange={onChange}
+                aria-label="file contents"
+              />
+            </>
           )}
           <div className="p-2 border-t border-gray-600">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Find in files"
-              className="px-1 py-0.5 text-black"
-            />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Find in files"
+                className="px-1 py-0.5 text-black"
+                aria-label="search"
+              />
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
             </button>
