@@ -19,6 +19,10 @@ A desktop-style portfolio built with Next.js and Tailwind that recreates the loo
 10. [Troubleshooting](#troubleshooting)
 11. [License](#license)
 
+## Security Policy
+
+Review [SECURITY.md](./SECURITY.md) for in-scope components, coordinated disclosure guidelines, and expected response timelines when reporting vulnerabilities.
+
 ---
 
 ## Legal Notice & Risk Overview
