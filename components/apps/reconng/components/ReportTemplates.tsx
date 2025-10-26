@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import usePersistentState from '../../../../hooks/usePersistentState';
 import defaultTemplates from '../../../../templates/export/report-templates.json';
+import { generateReport } from '../../../../modules/reporting/exporter';
 
 interface Finding {
   title: string;
@@ -55,13 +56,45 @@ export default function ReportTemplates() {
     [templateKey, templateData],
   );
 
-  const exportReport = () => {
-    const blob = new Blob([report], { type: 'text/plain' });
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exportedHtml, setExportedHtml] = useState<string | null>(null);
+
+  const exportReport = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      const result = await generateReport({
+        markdown: report,
+        metadata: {
+          title: templateData[templateKey].name,
+          template: templateKey,
+        },
+      });
+      setExportedHtml(result.html);
+      const pdfBlob = new Blob([result.pdf], { type: 'application/pdf' });
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      const anchor = document.createElement('a');
+      anchor.href = pdfUrl;
+      anchor.download = `${templateKey}-report.pdf`;
+      anchor.click();
+      URL.revokeObjectURL(pdfUrl);
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : 'Failed to export report');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const downloadHtml = () => {
+    if (!exportedHtml) return;
+    const blob = new Blob([exportedHtml], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${templateKey}-report.txt`;
-    a.click();
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${templateKey}-report.html`;
+    anchor.click();
     URL.revokeObjectURL(url);
   };
 
@@ -112,9 +145,18 @@ export default function ReportTemplates() {
         <button
           type="button"
           onClick={exportReport}
-          className="bg-blue-600 hover:bg-blue-500 px-2 py-1 rounded"
+          className="bg-blue-600 hover:bg-blue-500 px-2 py-1 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={isExporting}
         >
-          Export
+          {isExporting ? 'Exporting…' : 'Export PDF'}
+        </button>
+        <button
+          type="button"
+          onClick={downloadHtml}
+          disabled={!exportedHtml}
+          className="bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Download HTML
         </button>
         <button
           type="button"
@@ -124,6 +166,7 @@ export default function ReportTemplates() {
           Import/Share
         </button>
       </div>
+      {exportError && <p className="text-red-400 text-sm mb-2">{exportError}</p>}
       <pre className="flex-1 bg-black p-2 overflow-auto whitespace-pre-wrap text-sm">
         {report}
       </pre>
