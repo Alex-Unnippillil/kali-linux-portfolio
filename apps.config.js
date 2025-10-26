@@ -62,6 +62,7 @@ const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
 const AboutAlexApp = createDynamicApp('alex', 'About Alex');
 
+const PrintersApp = createDynamicApp('printers', 'Printers');
 const QrApp = createDynamicApp('qr', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
 const QuoteApp = createDynamicApp('quote', 'Quote');
@@ -153,6 +154,7 @@ const displayFileExplorer = createDisplay(FileExplorerApp);
 const displayRadare2 = createDisplay(Radare2App);
 const displayAboutAlex = createDisplay(AboutAlexApp);
 
+const displayPrinters = createDisplay(PrintersApp);
 const displayQr = createDisplay(QrApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
 const displayQuote = createDisplay(QuoteApp);
@@ -246,6 +248,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayQuote,
+  },
+  {
+    id: 'printers',
+    title: 'Printers',
+    icon: '/themes/Yaru/apps/printers.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPrinters,
   },
   {
     id: 'project-gallery',

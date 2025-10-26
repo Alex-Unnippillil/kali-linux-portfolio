@@ -1,0 +1,68 @@
+{
+  "drivers": [
+    {
+      "id": "hp-universal-ps",
+      "name": "HP Universal Print Driver (PostScript)",
+      "vendor": "HP Open Source",
+      "version": "7.1.2",
+      "models": [
+        "HP LaserJet Pro M404dn",
+        "HP LaserJet Enterprise M507dn"
+      ],
+      "features": [
+        "PostScript",
+        "Secure Pull Print",
+        "AirPrint",
+        "IPv6"
+      ],
+      "signedFor": [
+        "Debian 12",
+        "Ubuntu 22.04"
+      ],
+      "portal": "https://print.local/drivers/hp-universal-ps",
+      "releaseNotes": "Signed PPD with duplex defaults and SNMP status polling."
+    },
+    {
+      "id": "brother-brscript3",
+      "name": "Brother BR-Script3 Driver",
+      "vendor": "Brother Open Source",
+      "version": "5.0.0",
+      "models": [
+        "Brother HL-L8360CDW",
+        "Brother MFC-L8900CDW"
+      ],
+      "features": [
+        "Color",
+        "Secure Function Lock",
+        "SNMP alerts"
+      ],
+      "signedFor": [
+        "Debian 12",
+        "Ubuntu 22.04"
+      ],
+      "portal": "https://print.local/drivers/brother-brscript3",
+      "releaseNotes": "Includes BR-Script3 PPD and color calibration profile."
+    },
+    {
+      "id": "cups-generic-pdf",
+      "name": "Generic IPP Everywhere (CUPS)",
+      "vendor": "OpenPrinting",
+      "version": "2.5.1",
+      "models": [
+        "Generic Queue"
+      ],
+      "features": [
+        "Universal PPD",
+        "Test page template",
+        "Driverless IPP"
+      ],
+      "signedFor": [
+        "Debian 12",
+        "Ubuntu 22.04",
+        "Fedora 40"
+      ],
+      "portal": "https://print.local/drivers/cups-generic",
+      "releaseNotes": "Fallback driver for driverless IPP printers and plotters."
+    }
+  ]
+}

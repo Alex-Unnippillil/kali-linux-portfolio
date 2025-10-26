@@ -1,0 +1,56 @@
+{
+  "subnet": "10.0.5.0/24",
+  "portalBase": "https://print.local",
+  "printers": [
+    {
+      "id": "ops-laserjet",
+      "name": "Ops LaserJet",
+      "ip": "10.0.5.42",
+      "mac": "52:54:00:8a:11:42",
+      "model": "HP LaserJet Pro M404dn",
+      "location": "Operations floor (IDF closet)",
+      "status": "online",
+      "queueDepth": 2,
+      "capabilities": [
+        "Secure Pull Print",
+        "AirPrint",
+        "SNMP monitoring"
+      ],
+      "portal": "https://print.local/queues/ops-laserjet",
+      "recommendedDriver": "hp-universal-ps"
+    },
+    {
+      "id": "lab-color",
+      "name": "Lab ColorJet",
+      "ip": "10.0.5.88",
+      "mac": "52:54:00:8a:11:88",
+      "model": "Brother HL-L8360CDW",
+      "location": "Purple team lab",
+      "status": "online",
+      "queueDepth": 0,
+      "capabilities": [
+        "Color",
+        "Secure Function Lock",
+        "SNMP monitoring"
+      ],
+      "portal": "https://print.local/queues/lab-color",
+      "recommendedDriver": "brother-brscript3"
+    },
+    {
+      "id": "war-room",
+      "name": "War Room Plotter",
+      "ip": "10.0.5.121",
+      "mac": "52:54:00:8a:11:21",
+      "model": "Generic Queue",
+      "location": "War room",
+      "status": "standby",
+      "queueDepth": 1,
+      "capabilities": [
+        "Large format",
+        "IPP Everywhere"
+      ],
+      "portal": "https://print.local/queues/war-room",
+      "recommendedDriver": "cups-generic-pdf"
+    }
+  ]
+}
