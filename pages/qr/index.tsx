@@ -1,6 +1,7 @@
 "use client";
 
 import Image from 'next/image';
+import Head from 'next/head';
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { BrowserQRCodeReader, NotFoundException } from '@zxing/library';
@@ -188,14 +189,18 @@ const QRPage: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-8 p-4">
-      <div className="w-full max-w-md">
-        <Tabs
-          tabs={tabs}
-          active={active}
-          onChange={setActive}
-          className="mb-4 justify-center"
-        />
+    <>
+      <Head>
+        <link rel="canonical" href="https://unnippillil.com/qr" />
+      </Head>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-8 p-4">
+        <div className="w-full max-w-md">
+          <Tabs
+            tabs={tabs}
+            active={active}
+            onChange={setActive}
+            className="mb-4 justify-center"
+          />
         {active === 'text' && (
           <form onSubmit={generateQr} className="space-y-2">
             <label className="block text-sm" htmlFor="qr-text">
@@ -378,8 +383,9 @@ const QRPage: React.FC = () => {
             </div>
           </>
         )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
