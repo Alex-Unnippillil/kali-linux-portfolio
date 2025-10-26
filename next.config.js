@@ -159,6 +159,8 @@ const withPWA = withPWAInit({
       { url: '/apps/terminal', revision: null },
       { url: '/apps/checkers', revision: null },
       { url: '/offline.html', revision: null },
+      { url: '/offline.css', revision: null },
+      { url: '/offline.js', revision: null },
       { url: '/manifest.webmanifest', revision: null },
     ],
     runtimeCaching,
