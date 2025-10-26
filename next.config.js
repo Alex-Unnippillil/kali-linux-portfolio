@@ -169,6 +169,7 @@ const withPWA = withPWAInit({
 
 const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 const isProd = process.env.NODE_ENV === 'production';
+const enableSourceMaps = process.env.NEXT_ENABLE_SOURCE_MAPS === 'true';
 
 // Merge experiment settings and production optimizations into a single function.
 function configureWebpack(config, { isServer }) {
@@ -207,6 +208,7 @@ module.exports = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
     webpack: configureWebpack,
+    productionBrowserSourceMaps: enableSourceMaps,
 
     // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
     eslint: {
