@@ -1,33 +1,21 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import FormError from '../ui/FormError';
-
-interface SerialPort {
-  readonly readable: ReadableStream<Uint8Array> | null;
-  open(options: { baudRate: number }): Promise<void>;
-  close(): Promise<void>;
-}
-
-interface Serial {
-  requestPort(): Promise<SerialPort>;
-  addEventListener(type: 'disconnect', listener: (ev: Event & { readonly target: SerialPort }) => void): void;
-  removeEventListener(type: 'disconnect', listener: (ev: Event & { readonly target: SerialPort }) => void): void;
-}
-
-type NavigatorSerial = Navigator & { serial: Serial };
+import Receive from './serial-terminal/Receive';
+import type { NavigatorSerial, SerialPortLike } from './serial-terminal/types';
 
 const SerialTerminalApp: React.FC = () => {
   const supported = typeof navigator !== 'undefined' && 'serial' in navigator;
-  const [port, setPort] = useState<SerialPort | null>(null);
-  const [logs, setLogs] = useState('');
+  const [port, setPort] = useState<SerialPortLike | null>(null);
   const [error, setError] = useState('');
-  const readerRef = useRef<ReadableStreamDefaultReader<string> | null>(null);
+  const [status, setStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
 
   useEffect(() => {
     if (!supported) return;
-    const handleDisconnect = (e: Event & { readonly target: SerialPort }) => {
-      if (e.target === port) {
+    const handleDisconnect = (event: Event & { readonly target: SerialPortLike }) => {
+      if (event.target === port) {
         setError('Device disconnected.');
         setPort(null);
+        setStatus('disconnected');
       }
     };
     const nav = navigator as NavigatorSerial;
@@ -37,33 +25,15 @@ const SerialTerminalApp: React.FC = () => {
     };
   }, [supported, port]);
 
-  const readLoop = async (p: SerialPort) => {
-    const textDecoder = new TextDecoderStream();
-    const readableClosed = p.readable?.pipeTo(textDecoder.writable as WritableStream<Uint8Array>);
-    const reader = textDecoder.readable.getReader();
-    readerRef.current = reader;
-    try {
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        if (value) setLogs((l) => l + value);
-      }
-    } catch {
-      // ignored
-    } finally {
-      reader.releaseLock();
-      await readableClosed?.catch(() => {});
-    }
-  };
-
   const connect = async () => {
     if (!supported) return;
     setError('');
+    setStatus('connecting');
     try {
-      const p = await (navigator as NavigatorSerial).serial.requestPort();
-      await p.open({ baudRate: 9600 });
-      setPort(p);
-      readLoop(p);
+      const selectedPort = await (navigator as NavigatorSerial).serial.requestPort();
+      await selectedPort.open({ baudRate: 9600 });
+      setPort(selectedPort);
+      setStatus('connected');
     } catch (err) {
       const e = err as DOMException;
       if (e.name === 'NotAllowedError') {
@@ -73,53 +43,67 @@ const SerialTerminalApp: React.FC = () => {
       } else {
         setError(e.message || 'Failed to open serial port.');
       }
+      setStatus('disconnected');
     }
   };
 
   const disconnect = async () => {
+    if (!port) return;
+    setStatus('disconnected');
     try {
-      await readerRef.current?.cancel();
-      await port?.close();
+      await port.close();
     } catch {
-      // ignore
+      // ignore close errors
     } finally {
       setPort(null);
     }
   };
 
+  const statusLabel = status === 'connected' ? 'Connected' : status === 'connecting' ? 'Requesting access…' : 'Disconnected';
+
   return (
-    <div className="relative h-full w-full bg-black p-4 text-green-400 font-mono">
-      <div className="mb-4 flex gap-2">
-        {!port ? (
+    <div className="relative h-full w-full overflow-y-auto bg-slate-950 p-4 text-slate-100">
+      <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
+        <div className="flex items-center gap-2">
           <button
-            onClick={connect}
-            disabled={!supported}
-            className="rounded bg-gray-700 px-2 py-1 text-white disabled:opacity-50"
+            onClick={port ? disconnect : connect}
+            disabled={!supported || status === 'connecting'}
+            className="rounded border border-slate-600 bg-slate-800 px-3 py-1 font-semibold text-slate-100 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800/50 disabled:text-slate-400"
           >
-            Connect
+            {port ? 'Disconnect' : 'Connect'}
           </button>
-        ) : (
-          <button
-            onClick={disconnect}
-            className="rounded bg-red-700 px-2 py-1 text-white"
+          <span
+            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+              status === 'connected'
+                ? 'bg-emerald-500/20 text-emerald-200'
+                : status === 'connecting'
+                ? 'bg-amber-500/20 text-amber-200'
+                : 'bg-slate-700/50 text-slate-300'
+            }`}
           >
-            Disconnect
-          </button>
-        )}
+            {statusLabel}
+          </span>
+        </div>
+        <p className="text-xs text-slate-400">
+          Configure your device to stream binary data at 9600 baud, then start a capture session below.
+        </p>
       </div>
       {!supported && (
-        <p className="mb-2 text-sm text-yellow-400">
+        <p className="mb-3 text-xs text-yellow-300">
           Web Serial API not supported in this browser.
         </p>
       )}
-      {error && <FormError className="mb-2 mt-0">{error}</FormError>}
-      <pre className="h-[calc(100%-4rem)] overflow-auto whitespace-pre-wrap break-words">
-        {logs || 'No data'}
-      </pre>
+      {error && <FormError className="mb-4 mt-0">{error}</FormError>}
+      {!port && (
+        <div className="mb-4 rounded border border-dashed border-slate-700 bg-slate-900/60 p-6 text-center text-xs text-slate-400">
+          Connect to a serial device to begin monitoring incoming data. Once connected you can manually start recording and
+          save detected files.
+        </div>
+      )}
+      <Receive port={port} />
     </div>
   );
 };
 
 export default SerialTerminalApp;
 export const displaySerialTerminal = () => <SerialTerminalApp />;
-
