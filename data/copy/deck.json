@@ -1,0 +1,12 @@
+[
+  {
+    "id": "desktop-hero",
+    "tagline": "Spin up a Kali desktop in your browser.",
+    "secondary": "Launch simulated tools, games, and workflows—no installs or external targets required."
+  },
+  {
+    "id": "apps-grid",
+    "tagline": "Curated apps for red teaming practice.",
+    "secondary": "Mix offensive tooling demos with utilities and retro games to keep sessions approachable."
+  }
+]
