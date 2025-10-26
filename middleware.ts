@@ -35,7 +35,7 @@ export function middleware(req: NextRequest) {
     "connect-src 'self' https://cdn.syndication.twimg.com https://*.twitter.com https://embed.x.com https://stackblitz.com",
     "frame-src 'self' https://vercel.live https://stackblitz.com https://ghbtns.com https://platform.twitter.com https://embed.x.com https://open.spotify.com https://todoist.com https://www.youtube.com https://www.youtube-nocookie.com",
     "frame-ancestors 'self'",
-    "object-src 'none'",
+    "object-src 'self'",
     "base-uri 'self'",
     "form-action 'self'"
   ].join('; ');

@@ -10,8 +10,8 @@ const ContentSecurityPolicy = [
   "base-uri 'self'",
   // Restrict form submissions to same origin
   "form-action 'self'",
-  // Disallow all plugins and other embedded objects
-  "object-src 'none'",
+  // Allow same-origin PDF embedding for the resume while blocking external plugins
+  "object-src 'self'",
   // Allow external images and data URIs for badges/icons
   "img-src 'self' https: data:",
   // Allow inline styles
