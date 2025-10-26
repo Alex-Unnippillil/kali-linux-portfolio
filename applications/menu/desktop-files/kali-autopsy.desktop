@@ -1,0 +1,16 @@
+[Desktop Entry]
+Name=Autopsy (Simulated)
+GenericName=Digital Forensics Suite
+Comment=Simulated Autopsy case explorer with walk-through datasets
+Exec=/usr/bin/env xdg-open https://unnippillil.com/apps/autopsy
+Icon=kali-autopsy
+StartupNotify=false
+Terminal=false
+Type=Application
+Categories=kali-sleuth-kit-suite;kali-digital-forensics;kali-forensics;kali-collection;
+Keywords=forensics;autopsy;sleuth kit;case manager;
+X-Kali-Package=autopsy
+X-Kali-Simulation=true
+X-Portfolio-App=autopsy
+
+

@@ -1,0 +1,83 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: kali-linux-portfolio\n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Usual Applications"
+msgstr "Übliche Anwendungen"
+
+msgid "01 - Reconnaissance"
+msgstr "01 - Erkennung"
+
+msgid "• Identity Information"
+msgstr "• Identitätsinformationen"
+
+msgid "• Network Information"
+msgstr "• Netzwerk-Informationen"
+
+msgid "• Web Scanning"
+msgstr "• Web-Scannen"
+
+msgid "• Web Vulnerability Scanning"
+msgstr "• Web-Schwachstellen-Scannen"
+
+msgid "• WiFi"
+msgstr "• WiFi"
+
+msgid "03 - Initial Access"
+msgstr "03 - Erster Zugriff"
+
+msgid "04 - Execution"
+msgstr "04 - Ausführung"
+
+msgid "06 - Privilege Escalation"
+msgstr "06 - Privilegien Erweiterung"
+
+msgid "08 - Credential Access"
+msgstr "08 - Zugriff auf Zugangsdaten"
+
+msgid "• OS Credential Dumping"
+msgstr "• Betriebssystem-Zugangsdatenextraktion"
+
+msgid "• Brute Force"
+msgstr "• Brute-Force-Angriff"
+
+msgid "• Password Cracking"
+msgstr "• Passwort-Knacken"
+
+msgid "• Pass-the-Hash"
+msgstr "• Pass-the-Hash"
+
+msgid "09 - Discovery"
+msgstr "09 - Entdeckung"
+
+msgid "• Network Service Discovery"
+msgstr "• Netzwerkdienst-Erkennung"
+
+msgid "• Network Sniffing"
+msgstr "• Netzwerk-Sniffing"
+
+msgid "11 - Collection"
+msgstr "11 - Sammlung"
+
+msgid "12 - Command and Control"
+msgstr "12 - Befehl und Kontrolle"
+
+msgid "• Non-Application Layer Protocol"
+msgstr "• Nicht-Anwendungsschicht-Protokoll"
+
+msgid "13 - Exfiltration"
+msgstr "13 - Exfiltration"
+
+msgid "15 - Forensics"
+msgstr "15 - Forensik"
+
+msgid "• Digital Forensics"
+msgstr "• Digitale Forensik"
+
+msgid "• Sleuth Kit Suite"
+msgstr "• Forensik-Werkzeugsammlungen"
+

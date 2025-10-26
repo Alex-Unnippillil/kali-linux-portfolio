@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=Metasploit Framework (Simulated)
+GenericName=Exploit Development Platform
+Comment=Metasploit simulation with safe modules and reporting
+Exec=/usr/bin/env xdg-open https://unnippillil.com/apps/metasploit
+Icon=kali-metasploit-framework
+StartupNotify=false
+Terminal=false
+Type=Application
+Categories=kali-initial-access;kali-execution;kali-privilege-escalation;kali-command-and-control;
+Keywords=metasploit;msfconsole;exploit dev;payloads;
+X-Kali-Package=metasploit-framework
+X-Kali-Simulation=true
+X-Portfolio-App=metasploit
+

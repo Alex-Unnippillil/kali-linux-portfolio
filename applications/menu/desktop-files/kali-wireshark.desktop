@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=Wireshark (Simulated)
+GenericName=Network Protocol Analyzer
+Comment=Packet capture simulations showcasing Wireshark workflows
+Exec=/usr/bin/env xdg-open https://unnippillil.com/apps/wireshark
+Icon=org.wireshark.Wireshark
+StartupNotify=false
+Terminal=false
+Type=Application
+Categories=kali-network-sniffing;kali-discovery;
+Keywords=packet capture;wireshark;sniffer;pcap;
+X-Kali-Package=wireshark
+X-Kali-Simulation=true
+X-Portfolio-App=wireshark
+

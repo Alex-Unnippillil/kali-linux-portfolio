@@ -1,0 +1,18 @@
+{
+  "kali-autopsy": ["autopsy", "sleuth kit", "case manager"],
+  "kali-evidence-vault": ["evidence", "chain of custody", "vault"],
+  "kali-files": ["file manager", "explorer", "browser"],
+  "kali-hydra": ["hydra", "brute force", "login"],
+  "kali-john": ["john the ripper", "hash", "password"],
+  "kali-metasploit-framework": ["metasploit", "msfconsole", "payload"],
+  "kali-mimikatz": ["mimikatz", "pass the hash", "credential"],
+  "kali-nikto": ["nikto", "web scanner", "http"],
+  "kali-nmap": ["nmap", "network mapper", "port"],
+  "kali-netcat": ["netcat", "reverse shell", "tunnel"],
+  "kali-reaver": ["reaver", "wps", "wifi"],
+  "kali-recon-ng": ["recon-ng", "osint", "recon"],
+  "kali-terminal": ["terminal", "shell", "command"],
+  "kali-theharvester": ["theharvester", "email", "osint"],
+  "kali-volatility": ["volatility", "memory", "ram"],
+  "kali-wireshark": ["wireshark", "packet", "sniffer"]
+}
