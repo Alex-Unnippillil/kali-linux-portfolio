@@ -1,10 +1,93 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from 'react';
 import data from './data.json';
 import ArpLab from './components/ArpLab';
 import vendors from '../kismet/oui.json';
 
 const { arpTable, flows } = data;
 const attackerMac = 'aa:aa:aa:aa:aa:aa';
+
+const DEFAULT_GATEWAY_IP = arpTable[0]?.ip ?? '192.168.0.1';
+const DEFAULT_VICTIM_IP = arpTable[1]?.ip ?? '192.168.0.2';
+export const ARP_SIMULATION_TICK_MS = 1600;
+
+const clampIndex = (value, length) => {
+  if (length <= 0) return 0;
+  return Math.max(0, Math.min(length - 1, value));
+};
+
+const deterministicMacFromIp = (ip) => {
+  const ipv4Parts = ip
+    .split('.')
+    .map((part) => Number.parseInt(part, 10))
+    .filter((part) => Number.isFinite(part) && part >= 0 && part <= 255);
+  let bytes = ipv4Parts.length >= 4 ? ipv4Parts : [];
+  if (!bytes.length) {
+    bytes = Array.from(ip).map((char, index) =>
+      (char.charCodeAt(0) + index * 37) % 256
+    );
+  }
+  while (bytes.length < 6) {
+    bytes.push((bytes.length * 37 + 97) % 256);
+  }
+  return bytes
+    .slice(0, 6)
+    .map((value) => value.toString(16).padStart(2, '0'))
+    .join(':');
+};
+
+const vendorLookup = (mac, fallbackLabel = 'Unknown') => {
+  const prefix = mac.slice(0, 8).toUpperCase();
+  return vendors[prefix] || fallbackLabel;
+};
+
+const makeEntry = (ip, mac, fallbackLabel = 'Unknown') => ({
+  ip,
+  mac,
+  vendor: vendorLookup(mac, fallbackLabel),
+});
+
+const cloneEntries = (entries) => entries.map((entry) => ({ ...entry }));
+
+const simulationReducer = (state, action) => {
+  switch (action.type) {
+    case 'SCRUB_TO':
+      return {
+        index: clampIndex(action.index, action.length),
+        playing: false,
+      };
+    case 'STEP':
+      return {
+        index: clampIndex(state.index + action.delta, action.length),
+        playing: false,
+      };
+    case 'PLAY':
+      return { ...state, playing: true };
+    case 'PAUSE':
+      return { ...state, playing: false };
+    case 'AUTO_ADVANCE': {
+      if (state.index >= action.length - 1) {
+        return {
+          index: clampIndex(action.length - 1, action.length),
+          playing: false,
+        };
+      }
+      return { index: state.index + 1, playing: true };
+    }
+    case 'PLAY_FROM_START':
+      return { index: 0, playing: true };
+    default:
+      return state;
+  }
+};
+
+const SIMULATION_INITIAL_STATE = { index: 0, playing: false };
 
 const filterExamples = {
   'Block HTTP': "if (ip.proto == 'TCP' && tcp.port == 80) {\n  drop();\n}",
@@ -44,15 +127,128 @@ const EttercapApp = () => {
   });
   const canvasRef = useRef(null);
   const hostPositions = useRef({});
-  const arpEntries = useMemo(
-    () =>
-      arpTable.map(({ ip, mac }) => ({
-        ip,
-        mac,
-        vendor: vendors[mac.slice(0, 8).toUpperCase()] || 'Unknown',
-      })),
-    []
+  const [simulation, dispatchSimulation] = useReducer(
+    simulationReducer,
+    SIMULATION_INITIAL_STATE
   );
+  const victimIp = target1 || DEFAULT_VICTIM_IP;
+  const gatewayIp = target2 || DEFAULT_GATEWAY_IP;
+
+  const baselineEntries = useMemo(() => {
+    const seen = new Map();
+    arpTable.forEach(({ ip, mac }) => {
+      seen.set(ip, makeEntry(ip, mac));
+    });
+    if (!seen.has(victimIp)) {
+      const mac = deterministicMacFromIp(victimIp);
+      seen.set(victimIp, makeEntry(victimIp, mac, 'Simulated Device'));
+    }
+    if (!seen.has(gatewayIp)) {
+      const mac = deterministicMacFromIp(gatewayIp);
+      seen.set(gatewayIp, makeEntry(gatewayIp, mac, 'Simulated Device'));
+    }
+    return Array.from(seen.values()).sort((a, b) => a.ip.localeCompare(b.ip));
+  }, [victimIp, gatewayIp]);
+
+  const timeline = useMemo(() => {
+    if (!baselineEntries.length) return [];
+    const attackerVendor = vendorLookup(attackerMac, 'Attacker Device (spoofed)');
+    const baseline = cloneEntries(baselineEntries);
+    const victimPoisoned = cloneEntries(baselineEntries).map((entry) =>
+      entry.ip === victimIp
+        ? { ...entry, mac: attackerMac, vendor: attackerVendor }
+        : entry
+    );
+    const gatewayPoisoned = cloneEntries(victimPoisoned).map((entry) =>
+      entry.ip === gatewayIp
+        ? { ...entry, mac: attackerMac, vendor: attackerVendor }
+        : entry
+    );
+    const restored = cloneEntries(baselineEntries);
+
+    return [
+      {
+        id: 'baseline',
+        label: 'Normal discovery',
+        caption: `Hosts learn each other normally, leaving ${victimIp} and ${gatewayIp} mapped to legitimate vendors.`,
+        entries: baseline,
+      },
+      {
+        id: 'poison-victim',
+        label: 'Victim poisoned',
+        caption: `A spoofed reply convinces ${victimIp} that ${gatewayIp} is at ${attackerMac}, diverting outbound traffic to the attacker.`,
+        entries: victimPoisoned,
+      },
+      {
+        id: 'poison-gateway',
+        label: 'Gateway poisoned',
+        caption: `${gatewayIp} updates its cache to the attacker MAC as well, giving the intruder a full man-in-the-middle position.`,
+        entries: gatewayPoisoned,
+      },
+      {
+        id: 'restored',
+        label: 'Cache restored',
+        caption: `Flushing the ARP cache reverts both hosts to their original vendors, removing the attacker from the path.`,
+        entries: restored,
+      },
+    ];
+  }, [baselineEntries, gatewayIp, victimIp]);
+
+  const activeFrame =
+    timeline[simulation.index] ?? timeline[0] ?? {
+      id: 'empty',
+      label: '',
+      caption: '',
+      entries: [],
+    };
+  const stageCount = timeline.length;
+  const atStart = simulation.index === 0;
+  const atEnd = stageCount > 0 && simulation.index >= stageCount - 1;
+
+  const handlePlayToggle = () => {
+    if (!stageCount) return;
+    if (simulation.playing) {
+      dispatchSimulation({ type: 'PAUSE' });
+      return;
+    }
+    if (simulation.index >= stageCount - 1) {
+      dispatchSimulation({ type: 'PLAY_FROM_START' });
+    } else {
+      dispatchSimulation({ type: 'PLAY' });
+    }
+  };
+
+  const handleStep = (delta) => {
+    if (!stageCount) return;
+    dispatchSimulation({ type: 'STEP', delta, length: stageCount });
+  };
+
+  const handleScrub = (value) => {
+    dispatchSimulation({
+      type: 'SCRUB_TO',
+      index: clampIndex(value, stageCount),
+      length: stageCount,
+    });
+  };
+
+  useEffect(() => {
+    if (!simulation.playing || stageCount <= 1) return undefined;
+    const id = setInterval(() => {
+      dispatchSimulation({ type: 'AUTO_ADVANCE', length: stageCount });
+    }, ARP_SIMULATION_TICK_MS);
+    return () => clearInterval(id);
+  }, [simulation.playing, stageCount]);
+
+  useEffect(() => {
+    if (!stageCount) return;
+    if (simulation.index > stageCount - 1) {
+      dispatchSimulation({
+        type: 'SCRUB_TO',
+        index: stageCount - 1,
+        length: stageCount,
+      });
+    }
+  }, [simulation.index, stageCount]);
 
   // storyboard state for interactive canvas
   const boardRef = useRef(null);
@@ -448,30 +644,32 @@ const EttercapApp = () => {
     };
   }, [running, target1, target2]);
 
-const startSpoof = () => {
-  if (!target1 || !target2) return;
-  setMac1(randomMac());
-  setMac2(randomMac());
-  setStatus(`Simulating spoofed ARP replies to ${target1} and ${target2}`);
-  setLogs([]);
-  setRunning(true);
-  logIntervalRef.current = setInterval(() => {
-    setLogs((prev) => {
-      const entries = [
-        `Simulated ARP reply ${target1} is-at ${attackerMac}`,
-        `Simulated ARP reply ${target2} is-at ${attackerMac}`,
-      ];
-      return [...prev, ...entries].slice(-50);
-    });
-  }, 1000);
-};
+  const startSpoof = () => {
+    if (!target1 || !target2) return;
+    dispatchSimulation({ type: 'PLAY_FROM_START' });
+    setMac1(randomMac());
+    setMac2(randomMac());
+    setStatus(`Simulating spoofed ARP replies to ${target1} and ${target2}`);
+    setLogs([]);
+    setRunning(true);
+    logIntervalRef.current = setInterval(() => {
+      setLogs((prev) => {
+        const entries = [
+          `Simulated ARP reply ${target1} is-at ${attackerMac}`,
+          `Simulated ARP reply ${target2} is-at ${attackerMac}`,
+        ];
+        return [...prev, ...entries].slice(-50);
+      });
+    }, 1000);
+  };
 
-const stopSpoof = () => {
-  cancelAnimationFrame(animationRef.current);
-  clearInterval(logIntervalRef.current);
-  setRunning(false);
-  setStatus('ARP spoofing simulation stopped');
-};
+  const stopSpoof = () => {
+    cancelAnimationFrame(animationRef.current);
+    clearInterval(logIntervalRef.current);
+    setRunning(false);
+    dispatchSimulation({ type: 'PAUSE' });
+    setStatus('ARP spoofing simulation stopped');
+  };
 
   return (
     <div
@@ -650,8 +848,79 @@ const stopSpoof = () => {
       </div>
       <div className="mt-4">
         <h2 className="font-semibold">ARP Table</h2>
-        <table className="w-full text-left border-collapse mt-2">
-          <caption className="sr-only">Mock ARP entries</caption>
+        <div className="mt-2 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleStep(-1)}
+              className="px-2 py-1 rounded border border-gray-700 bg-gray-800 text-xs font-medium hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={atStart || stageCount <= 1}
+              data-testid="arp-prev"
+            >
+              ◀ Prev
+            </button>
+            <button
+              type="button"
+              onClick={handlePlayToggle}
+              className="px-3 py-1 rounded bg-yellow-500 text-black text-xs font-semibold hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-300 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={stageCount <= 1}
+              data-testid="arp-play-toggle"
+            >
+              {simulation.playing ? 'Pause' : 'Play'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleStep(1)}
+              className="px-2 py-1 rounded border border-gray-700 bg-gray-800 text-xs font-medium hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={atEnd || stageCount <= 1}
+              data-testid="arp-next"
+            >
+              Next ▶
+            </button>
+          </div>
+          <div className="flex flex-1 items-center gap-3">
+            <input
+              type="range"
+              min="0"
+              max={Math.max(stageCount - 1, 0)}
+              step="1"
+              value={stageCount ? simulation.index : 0}
+              onChange={(e) => handleScrub(Number(e.target.value))}
+              className="flex-1 accent-yellow-400"
+              aria-label="ARP table timeline scrubber"
+              aria-valuemin={0}
+              aria-valuemax={Math.max(stageCount - 1, 0)}
+              aria-valuenow={stageCount ? simulation.index : 0}
+              aria-valuetext={stageCount ? activeFrame.label : 'No timeline frames'}
+              disabled={!stageCount}
+              data-testid="arp-scrubber"
+            />
+            <span className="text-xs font-mono text-gray-300">
+              {stageCount ? `${simulation.index + 1}/${stageCount}` : '0/0'}
+            </span>
+          </div>
+        </div>
+        <div
+          className="mt-2 rounded border border-gray-700 bg-gray-800 p-3 transition-colors"
+          aria-live="polite"
+        >
+          {stageCount ? (
+            <>
+              <div className="text-sm font-semibold text-yellow-300">
+                {`Step ${simulation.index + 1}: ${activeFrame.label}`}
+              </div>
+              <p className="mt-1 text-xs text-gray-300">{activeFrame.caption}</p>
+            </>
+          ) : (
+            <p className="text-xs text-gray-300">No ARP data available.</p>
+          )}
+        </div>
+        <table className="w-full text-left border-collapse mt-3">
+          <caption className="sr-only">
+            {stageCount
+              ? `ARP entries at step ${simulation.index + 1} - ${activeFrame.label}`
+              : 'ARP entries'}
+          </caption>
           <thead>
             <tr>
               <th scope="col" className="border-b px-2 py-1">
@@ -665,14 +934,40 @@ const stopSpoof = () => {
               </th>
             </tr>
           </thead>
-          <tbody>
-            {arpEntries.map(({ ip, mac, vendor }) => (
-              <tr key={ip}>
-                <td className="px-2 py-1 font-mono">{ip}</td>
-                <td className="px-2 py-1 font-mono">{mac}</td>
-                <td className="px-2 py-1">{vendor}</td>
+          <tbody className="transition-colors">
+            {activeFrame.entries.length ? (
+              activeFrame.entries.map(({ ip, mac, vendor }) => {
+                const spoofed = mac === attackerMac;
+                return (
+                  <tr
+                    key={ip}
+                    className={`transition-colors ${
+                      spoofed ? 'bg-yellow-900/30' : ''
+                    }`}
+                  >
+                    <td className="px-2 py-1 font-mono">{ip}</td>
+                    <td className="px-2 py-1 font-mono">{mac}</td>
+                    <td className="px-2 py-1">
+                      {vendor}
+                      {spoofed ? (
+                        <span className="ml-2 text-[0.6rem] uppercase tracking-wide text-yellow-300">
+                          spoofed
+                        </span>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td
+                  colSpan={3}
+                  className="px-2 py-3 text-center text-sm text-gray-400"
+                >
+                  No ARP entries available.
+                </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
