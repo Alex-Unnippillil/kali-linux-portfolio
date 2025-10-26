@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 
@@ -24,6 +24,22 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
+  const itemCount = items.length;
+
+  const closeMenu = useCallback(
+    (options?: { focusTarget?: boolean }) => {
+      setOpen(false);
+
+      if (options?.focusTarget) {
+        const trigger = targetRef.current;
+
+        if (trigger) {
+          setTimeout(() => trigger.focus(), 0);
+        }
+      }
+    },
+    [targetRef]
+  );
 
   useFocusTrap(menuRef as React.RefObject<HTMLElement>, open);
   useRovingTabIndex(
@@ -31,6 +47,29 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
     open,
     'vertical',
   );
+
+  useEffect(() => {
+    if (!open) return;
+
+    const menuNode = menuRef.current;
+    if (!menuNode) return;
+
+    const menuItems = Array.from(
+      menuNode.querySelectorAll<HTMLElement>('[role="menuitem"]')
+    );
+
+    if (menuItems.length === 0) return;
+
+    menuItems.forEach((item, index) => {
+      item.tabIndex = index === 0 ? 0 : -1;
+    });
+
+    const timer = setTimeout(() => {
+      menuItems[0].focus();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [open, itemCount]);
 
   useEffect(() => {
     const node = targetRef.current;
@@ -73,13 +112,14 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
 
     const handleClick = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpen(false);
+        closeMenu();
       }
     };
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setOpen(false);
+        e.preventDefault();
+        closeMenu({ focusTarget: true });
       }
     };
 
@@ -90,7 +130,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
       document.removeEventListener('mousedown', handleClick);
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [open]);
+  }, [open, closeMenu]);
 
   return (
     <div
@@ -108,7 +148,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
           tabIndex={-1}
           onClick={() => {
             item.onSelect();
-            setOpen(false);
+            closeMenu();
           }}
           className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
         >
