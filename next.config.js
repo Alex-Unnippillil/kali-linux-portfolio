@@ -59,6 +59,11 @@ const securityHeaders = [
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
+  openAnalyzer: false,
+  analyzerMode: 'static',
+  reportFilename: 'analyze/[name].html',
+  generateStatsFile: true,
+  statsFilename: 'analyze/[name]-stats.json',
 });
 
 function sanitizeBuildId(rawId) {
