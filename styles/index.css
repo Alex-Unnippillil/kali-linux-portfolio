@@ -209,6 +209,7 @@ input[type=range].ubuntu-slider:focus-visible::-webkit-slider-thumb {
 
 .windowMainScreen {
     container-type: inline-size;
+    scrollbar-color: var(--color-border) transparent;
 }
 
 .windowMainScreen::-webkit-scrollbar-track {
