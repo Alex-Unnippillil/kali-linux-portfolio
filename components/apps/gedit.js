@@ -5,6 +5,8 @@ import emailjs from '@emailjs/browser';
 import ProgressBar from '../ui/ProgressBar';
 import { createDisplay } from '../../utils/createDynamicApp';
 
+const analyticsEnabled = () => (process.env.NEXT_PUBLIC_ENABLE_ANALYTICS || '').toLowerCase() === 'true';
+
 export class Gedit extends Component {
 
     constructor() {
@@ -23,13 +25,17 @@ export class Gedit extends Component {
             location: null,
             timezone: '',
             localTime: '',
+            errorMessage: '',
         }
         this.progressTimer = null;
         this.progressInterval = null;
     }
 
     componentDidMount() {
-        emailjs.init(process.env.NEXT_PUBLIC_USER_ID);
+        const userId = process.env.NEXT_PUBLIC_USER_ID;
+        if (userId) {
+            emailjs.init(userId);
+        }
         this.fetchLocation();
     }
 
@@ -101,7 +107,7 @@ export class Gedit extends Component {
         }
         if (error) return;
 
-        this.setState({ sending: true, showProgress: false, progress: 0 });
+        this.setState({ sending: true, showProgress: false, progress: 0, errorMessage: '' });
 
         this.progressTimer = setTimeout(() => {
             this.setState({ showProgress: true });
@@ -118,21 +124,35 @@ export class Gedit extends Component {
             'message': message,
         }
 
+        let sendSucceeded = false;
         try {
             await emailjs.send(serviceID, templateID, templateParams);
             this.setState({ name: '', subject: '', message: '' });
-            ReactGA.event({
-                category: "contact",
-                action: "submit_success",
-            });
+            sendSucceeded = true;
+            if (analyticsEnabled()) {
+                ReactGA.event({
+                    category: "contact",
+                    action: "submit_success",
+                });
+            }
         } catch {
-            // ignore errors
+            this.setState({ errorMessage: 'Message failed to send. Please try again later.' });
         } finally {
-            if (this.progressTimer) clearTimeout(this.progressTimer);
-            if (this.progressInterval) clearInterval(this.progressInterval);
-            this.setState({ progress: 100 });
-            document.getElementById('close-gedit')?.click();
-            setTimeout(() => this.setState({ sending: false, showProgress: false, progress: 0 }), 300);
+            if (this.progressTimer) {
+                clearTimeout(this.progressTimer);
+                this.progressTimer = null;
+            }
+            if (this.progressInterval) {
+                clearInterval(this.progressInterval);
+                this.progressInterval = null;
+            }
+            if (sendSucceeded) {
+                this.setState({ progress: 100 });
+                document.getElementById('close-gedit')?.click();
+                setTimeout(() => this.setState({ sending: false, showProgress: false, progress: 0 }), 300);
+            } else {
+                this.setState({ sending: false, showProgress: false, progress: 0 });
+            }
         }
 
     }
@@ -150,6 +170,11 @@ export class Gedit extends Component {
                         <div onClick={this.sendMessage} className="border border-black bg-black bg-opacity-50 px-3 py-0.5 my-1 mx-1 rounded hover:bg-opacity-80">Send</div>
                     </div>
                 </div>
+                {this.state.errorMessage && (
+                    <div role="alert" aria-live="polite" className="bg-red-700 bg-opacity-80 border-b border-red-500 px-3 py-2 text-xs sm:text-sm">
+                        {this.state.errorMessage}
+                    </div>
+                )}
                 <div className="relative flex-grow flex flex-col bg-ub-gedit-dark font-normal windowMainScreen">
                     <div className="absolute left-0 top-0 h-full px-2 bg-ub-gedit-darker"></div>
                     <div className="relative">
