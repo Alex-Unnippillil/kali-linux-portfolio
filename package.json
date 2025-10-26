@@ -58,6 +58,7 @@
     "diff": "^8",
     "dompurify": "^3.2.6",
     "fast-xml-parser": "^4.3.5",
+    "fflate": "^0.8.2",
     "figlet": "^1.8.2",
     "framer-motion": "^11.0.3",
     "hash-wasm": "^4.12.0",
