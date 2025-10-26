@@ -1,0 +1,89 @@
+{
+  "runs": [
+    {
+      "id": "baseline",
+      "label": "Baseline vulnerability sweep",
+      "startedAt": "2024-02-15T14:30:00Z",
+      "profile": "nmap -sV -T4 --script vuln lab.internal",
+      "notes": "Initial scan before maintenance window.",
+      "hosts": [
+        {
+          "address": "192.0.2.10",
+          "hostname": "web.lab.internal",
+          "ports": [
+            { "port": 22, "protocol": "tcp", "state": "open", "service": "ssh", "product": "OpenSSH 8.9p1" },
+            { "port": 80, "protocol": "tcp", "state": "open", "service": "http", "product": "nginx 1.20.1" },
+            { "port": 443, "protocol": "tcp", "state": "closed", "service": "https", "product": "" }
+          ]
+        },
+        {
+          "address": "192.0.2.20",
+          "hostname": "db.lab.internal",
+          "ports": [
+            { "port": 5432, "protocol": "tcp", "state": "open", "service": "postgresql", "product": "PostgreSQL 13" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "post-patch",
+      "label": "Post maintenance validation",
+      "startedAt": "2024-03-01T04:15:00Z",
+      "profile": "nmap -sV -T4 --script vuln lab.internal",
+      "notes": "Validation scan after OS patching.",
+      "hosts": [
+        {
+          "address": "192.0.2.10",
+          "hostname": "web.lab.internal",
+          "ports": [
+            { "port": 22, "protocol": "tcp", "state": "open", "service": "ssh", "product": "OpenSSH 9.0p1" },
+            { "port": 80, "protocol": "tcp", "state": "open", "service": "http", "product": "nginx 1.24.0" },
+            { "port": 443, "protocol": "tcp", "state": "open", "service": "https", "product": "nginx 1.24.0" },
+            { "port": 8080, "protocol": "tcp", "state": "open", "service": "http-proxy", "product": "Node.js reverse proxy" }
+          ]
+        },
+        {
+          "address": "192.0.2.20",
+          "hostname": "db.lab.internal",
+          "ports": [
+            { "port": 5432, "protocol": "tcp", "state": "filtered", "service": "postgresql", "product": "PostgreSQL 13" }
+          ]
+        },
+        {
+          "address": "192.0.2.30",
+          "hostname": "ci.lab.internal",
+          "ports": [
+            { "port": 22, "protocol": "tcp", "state": "open", "service": "ssh", "product": "OpenSSH 8.6p1" },
+            { "port": 9090, "protocol": "tcp", "state": "open", "service": "http", "product": "Prometheus exporter" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "purple-team",
+      "label": "Purple team exercise",
+      "startedAt": "2024-04-20T19:50:00Z",
+      "profile": "nmap -sV -T4 --script vuln --script-args safe=1 lab.internal",
+      "notes": "Scan executed during detection engineering drill.",
+      "hosts": [
+        {
+          "address": "192.0.2.10",
+          "hostname": "web.lab.internal",
+          "ports": [
+            { "port": 22, "protocol": "tcp", "state": "filtered", "service": "ssh", "product": "OpenSSH 9.0p1" },
+            { "port": 80, "protocol": "tcp", "state": "open", "service": "http", "product": "nginx 1.24.0" },
+            { "port": 443, "protocol": "tcp", "state": "open", "service": "https", "product": "nginx 1.24.0" }
+          ]
+        },
+        {
+          "address": "192.0.2.30",
+          "hostname": "ci.lab.internal",
+          "ports": [
+            { "port": 22, "protocol": "tcp", "state": "open", "service": "ssh", "product": "OpenSSH 8.6p1" },
+            { "port": 9090, "protocol": "tcp", "state": "closed", "service": "http", "product": "Prometheus exporter" }
+          ]
+        }
+      ]
+    }
+  ]
+}
