@@ -3,6 +3,10 @@
 // Update README (section "CSP External Domains") when editing domains below.
 
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+const {
+  buildDocsJsonHeaders,
+  createDocsJsonRuntimeCaching,
+} = require('./lib/docsCacheConfig.js');
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -124,8 +128,14 @@ const startUrlRuntimeCaching = {
   },
 };
 
+const docsJsonRuntimeCaching = createDocsJsonRuntimeCaching({
+  basePath: normalizedBasePath === '/' ? '' : normalizedBasePath,
+  cacheName: buildAwareCacheName('docs-json'),
+});
+
 const runtimeCaching = [
   startUrlRuntimeCaching,
+  docsJsonRuntimeCaching,
   ...defaultRuntimeCaching.map((entry) => ({
     ...entry,
     ...(entry.options
@@ -234,6 +244,11 @@ module.exports = withBundleAnalyzer(
       ? {}
       : {
           async headers() {
+            const docsAndJsonHeaders = buildDocsJsonHeaders({
+              projectRoot: __dirname,
+              basePath: normalizedBasePath === '/' ? '' : normalizedBasePath,
+            });
+
             return [
               {
                 source: '/(.*)',
@@ -257,6 +272,7 @@ module.exports = withBundleAnalyzer(
                   },
                 ],
               },
+              ...docsAndJsonHeaders,
             ];
           },
         }),
