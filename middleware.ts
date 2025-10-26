@@ -7,6 +7,15 @@ function nonce() {
 }
 
 export function middleware(req: NextRequest) {
+  if (req.headers.get('x-middleware-subrequest')) {
+    return new NextResponse(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
+      headers: {
+        'content-type': 'application/json',
+      },
+    });
+  }
+
   const n = nonce();
   const scriptSrc = [
     "'self'",
