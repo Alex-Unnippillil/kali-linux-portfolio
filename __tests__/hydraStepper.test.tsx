@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import Stepper from '../components/apps/hydra/Stepper';
+import { defaultThrottleConfig } from '../components/apps/hydra/ThrottlePanel';
 
 describe('Hydra Stepper', () => {
   beforeEach(() => {
@@ -28,6 +29,7 @@ describe('Hydra Stepper', () => {
         totalAttempts={10}
         backoffThreshold={2}
         lockoutThreshold={5}
+        throttleConfig={defaultThrottleConfig}
         runId={1}
       />
     );
@@ -42,6 +44,7 @@ describe('Hydra Stepper', () => {
         totalAttempts={10}
         backoffThreshold={2}
         lockoutThreshold={3}
+        throttleConfig={{ ...defaultThrottleConfig, lockoutAfter: 3, throttleAfter: 2 }}
         runId={1}
       />
     );

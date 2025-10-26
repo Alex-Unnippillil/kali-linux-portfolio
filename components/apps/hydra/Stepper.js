@@ -1,39 +1,63 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { calculateDelayMs, defaultThrottleConfig } from './ThrottlePanel';
 
 const Stepper = ({
   active,
   totalAttempts,
   backoffThreshold = 5,
   lockoutThreshold = 10,
+  throttleConfig,
   runId,
   initialAttempt = 0,
   onAttemptChange = () => {},
 }) => {
+  const effectiveConfig = useMemo(() => {
+    const base = { ...defaultThrottleConfig, ...(throttleConfig || {}) };
+    if (throttleConfig?.throttleAfter === undefined && backoffThreshold !== undefined) {
+      base.throttleAfter = backoffThreshold;
+    }
+    if (throttleConfig?.lockoutAfter === undefined && lockoutThreshold !== undefined) {
+      base.lockoutAfter = lockoutThreshold;
+    }
+    return base;
+  }, [throttleConfig, backoffThreshold, lockoutThreshold]);
+
+  const lockoutLimit = effectiveConfig.lockoutAfter;
   const [attempt, setAttempt] = useState(initialAttempt);
-  const [locked, setLocked] = useState(initialAttempt >= lockoutThreshold);
-  const [delayMs, setDelayMs] = useState(500);
+  const [locked, setLocked] = useState(initialAttempt >= lockoutLimit);
+  const initialDelay = calculateDelayMs(
+    Math.max(initialAttempt + 1, 2),
+    effectiveConfig
+  );
+  const [delayMs, setDelayMs] = useState(
+    initialDelay || effectiveConfig.baseDelayMs
+  );
   const timerRef = useRef(null);
-  const delayRef = useRef(500);
+  const delayRef = useRef(initialDelay || effectiveConfig.baseDelayMs);
 
   useEffect(() => {
     setAttempt(initialAttempt);
-    setLocked(initialAttempt >= lockoutThreshold);
+    setLocked(initialAttempt >= lockoutLimit);
+    const resetDelay = calculateDelayMs(
+      Math.max(initialAttempt + 1, 2),
+      effectiveConfig
+    );
+    delayRef.current = resetDelay || effectiveConfig.baseDelayMs;
+    setDelayMs(delayRef.current);
     onAttemptChange(initialAttempt);
     // onAttemptChange is stable enough for this use
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runId, initialAttempt, lockoutThreshold]);
+  }, [runId, initialAttempt, lockoutLimit, effectiveConfig]);
 
   useEffect(() => {
     if (!active || locked) return;
 
-    let delay = 500;
-    if (initialAttempt >= backoffThreshold) {
-      for (let i = backoffThreshold; i < initialAttempt; i++) {
-        delay = Math.min(delay * 2, 4000);
-      }
-    }
-    delayRef.current = delay;
-    setDelayMs(delay);
+    const nextDelay = calculateDelayMs(
+      Math.max(initialAttempt + 1, 2),
+      effectiveConfig
+    );
+    delayRef.current = nextDelay || effectiveConfig.baseDelayMs;
+    setDelayMs(delayRef.current);
 
     const prefersReducedMotion =
       typeof window !== 'undefined' &&
@@ -41,11 +65,11 @@ const Stepper = ({
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     if (prefersReducedMotion) {
-      const final = Math.min(lockoutThreshold, totalAttempts);
+      const final = Math.min(lockoutLimit, totalAttempts);
       setAttempt(final);
       setDelayMs(0);
       delayRef.current = 0;
-      if (final >= lockoutThreshold) {
+      if (final >= lockoutLimit) {
         setLocked(true);
       }
       return;
@@ -55,19 +79,21 @@ const Stepper = ({
       requestAnimationFrame(() => {
         setAttempt((prev) => {
           const next = prev + 1;
-          const final = Math.min(next, lockoutThreshold, totalAttempts);
+          const final = Math.min(next, lockoutLimit, totalAttempts);
           onAttemptChange(final);
-          if (final >= lockoutThreshold || final >= totalAttempts) {
-            if (final >= lockoutThreshold) {
+          if (final >= lockoutLimit || final >= totalAttempts) {
+            if (final >= lockoutLimit) {
               setLocked(true);
             }
             setDelayMs(0);
             delayRef.current = 0;
             return final;
           }
-          if (next >= backoffThreshold) {
-            delayRef.current = Math.min(delayRef.current * 2, 4000);
-          }
+          const upcomingDelay = calculateDelayMs(
+            Math.max(final + 1, 2),
+            effectiveConfig
+          );
+          delayRef.current = upcomingDelay || effectiveConfig.baseDelayMs;
           setDelayMs(delayRef.current);
           timerRef.current = setTimeout(tick, delayRef.current);
           return next;
@@ -85,8 +111,8 @@ const Stepper = ({
     };
   }, [
     active,
-    backoffThreshold,
-    lockoutThreshold,
+    effectiveConfig,
+    lockoutLimit,
     totalAttempts,
     runId,
     locked,
@@ -97,7 +123,7 @@ const Stepper = ({
   return (
     <div className="mt-4">
       <div className="flex space-x-1" aria-hidden="true">
-        {Array.from({ length: lockoutThreshold }).map((_, i) => (
+        {Array.from({ length: lockoutLimit }).map((_, i) => (
           <div
             key={i}
             className={`w-4 h-4 rounded ${
@@ -111,13 +137,22 @@ const Stepper = ({
       ) : (
         <>
           <div className="text-white mt-1">
-            Attempt {attempt} of {lockoutThreshold}
+            Attempt {attempt} of {lockoutLimit}
           </div>
           <div className="mt-2 w-full bg-gray-700 h-2 rounded">
             <div
               data-testid="backoff-bar"
               className="bg-yellow-500 h-2 rounded"
-              style={{ width: `${(delayMs / 4000) * 100}%` }}
+              style={{
+                width: `${Math.min(
+                  100,
+                  (delayMs /
+                    Math.max(
+                      effectiveConfig.maxDelayMs || 1,
+                      effectiveConfig.baseDelayMs || 1
+                    )) * 100
+                )}%`,
+              }}
             />
           </div>
           <div className="text-xs text-yellow-300 mt-1">
