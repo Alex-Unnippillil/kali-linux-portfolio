@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import usePersistentState from '../../../../hooks/usePersistentState';
 import defaultTemplates from '../../../../templates/export/report-templates.json';
+import { blobManager } from '@/utils/blobManager';
 
 interface Finding {
   title: string;
@@ -57,12 +58,12 @@ export default function ReportTemplates() {
 
   const exportReport = () => {
     const blob = new Blob([report], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
+    const url = blobManager.register(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `${templateKey}-report.txt`;
     a.click();
-    URL.revokeObjectURL(url);
+    blobManager.release(url);
   };
 
   const [showDialog, setShowDialog] = useState(false);
