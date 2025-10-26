@@ -2,17 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import useKeymap from '../../apps/settings/keymapRegistry';
-
-const formatEvent = (e: KeyboardEvent) => {
-  const parts = [
-    e.ctrlKey ? 'Ctrl' : '',
-    e.altKey ? 'Alt' : '',
-    e.shiftKey ? 'Shift' : '',
-    e.metaKey ? 'Meta' : '',
-    e.key.length === 1 ? e.key.toUpperCase() : e.key,
-  ];
-  return parts.filter(Boolean).join('+');
-};
+import { attach, register } from '../../src/desktop/keymap';
 
 const ShortcutOverlay: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -21,27 +11,30 @@ const ShortcutOverlay: React.FC = () => {
   const toggle = useCallback(() => setOpen((o) => !o), []);
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      const isInput =
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        (target as HTMLElement).isContentEditable;
-      if (isInput) return;
-      const show =
-        shortcuts.find((s) => s.description === 'Show keyboard shortcuts')?.keys ||
-        '?';
-      if (formatEvent(e) === show) {
-        e.preventDefault();
-        toggle();
-      } else if (e.key === 'Escape' && open) {
-        e.preventDefault();
+    return attach();
+  }, []);
+
+  useEffect(() => {
+    const show =
+      shortcuts.find((s) => s.description === 'Show keyboard shortcuts')?.keys ||
+      'Shift+?';
+    const unregister = register(show, () => {
+      toggle();
+    });
+    return unregister;
+  }, [shortcuts, toggle]);
+
+  useEffect(() => {
+    if (!open) return;
+    const unregister = register(
+      'Escape',
+      () => {
         setOpen(false);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [open, toggle, shortcuts]);
+      },
+      { allowInInput: true }
+    );
+    return unregister;
+  }, [open]);
 
   const handleExport = () => {
     const data = JSON.stringify(shortcuts, null, 2);
