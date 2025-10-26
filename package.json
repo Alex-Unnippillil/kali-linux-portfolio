@@ -23,7 +23,10 @@
     "analyze": "ANALYZE=true yarn build",
     "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
     "verify:all": "node scripts/verify.mjs",
-    "dedupe:fix": "yarn dedupe"
+    "dedupe:fix": "yarn dedupe",
+    "perf:test": "npx playwright test --project=perf",
+    "perf:update": "node scripts/perf/update-baseline.mjs",
+    "perf:report": "node scripts/perf/generate-dashboard.mjs"
   },
   "engines": {
     "node": "20"
