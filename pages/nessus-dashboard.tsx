@@ -1,41 +1,43 @@
-import React, { useEffect, useState } from 'react';
-import { loadFalsePositives, loadJobDefinitions } from '../components/apps/nessus/index';
-import { WindowMainScreen } from '../components/base/window';
+import dynamic from 'next/dynamic';
+import type { GetStaticProps } from 'next';
+import React, { Suspense } from 'react';
+import NessusDashboardShell from '../components/pages/nessus-dashboard/NessusDashboardShell';
+import type {
+  NessusDashboardStaticProps,
+} from '../utils/ssg/nessus';
+import { buildNessusDashboardStaticProps } from '../utils/ssg/nessus';
 
-const NessusDashboard: React.FC = () => {
-  const [totals, setTotals] = useState({ jobs: 0, falsePositives: 0 });
+const NessusDashboardHydrated = dynamic(
+  () =>
+    import('../components/pages/nessus-dashboard/NessusDashboardHydrated').then(
+      (mod) => mod.NessusDashboardHydrated,
+    ),
+  { suspense: true, ssr: false } as any,
+);
 
-  useEffect(() => {
-    const jobs = loadJobDefinitions();
-    const fps = loadFalsePositives();
-    setTotals({ jobs: jobs.length, falsePositives: fps.length });
-  }, []);
+type NessusDashboardPageProps = NessusDashboardStaticProps;
 
-  const max = Math.max(totals.jobs, totals.falsePositives, 1);
-
-  return (
-    <WindowMainScreen
-      screen={() => (
-        <div className="p-4 text-white">
-          <h1 className="mb-4 text-2xl">Nessus Dashboard</h1>
-          <div className="flex h-48 items-end space-x-4">
-            <div
-              className="flex w-24 flex-col justify-end bg-blue-600 text-center"
-              style={{ height: `${(totals.jobs / max) * 100}%` }}
-            >
-              <span className="pb-2 text-sm">Jobs {totals.jobs}</span>
-            </div>
-            <div
-              className="flex w-24 flex-col justify-end bg-green-600 text-center"
-              style={{ height: `${(totals.falsePositives / max) * 100}%` }}
-            >
-              <span className="pb-2 text-sm">False {totals.falsePositives}</span>
-            </div>
-          </div>
-        </div>
-      )}
+const NessusDashboardPage: React.FC<NessusDashboardPageProps> = ({
+  generatedAt,
+  shellTotals,
+  initialTotals,
+}) => (
+  <Suspense
+    fallback={<NessusDashboardShell generatedAt={generatedAt} totals={shellTotals} />}
+  >
+    <NessusDashboardHydrated
+      generatedAt={generatedAt}
+      initialTotals={initialTotals}
     />
-  );
+  </Suspense>
+);
+
+export const getStaticProps: GetStaticProps<NessusDashboardStaticProps> = async () => {
+  const props = await buildNessusDashboardStaticProps();
+  return {
+    props,
+    revalidate: 1800,
+  };
 };
 
-export default NessusDashboard;
+export default NessusDashboardPage;
