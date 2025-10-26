@@ -2,14 +2,19 @@
 
 import React, {
   FormEvent,
+  Suspense,
+  use,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { demoYouTubeVideos } from '../../../data/youtube/demoVideos';
 import usePersistentState from '../../../hooks/usePersistentState';
+import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
+import { darkenColor, lightenColor } from '../../../utils/colorMath';
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
@@ -29,6 +34,46 @@ interface Props {
 const HISTORY_STORAGE_KEY = 'youtube:recently-watched';
 const SEARCH_DEBOUNCE_MS = 500;
 const MAX_HISTORY_ITEMS = 10;
+
+type ThemeTokens = {
+  surface: string;
+  surfaceRaised: string;
+  background: string;
+  accent: string;
+  text: string;
+};
+
+const DEFAULT_THEME_TOKENS: ThemeTokens = {
+  surface: '#111b24',
+  surfaceRaised: '#1a2533',
+  background: '#0b121a',
+  accent: '#0f94d2',
+  text: '#f5faff',
+};
+
+const readThemeTokens = (): ThemeTokens => {
+  if (typeof window === 'undefined') {
+    return DEFAULT_THEME_TOKENS;
+  }
+
+  const styles = getComputedStyle(document.documentElement);
+
+  const getVar = (name: string, fallback: string) => {
+    const value = styles.getPropertyValue(name).trim();
+    return value || fallback;
+  };
+
+  return {
+    surface: getVar('--color-surface', DEFAULT_THEME_TOKENS.surface),
+    surfaceRaised: getVar(
+      '--color-surface-raised',
+      DEFAULT_THEME_TOKENS.surfaceRaised,
+    ),
+    background: getVar('--color-bg', DEFAULT_THEME_TOKENS.background),
+    accent: getVar('--color-control-accent', DEFAULT_THEME_TOKENS.accent),
+    text: getVar('--color-text', DEFAULT_THEME_TOKENS.text),
+  };
+};
 
 const hasOwnText = (value?: string) => Boolean(value && value.trim().length);
 
@@ -164,6 +209,11 @@ export default function YouTubeApp({ initialResults }: Props) {
   const [lastSearchSource, setLastSearchSource] = useState<'api' | 'demo' | null>(
     null,
   );
+  const [themeTokens, setThemeTokens] = useState<ThemeTokens>(() => readThemeTokens());
+  const [resultsResource, setResultsResource] = useState<Promise<VideoResult[]>>(
+    () => Promise.resolve(fallbackInitial),
+  );
+  const prefersReducedMotion = usePrefersReducedMotion();
   const [rawHistory, setHistoryState, , clearHistoryState] =
     usePersistentState<VideoResult[]>(HISTORY_STORAGE_KEY, [], isVideoList);
 
@@ -176,11 +226,47 @@ export default function YouTubeApp({ initialResults }: Props) {
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const requestIdRef = useRef(0);
+  const suspenseResolverRef =
+    useRef<((value: VideoResult[]) => void) | null>(null);
+  const latestResultsRef = useRef<VideoResult[]>(fallbackInitial);
+  const historyContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const resolveSuspense = useCallback(
+    (videos: VideoResult[]) => {
+      suspenseResolverRef.current?.(videos);
+      suspenseResolverRef.current = null;
+      setResultsResource(Promise.resolve(videos));
+    },
+    [setResultsResource],
+  );
+
+  useEffect(() => {
+    latestResultsRef.current = results;
+  }, [results]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const root = document.documentElement;
+    const update = () => setThemeTokens(readThemeTokens());
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ['data-theme', 'style'],
+    });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     setResults(fallbackInitial);
     setSelectedVideo((previous) => previous ?? fallbackInitial[0] ?? null);
-  }, [fallbackInitial]);
+    resolveSuspense(fallbackInitial);
+  }, [fallbackInitial, resolveSuspense]);
+
+  useEffect(() => () => {
+    suspenseResolverRef.current?.(latestResultsRef.current);
+    suspenseResolverRef.current = null;
+  }, []);
 
   const setHistory = useCallback(
     (updater: React.SetStateAction<VideoResult[]>) => {
@@ -217,22 +303,30 @@ export default function YouTubeApp({ initialResults }: Props) {
       requestIdRef.current = requestId;
 
       if (!trimmed) {
-        setResults(fallbackInitial);
-        setSelectedVideo((prev) => prev ?? fallbackInitial[0] ?? null);
         setError(null);
         setLastSearchSource(null);
         setLoading(false);
+        setResults(fallbackInitial);
+        setSelectedVideo((prev) => prev ?? fallbackInitial[0] ?? null);
+        resolveSuspense(fallbackInitial);
         return;
       }
 
       if (trimmed.length < 2) {
         setError('Type at least two characters to search.');
         setLoading(false);
+        resolveSuspense(latestResultsRef.current);
         return;
       }
 
       setLoading(true);
       setError(null);
+      setLastSearchSource(null);
+
+      const pending = new Promise<VideoResult[]>((resolve) => {
+        suspenseResolverRef.current = resolve;
+      });
+      setResultsResource(pending);
 
       let items: VideoResult[] = [];
       let source: 'api' | 'demo' = 'demo';
@@ -249,6 +343,7 @@ export default function YouTubeApp({ initialResults }: Props) {
         } catch (error_: unknown) {
           const err = error_ as Error;
           if (err.name === 'AbortError') {
+            resolveSuspense(latestResultsRef.current);
             setLoading(false);
             return;
           }
@@ -265,11 +360,13 @@ export default function YouTubeApp({ initialResults }: Props) {
           abortControllerRef.current = null;
         }
       } else {
+        await new Promise((resolve) => setTimeout(resolve, 32));
         items = filterDemoVideos(trimmed).map((item) => normalizeVideo(item));
         source = 'demo';
       }
 
       if (requestIdRef.current !== requestId) {
+        resolveSuspense(latestResultsRef.current);
         setLoading(false);
         return;
       }
@@ -279,11 +376,17 @@ export default function YouTubeApp({ initialResults }: Props) {
       if (!items.length) {
         setSelectedVideo((prev) => (prev && prev.id ? prev : null));
       } else {
-        setSelectedVideo((prev) => prev ?? items[0]);
+        setSelectedVideo((prev) => {
+          if (prev && items.some((item) => item.id === prev.id)) {
+            return prev;
+          }
+          return items[0];
+        });
       }
+      resolveSuspense(items);
       setLoading(false);
     },
-    [fallbackInitial, hasApiKey],
+    [fallbackInitial, hasApiKey, resolveSuspense],
   );
 
   useEffect(() => {
@@ -326,8 +429,36 @@ export default function YouTubeApp({ initialResults }: Props) {
     clearHistoryState();
   }, [clearHistoryState]);
 
+  const historyVirtualizer = useVirtualizer({
+    count: history.length,
+    getScrollElement: () => historyContainerRef.current,
+    estimateSize: () => 92,
+    overscan: 4,
+  });
+
+  const gradientStyle = useMemo<React.CSSProperties>(() => {
+    const accentGlow = lightenColor(themeTokens.accent, 0.36);
+    const surfaceHighlight = lightenColor(themeTokens.surfaceRaised, 0.16);
+    const surfaceMid = lightenColor(themeTokens.surface, 0.04);
+    const surfaceShadow = darkenColor(themeTokens.surface, 0.24);
+    return {
+      backgroundColor: themeTokens.background,
+      backgroundImage: `radial-gradient(circle at top left, ${accentGlow} 0%, ${surfaceHighlight} 32%, ${surfaceMid} 56%, ${surfaceShadow} 100%)`,
+      color: themeTokens.text,
+    };
+  }, [themeTokens]);
+
+  const skeletonPalette = useMemo(
+    () => ({
+      tile: lightenColor(themeTokens.surfaceRaised, 0.12),
+      bar: lightenColor(themeTokens.surface, 0.2),
+      shimmer: lightenColor(themeTokens.accent, 0.5),
+    }),
+    [themeTokens],
+  );
+
   return (
-    <div className="flex h-full flex-col bg-[radial-gradient(circle_at_top_left,_color-mix(in_srgb,var(--kali-blue)_18%,var(--color-bg))_0%,_var(--color-bg)_45%,_var(--color-dark)_100%)] text-[var(--color-text)]">
+    <div className="flex h-full flex-col" style={gradientStyle}>
       <header className="border-b border-[var(--kali-panel-border)] bg-[var(--color-overlay-strong)] px-6 py-6 shadow-sm backdrop-blur">
         <h1 className="text-2xl font-semibold">YouTube Explorer</h1>
         <p className="mt-2 max-w-3xl text-sm text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
@@ -426,48 +557,68 @@ export default function YouTubeApp({ initialResults }: Props) {
                 onClick={handleClearHistory}
                 className="text-xs font-semibold text-kali-control transition hover:text-kali-control/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:opacity-40"
                 disabled={!history.length}
+                data-testid="youtube-history-clear"
               >
                 Clear history
               </button>
             </div>
-            <ul className="mt-4 space-y-3" data-testid="recently-watched">
+            <div
+              ref={historyContainerRef}
+              className="mt-4 max-h-80 overflow-y-auto pr-1"
+              data-testid="recently-watched"
+            >
               {history.length ? (
-                history.map((video) => (
-                  <li key={video.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectVideo(video)}
-                      className="flex w-full items-center gap-3 rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] p-3 text-left shadow-[0_6px_16px_rgba(8,15,26,0.32)] transition-colors hover:border-kali-control hover:text-kali-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
-                      aria-label={`Watch ${video.title} again`}
-                    >
-                      {video.thumbnail ? (
-                        <img
-                          src={video.thumbnail}
-                          alt=""
-                          className="h-12 w-20 rounded object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-12 w-20 items-center justify-center rounded bg-[var(--kali-panel-highlight)] text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                          No preview
-                        </div>
-                      )}
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-[var(--color-text)] line-clamp-2">
-                          {video.title}
-                        </p>
-                        <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                          {video.channelTitle}
-                        </p>
-                      </div>
-                    </button>
-                  </li>
-                ))
+                <ul
+                  className="relative"
+                  style={{ height: `${historyVirtualizer.getTotalSize()}px` }}
+                >
+                  {historyVirtualizer.getVirtualItems().map((virtualItem) => {
+                    const video = history[virtualItem.index];
+                    return (
+                      <li
+                        key={video.id}
+                        className="absolute left-0 right-0 pb-3"
+                        style={{
+                          transform: `translateY(${virtualItem.start}px)`,
+                          height: virtualItem.size,
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => handleSelectVideo(video)}
+                          className="flex w-full items-center gap-3 rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] p-3 text-left shadow-[0_6px_16px_rgba(8,15,26,0.32)] transition-colors hover:border-kali-control hover:text-kali-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+                          aria-label={`Watch ${video.title} again`}
+                        >
+                          {video.thumbnail ? (
+                            <img
+                              src={video.thumbnail}
+                              alt=""
+                              className="h-12 w-20 rounded object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-12 w-20 items-center justify-center rounded bg-[var(--kali-panel-highlight)] text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                              No preview
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-[var(--color-text)] line-clamp-2">
+                              {video.title}
+                            </p>
+                            <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                              {video.channelTitle}
+                            </p>
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
               ) : (
-                <li className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
                   Your history is empty. Watch a video to add it here.
-                </li>
+                </p>
               )}
-            </ul>
+            </div>
           </div>
         </aside>
       </main>
@@ -484,59 +635,155 @@ export default function YouTubeApp({ initialResults }: Props) {
             </span>
           )}
         </div>
-        {results.length ? (
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {results.map((video) => {
-              const isActive = selectedVideo?.id === video.id;
-              return (
-                <button
-                  key={video.id}
-                  type="button"
-                  onClick={() => handleSelectVideo(video)}
-                  className={`flex h-full flex-col overflow-hidden rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] text-left shadow-[0_8px_22px_rgba(8,15,26,0.4)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-kali-control ${
-                    isActive
-                      ? 'border-kali-control shadow-[0_10px_30px_rgba(15,148,210,0.28)]'
-                      : 'hover:shadow-[0_10px_35px_rgba(2,6,23,0.45)]'
-                  }`}
-                  aria-label={`Watch ${video.title}`}
-                >
-                  {video.thumbnail ? (
-                    <img
-                      src={video.thumbnail}
-                      alt=""
-                      className="h-40 w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-40 w-full items-center justify-center bg-[var(--kali-panel-highlight)] text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                      No preview available
-                    </div>
-                  )}
-                  <div className="flex flex-1 flex-col gap-2 p-4">
-                    <h3 className="text-base font-semibold text-[var(--color-text)] line-clamp-2">
-                      {video.title}
-                    </h3>
-                    <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                      {video.channelTitle}
-                    </p>
-                    <p className="line-clamp-3 text-xs text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
-                      {video.description || 'No description available.'}
-                    </p>
-                    <p className="mt-auto text-[11px] uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                      {formatDate(video.publishedAt)}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-sm text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
-            {loading
-              ? 'Fetching results…'
-              : 'No matches yet. Try a different search term or clear the search box to see featured videos.'}
-          </p>
-        )}
+        <Suspense
+          fallback={
+            <ResultsSkeleton
+              count={12}
+              reducedMotion={prefersReducedMotion}
+              palette={skeletonPalette}
+            />
+          }
+        >
+          <ResultsGrid
+            resource={resultsResource}
+            loading={loading}
+            selectedVideoId={selectedVideo?.id ?? null}
+            onSelect={handleSelectVideo}
+          />
+        </Suspense>
       </section>
+    </div>
+  );
+}
+
+type SkeletonPalette = {
+  tile: string;
+  bar: string;
+  shimmer: string;
+};
+
+function ResultsSkeleton({
+  count,
+  reducedMotion,
+  palette,
+}: {
+  count: number;
+  reducedMotion: boolean;
+  palette: SkeletonPalette;
+}) {
+  return (
+    <div
+      className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+      role="status"
+      aria-live="polite"
+    >
+      {Array.from({ length: count }).map((_, index) => (
+        <div
+          key={index}
+          className={`flex h-full flex-col overflow-hidden rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] shadow-[0_8px_22px_rgba(8,15,26,0.3)] ${
+            reducedMotion ? '' : 'transition-opacity duration-500 ease-out'
+          }`}
+          style={{
+            opacity: reducedMotion ? 1 : 0.85,
+            willChange: reducedMotion ? undefined : 'opacity',
+          }}
+          data-testid="youtube-result-skeleton"
+        >
+          <div
+            className={`h-40 w-full ${reducedMotion ? '' : 'animate-pulse'}`}
+            style={{
+              background: `linear-gradient(135deg, ${palette.tile} 0%, ${palette.shimmer} 50%, ${palette.tile} 100%)`,
+            }}
+          />
+          <div className="flex flex-1 flex-col gap-3 p-4">
+            <div
+              className={`${reducedMotion ? '' : 'animate-pulse'} h-4 w-3/4 rounded`}
+              style={{ background: palette.bar, opacity: 0.75 }}
+            />
+            <div
+              className={`${reducedMotion ? '' : 'animate-pulse'} h-3 w-1/2 rounded`}
+              style={{ background: palette.bar, opacity: 0.65 }}
+            />
+            <div
+              className={`${reducedMotion ? '' : 'animate-pulse'} h-3 w-full rounded`}
+              style={{ background: palette.bar, opacity: 0.55 }}
+            />
+            <div
+              className={`${reducedMotion ? '' : 'animate-pulse'} mt-auto h-3 w-1/3 rounded`}
+              style={{ background: palette.bar, opacity: 0.5 }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ResultsGrid({
+  resource,
+  loading,
+  selectedVideoId,
+  onSelect,
+}: {
+  resource: Promise<VideoResult[]>;
+  loading: boolean;
+  selectedVideoId: string | null;
+  onSelect: (video: VideoResult) => void;
+}) {
+  const videos = use(resource);
+
+  if (!videos.length) {
+    return (
+      <p className="text-sm text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
+        {loading
+          ? 'Fetching results…'
+          : 'No matches yet. Try a different search term or clear the search box to see featured videos.'}
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {videos.map((video) => {
+        const isActive = selectedVideoId === video.id;
+        return (
+          <button
+            key={video.id}
+            type="button"
+            onClick={() => onSelect(video)}
+            className={`flex h-full flex-col overflow-hidden rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] text-left shadow-[0_8px_22px_rgba(8,15,26,0.4)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-kali-control ${
+              isActive
+                ? 'border-kali-control shadow-[0_10px_30px_rgba(15,148,210,0.28)]'
+                : 'hover:shadow-[0_10px_35px_rgba(2,6,23,0.45)]'
+            }`}
+            aria-label={`Watch ${video.title}`}
+            data-testid="youtube-result-card"
+            data-video-id={video.id}
+          >
+            {video.thumbnail ? (
+              <img src={video.thumbnail} alt="" className="h-40 w-full object-cover" />
+            ) : (
+              <div className="flex h-40 w-full items-center justify-center bg-[var(--kali-panel-highlight)] text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                No preview available
+              </div>
+            )}
+            <div className="flex flex-1 flex-col gap-2 p-4">
+              <h3 className="text-base font-semibold text-[var(--color-text)] line-clamp-2">
+                {video.title}
+              </h3>
+              <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                {video.channelTitle}
+              </p>
+              <p className="line-clamp-3 text-xs text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
+                {video.description || 'No description available.'}
+              </p>
+              <p className="mt-auto text-[11px] uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                {formatDate(video.publishedAt)}
+              </p>
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 }
