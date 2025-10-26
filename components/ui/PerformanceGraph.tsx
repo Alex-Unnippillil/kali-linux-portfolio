@@ -4,6 +4,12 @@ const SAMPLE_INTERVAL = 1000;
 const MAX_POINTS = 32;
 const GRAPH_HEIGHT = 18;
 const GRAPH_WIDTH = 80;
+const DEFAULT_ACCENT = '#1793d1';
+
+function sanitizeAccent(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : DEFAULT_ACCENT;
+}
 
 function usePrefersReducedMotion() {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -49,12 +55,29 @@ type PerformanceGraphProps = {
 
 const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
   const prefersReducedMotion = usePrefersReducedMotion();
+  const [accentColor, setAccentColor] = useState<string>(DEFAULT_ACCENT);
   const [points, setPoints] = useState<number[]>(() =>
     Array.from({ length: MAX_POINTS }, (_, index) => 0.32 + (index % 3) * 0.04)
   );
   const timeoutRef = useRef<number | ReturnType<typeof setTimeout> | null>(null);
   const frameRef = useRef<number | null>(null);
   const lastSampleRef = useRef<number>(typeof performance !== 'undefined' ? performance.now() : 0);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return;
+    }
+
+    const rootStyle = getComputedStyle(document.documentElement);
+    const accent =
+      rootStyle.getPropertyValue('--kali-accent') ||
+      rootStyle.getPropertyValue('--color-primary') ||
+      DEFAULT_ACCENT;
+
+    const nextAccent = sanitizeAccent(accent);
+
+    setAccentColor(prev => (prev === nextAccent ? prev : nextAccent));
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -143,8 +166,8 @@ const PerformanceGraph: React.FC<PerformanceGraphProps> = ({ className }) => {
       >
         <defs>
           <linearGradient id="kaliSpark" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#61a3ff" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#1f4aa8" stopOpacity="0.25" />
+            <stop offset="0%" stopColor={accentColor} stopOpacity="0.9" />
+            <stop offset="100%" stopColor={accentColor} stopOpacity="0.25" />
           </linearGradient>
         </defs>
         <path
