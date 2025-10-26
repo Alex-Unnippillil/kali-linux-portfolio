@@ -125,6 +125,7 @@ For each game below, build a canvas-based component with `requestAnimationFrame`
 ## Housekeeping
 - Keep `apps.config.js` organized with utilities and games grouped and exported consistently.
 - Monitor `fast-glob` updates and explore hash optimizations for the custom service worker.
+- Keep the noisy query generator in `playwright/search.spec.ts` updated when apps are added, renamed, or removed so the search coverage reflects reality.
 
 ### App Icon Refresh
 - Inventory every app logo under `public/apps`, `public/assets`, and other icon folders; note sizes and current formats.
