@@ -2,6 +2,9 @@
 // Allows external badges and same-origin PDF embedding.
 // Update README (section "CSP External Domains") when editing domains below.
 
+const fs = require('fs');
+const path = require('path');
+
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
 
 const ContentSecurityPolicy = [
@@ -88,6 +91,39 @@ const {
   runtimeCaching: defaultRuntimeCaching,
 } = require('@ducanh2912/next-pwa');
 
+const publicDir = path.join(__dirname, 'public');
+
+function toPosixPath(relativePath) {
+  return relativePath.split(path.sep).join('/');
+}
+
+function listPublicAssets(relativeDir) {
+  const directory = path.join(publicDir, relativeDir);
+  if (!fs.existsSync(directory)) {
+    return [];
+  }
+
+  return fs
+    .readdirSync(directory, { withFileTypes: true })
+    .flatMap((entry) => {
+      if (entry.name.startsWith('.')) {
+        return [];
+      }
+
+      const entryPath = path.join(relativeDir, entry.name);
+
+      if (entry.isDirectory()) {
+        return listPublicAssets(entryPath);
+      }
+
+      if (entry.isFile()) {
+        return [`/${toPosixPath(entryPath)}`];
+      }
+
+      return [];
+    });
+}
+
 function buildAwareCacheName(name) {
   if (!name) return name;
   return resolvedBuildId ? `${name}-${resolvedBuildId}` : name;
@@ -126,6 +162,58 @@ const startUrlRuntimeCaching = {
 
 const runtimeCaching = [
   startUrlRuntimeCaching,
+  {
+    urlPattern: ({ sameOrigin, url }) => {
+      if (sameOrigin) {
+        const relativePath =
+          normalizedBasePath === '/'
+            ? url.pathname
+            : url.pathname.startsWith(normalizedBasePath)
+            ? url.pathname.slice(normalizedBasePath.length) || '/'
+            : url.pathname;
+        if (relativePath.startsWith('/api')) {
+          return false;
+        }
+      }
+
+      return /\.(?:png|jpe?g|gif|bmp|webp|avif|svg)$/i.test(url.pathname);
+    },
+    handler: 'CacheFirst',
+    options: {
+      cacheName: buildAwareCacheName('image-assets'),
+      cacheableResponse: { statuses: [0, 200] },
+      expiration: {
+        maxEntries: 80,
+        maxAgeSeconds: 30 * 24 * 60 * 60,
+      },
+    },
+  },
+  {
+    urlPattern: ({ sameOrigin, url }) => {
+      if (sameOrigin) {
+        const relativePath =
+          normalizedBasePath === '/'
+            ? url.pathname
+            : url.pathname.startsWith(normalizedBasePath)
+            ? url.pathname.slice(normalizedBasePath.length) || '/'
+            : url.pathname;
+        if (relativePath.startsWith('/api')) {
+          return false;
+        }
+      }
+
+      return /\.(?:woff2?|ttf|otf|eot)$/i.test(url.pathname);
+    },
+    handler: 'CacheFirst',
+    options: {
+      cacheName: buildAwareCacheName('font-assets'),
+      cacheableResponse: { statuses: [0, 200] },
+      expiration: {
+        maxEntries: 40,
+        maxAgeSeconds: 365 * 24 * 60 * 60,
+      },
+    },
+  },
   ...defaultRuntimeCaching.map((entry) => ({
     ...entry,
     ...(entry.options
@@ -148,19 +236,27 @@ const withPWA = withPWAInit({
   buildExcludes: [/dynamic-css-manifest\.json$/],
   workboxOptions: {
     navigateFallback: '/offline.html',
-    additionalManifestEntries: [
-      { url: '/', revision: null },
-      { url: '/feeds', revision: null },
-      { url: '/about', revision: null },
-      { url: '/projects', revision: null },
-      { url: '/projects.json', revision: null },
-      { url: '/apps', revision: null },
-      { url: '/apps/weather', revision: null },
-      { url: '/apps/terminal', revision: null },
-      { url: '/apps/checkers', revision: null },
-      { url: '/offline.html', revision: null },
-      { url: '/manifest.webmanifest', revision: null },
-    ],
+    additionalManifestEntries: Array.from(
+      new Set([
+        '/',
+        '/feeds',
+        '/about',
+        '/projects',
+        '/projects.json',
+        '/apps',
+        '/apps/weather',
+        '/apps/terminal',
+        '/apps/checkers',
+        '/offline.html',
+        '/offline.css',
+        '/offline.js',
+        '/manifest.webmanifest',
+        '/theme.js',
+        ...listPublicAssets('wallpapers'),
+        ...listPublicAssets('icons'),
+        ...listPublicAssets('themes'),
+      ])
+    ).map((url) => ({ url, revision: null })),
     runtimeCaching,
     ...(workboxCacheId && { cacheId: workboxCacheId }),
   },
