@@ -385,6 +385,11 @@ export class Desktop extends Component {
             this.commandPaletteUsesMeta = /Mac|iPhone|iPad|iPod/i.test(platform || userAgent);
         }
 
+        this.touchContextHold = null;
+        this.touchContextHoldTimeout = null;
+        this.touchFeedbackTimeout = null;
+        this.ignoreNextContextClick = false;
+
     }
 
     createEmptyWorkspaceState = () => ({
@@ -3546,6 +3551,11 @@ export class Desktop extends Component {
         window.removeEventListener('open-app', this.handleOpenAppEvent);
         window.removeEventListener('resize', this.handleViewportResize);
         this.detachIconKeyboardListeners();
+        this.cancelTouchContextHold();
+        if (this.touchFeedbackTimeout) {
+            clearTimeout(this.touchFeedbackTimeout);
+            this.touchFeedbackTimeout = null;
+        }
         if (typeof window !== 'undefined') {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
@@ -3801,15 +3811,130 @@ export class Desktop extends Component {
     setContextListeners = () => {
         document.addEventListener('contextmenu', this.checkContextMenu);
         // on click, anywhere, hide all menus
-        document.addEventListener('click', this.hideAllContextMenu);
+        document.addEventListener('click', this.handleContextMenuClickDismiss, true);
         // allow keyboard activation of context menus
         document.addEventListener('keydown', this.handleContextKey);
+        document.addEventListener('pointerdown', this.handleContextPointerDown, { passive: true });
+        document.addEventListener('pointermove', this.handleContextPointerMove, { passive: true });
+        document.addEventListener('pointerup', this.handleContextPointerUp, { passive: true });
+        document.addEventListener('pointercancel', this.handleContextPointerCancel, { passive: true });
     }
 
     removeContextListeners = () => {
         document.removeEventListener("contextmenu", this.checkContextMenu);
-        document.removeEventListener("click", this.hideAllContextMenu);
+        document.removeEventListener('click', this.handleContextMenuClickDismiss, true);
         document.removeEventListener('keydown', this.handleContextKey);
+        document.removeEventListener('pointerdown', this.handleContextPointerDown);
+        document.removeEventListener('pointermove', this.handleContextPointerMove);
+        document.removeEventListener('pointerup', this.handleContextPointerUp);
+        document.removeEventListener('pointercancel', this.handleContextPointerCancel);
+    }
+
+    handleContextMenuClickDismiss = () => {
+        if (this.ignoreNextContextClick) {
+            this.ignoreNextContextClick = false;
+            return;
+        }
+        this.hideAllContextMenu();
+    }
+
+    cancelTouchContextHold = () => {
+        if (this.touchContextHoldTimeout) {
+            clearTimeout(this.touchContextHoldTimeout);
+            this.touchContextHoldTimeout = null;
+        }
+        this.touchContextHold = null;
+    }
+
+    handleContextPointerDown = (event) => {
+        if (event.pointerType !== 'touch' || event.isPrimary === false) return;
+        const target = event.target?.closest?.('[data-context]');
+        if (!target) {
+            this.cancelTouchContextHold();
+            return;
+        }
+        this.cancelTouchContextHold();
+        const { clientX, clientY, pageX, pageY, pointerId } = event;
+        this.touchContextHold = {
+            pointerId,
+            target,
+            startX: clientX,
+            startY: clientY,
+            pageX,
+            pageY,
+            clientX,
+            clientY,
+        };
+        this.touchContextHoldTimeout = setTimeout(() => {
+            this.touchContextHoldTimeout = null;
+            if (!this.touchContextHold || this.touchContextHold.pointerId !== pointerId) return;
+            this.triggerTouchContextMenu();
+        }, 550);
+    }
+
+    handleContextPointerMove = (event) => {
+        const hold = this.touchContextHold;
+        if (!hold || hold.pointerId !== event.pointerId) return;
+        const { clientX, clientY, pageX, pageY } = event;
+        const deltaX = clientX - hold.startX;
+        const deltaY = clientY - hold.startY;
+        if (Math.hypot(deltaX, deltaY) > 10) {
+            this.cancelTouchContextHold();
+            return;
+        }
+        hold.pageX = pageX;
+        hold.pageY = pageY;
+        hold.clientX = clientX;
+        hold.clientY = clientY;
+    }
+
+    handleContextPointerUp = (event) => {
+        if (this.touchContextHold && this.touchContextHold.pointerId === event.pointerId) {
+            this.cancelTouchContextHold();
+        }
+    }
+
+    handleContextPointerCancel = (event) => {
+        if (this.touchContextHold && this.touchContextHold.pointerId === event.pointerId) {
+            this.cancelTouchContextHold();
+        }
+    }
+
+    triggerTouchContextMenu = () => {
+        const hold = this.touchContextHold;
+        if (!hold) return;
+        const target = hold.target;
+        const fakeEvent = {
+            preventDefault: () => { },
+            target,
+            pageX: hold.pageX,
+            pageY: hold.pageY,
+            clientX: hold.clientX ?? hold.pageX,
+            clientY: hold.clientY ?? hold.pageY,
+        };
+        this.ignoreNextContextClick = true;
+        this.checkContextMenu(fakeEvent);
+        this.provideTouchContextFeedback(target);
+        this.cancelTouchContextHold();
+    }
+
+    provideTouchContextFeedback = (target) => {
+        if (!target || !target.classList) return;
+        if (typeof window !== 'undefined' && window.navigator?.vibrate) {
+            try {
+                window.navigator.vibrate(15);
+            } catch (_error) {
+                // ignore vibration errors
+            }
+        }
+        target.classList.add('context-touch-feedback');
+        if (this.touchFeedbackTimeout) {
+            clearTimeout(this.touchFeedbackTimeout);
+        }
+        this.touchFeedbackTimeout = setTimeout(() => {
+            target.classList.remove('context-touch-feedback');
+            this.touchFeedbackTimeout = null;
+        }, 250);
     }
 
     handleGlobalShortcut = (e) => {
