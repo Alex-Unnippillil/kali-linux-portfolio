@@ -57,6 +57,31 @@
     0 0 0 1px rgba(30, 64, 175, 0.28);
 }
 
+.windowFrameCompact {
+  position: relative;
+  max-width: min(100%, 68rem);
+  margin: clamp(0.75rem, 3vw, 1.5rem) auto;
+  box-shadow: none;
+  border-radius: clamp(1rem, 3vw, 1.5rem);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background-color: rgba(15, 23, 42, 0.88);
+}
+
+.windowFrameCompact.windowFrameActive {
+  box-shadow:
+    0 6px 18px rgba(15, 23, 42, 0.32),
+    0 0 0 1px rgba(56, 189, 248, 0.28);
+}
+
+.windowFrameCompact::before {
+  border-radius: clamp(1rem, 3vw, 1.5rem);
+  opacity: 0.4;
+}
+
+.windowFrameCompact :global(.windowMainScreen) {
+  max-height: none;
+}
+
 .windowFrameResizing {
   filter: brightness(1.05) saturate(1.05);
   transition: filter var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
@@ -141,6 +166,16 @@
   cursor: grab;
   cursor: -webkit-grab;
   touch-action: none;
+}
+
+.windowTitlebarCompact {
+  cursor: default;
+  touch-action: pan-y;
+}
+
+.windowTitlebarCompact:active,
+.windowTitlebarCompact[aria-grabbed='true'] {
+  cursor: default;
 }
 
 .windowTitlebar:active,

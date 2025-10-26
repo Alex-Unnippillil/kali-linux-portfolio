@@ -28,6 +28,7 @@ import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
 import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
+import { useDesktopMode } from '../desktop/DesktopModeContext';
 import {
     clampWindowPositionWithinViewport,
     clampWindowTopPosition,
@@ -5407,10 +5408,11 @@ export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
     const [snapGrid] = useSnapGridSetting();
     const { density, fontScale, largeHitAreas, desktopTheme } = useSettings();
+    const { isCompact } = useDesktopMode();
     return (
         <Desktop
             {...props}
-            snapEnabled={snapEnabled}
+            snapEnabled={isCompact ? false : snapEnabled}
             snapGrid={snapGrid}
             density={density}
             fontScale={fontScale}

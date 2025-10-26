@@ -292,6 +292,22 @@ export class Window extends Component {
     }
 
     componentDidUpdate(prevProps) {
+        if (prevProps.compactMode !== this.props.compactMode) {
+            const node = this.getWindowNode();
+            if (this.props.compactMode) {
+                if (node) {
+                    node.style.transform = 'none';
+                    if (typeof node.style.removeProperty === 'function') {
+                        node.style.removeProperty('--window-transform-x');
+                        node.style.removeProperty('--window-transform-y');
+                    }
+                }
+                if (this.state.snapPreview || this.state.snapPosition || this.state.snapped) {
+                    this.setState({ snapPreview: null, snapPosition: null, snapped: null });
+                }
+            }
+        }
+
         if (prevProps.minWidth === this.props.minWidth && prevProps.minHeight === this.props.minHeight) {
             return;
         }
@@ -1678,9 +1694,109 @@ export class Window extends Component {
                     ? `snapped-${this.state.snapped}`
                     : 'active'));
 
+        const isCompact = Boolean(this.props.compactMode);
+        const frameClassName = [
+            this.state.cursorType,
+            this.state.closed ? 'closed-window' : '',
+            this.props.minimized ? styles.windowFrameMinimized : '',
+            this.state.grabbed && !isCompact ? 'opacity-70' : '',
+            this.state.snapPreview && !isCompact ? 'ring-2 ring-blue-400' : '',
+            'opened-window overflow-hidden flex flex-col window-shadow main-window',
+            isCompact ? 'relative w-full max-w-full' : 'absolute min-w-1/4 min-h-1/4',
+            styles.windowFrame,
+            this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
+            !isCompact && this.state.maximized ? styles.windowFrameMaximized : '',
+            !isCompact && this.state.resizing ? styles.windowFrameResizing : '',
+            isCompact ? styles.windowFrameCompact : '',
+        ].filter(Boolean).join(' ');
+
+        const frameStyle = isCompact
+            ? {
+                position: 'relative',
+                width: '100%',
+                minWidth: '100%',
+                height: 'auto',
+                minHeight: 'auto',
+                zIndex: computedZIndex,
+                transform: 'none',
+            }
+            : {
+                position: 'absolute',
+                width: `${this.state.width}%`,
+                height: `${this.state.height}%`,
+                minWidth: `${this.state.minWidth}%`,
+                minHeight: `${this.state.minHeight}%`,
+                zIndex: computedZIndex,
+            };
+
+        const allowResizing = this.props.resizable !== false && !this.state.maximized && !isCompact;
+
+        const windowBody = (
+            <div
+                ref={this.windowRef}
+                style={frameStyle}
+                className={frameClassName}
+                id={this.id}
+                role="dialog"
+                data-window-state={windowState}
+                aria-hidden={this.props.minimized ? true : false}
+                aria-label={this.props.title}
+                tabIndex={0}
+                onKeyDown={this.handleKeyDown}
+                onPointerDown={this.focusWindow}
+                onFocus={this.focusWindow}
+            >
+                {allowResizing && (
+                    <>
+                        <WindowEdgeHandle direction="n" onResizeStart={this.beginResize} active={this.state.resizing === 'n'} />
+                        <WindowEdgeHandle direction="s" onResizeStart={this.beginResize} active={this.state.resizing === 's'} />
+                        <WindowEdgeHandle direction="e" onResizeStart={this.beginResize} active={this.state.resizing === 'e'} />
+                        <WindowEdgeHandle direction="w" onResizeStart={this.beginResize} active={this.state.resizing === 'w'} />
+                        <WindowCornerHandle direction="nw" onResizeStart={this.beginResize} active={this.state.resizing === 'nw'} />
+                        <WindowCornerHandle direction="ne" onResizeStart={this.beginResize} active={this.state.resizing === 'ne'} />
+                        <WindowCornerHandle direction="se" onResizeStart={this.beginResize} active={this.state.resizing === 'se'} />
+                        <WindowCornerHandle direction="sw" onResizeStart={this.beginResize} active={this.state.resizing === 'sw'} />
+                    </>
+                )}
+                <WindowTopBar
+                    title={this.props.title}
+                    onKeyDown={!isCompact ? this.handleTitleBarKeyDown : undefined}
+                    onBlur={this.releaseGrab}
+                    grabbed={this.state.grabbed}
+                    onPointerDown={this.focusWindow}
+                    onDoubleClick={!isCompact ? this.handleTitleBarDoubleClick : undefined}
+                    draggable={!isCompact}
+                    controls={(
+                        <WindowEditButtons
+                            minimize={!isCompact ? this.minimizeWindow : undefined}
+                            maximize={!isCompact ? this.maximizeWindow : undefined}
+                            isMaximised={this.state.maximized}
+                            close={this.closeWindow}
+                            id={this.id}
+                            allowMaximize={!isCompact && this.props.allowMaximize !== false}
+                            compactMode={isCompact}
+                        />
+                    )}
+                />
+                {(this.id === "settings"
+                    ? <Settings />
+                    : <WindowMainScreen
+                        screen={this.props.screen}
+                        title={this.props.title}
+                        addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
+                        openApp={this.props.openApp}
+                        context={this.props.context}
+                    />)}
+            </div>
+        );
+
+        if (isCompact) {
+            return windowBody;
+        }
+
         return (
             <>
-                {this.state.snapPreview && (
+                {!isCompact && this.state.snapPreview && (
                     <div
                         data-testid="snap-preview"
                         className={`fixed pointer-events-none z-40 transition-opacity ${styles.snapPreview} ${styles.snapPreviewGlass}`}
@@ -1691,7 +1807,6 @@ export class Window extends Component {
                             height: `${this.state.snapPreview.height}px`,
                             backdropFilter: 'brightness(1.1) saturate(1.2)',
                             WebkitBackdropFilter: 'brightness(1.1) saturate(1.2)'
-
                         }}
                         aria-live="polite"
                         aria-label={getSnapLabel(this.state.snapPosition)}
@@ -1721,76 +1836,8 @@ export class Window extends Component {
                         bottom: boundsBottom + DRAG_BOUNDS_PADDING,
                     }}
                 >
-                    <div
-                        ref={this.windowRef}
-                        style={{
-                            position: 'absolute',
-                            width: `${this.state.width}%`,
-                            height: `${this.state.height}%`,
-                            minWidth: `${this.state.minWidth}%`,
-                            minHeight: `${this.state.minHeight}%`,
-                            zIndex: computedZIndex,
-                        }}
-                        className={[
-                            this.state.cursorType,
-                            this.state.closed ? 'closed-window' : '',
-                            this.props.minimized ? styles.windowFrameMinimized : '',
-                            this.state.grabbed ? 'opacity-70' : '',
-                            this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
-                            'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',
-                            styles.windowFrame,
-                            this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
-                            this.state.maximized ? styles.windowFrameMaximized : '',
-                            this.state.resizing ? styles.windowFrameResizing : '',
-                        ].filter(Boolean).join(' ')}
-                        id={this.id}
-                        role="dialog"
-                        data-window-state={windowState}
-                        aria-hidden={this.props.minimized ? true : false}
-                        aria-label={this.props.title}
-                        tabIndex={0}
-                        onKeyDown={this.handleKeyDown}
-                        onPointerDown={this.focusWindow}
-                        onFocus={this.focusWindow}
-                    >
-                        {this.props.resizable !== false && !this.state.maximized && (
-                            <>
-                                <WindowEdgeHandle direction="n" onResizeStart={this.beginResize} active={this.state.resizing === 'n'} />
-                                <WindowEdgeHandle direction="s" onResizeStart={this.beginResize} active={this.state.resizing === 's'} />
-                                <WindowEdgeHandle direction="e" onResizeStart={this.beginResize} active={this.state.resizing === 'e'} />
-                                <WindowEdgeHandle direction="w" onResizeStart={this.beginResize} active={this.state.resizing === 'w'} />
-                                <WindowCornerHandle direction="nw" onResizeStart={this.beginResize} active={this.state.resizing === 'nw'} />
-                                <WindowCornerHandle direction="ne" onResizeStart={this.beginResize} active={this.state.resizing === 'ne'} />
-                                <WindowCornerHandle direction="se" onResizeStart={this.beginResize} active={this.state.resizing === 'se'} />
-                                <WindowCornerHandle direction="sw" onResizeStart={this.beginResize} active={this.state.resizing === 'sw'} />
-                            </>
-                        )}
-                        <WindowTopBar
-                            title={this.props.title}
-                            onKeyDown={this.handleTitleBarKeyDown}
-                            onBlur={this.releaseGrab}
-                            grabbed={this.state.grabbed}
-                            onPointerDown={this.focusWindow}
-                            onDoubleClick={this.handleTitleBarDoubleClick}
-                            controls={(
-                                <WindowEditButtons
-                                    minimize={this.minimizeWindow}
-                                    maximize={this.maximizeWindow}
-                                    isMaximised={this.state.maximized}
-                                    close={this.closeWindow}
-                                    id={this.id}
-                                    allowMaximize={this.props.allowMaximize !== false}
-                                />
-                            )}
-                        />
-                        {(this.id === "settings"
-                            ? <Settings />
-                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
-                                addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp}
-                                context={this.props.context} />)}
-                    </div>
-                </Draggable >
+                    {windowBody}
+                </Draggable>
             </>
         )
     }
@@ -1799,19 +1846,28 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, controls }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, controls, draggable = true }) {
+    const className = [
+        styles.windowTitlebar,
+        'bg-ub-window-title text-white select-none',
+        draggable ? '' : styles.windowTitlebarCompact,
+    ].filter(Boolean).join(' ');
+
+    const dragHandleProps = draggable ? { 'data-window-drag-handle': '' } : {};
+
     return (
         <div
-            className={`${styles.windowTitlebar} bg-ub-window-title text-white select-none`}
-            tabIndex={0}
-            role="button"
-            aria-grabbed={grabbed}
-            onKeyDown={onKeyDown}
+            className={className}
+            tabIndex={draggable ? 0 : undefined}
+            role={draggable ? 'button' : 'heading'}
+            aria-level={draggable ? undefined : 2}
+            aria-grabbed={draggable ? grabbed : undefined}
+            onKeyDown={draggable ? onKeyDown : undefined}
             onBlur={onBlur}
             onPointerDown={onPointerDown}
-            onDoubleClick={onDoubleClick}
+            onDoubleClick={draggable ? onDoubleClick : undefined}
             data-window-titlebar=""
-            data-window-drag-handle=""
+            {...dragHandleProps}
         >
             <span className={styles.windowTitleBalancer} aria-hidden="true" />
             <div className={`${styles.windowTitle} text-sm font-bold`} title={title}>
@@ -1893,7 +1949,8 @@ export function WindowCornerHandle({ direction, onResizeStart, active }) {
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
-    const allowMaximize = props.allowMaximize !== false;
+    const compactMode = Boolean(props.compactMode);
+    const allowMaximize = !compactMode && props.allowMaximize !== false;
     const isMaximized = Boolean(props.isMaximised);
     const minimizeAriaLabel = 'Window minimize';
     const maximizeAriaLabel = isMaximized ? 'Restore window size' : 'Window maximize';
@@ -2058,40 +2115,44 @@ export function WindowEditButtons(props) {
             onTouchStart={(event) => event.stopPropagation()}
             data-window-controls=""
         >
-            <button
-                type="button"
-                aria-label={minimizeAriaLabel}
-                title="Minimize"
-                className={`${styles.windowControlButton} ${pressedControl === 'minimize' ? styles.windowControlButtonPressed : ''}`.trim()}
-                onPointerDown={handlePointerDown('minimize')}
-                onPointerUp={handlePointerUp('minimize', props.minimize)}
-                onPointerLeave={resetPressedControl}
-                onPointerCancel={resetPressedControl}
-                onBlur={resetPressedControl}
-                onClick={handleButtonClick(props.minimize)}
-            >
-                <MinimizeIcon />
-            </button>
-            <button
-                type="button"
-                aria-label={maximizeAriaLabel}
-                title={isMaximized ? 'Restore' : 'Maximize'}
-                className={[
-                    styles.windowControlButton,
-                    allowMaximize ? '' : styles.windowControlButtonDisabled,
-                    pressedControl === 'maximize' ? styles.windowControlButtonPressed : '',
-                ].filter(Boolean).join(' ')}
-                onClick={handleButtonClick(handleMaximize)}
-                disabled={!allowMaximize}
-                aria-disabled={!allowMaximize}
-                onPointerDown={allowMaximize ? handlePointerDown('maximize') : undefined}
-                onPointerUp={allowMaximize ? handlePointerUp('maximize', handleMaximize) : undefined}
-                onPointerLeave={resetPressedControl}
-                onPointerCancel={resetPressedControl}
-                onBlur={resetPressedControl}
-            >
-                {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
-            </button>
+            {!compactMode && (
+                <button
+                    type="button"
+                    aria-label={minimizeAriaLabel}
+                    title="Minimize"
+                    className={`${styles.windowControlButton} ${pressedControl === 'minimize' ? styles.windowControlButtonPressed : ''}`.trim()}
+                    onPointerDown={handlePointerDown('minimize')}
+                    onPointerUp={handlePointerUp('minimize', props.minimize)}
+                    onPointerLeave={resetPressedControl}
+                    onPointerCancel={resetPressedControl}
+                    onBlur={resetPressedControl}
+                    onClick={handleButtonClick(props.minimize)}
+                >
+                    <MinimizeIcon />
+                </button>
+            )}
+            {!compactMode && (
+                <button
+                    type="button"
+                    aria-label={maximizeAriaLabel}
+                    title={isMaximized ? 'Restore' : 'Maximize'}
+                    className={[
+                        styles.windowControlButton,
+                        allowMaximize ? '' : styles.windowControlButtonDisabled,
+                        pressedControl === 'maximize' ? styles.windowControlButtonPressed : '',
+                    ].filter(Boolean).join(' ')}
+                    onClick={handleButtonClick(handleMaximize)}
+                    disabled={!allowMaximize}
+                    aria-disabled={!allowMaximize}
+                    onPointerDown={allowMaximize ? handlePointerDown('maximize') : undefined}
+                    onPointerUp={allowMaximize ? handlePointerUp('maximize', handleMaximize) : undefined}
+                    onPointerLeave={resetPressedControl}
+                    onPointerCancel={resetPressedControl}
+                    onBlur={resetPressedControl}
+                >
+                    {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
+                </button>
+            )}
             <button
                 type="button"
                 id={`close-${props.id}`}

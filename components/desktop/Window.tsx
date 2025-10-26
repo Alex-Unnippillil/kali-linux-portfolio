@@ -6,6 +6,7 @@ import {
   measureWindowTopOffset,
 } from "../../utils/windowLayout";
 import { useDesktopZIndex } from "./zIndexManager";
+import { useDesktopMode } from "./DesktopModeContext";
 
 type BaseWindowProps = React.ComponentProps<typeof BaseWindow>;
 // BaseWindow is a class component, so the instance type exposes helper methods.
@@ -57,6 +58,7 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       zIndex: _ignoredZIndex,
       ...rest
     } = props;
+    const { initialX, initialY, onPositionChange } = rest;
     const innerRef = useRef<BaseWindowInstance>(null);
     const {
       baseZIndex,
@@ -65,6 +67,7 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       focusWindow: focusZIndex,
       getZIndex,
     } = useDesktopZIndex();
+    const { isCompact } = useDesktopMode();
     const windowId = id ?? null;
 
     const assignRef = useCallback(
@@ -98,10 +101,10 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       const combinedTopOffset = viewportTop + topOffset;
       const storedPosition = readNodePosition(node);
       const fallbackPosition = {
-        x: typeof props.initialX === "number"
-          ? props.initialX + viewportLeft
+        x: typeof initialX === "number"
+          ? initialX + viewportLeft
           : viewportLeft,
-        y: clampWindowTopPosition(props.initialY, combinedTopOffset),
+        y: clampWindowTopPosition(initialY, combinedTopOffset),
       };
       const currentPosition = storedPosition || fallbackPosition;
       const clamped = clampWindowPositionWithinViewport(currentPosition, rect, {
@@ -125,10 +128,10 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
         (node.style as unknown as Record<string, string>)["--window-transform-y"] = `${clamped.y}px`;
       }
 
-      if (typeof props.onPositionChange === "function") {
-        props.onPositionChange(clamped.x, clamped.y);
+      if (typeof onPositionChange === "function") {
+        onPositionChange(clamped.x, clamped.y);
       }
-    }, [props.initialX, props.initialY, props.onPositionChange]);
+    }, [initialX, initialY, onPositionChange]);
 
     useEffect(() => {
       if (!windowId) return;
@@ -173,6 +176,10 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       <BaseWindow
         ref={assignRef}
         {...rest}
+        snapEnabled={isCompact ? false : rest.snapEnabled}
+        resizable={isCompact ? false : rest.resizable}
+        allowMaximize={isCompact ? false : rest.allowMaximize}
+        compactMode={isCompact}
         id={id}
         focus={handleFocus}
         isFocused={isFocused}
