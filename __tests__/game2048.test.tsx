@@ -6,6 +6,7 @@ beforeEach(() => {
   window.localStorage.clear();
   setSeed(1);
   window.localStorage.setItem('2048-seed', new Date().toISOString().slice(0, 10));
+  window.localStorage.setItem('seen_tutorial_2048', '1');
 });
 
 test.skip('merging two 2s creates one 4', async () => {
@@ -70,9 +71,9 @@ test('ignores browser key repeat events', () => {
     [0, 0, 0, 0],
     [0, 0, 0, 0],
   ]));
-  const { getByText } = render(<Game2048 />);
+  const { getByTestId } = render(<Game2048 />);
   fireEvent.keyDown(window, { key: 'ArrowLeft', repeat: true });
-  expect(getByText(/Moves: 0/)).toBeTruthy();
+  expect(getByTestId('move-count')).toHaveTextContent('0');
 });
 
 
@@ -83,19 +84,19 @@ test('tracks moves and allows multiple undos', async () => {
     [0, 0, 0, 0],
     [0, 0, 0, 0],
   ]));
-  const { getByText } = render(<Game2048 />);
+  const { getByRole, getByTestId } = render(<Game2048 />);
   const initial = JSON.parse(window.localStorage.getItem('2048-board') || '[]');
   fireEvent.keyDown(window, { key: 'ArrowLeft' });
   await act(async () => {
     await new Promise((r) => setTimeout(r, 500));
   });
   fireEvent.keyDown(window, { key: 'ArrowRight' });
-  expect(getByText(/Moves: 2/)).toBeTruthy();
-  const undoBtn = getByText(/Undo/);
+  expect(getByTestId('move-count')).toHaveTextContent('2');
+  const undoBtn = getByRole('button', { name: /Undo/ });
   fireEvent.click(undoBtn);
-  expect(getByText(/Moves: 1/)).toBeTruthy();
+  expect(getByTestId('move-count')).toHaveTextContent('1');
   fireEvent.click(undoBtn);
-  expect(getByText(/Moves: 0/)).toBeTruthy();
+  expect(getByTestId('move-count')).toHaveTextContent('0');
   const board = JSON.parse(window.localStorage.getItem('2048-board') || '[]');
   expect(board).toEqual(initial);
 });
@@ -127,13 +128,13 @@ test('ignores key repeats while a move is in progress', async () => {
     [0, 0, 0, 0],
     [0, 0, 0, 0],
   ]));
-  const { getByText } = render(<Game2048 />);
+  const { getByTestId } = render(<Game2048 />);
   fireEvent.keyDown(window, { key: 'ArrowLeft' });
   fireEvent.keyDown(window, { key: 'ArrowLeft' });
-  expect(getByText(/Moves: 1/)).toBeTruthy();
+  expect(getByTestId('move-count')).toHaveTextContent('1');
   await act(async () => {
     await new Promise((r) => setTimeout(r, 500));
   });
   fireEvent.keyDown(window, { key: 'ArrowLeft' });
-  expect(getByText(/Moves: 2/)).toBeTruthy();
+  expect(getByTestId('move-count')).toHaveTextContent('2');
 });

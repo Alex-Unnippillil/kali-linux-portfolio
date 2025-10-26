@@ -6,6 +6,7 @@ import React, {
   useCallback,
   createContext,
   useContext,
+  useMemo,
 } from 'react';
 import clsx from 'clsx';
 import HelpOverlay from './HelpOverlay';
@@ -44,6 +45,36 @@ const RecorderContext = createContext<RecorderContextValue>({
 
 export const useInputRecorder = () => useContext(RecorderContext);
 
+type ScaleDuration = (ms: number) => number;
+
+interface GameLayoutTheme {
+  prefersReducedMotion: boolean;
+  isActive: boolean;
+  scaleDuration: ScaleDuration;
+  durations: {
+    tilePop: number;
+    tileMerge: number;
+    scorePop: number;
+    tileGlow: number;
+    ripple: number;
+  };
+}
+
+const GameLayoutThemeContext = createContext<GameLayoutTheme>({
+  prefersReducedMotion: false,
+  isActive: true,
+  scaleDuration: (ms) => ms,
+  durations: {
+    tilePop: 200,
+    tileMerge: 400,
+    scorePop: 300,
+    tileGlow: 900,
+    ripple: 400,
+  },
+});
+
+export const useGameLayoutTheme = () => useContext(GameLayoutThemeContext);
+
 const GameLayout: React.FC<GameLayoutProps> = ({
   gameId = 'unknown',
   children,
@@ -63,6 +94,12 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   const [scorePulse, setScorePulse] = useState(false);
   const [highScorePulse, setHighScorePulse] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+  const [isActive, setIsActive] = useState(() => {
+    if (typeof document === 'undefined') return true;
+    const visible = document.visibilityState !== 'hidden';
+    const focused = typeof document.hasFocus === 'function' ? document.hasFocus() : true;
+    return visible && focused;
+  });
 
   const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
@@ -208,17 +245,33 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 
   // Auto-pause when page becomes hidden or window loses focus
   useEffect(() => {
+    const computeActive = () => {
+      if (typeof document === 'undefined') return true;
+      const visible = document.visibilityState !== 'hidden';
+      const focused = typeof document.hasFocus === 'function' ? document.hasFocus() : true;
+      return visible && focused;
+    };
     const handleVisibility = () => {
-      if (document.visibilityState === 'hidden') {
+      const active = computeActive();
+      if (!active) {
         setPaused(true);
       }
+      setIsActive(active);
     };
-    const handleBlur = () => setPaused(true);
+    const handleBlur = () => {
+      setPaused(true);
+      setIsActive(false);
+    };
+    const handleFocus = () => {
+      setIsActive(computeActive());
+    };
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
     };
   }, []);
 
@@ -226,12 +279,53 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 
   const contextValue = { record, registerReplay };
 
+  const themeValue = useMemo<GameLayoutTheme>(() => {
+    const scaleDuration: ScaleDuration = (ms) =>
+      prefersReducedMotion || !isActive ? 0 : ms;
+    return {
+      prefersReducedMotion,
+      isActive,
+      scaleDuration,
+      durations: {
+        tilePop: scaleDuration(200),
+        tileMerge: scaleDuration(400),
+        scorePop: scaleDuration(300),
+        tileGlow: scaleDuration(900),
+        ripple: scaleDuration(400),
+      },
+    };
+  }, [isActive, prefersReducedMotion]);
+
+  const themeStyle = useMemo(
+    () =>
+      ({
+        '--game-tile-pop-duration': `${themeValue.durations.tilePop}ms`,
+        '--game-tile-merge-duration': `${themeValue.durations.tileMerge}ms`,
+        '--game-tile-score-duration': `${themeValue.durations.scorePop}ms`,
+        '--game-tile-glow-duration': `${themeValue.durations.tileGlow}ms`,
+        '--game-tile-ripple-duration': `${themeValue.durations.ripple}ms`,
+      }) as React.CSSProperties,
+    [
+      themeValue.durations.tileGlow,
+      themeValue.durations.tileMerge,
+      themeValue.durations.tilePop,
+      themeValue.durations.scorePop,
+      themeValue.durations.ripple,
+    ],
+  );
+
   return (
     <RecorderContext.Provider value={contextValue}>
-      <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
-        {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
-        {paused && (
-          <div
+      <GameLayoutThemeContext.Provider value={themeValue}>
+        <div
+          className="relative h-full w-full"
+          data-reduced-motion={prefersReducedMotion}
+          data-game-active={themeValue.isActive ? 'true' : 'false'}
+          style={themeStyle}
+        >
+          {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
+          {paused && (
+            <div
             className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
             role="dialog"
           aria-modal="true"
@@ -337,7 +431,8 @@ const GameLayout: React.FC<GameLayoutProps> = ({
       {editor && (
         <div className="absolute bottom-2 left-2 z-30">{editor}</div>
       )}
-      </div>
+        </div>
+      </GameLayoutThemeContext.Provider>
     </RecorderContext.Provider>
   );
 };

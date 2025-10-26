@@ -4,10 +4,10 @@ import type { Board } from '../../apps/games/_2048/logic';
 import { shareBlob } from '../../components/apps/Games/common/share';
 
 const recorder = new Replay<string>();
-let startState: { board: Board; rng: string } | null = null;
+let startState: { board: Board; rng: string; seed?: string } | null = null;
 
-export function startRecording(board: Board): void {
-  startState = { board: board.map((row) => [...row]), rng: serialize() };
+export function startRecording(board: Board, seed?: string): void {
+  startState = { board: board.map((row) => [...row]), rng: serialize(), seed };
   recorder.startRecording();
 }
 
@@ -20,6 +20,7 @@ export async function downloadReplay(): Promise<void> {
   const data = {
     board: startState.board,
     rng: startState.rng,
+    seed: startState.seed ?? null,
     events: recorder.getEvents().map(({ t, data }) => ({ t, dir: data })),
   };
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
