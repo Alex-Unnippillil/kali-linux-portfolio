@@ -1,6 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import progressInfo from './progress.json';
 import StatsChart from '../../StatsChart';
+import {
+  AdaptiveSmoother,
+  createStaticConfidence,
+  getPresetById,
+  SMOOTHING_PRESETS,
+  TICK_INTERVAL_MS,
+} from './smoothing';
 
 export const hashTypes = [
   {
@@ -179,7 +186,16 @@ const Gauge = ({ value }) => (
   </div>
 );
 
-const ProgressGauge = ({ progress, info, reduceMotion }) => {
+const ProgressGauge = ({
+  progress,
+  info,
+  reduceMotion,
+  confidence,
+  etaSeconds,
+  etaConfidence,
+  attemptsPerSecond,
+  isCracking,
+}) => {
   const hashRates = Array.isArray(info.hashRate)
     ? info.hashRate
     : [info.hashRate];
@@ -188,6 +204,56 @@ const ProgressGauge = ({ progress, info, reduceMotion }) => {
     ? info.recovered
     : [info.recovered];
   const [index, setIndex] = useState(0);
+  const resolvedProgress = Number(progress ?? 0);
+  const sanitizedProgress = Number.isFinite(resolvedProgress)
+    ? Math.max(0, Math.min(100, Number(resolvedProgress.toFixed(2))))
+    : 0;
+  const hasConfidence =
+    confidence &&
+    Number.isFinite(confidence.lower) &&
+    Number.isFinite(confidence.upper);
+
+  const hasLiveEta = Number.isFinite(etaSeconds);
+  const liveAttempts = Number.isFinite(attemptsPerSecond)
+    ? `${attemptsPerSecond.toFixed(2)} H/s`
+    : null;
+
+  const formatDuration = (seconds) => {
+    if (!Number.isFinite(seconds)) return 'N/A';
+    const total = Math.max(0, seconds);
+    if (total < 1) {
+      return `${total.toFixed(2)}s`;
+    }
+    if (total < 60) {
+      return `${total.toFixed(1)}s`;
+    }
+    const minutes = total / 60;
+    if (minutes < 60) {
+      return `${minutes.toFixed(2)}m`;
+    }
+    const hours = minutes / 60;
+    if (hours < 24) {
+      return `${hours.toFixed(2)}h`;
+    }
+    const days = hours / 24;
+    return `${days.toFixed(2)}d`;
+  };
+
+  const shouldShowProgressRange =
+    hasConfidence &&
+    (isCracking || confidence.lower !== confidence.upper);
+  const progressRangeDisplay = shouldShowProgressRange
+    ? `${confidence.lower.toFixed(1)}% – ${confidence.upper.toFixed(1)}%`
+    : null;
+  const shouldShowEtaRange =
+    hasLiveEta &&
+    etaConfidence &&
+    (isCracking || etaConfidence.lower !== etaConfidence.upper);
+  const etaRangeDisplay = shouldShowEtaRange
+    ? `${formatDuration(etaConfidence.lower)} – ${formatDuration(
+        etaConfidence.upper
+      )}`
+    : null;
 
   useEffect(() => {
     if (reduceMotion || hashRates.length === 1) {
@@ -209,21 +275,29 @@ const ProgressGauge = ({ progress, info, reduceMotion }) => {
       aria-label="Hash cracking progress"
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-valuenow={progress}
-      aria-valuetext={`${progress}%`}
+      aria-valuenow={sanitizedProgress}
+      aria-valuetext={`${sanitizedProgress}%`}
     >
-      <div className="text-sm mb-1">Progress: {progress}%</div>
+      <div className="text-sm mb-1">Progress: {sanitizedProgress}%</div>
       <div className="w-full h-4 bg-gray-700 rounded">
         <div
           className="h-4 bg-blue-600 rounded"
-          style={{ width: `${progress}%` }}
+          style={{ width: `${sanitizedProgress}%` }}
         />
       </div>
       <div role="status" aria-live="polite" className="text-sm mt-2">
-        <div>Attempts/sec: {hashRates[index]}</div>
-        <div>ETA: {etas[index]}</div>
+        <div>
+          Attempts/sec: {liveAttempts ?? hashRates[index]}
+        </div>
+        <div>ETA: {hasLiveEta ? formatDuration(etaSeconds) : etas[index]}</div>
         <div>Recovered: {recovered[index]}</div>
         <div>Mode: {info.mode}</div>
+        {progressRangeDisplay && (
+          <div className="mt-1">95% progress range: {progressRangeDisplay}</div>
+        )}
+        {etaRangeDisplay && (
+          <div className="mt-1">95% ETA range: {etaRangeDisplay}</div>
+        )}
       </div>
     </div>
   );
@@ -239,6 +313,11 @@ function HashcatApp() {
   const [wordlistUrl, setWordlistUrl] = useState('');
   const [wordlist, setWordlist] = useState('');
   const [progress, setProgress] = useState(0);
+  const [displayProgress, setDisplayProgress] = useState(0);
+  const [progressConfidence, setProgressConfidence] = useState(null);
+  const [displayEtaSeconds, setDisplayEtaSeconds] = useState(null);
+  const [etaConfidence, setEtaConfidence] = useState(null);
+  const [attemptsPerSecond, setAttemptsPerSecond] = useState(null);
   const [result, setResult] = useState('');
   const [isCracking, setIsCracking] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -248,9 +327,23 @@ function HashcatApp() {
   const [maskStats, setMaskStats] = useState({ count: 0, time: 0 });
   const showMask = ['3', '6', '7'].includes(attackMode);
   const [ruleSet, setRuleSet] = useState('none');
+  const [smoothingPreset, setSmoothingPreset] = useState('balanced');
   const rulePreview = (ruleSets[ruleSet] || []).slice(0, 10).join('\n');
   const workerRef = useRef(null);
-  const frameRef = useRef(null);
+  const frameRef = useRef({ id: null, type: null });
+  const smoothingRef = useRef({ progress: null, eta: null });
+  const targetRef = useRef(progressInfo.progress);
+
+  const clearScheduledFrame = useCallback(() => {
+    if (frameRef.current?.id !== null) {
+      if (frameRef.current.type === 'timeout') {
+        clearTimeout(frameRef.current.id);
+      } else if (frameRef.current.type === 'frame') {
+        cancelAnimationFrame(frameRef.current.id);
+      }
+      frameRef.current = { id: null, type: null };
+    }
+  }, []);
 
   const formatTime = (seconds) => {
     if (seconds < 60) return `${seconds.toFixed(2)}s`;
@@ -299,69 +392,197 @@ function HashcatApp() {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
+  const handleSmoothingChange = useCallback(
+    (nextPresetId) => {
+      setSmoothingPreset(nextPresetId);
+      if (!isCracking) return;
+      const preset = getPresetById(nextPresetId);
+      const progressSmoother = new AdaptiveSmoother({
+        alpha: preset.alpha,
+        windowSize: preset.windowSize,
+      });
+      progressSmoother.update(progress);
+      const etaSmoother = new AdaptiveSmoother({
+        alpha: Math.min(0.9, preset.alpha + 0.1),
+        windowSize: preset.windowSize,
+      });
+      if (Number.isFinite(displayEtaSeconds)) {
+        etaSmoother.update(displayEtaSeconds);
+      }
+      smoothingRef.current = {
+        progress: progressSmoother,
+        eta: etaSmoother,
+      };
+    },
+    [displayEtaSeconds, isCracking, progress]
+  );
+
+  const cancelCracking = useCallback(
+    (reset = true) => {
+      if (workerRef.current) {
+        workerRef.current.postMessage({ cancel: true });
+        workerRef.current.terminate();
+        workerRef.current = null;
+      }
+      clearScheduledFrame();
+      smoothingRef.current = { progress: null, eta: null };
+      setIsCracking(false);
+      if (reset) {
+        setProgress(0);
+        setDisplayProgress(0);
+        setProgressConfidence(null);
+        setDisplayEtaSeconds(null);
+        setEtaConfidence(null);
+        setAttemptsPerSecond(null);
+        setResult('');
+      }
+    },
+    [clearScheduledFrame]
+  );
+
+  const applyProgressUpdate = useCallback(
+    (payload, expectedValue) => {
+      const progressBounds = { min: 0, max: targetRef.current };
+      const etaBounds = {
+        min: 0,
+        max: targetRef.current * (TICK_INTERVAL_MS / 1000),
+      };
+
+      const nextProgress = Number.isFinite(payload.progress)
+        ? payload.progress
+        : 0;
+      const nextEta = Number.isFinite(payload.etaSeconds)
+        ? payload.etaSeconds
+        : etaBounds.max;
+
+      setProgress(nextProgress);
+
+      const progressSmoother = smoothingRef.current.progress;
+      const etaSmoother = smoothingRef.current.eta;
+
+      const smoothedProgress = progressSmoother
+        ? progressSmoother.update(nextProgress)
+        : nextProgress;
+      const progressInterval = progressSmoother
+        ? progressSmoother.getConfidenceInterval(0.95, progressBounds)
+        : createStaticConfidence(nextProgress, progressBounds);
+
+      const smoothedEta = etaSmoother ? etaSmoother.update(nextEta) : nextEta;
+      const etaInterval = etaSmoother
+        ? etaSmoother.getConfidenceInterval(0.95, etaBounds)
+        : createStaticConfidence(nextEta, etaBounds);
+
+      const progressValue = Number.isFinite(progressInterval?.smoothed)
+        ? progressInterval.smoothed
+        : Number.isFinite(smoothedProgress)
+        ? smoothedProgress
+        : nextProgress;
+      const etaValue = Number.isFinite(etaInterval?.smoothed)
+        ? etaInterval.smoothed
+        : Number.isFinite(smoothedEta)
+        ? smoothedEta
+        : nextEta;
+
+      setDisplayProgress(progressValue);
+      setProgressConfidence(progressInterval);
+      setDisplayEtaSeconds(etaValue);
+      setEtaConfidence(etaInterval);
+      setAttemptsPerSecond(
+        Number.isFinite(payload.attemptsPerSecond)
+          ? payload.attemptsPerSecond
+          : null
+      );
+
+      if (payload.complete) {
+        setResult(expectedValue);
+        setDisplayProgress(progressBounds.max);
+        setProgressConfidence(
+          createStaticConfidence(progressBounds.max, progressBounds)
+        );
+        setDisplayEtaSeconds(0);
+        setEtaConfidence(createStaticConfidence(0, etaBounds));
+        cancelCracking(false);
+      }
+    },
+    [cancelCracking]
+  );
+
   const startCracking = () => {
     if (isCracking) return;
     const expected = selected.output;
+    const preset = getPresetById(smoothingPreset);
+    smoothingRef.current = {
+      progress: new AdaptiveSmoother({
+        alpha: preset.alpha,
+        windowSize: preset.windowSize,
+      }),
+      eta: new AdaptiveSmoother({
+        alpha: Math.min(0.9, preset.alpha + 0.1),
+        windowSize: preset.windowSize,
+      }),
+    };
+    frameRef.current = { id: null, type: null };
     setIsCracking(true);
     setProgress(0);
+    setDisplayProgress(0);
+    setProgressConfidence(null);
+    setDisplayEtaSeconds(null);
+    setEtaConfidence(null);
+    setAttemptsPerSecond(null);
     setResult('');
     if (typeof window === 'undefined') return;
+    const totalTarget = targetRef.current;
     if (typeof Worker === 'function') {
       workerRef.current = new Worker(
         new URL('./progress.worker.js', import.meta.url)
       );
-      workerRef.current.postMessage({ target: progressInfo.progress });
+      workerRef.current.postMessage({ target: totalTarget });
       workerRef.current.onmessage = ({ data }) => {
-        const update = () => {
-          setProgress(data);
-          if (data >= progressInfo.progress) {
-            setResult(expected);
-            cancelCracking(false);
-          }
-        };
+        const update = () => applyProgressUpdate(data, expected);
         if (prefersReducedMotion) {
+          clearScheduledFrame();
           update();
         } else {
-          frameRef.current = requestAnimationFrame(update);
+          clearScheduledFrame();
+          frameRef.current = {
+            id: requestAnimationFrame(update),
+            type: 'frame',
+          };
         }
       };
     } else {
-      const target = progressInfo.progress;
-      const animate = () => {
-        setProgress((p) => {
-          if (p >= target) {
-            setResult(expected);
-            cancelCracking(false);
-            return p;
-          }
-          frameRef.current = requestAnimationFrame(animate);
-          return p + 1;
-        });
+      const start = Date.now();
+      let current = 0;
+      const fallbackTick = () => {
+        current = Math.min(totalTarget, current + 1);
+        const elapsedMs = Date.now() - start;
+        const payload = {
+          progress: current,
+          etaSeconds: Math.max(
+            0,
+            (totalTarget - current) * (TICK_INTERVAL_MS / 1000)
+          ),
+          attemptsPerSecond: current
+            ? (current / Math.max(1, elapsedMs)) * 1000
+            : 0,
+          complete: current >= totalTarget,
+        };
+        applyProgressUpdate(payload, expected);
+        if (!payload.complete) {
+          clearScheduledFrame();
+          frameRef.current = {
+            id: window.setTimeout(fallbackTick, TICK_INTERVAL_MS),
+            type: 'timeout',
+          };
+        }
       };
-      frameRef.current = requestAnimationFrame(animate);
-    }
-  };
-
-  const cancelCracking = (reset = true) => {
-    if (workerRef.current) {
-      workerRef.current.postMessage({ cancel: true });
-      workerRef.current.terminate();
-      workerRef.current = null;
-    }
-    if (frameRef.current) {
-      cancelAnimationFrame(frameRef.current);
-      frameRef.current = null;
-    }
-    setIsCracking(false);
-    if (reset) {
-      setProgress(0);
-      setResult('');
+      fallbackTick();
     }
   };
 
   useEffect(() => {
     return () => cancelCracking();
-  }, []);
+  }, [cancelCracking]);
 
   const selected = hashTypes.find((h) => h.id === hashType) || hashTypes[0];
   const filteredHashTypes = hashTypes.filter(
@@ -628,6 +849,27 @@ function HashcatApp() {
           Session completed.
         </pre>
       </div>
+      <div>
+        <label className="mr-2" htmlFor="smoothing-level">
+          Smoothing level:
+        </label>
+        <select
+          id="smoothing-level"
+          className="text-black px-2 py-1"
+          value={smoothingPreset}
+          onChange={(e) => handleSmoothingChange(e.target.value)}
+        >
+          {Object.values(SMOOTHING_PRESETS).map((presetOption) => (
+            <option key={presetOption.id} value={presetOption.id}>
+              {presetOption.label}
+            </option>
+          ))}
+        </select>
+        <div className="text-xs mt-1 max-w-md">
+          Adjust smoothing aggressiveness so progress and ETA updates stay
+          readable at 50ms intervals.
+        </div>
+      </div>
       <Gauge value={gpuUsage} />
       <div className="text-xs">Note: real hashcat requires a compatible GPU.</div>
       {!isCracking ? (
@@ -640,9 +882,14 @@ function HashcatApp() {
         </button>
       )}
       <ProgressGauge
-        progress={progress}
+        progress={displayProgress}
         info={info}
         reduceMotion={prefersReducedMotion}
+        confidence={progressConfidence}
+        etaSeconds={displayEtaSeconds}
+        etaConfidence={etaConfidence}
+        attemptsPerSecond={attemptsPerSecond}
+        isCracking={isCracking}
       />
       {result && <div>Result: {result}</div>}
       <pre className="bg-black text-green-400 p-2 rounded text-xs w-full max-w-md overflow-x-auto mt-4">
