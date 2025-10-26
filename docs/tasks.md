@@ -125,6 +125,9 @@ For each game below, build a canvas-based component with `requestAnimationFrame`
 ## Housekeeping
 - Keep `apps.config.js` organized with utilities and games grouped and exported consistently.
 - Monitor `fast-glob` updates and explore hash optimizations for the custom service worker.
+- Ops Dashboard verification steps:
+  - Run `npx playwright test playwright/ops-dashboard.spec.ts` to exercise the `/ops-dashboard` workflow.
+  - Confirm the run simulates an SLO breach, switches alert routes, logs an incident, exports the data, and finishes with a clean console.
 
 ### App Icon Refresh
 - Inventory every app logo under `public/apps`, `public/assets`, and other icon folders; note sizes and current formats.
