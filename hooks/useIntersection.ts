@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { observeViewport } from '../utils/viewport';
 
 /**
  * useIntersection observes the given element and reports whether it is
@@ -14,17 +15,14 @@ export default function useIntersection<T extends Element>(
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
-    if (typeof IntersectionObserver === 'undefined') {
-      setIntersecting(true);
-      return;
-    }
 
-    const observer = new IntersectionObserver(([entry]) => {
+    const unsubscribe = observeViewport(node, (entry) => {
       setIntersecting(entry.isIntersecting);
     }, options);
 
-    observer.observe(node);
-    return () => observer.disconnect();
+    return () => {
+      unsubscribe();
+    };
   }, [ref, options]);
 
   return isIntersecting;
