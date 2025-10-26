@@ -61,6 +61,7 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
 const AboutAlexApp = createDynamicApp('alex', 'About Alex');
+const SchedulerApp = createDynamicApp('scheduler/SchedulerApp', 'Scheduler');
 
 const QrApp = createDynamicApp('qr', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
@@ -152,6 +153,7 @@ const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayFileExplorer = createDisplay(FileExplorerApp);
 const displayRadare2 = createDisplay(Radare2App);
 const displayAboutAlex = createDisplay(AboutAlexApp);
+const displayScheduler = createDisplay(SchedulerApp);
 
 const displayQr = createDisplay(QrApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
@@ -228,6 +230,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayClipboardManager,
+  },
+  {
+    id: 'scheduler',
+    title: 'Scheduler',
+    icon: '/themes/Yaru/apps/scheduler.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayScheduler,
   },
   {
     id: 'figlet',
