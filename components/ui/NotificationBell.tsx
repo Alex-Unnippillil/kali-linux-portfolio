@@ -22,37 +22,61 @@ const PRIORITY_METADATA: Record<
   NotificationPriority,
   {
     label: string;
-    badgeClass: string;
+    badgeClasses: {
+      solid: string;
+      soft: string;
+    };
     accentClass: string;
+    sectionHeaderClass: string;
     defaultCollapsed: boolean;
     description: string;
   }
 > = {
   critical: {
     label: 'Critical',
-    badgeClass: 'bg-red-500 text-white',
-    accentClass: 'border-red-500 bg-red-500/10',
+    badgeClasses: {
+      solid: 'bg-red-700 text-white ring-1 ring-red-400/70',
+      soft: 'bg-red-100 text-red-900 ring-1 ring-red-200/70',
+    },
+    accentClass: 'border-red-500/70 bg-red-500/20',
+    sectionHeaderClass:
+      'text-red-50 hover:bg-red-500/15 focus-visible:ring-red-400 focus-visible:ring-offset-0',
     defaultCollapsed: false,
     description: 'Immediate action required alerts.',
   },
   high: {
     label: 'High',
-    badgeClass: 'bg-orange-500 text-white',
-    accentClass: 'border-orange-400 bg-orange-500/10',
+    badgeClasses: {
+      solid: 'bg-amber-500 text-slate-900 ring-1 ring-amber-300/70',
+      soft: 'bg-amber-200 text-slate-900 ring-1 ring-amber-300/70',
+    },
+    accentClass: 'border-amber-400/70 bg-amber-400/15',
+    sectionHeaderClass:
+      'text-amber-50 hover:bg-amber-400/15 focus-visible:ring-amber-300 focus-visible:ring-offset-0',
     defaultCollapsed: false,
     description: 'Important follow-up from active tools.',
   },
   normal: {
     label: 'Normal',
-    badgeClass: 'bg-sky-500 text-white',
-    accentClass: 'border-sky-400 bg-sky-500/5',
+    badgeClasses: {
+      solid: 'bg-sky-600 text-white ring-1 ring-sky-400/60',
+      soft: 'bg-sky-200 text-sky-900 ring-1 ring-sky-300/60',
+    },
+    accentClass: 'border-sky-500/70 bg-sky-500/15',
+    sectionHeaderClass:
+      'text-sky-50 hover:bg-sky-500/15 focus-visible:ring-sky-400 focus-visible:ring-offset-0',
     defaultCollapsed: false,
     description: 'Routine updates and summaries.',
   },
   low: {
     label: 'Low',
-    badgeClass: 'bg-slate-600 text-white',
-    accentClass: 'border-slate-600 bg-slate-500/10',
+    badgeClasses: {
+      solid: 'bg-slate-600 text-white ring-1 ring-slate-400/60',
+      soft: 'bg-slate-200 text-slate-900 ring-1 ring-slate-300/60',
+    },
+    accentClass: 'border-slate-500/70 bg-slate-500/20',
+    sectionHeaderClass:
+      'text-slate-100 hover:bg-slate-500/20 focus-visible:ring-slate-400 focus-visible:ring-offset-0',
     defaultCollapsed: true,
     description: 'Verbose background chatter collapses by default.',
   },
@@ -302,12 +326,12 @@ const NotificationBell: React.FC = () => {
                         onClick={() => toggleGroup(group.priority)}
                         aria-expanded={!collapsed}
                         aria-controls={contentId}
-                        className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
+                        className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold transition focus:outline-none focus-visible:ring-2 ${group.metadata.sectionHeaderClass}`}
                       >
                         <span className="flex items-center gap-2">
                           {group.metadata.label}
                           <span
-                            className={`rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide ${group.metadata.badgeClass}`}
+                            className={`rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide ${group.metadata.badgeClasses.solid}`}
                             title={group.metadata.description}
                           >
                             {group.notifications.length}
@@ -339,7 +363,7 @@ const NotificationBell: React.FC = () => {
                               <div className="flex items-start justify-between gap-2">
                                 <p className="font-medium">{notification.title}</p>
                                 <span
-                                  className={`shrink-0 rounded-full px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide ${notification.metadata.badgeClass}`}
+                                  className={`shrink-0 rounded-full px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide ${notification.metadata.badgeClasses.soft}`}
                                   title={
                                     notification.classification.matchedRuleId
                                       ? `Priority ${notification.metadata.label} (${notification.classification.source}: ${notification.classification.matchedRuleId})`
@@ -350,11 +374,11 @@ const NotificationBell: React.FC = () => {
                                 </span>
                               </div>
                               {notification.body && (
-                                <p className="mt-1 whitespace-pre-line text-xs text-ubt-grey text-opacity-80">
+                                <p className="mt-1 whitespace-pre-line text-xs text-slate-200">
                                   {notification.body}
                                 </p>
                               )}
-                              <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[0.65rem] uppercase tracking-wide text-ubt-grey text-opacity-70">
+                              <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[0.65rem] uppercase tracking-wide text-slate-300">
                                 <span>{notification.appId}</span>
                                 <time dateTime={notification.formattedTime}>{notification.readableTime}</time>
                               </div>
