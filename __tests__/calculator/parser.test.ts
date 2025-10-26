@@ -1,5 +1,6 @@
 const { JSDOM } = require('jsdom');
 const { create, all } = require('mathjs');
+const fc = require('fast-check');
 const math = create(all);
 
 describe('calculator parser', () => {
@@ -12,6 +13,8 @@ describe('calculator parser', () => {
     global.math = math;
     calc = require('../../apps/calculator/main.js');
     calc.setPreciseMode(false);
+    calc.setProgrammerMode(false);
+    calc.setBase(10);
   });
 
   beforeEach(() => {
@@ -61,6 +64,38 @@ describe('calculator parser', () => {
 
   test.each(cases)('%s -> %s', (expr, expected) => {
     expect(calc.evaluate(expr)).toBe(expected);
+  });
+
+  it('agrees with math.js for generated arithmetic expressions', () => {
+    const arithmeticExpression = fc
+      .tuple(
+        fc.integer({ min: -1000, max: 1000 }),
+        fc.array(
+          fc.tuple(
+            fc.constantFrom('+', '-', '*', '/'),
+            fc.integer({ min: -1000, max: 1000 })
+          ),
+          { minLength: 0, maxLength: 5 }
+        )
+      )
+      .map(([first, operations]) =>
+        operations.reduce((expr, [operator, value]) => {
+          const operand = operator === '/' && value === 0 ? 1 : value;
+          return `${expr}${operator}${operand}`;
+        }, `${first}`)
+      );
+
+    fc.assert(
+      fc.property(arithmeticExpression, (expr) => {
+        const expected = math.evaluate(expr);
+        const actual = Number(calc.evaluate(expr));
+
+        expect(Number.isFinite(expected)).toBe(true);
+        expect(Number.isFinite(actual)).toBe(true);
+        expect(actual).toBeCloseTo(expected, 12);
+      }),
+      { numRuns: 100 }
+    );
   });
 
   test('handles variables', () => {
