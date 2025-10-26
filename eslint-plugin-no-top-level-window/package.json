@@ -1,5 +1,16 @@
 {
   "name": "eslint-plugin-no-top-level-window",
   "version": "1.0.0",
-  "main": "index.js"
+  "type": "commonjs",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "module": "./index.js",
+      "import": "./index.js",
+      "default": "./index.js",
+      "require": "./index.js"
+    }
+  }
 }

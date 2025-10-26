@@ -1,5 +1,5 @@
 import { FlatCompat } from '@eslint/eslintrc';
-import noTopLevelWindow from './eslint-plugin-no-top-level-window/index.js';
+import noTopLevelWindow from 'eslint-plugin-no-top-level-window';
 
 const compat = new FlatCompat();
 
