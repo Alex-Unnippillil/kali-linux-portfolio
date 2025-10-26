@@ -1,0 +1,103 @@
+@tailwind components;
+
+@layer components {
+  .design-page {
+    @apply relative min-h-screen bg-ub-grey text-ubt-grey overflow-x-hidden;
+  }
+
+  .design-shell-background {
+    @apply absolute inset-0 -z-10;
+  }
+
+  .design-shell-navbar {
+    @apply sticky top-0 z-40 h-12;
+  }
+
+  .design-container {
+    @apply relative mx-auto flex max-w-6xl flex-col gap-10 px-6 pb-24 pt-24 md:px-10;
+  }
+
+  .design-card {
+    @apply rounded-xl border border-ub-border-orange/30 bg-ub-lite-abrgn/70 p-6 shadow-xl shadow-black/30 backdrop-blur;
+  }
+
+  .design-section-title {
+    @apply mb-4 flex items-center gap-3 text-2xl font-semibold text-ubt-grey;
+  }
+
+  .design-section-body {
+    @apply space-y-4 text-base leading-relaxed text-ubt-grey/90;
+  }
+
+  .design-token-grid {
+    @apply grid gap-4 sm:grid-cols-2 lg:grid-cols-3;
+  }
+
+  .design-token-swatch {
+    @apply relative overflow-hidden rounded-xl border border-ub-border-orange/40 bg-ub-drk-abrgn/40 shadow-lg;
+  }
+
+  .design-token-meta {
+    @apply space-y-1 p-4 text-xs uppercase tracking-wide text-ubt-grey/90;
+  }
+
+  .design-token-copy {
+    @apply absolute right-3 top-3;
+  }
+
+  .design-spacing-grid {
+    @apply grid gap-4 md:grid-cols-2;
+  }
+
+  .design-spacing-row {
+    @apply flex items-center justify-between gap-6 rounded-lg border border-ub-border-orange/40 bg-ub-drk-abrgn/40 p-4;
+  }
+
+  .design-spacing-visual {
+    @apply relative h-8 flex-1 rounded-full bg-ub-lite-abrgn/70;
+  }
+
+  .design-spacing-bar {
+    @apply absolute inset-y-2 left-2 rounded-full bg-ub-border-orange/60;
+  }
+
+  .design-typography-list {
+    @apply grid gap-4 md:grid-cols-2;
+  }
+
+  .design-typography-item {
+    @apply space-y-1 rounded-lg border border-ub-border-orange/30 bg-ub-drk-abrgn/40 p-4;
+  }
+
+  .design-search {
+    @apply w-full rounded-lg border border-ub-border-orange/40 bg-ub-lite-abrgn/70 px-4 py-3 text-base text-ubt-grey placeholder:text-ubt-grey/50 focus:outline-none focus:ring-2 focus:ring-ub-border-orange;
+  }
+
+  .design-inline-copy {
+    @apply ml-auto flex-shrink-0;
+  }
+
+  .design-copy-trigger {
+    @apply relative flex items-center gap-2 rounded-full border border-ub-border-orange/40 bg-ub-lite-abrgn/80 px-3 py-1 text-xs font-medium uppercase tracking-wide text-ubt-grey transition hover:bg-ub-border-orange/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ub-border-orange;
+  }
+
+  .design-copy-trigger[data-copied='true'] {
+    @apply bg-ub-border-orange/60 text-black;
+  }
+
+  .design-code-block {
+    @apply relative overflow-auto rounded-lg border border-ub-border-orange/30 bg-black/60 p-4 font-mono text-sm text-ubt-grey shadow-inner;
+  }
+
+  .design-list {
+    @apply list-disc space-y-2 pl-5 text-ubt-grey/90;
+  }
+
+  .design-badge {
+    @apply inline-flex items-center gap-1 rounded-full border border-ub-border-orange/30 bg-ub-drk-abrgn/60 px-3 py-1 text-xs uppercase tracking-wide text-ubt-grey/80;
+  }
+
+  .design-no-results {
+    @apply rounded-lg border border-dashed border-ub-border-orange/40 bg-ub-drk-abrgn/40 p-6 text-center text-ubt-grey/70;
+  }
+}
