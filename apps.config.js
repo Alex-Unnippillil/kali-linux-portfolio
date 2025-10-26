@@ -83,6 +83,7 @@ const BeefApp = createDynamicApp('beef', 'BeEF');
 const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
 
 const AutopsyApp = createDynamicApp('autopsy', 'Autopsy');
+const StartupManagerApp = createDynamicApp('startup-manager', 'Startup Manager');
 const PluginManagerApp = createDynamicApp('plugin-manager', 'Plugin Manager');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
@@ -167,6 +168,7 @@ const displaySubnetCalculator = createDisplay(SubnetCalculatorApp);
 const displayGhidra = createDisplay(GhidraApp);
 
 const displayAutopsy = createDisplay(AutopsyApp);
+const displayStartupManager = createDisplay(StartupManagerApp);
 const displayPluginManager = createDisplay(PluginManagerApp);
 
 const displayWireshark = createDisplay(WiresharkApp);
@@ -850,6 +852,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayAutopsy,
+  },
+  {
+    id: 'startup-manager',
+    title: 'Startup Manager',
+    icon: '/themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayStartupManager,
   },
   {
     id: 'plugin-manager',
