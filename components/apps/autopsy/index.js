@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { rentUint8Array, releaseTypedArray } from '../../../utils/pools';
 import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
@@ -463,7 +464,10 @@ function Autopsy({ initialArtifacts = null }) {
     const reader = new FileReader();
     reader.onload = (event) => {
       const buffer = event.target.result;
-      const bytes = new Uint8Array(buffer).slice(0, 20);
+      const view = new Uint8Array(buffer);
+      const sliceLength = Math.min(20, view.length);
+      const bytes = rentUint8Array(sliceLength);
+      bytes.set(view.subarray(0, sliceLength));
       const hex = bufferToHex(bytes);
       const safeName = escapeFilename(file.name);
       setAnalysis(
@@ -479,6 +483,7 @@ function Autopsy({ initialArtifacts = null }) {
           timestamp: new Date().toISOString(),
         },
       ]);
+      releaseTypedArray(bytes);
     };
     reader.readAsArrayBuffer(file);
   };
@@ -492,12 +497,20 @@ function Autopsy({ initialArtifacts = null }) {
       .join('')
       .trim();
 
-  const decodeBase64 = (b64) =>
-    Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  const decodeBase64 = (b64) => {
+    const binary = atob(b64 || '');
+    const bytes = rentUint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  };
 
   const selectFile = async (file) => {
+    let bytes = null;
+    let hashView = null;
     try {
-      const bytes = decodeBase64(file.content || '');
+      bytes = decodeBase64(file.content || '');
       const hex = bufferToHex(bytes);
       const strings = new TextDecoder()
         .decode(bytes)
@@ -505,7 +518,9 @@ function Autopsy({ initialArtifacts = null }) {
       let hash = '';
       if (crypto && crypto.subtle) {
         const buf = await crypto.subtle.digest('SHA-256', bytes);
-        hash = bufferToHex(new Uint8Array(buf)).replace(/ /g, '');
+        hashView = rentUint8Array(buf.byteLength);
+        hashView.set(new Uint8Array(buf));
+        hash = bufferToHex(hashView).replace(/ /g, '');
       }
       const known = hashDB[hash];
       let imageUrl = null;
@@ -536,6 +551,9 @@ function Autopsy({ initialArtifacts = null }) {
         imageUrl: null,
       });
       setPreviewTab('hex');
+    } finally {
+      if (hashView) releaseTypedArray(hashView);
+      if (bytes) releaseTypedArray(bytes);
     }
   };
 
