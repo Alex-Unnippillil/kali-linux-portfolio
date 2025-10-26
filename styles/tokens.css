@@ -47,6 +47,82 @@
   --game-color-warning: #d97706;
   --game-color-danger: #b91c1c;
 
+  /* 2048 tile palette */
+  --game-2048-empty-bg: color-mix(in srgb, var(--kali-panel) 92%, rgba(148, 163, 184, 0.08));
+  --game-2048-empty-border: color-mix(in srgb, var(--kali-panel-border) 65%, rgba(15, 23, 42, 0.35));
+  --game-2048-tile-border: color-mix(in srgb, var(--game-2048-empty-border) 70%, rgba(255, 255, 255, 0.08));
+  --game-2048-text-strong: var(--kali-terminal-text);
+  --game-2048-text-muted: color-mix(in srgb, #0b121a 82%, var(--kali-terminal-text) 18%);
+
+  --game-2048-classic-2-hue: color-mix(in srgb, var(--game-color-warning) 20%, #f8fafc 80%);
+  --game-2048-classic-2-fg: var(--game-2048-text-muted);
+  --game-2048-classic-4-hue: color-mix(in srgb, var(--game-color-warning) 30%, #f8fafc 70%);
+  --game-2048-classic-4-fg: var(--game-2048-text-muted);
+  --game-2048-classic-8-hue: color-mix(in srgb, var(--game-color-warning) 45%, var(--kali-panel) 55%);
+  --game-2048-classic-8-fg: var(--game-2048-text-strong);
+  --game-2048-classic-16-hue: color-mix(in srgb, var(--game-color-warning) 60%, var(--kali-panel) 40%);
+  --game-2048-classic-16-fg: var(--game-2048-text-strong);
+  --game-2048-classic-32-hue: color-mix(in srgb, var(--game-color-warning) 70%, var(--kali-panel) 30%);
+  --game-2048-classic-32-fg: var(--game-2048-text-strong);
+  --game-2048-classic-64-hue: color-mix(in srgb, var(--game-color-warning) 80%, var(--kali-panel) 20%);
+  --game-2048-classic-64-fg: var(--game-2048-text-strong);
+  --game-2048-classic-128-hue: color-mix(in srgb, var(--game-color-secondary) 60%, var(--kali-panel) 40%);
+  --game-2048-classic-128-fg: var(--game-2048-text-strong);
+  --game-2048-classic-256-hue: color-mix(in srgb, var(--game-color-secondary) 75%, var(--kali-panel) 25%);
+  --game-2048-classic-256-fg: var(--game-2048-text-strong);
+  --game-2048-classic-512-hue: color-mix(in srgb, var(--game-color-secondary) 85%, var(--kali-panel) 15%);
+  --game-2048-classic-512-fg: var(--game-2048-text-strong);
+  --game-2048-classic-1024-hue: color-mix(in srgb, var(--game-color-success) 75%, var(--kali-panel) 25%);
+  --game-2048-classic-1024-fg: var(--game-2048-text-strong);
+  --game-2048-classic-2048-hue: color-mix(in srgb, var(--game-color-success) 85%, var(--kali-panel) 15%);
+  --game-2048-classic-2048-fg: var(--game-2048-text-strong);
+
+  --game-2048-colorblind-2-hue: color-mix(in srgb, var(--game-color-secondary) 25%, #f8fafc 75%);
+  --game-2048-colorblind-2-fg: var(--game-2048-text-muted);
+  --game-2048-colorblind-4-hue: color-mix(in srgb, var(--game-color-secondary) 45%, #e2e8f0 55%);
+  --game-2048-colorblind-4-fg: var(--game-2048-text-muted);
+  --game-2048-colorblind-8-hue: color-mix(in srgb, var(--game-color-secondary) 60%, var(--kali-panel) 40%);
+  --game-2048-colorblind-8-fg: var(--game-2048-text-strong);
+  --game-2048-colorblind-16-hue: color-mix(in srgb, var(--game-color-secondary) 75%, var(--kali-panel) 25%);
+  --game-2048-colorblind-16-fg: var(--game-2048-text-strong);
+  --game-2048-colorblind-32-hue: color-mix(in srgb, var(--game-color-success) 55%, var(--kali-panel) 45%);
+  --game-2048-colorblind-32-fg: var(--game-2048-text-strong);
+  --game-2048-colorblind-64-hue: color-mix(in srgb, var(--game-color-success) 70%, var(--kali-panel) 30%);
+  --game-2048-colorblind-64-fg: var(--game-2048-text-strong);
+  --game-2048-colorblind-128-hue: color-mix(in srgb, var(--game-color-success) 82%, var(--kali-panel) 18%);
+  --game-2048-colorblind-128-fg: var(--game-2048-text-strong);
+  --game-2048-colorblind-256-hue: color-mix(in srgb, var(--game-color-warning) 65%, var(--kali-panel) 35%);
+  --game-2048-colorblind-256-fg: var(--game-2048-text-strong);
+  --game-2048-colorblind-512-hue: color-mix(in srgb, var(--game-color-warning) 78%, var(--kali-panel) 22%);
+  --game-2048-colorblind-512-fg: var(--game-2048-text-strong);
+  --game-2048-colorblind-1024-hue: color-mix(in srgb, var(--game-color-warning) 88%, var(--kali-panel) 12%);
+  --game-2048-colorblind-1024-fg: var(--game-2048-text-strong);
+  --game-2048-colorblind-2048-hue: color-mix(in srgb, var(--game-color-danger) 70%, var(--kali-panel) 30%);
+  --game-2048-colorblind-2048-fg: var(--game-2048-text-strong);
+
+  --game-2048-neon-2-hue: color-mix(in srgb, var(--game-color-danger) 60%, var(--kali-terminal) 40%);
+  --game-2048-neon-2-fg: var(--color-text);
+  --game-2048-neon-4-hue: color-mix(in srgb, var(--game-color-danger) 75%, var(--kali-terminal) 25%);
+  --game-2048-neon-4-fg: var(--color-text);
+  --game-2048-neon-8-hue: color-mix(in srgb, var(--game-color-warning) 75%, var(--kali-terminal) 25%);
+  --game-2048-neon-8-fg: var(--color-text);
+  --game-2048-neon-16-hue: color-mix(in srgb, var(--game-color-warning) 85%, var(--kali-terminal) 15%);
+  --game-2048-neon-16-fg: var(--color-text);
+  --game-2048-neon-32-hue: color-mix(in srgb, var(--game-color-secondary) 68%, var(--kali-terminal) 32%);
+  --game-2048-neon-32-fg: var(--color-text);
+  --game-2048-neon-64-hue: color-mix(in srgb, var(--game-color-secondary) 78%, var(--kali-terminal) 22%);
+  --game-2048-neon-64-fg: var(--color-text);
+  --game-2048-neon-128-hue: color-mix(in srgb, var(--game-color-secondary) 88%, var(--kali-terminal) 12%);
+  --game-2048-neon-128-fg: var(--color-text);
+  --game-2048-neon-256-hue: color-mix(in srgb, var(--game-color-success) 78%, var(--kali-terminal) 22%);
+  --game-2048-neon-256-fg: var(--color-text);
+  --game-2048-neon-512-hue: color-mix(in srgb, var(--game-color-success) 88%, var(--kali-terminal) 12%);
+  --game-2048-neon-512-fg: var(--color-text);
+  --game-2048-neon-1024-hue: color-mix(in srgb, var(--game-color-success) 92%, var(--kali-terminal) 8%);
+  --game-2048-neon-1024-fg: var(--color-text);
+  --game-2048-neon-2048-hue: color-mix(in srgb, var(--game-color-danger) 85%, var(--kali-blue) 15%);
+  --game-2048-neon-2048-fg: var(--color-text);
+
   /* Spacing scale */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
