@@ -213,7 +213,7 @@ module.exports = withBundleAnalyzer(
       ignoreDuringBuilds: true,
     },
     images: {
-      unoptimized: true,
+      unoptimized: isStaticExport,
       domains: [
         'opengraph.githubassets.com',
         'raw.githubusercontent.com',
