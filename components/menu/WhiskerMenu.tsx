@@ -7,12 +7,117 @@ import { safeLocalStorage } from '../../utils/safeStorage';
 import { readRecentAppIds } from '../../utils/recentStorage';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 
-type AppMeta = {
+export type AppMeta = {
   id: string;
   title: string;
   icon: string;
   disabled?: boolean;
   favourite?: boolean;
+};
+
+type AppScoreResult = {
+  score: number;
+  matches: boolean;
+};
+
+const FAVORITE_WEIGHT = 300;
+const RECENT_WEIGHT_STEP = 25;
+
+const computeFuzzyMatchScore = (query: string, target: string): number => {
+  if (!query) {
+    return 0;
+  }
+
+  const normalizedTarget = target.toLowerCase();
+
+  if (normalizedTarget === query) {
+    return 140;
+  }
+
+  if (normalizedTarget.startsWith(query)) {
+    return 110;
+  }
+
+  const indexOfQuery = normalizedTarget.indexOf(query);
+  if (indexOfQuery !== -1) {
+    return 90 - indexOfQuery;
+  }
+
+  let score = 0;
+  let matched = 0;
+  let lastIndex = -1;
+
+  for (const char of query) {
+    const foundIndex = normalizedTarget.indexOf(char, lastIndex + 1);
+    if (foundIndex === -1) {
+      continue;
+    }
+    matched += 1;
+
+    if (foundIndex === lastIndex + 1) {
+      score += 14;
+    } else {
+      const gap = foundIndex - (lastIndex + 1);
+      score += Math.max(6, 14 - gap);
+    }
+
+    lastIndex = foundIndex;
+  }
+
+  if (matched === 0 || matched < query.length) {
+    return 0;
+  }
+
+  const coverage = matched / query.length;
+  return score * coverage;
+};
+
+export const createAppScorer = ({
+  query,
+  favoriteIds,
+  recentIds,
+}: {
+  query: string;
+  favoriteIds: ReadonlySet<string>;
+  recentIds: readonly string[];
+}): ((app: AppMeta) => AppScoreResult) => {
+  const normalizedQuery = query.trim().toLowerCase();
+  const recentWeights = new Map<string, number>();
+
+  recentIds.forEach((id, index) => {
+    if (!recentWeights.has(id)) {
+      const weightFromRecency = (recentIds.length - index) * RECENT_WEIGHT_STEP;
+      recentWeights.set(id, weightFromRecency);
+    }
+  });
+
+  return (app: AppMeta) => {
+    let score = 0;
+    let matches = true;
+
+    if (favoriteIds.has(app.id)) {
+      score += FAVORITE_WEIGHT;
+    }
+
+    const recentBoost = recentWeights.get(app.id);
+    if (typeof recentBoost === 'number') {
+      score += recentBoost;
+    }
+
+    if (normalizedQuery) {
+      const titleScore = computeFuzzyMatchScore(normalizedQuery, app.title);
+      const idScore = computeFuzzyMatchScore(normalizedQuery, app.id) * 0.6;
+      const combinedScore = Math.max(titleScore, titleScore + idScore * 0.4, idScore);
+
+      if (combinedScore <= 0) {
+        matches = false;
+      } else {
+        score += combinedScore;
+      }
+    }
+
+    return { score, matches };
+  };
 };
 
 type CategorySource =
@@ -159,6 +264,10 @@ const WhiskerMenu: React.FC = () => {
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
+  const favoriteAppIds = useMemo(
+    () => new Set(favoriteApps.map(app => app.id)),
+    [favoriteApps],
+  );
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
@@ -268,13 +377,32 @@ const WhiskerMenu: React.FC = () => {
   }, [category, categoryConfigs]);
 
   const currentApps = useMemo(() => {
-    let list = currentCategory?.apps ?? [];
-    if (query) {
-      const q = query.toLowerCase();
-      list = list.filter(a => a.title.toLowerCase().includes(q));
-    }
-    return list;
-  }, [currentCategory, query]);
+    const list = currentCategory?.apps ?? [];
+    const scorer = createAppScorer({
+      query,
+      favoriteIds: favoriteAppIds,
+      recentIds,
+    });
+
+    return list
+      .map((app, index) => {
+        const { score, matches } = scorer(app);
+        return {
+          app,
+          score: score + (list.length - index) * 0.001,
+          matches,
+          index,
+        };
+      })
+      .filter(item => item.matches)
+      .sort((a, b) => {
+        if (b.score !== a.score) {
+          return b.score - a.score;
+        }
+        return a.index - b.index;
+      })
+      .map(item => item.app);
+  }, [currentCategory, favoriteAppIds, query, recentIds]);
 
   useEffect(() => {
     const storedCategory = safeLocalStorage?.getItem(CATEGORY_STORAGE_KEY);
@@ -290,7 +418,7 @@ const WhiskerMenu: React.FC = () => {
   useEffect(() => {
     if (!isVisible) return;
     setHighlight(0);
-  }, [isVisible, category, query]);
+  }, [currentApps, isVisible]);
 
   useEffect(() => {
     if (!isVisible) return;
