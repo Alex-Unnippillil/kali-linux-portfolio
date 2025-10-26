@@ -1,7 +1,26 @@
 import { chromium, firefox, webkit } from 'playwright';
 import fs from 'fs';
+import path from 'path';
+import './generate-smoke-list.mjs';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+
+const routesPath = path.join(process.cwd(), 'playwright', 'app-routes.json');
+
+const loadRoutes = () => {
+  try {
+    const raw = fs.readFileSync(routesPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      throw new Error('Expected an array of routes');
+    }
+    return parsed;
+  } catch (error) {
+    console.error('Unable to read generated app routes.');
+    console.error('Run `node scripts/generate-smoke-list.mjs` to regenerate the list.');
+    throw error;
+  }
+};
 
 (async () => {
   const browsers = [
@@ -10,50 +29,7 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
     { name: 'webkit', type: webkit },
   ];
 
-  // Add new app routes here to include them in smoke tests
-  const routes = [
-    '/apps/2048',
-    '/apps/ascii-art',
-    '/apps/autopsy',
-    '/apps/beef',
-    '/apps/blackjack',
-    '/apps/calculator',
-    '/apps/checkers',
-    '/apps/connect-four',
-    '/apps/contact',
-    '/apps/converter',
-    '/apps/figlet',
-    '/apps/http',
-    '/apps',
-    '/apps/input-lab',
-    '/apps/john',
-    '/apps/kismet',
-    '/apps/metasploit-post',
-    '/apps/metasploit',
-    '/apps/minesweeper',
-    '/apps/nmap-nse',
-    '/apps/password_generator',
-    '/apps/phaser_matter',
-    '/apps/pinball',
-    '/apps/project-gallery',
-    '/apps/qr',
-    '/apps/settings',
-    '/apps/simon',
-    '/apps/sokoban',
-    '/apps/solitaire',
-    '/apps/spotify',
-    '/apps/ssh',
-    '/apps/sticky_notes',
-    '/apps/timer_stopwatch',
-    '/apps/tower-defense',
-    '/apps/volatility',
-    '/apps/vscode',
-    '/apps/weather',
-    '/apps/weather_widget',
-    '/apps/wireshark',
-    '/apps/word_search',
-    '/apps/x',
-  ];
+  const routes = ['/apps', ...loadRoutes()];
 
   let hadError = false;
   const results = [];
