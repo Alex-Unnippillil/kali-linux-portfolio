@@ -1,7 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, FC } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import usePersistentState from "../../hooks/usePersistentState";
 
 const ICONS = {
@@ -24,7 +32,7 @@ const isValidVolume = (value: unknown): value is number =>
 
 const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
 
-const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
+const VolumeControl: FC<VolumeControlProps> = ({ className = "" }) => {
   const [volume, setVolume] = usePersistentState<number>(
     "system-volume",
     () => 0.7,
@@ -33,6 +41,26 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const sliderRef = useRef<HTMLInputElement>(null);
+  const baseId = useId();
+  const sliderIds = useMemo(
+    () => ({
+      label: `${baseId}-label`,
+      value: `${baseId}-value`,
+      slider: `${baseId}-input`,
+    }),
+    [baseId],
+  );
+  const percentage = useMemo(() => Math.round(volume * 100), [volume]);
+  const sliderStyles = useMemo<CSSProperties>(() => {
+    const accent = "#4da0ff";
+    const track = "rgba(255, 255, 255, 0.24)";
+    return {
+      background: `linear-gradient(to right, ${accent} ${percentage}%, ${track} ${percentage}%)`,
+      ["--slider-active" as "--slider-active"]: accent,
+      ["--slider-track" as "--slider-track"]: track,
+      ["--slider-percentage" as "--slider-percentage"]: `${percentage}%`,
+    };
+  }, [percentage]);
 
   const level: VolumeLevel = useMemo(() => {
     if (volume <= 0.001) return "muted";
@@ -134,23 +162,69 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
           onWheel={handleWheel}
         >
           <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-200">
-            <span>Volume</span>
-            <span className="font-semibold text-white">{formatPercent(volume)}</span>
+            <span id={sliderIds.label}>Volume</span>
+            <span id={sliderIds.value} className="font-semibold text-white">
+              {formatPercent(volume)}
+            </span>
           </div>
           <input
             ref={sliderRef}
             type="range"
             min={0}
             max={100}
-            step={1}
-            value={Math.round(volume * 100)}
+            step={5}
+            value={percentage}
+            id={sliderIds.slider}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-valuenow={Math.round(volume * 100)}
-            aria-label="Volume level"
-            className="h-1 w-full cursor-pointer accent-ubt-blue"
+            aria-valuenow={percentage}
+            aria-labelledby={`${sliderIds.label} ${sliderIds.value}`}
+            aria-valuetext={formatPercent(volume)}
+            className="volume-slider h-1 w-full cursor-pointer appearance-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue"
+            style={sliderStyles}
             onChange={handleRangeChange}
           />
+          <style jsx>{`
+            .volume-slider::-webkit-slider-runnable-track {
+              height: 0.25rem;
+              border-radius: 9999px;
+              background: linear-gradient(
+                to right,
+                var(--slider-active) 0%,
+                var(--slider-active) var(--slider-percentage),
+                var(--slider-track) var(--slider-percentage),
+                var(--slider-track) 100%
+              );
+            }
+            .volume-slider::-webkit-slider-thumb {
+              appearance: none;
+              height: 14px;
+              width: 14px;
+              margin-top: -4px;
+              border-radius: 9999px;
+              border: 2px solid #003f8a;
+              background: #f8fafc;
+              box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+            }
+            .volume-slider::-moz-range-track {
+              height: 0.25rem;
+              border-radius: 9999px;
+              background: var(--slider-track);
+            }
+            .volume-slider::-moz-range-progress {
+              height: 0.25rem;
+              border-radius: 9999px;
+              background: var(--slider-active);
+            }
+            .volume-slider::-moz-range-thumb {
+              height: 14px;
+              width: 14px;
+              border-radius: 9999px;
+              border: 2px solid #003f8a;
+              background: #f8fafc;
+              box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+            }
+          `}</style>
         </div>
       )}
     </div>
