@@ -107,6 +107,28 @@ if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
   global.IntersectionObserver = IntersectionObserverMock as any;
 }
 
+if (typeof window !== 'undefined' && !('ResizeObserver' in window)) {
+  class ResizeObserverMock {
+    callback: ResizeObserverCallback;
+    constructor(callback: ResizeObserverCallback) {
+      this.callback = callback;
+    }
+    observe(target: Element) {
+      const entry = {
+        target,
+        contentRect: target.getBoundingClientRect(),
+      } as ResizeObserverEntry;
+      this.callback([entry], this as unknown as ResizeObserver);
+    }
+    unobserve() {}
+    disconnect() {}
+  }
+  // @ts-ignore
+  window.ResizeObserver = ResizeObserverMock;
+  // @ts-ignore
+  global.ResizeObserver = ResizeObserverMock as any;
+}
+
 // jsdom does not implement scrollIntoView; provide a no-op stub so components
 // depending on it do not fail during tests.
 if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
