@@ -9,6 +9,7 @@ const customJestConfig = {
     '^@/(.*)$': '<rootDir>/$1',
     '^@xterm/xterm/css/xterm.css$': '<rootDir>/__mocks__/styleMock.js',
     '^@/(.*)$': '<rootDir>/$1',
+    '^capstone-wasm$': '<rootDir>/lib/capstone/server.ts',
   },
   testPathIgnorePatterns: [
     '<rootDir>/playwright/',
