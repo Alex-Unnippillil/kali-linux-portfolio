@@ -1,0 +1,147 @@
+[
+  {
+    "id": "nmap",
+    "name": "Nmap",
+    "category": "Reconnaissance",
+    "summary": "Network mapper and port scanner used for inventorying lab subnets.",
+    "description": "Simulated package metadata for the Nmap network scanning toolkit.",
+    "homepage": "https://nmap.org/",
+    "maintainer": "Insecure.Org (simulated)",
+    "size": "6.4 MB",
+    "defaultVersion": "7.94",
+    "dependencies": ["libpcap", "openssl"],
+    "versions": [
+      {
+        "version": "7.94",
+        "releaseDate": "2024-05-13",
+        "notes": "Latest stable release with NSE script refresh and fingerprint updates."
+      },
+      {
+        "version": "7.93",
+        "releaseDate": "2023-09-21",
+        "notes": "Includes performance improvements for large IPv6 sweeps."
+      },
+      {
+        "version": "7.92",
+        "releaseDate": "2022-09-01",
+        "notes": "Long-term support build used in introductory labs."
+      }
+    ]
+  },
+  {
+    "id": "metasploit-framework",
+    "name": "Metasploit Framework",
+    "category": "Exploitation",
+    "summary": "Penetration testing framework with extensive module catalog.",
+    "description": "Simulated framework metadata showcasing common training builds.",
+    "homepage": "https://www.metasploit.com/",
+    "maintainer": "Rapid7 (simulated)",
+    "size": "110 MB",
+    "defaultVersion": "6.4.0",
+    "dependencies": ["postgresql", "ruby", "openssl"],
+    "versions": [
+      {
+        "version": "6.4.0",
+        "releaseDate": "2024-11-12",
+        "notes": "Ships with refreshed module metadata and simulated content pack."
+      },
+      {
+        "version": "6.3.5",
+        "releaseDate": "2024-05-02",
+        "notes": "Adds mock automation helpers for guided exercises."
+      },
+      {
+        "version": "6.2.1",
+        "releaseDate": "2023-08-18",
+        "notes": "Baseline used for long-running labs and capture-the-flag scenarios."
+      }
+    ]
+  },
+  {
+    "id": "hydra",
+    "name": "Hydra",
+    "category": "Password Attacks",
+    "summary": "Parallelized login cracker supporting common network services.",
+    "description": "Simulated Hydra builds for offline credential testing exercises.",
+    "homepage": "https://github.com/vanhauser-thc/thc-hydra",
+    "maintainer": "THC (simulated)",
+    "size": "3.1 MB",
+    "defaultVersion": "9.6",
+    "dependencies": ["libssh", "openssl"],
+    "versions": [
+      {
+        "version": "9.6",
+        "releaseDate": "2024-03-05",
+        "notes": "Introduces mock progress reporting API used in the portfolio demo."
+      },
+      {
+        "version": "9.5",
+        "releaseDate": "2023-06-14",
+        "notes": "Adds simulated modules for RDP and VNC credential replay exercises."
+      },
+      {
+        "version": "9.3",
+        "releaseDate": "2022-11-09",
+        "notes": "Stable training build with reduced output for classroom walkthroughs."
+      }
+    ]
+  },
+  {
+    "id": "wireshark",
+    "name": "Wireshark",
+    "category": "Network Analysis",
+    "summary": "Packet analyzer with dissectors for numerous protocols.",
+    "description": "Simulated Wireshark packages used for packet analysis labs.",
+    "homepage": "https://www.wireshark.org/",
+    "maintainer": "Wireshark Foundation (simulated)",
+    "size": "52 MB",
+    "defaultVersion": "4.2.3",
+    "dependencies": ["qt6", "glib2"],
+    "versions": [
+      {
+        "version": "4.2.3",
+        "releaseDate": "2024-04-17",
+        "notes": "Latest dissector refresh with canned PCAP samples."
+      },
+      {
+        "version": "4.2.1",
+        "releaseDate": "2023-12-06",
+        "notes": "Adds simulated WPA handshake analyzer for workshop content."
+      },
+      {
+        "version": "4.0.6",
+        "releaseDate": "2023-03-29",
+        "notes": "Long-term maintenance release used across archived labs."
+      }
+    ]
+  },
+  {
+    "id": "john",
+    "name": "John the Ripper",
+    "category": "Password Cracking",
+    "summary": "Offline password cracking utility with extensive hash support.",
+    "description": "Simulated John the Ripper builds packaged for local lab environments.",
+    "homepage": "https://www.openwall.com/john/",
+    "maintainer": "Openwall (simulated)",
+    "size": "14 MB",
+    "defaultVersion": "1.9.0-jumbo-1",
+    "dependencies": ["openssl"],
+    "versions": [
+      {
+        "version": "1.9.0-jumbo-1",
+        "releaseDate": "2024-01-23",
+        "notes": "Adds wordlist staging helpers used in the desktop demo."
+      },
+      {
+        "version": "1.9.0-jumbo-0",
+        "releaseDate": "2023-05-11",
+        "notes": "Includes simulated GPU cracking hooks for explanation overlays."
+      },
+      {
+        "version": "1.8.0",
+        "releaseDate": "2022-02-07",
+        "notes": "Reference build used for reproducible step-by-step labs."
+      }
+    ]
+  }
+]

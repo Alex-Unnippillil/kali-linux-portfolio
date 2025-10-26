@@ -84,6 +84,7 @@ const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
 
 const AutopsyApp = createDynamicApp('autopsy', 'Autopsy');
 const PluginManagerApp = createDynamicApp('plugin-manager', 'Plugin Manager');
+const PackageManagerApp = createDynamicApp('package-manager', 'Package Manager');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
@@ -168,6 +169,7 @@ const displayGhidra = createDisplay(GhidraApp);
 
 const displayAutopsy = createDisplay(AutopsyApp);
 const displayPluginManager = createDisplay(PluginManagerApp);
+const displayPackageManager = createDisplay(PackageManagerApp);
 
 const displayWireshark = createDisplay(WiresharkApp);
 const displayBleSensor = createDisplay(BleSensorApp);
@@ -859,6 +861,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayPluginManager,
+  },
+  {
+    id: 'package-manager',
+    title: 'Package Manager',
+    icon: '/themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPackageManager,
   },
   {    id: 'reaver',
     title: 'Reaver',
