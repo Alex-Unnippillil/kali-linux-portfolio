@@ -74,6 +74,7 @@ const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
 const TrashApp = createDynamicApp('trash', 'Trash');
 const SerialTerminalApp = createDynamicApp('serial-terminal', 'Serial Terminal');
+const PacketCaptureApp = createDynamicApp('network/PacketCapture', 'Packet Capture');
 
 
 const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
@@ -169,6 +170,7 @@ const displayGhidra = createDisplay(GhidraApp);
 const displayAutopsy = createDisplay(AutopsyApp);
 const displayPluginManager = createDisplay(PluginManagerApp);
 
+const displayPacketCapture = createDisplay(PacketCaptureApp);
 const displayWireshark = createDisplay(WiresharkApp);
 const displayBleSensor = createDisplay(BleSensorApp);
 const displayBeef = createDisplay(BeefApp);
@@ -769,6 +771,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayMetasploit,
+  },
+  {
+    id: 'packet-capture',
+    title: 'Packet Capture',
+    icon: '/themes/Yaru/apps/wireshark.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPacketCapture,
   },
   {
     id: 'wireshark',
