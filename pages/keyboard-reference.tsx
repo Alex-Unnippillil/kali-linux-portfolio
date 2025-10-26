@@ -36,6 +36,18 @@ const KeyboardReference = () => (
           <td className="p-2 border border-ubt-grey">Alt + F4</td>
           <td className="p-2 border border-ubt-grey">Close current window</td>
         </tr>
+        <tr>
+          <td className="p-2 border border-ubt-grey">Space</td>
+          <td className="p-2 border border-ubt-grey">Play or pause focused video player</td>
+        </tr>
+        <tr>
+          <td className="p-2 border border-ubt-grey">Arrow Left / Arrow Right</td>
+          <td className="p-2 border border-ubt-grey">Seek video backward or forward 5 seconds</td>
+        </tr>
+        <tr>
+          <td className="p-2 border border-ubt-grey">M</td>
+          <td className="p-2 border border-ubt-grey">Toggle mute on focused video player</td>
+        </tr>
       </tbody>
     </table>
   </main>
