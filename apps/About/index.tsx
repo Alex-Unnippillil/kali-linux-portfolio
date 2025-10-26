@@ -1,7 +1,10 @@
 'use client';
 
 import Image from 'next/image';
+import ReactGA from 'react-ga4';
 import AboutApp from '../../components/apps/About';
+import { aboutProfile } from '../../data/about/profile';
+import useAboutInterface from '../../hooks/useAboutInterface';
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -30,6 +33,17 @@ function LinkedInIcon({ className }: { className?: string }) {
 }
 
 export default function AboutPage() {
+  const aboutController = useAboutInterface({
+    sections: aboutProfile.sections,
+    defaultSectionId: 'about',
+    onSectionChange: (sectionId) =>
+      ReactGA.send({ hitType: 'pageview', page: `/${sectionId}`, title: 'Custom Title' }),
+  });
+  const highlightTransition = aboutController.shouldReduceMotion
+    ? ''
+    : 'transition focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-[color:color-mix(in_srgb,var(--kali-control)_60%,var(--kali-border))] hover:bg-[color-mix(in_srgb,var(--kali-control)_18%,var(--kali-surface))] hover:shadow-black/30';
+  const focusRing = aboutController.focusRingClass;
+
   return (
     <div className="min-h-screen w-full bg-[var(--kali-bg)]">
       <div className="mx-auto flex min-h-screen max-w-screen-md flex-col px-4 py-6 sm:px-6 sm:py-10">
@@ -60,7 +74,7 @@ export default function AboutPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="GitHub"
-                  className="group inline-flex h-11 w-11 items-center justify-center rounded-full border border-[color:var(--kali-border)] bg-[var(--kali-overlay)] text-white transition focus-visible:border-[color:var(--kali-control)] focus-visible:bg-[color:var(--kali-control-overlay)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-[color:var(--kali-control)] hover:bg-[color:var(--kali-control-overlay)] hover:text-[color:var(--kali-control)]"
+                  className={`group inline-flex h-11 w-11 items-center justify-center rounded-full border border-[color:var(--kali-border)] bg-[var(--kali-overlay)] text-white transition focus-visible:outline-none ${focusRing} hover:border-[color:var(--kali-control)] hover:bg-[color:var(--kali-control-overlay)] hover:text-[color:var(--kali-control)]`}
                 >
                   <GitHubIcon className="h-5 w-5 transition-transform duration-150 group-hover:scale-110" />
                 </a>
@@ -69,7 +83,7 @@ export default function AboutPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="LinkedIn"
-                  className="group inline-flex h-11 w-11 items-center justify-center rounded-full border border-[color:var(--kali-border)] bg-[var(--kali-overlay)] text-white transition focus-visible:border-[color:var(--kali-control)] focus-visible:bg-[color:var(--kali-control-overlay)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-[color:var(--kali-control)] hover:bg-[color:var(--kali-control-overlay)] hover:text-[color:var(--kali-control)]"
+                  className={`group inline-flex h-11 w-11 items-center justify-center rounded-full border border-[color:var(--kali-border)] bg-[var(--kali-overlay)] text-white transition focus-visible:outline-none ${focusRing} hover:border-[color:var(--kali-control)] hover:bg-[color:var(--kali-control-overlay)] hover:text-[color:var(--kali-control)]`}
                 >
                   <LinkedInIcon className="h-5 w-5 transition-transform duration-150 group-hover:scale-110" />
                 </a>
@@ -90,7 +104,7 @@ export default function AboutPage() {
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <article
               tabIndex={0}
-              className="rounded-xl border border-[color:var(--kali-border)] bg-[var(--kali-surface)] p-5 shadow-sm shadow-black/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-[color:color-mix(in_srgb,var(--kali-control)_60%,var(--kali-border))] hover:bg-[color-mix(in_srgb,var(--kali-control)_18%,var(--kali-surface))] hover:shadow-black/30"
+              className={`rounded-xl border border-[color:var(--kali-border)] bg-[var(--kali-surface)] p-5 shadow-sm shadow-black/10 focus-visible:outline-none ${highlightTransition}`}
               aria-labelledby="highlight-skills"
             >
               <h3 id="highlight-skills" className="text-lg font-semibold text-white">
@@ -107,7 +121,7 @@ export default function AboutPage() {
             </article>
             <article
               tabIndex={0}
-              className="rounded-xl border border-[color:var(--kali-border)] bg-[var(--kali-surface)] p-5 shadow-sm shadow-black/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-[color:color-mix(in_srgb,var(--kali-control)_60%,var(--kali-border))] hover:bg-[color-mix(in_srgb,var(--kali-control)_18%,var(--kali-surface))] hover:shadow-black/30"
+              className={`rounded-xl border border-[color:var(--kali-border)] bg-[var(--kali-surface)] p-5 shadow-sm shadow-black/10 focus-visible:outline-none ${highlightTransition}`}
               aria-labelledby="highlight-experience"
             >
               <h3 id="highlight-experience" className="text-lg font-semibold text-white">
@@ -124,7 +138,7 @@ export default function AboutPage() {
             </article>
             <article
               tabIndex={0}
-              className="rounded-xl border border-[color:var(--kali-border)] bg-[var(--kali-surface)] p-5 shadow-sm shadow-black/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-[color:color-mix(in_srgb,var(--kali-control)_60%,var(--kali-border))] hover:bg-[color-mix(in_srgb,var(--kali-control)_18%,var(--kali-surface))] hover:shadow-black/30"
+              className={`rounded-xl border border-[color:var(--kali-border)] bg-[var(--kali-surface)] p-5 shadow-sm shadow-black/10 focus-visible:outline-none ${highlightTransition}`}
               aria-labelledby="highlight-contact"
             >
               <h3 id="highlight-contact" className="text-lg font-semibold text-white">
@@ -148,7 +162,7 @@ export default function AboutPage() {
           </div>
         </section>
 
-        <AboutApp />
+        <AboutApp controller={aboutController} />
       </div>
     </div>
   );
