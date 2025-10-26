@@ -5,8 +5,8 @@ export function CloseIcon() {
     <Image
       src="/themes/Yaru/window/window-close-symbolic.svg"
       alt="Close"
-      width={16}
-      height={16}
+      width={24}
+      height={24}
     />
   );
 }
@@ -16,8 +16,8 @@ export function MinimizeIcon() {
     <Image
       src="/themes/Yaru/window/window-minimize-symbolic.svg"
       alt="Minimize"
-      width={16}
-      height={16}
+      width={24}
+      height={24}
     />
   );
 }
@@ -27,8 +27,8 @@ export function MaximizeIcon() {
     <Image
       src="/themes/Yaru/window/window-maximize-symbolic.svg"
       alt="Maximize"
-      width={16}
-      height={16}
+      width={24}
+      height={24}
     />
   );
 }
@@ -38,8 +38,8 @@ export function RestoreIcon() {
     <Image
       src="/themes/Yaru/window/window-restore-symbolic.svg"
       alt="Restore"
-      width={16}
-      height={16}
+      width={24}
+      height={24}
     />
   );
 }
@@ -49,8 +49,8 @@ export function PinIcon() {
     <Image
       src="/themes/Yaru/window/window-pin-symbolic.svg"
       alt="Pin"
-      width={16}
-      height={16}
+      width={24}
+      height={24}
     />
   );
 }
