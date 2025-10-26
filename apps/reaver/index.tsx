@@ -8,6 +8,7 @@ import RouterProfiles, {
 } from './components/RouterProfiles';
 import APList from './components/APList';
 import ProgressDonut from './components/ProgressDonut';
+import HandshakeVisualizer from './components/HandshakeVisualizer';
 
 const PlayIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 20 20" fill="currentColor" {...props}>
@@ -242,6 +243,11 @@ const ReaverPanel: React.FC = () => {
             </li>
           ))}
         </ol>
+      </div>
+
+      <div className="mb-6">
+        <h2 className="text-lg mb-2">WPA2 Handshake Sequence</h2>
+        <HandshakeVisualizer />
       </div>
 
       <div className="mb-6">
