@@ -5,6 +5,7 @@ import useOPFS from '../../hooks/useOPFS';
 import useFileSystemNavigator from '../../hooks/useFileSystemNavigator';
 import { ensureHandlePermission } from '../../services/fileExplorer/permissions';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import { downloadBlob } from '../../lib/download';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -47,12 +48,7 @@ export async function saveFileDialog(options = {}) {
       return {
         async write(data) {
           const blob = data instanceof Blob ? data : new Blob([data]);
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = options?.suggestedName || 'download';
-          a.click();
-          URL.revokeObjectURL(url);
+          downloadBlob(options?.suggestedName || 'download', blob);
         },
         async close() {},
       };
