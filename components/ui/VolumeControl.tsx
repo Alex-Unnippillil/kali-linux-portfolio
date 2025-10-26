@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import usePersistentState from "../../hooks/usePersistentState";
 
 const ICONS = {
@@ -24,6 +24,9 @@ const isValidVolume = (value: unknown): value is number =>
 
 const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
 
+const STEP = 0.05;
+const FINE_STEP = 0.02;
+
 const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
   const [volume, setVolume] = usePersistentState<number>(
     "system-volume",
@@ -33,6 +36,16 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const sliderRef = useRef<HTMLInputElement>(null);
+
+  const sliderStyles = useMemo<CSSProperties>(
+    () => ({
+      writingMode: "bt-lr",
+      WebkitAppearance: "slider-vertical",
+      width: "100%",
+      height: "100%",
+    }),
+    [],
+  );
 
   const level: VolumeLevel = useMemo(() => {
     if (volume <= 0.001) return "muted";
@@ -60,7 +73,7 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
     event.preventDefault();
     event.stopPropagation();
     const direction = event.deltaY > 0 ? -1 : 1;
-    const delta = (event.shiftKey ? 0.02 : 0.05) * direction;
+    const delta = (event.shiftKey ? FINE_STEP : STEP) * direction;
     setClampedVolume((current) => current + delta);
   };
 
@@ -69,6 +82,13 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
     const next = Number(event.target.value) / 100;
     setClampedVolume(next);
   };
+
+  const handleStepChange = useCallback(
+    (direction: 1 | -1) => {
+      setClampedVolume((current) => current + direction * STEP);
+    },
+    [setClampedVolume],
+  );
 
   useEffect(() => {
     if (!open) return undefined;
@@ -128,29 +148,58 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
       </button>
       {open && (
         <div
-          className="absolute bottom-full right-0 z-50 mb-2 min-w-[9rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-2 text-xs text-white shadow-lg"
+          className="absolute bottom-full right-0 z-50 mb-2 w-32 origin-bottom-right rounded-lg border border-black/30 bg-ub-cool-grey/95 px-3 py-3 text-xs text-white shadow-lg backdrop-blur"
           onClick={(event) => event.stopPropagation()}
           onPointerDown={(event) => event.stopPropagation()}
           onWheel={handleWheel}
         >
-          <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-200">
-            <span>Volume</span>
-            <span className="font-semibold text-white">{formatPercent(volume)}</span>
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex w-full items-center justify-between text-[11px] uppercase tracking-wide text-gray-200">
+              <span>Volume</span>
+              <span className="font-semibold text-white">{formatPercent(volume)}</span>
+            </div>
+            <div className="flex w-full items-end justify-center gap-3">
+              <button
+                type="button"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/10 text-base font-semibold text-white shadow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue active:bg-white/20"
+                aria-label="Increase volume"
+                title="Increase volume"
+                onClick={() => handleStepChange(1)}
+              >
+                +
+              </button>
+              <div className="relative flex h-28 w-8 touch-none items-center justify-center rounded-full bg-black/20 px-2 py-3">
+                <input
+                  ref={sliderRef}
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={Math.round(volume * 100)}
+                  aria-orientation="vertical"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(volume * 100)}
+                  aria-valuetext={`Volume ${formatPercent(volume)}`}
+                  aria-label="Volume level"
+                  className="absolute inset-0 h-full w-full cursor-pointer appearance-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-ubt-blue"
+                  style={sliderStyles}
+                  orient="vertical"
+                  onChange={handleRangeChange}
+                />
+                <div className="pointer-events-none absolute inset-1 rounded-full bg-gradient-to-b from-white/40 via-white/10 to-black/20" />
+              </div>
+              <button
+                type="button"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/10 text-base font-semibold text-white shadow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue active:bg-white/20"
+                aria-label="Decrease volume"
+                title="Decrease volume"
+                onClick={() => handleStepChange(-1)}
+              >
+                −
+              </button>
+            </div>
           </div>
-          <input
-            ref={sliderRef}
-            type="range"
-            min={0}
-            max={100}
-            step={1}
-            value={Math.round(volume * 100)}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(volume * 100)}
-            aria-label="Volume level"
-            className="h-1 w-full cursor-pointer accent-ubt-blue"
-            onChange={handleRangeChange}
-          />
         </div>
       )}
     </div>
