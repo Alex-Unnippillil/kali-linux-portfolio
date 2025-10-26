@@ -92,6 +92,7 @@ const VolatilityApp = createDynamicApp('volatility', 'Volatility');
 const KismetApp = createDynamicApp('kismet.jsx', 'Kismet');
 
 const HashcatApp = createDynamicApp('hashcat', 'Hashcat');
+const AttemptAnalyticsApp = createDynamicApp('attempt-analytics', 'Attempt Analytics');
 const MsfPostApp = createDynamicApp('msf-post', 'Metasploit Post');
 const EvidenceVaultApp = createDynamicApp('evidence-vault', 'Evidence Vault');
 const MimikatzApp = createDynamicApp('mimikatz', 'Mimikatz');
@@ -197,6 +198,7 @@ const displayHtmlRewrite = createDisplay(HtmlRewriteApp);
 const displayContact = createDisplay(ContactApp);
 
 const displayHashcat = createDisplay(HashcatApp);
+const displayAttemptAnalytics = createDisplay(AttemptAnalyticsApp);
 
 const displayKismet = createDisplay(KismetApp);
 
@@ -1011,6 +1013,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayHashcat,
+  },
+  {
+    id: 'attempt-analytics',
+    title: 'Attempt Analytics',
+    icon: '/themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayAttemptAnalytics,
   },
   {
     id: 'msf-post',
