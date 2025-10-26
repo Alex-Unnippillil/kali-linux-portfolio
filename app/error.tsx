@@ -11,7 +11,7 @@ export default function Error({ error, reset }: { error: Error; reset: () => voi
 
   return (
     <div className="flex flex-col items-center justify-center gap-4 p-4">
-      <h2 className="text-xl font-semibold">Something went wrong!</h2>
+      <h1 className="text-xl font-semibold">Something went wrong!</h1>
       <button
         type="button"
         onClick={() => reset()}
