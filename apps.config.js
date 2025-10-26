@@ -101,6 +101,7 @@ const ReaverApp = createDynamicApp('reaver', 'Reaver');
 const HydraApp = createDynamicApp('hydra', 'Hydra');
 const JohnApp = createDynamicApp('john', 'John the Ripper');
 const NessusApp = createDynamicApp('nessus', 'Nessus');
+const NetworkScannerApp = createDynamicApp('network-scanner', 'Network Scanner');
 const NmapNSEApp = createDynamicApp('nmap-nse', 'Nmap NSE');
 const OpenVASApp = createDynamicApp('openvas', 'OpenVAS');
 const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
@@ -187,6 +188,7 @@ const displayReaver = createDisplay(ReaverApp);
 const displayHydra = createDisplay(HydraApp);
 const displayJohn = createDisplay(JohnApp);
 const displayNessus = createDisplay(NessusApp);
+const displayNetworkScanner = createDisplay(NetworkScannerApp);
 const displayNmapNSE = createDisplay(NmapNSEApp);
 const displayOpenVAS = createDisplay(OpenVASApp);
 const displayReconNG = createDisplay(ReconNGApp);
@@ -199,6 +201,9 @@ const displayContact = createDisplay(ContactApp);
 const displayHashcat = createDisplay(HashcatApp);
 
 const displayKismet = createDisplay(KismetApp);
+
+const toolApisEnabled =
+  (process.env.NEXT_PUBLIC_FEATURE_TOOL_APIS ?? process.env.FEATURE_TOOL_APIS) === 'enabled';
 
 // Utilities list used for the "Utilities" folder on the desktop
 const utilityList = [
@@ -957,6 +962,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayNmapNSE,
+  },
+  {
+    id: 'network-scanner',
+    title: 'Network Scanner',
+    icon: '/themes/Yaru/apps/nmap-nse.svg',
+    disabled: !toolApisEnabled,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNetworkScanner,
   },
   {
     id: 'weather',
