@@ -74,6 +74,7 @@ const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
 const TrashApp = createDynamicApp('trash', 'Trash');
 const SerialTerminalApp = createDynamicApp('serial-terminal', 'Serial Terminal');
+const LogMonitorApp = createDynamicApp('log-monitor', 'Log Monitor');
 
 
 const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
@@ -160,6 +161,7 @@ const displayProjectGallery = createDisplay(ProjectGalleryApp);
 const displayTrash = createDisplay(TrashApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
+const displayLogMonitor = createDisplay(LogMonitorApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 const displayInputLab = createDisplay(InputLabApp);
 const displaySubnetCalculator = createDisplay(SubnetCalculatorApp);
@@ -255,6 +257,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayProjectGallery,
+  },
+  {
+    id: 'log-monitor',
+    title: 'Log Monitor',
+    icon: '/themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayLogMonitor,
   },
   {
     id: 'input-lab',
