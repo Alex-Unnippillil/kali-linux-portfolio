@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import modulesData from '../data/module-index.json';
 import versionInfo from '../data/module-version.json';
+import { CheckCircleIcon, InfoCircleIcon, WarningTriangleIcon, XCircleIcon } from './icons';
+import type { IconProps } from './icons';
 
 interface Module {
   id: string;
@@ -125,91 +127,14 @@ const PopularModules: React.FC = () => {
     }
   };
 
-  const levelClass: Record<string, string> = {
-    info: 'text-blue-300',
-    success: 'text-green-400',
-    error: 'text-red-400',
-    warning: 'text-yellow-300',
+  const levelStyles: Record<string, { color: string; Icon: React.ComponentType<IconProps> }> = {
+    info: { color: 'text-blue-300', Icon: InfoCircleIcon },
+    success: { color: 'text-green-400', Icon: CheckCircleIcon },
+    warning: { color: 'text-yellow-300', Icon: WarningTriangleIcon },
+    error: { color: 'text-red-400', Icon: XCircleIcon },
   };
 
-  const levelIcon: Record<string, React.ReactElement> = {
-    info: (
-      <svg
-        className="w-6 h-6 text-blue-300"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"
-        />
-      </svg>
-    ),
-    success: (
-      <svg
-        className="w-6 h-6 text-green-400"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M5 13l4 4L19 7"
-        />
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"
-        />
-      </svg>
-    ),
-    warning: (
-      <svg
-        className="w-6 h-6 text-yellow-300"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M12 8v4m0 4h.01M4.93 19h14.14c1.2 0 1.94-1.3 1.34-2.33L13.34 4.67c-.6-1.04-2.08-1.04-2.68 0L3.59 16.67c-.6 1.03-.15 2.33 1.34 2.33z"
-        />
-      </svg>
-    ),
-    error: (
-      <svg
-        className="w-6 h-6 text-red-400"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M12 2a10 10 0 100 20 10 10 0 000-20z"
-        />
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M15 9l-6 6m0-6l6 6"
-        />
-      </svg>
-    ),
-  };
+  const defaultLevelStyle = levelStyles.info;
 
   return (
     <div className="p-4 space-y-4 bg-ub-cool-grey text-white min-h-screen">
@@ -334,18 +259,21 @@ const PopularModules: React.FC = () => {
               Copy Logs
             </button>
             <ol className="border-l-2 border-gray-700 pl-4 space-y-2" role="log">
-              {filteredLog.map((line, idx) => (
-                <li key={idx} className="flex items-center gap-2">
-                  {levelIcon[line.level] || levelIcon.info}
-                  <span
-                    className={`px-2 py-1 rounded-full bg-gray-700 text-sm font-mono ${
-                      levelClass[line.level] || levelClass.info
-                    }`}
-                  >
-                    {line.message}
-                  </span>
-                </li>
-              ))}
+              {filteredLog.map((line, idx) => {
+                const { Icon: LevelIcon, color } =
+                  levelStyles[line.level] || defaultLevelStyle;
+
+                return (
+                  <li key={idx} className="flex items-center gap-2">
+                    <LevelIcon className={`w-6 h-6 ${color}`} aria-hidden="true" />
+                    <span
+                      className={`px-2 py-1 rounded-full bg-gray-700 text-sm font-mono ${color}`}
+                    >
+                      {line.message}
+                    </span>
+                  </li>
+                );
+              })}
             </ol>
           </div>
           <table className="min-w-full text-sm">
