@@ -39,6 +39,7 @@ import {
   getTheme as loadTheme,
   setTheme as saveTheme,
 } from '../utils/theme';
+import { shadeColor } from '../utils/color';
 type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
@@ -50,22 +51,6 @@ export const ACCENT_OPTIONS = [
   '#805ad5', // purple
   '#ed64a6', // pink
 ];
-
-// Utility to lighten or darken a hex color by a percentage
-const shadeColor = (color: string, percent: number): string => {
-  const f = parseInt(color.slice(1), 16);
-  const t = percent < 0 ? 0 : 255;
-  const p = Math.abs(percent);
-  const R = f >> 16;
-  const G = (f >> 8) & 0x00ff;
-  const B = f & 0x0000ff;
-  const newR = Math.round((t - R) * p) + R;
-  const newG = Math.round((t - G) * p) + G;
-  const newB = Math.round((t - B) * p) + B;
-  return `#${(0x1000000 + newR * 0x10000 + newG * 0x100 + newB)
-    .toString(16)
-    .slice(1)}`;
-};
 
 interface SettingsContextValue {
   accent: string;

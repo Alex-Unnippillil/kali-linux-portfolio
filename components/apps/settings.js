@@ -1,11 +1,12 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
+import { useAccentColorAnalytics } from '../../hooks/useAccentColorAnalytics';
 
 export function Settings() {
     const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
-    const [contrast, setContrast] = useState(0);
+    const { accentText, contrastRatio, isAccessible, warning, liveMessage } = useAccentColorAnalytics();
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
 
@@ -16,45 +17,11 @@ export function Settings() {
         setWallpaper(name);
     };
 
-    let hexToRgb = (hex) => {
-        hex = hex.replace('#', '');
-        let bigint = parseInt(hex, 16);
-        return {
-            r: (bigint >> 16) & 255,
-            g: (bigint >> 8) & 255,
-            b: bigint & 255,
-        };
-    };
-
-    let luminance = ({ r, g, b }) => {
-        let a = [r, g, b].map(v => {
-            v = v / 255;
-            return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
-        });
-        return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
-    };
-
-    const contrastRatio = useCallback((hex1, hex2) => {
-        let l1 = luminance(hexToRgb(hex1)) + 0.05;
-        let l2 = luminance(hexToRgb(hex2)) + 0.05;
-        return l1 > l2 ? l1 / l2 : l2 / l1;
-    }, []);
-
-    const accentText = useCallback(() => {
-        return contrastRatio(accent, '#000000') > contrastRatio(accent, '#ffffff') ? '#000000' : '#ffffff';
-    }, [accent, contrastRatio]);
-
     useEffect(() => {
-        let raf = requestAnimationFrame(() => {
-            let ratio = contrastRatio(accent, accentText());
-            setContrast(ratio);
-            if (liveRegion.current) {
-                const msg = `Contrast ratio ${ratio.toFixed(2)}:1 ${ratio >= 4.5 ? 'passes' : 'fails'}`;
-                liveRegion.current.textContent = msg;
-            }
-        });
-        return () => cancelAnimationFrame(raf);
-    }, [accent, accentText, contrastRatio]);
+        if (liveRegion.current) {
+            liveRegion.current.textContent = liveMessage;
+        }
+    }, [liveMessage]);
 
     return (
         <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-kali-surface text-kali-text">
@@ -221,13 +188,18 @@ export function Settings() {
                     <p className="mb-2 text-center">Preview</p>
                     <button
                         className="px-2 py-1 rounded"
-                        style={{ backgroundColor: accent, color: accentText() }}
+                        style={{ backgroundColor: accent, color: accentText }}
                     >
                         Accent
                     </button>
-                    <p className={`mt-2 text-sm text-center ${contrast >= 4.5 ? 'text-kali-primary' : 'text-kali-error'}`}>
-                        {`Contrast ${contrast.toFixed(2)}:1 ${contrast >= 4.5 ? 'Pass' : 'Fail'}`}
+                    <p className={`mt-2 text-sm text-center ${isAccessible ? 'text-kali-primary' : 'text-kali-error'}`}>
+                        {`Contrast ${contrastRatio.toFixed(2)}:1 ${isAccessible ? 'Pass' : 'Fail'}`}
                     </p>
+                    {warning && (
+                        <p role="alert" className="mt-1 text-xs text-center text-kali-error">
+                            {warning}
+                        </p>
+                    )}
                     <span ref={liveRegion} role="status" aria-live="polite" className="sr-only"></span>
                 </div>
             </div>
