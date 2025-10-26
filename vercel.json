@@ -4,5 +4,7 @@
   "functions": {
     "pages/api/**/*.{js,ts}": { "runtime": "@vercel/node@5.3.20" },
     "app/api/**/route.{js,ts}": { "runtime": "@vercel/node@5.3.20" }
-  }
+  },
+  "installCommand": "corepack enable && corepack prepare yarn@4.9.2 --activate && yarn install --immutable",
+  "buildCommand": "yarn build"
 }
