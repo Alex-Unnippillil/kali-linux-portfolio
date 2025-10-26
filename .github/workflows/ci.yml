@@ -51,6 +51,7 @@ jobs:
       - run: yarn install --immutable --immutable-cache
       - run: yarn dedupe --check
       - run: yarn npm audit
+      - run: yarn check:secrets
 
   vercel-preview:
     runs-on: ubuntu-latest
