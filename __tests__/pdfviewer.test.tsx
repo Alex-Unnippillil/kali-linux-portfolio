@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PdfViewer from '../components/common/PdfViewer';
 
@@ -26,15 +26,16 @@ describe('PdfViewer', () => {
     expect(canvas).toBeInTheDocument();
     await user.type(screen.getByPlaceholderText(/search/i), 'hello');
     await user.click(screen.getByText('Search'));
-    expect(await screen.findByText('Page 1')).toBeInTheDocument();
+    const results = await screen.findByTestId('search-results');
+    expect(within(results).getAllByText(/Page \d/)).toHaveLength(3);
   });
 
   it('supports keyboard navigation through thumbnails', async () => {
     const user = userEvent.setup();
     render(<PdfViewer url="/sample.pdf" />);
     const options = await screen.findAllByRole('option');
-    options[0].focus();
-    await user.keyboard('{ArrowRight}');
+    await user.click(options[0]);
+    await user.keyboard('{ArrowDown}');
     const updated = await screen.findAllByRole('option');
     expect(updated[1]).toHaveFocus();
     expect(updated[1]).toHaveAttribute('aria-selected', 'true');
