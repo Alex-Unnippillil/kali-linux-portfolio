@@ -22,6 +22,7 @@ const VsCodeApp = createDynamicApp('vscode', 'VsCode');
 const YouTubeApp = createDynamicApp('youtube', 'YouTube');
 const CalculatorApp = createDynamicApp('calculator', 'Calculator');
 const ConverterApp = createDynamicApp('converter', 'Converter');
+const CryptoToolkitApp = createDynamicApp('crypto-toolkit', 'Crypto Toolkit');
 const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
 const ChessApp = createDynamicApp('chess', 'Chess');
 // Classic four-in-a-row game
@@ -117,6 +118,7 @@ const displayVsCode = createDisplay(VsCodeApp);
 const displayYouTube = createDisplay(YouTubeApp);
 const displayCalculator = createDisplay(CalculatorApp);
 const displayConverter = createDisplay(ConverterApp);
+const displayCryptoToolkit = createDisplay(CryptoToolkitApp);
 const displayTicTacToe = createDisplay(TicTacToeApp);
 const displayChess = createDisplay(ChessApp);
 const displayConnectFour = createDisplay(ConnectFourApp);
@@ -228,6 +230,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayClipboardManager,
+  },
+  {
+    id: 'crypto-toolkit',
+    title: 'Crypto Toolkit',
+    icon: '/themes/Yaru/apps/calc.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCryptoToolkit,
   },
   {
     id: 'figlet',
