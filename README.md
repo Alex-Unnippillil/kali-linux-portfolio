@@ -120,6 +120,17 @@ playwright/           # Playwright helpers for end-to-end testing
 
 **Game layout.** Games share `components/apps/GameLayout.tsx`, which renders a standardized header, help toggle, and status footer. Gamepad bindings live in `components/apps/Games/common/input-remap` and persist to the Origin Private File System (OPFS) via `utils/opfs.ts`.
 
+### Desktop tour persistence
+
+The onboarding tour that introduces the desktop chrome lives in
+`components/system/Tour.tsx`. It stores a `system-tour-complete`
+flag in `localStorage` and guards every read/write so repeated calls are
+idempotent and safe even when storage APIs throw. The paired
+`components/system/HelpOverlay.tsx` surfaces a **Reset tour** button that
+clears the stored flag and automatically disables itself when storage is
+unavailable (e.g., strict privacy modes). Additional UI can reuse the
+`createTourPersistence()` helper to inspect or reset the persisted state.
+
 ---
 
 ## Desktop UX
