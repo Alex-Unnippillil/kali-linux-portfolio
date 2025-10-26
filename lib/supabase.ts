@@ -1,4 +1,7 @@
+import { ensureServerEnv } from './runtime-env';
+
 export function getServiceSupabase() {
+  ensureServerEnv();
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
@@ -27,6 +30,7 @@ export function getServiceSupabase() {
 }
 
 export function getAnonSupabaseServer() {
+  ensureServerEnv();
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_ANON_KEY;
   if (!url || !key) {
