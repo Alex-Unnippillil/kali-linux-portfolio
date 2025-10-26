@@ -1,4 +1,11 @@
+import 'server-only';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+
+function createSupabaseServerClient(url: string, key: string): SupabaseClient {
+  return createClient(url, key, {
+    auth: { persistSession: false },
+  });
+}
 
 export function getServiceClient(): SupabaseClient | null {
   const url = process.env.SUPABASE_URL;
@@ -9,7 +16,18 @@ export function getServiceClient(): SupabaseClient | null {
     );
     return null;
   }
-  return createClient(url, serviceKey, {
-    auth: { persistSession: false },
-  });
+  return createSupabaseServerClient(url, serviceKey);
+}
+
+export function getAnonServerClient(): SupabaseClient | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
+  const anonKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
+  if (!url || !anonKey) {
+    console.warn(
+      'Supabase anon client unavailable: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY not set',
+    );
+    return null;
+  }
+  return createSupabaseServerClient(url, anonKey);
 }

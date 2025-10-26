@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { getServiceClient } from "../../lib/service-client";
 
 export default async function handler(
   req,
@@ -9,20 +9,18 @@ export default async function handler(
     return;
   }
 
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    res.status(500).json({ ok: false, code: "missing_supabase_env" });
-    return;
-  }
-
   const { app_slug, event, payload } = req.body || {};
   if (!app_slug || !event) {
     res.status(400).json({ ok: false, code: "invalid_payload" });
     return;
   }
 
-  const supabase = createClient(url, key);
+  const supabase = getServiceClient();
+  if (!supabase) {
+    res.status(500).json({ ok: false, code: "missing_supabase_env" });
+    return;
+  }
+
   const { error } = await supabase
     .from("app_events")
     .insert({ app_slug, event, payload: payload ?? null });
