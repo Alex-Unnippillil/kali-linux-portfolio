@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import modules from './modules.json';
 import usePersistentState from '../../../hooks/usePersistentState';
 import ConsolePane from './ConsolePane';
+import SessionSimulator from './SessionSimulator';
 
 const severities = ['critical', 'high', 'medium', 'low'];
 const severityStyles = {
@@ -43,6 +44,11 @@ const MetasploitApp = ({
   const [timeline, setTimeline] = useState([]);
   const [replaying, setReplaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [activeTab, setActiveTab] = usePersistentState(
+    'metasploit-active-tab',
+    'console',
+    (value) => value === 'console' || value === 'session',
+  );
 
   useEffect(() => {
     onLoadingChange(loading);
@@ -279,7 +285,7 @@ const MetasploitApp = ({
       <div className="bg-yellow-400 text-black text-xs p-2 text-center">
         For authorized security testing and educational use only.
       </div>
-      <div className="flex p-2">
+      <div className="flex flex-1 min-h-0 p-2">
         <input
           className="flex-grow bg-ub-grey text-white p-1 rounded"
           value={command}
@@ -567,7 +573,62 @@ const MetasploitApp = ({
           )}
         </aside>
       </div>
-      <ConsolePane output={loading ? 'Running...' : output} />
+      <div className="mt-2 flex min-h-[14rem] flex-col rounded-t border-t border-gray-700 bg-ub-grey/40">
+        <div
+          role="tablist"
+          aria-label="Metasploit views"
+          className="flex divide-x divide-gray-700 border-b border-gray-700 bg-ub-grey/60 text-xs"
+        >
+          <button
+            type="button"
+            role="tab"
+            id="metasploit-tab-console"
+            aria-controls="metasploit-panel-console"
+            aria-selected={activeTab === 'console'}
+            onClick={() => setActiveTab('console')}
+            className={`flex-1 px-3 py-2 font-semibold transition-colors ${
+              activeTab === 'console'
+                ? 'bg-black/60 text-white'
+                : 'text-gray-300 hover:text-white'
+            }`}
+          >
+            Console
+          </button>
+          <button
+            type="button"
+            role="tab"
+            id="metasploit-tab-session"
+            aria-controls="metasploit-panel-session"
+            aria-selected={activeTab === 'session'}
+            onClick={() => setActiveTab('session')}
+            className={`flex-1 px-3 py-2 font-semibold transition-colors ${
+              activeTab === 'session'
+                ? 'bg-black/60 text-white'
+                : 'text-gray-300 hover:text-white'
+            }`}
+          >
+            Session Simulator
+          </button>
+        </div>
+        <section
+          role="tabpanel"
+          id="metasploit-panel-console"
+          aria-labelledby="metasploit-tab-console"
+          hidden={activeTab !== 'console'}
+          className="flex flex-1 flex-col min-h-0"
+        >
+          <ConsolePane output={loading ? 'Running...' : output} />
+        </section>
+        <section
+          role="tabpanel"
+          id="metasploit-panel-session"
+          aria-labelledby="metasploit-tab-session"
+          hidden={activeTab !== 'session'}
+          className="flex flex-1 flex-col min-h-0"
+        >
+          <SessionSimulator isActive={activeTab === 'session'} />
+        </section>
+      </div>
     </div>
   );
 };
