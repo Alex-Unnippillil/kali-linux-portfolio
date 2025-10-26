@@ -18,6 +18,12 @@ const randomMac = () =>
       .padStart(2, '0')
   ).join(':');
 
+const formatList = (items) => {
+  if (!items.length) return '';
+  if (items.length === 1) return items[0];
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+};
+
 const EttercapApp = () => {
   const [target1, setTarget1] = useState('');
   const [target2, setTarget2] = useState('');
@@ -28,6 +34,46 @@ const EttercapApp = () => {
   const [logs, setLogs] = useState([]);
   const [flowIndex, setFlowIndex] = useState(0);
   const [filterText, setFilterText] = useState(filterExamples['Block HTTP']);
+  const [staticArpEnabled, setStaticArpEnabled] = useState(false);
+  const [dhcpSnoopingEnabled, setDhcpSnoopingEnabled] = useState(false);
+  const [spoofBlockedBy, setSpoofBlockedBy] = useState([]);
+
+  const defenceLabels = useMemo(() => {
+    const labels = [];
+    if (staticArpEnabled) labels.push('static ARP entries');
+    if (dhcpSnoopingEnabled) labels.push('DHCP snooping');
+    return labels;
+  }, [staticArpEnabled, dhcpSnoopingEnabled]);
+
+  const defenceDescriptions = useMemo(() => {
+    const descriptions = [];
+    if (staticArpEnabled) {
+      descriptions.push(
+        'Static ARP entries pin trusted MAC addresses so forged replies are ignored.'
+      );
+    }
+    if (dhcpSnoopingEnabled) {
+      descriptions.push(
+        'DHCP snooping builds a binding table and drops rogue updates from untrusted ports.'
+      );
+    }
+    return descriptions;
+  }, [staticArpEnabled, dhcpSnoopingEnabled]);
+
+  const defencesActive = defenceLabels.length > 0;
+  const defenceNarrative = defenceDescriptions.join(' ');
+  const defenceStatusText = defencesActive
+    ? `Current defences: ${formatList(defenceLabels)}.${
+        defenceNarrative ? ` ${defenceNarrative}` : ''
+      }`
+    : 'Current defences: none — forged ARP replies will reroute traffic until protections are enabled.';
+  const storyboardStatus = defencesActive
+    ? `Topology highlights blocked paths when ${formatList(defenceLabels)} are active.`
+    : 'Topology illustrates the attacker sitting in the path when defences are disabled.';
+  const blockedMessage = spoofBlockedBy.length ? formatList(spoofBlockedBy) : '';
+  const mitigationExplainer = defenceDescriptions.length
+    ? defenceNarrative
+    : 'Enable static ARP entries or DHCP snooping above to pin trusted MAC addresses and drop rogue updates.';
 
   const containerRef = useRef(null);
   const attackerRef = useRef(null);
@@ -75,38 +121,113 @@ const EttercapApp = () => {
           'Victim -> Gateway: DNS query',
           'Gateway -> Victim: DNS response',
         ],
-        before: [{ from: 'Victim', to: 'Gateway', color: '#fbbf24' }],
-        after: [{ from: 'Victim', to: 'Gateway', color: '#fbbf24' }],
-      },
-      {
-        title: 'ARP Poisoning',
-        packetTrace: [
-          'Attacker -> Victim: ARP reply (gateway is-at attacker)',
-          'Attacker -> Gateway: ARP reply (victim is-at attacker)',
-        ],
-        before: [{ from: 'Victim', to: 'Gateway', color: '#fbbf24' }],
-        after: [
-          { from: 'Victim', to: 'Attacker', color: '#fbbf24' },
-          { from: 'Attacker', to: 'Gateway', color: '#fbbf24' },
-        ],
-      },
-      {
-        title: 'DNS Spoofing',
-        packetTrace: [
-          'Victim -> Attacker: DNS query',
-          'Attacker -> Victim: spoofed DNS response',
-        ],
         before: [
-          { from: 'Victim', to: 'Attacker', color: '#fbbf24' },
-          { from: 'Attacker', to: 'Gateway', color: '#fbbf24' },
+          {
+            from: 'Victim',
+            to: 'Gateway',
+            color: defencesActive ? '#34d399' : '#fbbf24',
+            label: defencesActive ? 'legitimate' : undefined,
+          },
         ],
         after: [
-          { from: 'Victim', to: 'Attacker', color: '#fbbf24' },
-          { from: 'Attacker', to: 'Gateway', color: '#f87171' },
+          {
+            from: 'Victim',
+            to: 'Gateway',
+            color: defencesActive ? '#34d399' : '#fbbf24',
+            label: defencesActive ? 'legitimate' : undefined,
+          },
         ],
+      },
+      {
+        title: defencesActive ? 'ARP Poisoning Blocked' : 'ARP Poisoning',
+        packetTrace: defencesActive
+          ? [
+              'Attacker -> Victim: forged ARP reply (spoofed gateway MAC)',
+              'Attacker -> Gateway: forged ARP reply (victim is-at attacker)',
+              ...defenceDescriptions.map((desc) => `Mitigation: ${desc}`),
+              `Switch/host: ${formatList(defenceLabels)} reject the rogue update.`,
+            ]
+          : [
+              'Attacker -> Victim: ARP reply (gateway is-at attacker)',
+              'Attacker -> Gateway: ARP reply (victim is-at attacker)',
+            ],
+        before: [
+          {
+            from: 'Victim',
+            to: 'Gateway',
+            color: defencesActive ? '#34d399' : '#fbbf24',
+            label: defencesActive ? 'legitimate' : undefined,
+          },
+        ],
+        after: defencesActive
+          ? [
+              {
+                from: 'Attacker',
+                to: 'Victim',
+                color: '#f87171',
+                blocked: true,
+                label: 'blocked',
+              },
+              {
+                from: 'Attacker',
+                to: 'Gateway',
+                color: '#f87171',
+                blocked: true,
+                label: 'blocked',
+              },
+              {
+                from: 'Victim',
+                to: 'Gateway',
+                color: '#34d399',
+                label: 'legitimate',
+              },
+            ]
+          : [
+              { from: 'Victim', to: 'Attacker', color: '#fbbf24' },
+              { from: 'Attacker', to: 'Gateway', color: '#fbbf24' },
+            ],
+      },
+      {
+        title: defencesActive ? 'Traffic Protected' : 'DNS Spoofing',
+        packetTrace: defencesActive
+          ? [
+              'Victim -> Gateway: DNS query (unchanged path)',
+              'Gateway -> Victim: DNS response delivered without interception',
+              `Attacker: kept off-path by ${formatList(defenceLabels)}.`,
+            ]
+          : [
+              'Victim -> Attacker: DNS query',
+              'Attacker -> Victim: spoofed DNS response',
+            ],
+        before: defencesActive
+          ? [
+              {
+                from: 'Victim',
+                to: 'Gateway',
+                color: '#34d399',
+                label: 'legitimate',
+              },
+            ]
+          : [
+              { from: 'Victim', to: 'Attacker', color: '#fbbf24' },
+              { from: 'Attacker', to: 'Gateway', color: '#fbbf24' },
+            ],
+        after: defencesActive
+          ? [
+              {
+                from: 'Victim',
+                to: 'Gateway',
+                color: '#34d399',
+                label: 'legitimate',
+              },
+            ]
+          : [
+              { from: 'Victim', to: 'Attacker', color: '#fbbf24' },
+              { from: 'Attacker', to: 'Gateway', color: '#f87171' },
+            ],
       },
     ],
-    []
+    [defenceDescriptions, defenceLabels, defencesActive]
   );
 
   const drawStoryboard = useCallback(() => {
@@ -120,13 +241,39 @@ const EttercapApp = () => {
       const from = activeNodes[f.from.toLowerCase()];
       const to = activeNodes[f.to.toLowerCase()];
       if (!from || !to) return;
-      ctx.strokeStyle = f.color;
+      ctx.strokeStyle = f.blocked ? '#f87171' : f.color;
       ctx.lineWidth = 2;
+      if (f.blocked) {
+        ctx.setLineDash([6, 4]);
+      } else {
+        ctx.setLineDash([]);
+      }
       ctx.beginPath();
       ctx.moveTo(from.x, from.y);
       ctx.lineTo(to.x, to.y);
       ctx.stroke();
-      if (i === 0) {
+      ctx.setLineDash([]);
+      const midX = from.x + (to.x - from.x) / 2;
+      const midY = from.y + (to.y - from.y) / 2;
+      if (f.blocked) {
+        ctx.strokeStyle = '#f87171';
+        ctx.beginPath();
+        ctx.moveTo(midX - 6, midY - 6);
+        ctx.lineTo(midX + 6, midY + 6);
+        ctx.moveTo(midX - 6, midY + 6);
+        ctx.lineTo(midX + 6, midY - 6);
+        ctx.stroke();
+        ctx.fillStyle = '#f87171';
+        ctx.textAlign = 'center';
+        ctx.font = '10px monospace';
+        ctx.fillText(f.label || 'blocked', midX, midY - 10);
+      } else if (f.label) {
+        ctx.fillStyle = f.color;
+        ctx.textAlign = 'center';
+        ctx.font = '10px monospace';
+        ctx.fillText(f.label, midX, midY - 10);
+      }
+      if (i === 0 && !f.blocked) {
         const x = from.x + (to.x - from.x) * animProgress;
         const y = from.y + (to.y - from.y) * animProgress;
         ctx.fillStyle = f.color;
@@ -232,6 +379,14 @@ const EttercapApp = () => {
     });
     setStep(0);
     setTraceIndex(0);
+    stopSpoof('');
+    setStaticArpEnabled(false);
+    setDhcpSnoopingEnabled(false);
+    setSpoofBlockedBy([]);
+    setLogs([]);
+    setMac1('');
+    setMac2('');
+    setStatus('');
   };
 
   const renderMini = (flowsArr) => {
@@ -263,6 +418,16 @@ const EttercapApp = () => {
           >
             <polygon points="0 0, 10 3.5, 0 7" fill="#f87171" />
           </marker>
+          <marker
+            id="mini-arrow-green"
+            markerWidth="10"
+            markerHeight="7"
+            refX="10"
+            refY="3.5"
+            orient="auto"
+          >
+            <polygon points="0 0, 10 3.5, 0 7" fill="#34d399" />
+          </marker>
         </defs>
         {Object.entries(positions).map(([name, pos]) => (
           <React.Fragment key={name}>
@@ -288,18 +453,70 @@ const EttercapApp = () => {
         {flowsArr.map((f, i) => {
           const from = positions[f.from];
           const to = positions[f.to];
-          const markerId = f.color === '#f87171' ? 'mini-arrow-red' : 'mini-arrow';
+          const start = { x: from.x + 30, y: from.y };
+          const end = { x: to.x - 30, y: to.y };
+          const midX = (start.x + end.x) / 2;
+          const midY = (start.y + end.y) / 2;
+          const markerId = f.blocked
+            ? null
+            : f.color === '#f87171'
+            ? 'mini-arrow-red'
+            : f.color === '#34d399'
+            ? 'mini-arrow-green'
+            : 'mini-arrow';
           return (
-            <line
-              key={i}
-              x1={from.x + 30}
-              y1={from.y}
-              x2={to.x - 30}
-              y2={to.y}
-              stroke={f.color}
-              strokeWidth="2"
-              markerEnd={`url(#${markerId})`}
-            />
+            <React.Fragment key={i}>
+              <line
+                x1={start.x}
+                y1={start.y}
+                x2={end.x}
+                y2={end.y}
+                stroke={f.blocked ? '#f87171' : f.color}
+                strokeWidth="2"
+                strokeDasharray={f.blocked ? '6 4' : undefined}
+                markerEnd={markerId ? `url(#${markerId})` : undefined}
+              />
+              {f.blocked && (
+                <>
+                  <line
+                    x1={midX - 6}
+                    y1={midY - 6}
+                    x2={midX + 6}
+                    y2={midY + 6}
+                    stroke="#f87171"
+                    strokeWidth="2"
+                  />
+                  <line
+                    x1={midX - 6}
+                    y1={midY + 6}
+                    x2={midX + 6}
+                    y2={midY - 6}
+                    stroke="#f87171"
+                    strokeWidth="2"
+                  />
+                  <text
+                    x={midX}
+                    y={midY - 10}
+                    fill="#f87171"
+                    textAnchor="middle"
+                    fontSize="8"
+                  >
+                    {f.label || 'blocked'}
+                  </text>
+                </>
+              )}
+              {!f.blocked && f.label && (
+                <text
+                  x={midX}
+                  y={midY - 10}
+                  fill={f.color}
+                  textAnchor="middle"
+                  fontSize="8"
+                >
+                  {f.label}
+                </text>
+              )}
+            </React.Fragment>
           );
         })}
       </svg>
@@ -385,7 +602,7 @@ const EttercapApp = () => {
     return () => clearInterval(id);
   }, []);
 
-  const computeLines = () => {
+  const computeLines = useCallback(() => {
     const container = containerRef.current?.getBoundingClientRect();
     const attacker = attackerRef.current?.getBoundingClientRect();
     const t1 = target1Ref.current?.getBoundingClientRect();
@@ -405,7 +622,7 @@ const EttercapApp = () => {
         y2: t2.top + t2.height / 2 - container.top,
       },
     });
-  };
+  }, []);
 
   const moveArrow = (fromRef, toRef, arrowRef, progress) => {
     const from = fromRef.current?.getBoundingClientRect();
@@ -448,30 +665,76 @@ const EttercapApp = () => {
     };
   }, [running, target1, target2]);
 
-const startSpoof = () => {
-  if (!target1 || !target2) return;
-  setMac1(randomMac());
-  setMac2(randomMac());
-  setStatus(`Simulating spoofed ARP replies to ${target1} and ${target2}`);
-  setLogs([]);
-  setRunning(true);
-  logIntervalRef.current = setInterval(() => {
-    setLogs((prev) => {
-      const entries = [
-        `Simulated ARP reply ${target1} is-at ${attackerMac}`,
-        `Simulated ARP reply ${target2} is-at ${attackerMac}`,
-      ];
-      return [...prev, ...entries].slice(-50);
-    });
-  }, 1000);
-};
+  const handleSpoofBlocked = useCallback(
+    (labels, context = {}) => {
+      if (!labels.length) return;
+      cancelAnimationFrame(animationRef.current);
+      clearInterval(logIntervalRef.current);
+      setRunning(false);
+      computeLines();
+      setSpoofBlockedBy(labels);
+      setMac1('');
+      setMac2('');
+      const formatted = formatList(labels);
+      const attemptSummary = context.victim && context.gateway
+        ? `Blocked forged ARP replies targeting ${context.victim} and ${context.gateway}.`
+        : 'Blocked forged ARP replies before they altered the path.';
+      setStatus(`Spoof attempt blocked by ${formatted}.`);
+      setLogs((prev) => {
+        const mitigationLines = defenceDescriptions.map((desc) => `Mitigation: ${desc}`);
+        const entries = [attemptSummary, ...mitigationLines];
+        return [...prev, ...entries].slice(-50);
+      });
+    },
+    [computeLines, defenceDescriptions]
+  );
 
-const stopSpoof = () => {
-  cancelAnimationFrame(animationRef.current);
-  clearInterval(logIntervalRef.current);
-  setRunning(false);
-  setStatus('ARP spoofing simulation stopped');
-};
+  const startSpoof = () => {
+    if (!target1 || !target2) return;
+    if (defencesActive) {
+      handleSpoofBlocked(defenceLabels, { victim: target1, gateway: target2 });
+      return;
+    }
+    setSpoofBlockedBy([]);
+    setMac1(randomMac());
+    setMac2(randomMac());
+    setStatus(`Simulating spoofed ARP replies to ${target1} and ${target2}`);
+    setLogs([]);
+    setRunning(true);
+    logIntervalRef.current = setInterval(() => {
+      setLogs((prev) => {
+        const entries = [
+          `Simulated ARP reply ${target1} is-at ${attackerMac}`,
+          `Simulated ARP reply ${target2} is-at ${attackerMac}`,
+        ];
+        return [...prev, ...entries].slice(-50);
+      });
+    }, 1000);
+  };
+
+  const stopSpoof = (message = 'ARP spoofing simulation stopped') => {
+    cancelAnimationFrame(animationRef.current);
+    clearInterval(logIntervalRef.current);
+    setRunning(false);
+    setStatus(message);
+    setSpoofBlockedBy([]);
+    setMac1('');
+    setMac2('');
+  };
+
+  useEffect(() => {
+    if (!running || !defencesActive) return;
+    handleSpoofBlocked(defenceLabels, {
+      victim: target1 || 'Victim',
+      gateway: target2 || 'Gateway',
+    });
+  }, [defenceLabels, defencesActive, handleSpoofBlocked, running, target1, target2]);
+
+  useEffect(() => {
+    if (!defencesActive) {
+      setSpoofBlockedBy([]);
+    }
+  }, [defencesActive]);
 
   return (
     <div
@@ -511,6 +774,27 @@ const stopSpoof = () => {
           </button>
         )}
       </div>
+      <div className="flex flex-col md:flex-row md:items-center md:space-x-6 text-sm">
+        <label className="inline-flex items-center space-x-2 mt-2 md:mt-0">
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={staticArpEnabled}
+            onChange={(e) => setStaticArpEnabled(e.target.checked)}
+          />
+          <span className="text-white">Static ARP entries (pin known MACs)</span>
+        </label>
+        <label className="inline-flex items-center space-x-2 mt-2 md:mt-0">
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={dhcpSnoopingEnabled}
+            onChange={(e) => setDhcpSnoopingEnabled(e.target.checked)}
+          />
+          <span className="text-white">DHCP snooping (filter rogue bindings)</span>
+        </label>
+      </div>
+      <p className="mt-2 text-xs text-blue-300">{defenceStatusText}</p>
       <div className="flex-1 relative flex items-center justify-around">
         <div
           ref={attackerRef}
@@ -533,7 +817,7 @@ const stopSpoof = () => {
           <div>{target2 || 'Gateway'}</div>
           <div className="font-mono text-xs">{mac2 || '--:--:--:--:--:--'}</div>
         </div>
-        {running && (
+        {running && spoofBlockedBy.length === 0 && (
           <svg className="absolute inset-0 pointer-events-none" aria-hidden="true">
             <defs>
               <marker
@@ -587,6 +871,85 @@ const stopSpoof = () => {
             <circle ref={arrow2Ref} r="4" fill="#fbbf24" />
           </svg>
         )}
+        {spoofBlockedBy.length > 0 && (
+          <svg className="absolute inset-0 pointer-events-none" aria-hidden="true">
+            <line
+              x1={lines.l1.x1}
+              y1={lines.l1.y1}
+              x2={lines.l1.x2}
+              y2={lines.l1.y2}
+              stroke="#f87171"
+              strokeWidth="2"
+              strokeDasharray="6 4"
+            />
+            <line
+              x1={(lines.l1.x1 + lines.l1.x2) / 2 - 6}
+              y1={(lines.l1.y1 + lines.l1.y2) / 2 - 6}
+              x2={(lines.l1.x1 + lines.l1.x2) / 2 + 6}
+              y2={(lines.l1.y1 + lines.l1.y2) / 2 + 6}
+              stroke="#f87171"
+              strokeWidth="2"
+            />
+            <line
+              x1={(lines.l1.x1 + lines.l1.x2) / 2 - 6}
+              y1={(lines.l1.y1 + lines.l1.y2) / 2 + 6}
+              x2={(lines.l1.x1 + lines.l1.x2) / 2 + 6}
+              y2={(lines.l1.y1 + lines.l1.y2) / 2 - 6}
+              stroke="#f87171"
+              strokeWidth="2"
+            />
+            <text
+              x={(lines.l1.x1 + lines.l1.x2) / 2}
+              y={(lines.l1.y1 + lines.l1.y2) / 2 - 8}
+              fill="#f87171"
+              textAnchor="middle"
+              className="text-xs"
+            >
+              blocked
+            </text>
+            <line
+              x1={lines.l2.x1}
+              y1={lines.l2.y1}
+              x2={lines.l2.x2}
+              y2={lines.l2.y2}
+              stroke="#f87171"
+              strokeWidth="2"
+              strokeDasharray="6 4"
+            />
+            <line
+              x1={(lines.l2.x1 + lines.l2.x2) / 2 - 6}
+              y1={(lines.l2.y1 + lines.l2.y2) / 2 - 6}
+              x2={(lines.l2.x1 + lines.l2.x2) / 2 + 6}
+              y2={(lines.l2.y1 + lines.l2.y2) / 2 + 6}
+              stroke="#f87171"
+              strokeWidth="2"
+            />
+            <line
+              x1={(lines.l2.x1 + lines.l2.x2) / 2 - 6}
+              y1={(lines.l2.y1 + lines.l2.y2) / 2 + 6}
+              x2={(lines.l2.x1 + lines.l2.x2) / 2 + 6}
+              y2={(lines.l2.y1 + lines.l2.y2) / 2 - 6}
+              stroke="#f87171"
+              strokeWidth="2"
+            />
+            <text
+              x={(lines.l2.x1 + lines.l2.x2) / 2}
+              y={(lines.l2.y1 + lines.l2.y2) / 2 - 8}
+              fill="#f87171"
+              textAnchor="middle"
+              className="text-xs"
+            >
+              blocked
+            </text>
+          </svg>
+        )}
+        {spoofBlockedBy.length > 0 && (
+          <div className="absolute inset-x-0 bottom-4 flex justify-center pointer-events-none">
+            <div className="bg-red-900/70 border border-red-500 px-3 py-1 rounded text-sm">
+              Forged ARP replies blocked by {blockedMessage || 'defences'}.
+            </div>
+          </div>
+        )}
       </div>
       <div
         className="mt-4 bg-black text-green-400 p-2 font-mono h-32 overflow-auto"
@@ -618,6 +981,7 @@ const stopSpoof = () => {
             Restart Lab
           </button>
         </div>
+        <p className="mt-2 text-xs text-blue-300">{storyboardStatus}</p>
         <div className="mt-2 text-xs font-mono">
           {steps[step].packetTrace.slice(0, traceIndex).map((p, i) => (
             <div key={i}>{p}</div>
@@ -728,7 +1092,10 @@ const stopSpoof = () => {
           />
         </pre>
       </div>
-      <ArpLab />
+      <ArpLab
+        staticArpEnabled={staticArpEnabled}
+        dhcpSnoopingEnabled={dhcpSnoopingEnabled}
+      />
       <div className="mt-4 text-xs bg-gray-800 p-2 rounded">
         <p>
           ARP poisoning works by sending forged Address Resolution Protocol
@@ -736,6 +1103,8 @@ const stopSpoof = () => {
           address with each other&rsquo;s IP. This lets the attacker intercept the
           traffic between them.
         </p>
+        <p className="mt-2">{mitigationExplainer}</p>
+        <p className="mt-2 text-blue-300">{storyboardStatus}</p>
         <p className="mt-2">
           Learn more at{' '}
           <a
