@@ -4651,6 +4651,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ansi_up@npm:^6.0.6":
+  version: 6.0.6
+  resolution: "ansi_up@npm:6.0.6"
+  checksum: 10c0/a94109bf8bb0da87260178c7d251fbbd3c4b7f079399bfc2de02a9ddcc82424a5392a813cc00270a25a3ae858cb2d30adc10e4999dd6da071ef4d59062cb440d
+  languageName: node
+  linkType: hard
+
 "antd@npm:5.27.2":
   version: 5.27.2
   resolution: "antd@npm:5.27.2"
@@ -13930,6 +13937,7 @@ __metadata:
     "@zxing/browser": "npm:^0.1.5"
     "@zxing/library": "npm:^0.21.3"
     aframe: "npm:^1.5.0"
+    ansi_up: "npm:^6.0.6"
     antd: "npm:5.27.2"
     autoprefixer: "npm:^10.4.13"
     bad-words: "npm:^3.0.4"
