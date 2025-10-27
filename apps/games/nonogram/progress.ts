@@ -24,5 +24,13 @@ export const loadProgress = (name: string): PuzzleState | null => {
   }
 };
 
-const progressApi = { saveProgress, loadProgress };
+export const clearProgress = (name: string): void => {
+  try {
+    localStorage.removeItem(`${PREFIX}${name}`);
+  } catch {
+    /* ignore */
+  }
+};
+
+const progressApi = { saveProgress, loadProgress, clearProgress };
 export default progressApi;

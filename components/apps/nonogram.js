@@ -7,18 +7,37 @@ import React, {
 } from "react";
 import {
   validateSolution,
-  puzzles,
   findHint,
-  autoFillLines,
-} from "./nonogramUtils";
+  autoFill,
+} from "../../apps/games/nonogram/logic";
+import { loadPackFromJSON } from "../../apps/games/nonogram/packs";
+import {
+  saveProgress,
+  loadProgress,
+  clearProgress,
+} from "../../apps/games/nonogram/progress";
+import samplePack from "../../apps/games/nonogram/sample-pack.json";
 import { getDailyPuzzle } from "../../utils/dailyPuzzle";
 
 // visual settings
 const CELL_SIZE = 30;
 const CLUE_SPACE = 60; // space for row/column clues around grid
+const BEST_TIME_KEY = "nonogramBestTime";
+
+const NONOGRAM_PACK = loadPackFromJSON(samplePack);
+const NONOGRAM_PUZZLES = NONOGRAM_PACK.puzzles;
 
 const Nonogram = () => {
-  const puzzle = useMemo(() => getDailyPuzzle("nonogram", puzzles), []);
+  const puzzle = useMemo(
+    () =>
+      getDailyPuzzle(
+        "nonogram",
+        NONOGRAM_PUZZLES,
+        new Date(),
+        NONOGRAM_PUZZLES[0] ?? null,
+      ),
+    [],
+  );
 
   if (!puzzle) {
     return <div>No puzzle available.</div>;
@@ -47,11 +66,13 @@ const Nonogram = () => {
   const [reduceMotion, setReduceMotion] = useState(false);
 
   // grid: 0 empty, 1 filled, -1 marked
-  const [grid, setGrid] = useState(() =>
-    Array(height)
-      .fill(0)
-      .map(() => Array(width).fill(0)),
+  const createEmptyGrid = useCallback(
+    () =>
+      Array.from({ length: height }, () => Array(width).fill(0)),
+    [height, width],
   );
+
+  const [grid, setGrid] = useState(createEmptyGrid);
   const gridRef = useRef(grid);
   useEffect(() => {
     gridRef.current = grid;
@@ -67,15 +88,19 @@ const Nonogram = () => {
   const [time, setTime] = useState(0);
   const [highScore, setHighScore] = useState(null);
   const [mistakes, setMistakes] = useState(0);
+  const [hintsUsed, setHintsUsed] = useState(0);
   const startTime = useRef(Date.now());
   const completed = useRef(false);
 
-  // load stored high score
+  // load stored best time
   useEffect(() => {
-    const hs = localStorage.getItem("nonogramHighScore");
-    if (hs) setHighScore(parseInt(hs, 10));
-    reset();
-  }, [reset]);
+    try {
+      const hs = localStorage.getItem(BEST_TIME_KEY);
+      if (hs) setHighScore(parseInt(hs, 10));
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const playSound = useCallback(() => {
     if (!sound) return;
@@ -97,15 +122,21 @@ const Nonogram = () => {
         completed.current = true;
         const elapsed = Math.floor((Date.now() - startTime.current) / 1000);
         setTime(elapsed);
+        setPaused(true);
         if (highScore === null || elapsed < highScore) {
-          localStorage.setItem("nonogramHighScore", String(elapsed));
+          try {
+            localStorage.setItem(BEST_TIME_KEY, String(elapsed));
+          } catch {
+            /* ignore */
+          }
           setHighScore(elapsed);
         }
+        clearProgress(puzzle.name);
         playSound();
         alert("Puzzle solved!");
       }
     },
-    [rows, cols, highScore, playSound],
+    [rows, cols, highScore, playSound, puzzle.name],
   );
 
   const setCellValue = useCallback(
@@ -128,7 +159,7 @@ const Nonogram = () => {
         }
         if (ng[i][j] === value) return g;
         ng[i][j] = value;
-        const auto = autoFillLines(ng, rows, cols);
+        const auto = autoFill(ng, rows, cols);
         checkSolved(auto);
         return auto;
       });
@@ -138,17 +169,48 @@ const Nonogram = () => {
   );
 
   const reset = useCallback(() => {
-    setGrid(
-      Array(height)
-        .fill(0)
-        .map(() => Array(width).fill(0)),
-    );
+    const fresh = createEmptyGrid();
+    setGrid(fresh);
+    gridRef.current = fresh;
     startTime.current = Date.now();
     setTime(0);
     completed.current = false;
     setPaused(false);
     setMistakes(0);
-  }, [height, width]);
+    setHintsUsed(0);
+    clearProgress(puzzle.name);
+  }, [createEmptyGrid, puzzle.name]);
+
+  // load saved progress for the current puzzle
+  useEffect(() => {
+    const saved = loadProgress(puzzle.name);
+    if (
+      saved &&
+      saved.grid.length === height &&
+      saved.grid[0] &&
+      saved.grid[0].length === width
+    ) {
+      setGrid(saved.grid);
+      gridRef.current = saved.grid;
+      setHintsUsed(saved.hintsUsed ?? 0);
+    } else {
+      const fresh = createEmptyGrid();
+      setGrid(fresh);
+      gridRef.current = fresh;
+      setHintsUsed(0);
+    }
+    startTime.current = Date.now();
+    setTime(0);
+    completed.current = false;
+    setPaused(false);
+    setMistakes(0);
+  }, [puzzle.name, height, width, createEmptyGrid]);
+
+  // persist progress whenever the grid or hint count changes
+  useEffect(() => {
+    if (completed.current) return;
+    saveProgress(puzzle.name, { grid, hintsUsed });
+  }, [grid, hintsUsed, puzzle.name]);
 
   // respect reduced motion preference
   useEffect(() => {
@@ -460,8 +522,11 @@ const Nonogram = () => {
 
   const handleHint = useCallback(() => {
     const hint = findHint(rows, cols, gridRef.current);
-    if (hint) setCellValue(hint.i, hint.j, hint.value);
-  }, [rows, cols, setCellValue]);
+    if (hint && gridRef.current[hint.i][hint.j] !== hint.value) {
+      setHintsUsed((h) => h + 1);
+      setCellValue(hint.i, hint.j, hint.value);
+    }
+  }, [rows, cols, setCellValue, setHintsUsed]);
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
@@ -493,8 +558,10 @@ const Nonogram = () => {
         ))}
       </div>
       <div className="mb-2">
-        Time: {time}s{highScore !== null && ` | Best: ${highScore}s`}
+        Puzzle: {puzzle.name} | Time: {time}s
+        {highScore !== null && ` | Best: ${highScore}s`}
         {` | Mistakes: ${mistakes}`}
+        {` | Hints: ${hintsUsed}`}
       </div>
       <canvas
         ref={canvasRef}
