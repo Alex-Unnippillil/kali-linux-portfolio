@@ -9,6 +9,10 @@ import {
   playColorTone,
   createToneSchedule,
 } from "../../utils/audio";
+import {
+  loadBestStreak,
+  saveBestStreak,
+} from "../../games/simon/storage";
 
 const padStyles = [
   {
@@ -85,6 +89,23 @@ export const generateSequence = (length, seed) => {
   return Array.from(values);
 };
 
+export const extendSequence = (sequence, rng = Math.random) => {
+  const next = Array.isArray(sequence) ? [...sequence] : [];
+  const raw = typeof rng === "function" ? rng() : Math.random();
+  const value = Number.isFinite(raw)
+    ? Math.floor(Math.abs(raw) * 4) % 4
+    : Math.floor(Math.random() * 4);
+  next.push(value);
+  return next;
+};
+
+const PHASES = {
+  IDLE: "idle",
+  COMPUTER: "computer",
+  PLAYER: "player",
+  GAMEOVER: "gameover",
+};
+
 const Simon = () => {
   const [pads, setPads] = useState(padStyles);
   const [sequence, setSequence] = useState([]);
@@ -117,17 +138,36 @@ const Simon = () => {
     "simon_random_palette",
     false,
   );
-  const [leaderboard, setLeaderboard] = usePersistentState(
-    "simon_leaderboard",
-    {},
+  const [muted, setMuted] = usePersistentState("simon_muted", false);
+  const [bestStreak, setBestStreak] = useState(() =>
+    loadBestStreak(mode, timing),
   );
+
   const errorSound = useRef(null);
   const rngRef = useRef(Math.random);
   const timeoutRef = useRef(null);
   const [errorFlash, setErrorFlash] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  const resumeSnapshotRef = useRef({
+    phase: PHASES.IDLE,
+    status: "Press Start",
+    step: 0,
+  });
+  const phaseRef = useRef(PHASES.IDLE);
+  const scheduledTimeouts = useRef(new Set());
 
   useEffect(() => {
+    setBestStreak(loadBestStreak(mode, timing));
+  }, [mode, timing]);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return undefined;
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     const handleChange = () => setPrefersReducedMotion(media.matches);
     handleChange();
@@ -135,17 +175,31 @@ const Simon = () => {
     return () => media.removeEventListener("change", handleChange);
   }, []);
 
-  const updateHighScores = useCallback(
-    (score) => {
-      const key = `${mode}-${timing}`;
-      setLeaderboard((prev) => {
-        const current = Array.isArray(prev[key]) ? [...prev[key]] : [];
-        current.push(score);
-        current.sort((a, b) => b - a);
-        return { ...prev, [key]: current.slice(0, 5) };
-      });
+  const clearScheduledTimeouts = useCallback(() => {
+    scheduledTimeouts.current.forEach((id) => {
+      if (typeof globalThis.clearTimeout === "function") {
+        globalThis.clearTimeout(id);
+      }
+    });
+    scheduledTimeouts.current.clear();
+  }, []);
+
+  const scheduleTimeout = useCallback((fn, delay) => {
+    if (typeof globalThis.setTimeout !== "function") return 0;
+    const id = globalThis.setTimeout(() => {
+      scheduledTimeouts.current.delete(id);
+      fn();
+    }, delay);
+    scheduledTimeouts.current.add(id);
+    return id;
+  }, []);
+
+  useEffect(
+    () => () => {
+      clearScheduledTimeouts();
+      globalThis.clearTimeout?.(timeoutRef.current);
     },
-    [mode, timing, setLeaderboard],
+    [clearScheduledTimeouts],
   );
 
   const flashPad = useCallback(
@@ -153,12 +207,12 @@ const Simon = () => {
       if (!prefersReducedMotion) vibrate(50);
       if (audioOnly) return;
       window.requestAnimationFrame(() => setActivePad(idx));
-      setTimeout(
+      scheduleTimeout(
         () => window.requestAnimationFrame(() => setActivePad(null)),
         duration * 1000,
       );
     },
-    [audioOnly, prefersReducedMotion],
+    [audioOnly, prefersReducedMotion, scheduleTimeout],
   );
 
   const stepDuration = useCallback(() => {
@@ -170,8 +224,19 @@ const Simon = () => {
     return Math.max((base - level * reduction) * speedFactor, 0.2);
   }, [tempo, mode, sequence.length]);
 
+  const persistBestStreak = useCallback(
+    (streak) => {
+      if (!Number.isFinite(streak) || streak < 0) return;
+      const updated = saveBestStreak(mode, timing, streak);
+      setBestStreak(updated);
+    },
+    [mode, timing],
+  );
+
   const playSequence = useCallback(() => {
+    if (!sequence.length) return;
     const ctx = getAudioContext();
+    phaseRef.current = PHASES.COMPUTER;
     setIsPlayerTurn(false);
     setStatus("Listen...");
     const start = ctx.currentTime + 0.1;
@@ -185,73 +250,130 @@ const Simon = () => {
     );
     let currentDelta = baseDelta;
     let finalDelta = baseDelta;
+    clearScheduledTimeouts();
     schedule.forEach((time, i) => {
       const idx = sequence[i];
-      playColorTone(idx, time, currentDelta);
-      const delay = (time - ctx.currentTime) * 1000;
-      setTimeout(() => flashPad(idx, currentDelta), delay);
+      if (!muted) playColorTone(idx, time, currentDelta);
+      const delay = Math.max((time - ctx.currentTime) * 1000, 0);
+      scheduleTimeout(() => {
+        if (pausedRef.current) return;
+        flashPad(idx, currentDelta);
+      }, delay);
       finalDelta = currentDelta;
       currentDelta *= ramp;
     });
-    const totalDelay =
-      (schedule[schedule.length - 1] - ctx.currentTime + finalDelta) * 1000;
-    setTimeout(() => {
+    const totalDelay = Math.max(
+      (schedule[schedule.length - 1] - ctx.currentTime + finalDelta) * 1000,
+      0,
+    );
+    scheduleTimeout(() => {
+      if (pausedRef.current) return;
+      phaseRef.current = PHASES.PLAYER;
       setStatus("Your turn");
       setIsPlayerTurn(true);
       setStep(0);
     }, totalDelay);
-  }, [flashPad, sequence, stepDuration]);
+  }, [
+    clearScheduledTimeouts,
+    flashPad,
+    muted,
+    scheduleTimeout,
+    sequence,
+    stepDuration,
+  ]);
 
   useEffect(() => {
-    if (sequence.length && !isPlayerTurn) {
+    if (sequence.length && !isPlayerTurn && !paused) {
       playSequence();
     }
-  }, [sequence, isPlayerTurn, playSequence]);
+  }, [sequence, isPlayerTurn, paused, playSequence]);
+
+  const currentStreak = Math.max(sequence.length - 1, 0);
 
   useEffect(() => {
-    if (timing !== "strict" || !isPlayerTurn) {
-      clearTimeout(timeoutRef.current);
+    if (timing !== "strict" || !isPlayerTurn || paused) {
+      globalThis.clearTimeout?.(timeoutRef.current);
       return;
     }
-    clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
-      if (!errorSound.current) {
-        errorSound.current = new Howl({ src: [ERROR_SOUND_SRC] });
+    globalThis.clearTimeout?.(timeoutRef.current);
+    timeoutRef.current = globalThis.setTimeout?.(() => {
+      if (pausedRef.current) return;
+      if (!muted) {
+        if (!errorSound.current) {
+          errorSound.current = new Howl({ src: [ERROR_SOUND_SRC] });
+        }
+        errorSound.current.play();
       }
-      errorSound.current.play();
       if (!prefersReducedMotion) vibrate(100);
       setErrorFlash(true);
-      if (playMode === "strict") {
-        const streak = Math.max(sequence.length - 1, 0);
-        updateHighScores(streak);
-      }
+      persistBestStreak(currentStreak);
+      const strict = playMode === "strict";
+      phaseRef.current = strict ? PHASES.GAMEOVER : PHASES.COMPUTER;
       setIsPlayerTurn(false);
-      setStatus(
-        playMode === "strict" ? "Time up! Game over." : "Time up! Try again.",
-      );
-      setTimeout(() => {
+      setStatus(strict ? "Time up! Game over." : "Time up! Try again.");
+      scheduleTimeout(() => {
+        if (pausedRef.current) return;
         setErrorFlash(false);
-        if (playMode === "strict") {
+        if (strict) {
           restartGame();
         } else {
           setStep(0);
           setStatus("Listen...");
+          phaseRef.current = PHASES.COMPUTER;
+          setIsPlayerTurn(false);
           playSequence();
         }
       }, 600);
     }, 5000);
-    return () => clearTimeout(timeoutRef.current);
+    return () => {
+      globalThis.clearTimeout?.(timeoutRef.current);
+    };
   }, [
-    timing,
+    currentStreak,
     isPlayerTurn,
-    step,
+    muted,
+    paused,
+    persistBestStreak,
     playMode,
-    sequence.length,
-    updateHighScores,
-    restartGame,
     playSequence,
     prefersReducedMotion,
+    restartGame,
+    scheduleTimeout,
+    step,
+    timing,
   ]);
+
+  const pauseGame = useCallback(() => {
+    if (pausedRef.current) return;
+    resumeSnapshotRef.current = { phase: phaseRef.current, status, step };
+    setPaused(true);
+    pausedRef.current = true;
+    setIsPlayerTurn(false);
+    setStatus("Paused");
+    globalThis.clearTimeout?.(timeoutRef.current);
+    clearScheduledTimeouts();
+  }, [clearScheduledTimeouts, status, step]);
+
+  const resumeGame = useCallback(() => {
+    if (!pausedRef.current) return;
+    setPaused(false);
+    pausedRef.current = false;
+    const snapshot = resumeSnapshotRef.current;
+    if (snapshot.phase === PHASES.PLAYER) {
+      phaseRef.current = PHASES.PLAYER;
+      setStatus("Your turn");
+      setIsPlayerTurn(true);
+      setStep(snapshot.step);
+    } else if (snapshot.phase === PHASES.COMPUTER) {
+      phaseRef.current = PHASES.COMPUTER;
+      setStatus("Listen...");
+      setIsPlayerTurn(false);
+    } else if (snapshot.phase === PHASES.GAMEOVER) {
+      setStatus(snapshot.status);
+    } else {
+      setStatus("Press Start");
+    }
+  }, []);
 
   const startGame = useCallback(() => {
     rngRef.current = seed ? seedrandom(seed) : Math.random;
@@ -265,50 +387,69 @@ const Simon = () => {
     } else {
       setPads(padStyles);
     }
-    setSequence([Math.floor(rngRef.current() * 4)]);
+    phaseRef.current = PHASES.COMPUTER;
+    setPaused(false);
+    pausedRef.current = false;
+    setErrorFlash(false);
+    setActivePad(null);
+    clearScheduledTimeouts();
+    setIsPlayerTurn(false);
+    setSequence(extendSequence([], rngRef.current));
     setStatus("Listen...");
-  }, [seed, randomPalette]);
+  }, [clearScheduledTimeouts, randomPalette, seed]);
 
   const restartGame = useCallback(() => {
-    clearTimeout(timeoutRef.current);
+    globalThis.clearTimeout?.(timeoutRef.current);
+    clearScheduledTimeouts();
     setSequence([]);
     setStep(0);
     setIsPlayerTurn(false);
+    setErrorFlash(false);
+    setActivePad(null);
     setStatus("Press Start");
-  }, []);
+    setPaused(false);
+    pausedRef.current = false;
+    phaseRef.current = PHASES.IDLE;
+    resumeSnapshotRef.current = {
+      phase: PHASES.IDLE,
+      status: "Press Start",
+      step: 0,
+    };
+  }, [clearScheduledTimeouts]);
 
   const handlePadClick = useCallback(
     (idx) => () => {
-      if (!isPlayerTurn) return;
+      if (!isPlayerTurn || pausedRef.current) return;
       const duration = stepDuration();
       flashPad(idx, duration);
-      const start = getAudioContext().currentTime + 0.001;
-      playColorTone(idx, start, duration);
-
+      if (!muted) {
+        const start = getAudioContext().currentTime + 0.001;
+        playColorTone(idx, start, duration);
+      }
       if (sequence[step] !== idx) {
-        if (!errorSound.current) {
-          errorSound.current = new Howl({ src: [ERROR_SOUND_SRC] });
+        if (!muted) {
+          if (!errorSound.current) {
+            errorSound.current = new Howl({ src: [ERROR_SOUND_SRC] });
+          }
+          errorSound.current.play();
         }
-        errorSound.current.play();
         if (!prefersReducedMotion) vibrate(100);
         setErrorFlash(true);
-        if (playMode === "strict") {
-          const streak = Math.max(sequence.length - 1, 0);
-          updateHighScores(streak);
-        }
+        persistBestStreak(currentStreak);
         setIsPlayerTurn(false);
-        setStatus(
-          playMode === "strict"
-            ? "Wrong pad! Game over."
-            : "Wrong pad! Try again.",
-        );
-        setTimeout(() => {
+        const strict = playMode === "strict";
+        phaseRef.current = strict ? PHASES.GAMEOVER : PHASES.COMPUTER;
+        setStatus(strict ? "Wrong pad! Game over." : "Wrong pad! Try again.");
+        scheduleTimeout(() => {
+          if (pausedRef.current) return;
           setErrorFlash(false);
-          if (playMode === "strict") {
+          if (strict) {
             restartGame();
           } else {
             setStep(0);
             setStatus("Listen...");
+            phaseRef.current = PHASES.COMPUTER;
+            setIsPlayerTurn(false);
             playSequence();
           }
         }, 600);
@@ -317,24 +458,32 @@ const Simon = () => {
 
       if (step + 1 === sequence.length) {
         setIsPlayerTurn(false);
-        setTimeout(() => {
-          setSequence((seq) => [...seq, Math.floor(rngRef.current() * 4)]);
+        phaseRef.current = PHASES.COMPUTER;
+        scheduleTimeout(() => {
+          setSequence((prev) => {
+            const nextSeq = extendSequence(prev, rngRef.current);
+            persistBestStreak(Math.max(nextSeq.length - 1, 0));
+            return nextSeq;
+          });
         }, 1000);
       } else {
         setStep(step + 1);
       }
     },
     [
+      currentStreak,
       flashPad,
       isPlayerTurn,
-      restartGame,
-      sequence,
-      step,
-      stepDuration,
-      updateHighScores,
+      muted,
+      persistBestStreak,
       playMode,
       playSequence,
       prefersReducedMotion,
+      restartGame,
+      scheduleTimeout,
+      sequence,
+      step,
+      stepDuration,
     ],
   );
 
@@ -367,11 +516,18 @@ const Simon = () => {
     [activePad, audioOnly, colorblindPalette, mode, thickOutline, errorFlash],
   );
 
-  const scoreKey = `${mode}-${timing}`;
-  const scores = leaderboard[scoreKey] || [];
-
   return (
-    <GameLayout onRestart={restartGame}>
+    <GameLayout
+      gameId="simon"
+      score={currentStreak}
+      highScore={bestStreak}
+      paused={paused}
+      onPause={pauseGame}
+      onResume={resumeGame}
+      onRestart={restartGame}
+      muted={muted}
+      onToggleSound={setMuted}
+    >
       <div className={errorFlash ? "buzz" : ""}>
         <div className="grid grid-cols-2 gap-[6px] mb-4">
           {pads.map((pad, idx) => (
@@ -486,13 +642,9 @@ const Simon = () => {
             Start
           </button>
         </div>
-        <div className="mt-4 text-center">
-          <div className="mb-1">Leaderboard</div>
-          <ol className="list-decimal list-inside">
-            {scores.map((score, i) => (
-              <li key={i}>{score}</li>
-            ))}
-          </ol>
+        <div className="mt-4 text-center" aria-live="polite">
+          <div className="mb-1 font-semibold">Best streak</div>
+          <div>{bestStreak}</div>
         </div>
       </div>
     </GameLayout>
