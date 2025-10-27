@@ -42,6 +42,8 @@ jobs:
 
   security:
     runs-on: ubuntu-latest
+    env:
+      AUDIT_LEVEL: high
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -50,7 +52,28 @@ jobs:
           cache: yarn
       - run: yarn install --immutable --immutable-cache
       - run: yarn dedupe --check
-      - run: yarn npm audit
+      - name: Run npm audit
+        run: |
+          set -o pipefail
+          yarn npm audit --recursive --json > npm-audit.ndjson || true
+      - name: Summarize npm audit
+        id: audit_summary
+        if: ${{ always() }}
+        run: node scripts/process-npm-audit.mjs npm-audit.ndjson npm-audit-summary.md
+      - name: Upload npm audit artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-report
+          path: |
+            npm-audit.ndjson
+            npm-audit-summary.md
+      - name: Enforce license allowlist
+        if: ${{ always() }}
+        run: node scripts/license-scan.mjs
+      - name: Enforce audit severity threshold
+        if: ${{ always() }}
+        run: node scripts/enforce-audit-threshold.mjs "${{ steps.audit_summary.outputs.highest_severity }}" "${{ env.AUDIT_LEVEL }}"
 
   vercel-preview:
     runs-on: ubuntu-latest
