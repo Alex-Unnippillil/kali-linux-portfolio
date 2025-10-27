@@ -121,26 +121,23 @@ export const clearSpriteCache = () => {
 };
 
 // ---- tower stats and upgrades ----
+export const RANGE_LEVELS = [1, 1.6, 2.3, 3] as const;
+export const DAMAGE_LEVELS = [1, 1.7, 2.5, 3.4] as const;
+
 export const TOWER_TYPES = {
-  single: [
-    { range: 1, damage: 1 },
-    { range: 2, damage: 2 },
-    { range: 3, damage: 3 },
-  ],
+  single: {
+    rangeLevels: RANGE_LEVELS,
+    damageLevels: DAMAGE_LEVELS,
+  },
 } as const;
 
 export type TowerType = keyof typeof TOWER_TYPES;
 
-export const getTowerDPS = (type: TowerType, level: number) => {
-
-  const stats = TOWER_TYPES[type]?.[level - 1];
-  if (!stats) return 0;
-  return stats.damage; // 1 shot per second
-};
+export const getTowerDPS = (tower: Tower) => tower.damage;
 
 export const ENEMY_TYPES = {
-  fast: { speed: 60, health: 5 },
-  tank: { speed: 30, health: 15 },
+  fast: { speed: 48, health: 6 },
+  tank: { speed: 26, health: 14 },
 };
 
 export type Tower = {
@@ -150,11 +147,37 @@ export type Tower = {
   damage: number;
   level: number;
   type?: TowerType;
+  rangeLevel: number;
+  damageLevel: number;
 };
 
 export const upgradeTower = (tower: Tower, path: 'range' | 'damage') => {
-  tower.level += 1;
-  if (path === 'range') tower.range += 1;
-  else tower.damage += 1;
+  if (path === 'range') {
+    if (tower.rangeLevel >= TOWER_TYPES.single.rangeLevels.length - 1) {
+      return tower;
+    }
+    const updated: Tower = {
+      ...tower,
+      rangeLevel: tower.rangeLevel + 1,
+    };
+    updated.range =
+      TOWER_TYPES.single.rangeLevels[updated.rangeLevel];
+    updated.damage =
+      TOWER_TYPES.single.damageLevels[updated.damageLevel];
+    updated.level = 1 + updated.rangeLevel + updated.damageLevel;
+    return updated;
+  }
+  if (tower.damageLevel >= TOWER_TYPES.single.damageLevels.length - 1) {
+    return tower;
+  }
+  const updated: Tower = {
+    ...tower,
+    damageLevel: tower.damageLevel + 1,
+  };
+  updated.damage =
+    TOWER_TYPES.single.damageLevels[updated.damageLevel];
+  updated.range = TOWER_TYPES.single.rangeLevels[updated.rangeLevel];
+  updated.level = 1 + updated.rangeLevel + updated.damageLevel;
+  return updated;
 };
 
