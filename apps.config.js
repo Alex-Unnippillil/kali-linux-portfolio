@@ -1,19 +1,19 @@
 import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 
 import { DEFAULT_DESKTOP_FOLDERS } from './data/desktopFolders';
-import { displayDesktopFolder } from './components/apps/desktop-folder';
-import { displayX } from './components/apps/x';
-import { displaySpotify } from './components/apps/spotify';
-import { displaySettings } from './components/apps/settings';
-import { displayFirefox } from './components/apps/firefox';
+import { displayDesktopFolder } from './components/apps/desktop-folder.display';
+import { displayX } from './components/apps/x.display';
+import { displaySpotify } from './components/apps/spotify.display';
+import { displaySettings } from './components/apps/settings.display';
+import { displayFirefox } from './components/apps/firefox.display';
 import { displayGedit } from './components/apps/gedit';
-import { displayTodoist } from './components/apps/todoist';
-import { displayWeather } from './components/apps/weather';
-import { displayClipboardManager } from './components/apps/ClipboardManager';
-import { displayFiglet } from './components/apps/figlet';
-import { displayResourceMonitor } from './components/apps/resource_monitor';
-import { displayScreenRecorder } from './components/apps/screen-recorder';
-import { displayNikto } from './components/apps/nikto';
+import { displayTodoist } from './components/apps/todoist.display';
+import { displayWeather } from './components/apps/weather.display';
+import { displayClipboardManager } from './components/apps/ClipboardManager.display';
+import { displayFiglet } from './components/apps/figlet.display';
+import { displayResourceMonitor } from './components/apps/resource_monitor.display';
+import { displayScreenRecorder } from './components/apps/screen-recorder.display';
+import { displayNikto } from './components/apps/nikto.display';
 
 // Dynamic applications and games
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
