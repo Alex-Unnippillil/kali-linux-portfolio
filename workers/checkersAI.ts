@@ -1,7 +1,12 @@
 export type Color = 'red' | 'black';
 export interface Piece { color: Color; king: boolean; }
 export type Board = (Piece | null)[][];
-export interface Move { from:[number,number]; to:[number,number]; captured?:[number,number]; }
+export interface Move {
+  from: [number, number];
+  to: [number, number];
+  path: [number, number][];
+  captures: [number, number][];
+}
 
 const directions: Record<Color, number[][]> = {
   red: [[-1, -1], [-1, 1]],
@@ -13,6 +18,63 @@ const inBounds = (r: number, c: number) => r >= 0 && r < 8 && c >= 0 && c < 8;
 const cloneBoard = (board: Board): Board =>
   board.map((row) => row.map((cell) => (cell ? { ...cell } : null)));
 
+const buildCaptureSequences = (
+  board: Board,
+  start: [number, number],
+  r: number,
+  c: number,
+  color: Color,
+  king: boolean,
+  path: [number, number][],
+  captures: [number, number][],
+): Move[] => {
+  const dirs = king ? [...directions.red, ...directions.black] : directions[color];
+  let sequences: Move[] = [];
+  for (const [dr, dc] of dirs) {
+    const midR = r + dr;
+    const midC = c + dc;
+    const landingR = r + dr * 2;
+    const landingC = c + dc * 2;
+    if (!inBounds(midR, midC) || !inBounds(landingR, landingC)) continue;
+    const enemy = board[midR][midC];
+    if (!enemy || enemy.color === color) continue;
+    if (board[landingR][landingC]) continue;
+
+    const nextBoard = cloneBoard(board);
+    nextBoard[r][c] = null;
+    nextBoard[midR][midC] = null;
+    const becameKing =
+      !king &&
+      ((color === 'red' && landingR === 0) || (color === 'black' && landingR === 7));
+    nextBoard[landingR][landingC] = { color, king: king || becameKing };
+    const newPath = [...path, [landingR, landingC]];
+    const newCaptures = [...captures, [midR, midC]];
+    const continuations = becameKing
+      ? []
+      : buildCaptureSequences(
+          nextBoard,
+          start,
+          landingR,
+          landingC,
+          color,
+          king || becameKing,
+          newPath,
+          newCaptures,
+        );
+    if (continuations.length) {
+      sequences = sequences.concat(continuations);
+    } else {
+      sequences.push({
+        from: [start[0], start[1]],
+        to: [landingR, landingC],
+        path: newPath,
+        captures: newCaptures,
+      });
+    }
+  }
+  return sequences;
+};
+
 const getPieceMoves = (
   board: Board,
   r: number,
@@ -21,28 +83,37 @@ const getPieceMoves = (
 ): Move[] => {
   const piece = board[r][c];
   if (!piece) return [];
-  const dirs = [...directions[piece.color]];
-  if (piece.king) {
-    dirs.push(...directions[piece.color === 'red' ? 'black' : 'red']);
+  const captureMoves = buildCaptureSequences(
+    board,
+    [r, c],
+    r,
+    c,
+    piece.color,
+    piece.king,
+    [[r, c]],
+    [],
+  );
+  if (captureMoves.length && enforceCapture) {
+    return captureMoves;
   }
-  const moves: Move[] = [];
-  const captures: Move[] = [];
+
+  const dirs = piece.king ? [...directions.red, ...directions.black] : directions[piece.color];
+  const quietMoves: Move[] = [];
   for (const [dr, dc] of dirs) {
-    const r1 = r + dr;
-    const c1 = c + dc;
-    if (!inBounds(r1, c1)) continue;
-    const target = board[r1][c1];
-    if (!target) {
-      moves.push({ from: [r, c], to: [r1, c1] });
-    } else if (target.color !== piece.color) {
-      const r2 = r + dr * 2;
-      const c2 = c + dc * 2;
-      if (inBounds(r2, c2) && !board[r2][c2]) {
-        captures.push({ from: [r, c], to: [r2, c2], captured: [r1, c1] });
-      }
-    }
+    const nr = r + dr;
+    const nc = c + dc;
+    if (!inBounds(nr, nc) || board[nr][nc]) continue;
+    quietMoves.push({
+      from: [r, c],
+      to: [nr, nc],
+      path: [
+        [r, c],
+        [nr, nc],
+      ],
+      captures: [],
+    });
   }
-  return enforceCapture && captures.length ? captures : [...captures, ...moves];
+  return captureMoves.length ? captureMoves.concat(quietMoves) : quietMoves;
 };
 
 const getAllMoves = (
@@ -59,26 +130,29 @@ const getAllMoves = (
       }
     }
   }
-  const anyCapture = result.some((m) => m.captured);
-  return enforceCapture && anyCapture ? result.filter((m) => m.captured) : result;
+  const anyCapture = result.some((m) => m.captures.length);
+  return enforceCapture && anyCapture ? result.filter((m) => m.captures.length) : result;
 };
 
 const applyMove = (board: Board, move: Move): { board: Board } => {
   const newBoard = cloneBoard(board);
-  const piece = newBoard[move.from[0]][move.from[1]]!;
+  const piece = newBoard[move.from[0]][move.from[1]];
+  if (!piece) return { board: newBoard };
   newBoard[move.from[0]][move.from[1]] = null;
-  newBoard[move.to[0]][move.to[1]] = piece;
-  if (move.captured) {
-    const [cr, cc] = move.captured;
+  for (const [cr, cc] of move.captures) {
     newBoard[cr][cc] = null;
   }
+  const path = move.path.length ? move.path : [move.from, move.to];
+  const [destR, destC] = path[path.length - 1];
+  const pieceAfterMove = { ...piece };
   if (
-    !piece.king &&
-    ((piece.color === 'red' && move.to[0] === 0) ||
-      (piece.color === 'black' && move.to[0] === 7))
+    !pieceAfterMove.king &&
+    ((pieceAfterMove.color === 'red' && destR === 0) ||
+      (pieceAfterMove.color === 'black' && destR === 7))
   ) {
-    piece.king = true;
+    pieceAfterMove.king = true;
   }
+  newBoard[destR][destC] = pieceAfterMove;
   return { board: newBoard };
 };
 

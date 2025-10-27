@@ -18,8 +18,8 @@ export const getSelectableMoves = (
   if (!piece) return [];
   const pieceMoves = getPieceMoves(board, r, c, enforceCapture);
   const allMoves = getAllMoves(board, piece.color, enforceCapture);
-  const mustCapture = enforceCapture && allMoves.some((m) => m.captured);
-  return mustCapture ? pieceMoves.filter((m) => m.captured) : pieceMoves;
+  const mustCapture = enforceCapture && allMoves.some((m) => m.captures.length);
+  return mustCapture ? pieceMoves.filter((m) => m.captures.length) : pieceMoves;
 };
 
 export const getHintMove = (

@@ -21,7 +21,15 @@ test('forced jumps are enforced', () => {
   board[4][1] = { color: 'black', king: false };
   const moves = getAllMoves(board, 'red');
   expect(moves).toEqual([
-    { from: [5, 0], to: [3, 2], captured: [4, 1] },
+    {
+      from: [5, 0],
+      to: [3, 2],
+      path: [
+        [5, 0],
+        [3, 2],
+      ],
+      captures: [[4, 1]],
+    },
   ]);
 });
 
@@ -33,12 +41,23 @@ test('multi-jump availability', () => {
   board[5][0] = { color: 'red', king: false };
   board[4][1] = { color: 'black', king: false };
   board[2][3] = { color: 'black', king: false };
-  const first = getPieceMoves(board, 5, 0)[0];
-  const { board: afterFirst } = applyMove(board, first);
-  const further = getPieceMoves(afterFirst, first.to[0], first.to[1]);
-  expect(further).toEqual([
-    { from: [3, 2], to: [1, 4], captured: [2, 3] },
-  ]);
+  const [jump] = getPieceMoves(board, 5, 0);
+  expect(jump).toMatchObject({
+    from: [5, 0],
+    to: [1, 4],
+    captures: [
+      [4, 1],
+      [2, 3],
+    ],
+    path: [
+      [5, 0],
+      [3, 2],
+      [1, 4],
+    ],
+  });
+  const { board: afterJump } = applyMove(board, jump);
+  const postMoves = getPieceMoves(afterJump, 1, 4);
+  expect(postMoves.every((m) => m.captures.length === 0)).toBe(true);
 });
 
 test('kinging on last row', () => {
@@ -87,10 +106,42 @@ test('getPieceMoves handles empty and king pieces', () => {
   board[3][2] = { color: 'red', king: true };
   const moves = getPieceMoves(board, 3, 2);
   expect(moves).toEqual([
-    { from: [3, 2], to: [2, 1] },
-    { from: [3, 2], to: [2, 3] },
-    { from: [3, 2], to: [4, 1] },
-    { from: [3, 2], to: [4, 3] },
+    {
+      from: [3, 2],
+      to: [2, 1],
+      path: [
+        [3, 2],
+        [2, 1],
+      ],
+      captures: [],
+    },
+    {
+      from: [3, 2],
+      to: [2, 3],
+      path: [
+        [3, 2],
+        [2, 3],
+      ],
+      captures: [],
+    },
+    {
+      from: [3, 2],
+      to: [4, 1],
+      path: [
+        [3, 2],
+        [4, 1],
+      ],
+      captures: [],
+    },
+    {
+      from: [3, 2],
+      to: [4, 3],
+      path: [
+        [3, 2],
+        [4, 3],
+      ],
+      captures: [],
+    },
   ]);
 });
 
@@ -100,7 +151,17 @@ test('getAllMoves without captures', () => {
   board[5][0] = { color: 'red', king: false };
   board[0][1] = { color: 'red', king: false }; // piece with no moves
   const moves = getAllMoves(board, 'red');
-  expect(moves).toEqual([{ from: [5, 0], to: [4, 1] }]);
+  expect(moves).toEqual([
+    {
+      from: [5, 0],
+      to: [4, 1],
+      path: [
+        [5, 0],
+        [4, 1],
+      ],
+      captures: [],
+    },
+  ]);
 });
 
 test('applyMove without kinging', () => {
