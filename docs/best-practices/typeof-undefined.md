@@ -2,7 +2,7 @@
 
 This note captures a recurring theme from recent code reviews: ensuring we guard browser-only APIs without scattering raw `typeof window === 'undefined'` checks throughout the code base.
 
-## Why centralize the check?
+## Why centralize the check
 
 * **Consistency.** A shared helper makes the intent obvious and avoids typos such as comparing against the wrong string literal.
 * **Lint compliance.** We disable the `no-top-level-window` lint in a single helper instead of sprinkling disable comments through feature files.
