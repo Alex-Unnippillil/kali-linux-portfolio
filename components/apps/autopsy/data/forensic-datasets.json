@@ -1,0 +1,70 @@
+{
+  "timeline": [
+    {
+      "timestamp": "2023-07-31T23:42:00Z",
+      "name": "Field laptop imaged",
+      "category": "Acquisition",
+      "description": "Responder performed a live triage image before seizing the device. This anchors the start of the lab chain of custody.",
+      "insight": "Baseline point for correlating later Autopsy findings with the original acquisition log."
+    },
+    {
+      "timestamp": "2023-08-01T08:05:00Z",
+      "name": "Removable USB mounted",
+      "category": "Device Activity",
+      "description": "System log shows a removable drive labelled FIELD-USB was mounted while the laptop was still with the subject.",
+      "insight": "Highlights potential staging media used to move tooling or exfiltrated data."
+    },
+    {
+      "timestamp": "2023-08-01T10:17:00Z",
+      "name": "resume.docx modified",
+      "category": "Documents",
+      "description": "User account 'casey' saved a new version of resume.docx shortly after the USB activity.",
+      "insight": "Cross-reference with keyword hits for 'macro' to illustrate hunting for persistence mechanisms in office files."
+    },
+    {
+      "timestamp": "2023-08-01T14:22:00Z",
+      "name": "run.exe executed",
+      "category": "Execution",
+      "description": "Prefetch artifacts show run.exe launched from the removable drive path.",
+      "insight": "Pairs with hash-set lookups to demonstrate whitelisting vs. suspicious binaries."
+    },
+    {
+      "timestamp": "2023-08-01T18:11:00Z",
+      "name": "System log rotation",
+      "category": "Logs",
+      "description": "The Windows System log rotated immediately after run.exe executed, implying tampering or heavy activity.",
+      "insight": "Useful talking point for retention strategies and why investigators export EVTX early."
+    }
+  ],
+  "hashSets": [
+    {
+      "name": "Known Good Reference",
+      "description": "Synthetic SHA-256 values generated for this portfolio build to show how Autopsy cross-references clean system files.",
+      "source": "Created for the Kali Linux Portfolio Autopsy simulator, derived from demo text blobs shipped in /public/demo-data/autopsy.",
+      "entries": [
+        {
+          "hash": "0efd846c4a6c66f82460152159e5605aa4aeeb7eb942dc300a7c6cbd9a5a3ff4",
+          "label": "notes.txt",
+          "explanation": "Matches the base64 demo note bundled with the simulator; used to teach hash verification workflows."
+        }
+      ]
+    },
+    {
+      "name": "Investigator Watchlist",
+      "description": "Fictional suspicious binaries crafted for classroom walk-throughs. They are inert placeholders and safe to share.",
+      "source": "Randomized using OpenSSL locally while preparing this fixture; no real malware samples are referenced.",
+      "entries": [
+        {
+          "hash": "d3b07384d113edec49eaa6238ad5ff00f6e9d7c4a8a9f0d0d5c2ee17f29c7caa",
+          "label": "run.exe",
+          "explanation": "Represents the executable discussed in the timeline. Instructors can show how to pivot from a hash hit to execution evidence."
+        },
+        {
+          "hash": "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae",
+          "label": "macro-enabled template",
+          "explanation": "Demonstrates why office document macros should be validated before trusting a resume or template file."
+        }
+      ]
+    }
+  ]
+}

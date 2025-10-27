@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
+import forensicDatasets from './data/forensic-datasets.json';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
 import demoCase from '../../../apps/autopsy/data/case.json';
 
@@ -355,8 +356,38 @@ function Autopsy({ initialArtifacts = null }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [keyword, setKeyword] = useState('');
   const [previewTab, setPreviewTab] = useState('hex');
-  const [timelineEvents] = useState(
-    demoCase.timeline.map((t) => ({ name: t.event, timestamp: t.timestamp }))
+  const timelineEvents = useMemo(() => {
+    const datasetTimeline = (forensicDatasets.timeline || []).map((entry) => ({
+      name: entry.name || entry.event,
+      timestamp: entry.timestamp,
+      category: entry.category || '',
+      description: entry.description || '',
+      insight: entry.insight || '',
+    }));
+    if (datasetTimeline.length > 0) {
+      return datasetTimeline;
+    }
+    return demoCase.timeline.map((t) => ({
+      name: t.event,
+      timestamp: t.timestamp,
+      category: '',
+      description: '',
+      insight: '',
+    }));
+  }, []);
+  const hashSets = useMemo(() => forensicDatasets.hashSets || [], []);
+  const [selectedTimelineEvent, setSelectedTimelineEvent] = useState(
+    () => timelineEvents[0] || null
+  );
+  const [activeHashSetIndex, setActiveHashSetIndex] = useState(0);
+  const selectedHashSet = hashSets[activeHashSetIndex] || null;
+  const selectedHashEntries = useMemo(
+    () =>
+      (selectedHashSet?.entries || []).map((entry) => ({
+        ...entry,
+        known: hashDB[entry.hash] || null,
+      })),
+    [selectedHashSet, hashDB]
   );
   const parseWorkerRef = useRef(null);
 
@@ -366,6 +397,18 @@ function Autopsy({ initialArtifacts = null }) {
       .then(setPlugins)
       .catch(() => setPlugins([]));
   }, []);
+
+  useEffect(() => {
+    if (hashSets.length === 0) {
+      if (activeHashSetIndex !== 0) {
+        setActiveHashSetIndex(0);
+      }
+      return;
+    }
+    if (activeHashSetIndex >= hashSets.length) {
+      setActiveHashSetIndex(0);
+    }
+  }, [activeHashSetIndex, hashSets]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof Worker === 'function') {
@@ -445,9 +488,46 @@ function Autopsy({ initialArtifacts = null }) {
       (!startTime || new Date(t.timestamp) >= new Date(startTime)) &&
       (!endTime || new Date(t.timestamp) <= new Date(endTime))
   );
-  const visibleTimeline = filteredTimeline.filter((t) =>
-    t.name.toLowerCase().includes(searchLower)
+  const visibleTimeline = filteredTimeline.filter((t) => {
+    const target = searchLower.trim();
+    if (!target) return true;
+    const nameMatch = (t.name || '').toLowerCase().includes(target);
+    const descriptionMatch = (t.description || '')
+      .toLowerCase()
+      .includes(target);
+    const insightMatch = (t.insight || '')
+      .toLowerCase()
+      .includes(target);
+    const categoryMatch = (t.category || '')
+      .toLowerCase()
+      .includes(target);
+    return nameMatch || descriptionMatch || insightMatch || categoryMatch;
+  });
+  const timelineToDisplay = useMemo(
+    () => (visibleTimeline.length > 0 ? visibleTimeline : timelineEvents),
+    [visibleTimeline, timelineEvents]
   );
+  const timelineIsFallback =
+    visibleTimeline.length === 0 && searchLower.trim().length > 0;
+
+  useEffect(() => {
+    if (timelineToDisplay.length === 0) {
+      if (selectedTimelineEvent !== null) {
+        setSelectedTimelineEvent(null);
+      }
+      return;
+    }
+    const hasSelected =
+      !!selectedTimelineEvent &&
+      timelineToDisplay.some(
+        (event) =>
+          event.timestamp === selectedTimelineEvent.timestamp &&
+          event.name === selectedTimelineEvent.name
+      );
+    if (!hasSelected) {
+      setSelectedTimelineEvent(timelineToDisplay[0]);
+    }
+  }, [timelineToDisplay, selectedTimelineEvent]);
 
   const createCase = () => {
     const name = caseName.trim();
@@ -707,11 +787,150 @@ function Autopsy({ initialArtifacts = null }) {
             artifacts={visibleArtifacts}
             onSelect={setSelectedArtifact}
           />
-          {visibleTimeline.length > 0 && (
-            <>
-              <div className="text-sm font-bold">Timeline</div>
-              <Timeline events={visibleTimeline} onSelect={() => {}} />
-            </>
+          {(timelineToDisplay.length > 0 || hashSets.length > 0) && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {timelineToDisplay.length > 0 && (
+                <div
+                  className="bg-ub-grey p-3 rounded space-y-2"
+                  role="group"
+                  aria-label="Forensic timeline dataset"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-bold">Forensic timeline dataset</div>
+                    <span className="text-[10px] uppercase text-ubt-blue">
+                      Read only
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-300">
+                    The curated events below come from the fictional FIELD-USB investigation and are frozen in place so learners can trace Autopsy correlations without risking evidence integrity.
+                  </p>
+                  {timelineIsFallback && (
+                    <div className="text-[11px] text-yellow-300" role="status">
+                      Filters hid every match, so the full teaching dataset is displayed.
+                    </div>
+                  )}
+                  <Timeline
+                    events={timelineToDisplay}
+                    onSelect={setSelectedTimelineEvent}
+                  />
+                  {selectedTimelineEvent && (
+                    <div
+                      className="bg-ub-cool-grey p-2 rounded text-xs space-y-1"
+                      role="note"
+                    >
+                      <div className="font-semibold text-white">
+                        {selectedTimelineEvent.name}
+                      </div>
+                      <div className="text-gray-300">
+                        {new Date(selectedTimelineEvent.timestamp).toLocaleString()}
+                        {selectedTimelineEvent.category && (
+                          <span>
+                            {' '}• {selectedTimelineEvent.category}
+                          </span>
+                        )}
+                      </div>
+                      {selectedTimelineEvent.description && (
+                        <p className="text-gray-200">
+                          {selectedTimelineEvent.description}
+                        </p>
+                      )}
+                      {selectedTimelineEvent.insight && (
+                        <p className="text-gray-200 italic">
+                          Instructor insight: {selectedTimelineEvent.insight}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              {hashSets.length > 0 && (
+                <div
+                  className="bg-ub-grey p-3 rounded space-y-2"
+                  role="group"
+                  aria-label="Hash set reference"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-bold">Hash set reference</div>
+                    <span className="text-[10px] uppercase text-ubt-blue">
+                      Read only
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-300">
+                    These digests mimic known-good and watchlist collections so you can rehearse Autopsy hash lookups without shipping live samples.
+                  </p>
+                  {hashSets.length > 1 && (
+                    <label className="text-xs flex flex-col gap-1">
+                      <span className="font-semibold text-white">Dataset</span>
+                      <select
+                        value={activeHashSetIndex}
+                        onChange={(e) => setActiveHashSetIndex(Number(e.target.value))}
+                        className="bg-ub-cool-grey text-white px-2 py-1 rounded"
+                        aria-label="Select hash set dataset"
+                      >
+                        {hashSets.map((set, idx) => (
+                          <option key={set.name} value={idx}>
+                            {set.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                  {selectedHashSet && (
+                    <>
+                      <div className="text-xs text-gray-200">
+                        <span className="font-semibold text-white">Source:</span>{' '}
+                        {selectedHashSet.source}
+                      </div>
+                      <div className="text-xs text-gray-200">
+                        {selectedHashSet.description}
+                      </div>
+                      {selectedHashEntries.length > 0 ? (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-xs mt-2 border border-gray-700 rounded">
+                            <thead>
+                              <tr className="bg-ub-cool-grey text-left">
+                                <th className="px-2 py-1 font-semibold">SHA-256</th>
+                                <th className="px-2 py-1 font-semibold">Label</th>
+                                <th className="px-2 py-1 font-semibold">Educational note</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {selectedHashEntries.map((entry) => (
+                                <tr
+                                  key={`${selectedHashSet.name}-${entry.hash}`}
+                                  className="border-t border-gray-700"
+                                >
+                                  <td className="px-2 py-1 font-mono break-all align-top">
+                                    {entry.hash}
+                                  </td>
+                                  <td className="px-2 py-1 align-top">
+                                    <div className="font-semibold text-white">
+                                      {entry.label}
+                                    </div>
+                                    {entry.known && (
+                                      <div className="text-[11px] text-green-300">
+                                        Matches demo hash DB entry: {entry.known}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="px-2 py-1 text-gray-200 align-top">
+                                    {entry.explanation}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="text-xs text-gray-400">
+                          No hash values are published for this dataset yet.
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           )}
           {fileTree && (
             <div className="flex space-x-4">
