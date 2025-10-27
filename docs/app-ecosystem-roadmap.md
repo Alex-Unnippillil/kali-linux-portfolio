@@ -44,7 +44,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | subnet-calculator | Subnet Calculator | Core maintainers | **Needs polish** – validation UX and shared presets | Network calc utils |
 | sticky_notes | Sticky Notes | Core maintainers | **Needs polish** – confirm persistence model and drag handles | localStorage |
 | trash | Trash | Core maintainers | **In progress** – soft-delete metadata with restore/empty flows | Virtual filesystem metadata |
-| serial-terminal | Serial Terminal | Core maintainers | **Needs polish** – confirm serial transport stubs | Web Serial API mock |
+| serial-terminal | Serial Terminal | Core maintainers | **Ready** – demo serial transport stub with tests | Web Serial API mock |
 | plugin-manager | Plugin Manager | Core maintainers | **Needs triage** – document scope and dependencies | Plugin metadata |
 | ssh | SSH Command Builder | Core maintainers | ✅ Ready – preset library, validation, and export actions shipped | Command templates |
 | http | HTTP Request Builder | Core maintainers | **Needs polish** – form validation and canned responses | HTTP schema mocks |

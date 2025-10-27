@@ -1,68 +1,87 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import FormError from '../ui/FormError';
+import {
+  createSerialTransportStub,
+  SerialLike,
+  SerialPortLike,
+} from '../../utils/serialTransportStub';
 
-interface SerialPort {
-  readonly readable: ReadableStream<Uint8Array> | null;
-  open(options: { baudRate: number }): Promise<void>;
-  close(): Promise<void>;
-}
+type NavigatorSerial = Navigator & { serial: SerialLike };
 
-interface Serial {
-  requestPort(): Promise<SerialPort>;
-  addEventListener(type: 'disconnect', listener: (ev: Event & { readonly target: SerialPort }) => void): void;
-  removeEventListener(type: 'disconnect', listener: (ev: Event & { readonly target: SerialPort }) => void): void;
-}
-
-type NavigatorSerial = Navigator & { serial: Serial };
+const STATUS_TEXT: Record<'idle' | 'connecting' | 'connected', string> = {
+  idle: 'Not connected',
+  connecting: 'Connecting…',
+  connected: 'Connected',
+};
 
 const SerialTerminalApp: React.FC = () => {
-  const supported = typeof navigator !== 'undefined' && 'serial' in navigator;
-  const [port, setPort] = useState<SerialPort | null>(null);
+  const nativeSupported = typeof navigator !== 'undefined' && 'serial' in navigator;
+  const fallbackSerial = useMemo(() => createSerialTransportStub(), []);
+  const serial = nativeSupported
+    ? (navigator as NavigatorSerial).serial
+    : fallbackSerial.serial;
+  const isDemo = !nativeSupported;
+
+  const [port, setPort] = useState<SerialPortLike | null>(null);
   const [logs, setLogs] = useState('');
   const [error, setError] = useState('');
-  const readerRef = useRef<ReadableStreamDefaultReader<string> | null>(null);
+  const [status, setStatus] = useState<'idle' | 'connecting' | 'connected'>('idle');
+  const readerRef = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
 
   useEffect(() => {
-    if (!supported) return;
-    const handleDisconnect = (e: Event & { readonly target: SerialPort }) => {
+    const handleDisconnect = (e: Event & { readonly target: SerialPortLike }) => {
       if (e.target === port) {
         setError('Device disconnected.');
         setPort(null);
+        setStatus('idle');
       }
     };
-    const nav = navigator as NavigatorSerial;
-    nav.serial.addEventListener('disconnect', handleDisconnect);
+    serial.addEventListener('disconnect', handleDisconnect);
     return () => {
-      nav.serial.removeEventListener('disconnect', handleDisconnect);
+      serial.removeEventListener('disconnect', handleDisconnect);
     };
-  }, [supported, port]);
+  }, [serial, port]);
 
-  const readLoop = async (p: SerialPort) => {
-    const textDecoder = new TextDecoderStream();
-    const readableClosed = p.readable?.pipeTo(textDecoder.writable as WritableStream<Uint8Array>);
-    const reader = textDecoder.readable.getReader();
+  useEffect(() => {
+    return () => {
+      void readerRef.current?.cancel().catch(() => undefined);
+      void port?.close().catch(() => undefined);
+    };
+  }, [port]);
+
+  const readLoop = async (p: SerialPortLike) => {
+    const readable = p.readable;
+    if (!readable) return;
+    const reader = readable.getReader();
     readerRef.current = reader;
+    const decoder = new TextDecoder();
     try {
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-        if (value) setLogs((l) => l + value);
+        if (value) {
+          const decoded = decoder.decode(value, { stream: true });
+          if (decoded) setLogs((l) => l + decoded);
+        }
       }
     } catch {
       // ignored
     } finally {
       reader.releaseLock();
-      await readableClosed?.catch(() => {});
+      const remainder = decoder.decode();
+      if (remainder) setLogs((l) => l + remainder);
     }
   };
 
   const connect = async () => {
-    if (!supported) return;
     setError('');
+    setStatus('connecting');
+    setLogs('');
     try {
-      const p = await (navigator as NavigatorSerial).serial.requestPort();
+      const p = await serial.requestPort();
       await p.open({ baudRate: 9600 });
       setPort(p);
+      setStatus('connected');
       readLoop(p);
     } catch (err) {
       const e = err as DOMException;
@@ -73,6 +92,7 @@ const SerialTerminalApp: React.FC = () => {
       } else {
         setError(e.message || 'Failed to open serial port.');
       }
+      setStatus('idle');
     }
   };
 
@@ -84,6 +104,7 @@ const SerialTerminalApp: React.FC = () => {
       // ignore
     } finally {
       setPort(null);
+      setStatus('idle');
     }
   };
 
@@ -93,7 +114,7 @@ const SerialTerminalApp: React.FC = () => {
         {!port ? (
           <button
             onClick={connect}
-            disabled={!supported}
+            disabled={status === 'connecting'}
             className="rounded bg-gray-700 px-2 py-1 text-white disabled:opacity-50"
           >
             Connect
@@ -107,12 +128,16 @@ const SerialTerminalApp: React.FC = () => {
           </button>
         )}
       </div>
-      {!supported && (
-        <p className="mb-2 text-sm text-yellow-400">
-          Web Serial API not supported in this browser.
-        </p>
+      {isDemo && (
+        <div className="mb-2 space-y-1 text-sm text-yellow-300" role="status" aria-live="polite">
+          <p>Web Serial API not supported in this browser.</p>
+          <p>Running in demo mode with a simulated serial device.</p>
+        </div>
       )}
       {error && <FormError className="mb-2 mt-0">{error}</FormError>}
+      <p className="mb-2 text-xs text-green-300" aria-live="polite">
+        Status: {STATUS_TEXT[status]}
+      </p>
       <pre className="h-[calc(100%-4rem)] overflow-auto whitespace-pre-wrap break-words">
         {logs || 'No data'}
       </pre>
