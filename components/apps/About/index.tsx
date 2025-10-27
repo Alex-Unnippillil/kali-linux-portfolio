@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
 import Head from 'next/head';
+import Script from 'next/script';
 import ReactGA from 'react-ga4';
 import Certs from '../certs';
 import data from '../alex/data.json';
@@ -114,12 +115,14 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
       <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
         <Head>
           <title>About</title>
-          <script
-            type="application/ld+json"
-            nonce={nonce}
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
-          />
         </Head>
+        <Script
+          id="about-structured-data"
+          strategy="afterInteractive"
+          type="application/ld+json"
+          nonce={nonce}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
+        />
         <div
           className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black"
           role="tablist"
@@ -354,6 +357,7 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
         type="text"
         placeholder="Filter..."
         className="mt-2 w-full px-2 py-1 rounded text-black"
+        aria-label="Filter skill badges"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         aria-label={`Filter ${title} badges`}
