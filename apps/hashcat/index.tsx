@@ -4,6 +4,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import RulesSandbox from './components/RulesSandbox';
 import StatsChart from '../../components/StatsChart';
+import LabMode from '../../components/LabMode';
+import rawDatasets from '../../components/apps/hashcat/datasets';
 
 interface Preset {
   value: string;
@@ -26,6 +28,52 @@ const defaultRuleSets: RuleSets = {
   none: [],
   best64: ['c', 'u', 'l', 'r', 'd', 'p', 't', 's'],
   quick: ['l', 'u', 'c', 'd'],
+};
+
+interface HashDatasetEntry {
+  id: string;
+  hash: string;
+  plaintext: string;
+  classification: string;
+  remediation: string;
+}
+
+interface HashDataset {
+  id: string;
+  label: string;
+  hashType: string;
+  summary: string;
+  origin: string;
+  analysis: string;
+  demoWordlist: string;
+  entries: HashDatasetEntry[];
+}
+
+const datasets = rawDatasets as HashDataset[];
+
+const sanitizeHashArg = (value: string) =>
+  (value || '').replace(/[^A-Za-z0-9$./:@_-]/g, '');
+const sanitizeWordlistArg = (value: string) =>
+  (value || '').replace(/[^A-Za-z0-9_./-]/g, '');
+const sanitizeRuleArg = (value: string) =>
+  (value || '').replace(/[^A-Za-z0-9_.-]/g, '');
+const sanitizeMaskArg = (value: string) =>
+  (value || '').replace(/[^A-Za-z0-9?]/g, '');
+
+const decodeHashValue = (hashValue: string | undefined | null) => {
+  if (!hashValue) {
+    return null;
+  }
+  const normalized = hashValue.toLowerCase();
+  for (const dataset of datasets) {
+    const entry = dataset.entries.find(
+      (item) => item.hash.toLowerCase() === normalized,
+    );
+    if (entry) {
+      return { dataset, entry };
+    }
+  }
+  return null;
 };
 
 const Hashcat: React.FC = () => {
@@ -65,6 +113,11 @@ const Hashcat: React.FC = () => {
     {},
   );
   const [ruleSet, setRuleSet] = useState('none');
+  const [datasetId, setDatasetId] = useState(datasets[0]?.id ?? '');
+  const [sampleId, setSampleId] = useState(
+    datasets[0]?.entries[0]?.id ?? '',
+  );
+  const [labCopyNotice, setLabCopyNotice] = useState('');
   const ruleOptions = [
     ...Object.keys(defaultRuleSets),
     ...Object.keys(customRuleSets),
@@ -165,6 +218,58 @@ const Hashcat: React.FC = () => {
     }
     setMaskStats({ count: total, time: total / 1_000_000 });
   }, [mask]);
+
+  useEffect(() => {
+    const dataset = datasets.find((item) => item.id === datasetId);
+    if (!dataset) {
+      return;
+    }
+    const exists = dataset.entries.some((entry) => entry.id === sampleId);
+    if (!exists) {
+      const first = dataset.entries[0];
+      if (first) {
+        setSampleId(first.id);
+      }
+    }
+  }, [datasetId, sampleId]);
+
+  const dataset =
+    datasets.find((item) => item.id === datasetId) ?? datasets[0];
+  const datasetEntry =
+    dataset?.entries.find((item) => item.id === sampleId) ||
+    dataset?.entries[0];
+  const decodedSelection = decodeHashValue(datasetEntry?.hash);
+  const safeHashValue = sanitizeHashArg(
+    hashInput || datasetEntry?.hash || 'hash.txt',
+  );
+  const primaryWordlist =
+    dictionaries[0] || dataset?.demoWordlist || 'wordlist.txt';
+  const safeWordlist = sanitizeWordlistArg(primaryWordlist);
+  const safeMask = showMask ? sanitizeMaskArg(mask) : '';
+  const safeRule =
+    ruleSet !== 'none' ? sanitizeRuleArg(`${ruleSet}.rule`) : '';
+  const safeCommandParts = [
+    'hashcat',
+    '-m',
+    dataset?.hashType ?? '0',
+    '-a',
+    attackMode,
+    safeHashValue || 'hash.txt',
+    safeWordlist || 'wordlist.txt',
+  ];
+  if (safeMask) {
+    safeCommandParts.push(safeMask);
+  }
+  if (safeRule) {
+    safeCommandParts.push('-r', safeRule);
+  }
+  const safeCommand = safeCommandParts.join(' ');
+
+  useEffect(() => {
+    if (labCopyNotice) {
+      setLabCopyNotice('');
+    }
+  }, [safeCommand]);
 
   // progress and eta are displayed in a neutral banner
 
@@ -349,6 +454,112 @@ const Hashcat: React.FC = () => {
         ))}
       </div>
       <div className="text-sm">Recovered: {recovered}/{total}</div>
+      <LabMode>
+        <div className="mt-4 space-y-4 rounded border border-white/20 bg-black/40 p-4 text-xs text-white sm:text-sm">
+          <section className="space-y-2" aria-label="hash datasets">
+            <h3 className="font-semibold text-ubt-grey">Hash sample datasets</h3>
+            <p className="text-gray-200">
+              These hashes were generated locally from common password lists for training.
+            </p>
+            <label className="block" htmlFor="hashcat-dataset-page-select">
+              Dataset
+            </label>
+            <select
+              id="hashcat-dataset-page-select"
+              className="w-full rounded bg-black/60 px-2 py-1 text-white"
+              value={dataset?.id ?? ''}
+              onChange={(event) => {
+                setDatasetId(event.target.value);
+              }}
+            >
+              {datasets.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+            <label className="block" htmlFor="hashcat-sample-page-select">
+              Sample hash
+            </label>
+            <select
+              id="hashcat-sample-page-select"
+              className="w-full rounded bg-black/60 px-2 py-1 text-white"
+              value={datasetEntry?.id ?? ''}
+              onChange={(event) => {
+                setSampleId(event.target.value);
+              }}
+            >
+              {(dataset?.entries || []).map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.plaintext} ({entry.hash.slice(0, 8)}…)
+                </option>
+              ))}
+            </select>
+            <div className="rounded bg-black/60 p-3 text-[11px] text-gray-200">
+              <p>
+                <span className="font-semibold text-ubt-grey">Summary:</span> {dataset?.summary}
+              </p>
+              <p>
+                <span className="font-semibold text-ubt-grey">Origin:</span> {dataset?.origin}
+              </p>
+            </div>
+          </section>
+          <section className="space-y-2" aria-label="safe command">
+            <h3 className="font-semibold text-ubt-grey">Safe Command Builder</h3>
+            <p className="text-gray-200">
+              Sanitized parameters keep this lab output read-only.
+            </p>
+            <code className="block whitespace-pre-wrap rounded bg-black px-3 py-2 text-xs" data-testid="lab-command-page">
+              {safeCommand}
+            </code>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="rounded bg-ub-green px-2 py-1 text-xs font-semibold text-black"
+                onClick={() => {
+                  if (navigator?.clipboard?.writeText) {
+                    navigator.clipboard.writeText(safeCommand);
+                    setLabCopyNotice('Copied to clipboard');
+                  } else {
+                    setLabCopyNotice('Clipboard access unavailable');
+                  }
+                }}
+              >
+                Copy
+              </button>
+              {labCopyNotice && (
+                <span className="text-[11px] text-gray-200">{labCopyNotice}</span>
+              )}
+            </div>
+            <div className="text-[11px] text-gray-200">
+              Hash source: <code>{datasetEntry?.hash}</code> →{' '}
+              <span className="font-semibold text-white">{datasetEntry?.plaintext}</span>
+            </div>
+          </section>
+          <section className="space-y-2" aria-label="result interpretation">
+            <h3 className="font-semibold text-ubt-grey">Result interpretation</h3>
+            {decodedSelection ? (
+              <div className="space-y-2 text-[11px] text-gray-200">
+                <p>
+                  <span className="font-semibold text-ubt-grey">Dataset:</span> {decodedSelection.dataset.label} (mode {decodedSelection.dataset.hashType})
+                </p>
+                <p>
+                  <span className="font-semibold text-ubt-grey">Plaintext:</span> {decodedSelection.entry.plaintext}
+                </p>
+                <p>
+                  <span className="font-semibold text-ubt-grey">Classification:</span> {decodedSelection.entry.classification}
+                </p>
+                <p>
+                  <span className="font-semibold text-ubt-grey">Remediation:</span> {decodedSelection.entry.remediation}
+                </p>
+                <p>{decodedSelection.dataset.analysis}</p>
+              </div>
+            ) : (
+              <p className="text-[11px] text-gray-200">Select a dataset entry to review its impact.</p>
+            )}
+          </section>
+        </div>
+      </LabMode>
     </div>
   );
 };
