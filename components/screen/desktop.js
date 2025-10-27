@@ -3347,12 +3347,65 @@ export class Desktop extends Component {
         this.switchWorkspace(next);
     };
 
-    getActiveStack = () => {
-        const { activeWorkspace } = this.state;
-        if (!this.workspaceStacks[activeWorkspace]) {
-            this.workspaceStacks[activeWorkspace] = [];
+    ensureWorkspaceStack = (workspaceId) => {
+        if (workspaceId < 0) return [];
+        if (workspaceId >= this.workspaceStacks.length) {
+            const missing = workspaceId - this.workspaceStacks.length + 1;
+            for (let index = 0; index < missing; index += 1) {
+                this.workspaceStacks.push([]);
+            }
         }
-        return this.workspaceStacks[activeWorkspace];
+        if (!this.workspaceStacks[workspaceId]) {
+            this.workspaceStacks[workspaceId] = [];
+        }
+        return this.workspaceStacks[workspaceId];
+    };
+
+    ensureWorkspaceSnapshot = (workspaceId) => {
+        if (workspaceId < 0) return this.createEmptyWorkspaceState();
+        if (workspaceId >= this.workspaceSnapshots.length) {
+            const missing = workspaceId - this.workspaceSnapshots.length + 1;
+            for (let index = 0; index < missing; index += 1) {
+                this.workspaceSnapshots.push(this.createEmptyWorkspaceState());
+            }
+        }
+        if (!this.workspaceSnapshots[workspaceId]) {
+            this.workspaceSnapshots[workspaceId] = this.createEmptyWorkspaceState();
+        }
+        return this.workspaceSnapshots[workspaceId];
+    };
+
+    getActiveStack = () => {
+        return this.ensureWorkspaceStack(this.state.activeWorkspace);
+    };
+
+    getWorkspaceStateSlice = (workspaceId) => {
+        if (workspaceId === this.state.activeWorkspace) {
+            return {
+                focused_windows: { ...this.state.focused_windows },
+                closed_windows: { ...this.state.closed_windows },
+                minimized_windows: { ...this.state.minimized_windows },
+                window_positions: { ...this.state.window_positions },
+            };
+        }
+        const snapshot = this.ensureWorkspaceSnapshot(workspaceId);
+        return this.cloneWorkspaceState(snapshot);
+    };
+
+    getWorkspaceForWindow = (windowId) => {
+        if (!windowId) return null;
+        const { activeWorkspace } = this.state;
+        if (this.state.closed_windows[windowId] === false) {
+            return activeWorkspace;
+        }
+        for (let index = 0; index < this.workspaceSnapshots.length; index += 1) {
+            if (index === activeWorkspace) continue;
+            const snapshot = this.workspaceSnapshots[index];
+            if (snapshot && snapshot.closed_windows && snapshot.closed_windows[windowId] === false) {
+                return index;
+            }
+        }
+        return null;
     };
 
     promoteWindowInStack = (id) => {
@@ -3650,6 +3703,11 @@ export class Desktop extends Component {
                 break;
             case 'open':
                 this.openApp(appId);
+                break;
+            case 'move':
+                if (typeof detail.workspaceId === 'number') {
+                    this.moveWindowToWorkspace(appId, detail.workspaceId);
+                }
                 break;
             case 'toggle':
             default:
@@ -4844,6 +4902,91 @@ export class Desktop extends Component {
         return result;
     }
 
+    moveWindowToWorkspace = (windowId, targetWorkspaceId) => {
+        if (!windowId || typeof targetWorkspaceId !== 'number') return false;
+        if (!this.validAppIds.has(windowId)) return false;
+        const { workspaces, activeWorkspace } = this.state;
+        if (!Array.isArray(workspaces) || targetWorkspaceId < 0 || targetWorkspaceId >= workspaces.length) {
+            return false;
+        }
+
+        const sourceWorkspaceId = this.getWorkspaceForWindow(windowId);
+        if (sourceWorkspaceId === null || sourceWorkspaceId === undefined) {
+            return false;
+        }
+        if (sourceWorkspaceId === targetWorkspaceId) {
+            return false;
+        }
+
+        const sourceState = this.getWorkspaceStateSlice(sourceWorkspaceId);
+        const targetState = this.getWorkspaceStateSlice(targetWorkspaceId);
+        const wasFocused = Boolean(sourceState.focused_windows[windowId]);
+        const wasMinimized = Boolean(sourceState.minimized_windows[windowId]);
+        const position = sourceState.window_positions[windowId]
+            ? { ...sourceState.window_positions[windowId] }
+            : undefined;
+
+        sourceState.closed_windows[windowId] = true;
+        sourceState.focused_windows[windowId] = false;
+        sourceState.minimized_windows[windowId] = false;
+        if (sourceState.window_positions[windowId]) {
+            delete sourceState.window_positions[windowId];
+        }
+
+        targetState.closed_windows[windowId] = false;
+        targetState.minimized_windows[windowId] = wasMinimized;
+        targetState.focused_windows[windowId] = false;
+        if (position) {
+            targetState.window_positions[windowId] = position;
+        } else if (targetState.window_positions[windowId]) {
+            delete targetState.window_positions[windowId];
+        }
+
+        const sourceStack = this.ensureWorkspaceStack(sourceWorkspaceId).filter((id) => id !== windowId);
+        const targetStack = this.ensureWorkspaceStack(targetWorkspaceId).filter((id) => id !== windowId);
+        this.workspaceStacks[sourceWorkspaceId] = sourceStack;
+        targetStack.unshift(windowId);
+        this.workspaceStacks[targetWorkspaceId] = targetStack;
+
+        if (sourceWorkspaceId === activeWorkspace) {
+            this.workspaceSnapshots[targetWorkspaceId] = targetState;
+            const partial = {
+                closed_windows: sourceState.closed_windows,
+                focused_windows: sourceState.focused_windows,
+                minimized_windows: sourceState.minimized_windows,
+                window_positions: sourceState.window_positions,
+            };
+            this.setWorkspaceState(partial, () => {
+                this.saveSession();
+                this.broadcastWorkspaceState();
+                if (wasFocused) {
+                    this.giveFocusToLastApp();
+                }
+            });
+        } else if (targetWorkspaceId === activeWorkspace) {
+            this.workspaceSnapshots[sourceWorkspaceId] = sourceState;
+            const partial = {
+                closed_windows: targetState.closed_windows,
+                focused_windows: targetState.focused_windows,
+                minimized_windows: targetState.minimized_windows,
+                window_positions: targetState.window_positions,
+            };
+            this.setWorkspaceState(partial, () => {
+                this.saveSession();
+                this.broadcastWorkspaceState();
+                if (!wasMinimized) {
+                    this.focus(windowId);
+                }
+            });
+        } else {
+            this.workspaceSnapshots[sourceWorkspaceId] = sourceState;
+            this.workspaceSnapshots[targetWorkspaceId] = targetState;
+            this.broadcastWorkspaceState();
+        }
+
+        return true;
+    }
+
     handleOpenAppEvent = (e) => {
         const detail = e.detail;
         if (!detail) return;
@@ -5357,6 +5500,13 @@ export class Desktop extends Component {
                         } else {
                             this.closeApp(id);
                         }
+                    }}
+                    workspaces={this.state.workspaces}
+                    currentWorkspaceId={this.getWorkspaceForWindow(this.state.context_app)}
+                    onMoveToWorkspace={(workspaceId) => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        this.moveWindowToWorkspace(id, workspaceId);
                     }}
                     onCloseMenu={this.hideAllContextMenu}
                 />
