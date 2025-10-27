@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
-type CommandPaletteItemType = 'app' | 'window' | 'action';
+import type { RankedSearchResult, SearchCategory } from '../../lib/search';
+
+type CommandPaletteItemType = 'app' | 'window' | 'action' | 'search';
 
 type BasicItem = {
   id: string;
@@ -17,6 +19,16 @@ export type CommandPaletteItem = BasicItem & {
   type: CommandPaletteItemType;
 };
 
+type SearchStatus = 'idle' | 'loading' | 'ready' | 'error';
+
+type PaletteSection = {
+  type: CommandPaletteItemType;
+  label: string;
+  items: CommandPaletteItem[];
+  state?: SearchStatus;
+  message?: string;
+};
+
 type CommandPaletteProps = {
   open: boolean;
   apps: BasicItem[];
@@ -27,10 +39,19 @@ type CommandPaletteProps = {
 };
 
 const SECTION_METADATA: Record<CommandPaletteItemType, { label: string }> = {
-  window: { label: 'Recent Windows' },
+  'window': { label: 'Recent Windows' },
   app: { label: 'Applications' },
   action: { label: 'Settings & Actions' },
+  search: { label: 'Search Results' },
 };
+
+const SEARCH_CATEGORY_LABEL: Record<SearchCategory, string> = {
+  page: 'Page',
+  project: 'Project',
+  doc: 'Documentation',
+};
+
+const MIN_QUERY_LENGTH = 2;
 
 const isMacLike = (): boolean => {
   if (typeof navigator === 'undefined') return false;
@@ -76,32 +97,206 @@ export default function CommandPalette({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const workerRef = useRef<Worker | null>(null);
+  const latestSearchId = useRef(0);
+  const searchTimeoutRef = useRef<number | null>(null);
+  const [searchState, setSearchState] = useState<SearchStatus>('idle');
+  const [searchResults, setSearchResults] = useState<RankedSearchResult[]>([]);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [workerReady, setWorkerReady] = useState(false);
 
-  const sections = useMemo(() => {
-    return [
-      { type: 'window' as const, label: SECTION_METADATA.window.label, items: buildItems(recentWindows, 'window') },
-      { type: 'app' as const, label: SECTION_METADATA.app.label, items: buildItems(apps, 'app') },
-      { type: 'action' as const, label: SECTION_METADATA.action.label, items: buildItems(settingsActions, 'action') },
-    ];
-  }, [apps, recentWindows, settingsActions]);
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
 
-  const filteredSections = useMemo(() => {
+    const worker = new Worker(new URL('../../workers/search.worker.ts', import.meta.url));
+    workerRef.current = worker;
+
+    const handleMessage = (event: MessageEvent<unknown>) => {
+      const message = event.data;
+      if (!message || typeof message !== 'object') return;
+
+      const typedMessage = message as
+        | { type: 'ready' }
+        | { type: 'search-result'; id: number; results: RankedSearchResult[] }
+        | { type: 'search-error'; id: number; message: string };
+
+      if (typedMessage.type === 'ready') {
+        setWorkerReady(true);
+        return;
+      }
+
+      if (typedMessage.type === 'search-result') {
+        if (typedMessage.id !== latestSearchId.current) return;
+        setSearchResults(typedMessage.results);
+        setSearchState('ready');
+        setSearchError(null);
+        return;
+      }
+
+      if (typedMessage.type === 'search-error') {
+        if (typedMessage.id !== latestSearchId.current) return;
+        setSearchResults([]);
+        setSearchState('error');
+        setSearchError(typedMessage.message);
+      }
+    };
+
+    const handleError = () => {
+      setSearchResults([]);
+      setSearchState('error');
+      setSearchError('Search service is unavailable.');
+    };
+
+    worker.addEventListener('message', handleMessage);
+    worker.addEventListener('error', handleError);
+    worker.postMessage({ type: 'warmup' });
+
+    return () => {
+      worker.removeEventListener('message', handleMessage);
+      worker.removeEventListener('error', handleError);
+      worker.terminate();
+      workerRef.current = null;
+    };
+  }, []);
+
+  const localSections = useMemo<PaletteSection[]>(
+    () => [
+      { type: 'window', label: SECTION_METADATA.window.label, items: buildItems(recentWindows, 'window') },
+      { type: 'app', label: SECTION_METADATA.app.label, items: buildItems(apps, 'app') },
+      { type: 'action', label: SECTION_METADATA.action.label, items: buildItems(settingsActions, 'action') },
+    ],
+    [apps, recentWindows, settingsActions],
+  );
+
+  const filteredSections = useMemo<PaletteSection[]>(() => {
     const term = query.trim().toLowerCase();
-    return sections.map((section) => ({
+    return localSections.map((section) => ({
       ...section,
       items: section.items.filter((item) => matchesQuery(item, term)),
     }));
-  }, [query, sections]);
+  }, [query, localSections]);
+
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      window.clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+
+    if (!open) {
+      setSearchState('idle');
+      setSearchResults([]);
+      setSearchError(null);
+      return;
+    }
+
+    const term = query.trim();
+
+    if (!term) {
+      setSearchState('idle');
+      setSearchResults([]);
+      setSearchError(null);
+      return;
+    }
+
+    if (term.length < MIN_QUERY_LENGTH) {
+      setSearchState('idle');
+      setSearchResults([]);
+      return;
+    }
+
+    if (!workerRef.current) {
+      setSearchState('error');
+      setSearchError('Search service is unavailable.');
+      return;
+    }
+
+    setSearchState('loading');
+    setSearchError(null);
+    setSearchResults([]);
+    const requestId = latestSearchId.current + 1;
+    latestSearchId.current = requestId;
+
+    const timeoutId = window.setTimeout(() => {
+      workerRef.current?.postMessage({ type: 'search', id: requestId, query: term, limit: 8 });
+    }, 180);
+
+    searchTimeoutRef.current = timeoutId;
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      if (searchTimeoutRef.current === timeoutId) {
+        searchTimeoutRef.current = null;
+      }
+    };
+  }, [query, open]);
+
+  const searchItems = useMemo(() =>
+    searchResults.map((result) => ({
+      id: result.id,
+      title: result.title,
+      subtitle: result.summary,
+      icon: normalizeIconPath(result.icon),
+      keywords: result.keywords,
+      type: 'search' as const,
+      data: {
+        url: result.url,
+        category: result.category,
+        categoryLabel: SEARCH_CATEGORY_LABEL[result.category],
+        openInNewTab: result.openInNewTab,
+      },
+    })),
+  [searchResults]);
+
+  const trimmedQuery = query.trim();
+
+  const searchSection = useMemo<PaletteSection | null>(() => {
+    if (!trimmedQuery) {
+      return null;
+    }
+
+    const effectiveState = trimmedQuery.length < MIN_QUERY_LENGTH ? 'idle' : searchState;
+    const items = trimmedQuery.length >= MIN_QUERY_LENGTH ? searchItems : [];
+
+    let message: string | undefined;
+
+    if (trimmedQuery.length < MIN_QUERY_LENGTH) {
+      message = `Type at least ${MIN_QUERY_LENGTH} characters to search indexed content.`;
+    } else if (!workerReady && effectiveState === 'loading') {
+      message = 'Preparing search index…';
+    } else if (effectiveState === 'loading') {
+      message = 'Searching…';
+    } else if (effectiveState === 'error') {
+      message = searchError ?? 'Unable to load search results.';
+    } else if (effectiveState === 'ready' && items.length === 0) {
+      message = `No results found for "${trimmedQuery}".`;
+    }
+
+    return {
+      type: 'search',
+      label: SECTION_METADATA.search.label,
+      items,
+      state: effectiveState,
+      message,
+    };
+  }, [trimmedQuery, searchItems, searchState, searchError, workerReady]);
+
+  const displaySections = useMemo<PaletteSection[]>(() => {
+    const list: PaletteSection[] = [];
+    if (searchSection) {
+      list.push(searchSection);
+    }
+    return list.concat(filteredSections);
+  }, [filteredSections, searchSection]);
 
   const flatItems = useMemo(() => {
-  const list: CommandPaletteItem[] = [];
-  filteredSections.forEach((section) => {
-    section.items.forEach((item) => {
-      list.push(item);
+    const list: CommandPaletteItem[] = [];
+    displaySections.forEach((section) => {
+      section.items.forEach((item) => {
+        list.push(item);
+      });
     });
-  });
-  return list;
-}, [filteredSections]);
+    return list;
+  }, [displaySections]);
 
   const indexLookup = useMemo(() => {
     const map = new Map<string, number>();
@@ -222,12 +417,15 @@ export default function CommandPalette({
     ? `command-palette-option-${flatItems[activeIndex].type}-${flatItems[activeIndex].id}`
     : undefined;
 
+  const showEmptyFallback = flatItems.length === 0 && (!searchSection || !trimmedQuery);
+
   return (
     <div className="flex h-full w-full flex-col gap-4 bg-slate-950/70 p-6 text-white">
       <header className="space-y-2">
         <h2 className="text-xl font-semibold tracking-wide">Command Palette</h2>
         <p className="text-sm text-white/70">
-          Search across applications, recent windows, and settings. Use the arrow keys to navigate and Enter to run a command.
+          Search across applications, documentation, pages, recent windows, and settings. Use the arrow keys to navigate and
+          Enter to run a command.
         </p>
       </header>
 
@@ -243,7 +441,7 @@ export default function CommandPalette({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleInputKeyDown}
-            placeholder="Search apps, windows, and settings"
+            placeholder="Search apps, docs, and pages"
             autoComplete="off"
             spellCheck={false}
             className="w-full rounded-lg border border-white/10 bg-white/10 px-4 py-2 text-sm text-white shadow-inner focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/60"
@@ -265,77 +463,92 @@ export default function CommandPalette({
         className="relative flex-1 overflow-y-auto rounded-xl border border-white/10 bg-white/5 p-2"
         onKeyDown={handleListKeyDown}
       >
-        {flatItems.length === 0 ? (
+        {showEmptyFallback ? (
           <p className="px-3 py-6 text-center text-sm text-white/60">No matching commands.</p>
         ) : (
-          filteredSections.map((section) => {
-            if (!section.items.length) return null;
+          displaySections.map((section) => {
+            const hasItems = section.items.length > 0;
+            const message = section.message;
+
+            if (!hasItems && !message) {
+              return null;
+            }
+
             return (
               <div key={section.type} className="mb-4 last:mb-0">
                 <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wider text-white/50">
                   {section.label}
                 </p>
-                <div className="space-y-1">
-                  {section.items.map((item) => {
-                    const lookupKey = `${item.type}:${item.id}`;
-                    const globalIndex = indexLookup.get(lookupKey) ?? -1;
-                    const optionId = `command-palette-option-${item.type}-${item.id}`;
-                    const isActive = globalIndex === activeIndex;
-                    return (
-                      <button
-                        key={optionId}
-                        ref={(node) => {
-                          if (globalIndex >= 0) {
-                            itemRefs.current[globalIndex] = node;
-                          }
-                        }}
-                        type="button"
-                        id={optionId}
-                        role="option"
-                        aria-selected={isActive}
-                        className={`flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition ${
-                          isActive
-                            ? 'border-sky-400/70 bg-sky-500/20 shadow-[0_0_0_1px_rgba(14,165,233,0.45)]'
-                            : 'border-white/5 bg-black/20 hover:border-white/15 hover:bg-white/10'
-                        }`}
-                        onClick={() => {
-                          if (globalIndex >= 0) {
-                            handleSelect(globalIndex);
-                          }
-                        }}
-                        onMouseEnter={() => {
-                          if (globalIndex >= 0) {
-                            setActiveIndex(globalIndex);
-                          }
-                        }}
-                      >
-                        <span className="flex h-9 w-9 items-center justify-center rounded-md bg-white/10 text-white/70">
-                          {item.icon ? (
-                            <img
-                              src={item.icon}
-                              alt=""
-                              className="h-5 w-5"
-                              aria-hidden="true"
-                            />
-                          ) : (
-                            <span aria-hidden="true" className="text-base font-semibold">
-                              {item.title.charAt(0).toUpperCase()}
-                            </span>
-                          )}
-                        </span>
-                        <span className="flex min-w-0 flex-1 flex-col">
-                          <span className="truncate font-medium text-white">{item.title}</span>
-                          {item.subtitle ? (
-                            <span className="truncate text-xs text-white/60">{item.subtitle}</span>
-                          ) : null}
-                        </span>
-                        <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">
-                          {SECTION_METADATA[item.type].label}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                {hasItems ? (
+                  <div className="space-y-1">
+                    {section.items.map((item) => {
+                      const lookupKey = `${item.type}:${item.id}`;
+                      const globalIndex = indexLookup.get(lookupKey) ?? -1;
+                      const optionId = `command-palette-option-${item.type}-${item.id}`;
+                      const isActive = globalIndex === activeIndex;
+                      const categoryLabel =
+                        item.type === 'search'
+                          ? (item.data?.categoryLabel as string | undefined) ?? SECTION_METADATA.search.label
+                          : SECTION_METADATA[item.type].label;
+
+                      return (
+                        <button
+                          key={optionId}
+                          ref={(node) => {
+                            if (globalIndex >= 0) {
+                              itemRefs.current[globalIndex] = node;
+                            }
+                          }}
+                          type="button"
+                          id={optionId}
+                          role="option"
+                          aria-selected={isActive}
+                          className={`flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition ${
+                            isActive
+                              ? 'border-sky-400/70 bg-sky-500/20 shadow-[0_0_0_1px_rgba(14,165,233,0.45)]'
+                              : 'border-white/5 bg-black/20 hover:border-white/15 hover:bg-white/10'
+                          }`}
+                          onClick={() => {
+                            if (globalIndex >= 0) {
+                              handleSelect(globalIndex);
+                            }
+                          }}
+                          onMouseEnter={() => {
+                            if (globalIndex >= 0) {
+                              setActiveIndex(globalIndex);
+                            }
+                          }}
+                        >
+                          <span className="flex h-9 w-9 items-center justify-center rounded-md bg-white/10 text-white/70">
+                            {item.icon ? (
+                              <img
+                                src={item.icon}
+                                alt=""
+                                className="h-5 w-5"
+                                aria-hidden="true"
+                              />
+                            ) : (
+                              <span aria-hidden="true" className="text-base font-semibold">
+                                {item.title.charAt(0).toUpperCase()}
+                              </span>
+                            )}
+                          </span>
+                          <span className="flex min-w-0 flex-1 flex-col">
+                            <span className="truncate font-medium text-white">{item.title}</span>
+                            {item.subtitle ? (
+                              <span className="truncate text-xs text-white/60">{item.subtitle}</span>
+                            ) : null}
+                          </span>
+                          <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">
+                            {categoryLabel}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="px-3 py-4 text-sm text-white/60">{message}</p>
+                )}
               </div>
             );
           })
