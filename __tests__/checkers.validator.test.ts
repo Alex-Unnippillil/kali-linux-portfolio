@@ -8,6 +8,7 @@ import {
   bitCount,
   hasMoves,
   isDraw,
+  normalizeBoard,
 } from '../components/apps/checkers/engine';
 
 test('forced jumps are enforced', () => {
@@ -137,4 +138,17 @@ test('detect draw by repeated positions', () => {
   const map = new Map<string, number>();
   map.set(JSON.stringify(board), 3);
   expect(isDraw(0, map)).toBe(true);
+});
+
+test('normalizeBoard validates persisted data', () => {
+  const board = createBoard();
+  const normalized = normalizeBoard(board);
+  expect(normalized).not.toBeNull();
+  expect(normalized?.[0]?.[1]?.color).toBe('black');
+  expect(normalized?.[5]?.[0]).not.toBe(board[5][0]);
+  expect(normalizeBoard(null)).toBeNull();
+  const badBoard = Array(8)
+    .fill(null)
+    .map(() => Array(8).fill({ color: 'green', king: false }));
+  expect(normalizeBoard(badBoard)).toBeNull();
 });
