@@ -1,4 +1,10 @@
-import handler, { rateLimit, RATE_LIMIT_WINDOW_MS } from '../pages/api/contact';
+import handler, {
+  rateLimit,
+  RATE_LIMIT_WINDOW_MS,
+  subscribeToRateLimit,
+  clearRateLimitSubscribers,
+} from '../pages/api/contact';
+import { resetEmailTestOutbox } from '../lib/email/provider';
 
 describe('contact api rate limiter', () => {
   afterEach(() => {
@@ -6,6 +12,11 @@ describe('contact api rate limiter', () => {
     rateLimit.clear();
     delete (global as any).fetch;
     delete process.env.RECAPTCHA_SECRET;
+    delete process.env.EMAIL_PROVIDER;
+    delete process.env.CONTACT_EMAIL_TO;
+    delete process.env.CONTACT_EMAIL_FROM;
+    clearRateLimitSubscribers();
+    resetEmailTestOutbox();
   });
 
   it('removes stale IP entries', async () => {
@@ -18,6 +29,9 @@ describe('contact api rate limiter', () => {
       .fn()
       .mockResolvedValue({ json: () => Promise.resolve({ success: true }) });
     process.env.RECAPTCHA_SECRET = 'secret';
+    process.env.EMAIL_PROVIDER = 'test';
+    process.env.CONTACT_EMAIL_TO = 'owner@example.com';
+    process.env.CONTACT_EMAIL_FROM = 'portfolio@example.com';
     const req: any = {
       method: 'POST',
       headers: { 'x-csrf-token': 'token', cookie: 'csrfToken=token' },
@@ -35,9 +49,13 @@ describe('contact api rate limiter', () => {
     res.status = () => res;
     res.json = () => {};
 
+    const events: any[] = [];
+    subscribeToRateLimit((event) => events.push(event));
+
     await handler(req, res);
 
     expect(rateLimit.has('1.1.1.1')).toBe(false);
     expect(rateLimit.has('2.2.2.2')).toBe(true);
+    expect(events.some((event) => event.type === 'reset')).toBe(true);
   });
 });
