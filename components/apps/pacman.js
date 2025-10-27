@@ -1,5 +1,16 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import useAssetLoader from '../../hooks/useAssetLoader';
+import useCanvasResize from '../../hooks/useCanvasResize';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import { useGameLoop } from './Games/common';
+import GameLayout from './GameLayout';
+import { usePacmanHighScore } from '../../games/pacman/highScore';
+import {
+  computeGhostTarget,
+  getAvailableDirections,
+  isTunnelTile,
+  tileAt as getTileValue,
+} from '../../games/pacman/logic';
 import SpeedControls from '../../games/pacman/components/SpeedControls';
 
 /**
@@ -26,20 +37,6 @@ const speed = 1; // pacman speed in pixels per frame
 const PATH_LENGTH = 25; // number of positions to keep for ghost traces
 const FRUIT_DURATION = 9 * 60; // fruit stays for this many frames
 
-const dirs = [
-  { x: 1, y: 0 },
-  { x: -1, y: 0 },
-  { x: 0, y: 1 },
-  { x: 0, y: -1 },
-];
-
-const SCATTER_CORNERS = {
-  blinky: { x: 13, y: 0 },
-  pinky: { x: 0, y: 0 },
-  inky: { x: 13, y: 6 },
-  clyde: { x: 0, y: 6 },
-};
-
 const modeSchedule = [
   { mode: 'scatter', duration: 7 * 60 },
   { mode: 'chase', duration: 20 * 60 },
@@ -60,7 +57,8 @@ const Pacman = () => {
     sounds: [],
   });
 
-  const canvasRef = useRef(null);
+  const canvasRef = useCanvasResize(WIDTH, HEIGHT);
+  const ctxRef = useRef(null);
 
   // Levels file can override the maze, fruit tile and fruit timings
   const [levels, setLevels] = useState([
@@ -110,7 +108,7 @@ const Pacman = () => {
   });
   const [score, setScore] = useState(0);
   const [pelletCount, setPelletCount] = useState(0);
-  const [highScore, setHighScore] = useState(0);
+  const { highScore, recordScore } = usePacmanHighScore();
   const [started, setStarted] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
   const fruitRef = useRef({ active: false, x: 7, y: 3, timer: 0 });
@@ -130,34 +128,14 @@ const Pacman = () => {
   useEffect(() => {
     soundRef.current = soundEnabled;
   }, [soundEnabled]);
-  const [prefersReduced, setPrefersReduced] = useState(false);
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const handler = () => setPrefersReduced(media.matches);
-    handler();
-    media.addEventListener('change', handler);
-    return () => media.removeEventListener('change', handler);
-  }, []);
+  const prefersReduced = usePrefersReducedMotion();
   const [announcement, setAnnouncement] = useState('');
   const squashRef = useRef(0);
-  const [scale, setScale] = useState(1);
-  useEffect(() => {
-    const updateScale = () => {
-      const s = Math.floor(window.innerWidth / WIDTH);
-      setScale(s > 1 ? s : 1);
-    };
-    updateScale();
-    window.addEventListener('resize', updateScale);
-    return () => window.removeEventListener('resize', updateScale);
-  }, []);
 
-  const tileAt = (tx, ty) => (mazeRef.current[ty] ? mazeRef.current[ty][tx] : 1);
+  const tileAt = (tx, ty) => getTileValue(mazeRef.current, tx, ty);
   const isCenter = (pos) => Math.abs((pos % tileSize) - tileSize / 2) < 0.1;
   const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-  const isTunnel = useCallback((tx, ty) => {
-    const width = mazeRef.current[0].length;
-    return (tx === 0 || tx === width - 1) && tileAt(tx, ty) !== 1;
-  }, []);
+  const isTunnel = useCallback((tx, ty) => isTunnelTile(mazeRef.current, tx, ty), []);
 
   const playSound = (freq) => {
     if (!soundRef.current) return;
@@ -265,53 +243,18 @@ const Pacman = () => {
     [],
   );
 
-  const targetFor = (ghost, pac) => {
-    if (frightTimerRef.current > 0) return null;
-    if (modeSchedule[modeRef.current.index].mode === 'scatter') {
-      return SCATTER_CORNERS[ghost.name];
-    }
-    const px = Math.floor(pac.x / tileSize);
-    const py = Math.floor(pac.y / tileSize);
-    const pdx = pac.dir.x;
-    const pdy = pac.dir.y;
-    switch (ghost.name) {
-      case 'blinky':
-        return { x: px, y: py };
-      case 'pinky':
-        return { x: px + 4 * pdx, y: py + 4 * pdy };
-      case 'inky': {
-        const blinky = ghostsRef.current[0];
-        const bx = Math.floor(blinky.x / tileSize);
-        const by = Math.floor(blinky.y / tileSize);
-        const tx = px + 2 * pdx;
-        const ty = py + 2 * pdy;
-        return { x: tx * 2 - bx, y: ty * 2 - by };
-      }
-      case 'clyde': {
-        const dist = Math.hypot(px - Math.floor(ghost.x / tileSize), py - Math.floor(ghost.y / tileSize));
-        if (dist > 8) return { x: px, y: py };
-        return SCATTER_CORNERS.clyde;
-      }
-      default:
-        return { x: px, y: py };
-    }
-  };
-
-    const availableDirs = useCallback((gx, gy, dir) => {
-      const rev = { x: -dir.x, y: -dir.y };
-      return dirs.filter((d) => {
-        if (d.x === rev.x && d.y === rev.y) return false;
-        const nx = gx + d.x;
-        const ny = gy + d.y;
-        return tileAt(nx, ny) !== 1;
-      });
-    }, []);
-
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = ctxRef.current || canvas.getContext('2d');
+    if (!ctx) return;
+    ctxRef.current = ctx;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
     const maze = mazeRef.current;
     for (let y = 0; y < maze.length; y++) {
@@ -560,15 +503,24 @@ const Pacman = () => {
       const gSpeed = (isTunnel(gtxPrev, gtyPrev) ? TUNNEL_SPEED : 1) * base;
 
       if (isCenter(g.x) && isCenter(g.y)) {
-        let options = availableDirs(Math.floor(gx), Math.floor(gy), g.dir);
-        if (frightTimerRef.current > 0 || randomMode) {
+        const tilePos = { x: Math.floor(gx), y: Math.floor(gy) };
+        let options = getAvailableDirections(maze, {
+          position: tilePos,
+          direction: g.dir,
+        });
+        const frightened = frightTimerRef.current > 0;
+        if (frightened || randomMode) {
           g.dir = options[Math.floor(Math.random() * options.length)] || g.dir;
         } else {
-          const target = targetFor(g, pac);
+          const target = computeGhostTarget(g, pac, ghostsRef.current, {
+            tileSize,
+            mode: modeSchedule[modeRef.current.index].mode,
+            frightened,
+          });
           if (target) {
             options.sort((a, b) => {
-              const da = distance({ x: Math.floor(gx) + a.x, y: Math.floor(gy) + a.y }, target);
-              const db = distance({ x: Math.floor(gx) + b.x, y: Math.floor(gy) + b.y }, target);
+              const da = distance({ x: tilePos.x + a.x, y: tilePos.y + a.y }, target);
+              const db = distance({ x: tilePos.x + b.x, y: tilePos.y + b.y }, target);
               return da - db;
             });
           }
@@ -612,7 +564,6 @@ const Pacman = () => {
     });
   }, [
     score,
-    availableDirs,
     levelIndex,
     isTunnel,
     prefersReduced,
@@ -620,6 +571,8 @@ const Pacman = () => {
     ghostSpeeds,
     gameSpeed,
     submitScore,
+    getAvailableDirections,
+    computeGhostTarget,
   ]);
 
   const stepRef = useRef(step);
@@ -639,16 +592,11 @@ const Pacman = () => {
         }
       })
       .catch(() => {});
-    const stored = window.localStorage.getItem('pacmanHighScore');
-    if (stored) setHighScore(parseInt(stored, 10));
   }, [loadLevel]);
 
   useEffect(() => {
-    if (score > highScore) {
-      setHighScore(score);
-      window.localStorage.setItem('pacmanHighScore', String(score));
-    }
-  }, [score, highScore]);
+    recordScore(score);
+  }, [recordScore, score]);
 
   useEffect(() => {
     if (loading || error) return;
@@ -709,35 +657,37 @@ const Pacman = () => {
     canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
     canvas.addEventListener('touchend', handleTouchEnd);
 
-    let id;
-    const loop = () => {
-      if (statusRef.current === 'Playing' && !pausedRef.current) {
-        stepRef.current();
-        // simple gamepad polling
-        const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-        if (pads) {
-          for (const pad of pads) {
-            if (!pad) continue;
-            const [ax, ay] = pad.axes;
-            if (Math.abs(ax) > 0.3) pacRef.current.nextDir = { x: ax > 0 ? 1 : -1, y: 0 };
-            if (Math.abs(ay) > 0.3) pacRef.current.nextDir = { x: 0, y: ay > 0 ? 1 : -1 };
-          }
-        }
-      }
-      draw();
-      id = requestAnimationFrame(loop);
-    };
-
     draw();
-    id = requestAnimationFrame(loop);
 
     return () => {
       window.removeEventListener('keydown', handleKey);
       canvas.removeEventListener('touchstart', handleTouchStart);
       canvas.removeEventListener('touchend', handleTouchEnd);
-      if (id) cancelAnimationFrame(id);
     };
-  }, [loading, error, draw, reset, setPaused, setSoundEnabled]);
+  }, [loading, error, draw, reset, setPaused, setSoundEnabled, started]);
+
+  const loopTick = useCallback(() => {
+    if (statusRef.current === 'Playing' && !pausedRef.current) {
+      stepRef.current();
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      if (pads) {
+        for (const pad of pads) {
+          if (!pad) continue;
+          const [ax, ay] = pad.axes;
+          if (Math.abs(ax) > 0.3) pacRef.current.nextDir = { x: ax > 0 ? 1 : -1, y: 0 };
+          if (Math.abs(ay) > 0.3) pacRef.current.nextDir = { x: 0, y: ay > 0 ? 1 : -1 };
+        }
+      }
+    }
+    draw();
+  }, [draw]);
+
+  useGameLoop(loopTick, started && !loading && !error);
+
+  useEffect(() => {
+    if (!started) return;
+    draw();
+  }, [draw, paused, started]);
 
 
   if (loading) {
@@ -758,29 +708,31 @@ const Pacman = () => {
 
   if (!started) {
     return (
-      <div className="flex flex-col items-center">
-        <button className="px-2 py-1 bg-ub-grey rounded" onClick={startGame}>
-          Start
-        </button>
-        {leaderboard.length > 0 && (
-          <div className="mt-4 text-left">
-            <h3 className="font-bold">Top Scores</h3>
-            <ol className="ml-4 list-decimal">
-              {leaderboard.map((entry, i) => (
-                <li key={`${entry.name}-${i}`}>
-                  {entry.name}: {entry.score}
-                </li>
-              ))}
-            </ol>
-          </div>
-        )}
-      </div>
+      <GameLayout gameId="pacman" score={score} highScore={highScore}>
+        <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-ub-cool-grey p-4 text-white">
+          <button className="px-3 py-1 rounded bg-ub-grey" onClick={startGame}>
+            Start
+          </button>
+          {leaderboard.length > 0 && (
+            <div className="text-left">
+              <h3 className="font-bold">Top Scores</h3>
+              <ol className="ml-4 list-decimal">
+                {leaderboard.map((entry, i) => (
+                  <li key={`${entry.name}-${i}`}>
+                    {entry.name}: {entry.score}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+        </div>
+      </GameLayout>
     );
   }
 
   return (
-
-  <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+    <GameLayout gameId="pacman" score={score} highScore={highScore}>
+      <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-ub-cool-grey p-4 text-white">
       <div className="mb-2 w-full max-w-xs">
         <input
           type="text"
@@ -829,15 +781,14 @@ const Pacman = () => {
       />
 
       <div
-        className="relative"
-        style={{ width: WIDTH * scale, height: HEIGHT * scale }}
+        className="relative w-full max-w-md"
+        style={{ aspectRatio: `${WIDTH}/${HEIGHT}` }}
       >
         <canvas
           ref={canvasRef}
-          width={WIDTH}
-          height={HEIGHT}
-          className="bg-black"
-          style={{ width: WIDTH * scale, height: HEIGHT * scale, imageRendering: 'pixelated' }}
+          className="h-full w-full bg-black"
+          style={{ imageRendering: 'pixelated' }}
+          aria-label="Pacman board"
         />
         <div className="absolute top-0 left-0 w-full text-xs bg-black bg-opacity-75 px-1 flex justify-between">
           <span>Score: {score}</span>
@@ -851,12 +802,14 @@ const Pacman = () => {
         {modeInfo.mode.toUpperCase()} {Math.ceil(modeInfo.timer / 60)}s
       </div>
 
-      <div className="mt-2">High: {highScore}</div>
-      <div className="mt-1">Lives: {pacRef.current.lives}</div>
+      <div className="mt-2 flex gap-4 text-sm">
+        <span>High: {highScore}</span>
+        <span>Lives: {pacRef.current.lives}</span>
+      </div>
       {(statusRef.current !== 'Playing' || paused) && (
-        <div className="mt-2">{paused ? 'Paused' : statusRef.current}</div>
+        <div className="mt-2 text-sm">{paused ? 'Paused' : statusRef.current}</div>
       )}
-      <div className="mt-2 space-x-2">
+      <div className="mt-2 flex flex-wrap justify-center gap-2">
         <button
           className="px-2 py-1 bg-ub-grey rounded"
           onClick={reset}
@@ -877,7 +830,8 @@ const Pacman = () => {
         </button>
       </div>
       <div className="sr-only" aria-live="polite">{announcement}</div>
-    </div>
+      </div>
+    </GameLayout>
   );
 };
 
