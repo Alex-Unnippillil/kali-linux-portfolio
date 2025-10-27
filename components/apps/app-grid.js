@@ -137,20 +137,22 @@ export default function AppGrid({ openApp }) {
       setFocusedIndex(idx);
       const row = Math.floor(idx / colCount);
       const col = idx % colCount;
-      gridRef.current?.scrollToCell({ rowIndex: row, columnIndex: col, rowAlign: 'smart', columnAlign: 'smart' });
-      setTimeout(() => {
-        const el = document.getElementById('app-' + filtered[idx].id);
-        el?.focus();
-      }, 0);
+      gridRef.current?.scrollToCell({
+        rowIndex: row,
+        columnIndex: col,
+        rowAlign: 'smart',
+        columnAlign: 'smart',
+        behavior: 'auto',
+      });
     },
     [filtered, focusedIndex]
   );
 
-  const Cell = ({ columnIndex, rowIndex, style, data }) => {
-    const index = rowIndex * data.columnCount + columnIndex;
-    if (index >= data.items.length) return null;
-    const app = data.items[index];
-    const meta = data.metadata[app.id] ?? buildAppMetadata(app);
+  const Cell = useCallback(({ columnIndex, rowIndex, style, items, columnCount, metadata, layout }) => {
+    const index = rowIndex * columnCount + columnIndex;
+    if (index >= items.length) return null;
+    const app = items[index];
+    const meta = metadata[app.id] ?? buildAppMetadata(app);
     return (
       <DelayedTooltip content={<AppTooltipContent meta={meta} />}>
         {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
@@ -158,10 +160,11 @@ export default function AppGrid({ openApp }) {
             ref={ref}
             style={{
               ...style,
+              boxSizing: 'border-box',
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              padding: `${data.layout.paddingY}px ${data.layout.paddingX}px`,
+              padding: `${layout.paddingY}px ${layout.paddingX}px`,
             }}
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
@@ -173,14 +176,30 @@ export default function AppGrid({ openApp }) {
               icon={app.icon}
               name={app.title}
               displayName={<>{app.nodes}</>}
-              style={data.layout.iconStyle}
+              style={layout.iconStyle}
               openApp={() => openApp && openApp(app.id)}
             />
           </div>
         )}
       </DelayedTooltip>
     );
-  };
+  }, [openApp]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const item = filtered[focusedIndex];
+    if (!item) return;
+    const frame = window.requestAnimationFrame(() => {
+      const el = document.getElementById('app-' + item.id);
+      el?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [filtered, focusedIndex]);
+
+  useEffect(() => {
+    if (!gridRef.current) return;
+    gridRef.current.scrollToCell({ rowIndex: 0, columnIndex: 0, behavior: 'auto' });
+  }, [query]);
 
   return (
     <div className="flex flex-col items-center h-full">
@@ -194,6 +213,7 @@ export default function AppGrid({ openApp }) {
       <div className="w-full flex-1 h-[70vh] outline-none" onKeyDown={handleKeyDown}>
         <AutoSizer>
           {({ height, width }) => {
+            if (!height || !width) return null;
             const layout = getColumnCount(width);
             columnCountRef.current = layout.columnCount;
             const rowCount = Math.ceil(filtered.length / layout.columnCount);
@@ -201,24 +221,24 @@ export default function AppGrid({ openApp }) {
               <Grid
                 gridRef={gridRef}
                 columnCount={layout.columnCount}
-                columnWidth={layout.columnWidth}
+                columnWidth={Math.floor(layout.columnWidth)}
                 height={height}
                 rowCount={rowCount}
-                rowHeight={layout.rowHeight}
+                rowHeight={Math.floor(layout.rowHeight)}
                 width={width}
+                defaultHeight={height}
+                defaultWidth={width}
+                style={{ width, height }}
+                cellComponent={Cell}
+                cellProps={{
+                  items: filtered,
+                  columnCount: layout.columnCount,
+                  metadata: registryMetadata,
+                  layout,
+                }}
                 className="scroll-smooth"
               >
-                {(props) => (
-                  <Cell
-                    {...props}
-                    data={{
-                      items: filtered,
-                      columnCount: layout.columnCount,
-                      metadata: registryMetadata,
-                      layout,
-                    }}
-                  />
-                )}
+                {null}
               </Grid>
             );
           }}
