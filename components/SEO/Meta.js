@@ -50,6 +50,18 @@ export default function Meta() {
             <link rel="canonical" href="https://unnippillil.com/" />
             <link rel="icon" href="images/logos/fevicon.svg" />
             <link rel="apple-touch-icon" href="images/logos/logo.png" />
+            <link
+                rel="alternate"
+                type="application/atom+xml"
+                title="Module Workspace Sessions (Atom)"
+                href="https://unnippillil.com/feeds/module-workspace.atom.xml"
+            />
+            <link
+                rel="alternate"
+                type="application/rss+xml"
+                title="Module Workspace Sessions (RSS)"
+                href="https://unnippillil.com/feeds/module-workspace.rss.xml"
+            />
             <script
                 type="application/ld+json"
                 nonce={nonce}

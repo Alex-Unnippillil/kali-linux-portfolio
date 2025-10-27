@@ -1,0 +1,42 @@
+[
+  {
+    "id": "recon-lab-seed",
+    "title": "Recon Lab Seed",
+    "summary": "Load a reconnaissance workspace with a simulated port scan result ready to review.",
+    "workspace": "Recon Lab",
+    "moduleId": "port-scan",
+    "options": {
+      "TARGET": "demo.local"
+    },
+    "result": "$ port-scan TARGET=demo.local\n[+] 192.168.0.1: Ports 22,80 open",
+    "updated": "2024-05-01T12:00:00.000Z",
+    "tags": ["network", "scanner"]
+  },
+  {
+    "id": "password-lab",
+    "title": "Password Audit Walkthrough",
+    "summary": "Review a brute force attempt with canned wordlist output and workspace notes.",
+    "workspace": "Password Lab",
+    "moduleId": "bruteforce",
+    "options": {
+      "TARGET": "admin.demo",
+      "WORDLIST": "top-100.txt"
+    },
+    "result": "$ bruteforce TARGET=admin.demo WORDLIST=top-100.txt\n[-] No valid password found",
+    "updated": "2024-05-08T09:30:00.000Z",
+    "tags": ["password", "attack"]
+  },
+  {
+    "id": "cve-digest",
+    "title": "CVE Digest Workspace",
+    "summary": "Jump into a vulnerability check workspace preloaded with demo CVE findings.",
+    "workspace": "Vuln Digest",
+    "moduleId": "vuln-check",
+    "options": {
+      "HOST": "intranet.demo"
+    },
+    "result": "$ vuln-check HOST=intranet.demo\n[+] CVE-2024-1234 present on host",
+    "updated": "2024-05-15T18:45:00.000Z",
+    "tags": ["vulnerability", "scanner"]
+  }
+]
