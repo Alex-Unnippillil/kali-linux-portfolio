@@ -12,6 +12,7 @@ export const BOOT_MESSAGES = [
 export const BOOT_MESSAGE_INTERVAL_MS = 360
 
 function BootingScreen(props) {
+    const rootRef = React.useRef(null)
     const isVisible = props.visible || props.isShutDown
     const visibilityClass = isVisible ? 'visible opacity-100' : 'invisible opacity-0'
     const [activeMessageIndex, setActiveMessageIndex] = useState(0)
@@ -44,11 +45,41 @@ function BootingScreen(props) {
 
     const bootMessages = BOOT_MESSAGES
 
+    React.useEffect(() => {
+        if (typeof window === 'undefined') {
+            return
+        }
+
+        const rootElement = rootRef.current
+
+        if (!rootElement || isVisible) {
+            return
+        }
+
+        const activeElement = document.activeElement
+
+        if (activeElement && rootElement.contains(activeElement)) {
+            const statusBar = document.getElementById('status-bar')
+
+            if (statusBar && typeof statusBar.focus === 'function') {
+                statusBar.focus({ preventScroll: true })
+                return
+            }
+
+            if (activeElement instanceof HTMLElement) {
+                activeElement.blur()
+            }
+        }
+    }, [isVisible])
+
     return (
         <div
+            ref={rootRef}
             role="status"
             aria-live="polite"
             aria-busy={props.visible}
+            aria-hidden={!isVisible}
+            inert={!isVisible ? '' : undefined}
             style={{
                 ...(isVisible ? { zIndex: '2147483647' } : { zIndex: '-20' }),
                 contentVisibility: 'auto',
