@@ -1,6 +1,26 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+'use client';
+
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import GameLayout from './GameLayout';
+import { useGameLoop } from './Games/common';
+import useCanvasResize from '../../hooks/useCanvasResize';
+import { useGameSettings, useGamePersistence } from './useGameControls';
 import { checkWinner, minimax, createBoard } from '../../apps/games/tictactoe/logic';
+import {
+  loadStats,
+  saveStats,
+  applyResult,
+  createVariantKey,
+  defaultVariantStats,
+  computeGlobalBestStreak,
+  resetVariantStats,
+} from '../../apps/games/tictactoe/storage';
 
 const SKINS = {
   classic: { X: 'X', O: 'O' },
@@ -9,291 +29,528 @@ const SKINS = {
   fruits: { X: '🍎', O: '🍌' },
 };
 
+const CELL_SIZE = 96;
+const BOARD_BG = '#111827';
+const GRID_COLOR = '#374151';
+const WIN_COLOR = '#f87171';
+const LAST_MOVE_COLOR = '#38bdf8';
+
+const clampIndex = (index, boardLength) =>
+  Number.isFinite(index) && index >= 0 && index < boardLength;
+
+const pickRandom = (options) =>
+  options[Math.floor(Math.random() * options.length)] ?? -1;
+
 const TicTacToe = () => {
   const [size, setSize] = useState(3);
   const [mode, setMode] = useState('classic');
   const [skin, setSkin] = useState('classic');
   const [level, setLevel] = useState('hard');
-  const [board, setBoard] = useState(createBoard(3));
-  const [player, setPlayer] = useState(null);
-  const [ai, setAi] = useState(null);
-  const [status, setStatus] = useState('Choose X or O');
+  const [board, setBoard] = useState(() => createBoard(3));
+  const [playerSymbol, setPlayerSymbol] = useState(null);
+  const [aiSymbol, setAiSymbol] = useState(null);
   const [winLine, setWinLine] = useState(null);
-  const [stats, setStats] = useState(() => {
-    if (typeof window === 'undefined') return {};
-    try {
-      return JSON.parse(localStorage.getItem('tictactoeStats') || '{}');
-    } catch {
-      return {};
+  const [lastMove, setLastMove] = useState(null);
+  const [status, setStatus] = useState('Choose X or O');
+  const [lineProgress, setLineProgress] = useState(1);
+  const [stats, setStats] = useState(() => loadStats());
+  const canvasRef = useCanvasResize(size * CELL_SIZE, size * CELL_SIZE);
+  const audioRef = useRef(null);
+
+  const { paused, togglePause, muted, toggleMute } = useGameSettings('tictactoe');
+  const { getHighScore, setHighScore } = useGamePersistence('tictactoe');
+  const [highScore, setHighScoreState] = useState(0);
+
+  const variantKey = useMemo(() => createVariantKey(mode, size), [mode, size]);
+  const variantStats = stats[variantKey] ?? defaultVariantStats();
+  const bestStreak = useMemo(() => computeGlobalBestStreak(stats), [stats]);
+  const hasActiveGame = playerSymbol !== null;
+
+  useEffect(() => {
+    setStats(loadStats());
+  }, []);
+
+  useEffect(() => {
+    setHighScoreState(getHighScore());
+  }, [getHighScore]);
+
+  useEffect(() => {
+    if (bestStreak > highScore) {
+      setHighScore(bestStreak);
+      setHighScoreState(bestStreak);
     }
-  });
+  }, [bestStreak, highScore, setHighScore]);
 
-  const lineRef = useRef(null);
+  useEffect(() => {
+    setBoard(createBoard(size));
+    setPlayerSymbol(null);
+    setAiSymbol(null);
+    setWinLine(null);
+    setLastMove(null);
+    setStatus('Choose X or O');
+    setLineProgress(1);
+    if (paused) togglePause();
+  }, [size, mode, paused, togglePause]);
 
-  const variantKey = `${mode}-${size}`;
-  const recordResult = useCallback(
-    (res) => {
+  const playTone = useCallback(
+    (frequency) => {
+      if (muted) return;
+      try {
+        const ctx =
+          audioRef.current ||
+          new (window.AudioContext || window.webkitAudioContext)();
+        audioRef.current = ctx;
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+        oscillator.frequency.value = frequency;
+        oscillator.connect(gain);
+        gain.connect(ctx.destination);
+        const now = ctx.currentTime;
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+        oscillator.start(now);
+        oscillator.stop(now + 0.18);
+      } catch {
+        // ignore audio errors
+      }
+    },
+    [muted],
+  );
+
+  useEffect(
+    () => () => {
+      audioRef.current?.close?.();
+    },
+    [],
+  );
+
+  const handleResult = useCallback(
+    (outcome) => {
       setStats((prev) => {
-        const cur = prev[variantKey] || { wins: 0, losses: 0, draws: 0 };
-        const updated = {
-          ...prev,
-          [variantKey]: {
-            wins: res === 'win' ? cur.wins + 1 : cur.wins,
-            losses: res === 'loss' ? cur.losses + 1 : cur.losses,
-            draws: res === 'draw' ? cur.draws + 1 : cur.draws,
-          },
-        };
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('tictactoeStats', JSON.stringify(updated));
-        }
-        return updated;
+        const next = applyResult(prev, variantKey, outcome);
+        saveStats(next);
+        return next;
       });
     },
-    [variantKey]
+    [variantKey],
+  );
+
+  const clearVariantStats = useCallback(() => {
+    setStats((prev) => {
+      const next = resetVariantStats(prev, variantKey);
+      saveStats(next);
+      return next;
+    });
+  }, [variantKey]);
+
+  const startGame = useCallback(
+    (symbol) => {
+      setPlayerSymbol(symbol);
+      setAiSymbol(symbol === 'X' ? 'O' : 'X');
+      setBoard(createBoard(size));
+      setWinLine(null);
+      setLastMove(null);
+      setLineProgress(1);
+      if (paused) togglePause();
+    },
+    [paused, size, togglePause],
+  );
+
+  const resetMatch = useCallback(() => {
+    setBoard(createBoard(size));
+    setWinLine(null);
+    setLastMove(null);
+    setLineProgress(1);
+  }, [size]);
+
+  const backToSetup = useCallback(() => {
+    setPlayerSymbol(null);
+    setAiSymbol(null);
+    setBoard(createBoard(size));
+    setWinLine(null);
+    setLastMove(null);
+    setLineProgress(1);
+    setStatus('Choose X or O');
+    if (paused) togglePause();
+  }, [paused, size, togglePause]);
+
+  const pickAiMove = useCallback(
+    (state) => {
+      const empties = state
+        .map((cell, idx) => (cell ? -1 : idx))
+        .filter((idx) => idx >= 0);
+      if (empties.length === 0) return -1;
+      if (level === 'easy') return pickRandom(empties);
+      if (level === 'medium' && Math.random() < 0.5) return pickRandom(empties);
+      const { index } = minimax(state.slice(), aiSymbol, size, mode === 'misere');
+      return typeof index === 'number' ? index : -1;
+    },
+    [aiSymbol, level, mode, size],
+  );
+
+  const handleCellSelection = useCallback(
+    (index) => {
+      if (!hasActiveGame || paused || !clampIndex(index, board.length)) return;
+      if (board[index]) return;
+      if (winLine) return;
+      const filled = board.filter(Boolean).length;
+      const playerTurn =
+        (playerSymbol === 'X' && filled % 2 === 0) ||
+        (playerSymbol === 'O' && filled % 2 === 1);
+      if (!playerTurn) return;
+      setBoard((prev) => {
+        if (prev[index]) return prev;
+        const next = prev.slice();
+        next[index] = playerSymbol;
+        return next;
+      });
+      setLastMove(index);
+      setWinLine(null);
+      setLineProgress(1);
+      playTone(540);
+    },
+    [board, hasActiveGame, paused, playerSymbol, playTone, winLine],
+  );
+
+  const handlePointerDown = useCallback(
+    (event) => {
+      event.preventDefault();
+      if (!hasActiveGame || paused) return;
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = ((event.clientX - rect.left) / rect.width) * size;
+      const y = ((event.clientY - rect.top) / rect.height) * size;
+      const col = Math.floor(x);
+      const row = Math.floor(y);
+      const index = row * size + col;
+      if (clampIndex(index, board.length)) handleCellSelection(index);
+    },
+    [board.length, canvasRef, handleCellSelection, hasActiveGame, paused, size],
   );
 
   useEffect(() => {
-    setBoard(createBoard(size));
-    setPlayer(null);
-    setAi(null);
-    setStatus('Choose X or O');
-    setWinLine(null);
-  }, [size, mode]);
-
-  const startGame = (p) => {
-    const a = p === 'X' ? 'O' : 'X';
-    setPlayer(p);
-    setAi(a);
-    setBoard(createBoard(size));
-    setStatus(`${SKINS[skin][p]}'s turn`);
-    setWinLine(null);
-  };
-
-  const handleClick = (idx) => {
-    if (player === null) return;
-    if (board[idx] || checkWinner(board, size, mode === 'misere').winner) return;
-    const newBoard = board.slice();
-    newBoard[idx] = player;
-    setBoard(newBoard);
-  };
-
-  useEffect(() => {
-    if (player === null || ai === null) return;
+    if (!playerSymbol || !aiSymbol) return undefined;
     const { winner, line } = checkWinner(board, size, mode === 'misere');
+    if (!winner && winLine) {
+      setWinLine(null);
+      setLineProgress(1);
+    }
     if (winner) {
-      setStatus(winner === 'draw' ? 'Draw' : `${SKINS[skin][winner]} wins`);
-      setWinLine(line);
-      if (winner === 'draw') recordResult('draw');
-      else if (winner === player) recordResult('win');
-      else recordResult('loss');
-      return;
+      if (winner === 'draw') {
+        setStatus('Draw');
+        setWinLine(null);
+        setLineProgress(1);
+        handleResult('draw');
+        return undefined;
+      }
+      setWinLine(line && line.length ? line : null);
+      if (line && line.length) setLineProgress(0);
+      const playerWon = winner === playerSymbol;
+      setStatus(playerWon ? 'You win!' : 'AI wins');
+      handleResult(playerWon ? 'win' : 'loss');
+      if (playerWon) playTone(880);
+      return undefined;
     }
     const filled = board.filter(Boolean).length;
-    const isPlayerTurn =
-      (player === 'X' && filled % 2 === 0) || (player === 'O' && filled % 2 === 1);
-    if (!isPlayerTurn) {
-      const getRandomMove = (b) => {
-        const options = b
-          .map((c, i) => (c ? null : i))
-          .filter((v) => v !== null);
-        return options[Math.floor(Math.random() * options.length)] ?? -1;
-      };
-      let move = -1;
-      if (level === 'easy') {
-        move = getRandomMove(board.slice());
-      } else if (level === 'medium') {
-        move = Math.random() < 0.5
-          ? getRandomMove(board.slice())
-          : minimax(board.slice(), ai, size, mode === 'misere').index;
-      } else {
-        move = minimax(board.slice(), ai, size, mode === 'misere').index;
-      }
-      if (move >= 0) {
-        const newBoard = board.slice();
-        newBoard[move] = ai;
-        setTimeout(() => setBoard(newBoard), 200);
-      }
-    } else {
-      setStatus(`${SKINS[skin][player]}'s turn`);
+    const playerTurn =
+      (playerSymbol === 'X' && filled % 2 === 0) ||
+      (playerSymbol === 'O' && filled % 2 === 1);
+    if (paused) {
+      setStatus('Paused');
+      return undefined;
     }
-  }, [board, player, ai, size, skin, mode, level, recordResult]);
+    if (playerTurn) {
+      setStatus(`${SKINS[skin][playerSymbol]}'s turn`);
+      return undefined;
+    }
+    setStatus(`${SKINS[skin][aiSymbol]}'s turn`);
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      const move = pickAiMove(board.slice());
+      if (!clampIndex(move, board.length)) return;
+      setBoard((prev) => {
+        if (prev[move]) return prev;
+        const next = prev.slice();
+        next[move] = aiSymbol;
+        return next;
+      });
+      setLastMove(move);
+      setWinLine(null);
+      setLineProgress(1);
+      playTone(392);
+    }, level === 'hard' ? 180 : 260);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [
+    aiSymbol,
+    board,
+    handleResult,
+    level,
+    mode,
+    paused,
+    pickAiMove,
+    playerSymbol,
+    playTone,
+    size,
+    skin,
+    winLine,
+  ]);
+
+  const drawBoard = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const boardSize = size * CELL_SIZE;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = BOARD_BG;
+    ctx.fillRect(0, 0, boardSize, boardSize);
+
+    ctx.strokeStyle = GRID_COLOR;
+    ctx.lineWidth = 4;
+    for (let i = 1; i < size; i += 1) {
+      const offset = i * CELL_SIZE;
+      ctx.beginPath();
+      ctx.moveTo(offset, 0);
+      ctx.lineTo(offset, boardSize);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, offset);
+      ctx.lineTo(boardSize, offset);
+      ctx.stroke();
+    }
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#f9fafb';
+    ctx.font = `${CELL_SIZE * 0.6}px 'Inter', system-ui, sans-serif`;
+    board.forEach((cell, idx) => {
+      if (!cell) return;
+      const col = idx % size;
+      const row = Math.floor(idx / size);
+      const x = col * CELL_SIZE + CELL_SIZE / 2;
+      const y = row * CELL_SIZE + CELL_SIZE / 2;
+      const glyph = SKINS[skin][cell];
+      ctx.fillText(glyph, x, y + (glyph.length > 1 ? 4 : 0));
+    });
+
+    if (lastMove !== null) {
+      const col = lastMove % size;
+      const row = Math.floor(lastMove / size);
+      ctx.strokeStyle = LAST_MOVE_COLOR;
+      ctx.lineWidth = 4;
+      ctx.strokeRect(
+        col * CELL_SIZE + 4,
+        row * CELL_SIZE + 4,
+        CELL_SIZE - 8,
+        CELL_SIZE - 8,
+      );
+    }
+
+    if (winLine && winLine.length > 1) {
+      const start = winLine[0];
+      const end = winLine[winLine.length - 1];
+      const sx = (start % size) * CELL_SIZE + CELL_SIZE / 2;
+      const sy = Math.floor(start / size) * CELL_SIZE + CELL_SIZE / 2;
+      const ex = (end % size) * CELL_SIZE + CELL_SIZE / 2;
+      const ey = Math.floor(end / size) * CELL_SIZE + CELL_SIZE / 2;
+      const progress = Math.max(0, Math.min(1, lineProgress));
+      ctx.strokeStyle = WIN_COLOR;
+      ctx.lineWidth = 8;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx + (ex - sx) * progress, sy + (ey - sy) * progress);
+      ctx.stroke();
+    }
+  }, [board, canvasRef, lastMove, lineProgress, size, skin, winLine]);
 
   useEffect(() => {
-    if (winLine && lineRef.current) {
-      const line = lineRef.current;
-      const length = line.getTotalLength();
-      line.style.transition = 'none';
-      line.style.strokeDasharray = String(length);
-      line.style.strokeDashoffset = String(length);
-      requestAnimationFrame(() => {
-        line.style.transition = 'stroke-dashoffset 0.5s ease';
-        line.style.strokeDashoffset = '0';
-      });
-    }
-  }, [winLine]);
+    drawBoard();
+  }, [drawBoard]);
 
-  const currentSkin = SKINS[skin];
+  useGameLoop(
+    (delta) => {
+      setLineProgress((prev) => Math.min(1, prev + delta * 3));
+    },
+    !paused && Boolean(winLine) && lineProgress < 1,
+  );
 
-  if (player === null) {
-    return (
-      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-        <div className="mb-4">Size:
-          <select
-            value={size}
-            onChange={(e) => setSize(parseInt(e.target.value, 10))}
-            className="bg-gray-700 rounded p-1 ml-2"
-          >
-            <option value={3}>3×3</option>
-            <option value={4}>4×4</option>
-          </select>
+  const statsSummary = (
+    <div className="text-sm text-gray-200 space-y-1">
+      <div>
+        Wins: {variantStats.wins} · Losses: {variantStats.losses} · Draws:{' '}
+        {variantStats.draws}
+      </div>
+      <div>Current streak: {variantStats.streak}</div>
+      <div>Best streak: {bestStreak}</div>
+    </div>
+  );
+
+  const controlBar = (
+    <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+      <button
+        type="button"
+        className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50"
+        onClick={togglePause}
+        disabled={!hasActiveGame}
+      >
+        {paused ? 'Resume' : 'Pause'}
+      </button>
+      <button
+        type="button"
+        className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600"
+        onClick={toggleMute}
+      >
+        {muted ? 'Sound On' : 'Mute'}
+      </button>
+      <button
+        type="button"
+        className="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-50"
+        onClick={resetMatch}
+        disabled={!hasActiveGame}
+      >
+        Restart Match
+      </button>
+      <button
+        type="button"
+        className="px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 disabled:opacity-50"
+        onClick={backToSetup}
+        disabled={!hasActiveGame}
+      >
+        Change Options
+      </button>
+      <button
+        type="button"
+        className="px-3 py-1 rounded bg-red-600 hover:bg-red-500"
+        onClick={clearVariantStats}
+      >
+        Reset Stats
+      </button>
+    </div>
+  );
+
+  return (
+    <GameLayout
+      gameId="tictactoe"
+      score={variantStats.streak}
+      highScore={highScore}
+    >
+      <div className="h-full w-full bg-ub-cool-grey text-white flex flex-col">
+        <div className="px-4 py-3 border-b border-gray-700 bg-gray-900/60">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            {controlBar}
+            {statsSummary}
+          </div>
         </div>
-        <div className="mb-4">Mode:
-          <select
-            value={mode}
-            onChange={(e) => setMode(e.target.value)}
-            className="bg-gray-700 rounded p-1 ml-2"
-          >
-            <option value="classic">Classic</option>
-            <option value="misere">Misère (three-in-a-row loses)</option>
-          </select>
-        </div>
-        <div className="mb-4">AI Level:
-          <select
-            value={level}
-            onChange={(e) => setLevel(e.target.value)}
-            className="bg-gray-700 rounded p-1 ml-2"
-          >
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
-          </select>
-        </div>
-        <div className="mb-4">Skin:
-          <select
-            value={skin}
-            onChange={(e) => setSkin(e.target.value)}
-            className="bg-gray-700 rounded p-1 ml-2"
-          >
-            {Object.keys(SKINS).map((k) => (
-              <option key={k} value={k}>
-                {k.charAt(0).toUpperCase() + k.slice(1)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="mb-4">Choose X or O</div>
-        <div className="flex space-x-4">
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={() => startGame('X')}
-          >
-            {currentSkin.X}
-          </button>
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={() => startGame('O')}
-          >
-            {currentSkin.O}
-          </button>
-        </div>
-        <div className="mt-4 text-sm">
-          <div>Stats for {mode} {size}×{size}:</div>
-          <div>
-            Wins: {stats[variantKey]?.wins || 0} | Losses: {stats[variantKey]?.losses || 0} | Draws: {stats[variantKey]?.draws || 0}
+        <div className="flex-1 flex flex-col items-center justify-center p-4 gap-6">
+          {hasActiveGame ? (
+            <>
+              <div className="text-lg" aria-live="polite">
+                {status}
+              </div>
+              <div className="w-full max-w-md">
+                <canvas
+                  ref={canvasRef}
+                  className="w-full h-auto bg-gray-900 rounded-lg shadow-lg border border-gray-700"
+                  onPointerDown={handlePointerDown}
+                  role="presentation"
+                />
+              </div>
+            </>
+          ) : (
+            <div className="w-full max-w-xl bg-gray-900/70 border border-gray-700 rounded-lg p-6 space-y-4 shadow-lg">
+              <h2 className="text-xl font-semibold text-center">Configure Match</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <label className="flex flex-col text-sm">
+                  <span className="mb-1 text-gray-200">Board Size</span>
+                  <select
+                    value={size}
+                    onChange={(e) => setSize(parseInt(e.target.value, 10))}
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-1"
+                  >
+                    <option value={3}>3 × 3</option>
+                    <option value={4}>4 × 4</option>
+                  </select>
+                </label>
+                <label className="flex flex-col text-sm">
+                  <span className="mb-1 text-gray-200">Mode</span>
+                  <select
+                    value={mode}
+                    onChange={(e) => setMode(e.target.value)}
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-1"
+                  >
+                    <option value="classic">Classic</option>
+                    <option value="misere">Misère (three in a row loses)</option>
+                  </select>
+                </label>
+                <label className="flex flex-col text-sm">
+                  <span className="mb-1 text-gray-200">AI Level</span>
+                  <select
+                    value={level}
+                    onChange={(e) => setLevel(e.target.value)}
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-1"
+                  >
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
+                </label>
+                <label className="flex flex-col text-sm">
+                  <span className="mb-1 text-gray-200">Skin</span>
+                  <select
+                    value={skin}
+                    onChange={(e) => setSkin(e.target.value)}
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-1"
+                  >
+                    {Object.keys(SKINS).map((key) => (
+                      <option key={key} value={key}>
+                        {key.charAt(0).toUpperCase() + key.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="text-center text-sm text-gray-300">
+                Choose your mark to begin.
+              </div>
+              <div className="flex justify-center gap-4">
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500"
+                  onClick={() => startGame('X')}
+                >
+                  {SKINS[skin].X}
+                </button>
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500"
+                  onClick={() => startGame('O')}
+                >
+                  {SKINS[skin].O}
+                </button>
+              </div>
+              <div className="text-sm text-gray-300 text-center">
+                {status}
+              </div>
+              <div className="pt-2 border-t border-gray-700">
+                {statsSummary}
+              </div>
+            </div>
+          )}
+          <div className="text-sm text-gray-300">
+            High score (best streak): {highScore}
           </div>
         </div>
       </div>
-    );
-  }
-
-  return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-      <div className="mb-2" aria-live="polite">
-        {status}
-      </div>
-      <div className="relative" style={{ width: `${size * 4.5}rem`, height: `${size * 4.5}rem` }}>
-        <div
-          className="absolute inset-0 grid gap-px bg-gray-500"
-          style={{ gridTemplateColumns: `repeat(${size},1fr)` }}
-        >
-          {board.map((cell, idx) => (
-            <button
-              key={idx}
-              className="w-full h-full flex items-center justify-center bg-gray-700 text-5xl"
-              onClick={() => handleClick(idx)}
-            >
-              {cell ? currentSkin[cell] : ''}
-            </button>
-          ))}
-        </div>
-        {winLine && (
-          <svg
-            className="absolute top-0 left-0 w-full h-full pointer-events-none"
-            viewBox={`0 0 ${size * 100} ${size * 100}`}
-          >
-            {(() => {
-              const start = winLine[0];
-              const end = winLine[winLine.length - 1];
-              const sx = (start % size) * 100 + 50;
-              const sy = Math.floor(start / size) * 100 + 50;
-              const ex = (end % size) * 100 + 50;
-              const ey = Math.floor(end / size) * 100 + 50;
-              return (
-                <line
-                  ref={lineRef}
-                  x1={sx}
-                  y1={sy}
-                  x2={ex}
-                  y2={ey}
-                  stroke="red"
-                  strokeWidth="10"
-                  strokeLinecap="round"
-                />
-              );
-            })()}
-          </svg>
-        )}
-      </div>
-      <div className="flex space-x-4 mt-4">
-        <button
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded"
-          onClick={() => {
-            setBoard(createBoard(size));
-            setStatus(`${currentSkin[player]}'s turn`);
-            setWinLine(null);
-          }}
-        >
-          Restart
-        </button>
-        <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={() => {
-            setPlayer(null);
-            setAi(null);
-            setBoard(createBoard(size));
-            setStatus('Choose X or O');
-            setWinLine(null);
-          }}
-        >
-          Reset
-        </button>
-      </div>
-      <div className="mt-4 text-sm">
-        <div>Stats for {mode} {size}×{size}:</div>
-        <div>
-          Wins: {stats[variantKey]?.wins || 0} | Losses: {stats[variantKey]?.losses || 0} | Draws: {stats[variantKey]?.draws || 0}
-        </div>
-      </div>
-    </div>
+    </GameLayout>
   );
 };
 
 export { checkWinner, minimax } from '../../apps/games/tictactoe/logic';
 
-export default function TicTacToeApp() {
-  return (
-    <GameLayout gameId="tictactoe">
-      <TicTacToe />
-    </GameLayout>
-  );
-}
+export default TicTacToe;

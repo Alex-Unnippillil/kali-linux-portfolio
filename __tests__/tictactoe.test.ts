@@ -1,4 +1,12 @@
 import { minimax, checkWinner, createBoard } from '../apps/games/tictactoe/logic';
+import {
+  applyResult,
+  loadStats,
+  saveStats,
+  STATS_STORAGE_KEY,
+  createVariantKey,
+  computeGlobalBestStreak,
+} from '../apps/games/tictactoe/storage';
 
 describe('tic tac toe AI', () => {
   const simulate = (firstMove: number) => {
@@ -79,5 +87,51 @@ describe('checkWinner', () => {
     const board = ['X', 'X', 'X', null, null, null, null, null, null];
     const result = checkWinner(board, 3, true);
     expect(result.winner).toBe('O');
+  });
+});
+
+describe('tic tac toe persistence', () => {
+  const variant = createVariantKey('classic', 3);
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('persists wins/losses/draws for a variant', () => {
+    let stats = loadStats();
+    expect(stats[variant]).toBeUndefined();
+    stats = applyResult(stats, variant, 'win');
+    saveStats(stats);
+    const stored = localStorage.getItem(STATS_STORAGE_KEY);
+    expect(stored).not.toBeNull();
+    const parsed = JSON.parse(stored || '{}');
+    expect(parsed[variant].wins).toBe(1);
+    const reloaded = loadStats();
+    expect(reloaded[variant].wins).toBe(1);
+    expect(reloaded[variant].streak).toBe(1);
+  });
+
+  it('resets streak on loss while tracking best streak', () => {
+    let stats = loadStats();
+    stats = applyResult(stats, variant, 'win');
+    stats = applyResult(stats, variant, 'win');
+    stats = applyResult(stats, variant, 'loss');
+    expect(stats[variant].streak).toBe(0);
+    expect(stats[variant].bestStreak).toBe(2);
+    expect(computeGlobalBestStreak(stats)).toBe(2);
+  });
+
+  it('migrates legacy storage schema', () => {
+    localStorage.setItem(
+      'tictactoeStats',
+      JSON.stringify({ [variant]: { wins: 3, losses: 1, draws: 2 } }),
+    );
+    const stats = loadStats();
+    expect(stats[variant].wins).toBe(3);
+    expect(stats[variant].losses).toBe(1);
+    expect(stats[variant].draws).toBe(2);
+    expect(stats[variant].bestStreak).toBe(3);
+    expect(localStorage.getItem(STATS_STORAGE_KEY)).not.toBeNull();
+    expect(localStorage.getItem('tictactoeStats')).toBeNull();
   });
 });

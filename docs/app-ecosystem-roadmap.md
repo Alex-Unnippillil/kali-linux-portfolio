@@ -101,7 +101,7 @@ All arcade-style and puzzle titles share the same readiness gap: implement canva
 
 | App ID | Display Name | Owner | Status | Key Dependencies / Notes |
 | --- | --- | --- | --- | --- |
-| tictactoe | Tic Tac Toe | Core maintainers | **Needs polish** – confirm canvas loop & OS alignment | Canvas loop, localStorage |
+| tictactoe | Tic Tac Toe | Core maintainers | **Ready** – shared canvas loop, pause/audio toggles, persistent streaks | `tictactoe:stats`, `highscore:tictactoe`, `game:tictactoe:muted` |
 | chess | Chess | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | connect-four | Connect Four | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | hangman | Hangman | Core maintainers | **In progress** – add word list, timer, difficulty | Word list data |
