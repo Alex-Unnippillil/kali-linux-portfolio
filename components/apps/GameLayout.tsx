@@ -15,6 +15,11 @@ import {
   serialize as serializeRng,
   deserialize as deserializeRng,
 } from '../../apps/games/rng';
+import {
+  useOverlayManager,
+  useOverlayRegistration,
+  useOverlaySnapshot,
+} from '../common/OverlayManager';
 
 interface GameLayoutProps {
   gameId?: string;
@@ -53,7 +58,6 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   highScore,
   editor,
 }) => {
-  const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
   const [log, setLog] = useState<RecordedInput[]>([]);
   const [replayHandler, setReplayHandler] = useState<
@@ -63,9 +67,20 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   const [scorePulse, setScorePulse] = useState(false);
   const [highScorePulse, setHighScorePulse] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+  const overlayId = `game-help-${gameId}`;
+  useOverlayRegistration({ id: overlayId, modal: true, overlay: true });
+  const { restoreOverlay, closeOverlay } = useOverlayManager();
+  const overlayState = useOverlaySnapshot(overlayId);
+  const showHelp = Boolean(overlayState?.open && !overlayState?.minimized);
 
-  const close = useCallback(() => setShowHelp(false), []);
-  const toggle = useCallback(() => setShowHelp((h) => !h), []);
+  const close = useCallback(() => closeOverlay(overlayId), [closeOverlay, overlayId]);
+  const toggle = useCallback(() => {
+    if (showHelp) {
+      closeOverlay(overlayId);
+    } else {
+      restoreOverlay(overlayId);
+    }
+  }, [closeOverlay, overlayId, restoreOverlay, showHelp]);
 
   const fallbackCopy = useCallback((text: string) => {
     if (navigator.clipboard) {
@@ -173,25 +188,25 @@ const GameLayout: React.FC<GameLayoutProps> = ({
       if (isInput) return;
       if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
         e.preventDefault();
-        setShowHelp((h) => !h);
+        toggle();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [toggle]);
 
   // Show tutorial overlay on first visit
   useEffect(() => {
     try {
       const key = `seen_tutorial_${gameId}`;
       if (typeof window !== 'undefined' && !window.localStorage.getItem(key)) {
-        setShowHelp(true);
+        restoreOverlay(overlayId);
         window.localStorage.setItem(key, '1');
       }
     } catch {
       // ignore storage errors
     }
-  }, [gameId]);
+  }, [gameId, overlayId, restoreOverlay]);
 
   // Allow closing overlay with Escape
   useEffect(() => {
@@ -199,12 +214,12 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        setShowHelp(false);
+        closeOverlay(overlayId);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [showHelp]);
+  }, [closeOverlay, overlayId, showHelp]);
 
   // Auto-pause when page becomes hidden or window loses focus
   useEffect(() => {
