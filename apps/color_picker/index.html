@@ -7,10 +7,98 @@
   <link rel="stylesheet" href="index.css">
 </head>
 <body>
-  <h1>Color Picker</h1>
-  <input type="color" id="color-input" />
-  <span id="hex-output"></span>
-  <div id="swatches"></div>
+  <main class="color-picker" aria-label="Kali theme color picker">
+    <header class="color-picker__header">
+      <h1>Color Picker</h1>
+      <p class="color-picker__intro">
+        Capture swatches, map them to Kali Linux design tokens, and export a ready-to-use
+        theme bundle.
+      </p>
+    </header>
+
+    <section class="color-picker__inputs" aria-labelledby="swatch-controls-title">
+      <div class="color-picker__field">
+        <label for="color-input" id="swatch-controls-title">Select a color</label>
+        <input type="color" id="color-input" aria-describedby="hex-output" />
+      </div>
+      <div class="color-picker__current" aria-live="polite">
+        <span class="color-picker__current-label">Current swatch</span>
+        <span id="hex-output" class="color-picker__current-value"></span>
+      </div>
+    </section>
+
+    <section class="color-picker__swatches" aria-labelledby="swatch-list-title">
+      <div class="color-picker__swatch-header">
+        <h2 id="swatch-list-title">Recent swatches</h2>
+        <p>Click a swatch to copy it and apply it to your theme tokens.</p>
+      </div>
+      <div id="swatches" class="color-picker__swatch-grid" role="list"></div>
+    </section>
+
+    <section class="token-section" aria-labelledby="token-section-title">
+      <div class="token-section__header">
+        <h2 id="token-section-title">Theme tokens</h2>
+        <p>Assign swatches to the Kali portfolio color system for seamless integration.</p>
+      </div>
+      <div id="token-grid" class="token-grid" role="list"></div>
+      <div class="token-section__actions">
+        <label class="token-import" for="token-file">
+          <span>Import token JSON</span>
+          <input type="file" id="token-file" accept="application/json" />
+        </label>
+        <button type="button" id="apply-json" class="token-button">Backfill from pasted JSON</button>
+        <button type="button" id="reset-tokens" class="token-button token-button--secondary">Reset to active theme</button>
+      </div>
+      <textarea
+        id="json-import"
+        class="token-section__textarea"
+        rows="6"
+        placeholder="Paste your token JSON here. Keys such as --color-bg or color-bg are supported."
+      ></textarea>
+      <p id="token-feedback" class="token-feedback" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="export-section" aria-labelledby="export-section-title">
+      <h2 id="export-section-title">Export palette</h2>
+      <div class="export-group" data-export-type="css">
+        <header>
+          <h3>CSS variables</h3>
+          <p>Drop this snippet into <code>styles/globals.css</code> or a theme override.</p>
+        </header>
+        <textarea id="css-output" class="export-group__textarea" rows="8" readonly></textarea>
+        <div class="export-group__actions">
+          <button type="button" class="token-button" data-copy-target="css-output">Copy CSS</button>
+          <button
+            type="button"
+            class="token-button token-button--secondary"
+            data-download-target="css-output"
+            data-download-name="kali-theme.css"
+          >
+            Download .css
+          </button>
+        </div>
+      </div>
+
+      <div class="export-group" data-export-type="json">
+        <header>
+          <h3>Design token JSON</h3>
+          <p>Use this with theming scripts or hand off to design tooling.</p>
+        </header>
+        <textarea id="json-output" class="export-group__textarea" rows="10" readonly></textarea>
+        <div class="export-group__actions">
+          <button type="button" class="token-button" data-copy-target="json-output">Copy JSON</button>
+          <button
+            type="button"
+            class="token-button token-button--secondary"
+            data-download-target="json-output"
+            data-download-name="kali-theme-tokens.json"
+          >
+            Download .json
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
   <script src="main.js"></script>
 </body>
 </html>
