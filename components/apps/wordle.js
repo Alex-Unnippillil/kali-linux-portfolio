@@ -5,8 +5,8 @@ import {
   dictionaries as wordleDictionaries,
 } from '../../utils/wordle';
 
-// Determine today's puzzle key for local storage
-const todayKey = new Date().toISOString().split('T')[0];
+const basePuzzleDate = new Date('2021-06-19T00:00:00Z');
+const getCurrentDayKey = () => new Date().toISOString().split('T')[0];
 
 const dictionaries = wordleDictionaries;
 
@@ -62,22 +62,36 @@ const evaluateGuess = (guess, answer) => {
 };
 
 const Wordle = () => {
+  const [todayKey, setTodayKey] = useState(getCurrentDayKey);
   const [dictName, setDictName] = usePersistentState('wordle-dictionary', 'common');
   const wordList = dictionaries[dictName];
-  const solution = useMemo(() => getWordOfTheDay(dictName), [dictName]);
+  const solutionDate = useMemo(
+    () => new Date(`${todayKey}T00:00:00Z`),
+    [todayKey]
+  );
+  const solution = useMemo(
+    () => getWordOfTheDay(dictName, solutionDate),
+    [dictName, solutionDate]
+  );
+  const emptyGuessDefault = useMemo(
+    () => (dictName || todayKey ? [] : []),
+    [dictName, todayKey]
+  );
+  const historyDefault = useMemo(() => ({}), []);
+  const streakDefault = useMemo(() => ({ current: 0, max: 0 }), []);
 
   // guesses for today are stored under a daily key so a new game starts each day
   const [guesses, setGuesses] = usePersistentState(
     `wordle-guesses-${dictName}-${todayKey}`,
-    []
+    emptyGuessDefault
   );
   const [history, setHistory] = usePersistentState(
     `wordle-history-${dictName}`,
-    {}
+    historyDefault
   );
   const [streak, setStreak] = usePersistentState(
     `wordle-streak-${dictName}`,
-    { current: 0, max: 0 }
+    streakDefault
   );
   const defaultStats = useMemo(
     () => ({
@@ -105,13 +119,27 @@ const Wordle = () => {
 
   const isSolved = guesses.some((g) => g.guess === solution);
   const isGameOver = isSolved || guesses.length === 6;
+  const puzzleNumber = useMemo(() => {
+    const diff = Math.floor((solutionDate.getTime() - basePuzzleDate.getTime()) / 86400000);
+    return diff < 0 ? 0 : diff;
+  }, [solutionDate]);
+
+  useEffect(() => {
+    const syncKey = () => {
+      const current = getCurrentDayKey();
+      setTodayKey((prev) => (prev === current ? prev : current));
+    };
+    syncKey();
+    const interval = setInterval(syncKey, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     setGuess('');
     setMessage('');
     setAnalysis('');
     setRevealMap({});
-  }, [dictName]);
+  }, [dictName, todayKey]);
 
   const colors = colorBlind
     ? {
@@ -203,8 +231,7 @@ const Wordle = () => {
     );
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const commitGuess = () => {
     if (isGameOver) return;
     const upper = guess.toUpperCase();
     if (upper.length !== 5) return;
@@ -297,14 +324,52 @@ const Wordle = () => {
     }
   };
 
-  const share = () => {
+  const share = async () => {
     const mosaic = buildResultMosaic(
       guesses.map((g) => g.result),
       colorBlind
     );
-    const text = `Wordle ${isSolved ? guesses.length : 'X'}/6\n${mosaic}`;
-    navigator.clipboard.writeText(text);
-    setMessage('Copied results to clipboard!');
+    const attempts = isSolved ? guesses.length : 'X';
+    const headerParts = ['Wordle'];
+    if (Number.isFinite(puzzleNumber)) {
+      headerParts.push(String(puzzleNumber));
+    }
+    headerParts.push(`${attempts}/6${hardMode ? '*' : ''}`);
+    const text = `${headerParts.join(' ')}\n${mosaic}`;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        setMessage('Copied results to clipboard!');
+      } else {
+        throw new Error('Clipboard unavailable');
+      }
+    } catch (err) {
+      setMessage('Unable to copy results automatically.');
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    commitGuess();
+  };
+
+  const handleVirtualKey = (key) => {
+    if (isGameOver) return;
+    if (message) setMessage('');
+    if (key === 'ENTER') {
+      commitGuess();
+      return;
+    }
+    if (key === 'BACK') {
+      setGuess((prev) => prev.slice(0, -1));
+      return;
+    }
+    if (/^[A-Z]$/.test(key)) {
+      setGuess((prev) => {
+        if (prev.length >= 5) return prev;
+        return `${prev}${key}`;
+      });
+    }
   };
 
   useEffect(() => {
@@ -382,47 +447,82 @@ const Wordle = () => {
     );
   };
 
-  const keyboardRows = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
+  const keyboardRows = [
+    ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+    ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+    ['ENTER', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'BACK'],
+  ];
   const renderKey = (ch) => {
     const status = letterHints[ch];
+    const isAction = ch === 'ENTER' || ch === 'BACK';
+    const display = ch === 'BACK' ? '⌫' : ch;
     let classes =
-      'w-6 h-10 md:w-8 md:h-10 flex items-center justify-center rounded font-bold text-sm';
-    if (status) {
-      classes += ` ${keyColors[status]} text-white`;
+      'h-10 md:h-12 flex items-center justify-center rounded font-bold text-sm focus:outline-none focus:ring-2 focus:ring-white/70';
+    if (isAction) {
+      classes += ' px-3 md:px-4 bg-gray-600 text-white';
+    } else if (status) {
+      classes += ` w-6 md:w-8 ${keyColors[status]} text-white`;
     } else {
-      classes += ' bg-gray-600';
+      classes += ' w-6 md:w-8 bg-gray-600 text-white';
     }
+    const ariaLabel =
+      ch === 'ENTER'
+        ? 'Enter key'
+        : ch === 'BACK'
+        ? 'Backspace key'
+        : `${ch} key${status ? ` (${status})` : ''}`;
     return (
-      <div key={ch} className={classes} aria-label={`${ch} ${status || ''}`.trim()}>
-        {ch}
-      </div>
+      <button
+        key={ch}
+        type="button"
+        onClick={() => handleVirtualKey(ch)}
+        className={classes}
+        aria-label={ariaLabel}
+      >
+        {display}
+      </button>
     );
   };
+
+  const colorBlindId = 'wordle-colorblind-toggle';
+  const hardModeId = 'wordle-hardmode-toggle';
+  const dictSelectId = 'wordle-dictionary-select';
+  const colorBlindLabelId = 'wordle-colorblind-label';
+  const hardModeLabelId = 'wordle-hardmode-label';
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 space-y-4 overflow-y-auto">
       <h1 className="text-xl font-bold">Wordle</h1>
 
       <div className="flex space-x-4">
-        <label className="flex items-center space-x-1 text-sm">
+        <div className="flex items-center space-x-1 text-sm">
           <input
+            id={colorBlindId}
             type="checkbox"
             checked={colorBlind}
             onChange={() => setColorBlind(!colorBlind)}
+            aria-labelledby={colorBlindLabelId}
           />
-          <span>Color Blind</span>
-        </label>
-        <label className="flex items-center space-x-1 text-sm">
+          <label id={colorBlindLabelId} htmlFor={colorBlindId}>
+            Color Blind
+          </label>
+        </div>
+        <div className="flex items-center space-x-1 text-sm">
           <input
+            id={hardModeId}
             type="checkbox"
             checked={hardMode}
             onChange={() => setHardMode(!hardMode)}
+            aria-labelledby={hardModeLabelId}
           />
-          <span>Hard Mode</span>
-        </label>
-        <label className="flex items-center space-x-1 text-sm">
-          <span>Word Pack</span>
+          <label id={hardModeLabelId} htmlFor={hardModeId}>
+            Hard Mode
+          </label>
+        </div>
+        <div className="flex items-center space-x-1 text-sm">
+          <label htmlFor={dictSelectId}>Word Pack</label>
           <select
+            id={dictSelectId}
             className="text-black text-sm"
             value={dictName}
             onChange={(e) => setDictName(e.target.value)}
@@ -433,7 +533,7 @@ const Wordle = () => {
               </option>
             ))}
           </select>
-        </label>
+        </div>
       </div>
 
       <div className="grid grid-rows-6 gap-1" role="grid" aria-label="Wordle board">
@@ -445,9 +545,9 @@ const Wordle = () => {
       </div>
 
       <div className="space-y-1" aria-label="Keyboard">
-        {keyboardRows.map((row) => (
-          <div key={row} className="flex justify-center space-x-1">
-            {row.split('').map((ch) => renderKey(ch))}
+        {keyboardRows.map((row, idx) => (
+          <div key={idx} className="flex justify-center space-x-1">
+            {row.map((ch) => renderKey(ch))}
           </div>
         ))}
       </div>
@@ -461,6 +561,7 @@ const Wordle = () => {
             onChange={(e) => setGuess(e.target.value.toUpperCase())}
             className="w-32 p-2 text-black text-center uppercase"
             placeholder="Guess"
+            aria-label="Guess word"
           />
           <button
             type="submit"
