@@ -77,6 +77,8 @@ const resolvedBuildId = sanitizeBuildId(rawBuildId);
 
 if (resolvedBuildId) {
   process.env.NEXT_PUBLIC_BUILD_ID = resolvedBuildId;
+  process.env.SENTRY_RELEASE = resolvedBuildId;
+  process.env.NEXT_PUBLIC_SENTRY_RELEASE = resolvedBuildId;
 }
 
 // Prefix Workbox-managed caches with the build identifier so new deployments
@@ -207,6 +209,7 @@ module.exports = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
     webpack: configureWebpack,
+    productionBrowserSourceMaps: true,
 
     // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
     eslint: {

@@ -33,6 +33,7 @@
     "@emailjs/browser": "^3.10.0",
     "@monaco-editor/react": "^4.7.0",
     "@mozilla/readability": "^0.6.0",
+    "@sentry/nextjs": "^10.19.0",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.76.0",
     "@vercel/analytics": "^1.5.0",

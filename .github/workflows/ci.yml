@@ -66,6 +66,20 @@ jobs:
           cache: yarn
       - run: yarn install --immutable --immutable-cache
       - run: yarn dedupe --check
+      - run: yarn build
+      - name: Upload Sentry source maps
+        if: ${{ secrets.SENTRY_AUTH_TOKEN != '' && secrets.SENTRY_ORG != '' && secrets.SENTRY_PROJECT != '' }}
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_RELEASE: ${{ github.sha }}
+        run: |
+          if ! npx sentry-cli releases info "$SENTRY_RELEASE" >/dev/null 2>&1; then
+            npx sentry-cli releases new "$SENTRY_RELEASE"
+          fi
+          npx sentry-cli releases files "$SENTRY_RELEASE" upload-sourcemaps .next --url-prefix "~/_next" --rewrite
+          npx sentry-cli releases finalize "$SENTRY_RELEASE"
       - run: npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel build --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
