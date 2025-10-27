@@ -99,35 +99,35 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   }, [handleKey]);
 
   return (
-    <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white select-none">
-      <div className="flex items-center justify-between w-full bg-ub-warm-grey bg-opacity-40 text-sm">
+    <div className="w-full h-full flex flex-col bg-kali-surface text-kali-text select-none">
+      <div className="flex items-center justify-between w-full bg-kali-secondary/80 text-sm">
         <span className="font-bold ml-2">Trash</span>
         <div className="flex">
           <button
             onClick={restore}
             disabled={selected === null}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            className="border border-kali-border/60 bg-kali-primary px-3 py-1 my-1 mx-1 rounded text-kali-inverse transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus hover:bg-kali-primary/90 disabled:opacity-50"
           >
             Restore
           </button>
           <button
             onClick={restoreAll}
             disabled={items.length === 0}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            className="border border-kali-border/60 bg-kali-primary px-3 py-1 my-1 mx-1 rounded text-kali-inverse transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus hover:bg-kali-primary/90 disabled:opacity-50"
           >
             Restore All
           </button>
           <button
             onClick={remove}
             disabled={selected === null}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            className="border border-kali-border/60 bg-kali-primary px-3 py-1 my-1 mx-1 rounded text-kali-inverse transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus hover:bg-kali-primary/90 disabled:opacity-50"
           >
             Delete
           </button>
           <button
             onClick={empty}
             disabled={items.length === 0}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            className="border border-kali-border/60 bg-kali-primary px-3 py-1 my-1 mx-1 rounded text-kali-inverse transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus hover:bg-kali-primary/90 disabled:opacity-50"
           >
             Empty
           </button>
@@ -140,7 +140,11 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
             key={item.closedAt}
             tabIndex={0}
             onClick={() => setSelected(idx)}
-            className={`m-2 border p-1 w-32 cursor-pointer ${selected === idx ? 'bg-ub-drk-abrgn' : ''}`}
+            className={`m-2 w-32 cursor-pointer rounded border p-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
+              selected === idx
+                ? 'border-kali-control bg-kali-control/20 text-kali-text shadow-[0_0_0_1px_rgba(15,148,210,0.35)]'
+                : 'border-kali-border/40 hover:border-kali-control/60 hover:bg-kali-muted/40'
+            }`}
           >
             {item.image ? (
               <img src={item.image} alt={item.title} className="h-20 w-full object-cover" />
