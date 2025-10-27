@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import { create, all } from 'mathjs';
+import { create, all } from 'mathjs/number';
 
 const math = create(all);
 
