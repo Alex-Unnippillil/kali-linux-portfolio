@@ -1,4 +1,6 @@
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+<svg role="img" aria-labelledby="icon-tictactoesvg-title" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <title id="icon-tictactoesvg-title">Tictactoe</title>
+
   <rect width="64" height="64" fill="#2e3436"/>
   <line x1="21" y1="8" x2="21" y2="56" stroke="#ffffff" stroke-width="4"/>
   <line x1="43" y1="8" x2="43" y2="56" stroke="#ffffff" stroke-width="4"/>

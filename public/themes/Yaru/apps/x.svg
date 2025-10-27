@@ -1,0 +1,5 @@
+<svg role="img" aria-labelledby="icon-x-title" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <title id="icon-x-title">X</title>
+  <rect x="8" y="8" width="48" height="48" rx="12" fill="#0f172a" />
+  <path d="M20 20h6l8 10 8-10h6l-11 14 11 14h-6l-8-10-8 10h-6l11-14z" fill="#f8fafc" />
+</svg>
