@@ -23,7 +23,7 @@ function ControlFlowGraph({ blocks, selected, onSelect, prefersReducedMotion }) 
       role="img"
       aria-label="Control flow graph"
       viewBox="0 0 300 120"
-      className="w-full h-full bg-black"
+      className="w-full h-full bg-kali-dark"
     >
       {blocks.map((b) =>
         b.edges.map((e) => {
@@ -48,8 +48,10 @@ function ControlFlowGraph({ blocks, selected, onSelect, prefersReducedMotion }) 
             width={60}
             height={40}
             className={`${
-              selected === b.id ? 'fill-yellow-600' : 'fill-gray-700'
-            } stroke-gray-400 ${
+              selected === b.id
+                ? 'fill-yellow-600'
+                : 'fill-[var(--color-muted)]'
+            } stroke-[var(--color-border)] ${
               prefersReducedMotion ? '' : 'transition-colors duration-300'
             }`}
           />
@@ -244,32 +246,33 @@ export default function GhidraApp() {
   if (engine === 'capstone') {
     return (
       <div
-        className="w-full h-full flex flex-col bg-gray-900 text-gray-100"
+        className="w-full h-full flex flex-col bg-kali-surface text-kali-text"
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
       >
         <div className="p-2 flex space-x-2">
           <button
             onClick={switchEngine}
-            className="px-2 py-1 bg-gray-700 rounded"
+            className="px-2 py-1 rounded bg-kali-accent text-white transition-colors hover:bg-kali-accent/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
           >
             Use Ghidra
           </button>
           <select
             value={arch}
             onChange={(e) => setArch(e.target.value)}
-            className="text-black rounded"
+            aria-label="Select architecture"
+            className="rounded border border-kali-border bg-kali-dark text-kali-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
           >
             <option value="x86">x86</option>
             <option value="arm">ARM</option>
           </select>
         </div>
         {instructions.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center m-2 border-2 border-dashed border-gray-600">
+          <div className="flex-1 flex items-center justify-center m-2 border-2 border-dashed border-kali-border/60 bg-kali-dark/60">
             Drop a binary file here
           </div>
         ) : (
-          <pre className="flex-1 overflow-auto p-2 whitespace-pre">
+          <pre className="flex-1 overflow-auto p-2 whitespace-pre bg-kali-dark/80 text-kali-text">
             {instructions
               .map(
                 (i) =>
@@ -291,29 +294,35 @@ export default function GhidraApp() {
   const filteredStrings = strings.filter((s) =>
     s.value.toLowerCase().includes(stringQuery.toLowerCase())
   );
+  const symbolSearchId = 'ghidra-symbol-search';
+  const stringSearchId = 'ghidra-string-search';
+  const functionNotesId = 'ghidra-function-notes';
+  const stringNotesId = 'ghidra-string-notes';
 
   return (
-    <div className="w-full h-full flex flex-col bg-gray-900 text-gray-100">
+    <div className="w-full h-full flex flex-col bg-kali-surface text-kali-text">
       <div className="p-2">
         <button
           onClick={switchEngine}
-          className="px-2 py-1 bg-gray-700 rounded"
+          className="px-2 py-1 rounded bg-kali-accent text-white transition-colors hover:bg-kali-accent/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
         >
           Use Capstone
         </button>
       </div>
-      <div className="p-2 border-t border-gray-700">
+      <div className="p-2 border-t border-kali-border">
         <ImportAnnotate />
       </div>
       <div className="grid flex-1 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-        <div className="border-b md:border-b-0 md:border-r border-gray-700 overflow-auto min-h-0 last:border-b-0 md:last:border-r-0">
+        <div className="border-b md:border-b-0 md:border-r border-kali-border overflow-auto min-h-0 last:border-b-0 md:last:border-r-0">
           <div className="p-2">
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search symbols"
-              className="w-full mb-2 p-1 rounded text-black"
+              id={symbolSearchId}
+              aria-label="Search symbols"
+              className="w-full mb-2 p-1 rounded border border-kali-border bg-kali-dark text-kali-text placeholder:text-kali-text/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             />
           </div>
           {query ? (
@@ -333,7 +342,7 @@ export default function GhidraApp() {
             <FunctionTree functions={functions} onSelect={setSelected} selected={selected} />
           )}
         </div>
-        <div className="border-b md:border-b-0 md:border-r border-gray-700 min-h-0 last:border-b-0 md:last:border-r-0">
+        <div className="border-b md:border-b-0 md:border-r border-kali-border min-h-0 last:border-b-0 md:last:border-r-0">
           <ControlFlowGraph
             blocks={currentFunc.blocks}
             selected={null}
@@ -345,7 +354,7 @@ export default function GhidraApp() {
         <pre
           ref={decompileRef}
           aria-label="Decompiled code"
-          className="overflow-auto p-2 whitespace-pre-wrap border-b md:border-b-0 md:border-r border-gray-700 min-h-0 last:border-b-0 md:last:border-r-0"
+          className="overflow-auto p-2 whitespace-pre-wrap border-b md:border-b-0 md:border-r border-kali-border min-h-0 last:border-b-0 md:last:border-r-0 bg-kali-dark/80"
         >
           {currentFunc.code.map((line, idx) => {
             const m = line.match(/call\s+(\w+)/);
@@ -355,7 +364,7 @@ export default function GhidraApp() {
               codeElem = (
                 <div
                   onClick={() => setSelected(target)}
-                  className="cursor-pointer text-blue-400 hover:underline"
+                  className="cursor-pointer text-kali-accent hover:underline"
                 >
                   {line}
                 </div>
@@ -379,7 +388,8 @@ export default function GhidraApp() {
                     })
                   }
                   placeholder="note"
-                  className="ml-2 w-24 text-xs text-black rounded"
+                  aria-label={`Note for line ${idx + 1}`}
+                  className="ml-2 w-24 text-xs rounded border border-kali-border bg-kali-dark text-kali-text placeholder:text-kali-text/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
                 />
               </div>
             );
@@ -391,7 +401,7 @@ export default function GhidraApp() {
                 <button
                   key={xr}
                   onClick={() => setSelected(xr)}
-                  className="ml-2 underline text-blue-400"
+                  className="ml-2 underline text-kali-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
                 >
                   {xr}
                 </button>
@@ -402,21 +412,21 @@ export default function GhidraApp() {
         <pre
           ref={hexRef}
           aria-label="Hexadecimal representation"
-          className="overflow-auto p-2 whitespace-pre-wrap border-b md:border-b-0 border-gray-700 min-h-0 last:border-b-0 md:last:border-r-0"
+          className="overflow-auto p-2 whitespace-pre-wrap border-b md:border-b-0 border-kali-border min-h-0 last:border-b-0 md:last:border-r-0 bg-kali-dark/80"
         >
           {hexMap[selected] || ''}
         </pre>
       </div>
       <PseudoDisasmViewer />
-      <div className="h-48 border-t border-gray-700">
+      <div className="h-48 border-t border-kali-border">
         <CallGraph
           func={currentFunc}
           callers={xrefs[selected] || []}
           onSelect={setSelected}
         />
       </div>
-      <div className="border-t border-gray-700 p-2">
-        <label className="block text-sm mb-1">
+      <div className="border-t border-kali-border p-2">
+        <label className="block text-sm mb-1" htmlFor={functionNotesId}>
           Notes for {selected || 'function'}
         </label>
         <textarea
@@ -424,17 +434,21 @@ export default function GhidraApp() {
           onChange={(e) =>
             setFuncNotes({ ...funcNotes, [selected]: e.target.value })
           }
-          className="w-full h-16 p-1 rounded text-black"
+          id={functionNotesId}
+          aria-label="Notes for selected function"
+          className="w-full h-16 p-1 rounded border border-kali-border bg-kali-dark text-kali-text placeholder:text-kali-text/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
         />
       </div>
-      <div className="grid border-t border-gray-700 grid-cols-1 md:grid-cols-2 md:h-40">
-        <div className="overflow-auto p-2 border-b md:border-b-0 md:border-r border-gray-700 min-h-0">
+      <div className="grid border-t border-kali-border grid-cols-1 md:grid-cols-2 md:h-40">
+        <div className="overflow-auto p-2 border-b md:border-b-0 md:border-r border-kali-border min-h-0">
           <input
             type="text"
             value={stringQuery}
             onChange={(e) => setStringQuery(e.target.value)}
             placeholder="Search strings"
-            className="w-full mb-2 p-1 rounded text-black"
+            id={stringSearchId}
+            aria-label="Search strings"
+            className="w-full mb-2 p-1 rounded border border-kali-border bg-kali-dark text-kali-text placeholder:text-kali-text/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
           />
           <ul className="text-sm space-y-1">
             {filteredStrings.map((s) => (
@@ -452,7 +466,7 @@ export default function GhidraApp() {
           </ul>
         </div>
         <div className="p-2">
-          <label className="block text-sm mb-1">
+          <label className="block text-sm mb-1" htmlFor={stringNotesId}>
             Notes for {
               strings.find((s) => s.id === selectedString)?.value || 'string'
             }
@@ -465,7 +479,9 @@ export default function GhidraApp() {
                 [selectedString]: e.target.value,
               })
             }
-            className="w-full h-full p-1 rounded text-black"
+            id={stringNotesId}
+            aria-label="Notes for selected string"
+            className="w-full h-full p-1 rounded border border-kali-border bg-kali-dark text-kali-text placeholder:text-kali-text/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
           />
         </div>
       </div>
