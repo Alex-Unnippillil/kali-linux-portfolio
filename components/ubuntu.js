@@ -6,6 +6,7 @@ import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import Layout from './desktop/Layout';
+import WindowManagerProvider from './desktop/WindowManagerProvider';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
 
@@ -211,7 +212,8 @@ export default class Ubuntu extends Component {
 
 	render() {
         return (
-                <Layout id="monitor-screen">
+                <WindowManagerProvider>
+                        <Layout id="monitor-screen">
                                 <LockScreen
                                         isLocked={this.state.screen_locked}
                                         bgImgName={this.state.bg_image_name}
@@ -224,7 +226,8 @@ export default class Ubuntu extends Component {
 				/>
                                 <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
                                 <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
-                </Layout>
+                        </Layout>
+                </WindowManagerProvider>
         );
 	}
 }
