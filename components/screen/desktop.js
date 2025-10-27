@@ -4495,6 +4495,8 @@ export class Desktop extends Component {
             <div
                 className="absolute inset-0"
                 aria-hidden={blockIcons ? 'true' : 'false'}
+                role="region"
+                aria-label="Desktop icons"
                 style={{
                     pointerEvents: 'auto',
                     zIndex: containerZIndex,
