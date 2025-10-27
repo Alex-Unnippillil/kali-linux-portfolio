@@ -11,6 +11,11 @@ interface ModalProps {
      * Defaults to the Next.js root (`__next`).
      */
     overlayRoot?: string | HTMLElement;
+    /**
+     * Additional props that should be applied to the dialog element.
+     * Useful for labelling or styling the modal from the caller.
+     */
+    dialogProps?: React.HTMLAttributes<HTMLDivElement>;
 }
 
 const FOCUSABLE_SELECTORS = [
@@ -27,11 +32,12 @@ const FOCUSABLE_SELECTORS = [
     '[contenteditable]'
 ].join(',');
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot, dialogProps }) => {
     const modalRef = useRef<HTMLDivElement>(null);
     const triggerRef = useRef<HTMLElement | null>(null);
     const portalRef = useRef<HTMLDivElement | null>(null);
     const inertRootRef = useRef<HTMLElement | null>(null);
+    const { onKeyDown: userOnKeyDown, ...restDialogProps } = dialogProps || {};
 
     if (!portalRef.current && typeof document !== 'undefined') {
         const el = document.createElement('div');
@@ -50,20 +56,24 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
     }, [overlayRoot]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-        if (e.key !== 'Tab') return;
-        const elements = modalRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS);
-        if (!elements || elements.length === 0) return;
-        const first = elements[0];
-        const last = elements[elements.length - 1];
-        const current = document.activeElement as HTMLElement;
-        if (!e.shiftKey && current === last) {
-            e.preventDefault();
-            first.focus();
-        } else if (e.shiftKey && current === first) {
-            e.preventDefault();
-            last.focus();
+        if (e.key === 'Tab') {
+            const elements = modalRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS);
+            if (!elements || elements.length === 0) return;
+            const first = elements[0];
+            const last = elements[elements.length - 1];
+            const current = document.activeElement as HTMLElement;
+            if (!e.shiftKey && current === last) {
+                e.preventDefault();
+                first.focus();
+            } else if (e.shiftKey && current === first) {
+                e.preventDefault();
+                last.focus();
+            }
         }
-    }, []);
+        if (userOnKeyDown) {
+            userOnKeyDown(e);
+        }
+    }, [userOnKeyDown]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -116,6 +126,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
             ref={modalRef}
             onKeyDown={handleKeyDown}
             tabIndex={-1}
+            {...restDialogProps}
         >
             {children}
         </div>,
