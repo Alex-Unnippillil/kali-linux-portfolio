@@ -92,56 +92,140 @@ export const isSoft = (hand) => {
   return aces > 0 && total <= 21;
 };
 
+const DEALER_VALUES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+
+const fillActions = (code) => {
+  const entries = {};
+  DEALER_VALUES.forEach((v) => {
+    entries[v] = code;
+  });
+  return entries;
+};
+
+const HARD_CHART = {
+  4: fillActions('H'),
+  5: fillActions('H'),
+  6: fillActions('H'),
+  7: fillActions('H'),
+  8: fillActions('H'),
+  9: { ...fillActions('H'), 3: 'Dh', 4: 'Dh', 5: 'Dh', 6: 'Dh' },
+  10: { ...fillActions('H'), 2: 'Dh', 3: 'Dh', 4: 'Dh', 5: 'Dh', 6: 'Dh', 7: 'Dh', 8: 'Dh', 9: 'Dh' },
+  11: { ...fillActions('H'), 2: 'Dh', 3: 'Dh', 4: 'Dh', 5: 'Dh', 6: 'Dh', 7: 'Dh', 8: 'Dh', 9: 'Dh', 10: 'Dh' },
+  12: { ...fillActions('H'), 4: 'S', 5: 'S', 6: 'S' },
+  13: { ...fillActions('H'), 2: 'S', 3: 'S', 4: 'S', 5: 'S', 6: 'S' },
+  14: { ...fillActions('H'), 2: 'S', 3: 'S', 4: 'S', 5: 'S', 6: 'S' },
+  15: { ...fillActions('H'), 2: 'S', 3: 'S', 4: 'S', 5: 'S', 6: 'S', 10: 'Rh' },
+  16: { ...fillActions('H'), 2: 'S', 3: 'S', 4: 'S', 5: 'S', 6: 'S', 9: 'Rh', 10: 'Rh', 11: 'Rh' },
+  17: fillActions('S'),
+  18: fillActions('S'),
+  19: fillActions('S'),
+  20: fillActions('S'),
+  21: fillActions('S'),
+};
+
+const SOFT_CHART = {
+  13: { ...fillActions('H'), 5: 'Dh', 6: 'Dh' },
+  14: { ...fillActions('H'), 5: 'Dh', 6: 'Dh' },
+  15: { ...fillActions('H'), 4: 'Dh', 5: 'Dh', 6: 'Dh' },
+  16: { ...fillActions('H'), 4: 'Dh', 5: 'Dh', 6: 'Dh' },
+  17: { ...fillActions('H'), 3: 'Dh', 4: 'Dh', 5: 'Dh', 6: 'Dh' },
+  18: {
+    ...fillActions('H'),
+    2: 'S',
+    3: 'Ds',
+    4: 'Ds',
+    5: 'Ds',
+    6: 'Ds',
+    7: 'S',
+    8: 'S',
+  },
+  19: { ...fillActions('S'), 6: 'Ds' },
+  20: fillActions('S'),
+  21: fillActions('S'),
+};
+
+const PAIR_CHART = {
+  2: { ...fillActions('H'), 2: 'P', 3: 'P', 4: 'P', 5: 'P', 6: 'P', 7: 'P' },
+  3: { ...fillActions('H'), 2: 'P', 3: 'P', 4: 'P', 5: 'P', 6: 'P', 7: 'P' },
+  4: { ...fillActions('H'), 5: 'P', 6: 'P' },
+  5: { ...fillActions('H'), 2: 'Dh', 3: 'Dh', 4: 'Dh', 5: 'Dh', 6: 'Dh', 7: 'Dh', 8: 'Dh', 9: 'Dh' },
+  6: { ...fillActions('H'), 2: 'P', 3: 'P', 4: 'P', 5: 'P', 6: 'P' },
+  7: { ...fillActions('H'), 2: 'P', 3: 'P', 4: 'P', 5: 'P', 6: 'P', 7: 'P' },
+  8: fillActions('P'),
+  9: { ...fillActions('S'), 2: 'P', 3: 'P', 4: 'P', 5: 'P', 6: 'P', 8: 'P', 9: 'P' },
+  10: fillActions('S'),
+  11: fillActions('P'),
+};
+
+const resolveAction = (code, { canDouble, canSplit, canSurrender }) => {
+  switch (code) {
+    case 'H':
+      return 'hit';
+    case 'S':
+      return 'stand';
+    case 'Dh':
+      return canDouble ? 'double' : 'hit';
+    case 'Ds':
+      return canDouble ? 'double' : 'stand';
+    case 'P':
+      return canSplit ? 'split' : 'hit';
+    case 'Rh':
+      return canSurrender ? 'surrender' : 'hit';
+    case 'Rs':
+      return canSurrender ? 'surrender' : 'stand';
+    default:
+      return 'hit';
+  }
+};
+
+const getChartAction = (chart, key, dealerValue) => {
+  const row = chart[key];
+  if (!row) return undefined;
+  return row[dealerValue] ?? row.default;
+};
+
 // Basic strategy for 4-8 decks, dealer stands on soft 17, double after split allowed
 export function basicStrategy(playerCards, dealerUpCard, options = {}) {
   const { canSplit = false, canDouble = false, canSurrender = false } = options;
+  if (!playerCards || playerCards.length === 0 || !dealerUpCard) return 'hit';
   const up = dealerUpCard.value === 'A' ? 11 : cardValue(dealerUpCard);
-  const values = playerCards.map((c) => c.value);
   const total = handValue(playerCards);
-  const pair = values.length === 2 && cardValue(playerCards[0]) === cardValue(playerCards[1]);
-  const soft = values.includes('A') && total <= 21;
+  const pair =
+    playerCards.length === 2 && cardValue(playerCards[0]) === cardValue(playerCards[1]);
+  const soft = isSoft(playerCards);
 
-  if (canSurrender) {
-    if (total === 16 && [9, 10, 11].includes(up)) return 'surrender';
-    if (total === 15 && up === 10) return 'surrender';
+  if (playerCards.length === 2 && !soft && !pair) {
+    const surrenderCode = getChartAction(HARD_CHART, total, up);
+    if (surrenderCode && surrenderCode.startsWith('R')) {
+      const surrenderAction = resolveAction(surrenderCode, { canDouble, canSplit, canSurrender });
+      if (surrenderAction === 'surrender') {
+        return surrenderAction;
+      }
+    }
   }
 
-  if (pair && canSplit) {
-    const v = cardValue(playerCards[0]);
-    if ([8, 11].includes(v)) return 'split'; // 8s or Aces
-    if ([2, 3, 7].includes(v) && up >= 2 && up <= 7) return 'split';
-    if (v === 6 && up >= 2 && up <= 6) return 'split';
-    if (v === 9 && [2, 3, 4, 5, 6, 8, 9].includes(up)) return 'split';
-    if (v === 4 && [5, 6].includes(up)) return 'split';
-    if (v === 2 && [2, 3, 4, 5, 6, 7].includes(up)) return 'split';
-    if (v === 3 && [2, 3, 4, 5, 6, 7].includes(up)) return 'split';
-    if (v === 7 && [2, 3, 4, 5, 6, 7].includes(up)) return 'split';
-    if (v === 6 && [2, 3, 4, 5, 6].includes(up)) return 'split';
-    if (v === 5) {
-      // treat as hard 10
-      if (canDouble && up >= 2 && up <= 9) return 'double';
-      return 'hit';
+  if (pair) {
+    const value = cardValue(playerCards[0]);
+    const code = getChartAction(PAIR_CHART, value, up);
+    if (code === 'P') {
+      if (canSplit) {
+        return 'split';
+      }
+      // otherwise fall through to hard/soft evaluation
+    } else if (code) {
+      return resolveAction(code, { canDouble, canSplit, canSurrender });
     }
   }
 
   if (soft) {
-    if (total <= 17) return canDouble && up >= 3 && up <= 6 ? 'double' : 'hit';
-    if (total === 18) {
-      if (canDouble && up >= 3 && up <= 6) return 'double';
-      if (up >= 9 || up === 11) return 'hit';
-      return 'stand';
+    const code = getChartAction(SOFT_CHART, total, up);
+    if (code) {
+      return resolveAction(code, { canDouble, canSplit, canSurrender });
     }
-    return 'stand';
   }
 
-  // hard totals
-  if (total <= 8) return 'hit';
-  if (total === 9) return canDouble && up >= 3 && up <= 6 ? 'double' : 'hit';
-  if (total === 10) return canDouble && up >= 2 && up <= 9 ? 'double' : 'hit';
-  if (total === 11) return canDouble && up !== 11 ? 'double' : 'hit';
-  if (total === 12) return up >= 4 && up <= 6 ? 'stand' : 'hit';
-  if (total >= 13 && total <= 16) return up >= 2 && up <= 6 ? 'stand' : 'hit';
-  return 'stand';
+  const code = getChartAction(HARD_CHART, total, up) || 'H';
+  return resolveAction(code, { canDouble, canSplit, canSurrender });
 }
 
 export class BlackjackGame {
@@ -209,6 +293,7 @@ export class BlackjackGame {
 
   double() {
     const hand = this.currentHand();
+    if (hand.cards.length !== 2 || hand.finished) throw new Error('Cannot double');
     if (this.bankroll < hand.bet) throw new Error('Not enough bankroll');
     this.bankroll -= hand.bet;
     hand.bet *= 2;
@@ -221,6 +306,7 @@ export class BlackjackGame {
 
   split() {
     const hand = this.currentHand();
+    if (hand.cards.length !== 2 || hand.finished) throw new Error('Cannot split');
     const card1 = hand.cards[0];
     const card2 = hand.cards[1];
     if (cardValue(card1) !== cardValue(card2)) throw new Error('Cannot split');

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useReducer } from 'react';
 import ReactGA from 'react-ga4';
-import { BlackjackGame, handValue, cardValue, Shoe } from './engine';
+import { BlackjackGame, handValue, cardValue, Shoe, isSoft } from './engine';
 import { recommendAction } from '../../../games/blackjack/coach';
 
 const CHIP_VALUES = [1, 5, 25, 100];
@@ -49,6 +49,48 @@ const Card = ({ card, faceDown, peeking }) => {
       <div className="card-face card-back" aria-hidden="true">?</div>
     </div>
   );
+};
+
+const ACTION_LABELS = {
+  hit: 'Hit',
+  stand: 'Stand',
+  double: 'Double Down',
+  split: 'Split',
+  surrender: 'Surrender',
+};
+
+const FACE_LABELS = {
+  A: 'Ace',
+  K: 'King',
+  Q: 'Queen',
+  J: 'Jack',
+};
+
+const pluralFace = (value) => {
+  if (value === 'A') return 'Aces';
+  if (value === 'K') return 'Kings';
+  if (value === 'Q') return 'Queens';
+  if (value === 'J') return 'Jacks';
+  return `${value}s`;
+};
+
+const formatHintOverlay = (hand, dealerCard, action) => {
+  if (!hand || !dealerCard || !action) return null;
+  const total = handValue(hand.cards);
+  const pair = hand.cards.length === 2 && cardValue(hand.cards[0]) === cardValue(hand.cards[1]);
+  const softHand = isSoft(hand.cards);
+  const actionLabel = ACTION_LABELS[action] || action.toUpperCase();
+  const dealerName = FACE_LABELS[dealerCard.value] || dealerCard.value;
+  const dealerLabel = `Dealer ${dealerName}`;
+  let handLabel = `${softHand ? 'Soft' : 'Hard'} ${total}`;
+  if (pair) {
+    const face = hand.cards[0].value;
+    handLabel = `Pair of ${pluralFace(face)}`;
+  }
+  return {
+    action: actionLabel,
+    context: `${handLabel} vs ${dealerLabel}`,
+  };
 };
 
 const BetChips = ({ amount }) => {
@@ -327,14 +369,19 @@ const Blackjack = () => {
         {handValue(hand.cards)}
       </div>
       {overlay && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded border border-[color:color-mix(in_srgb,var(--kali-control)_35%,var(--kali-border))] bg-[var(--kali-control-overlay)] px-2 text-xs font-semibold text-[color:var(--kali-control)] shadow-[0_6px_20px_rgba(9,15,23,0.55)]">
-          {overlay.toUpperCase()}
+        <div className="absolute -top-3 left-1/2 flex -translate-x-1/2 flex-col items-center gap-0.5 rounded border border-[color:color-mix(in_srgb,var(--kali-control)_35%,var(--kali-border))] bg-[var(--kali-control-overlay)] px-2 py-1 text-[10px] text-[color:var(--kali-control)] shadow-[0_6px_20px_rgba(9,15,23,0.55)]">
+          <span className="uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-control)_82%,transparent)]">Basic Strategy</span>
+          <span className="text-xs font-semibold leading-tight text-[color:var(--kali-control)]">{overlay.action}</span>
+          <span className="text-[color:color-mix(in_srgb,var(--kali-control)_75%,transparent)]">{overlay.context}</span>
         </div>
       )}
     </div>
   );
 
   const rec = showHints ? recommended() : '';
+  const currentHand = playerHands[current];
+  const dealerCard = dealerHand[0];
+  const hintOverlay = showHints ? formatHintOverlay(currentHand, dealerCard, rec) : null;
 
   const actionState = (hand) => ({
     hit: !hand.finished,
@@ -535,7 +582,7 @@ const Blackjack = () => {
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <BetChips amount={hand.bet} />
-            {renderHand(hand, false, true, false, idx === current && showHints ? rec : null)}
+            {renderHand(hand, false, true, false, idx === current ? hintOverlay : null)}
           </div>
           {idx === current && playerHands.length > 0 && (
             <div className="flex w-full flex-wrap items-center justify-center gap-2">
