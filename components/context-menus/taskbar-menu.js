@@ -27,6 +27,7 @@ function TaskbarMenu(props) {
         <div
             id="taskbar-menu"
             role="menu"
+            aria-orientation="vertical"
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}
