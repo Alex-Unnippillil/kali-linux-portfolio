@@ -64,6 +64,7 @@ describe('ClipboardManager', () => {
   let db: MockDb;
   const originalClipboard = navigator.clipboard;
   const originalPermissions = (navigator as any).permissions;
+  const originalExecCommand = document.execCommand;
 
   beforeEach(() => {
     db = createMockDb();
@@ -80,6 +81,7 @@ describe('ClipboardManager', () => {
       value: originalPermissions,
       configurable: true,
     });
+    document.execCommand = originalExecCommand;
   });
 
   it('shows unsupported guidance when clipboard API is missing', async () => {
@@ -94,7 +96,9 @@ describe('ClipboardManager', () => {
 
     render(<ClipboardManager />);
 
-    expect(await screen.findByText(/Clipboard API not supported/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Clipboard API not supported\. Fallback copy is available for manual actions./i)
+    ).toBeInTheDocument();
     expect(screen.getByTestId('clipboard-read-status').textContent).toBe('Not supported');
     expect(screen.getByTestId('clipboard-write-status').textContent).toBe('Not supported');
   });
@@ -143,5 +147,59 @@ describe('ClipboardManager', () => {
 
     await waitFor(() => expect(clipboard.writeText).toHaveBeenCalledWith('Hello world'));
     expect(await screen.findByText(/Copied to clipboard./i)).toBeInTheDocument();
+  });
+
+  it('uses fallback copy when async clipboard access is unavailable', async () => {
+    const execSpy = jest.fn().mockReturnValue(true);
+    document.execCommand = execSpy as unknown as typeof document.execCommand;
+
+    const clipboard = mockClipboard({
+      readText: jest.fn().mockResolvedValue('Legacy copy'),
+      writeText: undefined as unknown as Clipboard['writeText'],
+    });
+    const query = mockPermissions();
+    query.mockResolvedValue({ state: 'granted' });
+
+    render(<ClipboardManager />);
+
+    await waitFor(() => expect(query).toHaveBeenCalledTimes(2));
+
+    document.dispatchEvent(new Event('copy'));
+
+    expect(await screen.findByText('Legacy copy')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Legacy copy'));
+
+    await waitFor(() => expect(execSpy).toHaveBeenCalledWith('copy'));
+    expect(
+      await screen.findByText(/Copied using fallback clipboard support\./i)
+    ).toBeInTheDocument();
+  });
+
+  it('informs the user when fallback copy fails', async () => {
+    const execSpy = jest.fn().mockReturnValue(false);
+    document.execCommand = execSpy as unknown as typeof document.execCommand;
+
+    const clipboard = mockClipboard();
+    clipboard.readText = jest.fn().mockResolvedValue('Failure case');
+    clipboard.writeText = jest.fn().mockRejectedValue(new Error('denied'));
+
+    const query = mockPermissions();
+    query.mockResolvedValue({ state: 'granted' });
+
+    render(<ClipboardManager />);
+
+    await waitFor(() => expect(query).toHaveBeenCalledTimes(2));
+
+    document.dispatchEvent(new Event('copy'));
+
+    expect(await screen.findByText('Failure case')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Failure case'));
+
+    await waitFor(() => expect(execSpy).toHaveBeenCalled());
+    expect(
+      await screen.findByText(/Copy failed\. Use manual copy\/paste shortcuts\./i)
+    ).toBeInTheDocument();
   });
 });

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import emailjs from '@emailjs/browser';
 import { useRouter } from 'next/router';
+import { copyToClipboard } from '../utils/clipboard';
 
 const subjectTemplates = [
   'General Inquiry',
@@ -33,6 +34,7 @@ const InputHub = () => {
   const [status, setStatus] = useState('');
   const [useCaptcha, setUseCaptcha] = useState(false);
   const [emailjsReady, setEmailjsReady] = useState(false);
+  const [copyAnnouncement, setCopyAnnouncement] = useState('');
 
   useEffect(() => {
     const { preset, title, text, url, files } = router.query;
@@ -186,8 +188,97 @@ const InputHub = () => {
     }
   };
 
+  const integrationFields = [
+    {
+      id: 'emailjs-user-id',
+      label: 'EmailJS User ID',
+      value: process.env.NEXT_PUBLIC_USER_ID ?? '',
+      helper: 'Connects the form to your EmailJS account.',
+    },
+    {
+      id: 'emailjs-service-id',
+      label: 'EmailJS Service ID',
+      value: process.env.NEXT_PUBLIC_SERVICE_ID ?? '',
+      helper: 'Identifies the EmailJS service that will send messages.',
+    },
+    {
+      id: 'emailjs-template-id',
+      label: 'EmailJS Template ID',
+      value: process.env.NEXT_PUBLIC_TEMPLATE_ID ?? '',
+      helper: 'Template that formats the outbound email.',
+    },
+    {
+      id: 'recaptcha-site-key',
+      label: 'reCAPTCHA Site Key',
+      value: process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ?? '',
+      helper: 'Optional. Enables bot protection for the contact form.',
+    },
+  ];
+
+  const handleConfigCopy = async (value: string, label: string) => {
+    if (!value) return;
+    const success = await copyToClipboard(value);
+    setCopyAnnouncement(
+      success
+        ? `${label} copied to clipboard.`
+        : `Unable to copy ${label}. Select the value and copy manually.`
+    );
+  };
+
   return (
     <div className="p-4 text-black max-w-md mx-auto">
+      <section className="mb-4 rounded-lg border border-gray-200 bg-white/80 p-4 shadow-sm">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-700">
+          Integration IDs
+        </h2>
+        <p className="mt-1 text-xs text-gray-600">
+          Use these environment values to wire EmailJS and optional reCAPTCHA.
+          Copy each identifier before updating your deployment settings.
+        </p>
+        <ul className="mt-4 space-y-3">
+          {integrationFields.map((field) => {
+            const isConfigured = Boolean(field.value);
+            return (
+              <li
+                key={field.id}
+                className="rounded-md border border-gray-200 bg-white px-3 py-2 shadow-sm"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-700">
+                      {field.label}
+                    </p>
+                    <p className="mt-1 break-all font-mono text-xs text-gray-900" id={`${field.id}-value`}>
+                      {isConfigured ? field.value : 'Not configured'}
+                    </p>
+                    <p className="mt-1 text-[0.65rem] text-gray-500">{field.helper}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className="inline-flex items-center rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                    onClick={() => handleConfigCopy(field.value, field.label)}
+                    disabled={!isConfigured}
+                    aria-disabled={!isConfigured}
+                    aria-describedby={`${field.id}-value`}
+                  >
+                    Copy
+                    <span className="sr-only"> {field.label}</span>
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+        {copyAnnouncement && (
+          <p
+            role="status"
+            aria-live="polite"
+            className="mt-3 text-[0.7rem] text-gray-600"
+          >
+            {copyAnnouncement}
+          </p>
+        )}
+      </section>
       <div className="mb-4">
         <span
           className={`px-2 py-1 text-sm rounded ${
