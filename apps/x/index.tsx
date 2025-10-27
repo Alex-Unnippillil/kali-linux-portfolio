@@ -14,6 +14,7 @@ import { useSettings } from '../../hooks/useSettings';
 import useScheduledTweets, {
   ScheduledTweet,
 } from './state/scheduled';
+import { formatDate } from '@/lib/intl';
 import {
   getNextEmbedTheme,
   type EmbedTheme,
@@ -469,7 +470,7 @@ export default function XTimeline() {
                     }}
                   >
                     <span className="leading-6">
-                      {t.text} - {new Date(t.time).toLocaleString()}
+                      {t.text} - {formatDate(t.time, { dateStyle: 'medium', timeStyle: 'short' })}
                     </span>
                     <button
                       type="button"

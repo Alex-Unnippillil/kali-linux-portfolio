@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { formatCurrency, formatDate } from '../../../lib/intl';
 
 const apiBase = process.env.NEXT_PUBLIC_CURRENCY_API_URL || 'https://api.exchangerate.host/latest';
 const isDemo = !process.env.NEXT_PUBLIC_CURRENCY_API_URL;
@@ -69,17 +70,13 @@ const CurrencyConverter = () => {
       return;
     }
     const converted = parseFloat(amount) * rates[quote];
-    const formatted = new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency: quote,
-    }).format(converted);
+    const formatted = formatCurrency(converted, quote);
     setResult(formatted);
   }, [amount, quote, rates]);
 
   const currencyOptions = [base, ...Object.keys(rates)].sort();
 
-  const formatAmount = (val, curr) =>
-    new Intl.NumberFormat(undefined, { style: 'currency', currency: curr }).format(val);
+  const formatAmount = (val, curr) => formatCurrency(Number(val), curr);
 
   const chartPoints = useMemo(() => {
     if (history.length < 2) return '';
@@ -141,7 +138,9 @@ const CurrencyConverter = () => {
         {result && `${formatAmount(amount, base)} = ${result}`}
       </div>
       {lastUpdated && (
-        <div className="text-xs">Last updated: {new Date(lastUpdated).toLocaleString()}</div>
+        <div className="text-xs">
+          Last updated: {formatDate(lastUpdated, { dateStyle: 'medium', timeStyle: 'short' })}
+        </div>
       )}
       {chartPoints && (
         <svg

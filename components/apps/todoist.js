@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as chrono from 'chrono-node';
 import { RRule } from 'rrule';
 import { parseRecurring } from '../../apps/todoist/utils/recurringParser';
+import { formatDate } from '../../lib/intl';
 
 const STORAGE_KEY = 'portfolio-tasks';
 
@@ -720,7 +721,7 @@ export default function Todoist() {
       days.push({ dateStr, tasks: tasksByDate[dateStr] || [] });
     }
     while (days.length % 7 !== 0) days.push(null);
-    const monthLabel = start.toLocaleString('default', { month: 'long', year: 'numeric' });
+    const monthLabel = formatDate(start, { month: 'long', year: 'numeric' });
     return (
       <div className="flex-1 p-2 overflow-y-auto">
         <div className="flex items-center justify-between mb-2">

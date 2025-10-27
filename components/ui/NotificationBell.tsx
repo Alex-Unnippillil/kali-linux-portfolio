@@ -14,6 +14,7 @@ import {
   NotificationPriority,
 } from '../../hooks/useNotifications';
 import { PRIORITY_ORDER } from '../../utils/notifications/ruleEngine';
+import { createDateFormatter } from '@/lib/intl';
 
 const focusableSelector =
   'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
@@ -190,7 +191,7 @@ const NotificationBell: React.FC = () => {
 
   const timeFormatter = useMemo(
     () =>
-      new Intl.DateTimeFormat(undefined, {
+      createDateFormatter({
         dateStyle: 'short',
         timeStyle: 'short',
       }),

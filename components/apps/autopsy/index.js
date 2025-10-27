@@ -5,6 +5,7 @@ import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
 import demoCase from '../../../apps/autopsy/data/case.json';
+import { formatDate } from '../../../lib/intl';
 
 const escapeFilename = (str = '') =>
   str
@@ -137,14 +138,11 @@ function Timeline({ events, onSelect }) {
         const date = new Date(t);
         let label;
         if (tickMinutes >= 1440) {
-          label = date.toLocaleDateString();
+          label = formatDate(date, { dateStyle: 'medium' });
         } else if (tickMinutes >= 60) {
-          label = date.toLocaleTimeString([], { hour: '2-digit' });
+          label = formatDate(date, { hour: '2-digit' });
         } else {
-          label = date.toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          });
+          label = formatDate(date, { hour: '2-digit', minute: '2-digit' });
         }
         ctx.fillText(label, x + 2, height / 2 + 25);
       }
@@ -286,7 +284,7 @@ function Timeline({ events, onSelect }) {
               <option
                 key={m.day}
                 value={m.idx}
-                label={new Date(m.day).toLocaleDateString()}
+                label={formatDate(m.day, { dateStyle: 'medium' })}
               />
             ))}
           </datalist>
@@ -303,7 +301,7 @@ function Timeline({ events, onSelect }) {
               }}
             >
               <div>
-                {new Date(sorted[hoverIndex].timestamp).toLocaleString()}
+                {formatDate(sorted[hoverIndex].timestamp, { dateStyle: 'medium', timeStyle: 'short' })}
               </div>
               <div>{sorted[hoverIndex].name}</div>
               {sorted[hoverIndex].description && (
@@ -580,7 +578,7 @@ function Autopsy({ initialArtifacts = null }) {
     if (artifacts.length > 0) {
       const a = artifacts[artifacts.length - 1];
       setAnnouncement(
-        `${escapeFilename(a.name)} analyzed at ${new Date(a.timestamp).toLocaleString()}`
+        `${escapeFilename(a.name)} analyzed at ${formatDate(a.timestamp, { dateStyle: 'medium', timeStyle: 'short' })}`
       );
     }
   }, [artifacts]);
@@ -800,7 +798,7 @@ function Autopsy({ initialArtifacts = null }) {
           />
           <div className="text-kali-text/60">{selectedArtifact.type}</div>
           <div className="text-xs">
-            {new Date(selectedArtifact.timestamp).toLocaleString()}
+            {formatDate(selectedArtifact.timestamp, { dateStyle: 'medium', timeStyle: 'short' })}
           </div>
           <div className="text-xs">{selectedArtifact.description}</div>
           <div className="text-xs">Plugin: {selectedArtifact.plugin}</div>

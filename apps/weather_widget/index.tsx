@@ -15,6 +15,7 @@ import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSettings } from '../../hooks/useSettings';
 import demoCity from './demoCity.json';
 import './styles.css';
+import { createDateFormatter, formatDate } from '@/lib/intl';
 
 type Unit = 'metric' | 'imperial';
 
@@ -114,7 +115,8 @@ function formatTime(value: string | null) {
   if (!value) return '—';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const formatted = formatDate(date, { hour: '2-digit', minute: '2-digit' });
+  return formatted === 'Invalid Date' ? '—' : formatted;
 }
 
 function normalizeOpenMeteo(data: any, label: string): WeatherSnapshot {
@@ -385,7 +387,7 @@ export default function WeatherWidget() {
 
   const dayFormatter = useMemo(() => {
     try {
-      return new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+      return createDateFormatter({ weekday: 'short' });
     } catch {
       return null;
     }

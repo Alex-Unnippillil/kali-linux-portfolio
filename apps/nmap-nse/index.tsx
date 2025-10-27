@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import share, { canShare } from '../../utils/share';
+import { formatDate } from '@/lib/intl';
 
 interface Script {
   name: string;
@@ -190,9 +191,9 @@ const NmapNSE: React.FC = () => {
           'Simulated scan in progress. Review live metadata while logs stream in.',
         complete:
           lastRun && lastRun.script === selected?.name
-            ? `Finished at ${new Date(lastRun.timestamp).toLocaleTimeString()}.`:
+            ? `Finished at ${formatDate(lastRun.timestamp, { timeStyle: 'short' })}.`:
             lastRun
-              ? `Last completed: ${new Date(lastRun.timestamp).toLocaleString()}.`
+              ? `Last completed: ${formatDate(lastRun.timestamp, { dateStyle: 'medium', timeStyle: 'short' })}.`
               : 'Awaiting the first run of this script.',
       };
 
@@ -278,7 +279,7 @@ const NmapNSE: React.FC = () => {
                   {lastRun.tag} <span aria-hidden="true">›</span> {lastRun.script}
                 </p>
                 <p className="text-xs text-[color:var(--color-muted)]">
-                  {new Date(lastRun.timestamp).toLocaleString()}
+                  {formatDate(lastRun.timestamp, { dateStyle: 'medium', timeStyle: 'short' })}
                 </p>
               </div>
             ) : (
@@ -383,7 +384,7 @@ const NmapNSE: React.FC = () => {
                           Last Completed
                         </dt>
                         <dd className="font-mono text-xs text-white/90">
-                          {new Date(lastRun.timestamp).toLocaleString()}
+                          {formatDate(lastRun.timestamp, { dateStyle: 'medium', timeStyle: 'short' })}
                         </dd>
                       </div>
                     )}
