@@ -77,8 +77,11 @@ type AnalyticsEventWithMetadata = BeforeSendEvent & {
 };
 
 const kaliSans = Rajdhani({
-  subsets: ['latin'],
+  subsets: ['latin', 'latin-ext'],
   weight: ['300', '400', '500', '600', '700'],
+  display: 'swap',
+  fallback: ['Segoe UI', 'system-ui', 'sans-serif'],
+  adjustFontFallback: false,
 });
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
