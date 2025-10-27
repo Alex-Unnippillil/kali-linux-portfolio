@@ -57,8 +57,12 @@ const securityHeaders = [
   },
 ];
 
+const analyzerMode = process.env.BUNDLE_ANALYZER_MODE || 'static';
+
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
+  analyzerMode,
+  openAnalyzer: false,
 });
 
 function sanitizeBuildId(rawId) {
