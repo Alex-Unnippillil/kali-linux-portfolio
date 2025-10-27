@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useRef, useState } from 'react';
+import { toPng } from 'html-to-image';
 import usePersistentState from '../../hooks/usePersistentState';
 import { useTheme } from '../../hooks/useTheme';
 import { isDarkTheme } from '../../utils/theme';
@@ -18,6 +19,9 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
   const [focusMode, setFocusMode] = usePersistentState('qs-focus-mode', false);
+  const [hideWindowsForCapture, setHideWindowsForCapture] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [captureError, setCaptureError] = useState<string | null>(null);
   const [brightness, setBrightness] = usePersistentState(
     'qs-brightness',
     75,
@@ -34,6 +38,87 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
   const [shouldRender, setShouldRender] = useState(open);
   const [isVisible, setIsVisible] = useState(open);
   const focusableTabIndex = open ? 0 : -1;
+
+  const handleCaptureDesktop = async () => {
+    if (isCapturing) {
+      return;
+    }
+
+    setCaptureError(null);
+    setIsCapturing(true);
+
+    const cleanups: Array<() => void> = [];
+
+    try {
+      const desktopNode = document.getElementById('desktop');
+      if (!desktopNode) {
+        throw new Error('Desktop is not ready yet. Try again in a moment.');
+      }
+
+      const panelNode = panelRef.current;
+      if (panelNode) {
+        const previousVisibility = panelNode.style.visibility;
+        panelNode.style.visibility = 'hidden';
+        cleanups.push(() => {
+          panelNode.style.visibility = previousVisibility;
+        });
+      }
+
+      if (hideWindowsForCapture) {
+        const windowArea = document.getElementById('window-area');
+        if (windowArea instanceof HTMLElement) {
+          const previousVisibility = windowArea.style.visibility;
+          windowArea.style.visibility = 'hidden';
+          cleanups.push(() => {
+            windowArea.style.visibility = previousVisibility;
+          });
+        }
+      }
+
+      await new Promise((resolve) => {
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(() => {
+            resolve(null);
+          });
+          return;
+        }
+
+        setTimeout(resolve, 16);
+      });
+
+      const dataUrl = await toPng(desktopNode, { cacheBust: true });
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const fileName = `kali-desktop-${timestamp}.png`;
+
+      const downloadLink = document.createElement('a');
+      downloadLink.href = dataUrl;
+      downloadLink.download = fileName;
+      downloadLink.rel = 'noopener';
+      downloadLink.style.position = 'fixed';
+      downloadLink.style.opacity = '0';
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+    } catch (error) {
+      console.error('Failed to capture desktop layout', error);
+      setCaptureError(
+        error instanceof Error ? error.message : 'Unable to capture the desktop right now.',
+      );
+    } finally {
+      while (cleanups.length) {
+        const cleanup = cleanups.pop();
+        if (cleanup) {
+          try {
+            cleanup();
+          } catch (cleanupError) {
+            console.error('Failed to restore elements after capture', cleanupError);
+          }
+        }
+      }
+
+      setIsCapturing(false);
+    }
+  };
 
   useEffect(() => {
     document.documentElement.toggleAttribute('data-sound-muted', !sound);
@@ -515,6 +600,84 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
           );
         })}
       </div>
+      <section
+        aria-label="Desktop capture"
+        className="mt-4 space-y-3 rounded-xl border border-white/[0.18] bg-white/[0.14] p-3 shadow-inner"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-white/80">Capture</span>
+          <span className="text-[10px] uppercase tracking-[0.2em] text-white/50">Share</span>
+        </div>
+        <div className="space-y-3">
+          <div className="space-y-3 rounded-lg border border-white/[0.18] bg-white/[0.16] p-3 text-xs text-white/70">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 text-white/80">
+                <p className="font-semibold text-white">Capture desktop</p>
+                <p>Download a PNG of the current desktop layout.</p>
+              </div>
+              <button
+                type="button"
+                className={`inline-flex items-center justify-center rounded-full border border-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
+                  isCapturing ? 'cursor-wait bg-white/20 text-white/60' : 'bg-kali-control text-black hover:bg-kali-control/90'
+                }`}
+                onClick={handleCaptureDesktop}
+                disabled={isCapturing}
+                tabIndex={focusableTabIndex}
+              >
+                {isCapturing ? 'Capturing…' : 'Capture'}
+              </button>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p id="quick-settings-capture-hide-label" className="font-semibold text-white">
+                  Hide windows first
+                </p>
+                <p id="quick-settings-capture-hide-description">
+                  Temporarily hides open windows before taking the snapshot.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span
+                  aria-hidden
+                  className={`inline-flex items-center rounded-full border border-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                    hideWindowsForCapture ? 'bg-kali-control text-black' : 'bg-white/10 text-white/70'
+                  }`}
+                >
+                  {hideWindowsForCapture ? 'On' : 'Off'}
+                </span>
+                <button
+                  id="quick-settings-capture-hide"
+                  type="button"
+                  role="switch"
+                  aria-checked={hideWindowsForCapture}
+                  aria-labelledby="quick-settings-capture-hide-label"
+                  aria-describedby="quick-settings-capture-hide-description"
+                  className={`relative inline-flex h-6 w-12 shrink-0 items-center rounded-full border border-white/15 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
+                    hideWindowsForCapture
+                      ? 'bg-kali-control shadow-[0_0_18px_rgba(120,190,255,0.55)]'
+                      : 'bg-white/30'
+                  }`}
+                  onClick={() => setHideWindowsForCapture((value) => !value)}
+                  tabIndex={focusableTabIndex}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-150 ${
+                      hideWindowsForCapture ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+            <p
+              role="status"
+              aria-live="assertive"
+              className={`min-h-[1rem] text-xs ${captureError ? 'text-amber-200' : 'text-transparent'}`}
+            >
+              {captureError ?? String.fromCharCode(160)}
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };
