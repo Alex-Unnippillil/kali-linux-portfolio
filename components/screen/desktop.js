@@ -1,12 +1,7 @@
 "use client";
 
 import React, { Component } from 'react';
-import dynamic from 'next/dynamic';
-
-const BackgroundImage = dynamic(
-    () => import('../util-components/background-image'),
-    { ssr: false }
-);
+import BackgroundImage from '../util-components/background-image';
 import apps, { games } from '../../apps.config';
 import { DEFAULT_DESKTOP_FOLDERS } from '../../data/desktopFolders';
 import Window from '../desktop/Window';
@@ -206,6 +201,8 @@ export class Desktop extends Component {
             'window_sizes',
         ]);
         this.windowSizeStorageKey = 'desktop_window_sizes';
+        this.backgroundRef = React.createRef();
+        this.activeWallpaperPanPointerId = null;
         this.defaultThemeConfig = {
             id: 'default',
             accent: (props.desktopTheme && props.desktopTheme.accent) || '#1793d1',
@@ -3065,6 +3062,19 @@ export class Desktop extends Component {
     handleDesktopPointerDown = (event) => {
         if (event.button !== 0) return;
         if (event.target !== event.currentTarget) return;
+
+        const background = this.backgroundRef?.current;
+        if (background && typeof background.beginPan === 'function') {
+            const started = background.beginPan(event);
+            if (started) {
+                event.stopPropagation();
+                event.preventDefault();
+                this.activeWallpaperPanPointerId = event.pointerId;
+                event.currentTarget.setPointerCapture?.(event.pointerId);
+                return;
+            }
+        }
+
         event.stopPropagation();
 
         const container = event.currentTarget;
@@ -3102,6 +3112,13 @@ export class Desktop extends Component {
     };
 
     handleDesktopPointerMove = (event) => {
+        if (this.activeWallpaperPanPointerId && event.pointerId === this.activeWallpaperPanPointerId) {
+            event.stopPropagation();
+            event.preventDefault();
+            this.backgroundRef?.current?.updatePan?.(event);
+            return;
+        }
+
         const selectionState = this.desktopSelectionState;
         if (!selectionState || event.pointerId !== selectionState.pointerId) return;
         event.stopPropagation();
@@ -3146,6 +3163,15 @@ export class Desktop extends Component {
     };
 
     handleDesktopPointerUp = (event) => {
+        if (this.activeWallpaperPanPointerId && event.pointerId === this.activeWallpaperPanPointerId) {
+            event.stopPropagation();
+            event.preventDefault();
+            event.currentTarget?.releasePointerCapture?.(event.pointerId);
+            this.backgroundRef?.current?.endPan?.(event);
+            this.activeWallpaperPanPointerId = null;
+            return;
+        }
+
         const selectionState = this.desktopSelectionState;
         if (!selectionState || event.pointerId !== selectionState.pointerId) return;
         event.stopPropagation();
@@ -3161,6 +3187,15 @@ export class Desktop extends Component {
     };
 
     handleDesktopPointerCancel = (event) => {
+        if (this.activeWallpaperPanPointerId && event.pointerId === this.activeWallpaperPanPointerId) {
+            event?.stopPropagation?.();
+            event?.preventDefault?.();
+            event?.currentTarget?.releasePointerCapture?.(event.pointerId);
+            this.backgroundRef?.current?.cancelPan?.(event);
+            this.activeWallpaperPanPointerId = null;
+            return;
+        }
+
         const selectionState = this.desktopSelectionState;
         if (!selectionState) return;
         event?.stopPropagation?.();
@@ -5303,7 +5338,7 @@ export class Desktop extends Component {
                 </div>
 
                 {/* Background Image */}
-                <BackgroundImage theme={theme} />
+                <BackgroundImage ref={this.backgroundRef} theme={theme} />
 
                 {/* Desktop Apps */}
                 {this.renderDesktopApps()}

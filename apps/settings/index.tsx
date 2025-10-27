@@ -2,6 +2,7 @@
 
 import { useState, useRef, ReactNode } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
+import type { WallpaperMode, WallpaperOffset } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
   resetSettings,
@@ -91,6 +92,11 @@ export default function Settings() {
     setAccent,
     wallpaper,
     setWallpaper,
+    wallpaperMode,
+    setWallpaperMode,
+    wallpaperOffsets,
+    setWallpaperOffsets,
+    updateWallpaperOffset,
     useKaliWallpaper,
     setUseKaliWallpaper,
     density,
@@ -135,6 +141,27 @@ export default function Settings() {
 
   const changeBackground = (name: string) => setWallpaper(name);
   const wallpaperIndex = Math.max(0, wallpapers.indexOf(wallpaper));
+  const previewOffset: WallpaperOffset = wallpaperOffsets[wallpaper] ?? {
+    x: 0,
+    y: 0,
+  };
+  const isOffsetCentered =
+    Math.abs(previewOffset.x) < 1e-4 && Math.abs(previewOffset.y) < 1e-4;
+
+  const previewObjectFit = useKaliWallpaper
+    ? "cover"
+    : wallpaperMode === "fit"
+    ? "contain"
+    : wallpaperMode === "contain"
+    ? "contain"
+    : wallpaperMode === "fill"
+    ? "fill"
+    : "cover";
+
+  const previewObjectPosition =
+    wallpaperMode === "fit"
+      ? `${50 + previewOffset.x * 100}% ${50 + previewOffset.y * 100}%`
+      : "50% 50%";
 
   const handleExport = async () => {
     const data = await exportSettingsData();
@@ -154,6 +181,8 @@ export default function Settings() {
       const parsed = JSON.parse(text);
       if (parsed.accent !== undefined) setAccent(parsed.accent);
       if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
+      if (parsed.wallpaperMode !== undefined)
+        setWallpaperMode(parsed.wallpaperMode as WallpaperMode);
       if (parsed.density !== undefined) setDensity(parsed.density);
       if (parsed.reducedMotion !== undefined)
         setReducedMotion(parsed.reducedMotion);
@@ -161,6 +190,8 @@ export default function Settings() {
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
+      if (parsed.wallpaperOffsets !== undefined)
+        setWallpaperOffsets(parsed.wallpaperOffsets);
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -177,6 +208,8 @@ export default function Settings() {
     window.localStorage.clear();
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
+    setWallpaperMode(defaults.wallpaperMode as WallpaperMode);
+    setWallpaperOffsets({});
     setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
@@ -204,9 +237,15 @@ export default function Settings() {
                   {useKaliWallpaper ? (
                     <KaliWallpaper />
                   ) : (
-                    <div
-                      className="absolute inset-0 bg-cover bg-center"
-                      style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)` }}
+                    <img
+                      src={`/wallpapers/${wallpaper}.webp`}
+                      alt=""
+                      className="absolute inset-0 h-full w-full"
+                      style={{
+                        objectFit: previewObjectFit,
+                        objectPosition: previewObjectPosition,
+                        backgroundColor: "rgba(2,10,19,0.6)",
+                      }}
                       aria-hidden="true"
                     />
                   )}
@@ -288,6 +327,41 @@ export default function Settings() {
                   />
                   Enable gradient wallpaper
                 </label>
+              </SettingRow>
+
+              <SettingRow
+                label="Wallpaper Fit"
+                helperText={
+                  wallpaperMode === "fit"
+                    ? "Fit shows the entire image. Drag an empty spot on the desktop to pan or center it with the button."
+                    : "Choose how wallpapers scale across the desktop background."
+                }
+                align="between"
+              >
+                <select
+                  value={wallpaperMode}
+                  onChange={(e) => setWallpaperMode(e.target.value as WallpaperMode)}
+                  className="min-w-[10rem] rounded border border-[var(--kali-panel-border)] bg-[var(--kali-panel)] px-3 py-2 text-[var(--color-text)] focus:border-kali-control focus:outline-none"
+                >
+                  <option value="cover">Cover</option>
+                  <option value="contain">Contain</option>
+                  <option value="fill">Fill</option>
+                  <option value="fit">Fit (pan)</option>
+                </select>
+                {wallpaperMode === "fit" && (
+                  <button
+                    type="button"
+                    onClick={() => updateWallpaperOffset(wallpaper, { x: 0, y: 0 })}
+                    disabled={isOffsetCentered}
+                    className={`inline-flex items-center rounded border px-3 py-2 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-control/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] ${
+                      isOffsetCentered
+                        ? "border-[var(--kali-panel-border)] bg-[var(--kali-panel)] text-[var(--color-text)]/60"
+                        : "border-[var(--kali-panel-border)] bg-kali-control text-black hover:bg-kali-control/90"
+                    }`}
+                  >
+                    Center wallpaper
+                  </button>
+                )}
               </SettingRow>
 
               <SettingRow label="Wallpaper" labelFor="wallpaper-slider">
