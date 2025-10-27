@@ -6,6 +6,7 @@ import WiresharkApp from '../components/apps/wireshark';
 describe('WiresharkApp', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    window.localStorage.setItem('lab-mode', 'true');
   });
 
   it('persists filter expressions via localStorage', async () => {
