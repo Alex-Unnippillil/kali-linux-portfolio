@@ -8,12 +8,14 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import clsx from 'clsx';
 import {
   useNotifications,
   AppNotification,
   NotificationPriority,
 } from '../../hooks/useNotifications';
 import { PRIORITY_ORDER } from '../../utils/notifications/ruleEngine';
+import { ListChildComponentProps, VariableSizeList } from 'react-window';
 
 const focusableSelector =
   'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
@@ -71,6 +73,186 @@ interface NotificationGroup {
   metadata: PriorityMetadata;
   notifications: FormattedNotification[];
 }
+
+type VirtualizedListItem =
+  | {
+      type: 'group';
+      key: string;
+      priority: NotificationPriority;
+      metadata: PriorityMetadata;
+      collapsed: boolean;
+      totalCount: number;
+      pinnedCount: number;
+      dividerAfter: boolean;
+    }
+  | {
+      type: 'notification';
+      key: string;
+      notification: FormattedNotification;
+      pinned: boolean;
+      dividerAfter: boolean;
+      isFirstInGroup: boolean;
+    };
+
+interface VirtualizedListData {
+  items: VirtualizedListItem[];
+  toggleGroup: (priority: NotificationPriority) => void;
+  setSize: (index: number, size: number, key: string) => void;
+}
+
+const MAX_LIST_HEIGHT = 320; // Tailwind max-h-80
+const HEADER_FALLBACK_HEIGHT = 56;
+const NOTIFICATION_FALLBACK_HEIGHT = 112;
+const NOTIFICATION_BODY_EXTRA_HEIGHT = 32;
+
+const OuterListElement = React.forwardRef<HTMLDivElement, React.HTMLProps<HTMLDivElement>>(
+  (props, ref) => (
+    <div
+      {...props}
+      ref={ref}
+      role="list"
+      className={clsx('overflow-y-auto focus:outline-none', props.className)}
+    />
+  ),
+);
+
+OuterListElement.displayName = 'NotificationListOuter';
+
+const isPinnedNotification = (notification: FormattedNotification): boolean => {
+  const { hints } = notification;
+  if (!hints) return false;
+  const record = hints as Record<string, unknown>;
+  const candidates = [record['x-kali-pinned'], record.pinned];
+  return candidates.some(value => {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value !== 0;
+    if (typeof value === 'string') return value.toLowerCase() === 'true';
+    return false;
+  });
+};
+
+const getDefaultHeight = (item: VirtualizedListItem): number => {
+  if (item.type === 'group') {
+    return HEADER_FALLBACK_HEIGHT;
+  }
+  const hasBody = Boolean(item.notification.body);
+  return NOTIFICATION_FALLBACK_HEIGHT + (hasBody ? NOTIFICATION_BODY_EXTRA_HEIGHT : 0);
+};
+
+const NotificationListRow: React.FC<ListChildComponentProps<VirtualizedListData>> = ({
+  index,
+  style,
+  data,
+}) => {
+  const { items, toggleGroup, setSize } = data;
+  const item = items[index];
+
+  const measureRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (!node) return;
+      const height = node.getBoundingClientRect().height;
+      if (!Number.isFinite(height) || height <= 0) return;
+      setSize(index, height, item.key);
+    },
+    [index, item, setSize],
+  );
+
+  const baseStyle = useMemo(() => ({ ...style, width: '100%' }), [style]);
+
+  if (item.type === 'group') {
+    const dividerClass = item.dividerAfter ? 'border-b border-white/10' : undefined;
+    const labelId = `notification-group-${item.priority}`;
+    return (
+      <div
+        style={baseStyle}
+        ref={measureRef}
+        className={clsx(dividerClass)}
+        role="presentation"
+      >
+        <button
+          type="button"
+          onClick={() => toggleGroup(item.priority)}
+          aria-expanded={!item.collapsed}
+          aria-labelledby={labelId}
+          className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
+        >
+          <span id={labelId} className="flex items-center gap-2">
+            {item.metadata.label}
+            <span
+              className={clsx(
+                'rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide',
+                item.metadata.badgeClass,
+              )}
+              title={item.metadata.description}
+            >
+              {item.totalCount}
+            </span>
+          </span>
+          <svg
+            aria-hidden="true"
+            focusable="false"
+            className={clsx('h-4 w-4 transition-transform', item.collapsed ? 'rotate-0' : 'rotate-90')}
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path d="M7 5l6 5-6 5V5z" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
+  const { notification, pinned, dividerAfter, isFirstInGroup } = item;
+  const dividerClasses = clsx(
+    !isFirstInGroup && 'border-t border-white/10',
+    dividerAfter && 'border-b border-white/10',
+  );
+
+  return (
+    <div
+      style={baseStyle}
+      ref={measureRef}
+      className={clsx('bg-transparent px-0', dividerClasses)}
+      role="listitem"
+    >
+      <div
+        className={clsx(
+          'border-l-2 px-4 py-3 text-sm text-white',
+          notification.metadata.accentClass,
+        )}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <p className="font-medium">{notification.title}</p>
+          <span
+            className={clsx(
+              'shrink-0 rounded-full px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide',
+              notification.metadata.badgeClass,
+            )}
+            title={
+              notification.classification.matchedRuleId
+                ? `Priority ${notification.metadata.label} (${notification.classification.source}: ${notification.classification.matchedRuleId})`
+                : `Priority ${notification.metadata.label}`
+            }
+          >
+            {notification.metadata.label}
+          </span>
+        </div>
+        {notification.body && (
+          <p className="mt-1 whitespace-pre-line text-xs text-ubt-grey text-opacity-80">
+            {notification.body}
+          </p>
+        )}
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[0.65rem] uppercase tracking-wide text-ubt-grey text-opacity-70">
+          <span>
+            {notification.appId}
+            {pinned && <span className="ml-2 text-ubb-orange">• Pinned</span>}
+          </span>
+          <time dateTime={notification.formattedTime}>{notification.readableTime}</time>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const NotificationBell: React.FC = () => {
   const {
@@ -227,6 +409,115 @@ const NotificationBell: React.FC = () => {
     }));
   }, []);
 
+  const virtualItems = useMemo<VirtualizedListItem[]>(() => {
+    const items: VirtualizedListItem[] = [];
+    groupedNotifications.forEach((group, groupIndex) => {
+      const collapsed =
+        collapsedGroups[group.priority] ?? group.metadata.defaultCollapsed;
+      const annotated = group.notifications.map(notification => ({
+        notification,
+        pinned: isPinnedNotification(notification),
+      }));
+      const pinned = annotated.filter(entry => entry.pinned);
+      const regular = annotated.filter(entry => !entry.pinned);
+      const ordered = [...pinned, ...regular];
+      const hasNextGroup = groupIndex < groupedNotifications.length - 1;
+
+      items.push({
+        type: 'group',
+        key: `group-${group.priority}`,
+        priority: group.priority,
+        metadata: group.metadata,
+        collapsed,
+        totalCount: group.notifications.length,
+        pinnedCount: pinned.length,
+        dividerAfter: collapsed || ordered.length === 0 ? hasNextGroup : false,
+      });
+
+      if (!collapsed) {
+        ordered.forEach((entry, index) => {
+          items.push({
+            type: 'notification',
+            key: `notification-${group.priority}-${entry.notification.id}`,
+            notification: entry.notification,
+            pinned: entry.pinned,
+            dividerAfter: index === ordered.length - 1 ? hasNextGroup : false,
+            isFirstInGroup: index === 0,
+          });
+        });
+      }
+    });
+    return items;
+  }, [collapsedGroups, groupedNotifications]);
+
+  const listRef = useRef<VariableSizeList<VirtualizedListData> | null>(null);
+  const itemHeightsRef = useRef<Map<string, number>>(new Map());
+  const itemsRef = useRef<VirtualizedListItem[]>(virtualItems);
+  const [measuredTotalHeight, setMeasuredTotalHeight] = useState(0);
+
+  const recomputeTotalHeight = useCallback(() => {
+    const snapshot = itemsRef.current;
+    let total = 0;
+    snapshot.forEach(item => {
+      const stored = itemHeightsRef.current.get(item.key);
+      total += stored ?? getDefaultHeight(item);
+    });
+    setMeasuredTotalHeight(total);
+  }, []);
+
+  useEffect(() => {
+    itemsRef.current = virtualItems;
+    const validKeys = new Set(virtualItems.map(item => item.key));
+    const map = itemHeightsRef.current;
+    Array.from(map.keys()).forEach(key => {
+      if (!validKeys.has(key)) {
+        map.delete(key);
+      }
+    });
+    recomputeTotalHeight();
+    listRef.current?.resetAfterIndex(0, true);
+  }, [recomputeTotalHeight, virtualItems]);
+
+  const setSize = useCallback(
+    (index: number, size: number, key: string) => {
+      if (!Number.isFinite(size) || size <= 0) return;
+      const map = itemHeightsRef.current;
+      if (map.get(key) === size) return;
+      map.set(key, size);
+      recomputeTotalHeight();
+      listRef.current?.resetAfterIndex(index, false);
+    },
+    [recomputeTotalHeight],
+  );
+
+  const getItemSize = useCallback((index: number) => {
+    const item = itemsRef.current[index];
+    if (!item) return HEADER_FALLBACK_HEIGHT;
+    const stored = itemHeightsRef.current.get(item.key);
+    return stored ?? getDefaultHeight(item);
+  }, []);
+
+  const defaultTotalHeight = useMemo(
+    () => virtualItems.reduce((sum, item) => sum + getDefaultHeight(item), 0),
+    [virtualItems],
+  );
+
+  const computedHeight = measuredTotalHeight || defaultTotalHeight;
+  const listHeight = Math.min(
+    MAX_LIST_HEIGHT,
+    Math.max(computedHeight, HEADER_FALLBACK_HEIGHT),
+  );
+
+  const listData = useMemo<VirtualizedListData>(
+    () => ({ items: virtualItems, toggleGroup, setSize }),
+    [setSize, toggleGroup, virtualItems],
+  );
+
+  useEffect(() => {
+    if (!isOpen || virtualItems.length === 0) return;
+    listRef.current?.scrollToItem(0, 'start');
+  }, [isOpen, virtualItems.length]);
+
   const handleDismissAll = useCallback(() => {
     if (notifications.length === 0) return;
     clearNotifications();
@@ -284,87 +575,25 @@ const NotificationBell: React.FC = () => {
               Dismiss all
             </button>
           </div>
-          <div className="max-h-80 overflow-y-auto">
+          <div className="max-h-80">
             {notifications.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-ubt-grey text-opacity-80">
                 You&apos;re all caught up.
               </p>
             ) : (
-              <div>
-                {groupedNotifications.map(group => {
-                  const collapsed =
-                    collapsedGroups[group.priority] ?? group.metadata.defaultCollapsed;
-                  const contentId = `${panelId}-${group.priority}-group`;
-                  return (
-                    <section key={group.priority} className="border-b border-white/10 last:border-b-0">
-                      <button
-                        type="button"
-                        onClick={() => toggleGroup(group.priority)}
-                        aria-expanded={!collapsed}
-                        aria-controls={contentId}
-                        className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
-                      >
-                        <span className="flex items-center gap-2">
-                          {group.metadata.label}
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide ${group.metadata.badgeClass}`}
-                            title={group.metadata.description}
-                          >
-                            {group.notifications.length}
-                          </span>
-                        </span>
-                        <svg
-                          aria-hidden="true"
-                          focusable="false"
-                          className={`h-4 w-4 transition-transform ${collapsed ? 'rotate-0' : 'rotate-90'}`}
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path d="M7 5l6 5-6 5V5z" />
-                        </svg>
-                      </button>
-                      <div
-                        id={contentId}
-                        role="region"
-                        aria-hidden={collapsed}
-                        hidden={collapsed}
-                        className="bg-transparent"
-                      >
-                        <ul role="list" className="divide-y divide-white/10">
-                          {group.notifications.map(notification => (
-                            <li
-                              key={notification.id}
-                              className={`border-l-2 px-4 py-3 text-sm text-white ${notification.metadata.accentClass}`}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <p className="font-medium">{notification.title}</p>
-                                <span
-                                  className={`shrink-0 rounded-full px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide ${notification.metadata.badgeClass}`}
-                                  title={
-                                    notification.classification.matchedRuleId
-                                      ? `Priority ${notification.metadata.label} (${notification.classification.source}: ${notification.classification.matchedRuleId})`
-                                      : `Priority ${notification.metadata.label}`
-                                  }
-                                >
-                                  {notification.metadata.label}
-                                </span>
-                              </div>
-                              {notification.body && (
-                                <p className="mt-1 whitespace-pre-line text-xs text-ubt-grey text-opacity-80">
-                                  {notification.body}
-                                </p>
-                              )}
-                              <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[0.65rem] uppercase tracking-wide text-ubt-grey text-opacity-70">
-                                <span>{notification.appId}</span>
-                                <time dateTime={notification.formattedTime}>{notification.readableTime}</time>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </section>
-                  );
-                })}
+              <div className="px-0" style={{ maxHeight: `${MAX_LIST_HEIGHT}px` }}>
+                <VariableSizeList
+                  ref={listRef}
+                  height={listHeight}
+                  itemCount={virtualItems.length}
+                  itemSize={getItemSize}
+                  itemKey={index => virtualItems[index].key}
+                  itemData={listData}
+                  width="100%"
+                  outerElementType={OuterListElement}
+                >
+                  {NotificationListRow}
+                </VariableSizeList>
               </div>
             )}
           </div>
