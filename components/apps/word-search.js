@@ -501,8 +501,11 @@ const WordSearch = () => {
     if (failed) setStreak(0);
   }
 
+  const baseButtonClasses =
+    "rounded-md bg-kali-control text-white transition-colors hover:bg-kali-primary/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-surface";
+
   return (
-    <div className="h-full w-full flex items-start justify-center bg-ub-cool-grey text-white p-4 select-none">
+    <div className="h-full w-full flex items-start justify-center bg-kali-surface text-kali-text p-4 select-none">
       <div className="flex">
         <div
           className="relative mr-4"
@@ -538,14 +541,14 @@ const WordSearch = () => {
                     onMouseDown={() => handleMouseDown(r, c)}
                     onMouseEnter={() => handleMouseEnter(r, c)}
                     onMouseUp={handleMouseUp}
-                    className={`h-8 w-8 flex items-center justify-center border border-gray-600 cursor-pointer ${
+                    className={`h-8 w-8 flex items-center justify-center border border-kali-border cursor-pointer transition-colors ${
                       isFound
-                        ? "bg-green-600"
+                        ? "bg-kali-primary text-kali-inverse"
                         : isHint
-                          ? "bg-yellow-600"
+                          ? "bg-kali-primary/60"
                           : isSelected
-                            ? "bg-blue-600"
-                            : "bg-gray-700"
+                            ? "bg-kali-primary/30"
+                            : "bg-kali-muted"
                     }`}
                   >
                     {letter}
@@ -571,7 +574,7 @@ const WordSearch = () => {
                       }`,
                   )
                   .join(" ")}
-                stroke="rgb(250 204 21)"
+                stroke="var(--color-primary)"
                 strokeWidth="4"
                 fill="none"
                 strokeLinecap="round"
@@ -591,13 +594,11 @@ const WordSearch = () => {
             </div>
             <div>Streak: {streak}</div>
           </div>
-          <div className="flex-1 overflow-auto border border-gray-600 p-2 mb-2">
+          <div className="flex-1 overflow-auto border border-kali-border p-2 mb-2">
             {words.map((w) => (
               <div
                 key={w}
-                className={
-                  foundWords.includes(w) ? "line-through text-green-400" : ""
-                }
+                className={foundWords.includes(w) ? "line-through text-kali-primary" : ""}
               >
                 {w}
               </div>
@@ -605,25 +606,25 @@ const WordSearch = () => {
           </div>
           <div className="flex flex-col gap-2">
             <button
-              className="px-4 py-1 bg-gray-700 hover:bg-gray-600"
+              className={`px-4 py-1 ${baseButtonClasses}`}
               onClick={useHint}
             >
               Hint
             </button>
             <button
-              className="px-4 py-1 bg-gray-700 hover:bg-gray-600"
+              className={`px-4 py-1 ${baseButtonClasses}`}
               onClick={() => reset(true)}
             >
               New Puzzle
             </button>
             <button
-              className="px-4 py-1 bg-gray-700 hover:bg-gray-600"
+              className={`px-4 py-1 ${baseButtonClasses}`}
               onClick={() => setPaused((p) => !p)}
             >
               {paused ? "Resume" : "Pause"}
             </button>
             <button
-              className="px-4 py-1 bg-gray-700 hover:bg-gray-600"
+              className={`px-4 py-1 ${baseButtonClasses}`}
               onClick={() => setSound((s) => !s)}
             >
               {sound ? "Sound Off" : "Sound On"}
@@ -666,7 +667,7 @@ const WordSearch = () => {
                 onChange={(e) => setSeed(e.target.value)}
               />
               <button
-                className="px-2 py-1 bg-gray-700 hover:bg-gray-600"
+                className={`px-2 py-1 ${baseButtonClasses}`}
                 onClick={() => reset(true, seed)}
               >
                 Load
@@ -674,13 +675,13 @@ const WordSearch = () => {
             </div>
             <div className="flex gap-1">
               <button
-                className="flex-1 px-4 py-1 bg-gray-700 hover:bg-gray-600"
+                className={`flex-1 px-4 py-1 ${baseButtonClasses}`}
                 onClick={share}
               >
                 Share
               </button>
               <button
-                className="flex-1 px-4 py-1 bg-gray-700 hover:bg-gray-600"
+                className={`flex-1 px-4 py-1 ${baseButtonClasses}`}
                 onClick={() => window.print()}
               >
                 Print
@@ -723,7 +724,7 @@ const WordSearch = () => {
                 </option>
               ))}
             </select>
-            <div className="border border-gray-600 p-2 flex flex-col gap-1">
+            <div className="border border-kali-border p-2 flex flex-col gap-1">
               <input
                 className="px-1 text-black"
                 placeholder="List name"
@@ -747,7 +748,7 @@ const WordSearch = () => {
                 onChange={(e) => setNewListWords(e.target.value)}
               />
               <button
-                className="px-2 py-1 bg-gray-700 hover:bg-gray-600"
+                className={`px-2 py-1 ${baseButtonClasses}`}
                 onClick={addList}
               >
                 Save List
