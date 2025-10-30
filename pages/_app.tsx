@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from 'react';
-import type { ReactElement } from 'react';
+import { useCallback, useEffect } from 'react';
+import type { MouseEvent, ReactElement } from 'react';
 import type { AppProps } from 'next/app';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
@@ -82,6 +82,35 @@ const kaliSans = Rajdhani({
 });
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
+  const handleSkipToContent = useCallback((event: MouseEvent<HTMLAnchorElement>) => {
+    const selectors = [
+      '[data-skip-target="desktop"]',
+      '#desktop',
+      '#window-area',
+      '[data-skip-target="app-grid"]',
+      '#app-grid',
+      'main',
+    ];
+
+    const target = selectors
+      .map((selector) => (typeof document === 'undefined' ? null : document.querySelector<HTMLElement>(selector)))
+      .find((node): node is HTMLElement => Boolean(node));
+
+    if (!target) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (typeof target.focus === 'function') {
+      target.focus({ preventScroll: true });
+    }
+
+    if (typeof target.scrollIntoView === 'function') {
+      target.scrollIntoView({ block: 'start' });
+    }
+  }, []);
+
   useEffect(() => {
     const initAnalytics = async (): Promise<void> => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
@@ -207,10 +236,11 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
     <ErrorBoundary>
       <div className={kaliSans.className}>
         <a
-          href="#app-grid"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
+          href="#desktop"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[1000] focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:text-black focus:shadow-lg"
+          onClick={handleSkipToContent}
         >
-          Skip to app grid
+          Skip to content
         </a>
         <SettingsProvider>
           <NotificationCenter>
