@@ -25,6 +25,8 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
+import { loadAppUsage, persistAppUsage, updateAppUsage, getTopAppIds } from '../../utils/appUsage';
+import { scheduleIdlePrefetch } from '../../utils/prefetchScheduler';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
 import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
@@ -38,6 +40,28 @@ import {
 const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
 const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
 const PINNED_APPS_STORAGE_KEY = 'pinnedApps';
+const TOP_APP_LIST_LIMIT = 12;
+const PREFETCH_TOP_LIMIT = 3;
+
+const KNOWN_APP_IDS = new Set(apps.map((app) => app.id));
+
+const filterUsageByKnownApps = (entries) => {
+    if (!Array.isArray(entries)) return [];
+    const seen = new Set();
+    return entries.filter((entry) => {
+        if (!entry || typeof entry.id !== 'string') {
+            return false;
+        }
+        if (!KNOWN_APP_IDS.has(entry.id)) {
+            return false;
+        }
+        if (seen.has(entry.id)) {
+            return false;
+        }
+        seen.add(entry.id);
+        return true;
+    });
+};
 
 const sanitizeFolderItem = (item) => {
     if (!item) return null;
@@ -274,6 +298,12 @@ export class Desktop extends Component {
 
         const initialWindowSizes = this.loadWindowSizes();
         const storedFolderContents = loadStoredFolderContents();
+        const storedUsageEntriesRaw = loadAppUsage();
+        const initialAppUsageEntries = filterUsageByKnownApps(storedUsageEntriesRaw);
+        if (initialAppUsageEntries.length !== storedUsageEntriesRaw.length) {
+            persistAppUsage(initialAppUsageEntries);
+        }
+        const initialTopAppIds = getTopAppIds(initialAppUsageEntries, TOP_APP_LIST_LIMIT);
 
         this.state = {
             focused_windows: { ...initialOverlayFocused },
@@ -316,6 +346,8 @@ export class Desktop extends Component {
             minimizedShelfOpen: false,
             closedShelfOpen: false,
             appBadges: {},
+            appUsage: initialAppUsageEntries,
+            topAppIds: initialTopAppIds,
         };
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -356,6 +388,7 @@ export class Desktop extends Component {
         this.folderMetadata = new Map(DEFAULT_DESKTOP_FOLDERS.map((folder) => [folder.id, folder]));
         this.windowPreviewCache = new Map();
         this.windowSwitcherRequestId = 0;
+        this.topAppPrefetchSchedule = null;
         this.refreshAppRegistry();
 
         if (!this.hasStoredPinnedAppIds) {
@@ -1748,6 +1781,103 @@ export class Desktop extends Component {
         this.appMap = nextAppMap;
         this.validAppIds = nextValidAppIds;
     }
+
+    areUsageEntriesEqual = (a, b) => {
+        if (a === b) return true;
+        if (!Array.isArray(a) || !Array.isArray(b)) return false;
+        if (a.length !== b.length) return false;
+        for (let index = 0; index < a.length; index += 1) {
+            const first = a[index];
+            const second = b[index];
+            if (!first || !second) return false;
+            if (first.id !== second.id || first.count !== second.count || first.lastOpened !== second.lastOpened) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    areTopAppListsEqual = (a, b) => {
+        if (a === b) return true;
+        if (!Array.isArray(a) || !Array.isArray(b)) return false;
+        if (a.length !== b.length) return false;
+        for (let index = 0; index < a.length; index += 1) {
+            if (a[index] !== b[index]) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    updateAppUsageState = (appId, timestamp = Date.now()) => {
+        if (!appId || !KNOWN_APP_IDS.has(appId)) {
+            return;
+        }
+
+        this.setState((prevState) => {
+            const previousUsage = Array.isArray(prevState?.appUsage) ? prevState.appUsage : [];
+            const nextUsage = filterUsageByKnownApps(updateAppUsage(previousUsage, appId, timestamp));
+            const nextTopAppIds = getTopAppIds(nextUsage, TOP_APP_LIST_LIMIT);
+            const usageUnchanged = this.areUsageEntriesEqual(previousUsage, nextUsage);
+            const topUnchanged = this.areTopAppListsEqual(prevState?.topAppIds, nextTopAppIds);
+
+            if (usageUnchanged && topUnchanged) {
+                return null;
+            }
+
+            persistAppUsage(nextUsage);
+
+            return {
+                appUsage: nextUsage,
+                topAppIds: nextTopAppIds,
+            };
+        });
+    };
+
+    getTopAppPrefetchTasks = (limit = PREFETCH_TOP_LIMIT) => {
+        const ids = Array.isArray(this.state?.topAppIds)
+            ? this.state.topAppIds.slice(0, limit)
+            : [];
+        const tasks = [];
+        ids.forEach((id) => {
+            const app = this.getAppById(id);
+            if (!app) return;
+            const prefetch = app?.screen?.prefetch;
+            if (typeof prefetch === 'function') {
+                tasks.push(() => prefetch());
+            }
+        });
+        return tasks;
+    };
+
+    cancelTopAppPrefetch = () => {
+        if (this.topAppPrefetchSchedule && typeof this.topAppPrefetchSchedule.cancel === 'function') {
+            this.topAppPrefetchSchedule.cancel();
+        }
+        this.topAppPrefetchSchedule = null;
+    };
+
+    scheduleTopAppPrefetch = () => {
+        this.cancelTopAppPrefetch();
+
+        if (this.props.allowNetwork === false) {
+            return;
+        }
+
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        const tasks = this.getTopAppPrefetchTasks();
+        if (!tasks.length) {
+            return;
+        }
+
+        const schedule = scheduleIdlePrefetch(tasks, { env: window, limit: PREFETCH_TOP_LIMIT, timeout: 1500 });
+        if (schedule) {
+            this.topAppPrefetchSchedule = schedule;
+        }
+    };
 
     normalizeBadgeTone = (tone) => {
         if (typeof tone !== 'string') {
@@ -3483,6 +3613,7 @@ export class Desktop extends Component {
         window.addEventListener('open-app', this.handleOpenAppEvent);
         this.setupPointerMediaWatcher();
         this.setupGestureListeners();
+        this.scheduleTopAppPrefetch();
     }
 
     componentDidUpdate(prevProps, prevState) {
@@ -3535,6 +3666,16 @@ export class Desktop extends Component {
             this.deactivateAllAppsFocusTrap();
             this.restoreFocusToPreviousElement();
         }
+
+        if (prevProps?.allowNetwork !== this.props.allowNetwork) {
+            if (this.props.allowNetwork === false) {
+                this.cancelTopAppPrefetch();
+            } else {
+                this.scheduleTopAppPrefetch();
+            }
+        } else if (!this.areTopAppListsEqual(prevState?.topAppIds, this.state?.topAppIds)) {
+            this.scheduleTopAppPrefetch();
+        }
     }
 
     componentWillUnmount() {
@@ -3569,6 +3710,7 @@ export class Desktop extends Component {
             this.allAppsEnterRaf = null;
         }
         this.deactivateAllAppsFocusTrap();
+        this.cancelTopAppPrefetch();
     }
 
     handleExternalTaskbarCommand = (event) => {
@@ -4928,31 +5070,7 @@ export class Desktop extends Component {
             }
             return;
         } else {
-            let frequentApps = [];
-            try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
-            var currentApp = frequentApps.find(app => app.id === objId);
-            if (currentApp) {
-                frequentApps.forEach((app) => {
-                    if (app.id === currentApp.id) {
-                        app.frequency += 1; // increase the frequency if app is found 
-                    }
-                });
-            } else {
-                frequentApps.push({ id: objId, frequency: 1 }); // new app opened
-            }
-
-            frequentApps.sort((a, b) => {
-                if (a.frequency < b.frequency) {
-                    return 1;
-                }
-                if (a.frequency > b.frequency) {
-                    return -1;
-                }
-                return 0; // sort according to decreasing frequencies
-            });
-
-            safeLocalStorage?.setItem('frequentApps', JSON.stringify(frequentApps));
-
+            this.updateAppUsageState(objId);
             addRecentApp(objId);
 
             this.closeAllAppsOverlay();
@@ -5406,7 +5524,7 @@ export class Desktop extends Component {
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
     const [snapGrid] = useSnapGridSetting();
-    const { density, fontScale, largeHitAreas, desktopTheme } = useSettings();
+    const { density, fontScale, largeHitAreas, desktopTheme, allowNetwork } = useSettings();
     return (
         <Desktop
             {...props}
@@ -5416,6 +5534,7 @@ export default function DesktopWithSnap(props) {
             fontScale={fontScale}
             largeHitAreas={largeHitAreas}
             desktopTheme={desktopTheme}
+            allowNetwork={allowNetwork}
         />
     );
 }
