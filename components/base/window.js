@@ -258,6 +258,7 @@ export class Window extends Component {
         this._lastViewportMetrics = null;
         this._lastSnapBottomInset = null;
         this._lastSafeAreaBottom = null;
+        this._lastTitlebarDoubleClick = null;
         this._isUnmounted = false;
     }
 
@@ -373,6 +374,7 @@ export class Window extends Component {
         this._pendingDragUpdate = null;
         this.cancelResizeSession();
         this._resizeSession = null;
+        this._lastTitlebarDoubleClick = null;
     }
 
     setDefaultWindowDimenstion = () => {
@@ -700,7 +702,15 @@ export class Window extends Component {
         this._menuOpener = null;
     }
 
-    changeCursorToMove = () => {
+    changeCursorToMove = (_event) => {
+        if (typeof this._lastTitlebarDoubleClick === 'number') {
+            const now = Date.now();
+            if (Number.isFinite(now) && now - this._lastTitlebarDoubleClick <= 300) {
+                this._lastTitlebarDoubleClick = null;
+                return false;
+            }
+            this._lastTitlebarDoubleClick = null;
+        }
         this.focusWindow();
         if (this.state.maximized) {
             this.restoreWindow();
@@ -1375,6 +1385,8 @@ export class Window extends Component {
             event.stopPropagation();
         }
         if (this.props.allowMaximize === false) return;
+        const timestamp = Date.now();
+        this._lastTitlebarDoubleClick = Number.isFinite(timestamp) ? timestamp : 0;
         if (this.state.maximized) {
             this.restoreWindow();
         } else {
@@ -1677,6 +1689,7 @@ export class Window extends Component {
                 : (this.state.snapped
                     ? `snapped-${this.state.snapped}`
                     : 'active'));
+        const allowMaximize = this.props.allowMaximize !== false;
 
         return (
             <>
@@ -1771,7 +1784,7 @@ export class Window extends Component {
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
                             onPointerDown={this.focusWindow}
-                            onDoubleClick={this.handleTitleBarDoubleClick}
+                            onDoubleClick={allowMaximize ? this.handleTitleBarDoubleClick : undefined}
                             controls={(
                                 <WindowEditButtons
                                     minimize={this.minimizeWindow}
@@ -1779,7 +1792,7 @@ export class Window extends Component {
                                     isMaximised={this.state.maximized}
                                     close={this.closeWindow}
                                     id={this.id}
-                                    allowMaximize={this.props.allowMaximize !== false}
+                                    allowMaximize={allowMaximize}
                                 />
                             )}
                         />
