@@ -88,6 +88,10 @@ html[data-theme='dark'] {
   --color-severity-medium: #eab308;
   --color-severity-high: #f97316;
   --color-severity-critical: #f87171;
+  --window-border-color: color-mix(in srgb, var(--color-border) 72%, transparent);
+  --panel-border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+  --window-inner-shadow: inset 0 -1px 0 color-mix(in srgb, var(--color-border) 55%, transparent);
+  --panel-inner-shadow: inset 0 -1px 0 color-mix(in srgb, var(--color-border) 45%, transparent);
 }
 
 /* Neon theme */
@@ -113,6 +117,10 @@ html[data-theme='neon'] {
   --color-severity-medium: #ca8a04;
   --color-severity-high: #ea580c;
   --color-severity-critical: #ef4444;
+  --window-border-color: color-mix(in srgb, var(--color-primary) 38%, transparent);
+  --panel-border-color: color-mix(in srgb, var(--color-text) 12%, transparent);
+  --window-inner-shadow: inset 0 -1px 0 color-mix(in srgb, var(--color-primary) 32%, transparent);
+  --panel-inner-shadow: inset 0 -1px 0 color-mix(in srgb, var(--color-border) 55%, transparent);
 }
 
 /* Matrix theme */
@@ -138,7 +146,10 @@ html[data-theme='matrix'] {
   --color-severity-medium: #ca8a04;
   --color-severity-high: #ea580c;
   --color-severity-critical: #ef4444;
-
+  --window-border-color: color-mix(in srgb, var(--color-primary) 34%, transparent);
+  --panel-border-color: color-mix(in srgb, var(--color-text) 14%, transparent);
+  --window-inner-shadow: inset 0 -1px 0 color-mix(in srgb, var(--color-primary) 30%, transparent);
+  --panel-inner-shadow: inset 0 -1px 0 color-mix(in srgb, var(--color-border) 55%, transparent);
 }
 
 ::selection {

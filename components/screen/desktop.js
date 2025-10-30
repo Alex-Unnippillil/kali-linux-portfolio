@@ -4597,7 +4597,7 @@ export class Desktop extends Component {
                     overlayActive ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
                 ].join(' ');
                 const panelClasses = [
-                    'w-full max-w-6xl transform transition-all duration-200 ease-out focus:outline-none',
+                    'desktop-panel-surface w-full max-w-6xl transform transition-all duration-200 ease-out focus:outline-none',
                     overlayActive ? 'scale-100 opacity-100 translate-y-0' : 'scale-95 opacity-0 -translate-y-2',
                 ].join(' ');
 

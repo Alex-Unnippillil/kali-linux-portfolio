@@ -8,11 +8,13 @@
 - Coordinates runtime shell behavior including workspace switching, stack promotion, and broadcasting `workspace-state` custom events so other modules can react to active workspace, running apps, and icon sizing changes.【F:components/screen/desktop.js†L2440-L2501】
 - Provides overlay orchestration helpers (`syncOverlayWindowFlags`, `updateOverlayState`, `openOverlay`, `closeOverlay`, `restoreOverlay`) that encapsulate focus, transitions, and minimization semantics for both system overlays and app windows.【F:components/screen/desktop.js†L1599-L1779】【F:components/screen/desktop.js†L2788-L2835】
 - Handles global shortcuts, including forwarding `super-arrow` events for snapping commands and toggling overlays based on keyboard combos, anchoring accessibility focus loops to overlays such as the all-apps view.【F:components/screen/desktop.js†L2986-L3070】
+- Normalizes overlay panel chrome by applying the shared `desktop-panel-surface` utility so shell panels inherit tokenized borders and highlights.【F:components/screen/desktop.js†L4598-L4624】【F:styles/index.css†L178-L188】
 
 ### `components/base/window.js`
 - Hosts the draggable, resizable window primitive, normalizing top insets, safe areas, and snap grid defaults while tracking open/maximized/minimized/focus state on behalf of the shell.【F:components/base/window.js†L69-L138】
 - Calculates snap regions and labels for halves and quarters of the viewport, accounting for safe area insets and taskbar offsets to keep snapping consistent across device orientations.【F:components/base/window.js†L31-L67】
 - Responds to viewport changes by recomputing drag boundaries, safe-area padding, and accessible focus handling, and listens for shell-level events such as `super-arrow` to trigger snapping gestures programmatically.【F:components/base/window.js†L118-L210】
+- Styles the window frame with shared border width and radius tokens while layering token-driven inner highlights so window chrome aligns with panel surfaces across themes.【F:styles/tokens.css†L60-L82】【F:components/base/window.module.css†L1-L92】
 
 ### `components/desktop/Layout.tsx`
 - Wraps the desktop surface with shared CSS variables, touch-action rules, and responsive taskbar/desktop icon metrics that downstream shell components rely on for sizing and hit targets.【F:components/desktop/Layout.tsx†L6-L135】

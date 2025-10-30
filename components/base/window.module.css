@@ -1,11 +1,22 @@
 .windowFrame {
   position: relative;
-  border: 1px solid var(--color-window-border);
-  border-radius: var(--radius-6);
+  border: var(--window-border-width, var(--surface-border-width, 1px))
+    solid var(--window-border-color, var(--color-window-border));
+  border-radius: var(--window-border-radius, var(--radius-6));
   box-shadow:
     0 1px 1px rgba(15, 23, 42, 0.32),
     0 8px 24px rgba(15, 23, 42, 0.28),
-    0 0 0 1px rgba(12, 74, 110, 0.5);
+    0 0 0 calc(var(--window-border-width, var(--surface-border-width, 1px)))
+      rgba(12, 74, 110, 0.5),
+    var(
+      --window-inner-highlight,
+      inset 0 1px 0 color-mix(in srgb, var(--color-text) 14%, transparent)
+    ),
+    var(
+      --window-inner-shadow,
+      inset 0 -1px 0 color-mix(in srgb, var(--kali-blue) 28%, transparent)
+    );
+  background-clip: padding-box;
   overflow: hidden;
   --window-motion-transform-duration: var(--window-motion-duration-restore);
   --window-motion-transform-easing: var(--window-motion-ease-restore);
@@ -26,7 +37,16 @@
   box-shadow:
     0 1px 2px rgba(15, 23, 42, 0.42),
     0 16px 42px rgba(15, 23, 42, 0.45),
-    0 0 0 1px rgba(56, 189, 248, 0.45);
+    0 0 0 calc(var(--window-border-width, var(--surface-border-width, 1px)))
+      rgba(56, 189, 248, 0.45),
+    var(
+      --window-inner-highlight,
+      inset 0 1px 0 color-mix(in srgb, var(--color-text) 14%, transparent)
+    ),
+    var(
+      --window-inner-shadow,
+      inset 0 -1px 0 color-mix(in srgb, var(--kali-blue) 28%, transparent)
+    );
 }
 
 .windowFrame::before {
@@ -39,8 +59,14 @@
   background: var(--color-window-accent);
   opacity: 0;
   pointer-events: none;
-  border-top-left-radius: calc(var(--radius-6) - 1px);
-  border-top-right-radius: calc(var(--radius-6) - 1px);
+  border-top-left-radius: calc(
+    var(--window-border-radius, var(--radius-6)) -
+    var(--window-border-width, var(--surface-border-width, 1px))
+  );
+  border-top-right-radius: calc(
+    var(--window-border-radius, var(--radius-6)) -
+    var(--window-border-width, var(--surface-border-width, 1px))
+  );
   transition: opacity var(--motion-fast) ease;
   z-index: 2;
 }
@@ -54,7 +80,16 @@
   box-shadow:
     0 1px 1px rgba(15, 23, 42, 0.24),
     0 10px 28px rgba(15, 23, 42, 0.22),
-    0 0 0 1px rgba(30, 64, 175, 0.28);
+    0 0 0 calc(var(--window-border-width, var(--surface-border-width, 1px)))
+      rgba(30, 64, 175, 0.28),
+    var(
+      --window-inner-highlight,
+      inset 0 1px 0 color-mix(in srgb, var(--color-text) 14%, transparent)
+    ),
+    var(
+      --window-inner-shadow,
+      inset 0 -1px 0 color-mix(in srgb, var(--kali-blue) 28%, transparent)
+    );
 }
 
 .windowFrameResizing {
@@ -127,8 +162,14 @@
   --window-titlebar-gap: clamp(0.25rem, 1vw, 0.5rem);
   height: clamp(28px, 5.2vw, 34px);
   min-height: 36px;
-  border-top-left-radius: calc(var(--radius-6) - 1px);
-  border-top-right-radius: calc(var(--radius-6) - 1px);
+  border-top-left-radius: calc(
+    var(--window-border-radius, var(--radius-6)) -
+      var(--window-border-width, var(--surface-border-width, 1px))
+  );
+  border-top-right-radius: calc(
+    var(--window-border-radius, var(--radius-6)) -
+      var(--window-border-width, var(--surface-border-width, 1px))
+  );
   position: relative;
   z-index: 1;
   display: flex;

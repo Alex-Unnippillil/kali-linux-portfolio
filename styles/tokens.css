@@ -69,11 +69,25 @@
   --radius-6: 12px;
   --radius-round: 9999px;
 
+  /* Desktop surface geometry */
+  --surface-border-width: 1px;
+  --surface-border-radius: 12px;
+  --window-border-width: var(--surface-border-width);
+  --window-border-radius: var(--surface-border-radius);
+  --panel-border-width: var(--surface-border-width);
+  --panel-border-radius: calc(var(--surface-border-radius) - 2px);
+  --window-inner-highlight: inset 0 1px 0 color-mix(in srgb, var(--color-text) 14%, transparent);
+  --window-inner-shadow: inset 0 -1px 0 color-mix(in srgb, var(--kali-blue) 28%, transparent);
+  --panel-inner-highlight: inset 0 1px 0 color-mix(in srgb, var(--color-text) 10%, transparent);
+  --panel-inner-shadow: inset 0 -1px 0 color-mix(in srgb, var(--color-border) 55%, transparent);
+  --window-border-color: color-mix(in srgb, var(--kali-blue) 32%, rgba(8, 15, 26, 0.82));
+  --panel-border-color: var(--kali-panel-border);
+
   /* Elevation */
   --shadow-2: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
 
   /* Window chrome */
-  --color-window-border: #12344a;
+  --color-window-border: var(--window-border-color);
   --color-window-accent: var(--color-primary);
 
   /* Motion durations */
