@@ -201,6 +201,7 @@ const cancelScheduledAnimationFrame = (handle) => {
 export class Window extends Component {
     static defaultProps = {
         snapGrid: [8, 8],
+        snapToGrid: true,
         minWidth: DEFAULT_MIN_WIDTH,
         minHeight: DEFAULT_MIN_HEIGHT,
     };
@@ -292,62 +293,130 @@ export class Window extends Component {
     }
 
     componentDidUpdate(prevProps) {
-        if (prevProps.minWidth === this.props.minWidth && prevProps.minHeight === this.props.minHeight) {
+        const minWidthPropChanged = prevProps.minWidth !== this.props.minWidth;
+        const minHeightPropChanged = prevProps.minHeight !== this.props.minHeight;
+
+        if (minWidthPropChanged || minHeightPropChanged) {
+            const minWidth = normalizePercentageDimension(this.props.minWidth, DEFAULT_MIN_WIDTH);
+            const minHeight = normalizePercentageDimension(this.props.minHeight, DEFAULT_MIN_HEIGHT);
+
+            const minWidthChanged = this.state.minWidth !== minWidth;
+            const minHeightChanged = this.state.minHeight !== minHeight;
+            const widthNeedsUpdate = this.state.width < minWidth;
+            const heightNeedsUpdate = this.state.height < minHeight;
+            const lastSizeNeedsUpdate = this.state.lastSize
+                ? (this.state.lastSize.width < minWidth || this.state.lastSize.height < minHeight)
+                : false;
+            const preBoundsNeedsUpdate = this.state.preMaximizeBounds
+                ? (this.state.preMaximizeBounds.width < minWidth || this.state.preMaximizeBounds.height < minHeight)
+                : false;
+
+            if (minWidthChanged || minHeightChanged || widthNeedsUpdate || heightNeedsUpdate || lastSizeNeedsUpdate || preBoundsNeedsUpdate) {
+                this.setState((prevState) => {
+                    const updates = {};
+                    if (minWidthChanged) {
+                        updates.minWidth = minWidth;
+                    }
+                    if (minHeightChanged) {
+                        updates.minHeight = minHeight;
+                    }
+                    if (widthNeedsUpdate) {
+                        updates.width = Math.max(prevState.width, minWidth);
+                    }
+                    if (heightNeedsUpdate) {
+                        updates.height = Math.max(prevState.height, minHeight);
+                    }
+                    if (lastSizeNeedsUpdate && prevState.lastSize) {
+                        updates.lastSize = {
+                            width: Math.max(prevState.lastSize.width, minWidth),
+                            height: Math.max(prevState.lastSize.height, minHeight),
+                        };
+                    }
+                    if (preBoundsNeedsUpdate && prevState.preMaximizeBounds) {
+                        updates.preMaximizeBounds = {
+                            ...prevState.preMaximizeBounds,
+                            width: Math.max(prevState.preMaximizeBounds.width, minWidth),
+                            height: Math.max(prevState.preMaximizeBounds.height, minHeight),
+                        };
+                    }
+                    return updates;
+                }, () => {
+                    this.resizeBoundries();
+                    if (widthNeedsUpdate || heightNeedsUpdate) {
+                        this.notifySizeChange();
+                    }
+                });
+            }
+        }
+
+        const snapPreferenceChanged = prevProps.snapToGrid !== this.props.snapToGrid;
+        const gridChanged = !this.snapGridEquals(prevProps.snapGrid, this.props.snapGrid);
+        if (snapPreferenceChanged || gridChanged) {
+            this.handleGridPreferenceChange();
+        }
+    }
+
+    snapGridEquals = (a, b) => {
+        if (a === b) return true;
+        if (!Array.isArray(a) || !Array.isArray(b)) return false;
+        if (a.length !== b.length) return false;
+        for (let index = 0; index < a.length; index += 1) {
+            if (a[index] !== b[index]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    handleGridPreferenceChange = () => {
+        if (this._isUnmounted) return;
+        const applyPosition = () => {
+            this.setWinowsPosition();
+        };
+
+        if (this.props.snapToGrid === false || this.state.maximized) {
+            applyPosition();
             return;
         }
 
-        const minWidth = normalizePercentageDimension(this.props.minWidth, DEFAULT_MIN_WIDTH);
-        const minHeight = normalizePercentageDimension(this.props.minHeight, DEFAULT_MIN_HEIGHT);
-
-        const minWidthChanged = this.state.minWidth !== minWidth;
-        const minHeightChanged = this.state.minHeight !== minHeight;
-        const widthNeedsUpdate = this.state.width < minWidth;
-        const heightNeedsUpdate = this.state.height < minHeight;
-        const lastSizeNeedsUpdate = this.state.lastSize
-            ? (this.state.lastSize.width < minWidth || this.state.lastSize.height < minHeight)
-            : false;
-        const preBoundsNeedsUpdate = this.state.preMaximizeBounds
-            ? (this.state.preMaximizeBounds.width < minWidth || this.state.preMaximizeBounds.height < minHeight)
-            : false;
-
-        if (!minWidthChanged && !minHeightChanged && !widthNeedsUpdate && !heightNeedsUpdate && !lastSizeNeedsUpdate && !preBoundsNeedsUpdate) {
+        const metrics = this.getCachedViewportMetrics() || getViewportMetrics();
+        const viewportWidth = metrics?.width || 0;
+        const viewportHeight = metrics?.height || 0;
+        if (!viewportWidth || !viewportHeight) {
+            applyPosition();
             return;
         }
 
-        this.setState((prevState) => {
-            const updates = {};
-            if (minWidthChanged) {
-                updates.minWidth = minWidth;
+        const [gridX, gridY] = this.getSnapGrid();
+        const quantize = (value, step) => {
+            if (typeof step !== 'number' || !Number.isFinite(step) || step <= 0) {
+                return value;
             }
-            if (minHeightChanged) {
-                updates.minHeight = minHeight;
-            }
-            if (widthNeedsUpdate) {
-                updates.width = Math.max(prevState.width, minWidth);
-            }
-            if (heightNeedsUpdate) {
-                updates.height = Math.max(prevState.height, minHeight);
-            }
-            if (lastSizeNeedsUpdate && prevState.lastSize) {
-                updates.lastSize = {
-                    width: Math.max(prevState.lastSize.width, minWidth),
-                    height: Math.max(prevState.lastSize.height, minHeight),
-                };
-            }
-            if (preBoundsNeedsUpdate && prevState.preMaximizeBounds) {
-                updates.preMaximizeBounds = {
-                    ...prevState.preMaximizeBounds,
-                    width: Math.max(prevState.preMaximizeBounds.width, minWidth),
-                    height: Math.max(prevState.preMaximizeBounds.height, minHeight),
-                };
-            }
-            return updates;
-        }, () => {
-            this.resizeBoundries();
-            if (widthNeedsUpdate || heightNeedsUpdate) {
-                this.notifySizeChange();
-            }
-        });
+            return Math.round(value / step) * step;
+        };
+
+        const minWidthPx = Math.max((this.state.minWidth / 100) * viewportWidth, 1);
+        const minHeightPx = Math.max((this.state.minHeight / 100) * viewportHeight, 1);
+        const widthPx = Math.max((this.state.width / 100) * viewportWidth, minWidthPx);
+        const heightPx = Math.max((this.state.height / 100) * viewportHeight, minHeightPx);
+
+        const snappedWidthPx = Math.max(quantize(widthPx, gridX), minWidthPx);
+        const snappedHeightPx = Math.max(quantize(heightPx, gridY), minHeightPx);
+
+        const snappedWidthPercent = Math.min(100, (snappedWidthPx / viewportWidth) * 100);
+        const snappedHeightPercent = Math.min(100, (snappedHeightPx / viewportHeight) * 100);
+
+        const widthChanged = Math.abs(snappedWidthPercent - this.state.width) > 0.05;
+        const heightChanged = Math.abs(snappedHeightPercent - this.state.height) > 0.05;
+
+        if (widthChanged || heightChanged) {
+            this.setState((prevState) => ({
+                width: widthChanged ? snappedWidthPercent : prevState.width,
+                height: heightChanged ? snappedHeightPercent : prevState.height,
+            }), applyPosition);
+        } else {
+            applyPosition();
+        }
     }
 
     componentWillUnmount() {
@@ -735,10 +804,10 @@ export class Window extends Component {
     }
 
     snapToGrid = (value, axis = 'x') => {
-        if (!this.props.snapEnabled) return value;
+        if (this.props.snapToGrid === false) return value;
         const [gridX, gridY] = this.getSnapGrid();
         const size = axis === 'y' ? gridY : gridX;
-        if (!size) return value;
+        if (typeof size !== 'number' || !Number.isFinite(size) || size <= 0) return value;
         return Math.round(value / size) * size;
     }
 
@@ -1006,6 +1075,10 @@ export class Window extends Component {
         };
         this._pendingDragUpdate = update;
         this.applyEdgeResistance(node, update);
+        const immediateRect = this.readNodeRect(node);
+        if (immediateRect) {
+            this.checkSnapPreview(node, immediateRect);
+        }
 
         if (this._dragFrame !== null) {
             return;
@@ -1261,6 +1334,23 @@ export class Window extends Component {
         const sessionSnapBottomInset = typeof snapBottomInset === 'number' && Number.isFinite(snapBottomInset)
             ? snapBottomInset
             : this.getCachedSnapBottomInset();
+
+        if (this.props.snapToGrid !== false) {
+            const [gridX, gridY] = this.getSnapGrid();
+            const quantize = (value, step) => {
+                if (typeof step !== 'number' || !Number.isFinite(step) || step <= 0) {
+                    return value;
+                }
+                return Math.round(value / step) * step;
+            };
+            widthPx = Math.max(quantize(widthPx, gridX), minWidthPx);
+            heightPx = Math.max(quantize(heightPx, gridY), minHeightPx);
+            const baseTop = viewportTop + sessionTopOffset;
+            const snappedRelativeX = quantize(translateX - viewportLeft, gridX);
+            const snappedRelativeY = quantize(translateY - baseTop, gridY);
+            translateX = snappedRelativeX + viewportLeft;
+            translateY = snappedRelativeY + baseTop;
+        }
 
         const clampedPosition = clampWindowPositionWithinViewport(
             { x: translateX, y: translateY },
@@ -1707,7 +1797,7 @@ export class Window extends Component {
                     axis="both"
                     handle="[data-window-drag-handle]"
                     cancel={`.${styles.windowControls}`}
-                    grid={this.props.snapEnabled ? snapGrid : [1, 1]}
+                    grid={this.props.snapToGrid === false ? [1, 1] : snapGrid}
                     scale={1}
                     onStart={this.changeCursorToMove}
                     onStop={this.handleStop}
