@@ -35,6 +35,30 @@ beforeEach(() => {
 });
 
 describe('ContactApp UI', () => {
+  it('shows inline errors when client-side validation fails', async () => {
+    render(<ContactApp />);
+    fireEvent.change(screen.getByLabelText(/name/i), {
+      target: { value: ' ' },
+    });
+    fireEvent.change(screen.getByLabelText(/email/i), {
+      target: { value: 'invalid-email' },
+    });
+    fireEvent.change(screen.getByLabelText(/message/i), {
+      target: { value: ' ' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    expect(processContactFormMock).not.toHaveBeenCalled();
+    expect(await screen.findByText('Invalid email')).toBeInTheDocument();
+    expect(
+      screen.getByText('Please fix the errors above and try again.')
+    ).toBeInTheDocument();
+    expect(await screen.findByText('1-1000 chars')).toBeInTheDocument();
+    const nameErrors = await screen.findAllByText('1-100 chars');
+    expect(nameErrors.length).toBeGreaterThan(0);
+  });
+
   it('shows a success toast and banner after a successful submission', async () => {
     processContactFormMock.mockResolvedValue({ success: true });
 
@@ -78,5 +102,40 @@ describe('ContactApp UI', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /send message/i })).toBeEnabled();
     });
+  });
+
+  it('shows an error when reCAPTCHA fails to provide a token', async () => {
+    (window as any).grecaptcha.execute.mockResolvedValueOnce('');
+
+    render(<ContactApp />);
+    fillForm();
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    await waitFor(() => {
+      expect(processContactFormMock).not.toHaveBeenCalled();
+    });
+
+    expect(
+      screen.getByText('Captcha verification failed. Please try again.')
+    ).toBeInTheDocument();
+  });
+
+  it('surfaces server errors returned by the API', async () => {
+    processContactFormMock.mockResolvedValue({
+      success: false,
+      error: 'Server offline',
+    });
+
+    render(<ContactApp />);
+    fillForm();
+    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+
+    await waitFor(() => {
+      expect(processContactFormMock).toHaveBeenCalled();
+    });
+
+    expect(
+      screen.getByText('Server offline')
+    ).toBeInTheDocument();
   });
 });

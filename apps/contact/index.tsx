@@ -48,6 +48,7 @@ const ContactApp: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [csrfToken, setCsrfToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [nameError, setNameError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [messageError, setMessageError] = useState("");
 
@@ -78,12 +79,22 @@ const ContactApp: React.FC = () => {
     setSubmitting(true);
     setError("");
     setSuccessMessage("");
+    setNameError("");
     setEmailError("");
     setMessageError("");
 
-    const emailResult = contactSchema.shape.email.safeParse(email);
-    const messageResult = contactSchema.shape.message.safeParse(message);
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+    const trimmedMessage = message.trim();
+
+    const nameResult = contactSchema.shape.name.safeParse(trimmedName);
+    const emailResult = contactSchema.shape.email.safeParse(trimmedEmail);
+    const messageResult = contactSchema.shape.message.safeParse(trimmedMessage);
     let hasValidationError = false;
+    if (!nameResult.success) {
+      setNameError("1-100 chars");
+      hasValidationError = true;
+    }
     if (!emailResult.success) {
       setEmailError("Invalid email");
       hasValidationError = true;
@@ -99,6 +110,10 @@ const ContactApp: React.FC = () => {
       return;
     }
 
+    if (trimmedName !== name) setName(trimmedName);
+    if (trimmedEmail !== email) setEmail(trimmedEmail);
+    if (trimmedMessage !== message) setMessage(trimmedMessage);
+
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
     const recaptchaToken = await getRecaptchaToken(siteKey);
     if (!recaptchaToken) {
@@ -110,9 +125,9 @@ const ContactApp: React.FC = () => {
 
     try {
       const result = await processContactForm({
-        name,
-        email,
-        message,
+        name: trimmedName,
+        email: trimmedEmail,
+        message: trimmedMessage,
         honeypot,
         csrfToken,
         recaptchaToken,
@@ -123,6 +138,7 @@ const ContactApp: React.FC = () => {
         setToast("Message sent");
         setSuccessMessage(confirmation);
         setName("");
+        setNameError("");
         setEmail("");
         setMessage("");
         setHoneypot("");
@@ -182,6 +198,7 @@ const ContactApp: React.FC = () => {
         <div className="grid gap-8 lg:grid-cols-[1.6fr,1fr]">
           <form
             onSubmit={handleSubmit}
+            noValidate
             className="space-y-8 rounded-xl border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-surface)] p-6 shadow-kali-panel"
           >
             <div className="flex flex-col gap-3 rounded-lg border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-surface)_85%,transparent)] p-4 text-sm text-[color:var(--kali-text-muted)]">
@@ -227,6 +244,8 @@ const ContactApp: React.FC = () => {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
+                    aria-invalid={!!nameError}
+                    aria-describedby={nameError ? "contact-name-error" : undefined}
                     aria-labelledby="contact-name-label"
                   />
                   <svg
@@ -243,6 +262,11 @@ const ContactApp: React.FC = () => {
                       d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25v-1.5A4.5 4.5 0 0 1 9 14.25h6a4.5 4.5 0 0 1 4.5 4.5v1.5"
                     />
                   </svg>
+                  {nameError && (
+                    <FormError id="contact-name-error" className="mt-2">
+                      {nameError}
+                    </FormError>
+                  )}
                 </div>
               </div>
               <div className="space-y-2">
