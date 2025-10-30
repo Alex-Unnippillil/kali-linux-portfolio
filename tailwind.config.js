@@ -75,6 +75,10 @@ module.exports = {
       },
       boxShadow: {
         'kali-panel': '0 6px 20px rgba(0,0,0,.35)',
+        'kali-dock': 'var(--shadow-dock)',
+        'kali-window': 'var(--shadow-window-inactive)',
+        'kali-window-active': 'var(--shadow-window-active)',
+        'kali-modal': 'var(--shadow-modal)',
       },
       fontFamily: {
         ubuntu: ['Rajdhani', 'Segoe UI', 'sans-serif'],

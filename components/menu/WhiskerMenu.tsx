@@ -519,7 +519,7 @@ const WhiskerMenu: React.FC = () => {
         <div
           ref={menuRef}
           data-testid="whisker-menu-dropdown"
-          className={`fixed z-[260] flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:absolute sm:top-full sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:flex-row sm:overflow-hidden ${
+          className={`fixed z-[260] flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-kali-modal transition-all duration-200 ease-out sm:absolute sm:top-full sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:flex-row sm:overflow-hidden ${
             isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
           }`}
           style={{ ...menuStyle, transitionDuration: `${TRANSITION_DURATION}ms` }}

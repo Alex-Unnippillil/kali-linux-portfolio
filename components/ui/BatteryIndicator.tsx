@@ -193,7 +193,7 @@ const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
       </button>
       {open && (
         <div
-          className="absolute bottom-full right-0 z-50 mb-2 min-w-[14rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-3 text-xs text-white shadow-lg"
+          className="absolute bottom-full right-0 z-50 mb-2 min-w-[14rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-3 text-xs text-white shadow-kali-modal"
           role="menu"
           aria-label="Battery menu"
           onClick={(event) => event.stopPropagation()}

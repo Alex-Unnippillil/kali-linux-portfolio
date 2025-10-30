@@ -963,7 +963,7 @@ export default class Navbar extends PureComponent {
                 return (
                         <div
                                 ref={this.navbarRef}
-                                className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
+                                className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-kali-dock backdrop-blur-md"
                                 style={{
                                         minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
                                         paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,

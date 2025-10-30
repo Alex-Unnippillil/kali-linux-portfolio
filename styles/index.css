@@ -171,9 +171,9 @@ input[type=range].ubuntu-slider:focus-visible::-webkit-slider-thumb {
 }
 
 .window-shadow {
-    box-shadow: var(--shadow-2);
-    -webkit-box-shadow: var(--shadow-2);
-    -moz-box-shadow: var(--shadow-2);
+    box-shadow: var(--shadow-window-inactive);
+    -webkit-box-shadow: var(--shadow-window-inactive);
+    -moz-box-shadow: var(--shadow-window-inactive);
 }
 
 .closed-window {
