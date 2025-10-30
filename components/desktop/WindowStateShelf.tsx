@@ -80,7 +80,7 @@ function WindowStateShelf({
     );
 
     const toggleClasses = clsx(
-        'flex w-full items-center justify-between rounded-lg px-3 py-2 text-left font-medium text-white/90 transition-colors hover:text-white',
+        'flex w-full items-center justify-between rounded-lg px-3 py-2 text-left font-medium text-white/90 transition-colors transition-transform duration-100 ease-out hover:bg-white/10 hover:text-white active:bg-white/15 active:translate-y-px',
         focusRing,
     );
 
@@ -114,12 +114,12 @@ function WindowStateShelf({
                         <li className="px-2 py-4 text-center text-xs text-white/60">{emptyLabel}</li>
                     ) : (
                         entries.map((entry) => (
-                            <li key={entry.id} className="group flex items-center gap-2 rounded-md px-2 py-1 hover:bg-white/5">
+                            <li key={entry.id} className="group flex items-center gap-2 rounded-md px-2 py-1 transition-colors duration-100 ease-out hover:bg-white/5">
                                 <button
                                     type="button"
                                     onClick={() => onActivate(entry.id)}
                                     className={clsx(
-                                        'flex flex-1 items-center gap-3 rounded-md px-1 py-1 text-left transition-colors hover:text-white/95',
+                                        'flex flex-1 items-center gap-3 rounded-md px-1 py-1 text-left transition-colors duration-100 ease-out hover:bg-white/10 hover:text-white active:bg-white/15',
                                         focusRing,
                                     )}
                                 >
@@ -135,7 +135,7 @@ function WindowStateShelf({
                                         aria-label={`Remove ${entry.title} from ${label}`}
                                         onClick={() => onRemove(entry.id)}
                                         className={clsx(
-                                            'rounded-full p-1 text-white/60 transition-colors hover:bg-white/10 hover:text-white',
+                                            'rounded-full p-1 text-white/60 transition-colors duration-100 ease-out hover:bg-white/10 hover:text-white active:bg-white/15',
                                             focusRing,
                                         )}
                                     >

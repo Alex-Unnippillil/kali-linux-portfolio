@@ -124,7 +124,7 @@ export class UbuntuApp extends Component {
                 onPointerCancel={onPointerCancel}
                 style={combinedStyle}
                 className={(this.state.launching ? " app-icon-launch " : "") + (dragging ? " opacity-70 " : "") +
-                    " m-px z-10 outline-none rounded select-none flex flex-col justify-start items-center text-center text-white transition-colors transition-shadow duration-150 ease-out border focus-visible:ring-2 focus-visible:ring-sky-300/70 "}
+                    " m-px z-10 outline-none rounded select-none flex flex-col justify-start items-center text-center text-white transition-colors transition-shadow transition-transform duration-100 ease-out border hover:bg-sky-400/15 hover:border-sky-300/40 active:bg-sky-400/25 active:border-sky-300/60 active:shadow-[0_0_0_1px_rgba(125,211,252,0.55)] active:translate-y-px focus-visible:ring-2 focus-visible:ring-sky-300/70 "}
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
                 onKeyDown={(event) => {

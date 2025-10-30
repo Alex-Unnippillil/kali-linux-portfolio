@@ -1,4 +1,5 @@
 import React from 'react';
+import clsx from 'clsx';
 
 export type PlacesMenuItem = {
   id: string;
@@ -58,13 +59,14 @@ const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) =>
             item.onSelect?.();
           };
 
+          const buttonClasses = clsx(
+            'flex w-full items-center gap-3 rounded px-3 py-2 text-left text-slate-200 transition-colors duration-100 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-[#0b121c]',
+            'hover:bg-slate-700/60 hover:text-white active:bg-slate-700/80',
+          );
+
           return (
             <li key={item.id}>
-              <button
-                type="button"
-                onClick={handleClick}
-                className="flex w-full items-center gap-3 rounded px-3 py-2 text-left transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-ubb-orange"
-              >
+              <button type="button" onClick={handleClick} className={buttonClasses}>
                 <img
                   src={src}
                   alt=""

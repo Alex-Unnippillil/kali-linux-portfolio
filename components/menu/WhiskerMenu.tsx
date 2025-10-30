@@ -501,7 +501,7 @@ const WhiskerMenu: React.FC = () => {
         type="button"
         onClick={toggleMenu}
         aria-keyshortcuts="Meta Alt+F1"
-        className="flex items-center gap-2 border-b-2 border-transparent py-1 pl-3 pr-3 outline-none transition duration-100 ease-in-out"
+        className="flex items-center gap-2 border-b-2 border-transparent py-1 pl-3 pr-3 outline-none transition-colors transition-transform duration-100 ease-out hover:bg-white/10 hover:text-white active:bg-white/15 active:text-white active:translate-y-px focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b121c]"
         tabIndex={isOpen ? -1 : 0}
       >
         <svg
@@ -557,10 +557,10 @@ const WhiskerMenu: React.FC = () => {
                     categoryButtonRefs.current[index] = el;
                   }}
                   type="button"
-                  className={`group inline-flex min-h-[48px] min-w-[48px] flex-shrink-0 items-center gap-3 rounded-full border border-transparent bg-[#142132] px-5 py-2 text-sm text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] sm:min-h-[44px] sm:min-w-0 sm:w-full sm:rounded-lg sm:px-3 sm:py-3 ${
+                  className={`group inline-flex min-h-[48px] min-w-[48px] flex-shrink-0 items-center gap-3 rounded-full border border-transparent bg-[#142132] px-5 py-2 text-sm text-left transition-colors duration-100 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] sm:min-h-[44px] sm:min-w-0 sm:w-full sm:rounded-lg sm:px-3 sm:py-3 ${
                     category === cat.id
-                      ? 'bg-[#1d2c43] text-white shadow-[inset_0_0_0_1px_rgba(83,185,255,0.35)]'
-                      : 'text-gray-300 hover:bg-[#152133] hover:text-white'
+                      ? 'bg-[#1d2c43] text-white shadow-[inset_0_0_0_1px_rgba(83,185,255,0.35)] active:bg-[#223452]'
+                      : 'text-gray-300 hover:bg-[#152133] hover:text-white active:bg-[#1a2b41] active:text-white'
                   }`}
                   style={{ scrollSnapAlign: 'start' }}
                   role="option"
@@ -623,7 +623,7 @@ const WhiskerMenu: React.FC = () => {
                     key={app.id}
                     type="button"
                     onClick={() => openSelectedApp(app.id)}
-                    className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#122136] text-white transition hover:-translate-y-0.5 hover:bg-[#1b2d46] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29]"
+                    className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#122136] text-white transition-colors transition-transform duration-100 ease-out hover:-translate-y-0.5 hover:bg-[#1b2d46] active:translate-y-0 active:bg-[#213758] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29]"
                     aria-label={`Open ${app.title}`}
                   >
                     <Image
@@ -666,10 +666,10 @@ const WhiskerMenu: React.FC = () => {
                     <li key={app.id}>
                       <button
                         type="button"
-                        className={`flex w-full min-h-[44px] items-center justify-between gap-4 rounded-xl px-4 py-3 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
+                        className={`flex w-full min-h-[44px] items-center justify-between gap-4 rounded-xl px-4 py-3 text-left text-sm transition-colors duration-100 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
                           idx === highlight
-                            ? 'bg-[#162438] text-white shadow-[0_0_0_1px_rgba(83,185,255,0.35)]'
-                            : 'text-gray-200 hover:bg-[#142132]'
+                            ? 'bg-[#162438] text-white shadow-[0_0_0_1px_rgba(83,185,255,0.35)] active:bg-[#1c2f49]'
+                            : 'text-gray-200 hover:bg-[#142132] active:bg-[#1a283c]'
                         } ${app.disabled ? 'cursor-not-allowed opacity-60' : ''}`}
                         aria-label={app.title}
                         disabled={app.disabled}
