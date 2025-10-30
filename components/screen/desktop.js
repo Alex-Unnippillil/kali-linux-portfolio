@@ -254,6 +254,8 @@ export class Desktop extends Component {
 
         const initialViewportWidth =
             typeof window !== 'undefined' && typeof window.innerWidth === 'number' ? window.innerWidth : 0;
+        const initialViewportHeight =
+            typeof window !== 'undefined' && typeof window.innerHeight === 'number' ? window.innerHeight : 0;
         const initialIconSizeBucket = this.getViewportBucketId(initialViewportWidth);
         const initialIconSizePreset = this.getStoredIconSizePreset(initialIconSizeBucket);
         const initialPresetConfig = this.getIconSizePresetConfig(initialIconSizePreset);
@@ -316,6 +318,7 @@ export class Desktop extends Component {
             minimizedShelfOpen: false,
             closedShelfOpen: false,
             appBadges: {},
+            viewportOrientation: initialViewportHeight > initialViewportWidth ? 'portrait' : 'landscape',
         };
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -1073,6 +1076,10 @@ export class Desktop extends Component {
 
         const viewportWidth = typeof window.innerWidth === 'number' ? window.innerWidth : 0;
         const viewportHeight = typeof window.innerHeight === 'number' ? window.innerHeight : 0;
+        const nextOrientation = viewportHeight > viewportWidth ? 'portrait' : 'landscape';
+        if (this.state.viewportOrientation !== nextOrientation) {
+            this.setState({ viewportOrientation: nextOrientation });
+        }
         this.handleViewportBucketChange(viewportWidth);
         const topOffset = measureWindowTopOffset();
         const closedWindows = this.state.closed_windows || {};
@@ -4545,6 +4552,10 @@ export class Desktop extends Component {
 
         const appMap = new Map(apps.map((app) => [app.id, app]));
         const snapGrid = this.getSnapGrid();
+        const orientation = this.state.viewportOrientation || 'landscape';
+        const isPortraitViewport = orientation === 'portrait';
+        const portraitStackSpacing = 28;
+        const maxStackDepth = 4;
 
         return orderedIds.map((id, index) => {
             const app = appMap.get(id);
@@ -4553,6 +4564,14 @@ export class Desktop extends Component {
             const size = this.state.window_sizes?.[id];
             const defaultWidth = size && typeof size.width === 'number' ? size.width : app.defaultWidth;
             const defaultHeight = size && typeof size.height === 'number' ? size.height : app.defaultHeight;
+            const hasStoredPosition = pos && Number.isFinite(pos.x) && Number.isFinite(pos.y);
+            const stackIndex = Math.min(index, maxStackDepth);
+            const stackOffset = isPortraitViewport && !hasStoredPosition ? portraitStackSpacing * stackIndex : 0;
+            const storedX = hasStoredPosition ? pos.x : undefined;
+            const storedY = hasStoredPosition ? pos.y : undefined;
+            const initialY = hasStoredPosition
+                ? clampWindowTopPosition(storedY, safeTopOffset)
+                : clampWindowTopPosition(safeTopOffset + stackOffset, safeTopOffset);
             const props = {
                 title: app.title,
                 id: app.id,
@@ -4568,8 +4587,8 @@ export class Desktop extends Component {
                 allowMaximize: app.allowMaximize,
                 defaultWidth,
                 defaultHeight,
-                initialX: pos ? pos.x : undefined,
-                initialY: pos ? clampWindowTopPosition(pos.y, safeTopOffset) : safeTopOffset,
+                initialX: hasStoredPosition ? storedX : undefined,
+                initialY,
                 onPositionChange: (x, y) => this.updateWindowPosition(id, x, y),
                 onSizeChange: (width, height) => this.updateWindowSize(id, width, height),
                 snapEnabled: this.props.snapEnabled,

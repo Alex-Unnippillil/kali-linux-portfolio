@@ -70,6 +70,47 @@ const percentOf = (value, total) => {
     return (value / total) * 100;
 };
 
+const resolvePortraitWidth = (candidate, minWidth) => {
+    const safeMin = Math.max(minWidth || 0, 0);
+    const portraitMax = Math.max(90, safeMin);
+    const normalized = Math.max(candidate, safeMin);
+    return Math.min(normalized, portraitMax);
+};
+
+const computeDefaultWindowSize = ({
+    viewportWidth,
+    viewportHeight,
+    minWidth,
+    minHeight,
+    defaultWidth,
+    defaultHeight,
+}) => {
+    const isPortrait = viewportHeight > viewportWidth;
+    const smallViewport = viewportWidth < 640;
+    const fallbackWidth = isPortrait ? 90 : (smallViewport ? 85 : 60);
+    const fallbackHeight = isPortrait ? 85 : (smallViewport ? 60 : 85);
+    const requestedWidth = typeof defaultWidth === 'number' ? defaultWidth : fallbackWidth;
+    const requestedHeight = typeof defaultHeight === 'number' ? defaultHeight : fallbackHeight;
+    const normalizedMinWidth = normalizePercentageDimension(minWidth, DEFAULT_MIN_WIDTH);
+    const normalizedMinHeight = normalizePercentageDimension(minHeight, DEFAULT_MIN_HEIGHT);
+    const candidateWidth = Math.max(requestedWidth, normalizedMinWidth);
+    const width = isPortrait
+        ? resolvePortraitWidth(candidateWidth, normalizedMinWidth)
+        : candidateWidth;
+    const height = Math.max(requestedHeight, normalizedMinHeight);
+    return { width, height, isPortrait };
+};
+
+const computeCenteredStartX = (viewportWidth, viewportLeft, widthPercent) => {
+    if (!viewportWidth || !Number.isFinite(viewportWidth)) {
+        return viewportLeft || 0;
+    }
+    const normalizedWidthPercent = Number.isFinite(widthPercent) ? widthPercent : 0;
+    const windowWidthPx = (normalizedWidthPercent / 100) * viewportWidth;
+    const available = Math.max(viewportWidth - windowWidthPx, 0);
+    return (viewportLeft || 0) + available / 2;
+};
+
 const SNAP_LABELS = {
     left: 'Snap left half',
     right: 'Snap right half',
@@ -207,29 +248,31 @@ export class Window extends Component {
 
     constructor(props) {
         super(props);
-        this.id = null;
+        this.id = typeof props.id === 'string' ? props.id : null;
         const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = getViewportMetrics();
-        const isPortrait = viewportHeight > viewportWidth;
+        const minWidth = normalizePercentageDimension(props.minWidth, DEFAULT_MIN_WIDTH);
+        const minHeight = normalizePercentageDimension(props.minHeight, DEFAULT_MIN_HEIGHT);
+        const { width: defaultWidth, height: defaultHeight, isPortrait } = computeDefaultWindowSize({
+            viewportWidth,
+            viewportHeight,
+            minWidth,
+            minHeight,
+            defaultWidth: props.defaultWidth,
+            defaultHeight: props.defaultHeight,
+        });
         const initialTopInset = typeof window !== 'undefined'
             ? measureWindowTopOffset()
             : DEFAULT_WINDOW_TOP_OFFSET;
-        const minWidth = normalizePercentageDimension(props.minWidth, DEFAULT_MIN_WIDTH);
-        const minHeight = normalizePercentageDimension(props.minHeight, DEFAULT_MIN_HEIGHT);
-        const requestedWidth = typeof props.defaultWidth === 'number'
-            ? props.defaultWidth
-            : (isPortrait ? 90 : 60);
-        const requestedHeight = typeof props.defaultHeight === 'number'
-            ? props.defaultHeight
-            : 85;
-        this.startX =
-            props.initialX ??
-            (isPortrait ? window.innerWidth * 0.05 : 60);
+        const defaultStartX = isPortrait
+            ? computeCenteredStartX(viewportWidth, viewportLeft, defaultWidth)
+            : (viewportLeft || 0) + 60;
+        this.startX = typeof props.initialX === 'number' ? props.initialX : defaultStartX;
         this.startY = clampWindowTopPosition(props.initialY, initialTopInset);
 
         this.state = {
             cursorType: "cursor-default",
-            width: Math.max(requestedWidth, minWidth),
-            height: Math.max(requestedHeight, minHeight),
+            width: Math.max(defaultWidth, minWidth),
+            height: Math.max(defaultHeight, minHeight),
             closed: false,
             maximized: false,
             preMaximizeBounds: null,
@@ -259,12 +302,99 @@ export class Window extends Component {
         this._lastSnapBottomInset = null;
         this._lastSafeAreaBottom = null;
         this._isUnmounted = false;
+        this._lastOrientation = isPortrait ? 'portrait' : 'landscape';
+        this._hasCustomLayout = typeof props.initialX === 'number' || typeof props.initialY === 'number';
     }
 
     notifySizeChange = () => {
         if (typeof this.props.onSizeChange === 'function') {
             const { width, height } = this.state;
             this.props.onSizeChange(width, height);
+        }
+    }
+
+    updateWindowTransform = (nextX, nextY) => {
+        const node = this.getWindowNode();
+        if (!node) return;
+        const bounds = this.getCurrentBounds();
+        const safeTop = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
+        const resolvedX = Number.isFinite(nextX) ? nextX : bounds.x;
+        const resolvedYCandidate = Number.isFinite(nextY) ? nextY : bounds.y;
+        const resolvedY = clampWindowTopPosition(resolvedYCandidate, safeTop);
+
+        const transformValue = `translate(${resolvedX}px, ${resolvedY}px)`;
+        if (node.style.transform !== transformValue) {
+            node.style.transform = transformValue;
+        }
+
+        if (typeof node.style.setProperty === 'function') {
+            node.style.setProperty('--window-transform-x', `${resolvedX}px`);
+            node.style.setProperty('--window-transform-y', `${resolvedY}px`);
+        } else {
+            node.style['--window-transform-x'] = `${resolvedX}px`;
+            node.style['--window-transform-y'] = `${resolvedY}px`;
+        }
+
+        if (typeof this.props.onPositionChange === 'function') {
+            this.props.onPositionChange(resolvedX, resolvedY);
+        }
+    }
+
+    handleOrientationChange = (orientation, metrics) => {
+        if (!metrics) return;
+        const viewportWidth = Number.isFinite(metrics.viewportWidth) ? metrics.viewportWidth : 0;
+        const viewportHeight = Number.isFinite(metrics.viewportHeight) ? metrics.viewportHeight : 0;
+        const viewportLeft = Number.isFinite(metrics.viewportLeft) ? metrics.viewportLeft : 0;
+
+        const { width: computedWidth, height: computedHeight } = computeDefaultWindowSize({
+            viewportWidth,
+            viewportHeight,
+            minWidth: this.state.minWidth,
+            minHeight: this.state.minHeight,
+            defaultWidth: this.props.defaultWidth,
+            defaultHeight: this.props.defaultHeight,
+        });
+
+        const nextWidth = Math.max(computedWidth, this.state.minWidth);
+        const nextHeight = Math.max(computedHeight, this.state.minHeight);
+        const orientationIsPortrait = orientation === 'portrait';
+        const updates = {};
+
+        if (this.state.width !== nextWidth) {
+            updates.width = nextWidth;
+        }
+        if (orientationIsPortrait && this.state.height !== nextHeight) {
+            updates.height = nextHeight;
+        }
+
+        if (Object.keys(updates).length) {
+            updates.preMaximizeBounds = null;
+            this.setState(updates, () => {
+                this.resizeBoundries();
+                this.notifySizeChange();
+            });
+        }
+
+        const canAdjustPosition = typeof this.props.initialX !== 'number'
+            && !this._hasCustomLayout
+            && !this.state.snapped;
+        if (!canAdjustPosition) {
+            return;
+        }
+
+        const currentBounds = this.getCurrentBounds();
+        if (orientationIsPortrait) {
+            const centeredX = computeCenteredStartX(viewportWidth, viewportLeft, nextWidth);
+            if (Number.isFinite(centeredX) && Math.abs(centeredX - currentBounds.x) > 1) {
+                this.startX = centeredX;
+                this.updateWindowTransform(centeredX, currentBounds.y);
+            }
+        } else {
+            const landscapeX = (viewportLeft || 0) + 60;
+            if (Math.abs(landscapeX - currentBounds.x) > 1) {
+                this.startX = landscapeX;
+                this.updateWindowTransform(landscapeX, currentBounds.y);
+            }
         }
     }
 
@@ -376,50 +506,43 @@ export class Window extends Component {
     }
 
     setDefaultWindowDimenstion = () => {
-        if (typeof this.props.defaultHeight === 'number' && typeof this.props.defaultWidth === 'number') {
-            const width = Math.max(this.props.defaultWidth, this.state.minWidth);
-            const height = Math.max(this.props.defaultHeight, this.state.minHeight);
-            this.setState(
-                { height, width, preMaximizeBounds: null },
-                () => {
-                    this.resizeBoundries();
-                    this.notifySizeChange();
-                }
-            );
+        const { width: viewportWidth, height: viewportHeight, left: viewportLeft } = getViewportMetrics();
+        const { width: computedWidth, height: computedHeight, isPortrait } = computeDefaultWindowSize({
+            viewportWidth,
+            viewportHeight,
+            minWidth: this.state.minWidth,
+            minHeight: this.state.minHeight,
+            defaultWidth: this.props.defaultWidth,
+            defaultHeight: this.props.defaultHeight,
+        });
+
+        const nextWidth = Math.max(computedWidth, this.state.minWidth);
+        const nextHeight = Math.max(computedHeight, this.state.minHeight);
+        const widthChanged = this.state.width !== nextWidth;
+        const heightChanged = this.state.height !== nextHeight;
+        const shouldCenter = isPortrait && typeof this.props.initialX !== 'number' && !this._hasCustomLayout;
+
+        if (shouldCenter) {
+            const centeredX = computeCenteredStartX(viewportWidth, viewportLeft, nextWidth);
+            this.startX = centeredX;
+            this.updateWindowTransform(centeredX);
+        }
+
+        if (!widthChanged && !heightChanged) {
+            if (shouldCenter) {
+                this.resizeBoundries();
+            }
             return;
         }
 
-        const { width: viewportWidth, height: viewportHeight, left: viewportLeft } = getViewportMetrics();
-        const isPortrait = viewportHeight > viewportWidth;
-        if (isPortrait) {
-            this.startX = window.innerWidth * 0.05;
-            this.setState({
-                height: Math.max(85, this.state.minHeight),
-                width: Math.max(90, this.state.minWidth),
-                preMaximizeBounds: null,
-            }, () => {
-                this.resizeBoundries();
-                this.notifySizeChange();
-            });
-        } else if (window.innerWidth < 640) {
-            this.setState({
-                height: Math.max(60, this.state.minHeight),
-                width: Math.max(85, this.state.minWidth),
-                preMaximizeBounds: null,
-            }, () => {
-                this.resizeBoundries();
-                this.notifySizeChange();
-            });
-        } else {
-            this.setState({
-                height: Math.max(85, this.state.minHeight),
-                width: Math.max(60, this.state.minWidth),
-                preMaximizeBounds: null,
-            }, () => {
-                this.resizeBoundries();
-                this.notifySizeChange();
-            });
-        }
+        this.setState({
+            height: heightChanged ? nextHeight : this.state.height,
+            width: widthChanged ? nextWidth : this.state.width,
+            preMaximizeBounds: null,
+        }, () => {
+            this.resizeBoundries();
+            this.notifySizeChange();
+        });
     }
 
     resizeBoundries = () => {
@@ -435,6 +558,20 @@ export class Window extends Component {
         const availableVertical = Math.max(viewportHeight - topInset - snapBottomInset - safeAreaBottom, 0);
         const availableHorizontal = Math.max(viewportWidth - windowWidthPx, 0);
         const maxTop = Math.max(availableVertical - windowHeightPx, 0);
+
+        const previousOrientation = this._lastOrientation;
+        const nextOrientation = viewportHeight > viewportWidth ? 'portrait' : 'landscape';
+        const orientationChanged = previousOrientation !== nextOrientation;
+        this._lastOrientation = nextOrientation;
+
+        if (orientationChanged && !this.state.maximized) {
+            this.handleOrientationChange(nextOrientation, {
+                viewportWidth,
+                viewportHeight,
+                viewportLeft,
+                viewportTop,
+            });
+        }
 
         this._lastViewportMetrics = {
             width: viewportWidth,
@@ -806,6 +943,7 @@ export class Window extends Component {
             ? 'right'
             : position;
         this.setWinowsPosition();
+        this._hasCustomLayout = true;
         this.focusWindow();
         const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = this.getCachedViewportMetrics();
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
@@ -1004,6 +1142,7 @@ export class Window extends Component {
             x: coordinates.x,
             y: coordinates.y,
         };
+        this._hasCustomLayout = true;
         this._pendingDragUpdate = update;
         this.applyEdgeResistance(node, update);
 
@@ -1091,6 +1230,8 @@ export class Window extends Component {
 
         const node = this.getWindowNode();
         if (!node) return;
+
+        this._hasCustomLayout = true;
 
         const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = getViewportMetrics();
         if (!viewportWidth || !viewportHeight) {
@@ -1545,6 +1686,7 @@ export class Window extends Component {
             if (dx !== 0 || dy !== 0) {
                 e.preventDefault();
                 e.stopPropagation();
+                this._hasCustomLayout = true;
                 const node = this.getWindowNode();
                 if (node) {
                     const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
@@ -1592,6 +1734,7 @@ export class Window extends Component {
             }
             this.focusWindow();
         } else if (e.shiftKey) {
+            this._hasCustomLayout = true;
             const step = 1;
             if (e.key === 'ArrowLeft') {
                 e.preventDefault();
