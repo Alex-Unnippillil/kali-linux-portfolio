@@ -327,7 +327,7 @@ export default function YouTubeApp({ initialResults }: Props) {
   }, [clearHistoryState]);
 
   return (
-    <div className="flex h-full flex-col bg-[radial-gradient(circle_at_top_left,_color-mix(in_srgb,var(--kali-blue)_18%,var(--color-bg))_0%,_var(--color-bg)_45%,_var(--color-dark)_100%)] text-[var(--color-text)]">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,_color-mix(in_srgb,var(--kali-blue)_18%,var(--color-bg))_0%,_var(--color-bg)_45%,_var(--color-dark)_100%)] text-[var(--color-text)]">
       <header className="border-b border-[var(--kali-panel-border)] bg-[var(--color-overlay-strong)] px-6 py-6 shadow-sm backdrop-blur">
         <h1 className="text-2xl font-semibold">YouTube Explorer</h1>
         <p className="mt-2 max-w-3xl text-sm text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
@@ -377,166 +377,171 @@ export default function YouTubeApp({ initialResults }: Props) {
         )}
       </header>
 
-      <main className="flex flex-1 flex-col gap-6 px-6 py-6 lg:flex-row">
-        <section className="flex-1 rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface)] p-5 shadow-kali-panel">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
-            Watch
-          </h2>
-          <div className="mt-3 aspect-video overflow-hidden rounded-lg bg-[var(--kali-panel-highlight)]">
-            {selectedVideo ? (
-              <iframe
-                key={selectedVideo.id}
-                title={`YouTube player for ${selectedVideo.title}`}
-                src={`https://www.youtube-nocookie.com/embed/${selectedVideo.id}`}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="h-full w-full"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                Search and choose a video to start watching.
+      <div
+        className="flex flex-1 min-h-0 flex-col overflow-y-auto"
+        data-testid="youtube-scroll-region"
+      >
+        <main className="flex flex-1 flex-col gap-6 px-6 py-6 lg:flex-row">
+          <section className="flex-1 rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface)] p-5 shadow-kali-panel">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
+              Watch
+            </h2>
+            <div className="mt-3 aspect-video overflow-hidden rounded-lg bg-[var(--kali-panel-highlight)]">
+              {selectedVideo ? (
+                <iframe
+                  key={selectedVideo.id}
+                  title={`YouTube player for ${selectedVideo.title}`}
+                  src={`https://www.youtube-nocookie.com/embed/${selectedVideo.id}`}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="h-full w-full"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                  Search and choose a video to start watching.
+                </div>
+              )}
+            </div>
+            {selectedVideo && (
+              <div className="mt-4 space-y-2 text-sm text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
+                <h3 className="text-lg font-semibold text-[var(--color-text)]">
+                  {selectedVideo.title}
+                </h3>
+                <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                  {selectedVideo.channelTitle} • Published {formatDate(selectedVideo.publishedAt)}
+                </p>
+                {selectedVideo.description && (
+                  <p className="text-sm leading-relaxed text-[color:color-mix(in_srgb,var(--color-text)_72%,transparent)]">
+                    {selectedVideo.description}
+                  </p>
+                )}
               </div>
             )}
-          </div>
-          {selectedVideo && (
-            <div className="mt-4 space-y-2 text-sm text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
-              <h3 className="text-lg font-semibold text-[var(--color-text)]">
-                {selectedVideo.title}
-              </h3>
-              <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                {selectedVideo.channelTitle} • Published {formatDate(selectedVideo.publishedAt)}
-              </p>
-              {selectedVideo.description && (
-                <p className="text-sm leading-relaxed text-[color:color-mix(in_srgb,var(--color-text)_72%,transparent)]">
-                  {selectedVideo.description}
-                </p>
-              )}
+          </section>
+
+          <aside className="lg:w-80">
+            <div className="rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface)] p-5 shadow-kali-panel">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
+                  Recently watched
+                </h2>
+                <button
+                  type="button"
+                  onClick={handleClearHistory}
+                  className="text-xs font-semibold text-kali-control transition hover:text-kali-control/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:opacity-40"
+                  disabled={!history.length}
+                >
+                  Clear history
+                </button>
+              </div>
+              <ul className="mt-4 space-y-3" data-testid="recently-watched">
+                {history.length ? (
+                  history.map((video) => (
+                    <li key={video.id}>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectVideo(video)}
+                        className="flex w-full items-center gap-3 rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] p-3 text-left shadow-[0_6px_16px_rgba(8,15,26,0.32)] transition-colors hover:border-kali-control hover:text-kali-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+                        aria-label={`Watch ${video.title} again`}
+                      >
+                        {video.thumbnail ? (
+                          <img
+                            src={video.thumbnail}
+                            alt=""
+                            className="h-12 w-20 rounded object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-12 w-20 items-center justify-center rounded bg-[var(--kali-panel-highlight)] text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                            No preview
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-[var(--color-text)] line-clamp-2">
+                            {video.title}
+                          </p>
+                          <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                            {video.channelTitle}
+                          </p>
+                        </div>
+                      </button>
+                    </li>
+                  ))
+                ) : (
+                  <li className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                    Your history is empty. Watch a video to add it here.
+                  </li>
+                )}
+              </ul>
             </div>
+          </aside>
+        </main>
+
+        <section className="border-t border-[color:color-mix(in_srgb,var(--kali-panel-border)_65%,transparent)] bg-[var(--color-surface)] px-6 py-6 shadow-[0_-1px_0_rgba(15,148,210,0.08)]">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
+              Search results
+            </h2>
+            {loading && (
+              <span className="flex items-center gap-2 text-xs text-kali-control">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-kali-control" aria-hidden />
+                Loading results…
+              </span>
+            )}
+          </div>
+          {results.length ? (
+            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {results.map((video) => {
+                const isActive = selectedVideo?.id === video.id;
+                return (
+                  <button
+                    key={video.id}
+                    type="button"
+                    onClick={() => handleSelectVideo(video)}
+                    className={`flex h-full flex-col overflow-hidden rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] text-left shadow-[0_8px_22px_rgba(8,15,26,0.4)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-kali-control ${
+                      isActive
+                        ? 'border-kali-control shadow-[0_10px_30px_rgba(15,148,210,0.28)]'
+                        : 'hover:shadow-[0_10px_35px_rgba(2,6,23,0.45)]'
+                    }`}
+                    aria-label={`Watch ${video.title}`}
+                  >
+                    {video.thumbnail ? (
+                      <img
+                        src={video.thumbnail}
+                        alt=""
+                        className="h-40 w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-40 w-full items-center justify-center bg-[var(--kali-panel-highlight)] text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                        No preview available
+                      </div>
+                    )}
+                    <div className="flex flex-1 flex-col gap-2 p-4">
+                      <h3 className="text-base font-semibold text-[var(--color-text)] line-clamp-2">
+                        {video.title}
+                      </h3>
+                      <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                        {video.channelTitle}
+                      </p>
+                      <p className="line-clamp-3 text-xs text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
+                        {video.description || 'No description available.'}
+                      </p>
+                      <p className="mt-auto text-[11px] uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                        {formatDate(video.publishedAt)}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
+              {loading
+                ? 'Fetching results…'
+                : 'No matches yet. Try a different search term or clear the search box to see featured videos.'}
+            </p>
           )}
         </section>
-
-        <aside className="lg:w-80">
-          <div className="rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface)] p-5 shadow-kali-panel">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
-                Recently watched
-              </h2>
-              <button
-                type="button"
-                onClick={handleClearHistory}
-                className="text-xs font-semibold text-kali-control transition hover:text-kali-control/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:opacity-40"
-                disabled={!history.length}
-              >
-                Clear history
-              </button>
-            </div>
-            <ul className="mt-4 space-y-3" data-testid="recently-watched">
-              {history.length ? (
-                history.map((video) => (
-                  <li key={video.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectVideo(video)}
-                      className="flex w-full items-center gap-3 rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] p-3 text-left shadow-[0_6px_16px_rgba(8,15,26,0.32)] transition-colors hover:border-kali-control hover:text-kali-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
-                      aria-label={`Watch ${video.title} again`}
-                    >
-                      {video.thumbnail ? (
-                        <img
-                          src={video.thumbnail}
-                          alt=""
-                          className="h-12 w-20 rounded object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-12 w-20 items-center justify-center rounded bg-[var(--kali-panel-highlight)] text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                          No preview
-                        </div>
-                      )}
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-[var(--color-text)] line-clamp-2">
-                          {video.title}
-                        </p>
-                        <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                          {video.channelTitle}
-                        </p>
-                      </div>
-                    </button>
-                  </li>
-                ))
-              ) : (
-                <li className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                  Your history is empty. Watch a video to add it here.
-                </li>
-              )}
-            </ul>
-          </div>
-        </aside>
-      </main>
-
-      <section className="border-t border-[color:color-mix(in_srgb,var(--kali-panel-border)_65%,transparent)] bg-[var(--color-surface)] px-6 py-6 shadow-[0_-1px_0_rgba(15,148,210,0.08)]">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
-            Search results
-          </h2>
-          {loading && (
-            <span className="flex items-center gap-2 text-xs text-kali-control">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-kali-control" aria-hidden />
-              Loading results…
-            </span>
-          )}
-        </div>
-        {results.length ? (
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {results.map((video) => {
-              const isActive = selectedVideo?.id === video.id;
-              return (
-                <button
-                  key={video.id}
-                  type="button"
-                  onClick={() => handleSelectVideo(video)}
-                  className={`flex h-full flex-col overflow-hidden rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] text-left shadow-[0_8px_22px_rgba(8,15,26,0.4)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-kali-control ${
-                    isActive
-                      ? 'border-kali-control shadow-[0_10px_30px_rgba(15,148,210,0.28)]'
-                      : 'hover:shadow-[0_10px_35px_rgba(2,6,23,0.45)]'
-                  }`}
-                  aria-label={`Watch ${video.title}`}
-                >
-                  {video.thumbnail ? (
-                    <img
-                      src={video.thumbnail}
-                      alt=""
-                      className="h-40 w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-40 w-full items-center justify-center bg-[var(--kali-panel-highlight)] text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                      No preview available
-                    </div>
-                  )}
-                  <div className="flex flex-1 flex-col gap-2 p-4">
-                    <h3 className="text-base font-semibold text-[var(--color-text)] line-clamp-2">
-                      {video.title}
-                    </h3>
-                    <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                      {video.channelTitle}
-                    </p>
-                    <p className="line-clamp-3 text-xs text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
-                      {video.description || 'No description available.'}
-                    </p>
-                    <p className="mt-auto text-[11px] uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                      {formatDate(video.publishedAt)}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-sm text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
-            {loading
-              ? 'Fetching results…'
-              : 'No matches yet. Try a different search term or clear the search box to see featured videos.'}
-          </p>
-        )}
-      </section>
+      </div>
     </div>
   );
 }

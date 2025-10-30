@@ -123,7 +123,7 @@ const Firefox: React.FC = () => {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--kali-surface)] text-[color:var(--kali-text)]">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[var(--kali-surface)] text-[color:var(--kali-text)]">
       <form
         onSubmit={handleSubmit}
         className="flex flex-col gap-3 border-b border-[color:var(--kali-border)] bg-[var(--kali-overlay)] px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
@@ -187,52 +187,59 @@ const Firefox: React.FC = () => {
           Go
         </button>
       </form>
-      <nav className="border-b border-[color:var(--kali-border)] bg-[var(--kali-overlay)] px-2 py-2 text-xs sm:px-4" aria-label="Pinned sites">
-        <div className="flex gap-1 overflow-x-auto pb-1">
-          {BOOKMARKS.map((bookmark) => {
-            const normalizedBookmark = normaliseUrl(bookmark.url);
-            const isActive = address === normalizedBookmark;
-            return (
-              <button
-                key={bookmark.url}
-                type="button"
-                onClick={() => updateAddress(bookmark.url)}
-                className={`rounded-full px-3 py-1 font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)] ${
-                  isActive
-                    ? 'bg-[color:var(--color-primary)] text-[color:var(--color-inverse)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--kali-text)_16%,transparent)] hover:brightness-110'
-                    : 'bg-[var(--kali-overlay)] text-[color:color-mix(in_srgb,var(--kali-text)_88%,var(--kali-bg))] hover:bg-[color-mix(in_srgb,var(--kali-overlay)_85%,var(--kali-bg))]'
-                }`}
-                aria-current={isActive ? 'page' : undefined}
-              >
-                {bookmark.label}
-              </button>
-            );
-          })}
-        </div>
-      </nav>
-      <div className="relative flex-1 min-h-0 bg-[var(--kali-bg)]">
-        {!simulation && (
-          <aside className="pointer-events-auto absolute left-3 top-3 z-10 max-w-sm rounded-lg border border-[color:color-mix(in_srgb,var(--color-primary)_70%,transparent)] bg-[color-mix(in_srgb,var(--kali-bg)_94%,transparent)] p-4 text-xs text-[color:color-mix(in_srgb,var(--kali-text)_92%,var(--kali-bg))] shadow-[0_24px_60px_-24px_var(--kali-blue-glow)] backdrop-blur">
-            <h2 className="text-sm font-semibold text-[color:var(--color-primary)]">Sandboxed live preview</h2>
-            <p className="mt-2 text-[color:color-mix(in_srgb,var(--kali-text)_88%,var(--kali-bg))]">
-              This window loads external sites inside a sandboxed iframe for safety. Some sites may block embedding. Use the
-              quick links below to open them directly in a new tab.
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {BOOKMARKS.map((bookmark) => (
-                <a
-                  key={`fallback-${bookmark.url}`}
-                  href={bookmark.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-2 rounded border border-[color:var(--kali-border)] bg-[color-mix(in_srgb,var(--kali-overlay)_90%,var(--kali-bg))] px-2 py-1 text-[color:color-mix(in_srgb,var(--kali-text)_92%,var(--kali-bg))] transition hover:border-[color:var(--color-primary)] hover:text-[color:var(--kali-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)]"
+      <div
+        className="flex flex-1 min-h-0 flex-col overflow-y-auto"
+        data-testid="firefox-scroll-region"
+      >
+        <nav
+          className="flex-shrink-0 border-b border-[color:var(--kali-border)] bg-[var(--kali-overlay)] px-2 py-2 text-xs sm:px-4"
+          aria-label="Pinned sites"
+        >
+          <div className="flex gap-1 overflow-x-auto pb-1">
+            {BOOKMARKS.map((bookmark) => {
+              const normalizedBookmark = normaliseUrl(bookmark.url);
+              const isActive = address === normalizedBookmark;
+              return (
+                <button
+                  key={bookmark.url}
+                  type="button"
+                  onClick={() => updateAddress(bookmark.url)}
+                  className={`rounded-full px-3 py-1 font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)] ${
+                    isActive
+                      ? 'bg-[color:var(--color-primary)] text-[color:var(--color-inverse)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--kali-text)_16%,transparent)] hover:brightness-110'
+                      : 'bg-[var(--kali-overlay)] text-[color:color-mix(in_srgb,var(--kali-text)_88%,var(--kali-bg))] hover:bg-[color-mix(in_srgb,var(--kali-overlay)_85%,var(--kali-bg))]'
+                  }`}
+                  aria-current={isActive ? 'page' : undefined}
                 >
-                  <img src={getFaviconUrl(bookmark.url)} alt="" className="h-4 w-4" />
-                  <span>{bookmark.label}</span>
-                </a>
-              ))}
-            </div>
-          </aside>
+                  {bookmark.label}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+        <div className="relative flex-1 min-h-0 overflow-hidden bg-[var(--kali-bg)]">
+          {!simulation && (
+            <aside className="pointer-events-auto absolute left-3 top-3 z-10 max-w-sm rounded-lg border border-[color:color-mix(in_srgb,var(--color-primary)_70%,transparent)] bg-[color-mix(in_srgb,var(--kali-bg)_94%,transparent)] p-4 text-xs text-[color:color-mix(in_srgb,var(--kali-text)_92%,var(--kali-bg))] shadow-[0_24px_60px_-24px_var(--kali-blue-glow)] backdrop-blur">
+              <h2 className="text-sm font-semibold text-[color:var(--color-primary)]">Sandboxed live preview</h2>
+              <p className="mt-2 text-[color:color-mix(in_srgb,var(--kali-text)_88%,var(--kali-bg))]">
+                This window loads external sites inside a sandboxed iframe for safety. Some sites may block embedding. Use the
+                quick links below to open them directly in a new tab.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {BOOKMARKS.map((bookmark) => (
+                  <a
+                    key={`fallback-${bookmark.url}`}
+                    href={bookmark.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 rounded border border-[color:var(--kali-border)] bg-[color-mix(in_srgb,var(--kali-overlay)_90%,var(--kali-bg))] px-2 py-1 text-[color:color-mix(in_srgb,var(--kali-text)_92%,var(--kali-bg))] transition hover:border-[color:var(--color-primary)] hover:text-[color:var(--kali-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)]"
+                  >
+                    <img src={getFaviconUrl(bookmark.url)} alt="" className="h-4 w-4" />
+                    <span>{bookmark.label}</span>
+                  </a>
+                ))}
+              </div>
+            </aside>
         )}
         {simulation ? (
           <FirefoxSimulationView simulation={simulation} />
@@ -248,6 +255,7 @@ const Firefox: React.FC = () => {
             onError={() => setIsLoading(false)}
           />
         )}
+        </div>
       </div>
     </div>
   );

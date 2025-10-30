@@ -145,8 +145,13 @@ export function SpotifyWebPlayerLayout({ description, className = '' }) {
 
 export default function SpotifyApp() {
   return (
-    <div className="flex h-full w-full flex-col gap-4 bg-[var(--color-bg)] p-5 text-[color:var(--color-text)]">
-      <SpotifyWebPlayerLayout description="Stream a curated synthwave playlist inside a Kali-inspired Spotify shell. Resize, minimise, or pin the window alongside your other desktop apps while the embedded player keeps the beats flowing." />
+    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-[var(--color-bg)] text-[color:var(--color-text)]">
+      <div
+        className="flex-1 min-h-0 overflow-y-auto p-5"
+        data-testid="spotify-scroll-region"
+      >
+        <SpotifyWebPlayerLayout description="Stream a curated synthwave playlist inside a Kali-inspired Spotify shell. Resize, minimise, or pin the window alongside your other desktop apps while the embedded player keeps the beats flowing." />
+      </div>
     </div>
   );
 }
