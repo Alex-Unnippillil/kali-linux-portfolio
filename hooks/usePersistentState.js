@@ -61,3 +61,24 @@ export const useSnapGridSetting = () =>
         (item) => typeof item === "number" && Number.isFinite(item) && item > 0,
       ),
   );
+
+const isFiniteNumber = (value) =>
+  typeof value === "number" && Number.isFinite(value);
+
+const isWindowGeometry = (value) => {
+  if (!value || typeof value !== "object") return false;
+  return (
+    isFiniteNumber(value.x) &&
+    isFiniteNumber(value.y) &&
+    isFiniteNumber(value.width) &&
+    isFiniteNumber(value.height)
+  );
+};
+
+const isWindowGeometryMap = (value) => {
+  if (!value || typeof value !== "object") return false;
+  return Object.values(value).every((entry) => isWindowGeometry(entry));
+};
+
+export const useWindowGeometryStorage = () =>
+  usePersistentState("window-geometry", {}, isWindowGeometryMap);
