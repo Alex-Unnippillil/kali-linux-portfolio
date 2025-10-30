@@ -710,7 +710,7 @@ export default class Navbar extends PureComponent {
                                 type="button"
                                 aria-label={buttonLabel}
                                 aria-pressed={isActive}
-                                data-context="taskbar"
+                                data-context={section === 'pinned' ? 'dock' : 'taskbar'}
                                 data-app-id={app.id}
                                 data-active={isActive ? 'true' : 'false'}
                                 onClick={() => this.handleAppButtonClick(app)}
