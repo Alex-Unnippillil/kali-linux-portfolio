@@ -1,0 +1,37 @@
+.taskbarRoot {
+  --taskbar-padding-top: 0.375rem;
+  --taskbar-padding-bottom: 0.25rem;
+  --taskbar-padding-x: 0.75rem;
+  --taskbar-content-gap: 0.5rem;
+  --taskbar-status-gap: 0.75rem;
+  min-height: calc(var(--taskbar-height, 56px) + var(--safe-area-top, 0px));
+  padding-top: calc(var(--safe-area-top, 0px) + var(--taskbar-padding-top));
+  padding-bottom: var(--taskbar-padding-bottom);
+  padding-left: calc(var(--taskbar-padding-x) + var(--safe-area-left, 0px));
+  padding-right: calc(var(--taskbar-padding-x) + var(--safe-area-right, 0px));
+  box-sizing: border-box;
+}
+
+:global(.taskbar-density--compact) {
+  --taskbar-padding-top: 0.25rem;
+  --taskbar-padding-bottom: 0.2rem;
+  --taskbar-padding-x: 0.55rem;
+  --taskbar-content-gap: 0.4rem;
+  --taskbar-status-gap: 0.6rem;
+}
+
+:global(.taskbar-density--comfortable) {
+  --taskbar-padding-top: 0.375rem;
+  --taskbar-padding-bottom: 0.25rem;
+  --taskbar-padding-x: 0.75rem;
+  --taskbar-content-gap: 0.5rem;
+  --taskbar-status-gap: 0.75rem;
+}
+
+:global(.taskbar-density--spacious) {
+  --taskbar-padding-top: 0.5rem;
+  --taskbar-padding-bottom: 0.35rem;
+  --taskbar-padding-x: 1rem;
+  --taskbar-content-gap: 0.75rem;
+  --taskbar-status-gap: 1rem;
+}

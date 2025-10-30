@@ -154,7 +154,8 @@ export default function Settings() {
       const parsed = JSON.parse(text);
       if (parsed.accent !== undefined) setAccent(parsed.accent);
       if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-      if (parsed.density !== undefined) setDensity(parsed.density);
+      if (parsed.density !== undefined)
+        setDensity(parsed.density === 'regular' ? 'comfortable' : parsed.density);
       if (parsed.reducedMotion !== undefined)
         setReducedMotion(parsed.reducedMotion);
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
@@ -264,8 +265,9 @@ export default function Settings() {
                   onChange={(e) => setDensity(e.target.value as any)}
                   className="rounded-lg border border-[var(--kali-panel-border)] bg-[var(--kali-panel)] px-3 py-2 text-sm text-[var(--color-text)] focus:border-kali-control focus:outline-none"
                 >
-                  <option value="regular">Regular</option>
                   <option value="compact">Compact</option>
+                  <option value="comfortable">Comfortable</option>
+                  <option value="spacious">Spacious</option>
                 </select>
               </SettingRow>
             </Section>
