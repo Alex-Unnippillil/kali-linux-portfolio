@@ -198,6 +198,7 @@ export class Desktop extends Component {
         super(props);
         this.workspaceCount = 4;
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
+        this.workspaceWindowSets = Array.from({ length: this.workspaceCount }, () => new Set());
         this.workspaceKeys = new Set([
             'focused_windows',
             'closed_windows',
@@ -301,6 +302,7 @@ export class Desktop extends Component {
             workspaces: Array.from({ length: this.workspaceCount }, (_, index) => ({
                 id: index,
                 label: `Workspace ${index + 1}`,
+                windowIds: [],
             })),
             draggingIconId: null,
             keyboardMoveState: null,
@@ -353,6 +355,7 @@ export class Desktop extends Component {
         this.validAppIds = new Set();
         this.appMap = new Map();
         this.overlayRegistry = new Map(OVERLAY_WINDOW_LIST.map((meta) => [meta.id, meta]));
+        this.overlayIds = new Set(OVERLAY_WINDOW_LIST.map((meta) => meta.id));
         this.folderMetadata = new Map(DEFAULT_DESKTOP_FOLDERS.map((folder) => [folder.id, folder]));
         this.windowPreviewCache = new Map();
         this.windowSwitcherRequestId = 0;
@@ -402,6 +405,193 @@ export class Desktop extends Component {
         window_positions: { ...state.window_positions },
         window_sizes: { ...(state.window_sizes || {}) },
     });
+
+    ensureWorkspaceWindowSet = (workspaceId) => {
+        if (!Number.isInteger(workspaceId) || workspaceId < 0 || workspaceId >= this.workspaceCount) {
+            return new Set();
+        }
+        if (!Array.isArray(this.workspaceWindowSets)) {
+            this.workspaceWindowSets = Array.from({ length: this.workspaceCount }, () => new Set());
+        }
+        let targetSet = this.workspaceWindowSets[workspaceId];
+        if (!targetSet) {
+            const workspace = (this.state?.workspaces || []).find((entry) => entry.id === workspaceId);
+            const ids = workspace && Array.isArray(workspace.windowIds) ? workspace.windowIds : [];
+            targetSet = new Set(ids);
+            this.workspaceWindowSets[workspaceId] = targetSet;
+        }
+        return targetSet;
+    };
+
+    getWorkspaceWindowIds = (workspaceId = this.state.activeWorkspace) => {
+        const set = this.ensureWorkspaceWindowSet(workspaceId);
+        return Array.from(set);
+    };
+
+    updateWorkspaceWindowState = (workspaceId, windowIds) => {
+        if (!Number.isInteger(workspaceId) || workspaceId < 0 || workspaceId >= this.workspaceCount) {
+            return;
+        }
+        const normalized = Array.isArray(windowIds) ? windowIds : [];
+        this.setState((prevState) => {
+            let changed = false;
+            const workspaces = prevState.workspaces.map((workspace) => {
+                if (workspace.id !== workspaceId) {
+                    return workspace;
+                }
+                const current = Array.isArray(workspace.windowIds) ? workspace.windowIds : [];
+                if (current.length === normalized.length && current.every((value, index) => value === normalized[index])) {
+                    return workspace;
+                }
+                changed = true;
+                return { ...workspace, windowIds: normalized.slice() };
+            });
+            if (!changed) {
+                return null;
+            }
+            return { workspaces };
+        });
+    };
+
+    pruneWorkspaceSnapshot = (workspaceId) => {
+        if (!Number.isInteger(workspaceId) || workspaceId < 0 || workspaceId >= this.workspaceCount) {
+            return;
+        }
+        if (!Array.isArray(this.workspaceSnapshots)) {
+            return;
+        }
+        const snapshot = this.workspaceSnapshots[workspaceId];
+        if (!snapshot) {
+            return;
+        }
+        this.workspaceSnapshots[workspaceId] = this.filterWorkspaceSnapshot(snapshot, workspaceId);
+    };
+
+    buildWorkspaceAllowedSet = (workspaceId) => {
+        const allowed = new Set(this.getWorkspaceWindowIds(workspaceId));
+        if (this.overlayIds instanceof Set) {
+            this.overlayIds.forEach((id) => allowed.add(id));
+        }
+        return allowed;
+    };
+
+    filterBooleanMap = (source = {}, allowed, defaultValue) => {
+        const result = {};
+        if (!(allowed instanceof Set)) {
+            return result;
+        }
+        allowed.forEach((id) => {
+            if (Object.prototype.hasOwnProperty.call(source, id)) {
+                result[id] = source[id];
+            } else if (defaultValue !== undefined) {
+                result[id] = defaultValue;
+            }
+        });
+        return result;
+    };
+
+    filterObjectMap = (source = {}, allowed) => {
+        const result = {};
+        if (!(allowed instanceof Set)) {
+            return result;
+        }
+        allowed.forEach((id) => {
+            if (Object.prototype.hasOwnProperty.call(source, id)) {
+                result[id] = source[id];
+            }
+        });
+        return result;
+    };
+
+    filterWorkspaceSnapshot = (snapshot = this.createEmptyWorkspaceState(), workspaceId, allowedOverride = null) => {
+        const allowed = allowedOverride instanceof Set ? allowedOverride : this.buildWorkspaceAllowedSet(workspaceId);
+        return {
+            focused_windows: this.filterBooleanMap(snapshot.focused_windows, allowed, false),
+            closed_windows: this.filterBooleanMap(snapshot.closed_windows, allowed, true),
+            minimized_windows: this.filterBooleanMap(snapshot.minimized_windows, allowed, false),
+            window_positions: this.filterObjectMap(snapshot.window_positions, allowed),
+            window_sizes: this.filterObjectMap(snapshot.window_sizes, allowed),
+        };
+    };
+
+    findWorkspaceForWindow = (windowId) => {
+        if (!windowId || !Array.isArray(this.workspaceWindowSets)) {
+            return null;
+        }
+        for (let index = 0; index < this.workspaceWindowSets.length; index += 1) {
+            const set = this.workspaceWindowSets[index];
+            if (set && set.has(windowId)) {
+                return index;
+            }
+        }
+        return null;
+    };
+
+    removeWindowFromStack = (workspaceId, windowId) => {
+        if (!Number.isInteger(workspaceId) || workspaceId < 0 || workspaceId >= this.workspaceCount) {
+            return;
+        }
+        const stack = this.workspaceStacks?.[workspaceId];
+        if (!Array.isArray(stack)) {
+            return;
+        }
+        const index = stack.indexOf(windowId);
+        if (index !== -1) {
+            stack.splice(index, 1);
+        }
+    };
+
+    removeWindowFromWorkspace = (windowId, workspaceId = null) => {
+        if (!windowId || this.isOverlayId(windowId)) {
+            return;
+        }
+        const targetWorkspace = Number.isInteger(workspaceId)
+            ? workspaceId
+            : this.findWorkspaceForWindow(windowId);
+        if (!Number.isInteger(targetWorkspace) || targetWorkspace < 0 || targetWorkspace >= this.workspaceCount) {
+            return;
+        }
+        const currentSet = this.ensureWorkspaceWindowSet(targetWorkspace);
+        if (!currentSet.has(windowId)) {
+            return;
+        }
+        const nextSet = new Set(currentSet);
+        nextSet.delete(windowId);
+        this.workspaceWindowSets[targetWorkspace] = nextSet;
+        this.updateWorkspaceWindowState(targetWorkspace, Array.from(nextSet));
+        this.removeWindowFromStack(targetWorkspace, windowId);
+        this.pruneWorkspaceSnapshot(targetWorkspace);
+    };
+
+    moveWindowToWorkspace = (windowId, workspaceId = this.state.activeWorkspace) => {
+        if (!windowId || this.isOverlayId(windowId)) {
+            return;
+        }
+        const targetWorkspace = Number.isInteger(workspaceId)
+            ? workspaceId
+            : this.state.activeWorkspace;
+        if (!Number.isInteger(targetWorkspace) || targetWorkspace < 0 || targetWorkspace >= this.workspaceCount) {
+            return;
+        }
+        const currentWorkspace = this.findWorkspaceForWindow(windowId);
+        if (currentWorkspace === targetWorkspace) {
+            this.pruneWorkspaceSnapshot(targetWorkspace);
+            return;
+        }
+        if (Number.isInteger(currentWorkspace)) {
+            this.removeWindowFromWorkspace(windowId, currentWorkspace);
+        }
+        const targetSet = this.ensureWorkspaceWindowSet(targetWorkspace);
+        if (targetSet.has(windowId)) {
+            this.pruneWorkspaceSnapshot(targetWorkspace);
+            return;
+        }
+        const nextSet = new Set(targetSet);
+        nextSet.add(windowId);
+        this.workspaceWindowSets[targetWorkspace] = nextSet;
+        this.updateWorkspaceWindowState(targetWorkspace, Array.from(nextSet));
+        this.pruneWorkspaceSnapshot(targetWorkspace);
+    };
 
     getActiveUserId = () => {
         const { user } = this.props || {};
@@ -908,7 +1098,7 @@ export class Desktop extends Component {
                 nextSnapshot[key] = value;
             }
         });
-        this.workspaceSnapshots[targetIndex] = nextSnapshot;
+        this.workspaceSnapshots[targetIndex] = this.filterWorkspaceSnapshot(nextSnapshot, targetIndex);
     };
 
     mergeWorkspaceMaps = (current = {}, base = {}, validKeys = null) => {
@@ -1312,22 +1502,24 @@ export class Desktop extends Component {
         this.workspaceSnapshots = this.workspaceSnapshots.map((snapshot, index) => {
             const existing = snapshot || this.createEmptyWorkspaceState();
             if (index === this.state.activeWorkspace) {
-                return this.cloneWorkspaceState(baseState);
+                return this.filterWorkspaceSnapshot(baseState, index);
             }
-            return {
+            const mergedSnapshot = {
                 focused_windows: this.mergeWorkspaceMaps(existing.focused_windows, baseState.focused_windows, validKeys),
                 closed_windows: this.mergeWorkspaceMaps(existing.closed_windows, baseState.closed_windows, validKeys),
                 minimized_windows: this.mergeWorkspaceMaps(existing.minimized_windows, baseState.minimized_windows, validKeys),
                 window_positions: this.mergeWorkspaceMaps(existing.window_positions, baseState.window_positions, validKeys),
                 window_sizes: this.mergeWorkspaceMaps(existing.window_sizes, baseState.window_sizes, validKeys),
             };
+            return this.filterWorkspaceSnapshot(mergedSnapshot, index);
         });
     };
 
     getWorkspaceSummaries = () => {
         return this.state.workspaces.map((workspace) => {
             const snapshot = this.workspaceSnapshots[workspace.id] || this.createEmptyWorkspaceState();
-            const openWindows = Object.values(snapshot.closed_windows || {}).filter((value) => value === false).length;
+            const windowIds = this.getWorkspaceWindowIds(workspace.id);
+            const openWindows = windowIds.filter((id) => (snapshot.closed_windows || {})[id] === false).length;
             return {
                 id: workspace.id,
                 label: workspace.label,
@@ -1371,7 +1563,11 @@ export class Desktop extends Component {
             appBadges = {},
         } = this.state;
         const summaries = [];
+        const activeWindowIds = new Set(this.getWorkspaceWindowIds());
         apps.forEach((app) => {
+            if (!activeWindowIds.has(app.id)) {
+                return;
+            }
             if (closed_windows[app.id] === false) {
                 const badge = appBadges[app.id];
                 const summary = {
@@ -2402,9 +2598,11 @@ export class Desktop extends Component {
         const closed = this.state.closed_windows || {};
         const minimized = this.state.minimized_windows || {};
         const entries = [];
+        const allowed = new Set(this.getWorkspaceWindowIds());
         Object.keys(minimized).forEach((id) => {
             if (!minimized[id]) return;
             if (!this.validAppIds.has(id)) return;
+            if (!allowed.has(id) && !this.isOverlayId(id)) return;
             if (this.isOverlayId(id)) {
                 const overlayState = this.state.overlayWindows?.[id];
                 if (!overlayState || overlayState.open === false) {
@@ -3320,15 +3518,18 @@ export class Desktop extends Component {
     switchWorkspace = (workspaceId) => {
         if (workspaceId === this.state.activeWorkspace) return;
         if (workspaceId < 0 || workspaceId >= this.state.workspaces.length) return;
+        this.ensureWorkspaceWindowSet(workspaceId);
         const snapshot = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
+        const filtered = this.filterWorkspaceSnapshot(snapshot, workspaceId);
+        this.workspaceSnapshots[workspaceId] = filtered;
         const nextTheme = this.getWorkspaceTheme(workspaceId);
         this.closeOverlay('windowSwitcher');
         this.setState({
             activeWorkspace: workspaceId,
-            focused_windows: { ...snapshot.focused_windows },
-            closed_windows: { ...snapshot.closed_windows },
-            minimized_windows: { ...snapshot.minimized_windows },
-            window_positions: { ...snapshot.window_positions },
+            focused_windows: { ...filtered.focused_windows },
+            closed_windows: { ...filtered.closed_windows },
+            minimized_windows: { ...filtered.minimized_windows },
+            window_positions: { ...filtered.window_positions },
             switcherWindows: [],
             currentTheme: nextTheme,
         }, () => {
@@ -3340,10 +3541,34 @@ export class Desktop extends Component {
         });
     };
 
+    animateWorkspaceTransition = (direction) => {
+        const node = this.desktopRef?.current;
+        if (!node || typeof node.animate !== 'function') {
+            return;
+        }
+        const normalized = typeof direction === 'number' ? Math.sign(direction) : 0;
+        if (normalized === 0) {
+            return;
+        }
+        const offset = normalized > 0 ? 24 : -24;
+        try {
+            node.animate(
+                [
+                    { transform: `translateX(${offset}px)`, opacity: 0.85 },
+                    { transform: 'translateX(0)', opacity: 1 },
+                ],
+                { duration: 160, easing: 'ease-out' },
+            );
+        } catch (e) {
+            // ignore animation failures in environments without Web Animations support
+        }
+    };
+
     shiftWorkspace = (direction) => {
         const { activeWorkspace, workspaces } = this.state;
         const count = workspaces.length;
         const next = (activeWorkspace + direction + count) % count;
+        this.animateWorkspaceTransition(direction);
         this.switchWorkspace(next);
     };
 
@@ -3829,6 +4054,11 @@ export class Desktop extends Component {
         else if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
+        }
+        else if (e.ctrlKey && e.metaKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+            e.preventDefault();
+            const direction = e.key === 'ArrowRight' ? 1 : -1;
+            this.shiftWorkspace(direction);
         }
         else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
             e.preventDefault();
@@ -4343,6 +4573,7 @@ export class Desktop extends Component {
             window_sizes: this.state.window_sizes || {},
         };
         this.updateWorkspaceSnapshots(workspaceState);
+        this.workspaceWindowSets = Array.from({ length: this.workspaceCount }, () => new Set());
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
         this.setWorkspaceState({
             ...workspaceState,
@@ -4526,8 +4757,12 @@ export class Desktop extends Component {
         const stack = this.getActiveStack();
         const orderedIds = [];
         const seen = new Set();
+        const allowedIds = new Set(this.getWorkspaceWindowIds());
 
         stack.slice().reverse().forEach((id) => {
+            if (!allowedIds.has(id)) {
+                return;
+            }
             if (closed_windows[id] === false && !seen.has(id)) {
                 orderedIds.push(id);
                 seen.add(id);
@@ -4535,6 +4770,9 @@ export class Desktop extends Component {
         });
 
         apps.forEach((app) => {
+            if (!allowedIds.has(app.id)) {
+                return;
+            }
             if (closed_windows[app.id] === false && !seen.has(app.id)) {
                 orderedIds.push(app.id);
                 seen.add(app.id);
@@ -4890,6 +5128,8 @@ export class Desktop extends Component {
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
 
+        this.moveWindowToWorkspace(objId);
+
         if (!this.isOverlayId(objId) && this.isOverlayOpen(LAUNCHER_OVERLAY_ID)) {
             this.closeAllAppsOverlay();
         }
@@ -5054,6 +5294,8 @@ export class Desktop extends Component {
             }
             return nextState;
         }, this.saveSession);
+
+        this.removeWindowFromWorkspace(objId);
 
         this.clearAppBadge(objId, { force: true });
     }
