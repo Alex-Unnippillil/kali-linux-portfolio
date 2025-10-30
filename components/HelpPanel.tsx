@@ -55,13 +55,13 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
         aria-label="Help"
         aria-expanded={open}
         onClick={toggle}
-        className="fixed top-2 right-2 z-40 bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
+        className="help-panel-trigger fixed z-40 bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
       >
         ?
       </button>
       {open && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-end p-4"
+          className="help-panel-overlay fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-end"
           onClick={toggle}
         >
           <div
