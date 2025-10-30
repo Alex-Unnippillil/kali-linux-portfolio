@@ -43,4 +43,48 @@ describe('Window resize handles', () => {
 
     unmount();
   });
+
+  it('keeps resize handles out of the tab order', () => {
+    const { container, rerender, unmount } = render(
+      <WindowEdgeHandle direction="s" onResizeStart={jest.fn()} active={false} />,
+    );
+
+    const edgeHandle = container.firstElementChild as HTMLElement;
+    expect(edgeHandle).toHaveAttribute('aria-hidden', 'true');
+    expect(edgeHandle).toHaveAttribute('tabindex', '-1');
+    expect(edgeHandle.getAttribute('role')).toBe('presentation');
+
+    rerender(
+      <WindowCornerHandle direction="nw" onResizeStart={jest.fn()} active={false} />,
+    );
+
+    const cornerHandle = container.firstElementChild as HTMLElement;
+    expect(cornerHandle).toHaveAttribute('aria-hidden', 'true');
+    expect(cornerHandle).toHaveAttribute('tabindex', '-1');
+    expect(cornerHandle.getAttribute('role')).toBe('presentation');
+
+    unmount();
+  });
+
+  it('does not steal focus from already focused controls', () => {
+    const resizeStart = jest.fn();
+    const { getByRole, container, unmount } = render(
+      <>
+        <button type="button">Focusable control</button>
+        <WindowEdgeHandle direction="e" onResizeStart={resizeStart} active={false} />
+      </>,
+    );
+
+    const button = getByRole('button', { name: 'Focusable control' }) as HTMLButtonElement;
+    button.focus();
+    expect(document.activeElement).toBe(button);
+
+    const handle = container.lastElementChild as HTMLElement;
+    fireEvent.pointerDown(handle, { clientX: 360, clientY: 120, pointerId: 8 });
+
+    expect(resizeStart).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(button);
+
+    unmount();
+  });
 });

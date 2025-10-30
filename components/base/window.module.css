@@ -327,9 +327,9 @@
 }
 
 .windowResizeHandleCorner {
-  width: 16px;
-  height: 16px;
-  border-radius: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
 }
 
 .windowResizeHandleCorner::after {
@@ -346,9 +346,9 @@
 
 .windowResizeHandleNorth,
 .windowResizeHandleSouth {
-  left: 16px;
-  right: 16px;
-  height: 14px;
+  left: 8px;
+  right: 8px;
+  height: 8px;
 }
 
 .windowResizeHandleNorth {
@@ -363,9 +363,9 @@
 
 .windowResizeHandleEast,
 .windowResizeHandleWest {
-  top: 16px;
-  bottom: 16px;
-  width: 14px;
+  top: 8px;
+  bottom: 8px;
+  width: 8px;
 }
 
 .windowResizeHandleEast {
