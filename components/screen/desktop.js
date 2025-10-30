@@ -32,6 +32,7 @@ import {
     clampWindowPositionWithinViewport,
     clampWindowTopPosition,
     getSafeAreaInsets,
+    measureSnapBottomInset,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 
@@ -156,6 +157,16 @@ const BADGE_TONE_MAP = Object.freeze({
     neutral: 'neutral',
     muted: 'neutral',
     default: 'accent',
+});
+
+const WINDOW_SNAP_EDGE_THRESHOLD_MIN = 48;
+const WINDOW_SNAP_EDGE_THRESHOLD_MAX = 160;
+const WINDOW_SNAP_EDGE_THRESHOLD_RATIO = 0.05;
+
+const WINDOW_SNAP_LABELS = Object.freeze({
+    left: 'Snap left half',
+    right: 'Snap right half',
+    top: 'Snap full screen',
 });
 
 const clamp = (value, min = 0, max = 1) => {
@@ -316,6 +327,7 @@ export class Desktop extends Component {
             minimizedShelfOpen: false,
             closedShelfOpen: false,
             appBadges: {},
+            windowSnapPreview: null,
         };
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -338,6 +350,8 @@ export class Desktop extends Component {
         this.gestureState = { pointer: null, overview: null };
 
         this.currentPointerIsCoarse = false;
+        this.windowDragMonitor = null;
+        this.windowSnapListenersAttached = false;
 
         this.desktopIconVariables = {};
         this.desktopAccentVariables = {
@@ -1236,8 +1250,8 @@ export class Desktop extends Component {
         if (velocity < 0.35) {
             return;
         }
-        const direction = deltaX > 0 ? 'ArrowRight' : 'ArrowLeft';
-        const dispatched = this.dispatchWindowCommand(gesture.windowId, direction);
+        const direction = deltaX > 0 ? 'right' : 'left';
+        const dispatched = this.snapWindowToEdge(gesture.windowId, direction);
         if (dispatched) {
             this.focus(gesture.windowId);
         }
@@ -1305,6 +1319,264 @@ export class Desktop extends Component {
         const event = new CustomEvent('super-arrow', { detail: key, bubbles: true });
         node.dispatchEvent(event);
         return true;
+    };
+
+    snapWindowToEdge = (windowId, position) => {
+        if (!windowId) return false;
+        const keyMap = {
+            left: 'ArrowLeft',
+            right: 'ArrowRight',
+            top: 'ArrowUp',
+            down: 'ArrowDown',
+        };
+        const key = keyMap[position];
+        if (!key) return false;
+        return this.dispatchWindowCommand(windowId, key);
+    };
+
+    getViewportMetrics = () => {
+        if (typeof window === 'undefined') {
+            return { width: 0, height: 0, left: 0, top: 0 };
+        }
+        const fallbackWidth = typeof window.innerWidth === 'number' ? window.innerWidth : 0;
+        const fallbackHeight = typeof window.innerHeight === 'number' ? window.innerHeight : 0;
+        const viewport = window.visualViewport;
+        if (viewport) {
+            const width = Number.isFinite(viewport.width) ? viewport.width : fallbackWidth;
+            const height = Number.isFinite(viewport.height) ? viewport.height : fallbackHeight;
+            const left = Number.isFinite(viewport.offsetLeft) ? viewport.offsetLeft : 0;
+            const top = Number.isFinite(viewport.offsetTop) ? viewport.offsetTop : 0;
+            return {
+                width: width || fallbackWidth,
+                height: height || fallbackHeight,
+                left,
+                top,
+            };
+        }
+        return { width: fallbackWidth, height: fallbackHeight, left: 0, top: 0 };
+    };
+
+    computeWindowEdgeThreshold = (size) => {
+        if (typeof size !== 'number' || Number.isNaN(size)) {
+            return WINDOW_SNAP_EDGE_THRESHOLD_MIN;
+        }
+        return clamp(
+            size * WINDOW_SNAP_EDGE_THRESHOLD_RATIO,
+            WINDOW_SNAP_EDGE_THRESHOLD_MIN,
+            WINDOW_SNAP_EDGE_THRESHOLD_MAX,
+        );
+    };
+
+    computeWindowSnapCandidate = (rect, monitor = null) => {
+        if (!rect) return null;
+        const metrics = monitor?.metrics || this.getViewportMetrics();
+        const viewportWidth = metrics.width;
+        const viewportHeight = metrics.height;
+        if (!viewportWidth || !viewportHeight) {
+            return null;
+        }
+        const topInset = monitor?.topInset ?? measureWindowTopOffset();
+        const snapBottomInset = monitor?.snapBottomInset ?? measureSnapBottomInset();
+        const safeBottom = monitor?.safeBottom ?? Math.max(0, getSafeAreaInsets()?.bottom || 0);
+        const availableHeight = Math.max(viewportHeight - topInset - snapBottomInset - safeBottom, 0);
+        if (availableHeight <= 0) {
+            return null;
+        }
+
+        const leftEdge = metrics.left;
+        const rightEdge = metrics.left + viewportWidth;
+        const topEdge = metrics.top + topInset;
+        const halfWidth = Math.max(viewportWidth / 2, 0);
+        const horizontalThreshold = this.computeWindowEdgeThreshold(viewportWidth);
+        const verticalThreshold = this.computeWindowEdgeThreshold(viewportHeight);
+
+        const nearTop = rect.top <= topEdge + verticalThreshold;
+        const nearLeft = rect.left - leftEdge <= horizontalThreshold;
+        const nearRight = rightEdge - rect.right <= horizontalThreshold;
+
+        const buildPreview = (left, width) => ({
+            left,
+            top: topEdge,
+            width: Math.max(width, 0),
+            height: availableHeight,
+        });
+
+        if (nearTop) {
+            const preview = buildPreview(leftEdge, viewportWidth);
+            if (preview.width > 0 && preview.height > 0) {
+                return { position: 'top', preview };
+            }
+        }
+        if (nearLeft) {
+            const preview = buildPreview(leftEdge, halfWidth);
+            if (preview.width > 0 && preview.height > 0) {
+                return { position: 'left', preview };
+            }
+        }
+        if (nearRight) {
+            const preview = buildPreview(rightEdge - halfWidth, halfWidth);
+            if (preview.width > 0 && preview.height > 0) {
+                return { position: 'right', preview };
+            }
+        }
+        return null;
+    };
+
+    updateWindowSnapPreview = (candidate) => {
+        const nextPreview = candidate
+            ? { position: candidate.position, rect: { ...candidate.preview } }
+            : null;
+        this.setState((prevState) => {
+            const prevPreview = prevState.windowSnapPreview;
+            if (!nextPreview && !prevPreview) return null;
+            if (
+                nextPreview &&
+                prevPreview &&
+                prevPreview.position === nextPreview.position &&
+                prevPreview.rect.left === nextPreview.rect.left &&
+                prevPreview.rect.top === nextPreview.rect.top &&
+                prevPreview.rect.width === nextPreview.rect.width &&
+                prevPreview.rect.height === nextPreview.rect.height
+            ) {
+                return null;
+            }
+            return { windowSnapPreview: nextPreview };
+        });
+    };
+
+    clearWindowDragMonitor = (clearPreview = false) => {
+        const monitor = this.windowDragMonitor;
+        if (monitor && monitor.raf != null && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+            window.cancelAnimationFrame(monitor.raf);
+        }
+        this.windowDragMonitor = null;
+        if (clearPreview) {
+            this.updateWindowSnapPreview(null);
+        }
+    };
+
+    handleWindowDragPointerDown = (event) => {
+        if (event.isPrimary === false) return;
+        if (typeof event.button === 'number' && event.button !== 0) return;
+        const target = event.target;
+        if (!target || typeof target.closest !== 'function') return;
+        const handle = target.closest('[data-window-drag-ghost],[data-window-drag-handle]');
+        if (!handle) return;
+        const ghostNode = handle.closest('[data-window-drag-ghost]');
+        const windowNode = ghostNode || handle.closest('[role="dialog"]');
+        if (!windowNode) return;
+        const windowId = windowNode.getAttribute('data-window-id') || windowNode.id;
+        if (!windowId) return;
+
+        const metrics = this.getViewportMetrics();
+        const safeInsets = getSafeAreaInsets();
+        this.windowDragMonitor = {
+            pointerId: event.pointerId,
+            windowId,
+            node: windowNode,
+            ghost: Boolean(ghostNode),
+            startX: event.clientX,
+            startY: event.clientY,
+            moved: false,
+            raf: null,
+            candidate: null,
+            metrics,
+            topInset: measureWindowTopOffset(),
+            snapBottomInset: measureSnapBottomInset(),
+            safeBottom: Math.max(0, safeInsets?.bottom || 0),
+        };
+        this.updateWindowSnapPreview(null);
+    };
+
+    handleWindowDragPointerMove = (event) => {
+        const monitor = this.windowDragMonitor;
+        if (!monitor || event.pointerId !== monitor.pointerId) return;
+
+        if (!monitor.moved) {
+            const deltaX = event.clientX - monitor.startX;
+            const deltaY = event.clientY - monitor.startY;
+            const threshold = 4;
+            if (Math.abs(deltaX) < threshold && Math.abs(deltaY) < threshold) {
+                return;
+            }
+            monitor.moved = true;
+        }
+
+        if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+            const node = monitor.node || (typeof document !== 'undefined' ? document.getElementById(monitor.windowId) : null);
+            if (!node) {
+                this.clearWindowDragMonitor(true);
+                return;
+            }
+            monitor.node = node;
+            const rect = node.getBoundingClientRect();
+            const candidate = this.computeWindowSnapCandidate(rect, monitor);
+            monitor.candidate = candidate;
+            this.updateWindowSnapPreview(candidate);
+            return;
+        }
+
+        if (monitor.raf != null) return;
+        monitor.raf = window.requestAnimationFrame(() => {
+            monitor.raf = null;
+            const node = monitor.node && typeof document !== 'undefined' && document.contains(monitor.node)
+                ? monitor.node
+                : (typeof document !== 'undefined' ? document.getElementById(monitor.windowId) : null);
+            if (!node) {
+                this.clearWindowDragMonitor(true);
+                return;
+            }
+            monitor.node = node;
+            const rect = node.getBoundingClientRect();
+            const candidate = this.computeWindowSnapCandidate(rect, monitor);
+            monitor.candidate = candidate;
+            this.updateWindowSnapPreview(candidate);
+        });
+    };
+
+    handleWindowDragPointerUp = (event) => {
+        const monitor = this.windowDragMonitor;
+        if (!monitor || event.pointerId !== monitor.pointerId) return;
+        const candidate = monitor.candidate;
+        const moved = monitor.moved;
+        const windowId = monitor.windowId;
+        this.clearWindowDragMonitor(true);
+        if (!moved || !candidate || !windowId) {
+            return;
+        }
+        const snapped = this.snapWindowToEdge(windowId, candidate.position);
+        if (snapped) {
+            this.focus(windowId);
+        }
+    };
+
+    handleWindowDragPointerCancel = (event) => {
+        const monitor = this.windowDragMonitor;
+        if (!monitor || event.pointerId !== monitor.pointerId) return;
+        this.clearWindowDragMonitor(true);
+    };
+
+    setupWindowSnapListeners = () => {
+        if (this.windowSnapListenersAttached || typeof document === 'undefined') {
+            return;
+        }
+        document.addEventListener('pointerdown', this.handleWindowDragPointerDown, true);
+        document.addEventListener('pointermove', this.handleWindowDragPointerMove, true);
+        document.addEventListener('pointerup', this.handleWindowDragPointerUp, true);
+        document.addEventListener('pointercancel', this.handleWindowDragPointerCancel, true);
+        this.windowSnapListenersAttached = true;
+    };
+
+    teardownWindowSnapListeners = () => {
+        if (!this.windowSnapListenersAttached || typeof document === 'undefined') {
+            return;
+        }
+        document.removeEventListener('pointerdown', this.handleWindowDragPointerDown, true);
+        document.removeEventListener('pointermove', this.handleWindowDragPointerMove, true);
+        document.removeEventListener('pointerup', this.handleWindowDragPointerUp, true);
+        document.removeEventListener('pointercancel', this.handleWindowDragPointerCancel, true);
+        this.windowSnapListenersAttached = false;
+        this.clearWindowDragMonitor(true);
     };
 
     updateWorkspaceSnapshots = (baseState) => {
@@ -3483,6 +3755,7 @@ export class Desktop extends Component {
         window.addEventListener('open-app', this.handleOpenAppEvent);
         this.setupPointerMediaWatcher();
         this.setupGestureListeners();
+        this.setupWindowSnapListeners();
     }
 
     componentDidUpdate(prevProps, prevState) {
@@ -3555,6 +3828,7 @@ export class Desktop extends Component {
         }
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
+        this.teardownWindowSnapListeners();
         this.teardownViewportObserver();
         if (this.liveRegionTimeout) {
             clearTimeout(this.liveRegionTimeout);
@@ -3834,8 +4108,16 @@ export class Desktop extends Component {
             e.preventDefault();
             const id = this.getFocusedWindowId();
             if (id) {
-                const event = new CustomEvent('super-arrow', { detail: e.key });
-                document.getElementById(id)?.dispatchEvent(event);
+                const mapping = {
+                    ArrowLeft: 'left',
+                    ArrowRight: 'right',
+                    ArrowUp: 'top',
+                    ArrowDown: 'down',
+                };
+                const snapped = this.snapWindowToEdge(id, mapping[e.key]);
+                if (snapped) {
+                    this.focus(id);
+                }
             }
         }
         else if (this.isCommandPaletteShortcut(e)) {
@@ -4519,6 +4801,34 @@ export class Desktop extends Component {
             </div>
         );
     }
+
+    renderWindowSnapPreview = () => {
+        const preview = this.state.windowSnapPreview;
+        if (!preview) return null;
+        const { rect, position } = preview;
+        const classes = [
+            'fixed pointer-events-none z-[450]',
+            'rounded-lg border-2 border-sky-400/80 bg-sky-300/10',
+            'shadow-[0_0_0_1px_rgba(56,189,248,0.35)] transition duration-100 ease-out',
+        ].join(' ');
+        const style = {
+            left: `${rect.left}px`,
+            top: `${rect.top}px`,
+            width: `${rect.width}px`,
+            height: `${rect.height}px`,
+        };
+        return (
+            <div
+                key="window-snap-preview"
+                className={classes}
+                style={style}
+                role="presentation"
+                aria-hidden="true"
+                data-window-snap-preview={position}
+                title={WINDOW_SNAP_LABELS[position] || 'Snap window'}
+            />
+        );
+    };
 
     renderWindows = () => {
         const { closed_windows = {}, minimized_windows = {}, focused_windows = {} } = this.state;
@@ -5292,6 +5602,7 @@ export class Desktop extends Component {
                 className={" min-h-screen h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent"}
                 style={desktopStyle}
             >
+                {this.renderWindowSnapPreview()}
 
                 {/* Window Area */}
                 <div
