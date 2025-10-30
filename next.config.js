@@ -12,8 +12,8 @@ const ContentSecurityPolicy = [
   "form-action 'self'",
   // Disallow all plugins and other embedded objects
   "object-src 'none'",
-  // Allow external images and data URIs for badges/icons
-  "img-src 'self' https: data:",
+  // Allow external images from a curated set (icons, badges) and data URIs
+  "img-src 'self' data: https://opengraph.githubassets.com https://raw.githubusercontent.com https://avatars.githubusercontent.com https://i.ytimg.com https://yt3.ggpht.com https://i.scdn.co https://www.google.com https://developer.mozilla.org https://en.wikipedia.org https://icons.duckduckgo.com",
   // Allow inline styles
   "style-src 'self' 'unsafe-inline'",
   // Explicitly allow inline style tags
@@ -23,9 +23,9 @@ const ContentSecurityPolicy = [
   // External scripts required for embedded timelines
   "script-src 'self' 'unsafe-inline' https://vercel.live https://platform.twitter.com https://embed.x.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
   // Allow outbound connections for embeds and the in-browser Chrome app
-  "connect-src 'self' https://example.com https://developer.mozilla.org https://en.wikipedia.org https://www.google.com https://platform.twitter.com https://embed.x.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://stackblitz.com",
+  "connect-src 'self' https://developer.mozilla.org https://en.wikipedia.org https://www.google.com https://www.kali.org https://forums.kali.org https://www.offsec.com https://www.exploit-db.com https://platform.twitter.com https://embed.x.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://stackblitz.com",
   // Allow iframes from specific providers so the Chrome and StackBlitz apps can load allowed content
-  "frame-src 'self' https://vercel.live https://stackblitz.com https://*.google.com https://platform.twitter.com https://embed.x.com https://syndication.twitter.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://example.com https://developer.mozilla.org https://en.wikipedia.org",
+  "frame-src 'self' https://vercel.live https://stackblitz.com https://*.google.com https://platform.twitter.com https://embed.x.com https://syndication.twitter.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://developer.mozilla.org https://en.wikipedia.org https://www.kali.org https://forums.kali.org https://www.offsec.com https://www.exploit-db.com",
 
   // Allow this site to embed its own resources (resume PDF)
   "frame-ancestors 'self'",
@@ -48,7 +48,8 @@ const securityHeaders = [
   },
   {
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=*',
+    value:
+      'accelerometer=(), autoplay=(), camera=(), clipboard-read=(), clipboard-write=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()',
   },
   {
     // Allow same-origin framing so the PDF resume renders in an <object>
@@ -222,9 +223,9 @@ module.exports = withBundleAnalyzer(
         'yt3.ggpht.com',
         'i.scdn.co',
         'www.google.com',
-        'example.com',
         'developer.mozilla.org',
         'en.wikipedia.org',
+        'icons.duckduckgo.com',
       ],
       deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
       imageSizes: [16, 32, 48, 64, 96, 128, 256],
