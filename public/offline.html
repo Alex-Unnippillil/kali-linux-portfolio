@@ -7,13 +7,39 @@
   <link rel="stylesheet" href="/offline.css">
 </head>
 <body>
-  <main>
-    <h1>Offline</h1>
-    <p>You appear to be offline. Please check your connection.</p>
-    <button id="retry">Retry</button>
-    <section>
-      <h2>Cached Apps</h2>
-      <ul id="apps"></ul>
+  <main class="offline-shell" aria-labelledby="offline-title">
+    <header class="offline-shell__header">
+      <p class="offline-shell__eyebrow">Offline workspace</p>
+      <h1 id="offline-title">You&apos;re offline — but the desktop is ready</h1>
+      <p class="offline-shell__lead">
+        Cached experiences continue to work while we wait for the network to return. When you reconnect we&apos;ll refresh any live
+        data automatically.
+      </p>
+    </header>
+    <div class="offline-shell__actions">
+      <button id="retry" type="button" class="offline-shell__button offline-shell__button--primary">Retry connection</button>
+      <a id="desktop-link" class="offline-shell__button offline-shell__button--ghost" href="/">Back to desktop</a>
+    </div>
+    <section class="offline-shell__status" aria-live="polite">
+      <h2 class="offline-shell__section-title">Connection status</h2>
+      <p id="connection-status" class="offline-shell__status-line">Checking connection…</p>
+      <p id="last-checked" class="offline-shell__status-line offline-shell__status-line--muted"></p>
+      <p id="diagnostics" class="offline-shell__status-line offline-shell__status-line--muted"></p>
+    </section>
+    <section class="offline-shell__apps" aria-labelledby="offline-apps-heading">
+      <div class="offline-shell__section-heading">
+        <h2 id="offline-apps-heading" class="offline-shell__section-title">Cached tools you can launch</h2>
+        <p class="offline-shell__muted">These apps are available offline based on what your service worker cached.</p>
+      </div>
+      <ul id="apps" class="offline-shell__app-list" role="list" aria-live="polite"></ul>
+    </section>
+    <section class="offline-shell__tips">
+      <h2 class="offline-shell__section-title">Quick tips while offline</h2>
+      <ul class="offline-shell__tips-list">
+        <li>Keep drafting notes or code — everything saves locally until the network returns.</li>
+        <li>Games and utilities listed above continue to run without live data.</li>
+        <li>You can revisit this screen any time from the app launcher&apos;s help menu.</li>
+      </ul>
     </section>
   </main>
   <script src="/offline.js" defer></script>
