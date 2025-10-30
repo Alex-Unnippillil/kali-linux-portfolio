@@ -176,6 +176,18 @@ input[type=range].ubuntu-slider:focus-visible::-webkit-slider-thumb {
     -moz-box-shadow: var(--shadow-2);
 }
 
+.desktop-panel-surface {
+    position: relative;
+    border: var(--panel-border-width, var(--surface-border-width, 1px)) solid var(--panel-border-color, var(--kali-panel-border));
+    border-radius: var(--panel-border-radius, var(--surface-border-radius, 12px));
+    box-shadow:
+        0 18px 36px -28px rgba(8, 15, 26, 0.85),
+        var(--panel-inner-highlight, inset 0 1px 0 color-mix(in srgb, var(--color-text) 10%, transparent)),
+        var(--panel-inner-shadow, inset 0 -1px 0 color-mix(in srgb, var(--color-border) 55%, transparent));
+    background-clip: padding-box;
+    overflow: hidden;
+}
+
 .closed-window {
     animation: closeWindow var(--window-motion-duration-close, 180ms) var(--window-motion-ease-close, var(--window-motion-ease-minimize)) 1 forwards;
     will-change: opacity, transform;

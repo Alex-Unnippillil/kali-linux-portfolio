@@ -75,7 +75,7 @@ function WindowStateShelf({
     );
 
     const headerClasses = clsx(
-        'flex w-full items-center justify-between rounded-lg border border-white/10 bg-gradient-to-br px-3 py-2',
+        'desktop-panel-surface flex w-full items-center justify-between bg-gradient-to-br px-3 py-2',
         accentBackground[accent],
     );
 
@@ -85,7 +85,7 @@ function WindowStateShelf({
     );
 
     const listWrapperClasses = clsx(
-        'mt-2 overflow-hidden rounded-lg border border-white/10 bg-slate-950/80 backdrop-blur',
+        'desktop-panel-surface mt-2 overflow-hidden bg-slate-950/80 backdrop-blur',
         open ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0',
         'transition-all duration-200 ease-out',
     );
