@@ -7,7 +7,7 @@ const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
   useKaliWallpaper: false,
-  density: 'regular',
+  density: 'comfortable',
   reducedMotion: false,
   fontScale: 1,
   highContrast: false,
@@ -34,6 +34,14 @@ function getLocalStorage() {
     return null;
   }
 }
+
+const normalizeDensity = (value) => {
+  if (value === 'regular') return 'comfortable';
+  if (value === 'compact' || value === 'comfortable' || value === 'spacious') {
+    return value;
+  }
+  return DEFAULT_SETTINGS.density;
+};
 
 export async function getAccent() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
@@ -71,13 +79,14 @@ export async function setUseKaliWallpaper(value) {
 export async function getDensity() {
   const storage = getLocalStorage();
   if (!storage) return DEFAULT_SETTINGS.density;
-  return storage.getItem('density') || DEFAULT_SETTINGS.density;
+  const stored = storage.getItem('density');
+  return normalizeDensity(stored || DEFAULT_SETTINGS.density);
 }
 
 export async function setDensity(density) {
   const storage = getLocalStorage();
   if (!storage) return;
-  storage.setItem('density', density);
+  storage.setItem('density', normalizeDensity(density));
 }
 
 export async function getReducedMotion() {
@@ -263,7 +272,7 @@ export async function importSettings(json) {
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
   if (useKaliWallpaper !== undefined) await setUseKaliWallpaper(useKaliWallpaper);
-  if (density !== undefined) await setDensity(density);
+  if (density !== undefined) await setDensity(normalizeDensity(density));
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);
   if (highContrast !== undefined) await setHighContrast(highContrast);

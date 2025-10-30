@@ -972,7 +972,10 @@ export class Desktop extends Component {
     };
 
     applyIconLayoutFromSettings = (props = this.props) => {
-        const density = props?.density === 'compact' ? 'compact' : 'regular';
+        const density =
+            props?.density === 'compact' || props?.density === 'comfortable' || props?.density === 'spacious'
+                ? props.density
+                : 'comfortable';
         const rawFontScale = typeof props?.fontScale === 'number' ? props.fontScale : 1;
         const fontScale = Number.isFinite(rawFontScale) ? rawFontScale : 1;
         const largeHitAreas = Boolean(props?.largeHitAreas);
@@ -984,9 +987,9 @@ export class Desktop extends Component {
 
         const normalizedFont = clamp(fontScale, 0.85, 1.6);
         const pointerMultiplier = this.currentPointerIsCoarse ? 1.08 : 1;
-        const densitySizeMultiplier = density === 'compact' ? 0.9 : 1;
-        const densitySpacingMultiplier = density === 'compact' ? 0.88 : 1;
-        const densityPaddingMultiplier = density === 'compact' ? 0.92 : 1;
+        const densitySizeMultiplier = density === 'compact' ? 0.9 : density === 'spacious' ? 1.1 : 1;
+        const densitySpacingMultiplier = density === 'compact' ? 0.88 : density === 'spacious' ? 1.12 : 1;
+        const densityPaddingMultiplier = density === 'compact' ? 0.92 : density === 'spacious' ? 1.08 : 1;
         const hitAreaSizeMultiplier = largeHitAreas || this.currentPointerIsCoarse ? 1.12 : 1;
         const hitAreaSpacingMultiplier = largeHitAreas || this.currentPointerIsCoarse ? 1.15 : 1;
 
@@ -1026,7 +1029,7 @@ export class Desktop extends Component {
 
         const mediumDimensions = this.iconSizePresets.medium.dimensions;
         const dimensionScale = mediumDimensions?.width ? baseDimensions.width / mediumDimensions.width : 1;
-        const fontBase = normalizedFont * (density === 'compact' ? 0.95 : 1);
+        const fontBase = normalizedFont * (density === 'compact' ? 0.95 : density === 'spacious' ? 1.05 : 1);
         const iconPaddingRem = (0.25 * dimensionScale * hitAreaSpacingMultiplier).toFixed(3);
         const iconGapRem = (0.375 * dimensionScale * hitAreaSpacingMultiplier).toFixed(3);
         const fontSizeRem = (0.75 * dimensionScale * fontBase).toFixed(3);

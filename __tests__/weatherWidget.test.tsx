@@ -20,7 +20,7 @@ const baseSettings = {
   wallpaper: defaults.wallpaper,
   bgImageName: defaults.wallpaper,
   useKaliWallpaper: defaults.useKaliWallpaper,
-  density: defaults.density as 'regular' | 'compact',
+  density: defaults.density as 'compact' | 'comfortable' | 'spacious',
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
   highContrast: defaults.highContrast,
