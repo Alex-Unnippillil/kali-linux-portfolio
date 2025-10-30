@@ -39,6 +39,9 @@ const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
 const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
 const PINNED_APPS_STORAGE_KEY = 'pinnedApps';
 
+const WINDOW_LAYER_BASE = 200;
+const WINDOW_LAYER_STEP = 2;
+
 const sanitizeFolderItem = (item) => {
     if (!item) return null;
     if (typeof item === 'string') {
@@ -4526,6 +4529,7 @@ export class Desktop extends Component {
         const stack = this.getActiveStack();
         const orderedIds = [];
         const seen = new Set();
+        const activeStackTop = stack.length ? stack[0] : null;
 
         stack.slice().reverse().forEach((id) => {
             if (closed_windows[id] === false && !seen.has(id)) {
@@ -4545,6 +4549,7 @@ export class Desktop extends Component {
 
         const appMap = new Map(apps.map((app) => [app.id, app]));
         const snapGrid = this.getSnapGrid();
+        const fallbackFocusedId = activeStackTop ?? orderedIds[orderedIds.length - 1] ?? null;
 
         return orderedIds.map((id, index) => {
             const app = appMap.get(id);
@@ -4553,6 +4558,13 @@ export class Desktop extends Component {
             const size = this.state.window_sizes?.[id];
             const defaultWidth = size && typeof size.width === 'number' ? size.width : app.defaultWidth;
             const defaultHeight = size && typeof size.height === 'number' ? size.height : app.defaultHeight;
+            const explicitFocused = focused_windows[id];
+            const isFocused = typeof explicitFocused === 'boolean'
+                ? explicitFocused
+                : id === fallbackFocusedId;
+            const zIndexHint = WINDOW_LAYER_BASE
+                + (index * WINDOW_LAYER_STEP)
+                + (isFocused ? WINDOW_LAYER_STEP * orderedIds.length : 0);
             const props = {
                 title: app.title,
                 id: app.id,
@@ -4561,7 +4573,7 @@ export class Desktop extends Component {
                 closed: this.closeApp,
                 openApp: this.openApp,
                 focus: this.focus,
-                isFocused: focused_windows[id],
+                isFocused,
                 hasMinimised: this.hasMinimised,
                 minimized: minimized_windows[id],
                 resizable: app.resizable,
@@ -4575,6 +4587,7 @@ export class Desktop extends Component {
                 snapEnabled: this.props.snapEnabled,
                 snapGrid,
                 context: this.state.window_context[id],
+                zIndexHint,
             };
 
             return <Window key={id} {...props} />;

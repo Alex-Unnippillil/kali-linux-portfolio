@@ -55,6 +55,7 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       focus: focusProp,
       isFocused,
       zIndex: _ignoredZIndex,
+      zIndexHint,
       ...rest
     } = props;
     const innerRef = useRef<BaseWindowInstance>(null);
@@ -158,7 +159,8 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       [focusProp, focusZIndex, windowId],
     );
 
-    const computedZIndex = windowId ? getZIndex(windowId) : baseZIndex;
+    const fallbackZIndex = typeof zIndexHint === "number" ? zIndexHint : baseZIndex;
+    const computedZIndex = windowId ? Math.max(getZIndex(windowId), fallbackZIndex) : fallbackZIndex;
 
     useEffect(() => {
       if (typeof window === "undefined") return undefined;
