@@ -1007,6 +1007,11 @@ export class Window extends Component {
         this._pendingDragUpdate = update;
         this.applyEdgeResistance(node, update);
 
+        const immediateRect = this.readNodeRect(node);
+        if (immediateRect) {
+            this.checkSnapPreview(node, immediateRect);
+        }
+
         if (this._dragFrame !== null) {
             return;
         }
@@ -1735,7 +1740,7 @@ export class Window extends Component {
                             this.state.cursorType,
                             this.state.closed ? 'closed-window' : '',
                             this.props.minimized ? styles.windowFrameMinimized : '',
-                            this.state.grabbed ? 'opacity-70' : '',
+                            this.state.grabbed ? styles.windowFrameDragging : '',
                             this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
                             'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',
                             styles.windowFrame,
