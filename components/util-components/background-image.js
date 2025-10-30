@@ -139,19 +139,24 @@ export default function BackgroundImage({ theme }) {
         }
     };
 
+    const wallpaperBaseClass =
+        'absolute inset-0 h-full w-full transform transition-transform duration-700 ease-out';
+
     return (
         <div
             className="absolute inset-0 -z-10 overflow-hidden pointer-events-none"
             aria-hidden="true"
         >
             {theme?.useKaliWallpaper ? (
-                <KaliWallpaper className="h-full w-full" />
+                <div className={wallpaperBaseClass}>
+                    <KaliWallpaper className="h-full w-full" />
+                </div>
             ) : effectiveUrl ? (
                 <img
                     key={effectiveUrl}
                     src={effectiveUrl}
                     alt=""
-                    className="h-full w-full object-cover"
+                    className={`${wallpaperBaseClass} object-cover object-center`}
                     style={{
                         transform: 'scale(1.05)',
                     }}
