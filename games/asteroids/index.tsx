@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import { Overlay as GameOverlay } from "../../components/apps/Games/common";
 
 // Basic entity types
 interface Bullet {
@@ -268,7 +269,19 @@ const AsteroidsGame: React.FC = () => {
 
   return (
     <div className="relative w-full h-full bg-black" data-testid="asteroids-game">
-      <canvas ref={canvasRef} className="w-full h-full" />
+      <GameOverlay
+        gameId="asteroids"
+        paused={paused}
+        onPause={() => setPaused(true)}
+        onResume={() => setPaused(false)}
+        onReset={resetGame}
+      />
+      <canvas
+        ref={canvasRef}
+        className="w-full h-full"
+        role="img"
+        aria-label="Asteroids playfield"
+      />
       <div className="pointer-events-none absolute inset-0 select-none">
         <div className="absolute top-2 left-2 flex gap-1">
           {Array.from({ length: lives }).map((_, i) => (

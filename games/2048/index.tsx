@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import GameShell from '../../components/games/GameShell';
+import { Overlay as GameOverlay } from '../../components/apps/Games/common';
 import { toPng } from 'html-to-image';
 import useOPFSLeaderboard from '../../hooks/useOPFSLeaderboard';
 import {
@@ -322,8 +323,15 @@ const Game2048 = () => {
     >
       <div
         ref={boardRef}
-        className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4"
+        className="relative h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4"
       >
+        <GameOverlay
+          gameId="2048"
+          paused={paused}
+          onPause={() => setPaused(true)}
+          onResume={() => setPaused(false)}
+          onReset={init}
+        />
         <div className="flex space-x-2 items-center">
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
