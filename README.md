@@ -328,6 +328,7 @@ Add any additional variables required by your configuration (ReCAPTCHA, Supabase
 | `yarn test` | Jest unit tests (jsdom environment; see `jest.setup.ts`). |
 | `yarn test:watch` | Watch mode for Jest. |
 | `yarn smoke` | Manual smoke runner that opens each `/apps/*` route in a headless browser. |
+| `yarn perf` | Builds the site and runs Lighthouse CI with budgets (LCP ≤ 2.5s, TTI ≤ 8.0s, CLS ≤ 0.1). |
 | `npx playwright test` | Playwright end-to-end suite (optional locally, required in E2E CI runs). |
 
 Additional guidance:
@@ -337,6 +338,18 @@ Additional guidance:
 - For major UI updates, capture screenshots or short clips for reviewers.
 
 Accessibility and performance checks using Lighthouse or Pa11y (`pa11yci.json`) are encouraged for desktop shell changes.
+
+### Performance budgets
+
+Lighthouse CI is wired through [`.lighthouserc.cjs`](./.lighthouserc.cjs) and [`lighthouse-budgets.json`](./lighthouse-budgets.json) to capture the home screen (`/`) three times in headless Chrome. The following medians are enforced:
+
+| Metric | Threshold | Notes |
+| --- | --- | --- |
+| Largest Contentful Paint | ≤ 2,500 ms | Blocks merges when the desktop splash or hero regresses. |
+| Time to Interactive | ≤ 8,000 ms | Ensures the desktop becomes responsive shortly after load. |
+| Cumulative Layout Shift | ≤ 0.10 | Guards against layout jank during boot and window renders. |
+
+Run `yarn perf` locally to build, audit, and produce reports under `.lighthouseci/` before opening a PR. The helper script installs Playwright's Chromium build automatically when a system Chrome binary is unavailable, so expect a one-time browser download on first run; Linux environments also bootstrap required shared libraries via `playwright install --with-deps`. The "Performance budgets" GitHub Action executes the same script on every pull request and fails the check when thresholds are exceeded, preventing merges until the regression is addressed.
 
 ---
 

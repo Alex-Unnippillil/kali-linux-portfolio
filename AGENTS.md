@@ -83,11 +83,14 @@ yarn lint       # ESLint
 yarn test       # Jest unit tests
 yarn smoke      # Optional manual crawler over /apps/* during dev
 npx playwright test   # E2E, if tooling is available locally
+yarn perf       # Builds + Lighthouse CI (budgets fail the run when LCP/TTI/CLS regress)
 ```
 
 * Fix lint/type issues; do not silence them.
 * Add or update tests covering any logic you touch.
 * Record every command you ran in your PR summary.
+* Run `yarn perf` to verify Largest Contentful Paint ≤ 2.5s, Time to Interactive ≤ 8.0s, and Cumulative Layout Shift ≤ 0.1. Failing budgets block the new GitHub Action and must be addressed before merge.
+* The first `yarn perf` execution installs Playwright's Chromium build automatically when Chrome is missing; Linux hosts will also fetch system libraries via `playwright install --with-deps`, so cache the download locally to avoid repeated installs.
 
 ---
 
@@ -185,6 +188,7 @@ npx playwright test   # E2E, if tooling is available locally
 
 - [ ] `yarn lint`
 - [ ] `yarn test`
+- [ ] Performance budgets satisfied (`yarn perf`)
 - [ ] Static export still renders key screens
 - [ ] No new secrets or network calls
 
@@ -192,6 +196,7 @@ npx playwright test   # E2E, if tooling is available locally
 
 - [ ] Screenshots or clip added for UI changes
 - [ ] Docs updated for new flags/apps
+- [ ] Lighthouse performance check passing in CI
 - [ ] Reviewed in both serverful and static builds when `/api/*` is involved
 
 ---
