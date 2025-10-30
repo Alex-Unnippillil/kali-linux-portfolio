@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
+import clsx from 'clsx';
 
 export type KaliCategory = {
   id: string;
@@ -92,18 +93,18 @@ const ApplicationsMenu: React.FC<ApplicationsMenuProps> = ({ activeCategory, onS
       <ul className="space-y-1">
         {KALI_CATEGORIES.map((category) => {
           const isActive = category.id === activeCategory;
+          const buttonClasses = clsx(
+            'flex w-full items-center gap-3 rounded px-3 py-2 text-left text-sm font-medium transition-colors duration-100 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-sky-400 focus-visible:ring-offset-slate-900',
+            isActive
+              ? 'bg-slate-700 text-white shadow-[inset_0_0_0_1px_rgba(148,163,184,0.45)] active:bg-slate-700/90'
+              : 'bg-transparent text-slate-200 hover:bg-slate-700/60 hover:text-white active:bg-slate-700/80',
+          );
+
           return (
             <li key={category.id}>
-              <button
-                type="button"
-                onClick={() => onSelect(category.id)}
-                className={`flex w-full items-center gap-3 rounded px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-sky-400 ${
-                  isActive ? 'bg-gray-700 text-white' : 'bg-transparent hover:bg-gray-700/60'
-                }`}
-                aria-pressed={isActive}
-              >
+              <button type="button" onClick={() => onSelect(category.id)} className={buttonClasses} aria-pressed={isActive}>
                 <CategoryIcon categoryId={category.id} label={category.label} />
-                <span className="text-sm font-medium">{category.label}</span>
+                <span>{category.label}</span>
               </button>
             </li>
           );
