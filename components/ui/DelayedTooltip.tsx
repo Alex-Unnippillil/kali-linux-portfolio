@@ -2,6 +2,7 @@ import React, {
   ReactNode,
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useRef,
   useState,
@@ -14,6 +15,10 @@ type TriggerProps = {
   onMouseLeave: (event: React.MouseEvent<HTMLElement>) => void;
   onFocus: (event: React.FocusEvent<HTMLElement>) => void;
   onBlur: (event: React.FocusEvent<HTMLElement>) => void;
+  onPointerDown: (event: React.PointerEvent<HTMLElement>) => void;
+  onPointerUp: (event: React.PointerEvent<HTMLElement>) => void;
+  onPointerCancel: (event: React.PointerEvent<HTMLElement>) => void;
+  'aria-describedby'?: string;
 };
 
 type DelayedTooltipProps = {
@@ -37,6 +42,7 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
   const [visible, setVisible] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const timerRef = useRef<number | null>(null);
+  const tooltipId = useId();
   const [portalEl, setPortalEl] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -121,6 +127,18 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
     onBlur: () => {
       hide();
     },
+    onPointerDown: (event) => {
+      if (event.pointerType === 'touch' || event.pointerType === 'pen') {
+        show();
+      }
+    },
+    onPointerUp: () => {
+      hide();
+    },
+    onPointerCancel: () => {
+      hide();
+    },
+    'aria-describedby': visible ? tooltipId : undefined,
   };
 
   return (
@@ -136,6 +154,8 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
                 left: position.left,
                 zIndex: 1000,
               }}
+              id={tooltipId}
+              role="tooltip"
               className="pointer-events-none max-w-xs rounded-md border border-gray-500/60 bg-ub-grey/95 px-3 py-2 text-xs text-white shadow-xl backdrop-blur"
             >
               {content}
