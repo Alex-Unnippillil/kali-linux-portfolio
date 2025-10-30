@@ -123,10 +123,11 @@
 }
 
 .windowTitlebar {
-  --window-titlebar-gutter: clamp(0.45rem, 1.4vw, 0.75rem);
-  --window-titlebar-gap: clamp(0.25rem, 1vw, 0.5rem);
-  height: clamp(28px, 5.2vw, 34px);
-  min-height: 36px;
+  --window-ui-scale: var(--ui-scale, 1);
+  --window-titlebar-gutter: calc(clamp(0.45rem, 1.4vw, 0.75rem) * var(--window-ui-scale));
+  --window-titlebar-gap: calc(clamp(0.25rem, 1vw, 0.5rem) * var(--window-ui-scale));
+  height: calc(clamp(28px, 5.2vw, 34px) * var(--window-ui-scale));
+  min-height: calc(36px * var(--window-ui-scale));
   border-top-left-radius: calc(var(--radius-6) - 1px);
   border-top-right-radius: calc(var(--radius-6) - 1px);
   position: relative;
@@ -134,10 +135,10 @@
   display: flex;
   align-items: center;
   gap: var(--window-titlebar-gap);
-  padding: 0 var(--window-titlebar-gutter);
   flex-wrap: nowrap;
-  column-gap: 0.35rem;
-  padding: 0.35rem 0.85rem;
+  column-gap: calc(0.35rem * var(--window-ui-scale));
+  padding-inline: var(--window-titlebar-gutter);
+  padding-block: calc(0.35rem * var(--window-ui-scale));
   cursor: grab;
   cursor: -webkit-grab;
   touch-action: none;
@@ -170,7 +171,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
-  font-size: clamp(0.8rem, 1.6vw, 0.95rem);
+  font-size: calc(clamp(0.8rem, 1.6vw, 0.95rem) * var(--window-ui-scale));
   letter-spacing: 0.02em;
   margin-inline: auto;
 }
@@ -179,8 +180,8 @@
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: clamp(0.25rem, 1vw, 0.45rem);
-  padding: 0 clamp(0.25rem, 1vw, 0.35rem);
+  gap: calc(clamp(0.25rem, 1vw, 0.45rem) * var(--window-ui-scale));
+  padding-inline: calc(clamp(0.25rem, 1vw, 0.35rem) * var(--window-ui-scale));
   height: 100%;
   user-select: none;
   flex-shrink: 0;
@@ -190,9 +191,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: clamp(24px, 4.6vw, 28px);
-  height: clamp(22px, 4.2vw, 24px);
-  border-radius: clamp(4px, 1.2vw, 6px);
+  width: calc(clamp(24px, 4.6vw, 28px) * var(--window-ui-scale));
+  height: calc(clamp(22px, 4.2vw, 24px) * var(--window-ui-scale));
+  border-radius: calc(clamp(4px, 1.2vw, 6px) * var(--window-ui-scale));
   border: 1px solid transparent;
   outline: none;
   box-shadow: none;
@@ -265,15 +266,15 @@
 }
 
 .windowControlIcon {
-  width: clamp(12px, 3.2vw, 14px);
-  height: clamp(12px, 3.2vw, 14px);
+  width: calc(clamp(12px, 3.2vw, 14px) * var(--window-ui-scale));
+  height: calc(clamp(12px, 3.2vw, 14px) * var(--window-ui-scale));
   display: block;
 }
 
 @media (max-width: 640px) {
   .windowTitlebar {
-    --window-titlebar-gutter: clamp(0.35rem, 2.4vw, 0.6rem);
-    --window-titlebar-gap: clamp(0.2rem, 1.6vw, 0.35rem);
+    --window-titlebar-gutter: calc(clamp(0.35rem, 2.4vw, 0.6rem) * var(--window-ui-scale));
+    --window-titlebar-gap: calc(clamp(0.2rem, 1.6vw, 0.35rem) * var(--window-ui-scale));
   }
 
   .windowTitleBalancer {
@@ -285,8 +286,8 @@
   }
 
   .windowControls {
-    padding: 0 clamp(0.2rem, 1.6vw, 0.3rem);
-    gap: clamp(0.2rem, 1.6vw, 0.35rem);
+    padding-inline: calc(clamp(0.2rem, 1.6vw, 0.3rem) * var(--window-ui-scale));
+    gap: calc(clamp(0.2rem, 1.6vw, 0.35rem) * var(--window-ui-scale));
   }
 }
 

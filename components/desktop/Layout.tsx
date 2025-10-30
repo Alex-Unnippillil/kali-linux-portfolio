@@ -26,20 +26,21 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
           }
 
           .desktop-shell {
-            --shell-taskbar-height: 2.5rem;
-            --shell-taskbar-padding-x: 0.75rem;
-            --shell-taskbar-gap: 0.5rem;
-            --shell-taskbar-font-size: 0.875rem;
-            --shell-taskbar-icon: 1.5rem;
-            --shell-hit-target: 2.5rem;
-            --desktop-icon-width: 6rem;
-            --desktop-icon-height: 5.5rem;
-            --desktop-icon-padding: 0.25rem;
-            --desktop-icon-gap: 0.375rem;
-            --desktop-icon-image: 2.5rem;
-            --desktop-icon-font-size: 0.75rem;
+            --shell-ui-scale: var(--ui-scale, 1);
+            --shell-taskbar-height: calc(2.5rem * var(--shell-ui-scale));
+            --shell-taskbar-padding-x: calc(0.75rem * var(--shell-ui-scale));
+            --shell-taskbar-gap: calc(0.5rem * var(--shell-ui-scale));
+            --shell-taskbar-font-size: calc(0.875rem * var(--shell-ui-scale));
+            --shell-taskbar-icon: calc(1.5rem * var(--shell-ui-scale));
+            --shell-hit-target: calc(2.5rem * var(--shell-ui-scale));
+            --desktop-icon-width: calc(6rem * var(--shell-ui-scale));
+            --desktop-icon-height: calc(5.5rem * var(--shell-ui-scale));
+            --desktop-icon-padding: calc(0.25rem * var(--shell-ui-scale));
+            --desktop-icon-gap: calc(0.375rem * var(--shell-ui-scale));
+            --desktop-icon-image: calc(2.5rem * var(--shell-ui-scale));
+            --desktop-icon-font-size: calc(0.75rem * var(--shell-ui-scale));
             touch-action: manipulation;
-            font-size: clamp(0.95rem, 0.9rem + 0.2vw, 1rem);
+            font-size: calc(clamp(0.95rem, 0.9rem + 0.2vw, 1rem) * var(--shell-ui-scale));
             min-height: 100vh;
           }
 
@@ -57,73 +58,73 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
 
           @media (min-width: 640px) {
             .desktop-shell {
-              --shell-taskbar-height: 2.75rem;
-              --shell-taskbar-padding-x: 0.875rem;
-              --shell-taskbar-gap: 0.6rem;
-              --desktop-icon-width: 6.25rem;
-              --desktop-icon-height: 5.75rem;
+              --shell-taskbar-height: calc(2.75rem * var(--shell-ui-scale));
+              --shell-taskbar-padding-x: calc(0.875rem * var(--shell-ui-scale));
+              --shell-taskbar-gap: calc(0.6rem * var(--shell-ui-scale));
+              --desktop-icon-width: calc(6.25rem * var(--shell-ui-scale));
+              --desktop-icon-height: calc(5.75rem * var(--shell-ui-scale));
             }
           }
 
           @media (min-width: 768px) {
             .desktop-shell {
-              --shell-taskbar-height: 3rem;
-              --shell-taskbar-padding-x: 1rem;
-              --shell-taskbar-gap: 0.75rem;
-              --shell-taskbar-font-size: 0.925rem;
-              --desktop-icon-width: 6.5rem;
-              --desktop-icon-height: 6rem;
-              --desktop-icon-image: 2.75rem;
-              --desktop-icon-font-size: 0.8rem;
+              --shell-taskbar-height: calc(3rem * var(--shell-ui-scale));
+              --shell-taskbar-padding-x: calc(1rem * var(--shell-ui-scale));
+              --shell-taskbar-gap: calc(0.75rem * var(--shell-ui-scale));
+              --shell-taskbar-font-size: calc(0.925rem * var(--shell-ui-scale));
+              --desktop-icon-width: calc(6.5rem * var(--shell-ui-scale));
+              --desktop-icon-height: calc(6rem * var(--shell-ui-scale));
+              --desktop-icon-image: calc(2.75rem * var(--shell-ui-scale));
+              --desktop-icon-font-size: calc(0.8rem * var(--shell-ui-scale));
             }
           }
 
           @media (min-width: 1024px) {
             .desktop-shell {
-              --shell-taskbar-height: 3.25rem;
-              --shell-taskbar-font-size: 0.95rem;
-              --desktop-icon-width: 6.75rem;
-              --desktop-icon-height: 6.25rem;
+              --shell-taskbar-height: calc(3.25rem * var(--shell-ui-scale));
+              --shell-taskbar-font-size: calc(0.95rem * var(--shell-ui-scale));
+              --desktop-icon-width: calc(6.75rem * var(--shell-ui-scale));
+              --desktop-icon-height: calc(6.25rem * var(--shell-ui-scale));
             }
           }
 
           @media (min-width: 1280px) {
             .desktop-shell {
-              --shell-taskbar-height: 3.5rem;
-              --shell-taskbar-font-size: 1rem;
-              --desktop-icon-width: 7rem;
-              --desktop-icon-height: 6.5rem;
-              --desktop-icon-image: 3rem;
-              --desktop-icon-font-size: 0.85rem;
+              --shell-taskbar-height: calc(3.5rem * var(--shell-ui-scale));
+              --shell-taskbar-font-size: calc(1rem * var(--shell-ui-scale));
+              --desktop-icon-width: calc(7rem * var(--shell-ui-scale));
+              --desktop-icon-height: calc(6.5rem * var(--shell-ui-scale));
+              --desktop-icon-image: calc(3rem * var(--shell-ui-scale));
+              --desktop-icon-font-size: calc(0.85rem * var(--shell-ui-scale));
             }
           }
 
           @media (pointer: coarse) {
             .desktop-shell {
-              --shell-taskbar-height: 3.5rem;
-              --shell-taskbar-padding-x: 1.1rem;
-              --shell-taskbar-gap: 0.85rem;
-              --shell-taskbar-font-size: 1rem;
-              --shell-taskbar-icon: 2rem;
-              --shell-hit-target: 3.5rem;
-              --desktop-icon-width: 7.25rem;
-              --desktop-icon-height: 6.75rem;
-              --desktop-icon-image: 3rem;
-              --desktop-icon-padding: 0.45rem;
-              --desktop-icon-gap: 0.5rem;
-              --desktop-icon-font-size: 0.85rem;
+              --shell-taskbar-height: calc(3.5rem * var(--shell-ui-scale));
+              --shell-taskbar-padding-x: calc(1.1rem * var(--shell-ui-scale));
+              --shell-taskbar-gap: calc(0.85rem * var(--shell-ui-scale));
+              --shell-taskbar-font-size: calc(1rem * var(--shell-ui-scale));
+              --shell-taskbar-icon: calc(2rem * var(--shell-ui-scale));
+              --shell-hit-target: calc(3.5rem * var(--shell-ui-scale));
+              --desktop-icon-width: calc(7.25rem * var(--shell-ui-scale));
+              --desktop-icon-height: calc(6.75rem * var(--shell-ui-scale));
+              --desktop-icon-image: calc(3rem * var(--shell-ui-scale));
+              --desktop-icon-padding: calc(0.45rem * var(--shell-ui-scale));
+              --desktop-icon-gap: calc(0.5rem * var(--shell-ui-scale));
+              --desktop-icon-font-size: calc(0.85rem * var(--shell-ui-scale));
             }
           }
 
           @media (pointer: coarse) and (min-width: 768px) {
             .desktop-shell {
-              --shell-taskbar-height: 3.75rem;
-              --shell-taskbar-padding-x: 1.25rem;
-              --shell-hit-target: 3.75rem;
-              --desktop-icon-width: 7.5rem;
-              --desktop-icon-height: 7rem;
-              --desktop-icon-image: 3.25rem;
-              --desktop-icon-font-size: 0.9rem;
+              --shell-taskbar-height: calc(3.75rem * var(--shell-ui-scale));
+              --shell-taskbar-padding-x: calc(1.25rem * var(--shell-ui-scale));
+              --shell-hit-target: calc(3.75rem * var(--shell-ui-scale));
+              --desktop-icon-width: calc(7.5rem * var(--shell-ui-scale));
+              --desktop-icon-height: calc(7rem * var(--shell-ui-scale));
+              --desktop-icon-image: calc(3.25rem * var(--shell-ui-scale));
+              --desktop-icon-font-size: calc(0.9rem * var(--shell-ui-scale));
             }
           }
           `}</style>

@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  uiScaleMode: 'auto',
 };
 
 let hasLoggedStorageWarning = false;
@@ -151,6 +152,18 @@ export async function setHaptics(value) {
   storage.setItem('haptics', value ? 'true' : 'false');
 }
 
+export async function getUiScalePreference() {
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.uiScaleMode;
+  return storage.getItem('ui-scale-mode') || DEFAULT_SETTINGS.uiScaleMode;
+}
+
+export async function setUiScalePreference(value) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem('ui-scale-mode', value);
+}
+
 export async function getPongSpin() {
   const storage = getLocalStorage();
   if (!storage) return DEFAULT_SETTINGS.pongSpin;
@@ -192,6 +205,7 @@ export async function resetSettings() {
   storage.removeItem('allow-network');
   storage.removeItem('haptics');
   storage.removeItem('use-kali-wallpaper');
+  storage.removeItem('ui-scale-mode');
 }
 
 export async function exportSettings() {
@@ -207,6 +221,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    uiScaleMode,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -219,6 +234,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getUiScalePreference(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -234,6 +250,7 @@ export async function exportSettings() {
     haptics,
     useKaliWallpaper,
     theme,
+    uiScaleMode,
   });
 }
 
@@ -259,6 +276,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     theme,
+    uiScaleMode,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
@@ -272,6 +290,7 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (theme !== undefined) setTheme(theme);
+  if (uiScaleMode !== undefined) await setUiScalePreference(uiScaleMode);
 }
 
 export const defaults = DEFAULT_SETTINGS;
