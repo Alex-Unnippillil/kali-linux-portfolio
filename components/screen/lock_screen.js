@@ -28,24 +28,44 @@ export default function LockScreen(props) {
         };
     }, [props.isLocked, props.unLockScreen]);
 
+    const wallpaperBaseClass =
+        'absolute inset-0 h-full w-full transform transition duration-700 ease-out';
+    const wallpaperEffects = props.isLocked
+        ? 'scale-105 blur-lg brightness-75 saturate-125'
+        : 'scale-100 blur-0 brightness-100 saturate-100';
+
     return (
         <div
             id="ubuntu-lock-screen"
             style={{ zIndex: "100", contentVisibility: 'auto' }}
             aria-hidden={props.isLocked ? "false" : "true"}
-            className={(props.isLocked ? " visible translate-y-0 " : " invisible -translate-y-full ") + " absolute outline-none bg-black bg-opacity-90 transform duration-500 select-none top-0 right-0 overflow-hidden m-0 p-0 h-screen w-screen"}>
-            {useKaliTheme ? (
-                <KaliWallpaper
-                    className={`absolute top-0 left-0 h-full w-full transform z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
+            className={`${
+                props.isLocked ? 'visible translate-y-0' : 'invisible -translate-y-full'
+            } absolute top-0 right-0 m-0 h-screen w-screen overflow-hidden p-0 outline-none bg-black/70 backdrop-blur-sm transition-transform duration-500 select-none`}
+        >
+            <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+                {useKaliTheme ? (
+                    <div className={`${wallpaperBaseClass} ${wallpaperEffects} filter`}>
+                        <KaliWallpaper className="h-full w-full" />
+                    </div>
+                ) : (
+                    <img
+                        src={`/wallpapers/${bgImageName}.webp`}
+                        alt=""
+                        className={`${wallpaperBaseClass} ${wallpaperEffects} filter object-cover object-center`}
+                        loading="lazy"
+                    />
+                )}
+                <div
+                    className={`absolute inset-0 transition duration-700 ${
+                        props.isLocked
+                            ? 'bg-gradient-to-b from-black/40 via-black/55 to-black/80'
+                            : 'bg-black/10'
+                    }`}
+                    aria-hidden="true"
                 />
-            ) : (
-                <img
-                    src={`/wallpapers/${bgImageName}.webp`}
-                    alt=""
-                    className={`absolute top-0 left-0 w-full h-full object-cover transform z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
-                />
-            )}
-            <div className="w-full h-full z-50 overflow-hidden relative flex flex-col justify-center items-center text-white">
+            </div>
+            <div className="relative z-10 flex h-full w-full flex-col items-center justify-center overflow-hidden text-white">
                 <div className=" text-7xl">
                     <Clock onlyTime={true} />
                 </div>
