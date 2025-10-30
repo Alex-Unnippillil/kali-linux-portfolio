@@ -1744,6 +1744,8 @@ export class Window extends Component {
                             this.state.resizing ? styles.windowFrameResizing : '',
                         ].filter(Boolean).join(' ')}
                         id={this.id}
+                        data-context="window"
+                        data-app-id={this.props.id}
                         role="dialog"
                         data-window-state={windowState}
                         aria-hidden={this.props.minimized ? true : false}

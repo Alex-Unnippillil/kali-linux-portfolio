@@ -58,89 +58,70 @@ jest.mock('../components/desktop/Window', () => {
   return MockDesktopWindow;
 });
 
-describe('Desktop window size persistence', () => {
+describe('Desktop window context menu presets', () => {
+  const originalInnerWidth = window.innerWidth;
+  const originalInnerHeight = window.innerHeight;
+
   beforeEach(() => {
     jest.useFakeTimers();
-    localStorage.clear();
     windowRenderMock.mockClear();
     windowPropsById.clear();
+    localStorage.clear();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 1920 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: 1080 });
   });
 
   afterEach(() => {
     jest.useRealTimers();
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: originalInnerWidth });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: originalInnerHeight });
   });
 
-  it('restores stored window dimensions after reload', async () => {
+  it('resizes the active window to each preset dimension', async () => {
     const desktopRef = React.createRef<Desktop>();
-    let initialRender: ReturnType<typeof render> | undefined;
     await act(async () => {
-      initialRender = render(
+      render(
         <Desktop
           ref={desktopRef}
           clearSession={() => {}}
           changeBackgroundImage={() => {}}
           bg_image_name="aurora"
           snapEnabled
-        />
+        />,
       );
-    });
-    const { unmount } = initialRender!;
-    await act(async () => {
       await Promise.resolve();
     });
+
     expect(desktopRef.current).toBeDefined();
+
     act(() => {
       desktopRef.current?.openApp('terminal');
     });
+
     await act(async () => {
       jest.advanceTimersByTime(200);
       await Promise.resolve();
     });
 
-    expect(windowRenderMock).toHaveBeenCalled();
-    const initialProps = windowPropsById.get('terminal');
-    expect(initialProps).toBeDefined();
+    const presets = [
+      { width: 960, height: 600, expected: { width: 50, height: 56 } },
+      { width: 1200, height: 800, expected: { width: 63, height: 74 } },
+      { width: 1440, height: 900, expected: { width: 75, height: 83 } },
+    ];
 
-    await act(async () => {
-      initialProps?.onSizeChange?.(72, 64);
-    });
+    for (const preset of presets) {
+      await act(async () => {
+        desktopRef.current?.resizeWindowToDimensions('terminal', preset.width, preset.height);
+        await Promise.resolve();
+      });
 
-    const storedRaw = localStorage.getItem('desktop_window_sizes');
-    expect(storedRaw).toBeTruthy();
-    const stored = storedRaw ? JSON.parse(storedRaw) : {};
-    expect(stored.terminal).toEqual({ width: 72, height: 64 });
+      const stored = desktopRef.current?.state.window_sizes?.terminal;
+      expect(stored).toEqual(preset.expected);
 
-    unmount();
-    windowPropsById.clear();
-    windowRenderMock.mockClear();
-
-    const desktopRefReloaded = React.createRef<Desktop>();
-    await act(async () => {
-      render(
-        <Desktop
-          ref={desktopRefReloaded}
-          clearSession={() => {}}
-          changeBackgroundImage={() => {}}
-          bg_image_name="aurora"
-          snapEnabled
-        />
-      );
-    });
-    await act(async () => {
-      await Promise.resolve();
-    });
-    expect(desktopRefReloaded.current).toBeDefined();
-    act(() => {
-      desktopRefReloaded.current?.openApp('terminal');
-    });
-    await act(async () => {
-      jest.advanceTimersByTime(200);
-      await Promise.resolve();
-    });
-
-    expect(windowRenderMock).toHaveBeenCalled();
-    const reopenedProps = windowRenderMock.mock.calls[windowRenderMock.mock.calls.length - 1]?.[0];
-    expect(reopenedProps?.defaultWidth).toBe(72);
-    expect(reopenedProps?.defaultHeight).toBe(64);
+      const persistedRaw = localStorage.getItem('desktop_window_sizes');
+      expect(persistedRaw).toBeTruthy();
+      const persisted = persistedRaw ? JSON.parse(persistedRaw) : {};
+      expect(persisted.terminal).toEqual(preset.expected);
+    }
   });
 });
