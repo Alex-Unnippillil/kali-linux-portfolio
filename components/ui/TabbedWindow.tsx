@@ -401,7 +401,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
               <div
                 ref={moreMenuRef}
                 role="menu"
-                className="absolute right-0 z-10 mt-1 w-48 rounded border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] py-1 text-[color:var(--color-text)] shadow-lg"
+                className="absolute right-0 z-10 mt-1 w-48 rounded border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] py-1 text-[color:var(--color-text)] shadow-kali-modal"
               >
                 {overflowTabs.map((tab) => (
                   <button

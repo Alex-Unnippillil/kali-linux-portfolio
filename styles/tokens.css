@@ -71,6 +71,18 @@
 
   /* Elevation */
   --shadow-2: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 80%);
+  --shadow-dock:
+    0 22px 48px -24px color-mix(in srgb, var(--color-dark) 78%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--color-border) 55%, transparent);
+  --shadow-window-inactive:
+    0 18px 42px -22px color-mix(in srgb, var(--color-dark) 82%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--color-border) 65%, transparent 35%);
+  --shadow-window-active:
+    0 24px 54px -24px color-mix(in srgb, var(--color-primary) 32%, var(--color-dark) 68%),
+    0 0 0 1px color-mix(in srgb, var(--color-primary) 45%, transparent 55%);
+  --shadow-modal:
+    0 30px 68px -26px color-mix(in srgb, var(--color-dark) 86%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--color-info) 32%, transparent 68%);
 
   /* Window chrome */
   --color-window-border: #12344a;

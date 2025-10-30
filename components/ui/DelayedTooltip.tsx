@@ -23,7 +23,9 @@ type DelayedTooltipProps = {
 };
 
 const useIsomorphicLayoutEffect =
-  typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+  typeof globalThis !== 'undefined' && 'document' in globalThis
+    ? useLayoutEffect
+    : useEffect;
 
 const DEFAULT_OFFSET = 8;
 
@@ -36,7 +38,7 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
-  const timerRef = useRef<number | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [portalEl, setPortalEl] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -53,14 +55,14 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
-      window.clearTimeout(timerRef.current);
+      clearTimeout(timerRef.current);
       timerRef.current = null;
     }
   }, []);
 
   const show = useCallback(() => {
     clearTimer();
-    timerRef.current = window.setTimeout(() => {
+    timerRef.current = setTimeout(() => {
       setVisible(true);
     }, delay);
   }, [clearTimer, delay]);
@@ -78,8 +80,14 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
     }
     const triggerRect = triggerRef.current.getBoundingClientRect();
     const tooltipRect = tooltipRef.current.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
+    const viewportWidth =
+      typeof globalThis !== 'undefined' && typeof globalThis.innerWidth === 'number'
+        ? globalThis.innerWidth
+        : 0;
+    const viewportHeight =
+      typeof globalThis !== 'undefined' && typeof globalThis.innerHeight === 'number'
+        ? globalThis.innerHeight
+        : 0;
 
     let top = triggerRect.bottom + DEFAULT_OFFSET;
     let left =
@@ -136,7 +144,7 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
                 left: position.left,
                 zIndex: 1000,
               }}
-              className="pointer-events-none max-w-xs rounded-md border border-gray-500/60 bg-ub-grey/95 px-3 py-2 text-xs text-white shadow-xl backdrop-blur"
+              className="pointer-events-none max-w-xs rounded-md border border-gray-500/60 bg-ub-grey/95 px-3 py-2 text-xs text-white shadow-kali-modal backdrop-blur"
             >
               {content}
             </div>,
