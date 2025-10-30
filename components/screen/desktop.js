@@ -297,6 +297,7 @@ export class Desktop extends Component {
             context_app: null,
             showNameBar: false,
             switcherWindows: [],
+            switcherActiveIndex: 0,
             activeWorkspace: 0,
             workspaces: Array.from({ length: this.workspaceCount }, (_, index) => ({
                 id: index,
@@ -356,6 +357,7 @@ export class Desktop extends Component {
         this.folderMetadata = new Map(DEFAULT_DESKTOP_FOLDERS.map((folder) => [folder.id, folder]));
         this.windowPreviewCache = new Map();
         this.windowSwitcherRequestId = 0;
+        this.windowSwitcherCloseTimeout = null;
         this.refreshAppRegistry();
 
         if (!this.hasStoredPinnedAppIds) {
@@ -3568,6 +3570,10 @@ export class Desktop extends Component {
             cancelAnimationFrame(this.allAppsEnterRaf);
             this.allAppsEnterRaf = null;
         }
+        if (this.windowSwitcherCloseTimeout) {
+            clearTimeout(this.windowSwitcherCloseTimeout);
+            this.windowSwitcherCloseTimeout = null;
+        }
         this.deactivateAllAppsFocusTrap();
     }
 
@@ -3815,16 +3821,16 @@ export class Desktop extends Component {
     handleGlobalShortcut = (e) => {
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
+            const direction = e.shiftKey ? -1 : 1;
             if (!this.isOverlayOpen(SWITCHER_OVERLAY_ID)) {
-                this.openWindowSwitcher();
+                this.openWindowSwitcher(direction);
+            } else {
+                this.stepWindowSwitcherSelection(direction);
             }
+            return;
         } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
             e.preventDefault();
             this.openApp('clipboard-manager');
-        }
-        else if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
         }
         else if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
@@ -3859,6 +3865,20 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcutKeyup = (event) => {
+        if (this.isOverlayOpen(SWITCHER_OVERLAY_ID)) {
+            if (event.key === 'Alt') {
+                event.preventDefault();
+                this.commitWindowSwitcherSelection();
+                return;
+            }
+
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                this.closeWindowSwitcher();
+                return;
+            }
+        }
+
         if (!this.isOverlayOpen(LAUNCHER_OVERLAY_ID)) return;
 
         if (event.key === 'Escape') {
@@ -4085,6 +4105,73 @@ export class Desktop extends Component {
         this.focus(windows[next]);
     }
 
+    getInitialWindowSwitcherIndex = (windows, direction = 1, focusedId = null) => {
+        if (!Array.isArray(windows) || windows.length === 0) {
+            return 0;
+        }
+        const targetId = focusedId || this.getFocusedWindowId();
+        if (!targetId) {
+            return direction < 0 ? windows.length - 1 : 0;
+        }
+        const currentIndex = windows.findIndex((entry) => entry.id === targetId);
+        if (currentIndex === -1) {
+            return direction < 0 ? windows.length - 1 : 0;
+        }
+        if (!direction) {
+            return currentIndex;
+        }
+        const length = windows.length;
+        return ((currentIndex + direction) % length + length) % length;
+    };
+
+    getWindowSwitcherSelectedEntry = () => {
+        const windows = this.state.switcherWindows || [];
+        if (!windows.length) return null;
+        const index = this.state.switcherActiveIndex || 0;
+        if (index < 0 || index >= windows.length) {
+            return windows[0];
+        }
+        return windows[index];
+    };
+
+    setWindowSwitcherSelectionById = (id) => {
+        if (!id) return;
+        this.setState((prevState) => {
+            const windows = prevState.switcherWindows || [];
+            const index = windows.findIndex((entry) => entry.id === id);
+            if (index === -1 || prevState.switcherActiveIndex === index) {
+                return null;
+            }
+            return { switcherActiveIndex: index };
+        });
+    };
+
+    stepWindowSwitcherSelection = (direction) => {
+        if (!direction) return;
+        this.setState((prevState) => {
+            const windows = prevState.switcherWindows || [];
+            const length = windows.length;
+            if (!length) {
+                return null;
+            }
+            const current = prevState.switcherActiveIndex || 0;
+            const next = ((current + direction) % length + length) % length;
+            if (next === current) {
+                return null;
+            }
+            return { switcherActiveIndex: next };
+        });
+    };
+
+    commitWindowSwitcherSelection = () => {
+        const entry = this.getWindowSwitcherSelectedEntry();
+        if (entry) {
+            this.selectWindow(entry.id);
+        } else {
+            this.closeWindowSwitcher();
+        }
+    };
+
     getWindowPreview = async (id) => {
         if (this.windowPreviewCache.has(id)) {
             return this.windowPreviewCache.get(id);
@@ -4148,7 +4235,7 @@ export class Desktop extends Component {
         return entries;
     };
 
-    openWindowSwitcher = () => {
+    openWindowSwitcher = (direction = 0) => {
         const stack = this.getActiveStack();
         const availableIds = stack.filter((id) => (
             this.state.closed_windows[id] === false && !this.state.minimized_windows[id]
@@ -4158,8 +4245,15 @@ export class Desktop extends Component {
             return;
         }
 
+        if (this.windowSwitcherCloseTimeout) {
+            clearTimeout(this.windowSwitcherCloseTimeout);
+            this.windowSwitcherCloseTimeout = null;
+        }
+
         const requestId = ++this.windowSwitcherRequestId;
-        this.openOverlay(SWITCHER_OVERLAY_ID);
+        const focusedBeforeOverlay = this.getFocusedWindowId();
+        this.setState({ switcherActiveIndex: 0 });
+        this.openOverlay(SWITCHER_OVERLAY_ID, { transitionState: 'entering' });
 
         Promise.resolve(this.buildWindowSwitcherEntries(availableIds))
             .then((windows) => {
@@ -4168,31 +4262,64 @@ export class Desktop extends Component {
                 }
 
                 if (!windows.length) {
-                    this.setState({ switcherWindows: [] });
-                    this.closeOverlay(SWITCHER_OVERLAY_ID);
+                    this.setState({ switcherWindows: [], switcherActiveIndex: 0 }, () => {
+                        this.closeWindowSwitcher();
+                    });
                     return;
                 }
 
-                this.setState({ switcherWindows: windows });
+                const nextIndex = this.getInitialWindowSwitcherIndex(windows, direction, focusedBeforeOverlay);
+                this.setState({ switcherWindows: windows, switcherActiveIndex: nextIndex }, () => {
+                    this.updateOverlayState(SWITCHER_OVERLAY_ID, (current = {}) => ({
+                        ...current,
+                        transitionState: 'entered',
+                        open: true,
+                        minimized: false,
+                    }));
+                });
             })
             .catch(() => {
                 if (this.windowSwitcherRequestId === requestId) {
-                    this.setState({ switcherWindows: [] });
-                    this.closeOverlay(SWITCHER_OVERLAY_ID);
+                    this.setState({ switcherWindows: [], switcherActiveIndex: 0 }, () => {
+                        this.closeWindowSwitcher();
+                    });
                 }
             });
     }
 
     closeWindowSwitcher = () => {
-        this.setState({ switcherWindows: [] });
-        this.closeOverlay(SWITCHER_OVERLAY_ID);
+        if (this.windowSwitcherCloseTimeout) {
+            clearTimeout(this.windowSwitcherCloseTimeout);
+            this.windowSwitcherCloseTimeout = null;
+        }
+
+        this.updateOverlayState(SWITCHER_OVERLAY_ID, (current = {}) => ({
+            ...current,
+            transitionState: 'exiting',
+            open: true,
+        }));
+
+        const finalize = () => {
+            this.setState({ switcherWindows: [], switcherActiveIndex: 0 }, () => {
+                this.closeOverlay(SWITCHER_OVERLAY_ID, { transitionState: 'exited' });
+            });
+        };
+
+        if (typeof window !== 'undefined') {
+            this.windowSwitcherCloseTimeout = window.setTimeout(() => {
+                this.windowSwitcherCloseTimeout = null;
+                finalize();
+            }, 180);
+        } else {
+            finalize();
+        }
     }
 
     selectWindow = (id) => {
-        this.setState({ switcherWindows: [] }, () => {
-            this.closeOverlay(SWITCHER_OVERLAY_ID);
+        if (id) {
             this.openApp(id);
-        });
+        }
+        this.closeWindowSwitcher();
     }
 
     checkContextMenu = (e) => {
@@ -4641,11 +4768,21 @@ export class Desktop extends Component {
         }
 
         const switcherState = overlays[SWITCHER_OVERLAY_ID];
-        if (switcherState?.open && !switcherState.minimized) {
+        const switcherTransition = switcherState?.transitionState
+            || (switcherState?.open ? 'entered' : 'exited');
+        const switcherVisible = (
+            (switcherState?.open && !switcherState.minimized)
+            || ['entering', 'exiting'].includes(switcherTransition)
+        );
+        if (switcherVisible) {
+            const selectedEntry = this.getWindowSwitcherSelectedEntry();
             elements.push(
                 <WindowSwitcher
                     key={SWITCHER_OVERLAY_ID}
                     windows={this.state.switcherWindows}
+                    selectedId={selectedEntry ? selectedEntry.id : null}
+                    transitionState={switcherTransition}
+                    onHighlight={this.setWindowSwitcherSelectionById}
                     onSelect={this.selectWindow}
                     onClose={this.closeWindowSwitcher}
                 />
