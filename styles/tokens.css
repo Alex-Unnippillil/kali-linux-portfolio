@@ -84,6 +84,9 @@
   /* Fonts */
   --font-family-base: 'Rajdhani', 'Segoe UI', sans-serif;
   --font-multiplier: 1;
+  /* Interface scale */
+  --ui-scale-auto: 1;
+  --ui-scale: var(--ui-scale-override, var(--ui-scale-auto));
   /* Minimum interactive target size */
   --hit-area: 32px;
   /* Focus outline */
@@ -146,5 +149,11 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+  }
+}
+
+@media (min-resolution: 1.5dppx), (min-resolution: 144dpi), (min-device-pixel-ratio: 1.5) {
+  :root {
+    --ui-scale-auto: 1.14;
   }
 }

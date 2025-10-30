@@ -30,6 +30,8 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getUiScalePreference as loadUiScalePreference,
+  setUiScalePreference as saveUiScalePreference,
   defaults,
 } from '../utils/settingsStore';
 import {
@@ -40,6 +42,19 @@ import {
   setTheme as saveTheme,
 } from '../utils/theme';
 type Density = 'regular' | 'compact';
+export type UiScaleMode = 'auto' | 'standard' | 'comfort' | 'expanded';
+
+export const UI_SCALE_OPTIONS: { value: UiScaleMode; label: string; description?: string; override: string | null }[] = [
+  { value: 'auto', label: 'Auto (based on display)', description: 'Use device pixel density to scale UI', override: null },
+  { value: 'standard', label: 'Standard (100%)', description: 'Lock UI scale to 100%', override: '1' },
+  { value: 'comfort', label: 'Comfort (+12%)', description: 'Increase UI scale by about 12%', override: '1.12' },
+  { value: 'expanded', label: 'Expanded (+16%)', description: 'Increase UI scale by about 16%', override: '1.16' },
+];
+
+const UI_SCALE_MAP: Record<UiScaleMode, string | null> = UI_SCALE_OPTIONS.reduce(
+  (acc, option) => ({ ...acc, [option.value]: option.override ?? null }),
+  { auto: null, standard: '1', comfort: '1.12', expanded: '1.16' } as Record<UiScaleMode, string | null>,
+);
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -82,6 +97,7 @@ interface SettingsContextValue {
   haptics: boolean;
   theme: string;
   desktopTheme: DesktopTheme;
+  uiScaleMode: UiScaleMode;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setUseKaliWallpaper: (value: boolean) => void;
@@ -94,6 +110,7 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
+  setUiScaleMode: (value: UiScaleMode) => void;
 }
 
 const DEFAULT_DESKTOP_THEME = resolveDesktopTheme({
@@ -119,6 +136,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   haptics: defaults.haptics,
   theme: 'default',
   desktopTheme: DEFAULT_DESKTOP_THEME,
+  uiScaleMode: defaults.uiScaleMode as UiScaleMode,
   setAccent: () => {},
   setWallpaper: () => {},
   setUseKaliWallpaper: () => {},
@@ -131,6 +149,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => {},
   setHaptics: () => {},
   setTheme: () => {},
+  setUiScaleMode: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -146,6 +165,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [uiScaleMode, setUiScaleMode] = useState<UiScaleMode>(
+    (defaults.uiScaleMode as UiScaleMode) ?? 'auto',
+  );
   const fetchRef = useRef<typeof fetch | null>(null);
   const previousThemeRef = useRef<string | null>(null);
 
@@ -163,6 +185,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setTheme(loadTheme());
+      setUiScaleMode((await loadUiScalePreference()) as UiScaleMode);
     })();
   }, []);
 
@@ -299,6 +322,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const override = UI_SCALE_MAP[uiScaleMode];
+    if (override) {
+      document.documentElement.style.setProperty('--ui-scale-override', override);
+    } else {
+      document.documentElement.style.removeProperty('--ui-scale-override');
+    }
+    saveUiScalePreference(uiScaleMode);
+  }, [uiScaleMode]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
   const desktopTheme = useMemo(
     () =>
@@ -360,6 +394,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         haptics,
         theme,
         desktopTheme,
+        uiScaleMode,
         setAccent,
         setWallpaper,
         setUseKaliWallpaper,
@@ -372,6 +407,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setTheme,
+        setUiScaleMode,
       }}
     >
       {children}

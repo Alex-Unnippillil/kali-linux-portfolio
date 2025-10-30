@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, ReactNode } from "react";
-import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
+import { useSettings, ACCENT_OPTIONS, UI_SCALE_OPTIONS, UiScaleMode } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
   resetSettings,
@@ -111,6 +111,8 @@ export default function Settings() {
     setHaptics,
     theme,
     setTheme,
+    uiScaleMode,
+    setUiScaleMode,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -161,6 +163,8 @@ export default function Settings() {
       if (parsed.highContrast !== undefined)
         setHighContrast(parsed.highContrast);
       if (parsed.theme !== undefined) setTheme(parsed.theme);
+      if (parsed.uiScaleMode !== undefined)
+        setUiScaleMode(parsed.uiScaleMode as UiScaleMode);
     } catch (err) {
       console.error("Invalid settings", err);
     }
@@ -182,6 +186,7 @@ export default function Settings() {
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
+    setUiScaleMode(defaults.uiScaleMode as UiScaleMode);
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
@@ -382,6 +387,25 @@ export default function Settings() {
                   className="kali-slider flex-1"
                   aria-label="Icon size"
                 />
+              </SettingRow>
+
+              <SettingRow
+                label="Interface Scale"
+                labelFor="ui-scale-mode"
+                helperText="Adjust how much window chrome and dock elements scale on high-density displays."
+              >
+                <select
+                  id="ui-scale-mode"
+                  value={uiScaleMode}
+                  onChange={(event) => setUiScaleMode(event.target.value as UiScaleMode)}
+                  className="w-full max-w-xs rounded-md border border-[var(--kali-panel-border)] bg-[var(--kali-panel)] px-3 py-2 text-sm text-[var(--color-text)] shadow-sm transition-colors hover:border-[var(--color-accent)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+                >
+                  {UI_SCALE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </SettingRow>
 
               <SettingRow label="Reduced Motion" helperText="Minimizes animations for sensitive users.">
