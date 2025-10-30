@@ -210,6 +210,8 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayQr,
+    minWidth: 36,
+    minHeight: 48,
   },
   {
     id: 'ascii-art',
@@ -219,6 +221,8 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayAsciiArt,
+    minWidth: 36,
+    minHeight: 48,
   },
   {
     id: 'clipboard-manager',
@@ -228,6 +232,8 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayClipboardManager,
+    minWidth: 36,
+    minHeight: 48,
   },
   {
     id: 'figlet',
@@ -237,6 +243,8 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayFiglet,
+    minWidth: 36,
+    minHeight: 48,
   },
   {
     id: 'quote',
@@ -246,6 +254,8 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayQuote,
+    minWidth: 36,
+    minHeight: 48,
   },
   {
     id: 'project-gallery',
@@ -255,6 +265,8 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayProjectGallery,
+    minWidth: 40,
+    minHeight: 52,
   },
   {
     id: 'input-lab',
@@ -264,6 +276,8 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayInputLab,
+    minWidth: 38,
+    minHeight: 50,
   },
   {
     id: 'subnet-calculator',
@@ -273,6 +287,8 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displaySubnetCalculator,
+    minWidth: 38,
+    minHeight: 50,
   },
 ];
 
@@ -282,6 +298,8 @@ export const utilities = utilityList;
 export const gameDefaults = {
   defaultWidth: 50,
   defaultHeight: 60,
+  minWidth: 32,
+  minHeight: 42,
 };
 
 // Games list used for the "Games" folder on the desktop
@@ -612,6 +630,8 @@ const folderApps = DEFAULT_DESKTOP_FOLDERS.map((folder) => ({
   screen: displayDesktopFolder,
   defaultWidth: 64,
   defaultHeight: 70,
+  minWidth: 48,
+  minHeight: 60,
 }));
 
 const apps = [
@@ -624,6 +644,8 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displayFirefox,
+    minWidth: 52,
+    minHeight: 60,
   },
   {
     id: 'calculator',
@@ -637,6 +659,8 @@ const apps = [
     allowMaximize: false,
     defaultWidth: 28,
     defaultHeight: 50,
+    minWidth: 28,
+    minHeight: 50,
   },
   {
     id: 'terminal',
@@ -649,6 +673,8 @@ const apps = [
     resizable: true,
     defaultWidth: 68,
     defaultHeight: 72,
+    minWidth: 44,
+    minHeight: 52,
   },
   {
     // VSCode app uses a Stack iframe, so no editor dependencies are required
@@ -661,6 +687,8 @@ const apps = [
     screen: displayVsCode,
     defaultWidth: 85,
     defaultHeight: 85,
+    minWidth: 60,
+    minHeight: 65,
   },
   {
     id: 'x',
@@ -679,6 +707,8 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displaySpotify,
+    minWidth: 48,
+    minHeight: 55,
   },
   {
     id: 'youtube',
@@ -688,6 +718,8 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displayYouTube,
+    minWidth: 56,
+    minHeight: 60,
   },
   {
     id: 'beef',
@@ -697,6 +729,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayBeef,
+    minWidth: 44,
+    minHeight: 55,
   },
   {
     id: 'about',
@@ -706,6 +740,8 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displayAboutAlex,
+    minWidth: 42,
+    minHeight: 54,
   },
   {
     id: 'settings',
@@ -715,6 +751,8 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displaySettings,
+    minWidth: 46,
+    minHeight: 60,
   },
   {
     id: 'files',
@@ -724,6 +762,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayFileExplorer,
+    minWidth: 44,
+    minHeight: 58,
   },
   {
     id: 'resource-monitor',
@@ -733,6 +773,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayResourceMonitor,
+    minWidth: 52,
+    minHeight: 62,
   },
   {
     id: 'screen-recorder',
@@ -742,6 +784,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayScreenRecorder,
+    minWidth: 44,
+    minHeight: 54,
   },
   {
     id: 'ettercap',
@@ -751,6 +795,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayEttercap,
+    minWidth: 46,
+    minHeight: 55,
   },
   {
     id: 'ble-sensor',
@@ -760,6 +806,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayBleSensor,
+    minWidth: 40,
+    minHeight: 50,
   },
   {
     id: 'metasploit',

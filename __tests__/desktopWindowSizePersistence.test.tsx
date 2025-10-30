@@ -1,5 +1,7 @@
+/* eslint-disable react/display-name */
 import React from 'react';
 import { act, render } from '@testing-library/react';
+import apps from '../apps.config';
 import { Desktop } from '../components/screen/desktop';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
@@ -38,6 +40,14 @@ jest.mock('../components/desktop/Window', () => {
     return null;
   });
 });
+
+const getTerminalConstraints = () => {
+  const config = apps.find((app) => app.id === 'terminal');
+  if (!config || typeof config.minWidth !== 'number' || typeof config.minHeight !== 'number') {
+    throw new Error('Terminal constraints must be defined for tests');
+  }
+  return { minWidth: config.minWidth, minHeight: config.minHeight };
+};
 
 describe('Desktop window size persistence', () => {
   beforeEach(() => {
@@ -81,6 +91,9 @@ describe('Desktop window size persistence', () => {
     expect(windowRenderMock).toHaveBeenCalled();
     const initialProps = windowPropsById.get('terminal');
     expect(initialProps).toBeDefined();
+    const { minWidth: terminalMinWidth, minHeight: terminalMinHeight } = getTerminalConstraints();
+    expect(initialProps?.minWidth).toBe(terminalMinWidth);
+    expect(initialProps?.minHeight).toBe(terminalMinHeight);
 
     await act(async () => {
       initialProps?.onSizeChange?.(72, 64);
@@ -123,5 +136,53 @@ describe('Desktop window size persistence', () => {
     const reopenedProps = windowRenderMock.mock.calls[windowRenderMock.mock.calls.length - 1]?.[0];
     expect(reopenedProps?.defaultWidth).toBe(72);
     expect(reopenedProps?.defaultHeight).toBe(64);
+    expect(reopenedProps?.minWidth).toBe(terminalMinWidth);
+    expect(reopenedProps?.minHeight).toBe(terminalMinHeight);
+  });
+
+  it('clamps restored window dimensions to the terminal minimums', async () => {
+    const { minWidth: terminalMinWidth, minHeight: terminalMinHeight } = getTerminalConstraints();
+    const storedWidth = Math.max(0, terminalMinWidth - 10);
+    const storedHeight = Math.max(0, terminalMinHeight - 10);
+    localStorage.setItem('desktop_window_sizes', JSON.stringify({
+      terminal: { width: storedWidth, height: storedHeight },
+    }));
+
+    const desktopRef = React.createRef<Desktop>();
+    let renderResult: ReturnType<typeof render> | undefined;
+
+    await act(async () => {
+      renderResult = render(
+        <Desktop
+          ref={desktopRef}
+          clearSession={() => {}}
+          changeBackgroundImage={() => {}}
+          bg_image_name="aurora"
+          snapEnabled
+        />
+      );
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    act(() => {
+      desktopRef.current?.openApp('terminal');
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(200);
+      await Promise.resolve();
+    });
+
+    const terminalProps = windowPropsById.get('terminal');
+    expect(terminalProps).toBeDefined();
+    expect(terminalProps?.minWidth).toBe(terminalMinWidth);
+    expect(terminalProps?.minHeight).toBe(terminalMinHeight);
+    expect(terminalProps?.defaultWidth).toBeGreaterThanOrEqual(terminalMinWidth);
+    expect(terminalProps?.defaultHeight).toBeGreaterThanOrEqual(terminalMinHeight);
+
+    renderResult?.unmount();
   });
 });
