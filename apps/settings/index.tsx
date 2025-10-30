@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, ReactNode } from "react";
+import { useEffect, useState, useRef, ReactNode } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -13,6 +13,7 @@ import KeymapOverlay from "./components/KeymapOverlay";
 import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
 import KaliWallpaper from "../../components/util-components/kali-wallpaper";
+import { usePwaInstallPrompt } from "../../hooks/usePwaInstallPrompt";
 
 type SectionProps = {
   title: string;
@@ -85,6 +86,8 @@ const SettingRow = ({ label, labelFor, children, helperText, align = "start" }: 
   );
 };
 
+type InstallPromptResult = "accepted" | "dismissed" | "unavailable";
+
 export default function Settings() {
   const {
     accent,
@@ -113,6 +116,7 @@ export default function Settings() {
     setTheme,
   } = useSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { canInstall, promptInstall } = usePwaInstallPrompt();
 
   const tabs = [
     { id: "appearance", label: "Appearance" },
@@ -185,6 +189,22 @@ export default function Settings() {
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
+  const [installStatus, setInstallStatus] = useState<InstallPromptResult | null>(null);
+  const [isPrompting, setIsPrompting] = useState(false);
+
+  useEffect(() => {
+    if (canInstall) {
+      setInstallStatus(null);
+    }
+  }, [canInstall]);
+
+  const handleInstallClick = async () => {
+    if (!canInstall || isPrompting) return;
+    setIsPrompting(true);
+    const result = await promptInstall();
+    setInstallStatus(result);
+    setIsPrompting(false);
+  };
 
   return (
     <div className="windowMainScreen z-20 flex max-h-full w-full flex-grow select-none flex-col overflow-y-auto bg-[var(--kali-panel)]">
@@ -501,6 +521,42 @@ export default function Settings() {
                 />
               </SettingRow>
             </Section>
+
+            {(canInstall || installStatus) && (
+              <Section
+                title="Install"
+                description="Add the desktop as a standalone app when your browser supports installation."
+              >
+                {canInstall && (
+                  <SettingRow
+                    label="Install as App"
+                    helperText="Launch the browser prompt to install this desktop experience on your device."
+                    align="end"
+                  >
+                    <button
+                      type="button"
+                      onClick={handleInstallClick}
+                      disabled={isPrompting}
+                      className="inline-flex items-center justify-center rounded border border-[var(--kali-panel-border)] bg-kali-control px-4 py-2 text-sm font-semibold text-black shadow transition hover:bg-kali-control/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-control/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isPrompting ? "Preparing..." : "Install as App"}
+                    </button>
+                  </SettingRow>
+                )}
+
+                {installStatus && (
+                  <div className="px-5 pb-4">
+                    <p className="text-sm leading-relaxed text-[var(--color-text)]/70">
+                      {installStatus === "accepted"
+                        ? "Installation requested. Look for the Kali portfolio in your launcher or home screen."
+                        : installStatus === "dismissed"
+                        ? "Install prompt dismissed. You can retry from here whenever the browser surfaces the option again."
+                        : "Installation prompt unavailable. Try the browser's install menu if the option persists."}
+                    </p>
+                  </div>
+                )}
+              </Section>
+            )}
           </div>
         )}
       </div>
