@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, render } from '@testing-library/react';
 import { Desktop } from '../components/screen/desktop';
+import { clampWindowPositionWithinViewport, measureWindowTopOffset } from '../utils/windowLayout';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('html-to-image', () => ({ toPng: jest.fn().mockResolvedValue('data:image/png;base64,') }));
@@ -123,5 +124,147 @@ describe('Desktop window size persistence', () => {
     const reopenedProps = windowRenderMock.mock.calls[windowRenderMock.mock.calls.length - 1]?.[0];
     expect(reopenedProps?.defaultWidth).toBe(72);
     expect(reopenedProps?.defaultHeight).toBe(64);
+  });
+
+  it('persists window geometry on close', async () => {
+    const storeGeometry = jest.fn();
+    const desktopRef = React.createRef<Desktop>();
+    await act(async () => {
+      render(
+        <Desktop
+          ref={desktopRef}
+          clearSession={() => {}}
+          changeBackgroundImage={() => {}}
+          bg_image_name="aurora"
+          snapEnabled={false}
+          onStoreWindowGeometry={storeGeometry}
+        />,
+      );
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    act(() => {
+      desktopRef.current?.openApp('terminal');
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(200);
+      await Promise.resolve();
+    });
+
+    const windowProps = windowPropsById.get('terminal');
+    expect(windowProps).toBeDefined();
+
+    act(() => {
+      windowProps?.onPositionChange?.(144, 200);
+      windowProps?.onSizeChange?.(72, 64);
+    });
+
+    await act(async () => {
+      await desktopRef.current?.closeApp('terminal');
+    });
+
+    expect(storeGeometry).toHaveBeenCalledTimes(1);
+    expect(storeGeometry).toHaveBeenCalledWith('terminal', {
+      x: 144,
+      y: 200,
+      width: 72,
+      height: 64,
+    });
+  });
+
+  it('applies persisted geometry when launching windows', async () => {
+    const originalInnerWidth = window.innerWidth;
+    const originalInnerHeight = window.innerHeight;
+    Object.defineProperty(window, 'innerWidth', { value: 400, configurable: true, writable: true });
+    Object.defineProperty(window, 'innerHeight', { value: 300, configurable: true, writable: true });
+
+    const desktopRef = React.createRef<Desktop>();
+    await act(async () => {
+      render(
+        <Desktop
+          ref={desktopRef}
+          clearSession={() => {}}
+          changeBackgroundImage={() => {}}
+          bg_image_name="aurora"
+          snapEnabled={false}
+          windowGeometry={{
+            terminal: { x: 360, y: 10, width: 90, height: 60 },
+          }}
+          onStoreWindowGeometry={() => {}}
+        />,
+      );
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    act(() => {
+      desktopRef.current?.openApp('terminal');
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(200);
+      await Promise.resolve();
+    });
+
+    const renderedProps = windowRenderMock.mock.calls[windowRenderMock.mock.calls.length - 1]?.[0];
+    const topOffset = measureWindowTopOffset();
+    expect(renderedProps?.defaultWidth).toBe(90);
+    expect(renderedProps?.defaultHeight).toBe(60);
+    const viewportWidth = window.innerWidth;
+    const expectedX = Math.max(0, viewportWidth - ((renderedProps?.defaultWidth ?? 0) / 100) * viewportWidth);
+    expect(renderedProps?.initialX).toBeCloseTo(expectedX, 5);
+    expect(renderedProps?.initialY).toBeCloseTo(topOffset, 3);
+
+    Object.defineProperty(window, 'innerWidth', { value: originalInnerWidth, configurable: true, writable: true });
+    Object.defineProperty(window, 'innerHeight', { value: originalInnerHeight, configurable: true, writable: true });
+  });
+
+  it('falls back to app defaults when persisted geometry is invalid', async () => {
+    const desktopRef = React.createRef<Desktop>();
+    await act(async () => {
+      render(
+        <Desktop
+          ref={desktopRef}
+          clearSession={() => {}}
+          changeBackgroundImage={() => {}}
+          bg_image_name="aurora"
+          snapEnabled={false}
+          windowGeometry={{
+            terminal: { x: 120, y: 180, width: Number.NaN, height: Number.NaN },
+          }}
+          onStoreWindowGeometry={() => {}}
+        />,
+      );
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    act(() => {
+      desktopRef.current?.openApp('terminal');
+    });
+    await act(async () => {
+      jest.advanceTimersByTime(200);
+      await Promise.resolve();
+    });
+
+    const props = windowRenderMock.mock.calls[windowRenderMock.mock.calls.length - 1]?.[0];
+    expect(props?.defaultWidth).toBe(68);
+    expect(props?.defaultHeight).toBe(72);
+    expect(props?.initialX).toBe(120);
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const topOffset = measureWindowTopOffset();
+    const widthPx = ((props?.defaultWidth ?? 0) / 100) * viewportWidth;
+    const heightPx = ((props?.defaultHeight ?? 0) / 100) * viewportHeight;
+    const clamped = clampWindowPositionWithinViewport(
+      { x: 120, y: 180 },
+      { width: widthPx, height: heightPx },
+      { viewportWidth, viewportHeight, viewportLeft: 0, viewportTop: 0, topOffset },
+    );
+    const expectedY = clamped ? clamped.y : topOffset;
+    expect(props?.initialY).toBeCloseTo(expectedY, 3);
   });
 });
