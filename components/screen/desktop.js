@@ -4546,13 +4546,28 @@ export class Desktop extends Component {
         const appMap = new Map(apps.map((app) => [app.id, app]));
         const snapGrid = this.getSnapGrid();
 
+        const coercePercentageDimension = (value) => {
+            if (typeof value !== 'number') return undefined;
+            if (!Number.isFinite(value)) return undefined;
+            if (value <= 0) return undefined;
+            return Math.min(100, value);
+        };
+
         return orderedIds.map((id, index) => {
             const app = appMap.get(id);
             if (!app) return null;
             const pos = this.state.window_positions[id];
             const size = this.state.window_sizes?.[id];
-            const defaultWidth = size && typeof size.width === 'number' ? size.width : app.defaultWidth;
-            const defaultHeight = size && typeof size.height === 'number' ? size.height : app.defaultHeight;
+            const minWidth = coercePercentageDimension(app.minWidth);
+            const minHeight = coercePercentageDimension(app.minHeight);
+            const defaultWidthBase = size && typeof size.width === 'number' ? size.width : app.defaultWidth;
+            const defaultHeightBase = size && typeof size.height === 'number' ? size.height : app.defaultHeight;
+            const defaultWidth = typeof defaultWidthBase === 'number'
+                ? (typeof minWidth === 'number' ? Math.max(defaultWidthBase, minWidth) : defaultWidthBase)
+                : defaultWidthBase;
+            const defaultHeight = typeof defaultHeightBase === 'number'
+                ? (typeof minHeight === 'number' ? Math.max(defaultHeightBase, minHeight) : defaultHeightBase)
+                : defaultHeightBase;
             const props = {
                 title: app.title,
                 id: app.id,
@@ -4568,6 +4583,8 @@ export class Desktop extends Component {
                 allowMaximize: app.allowMaximize,
                 defaultWidth,
                 defaultHeight,
+                minWidth,
+                minHeight,
                 initialX: pos ? pos.x : undefined,
                 initialY: pos ? clampWindowTopPosition(pos.y, safeTopOffset) : safeTopOffset,
                 onPositionChange: (x, y) => this.updateWindowPosition(id, x, y),
