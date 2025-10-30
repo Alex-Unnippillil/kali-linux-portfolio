@@ -226,8 +226,9 @@
 }
 
 .windowControlButton:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(125, 211, 252, 0.75);
+  outline: var(--focus-outline-width, 2px) solid var(--focus-outline-color, rgba(125, 211, 252, 0.75));
+  outline-offset: 2px;
+  box-shadow: none;
 }
 
 .windowControlButton:disabled,

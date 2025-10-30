@@ -110,6 +110,7 @@ export default class Navbar extends PureComponent {
                         pinnedApps: [],
                 };
                 this.taskbarListRef = React.createRef();
+                this.pinnedListRef = React.createRef();
                 this.draggingAppId = null;
                 this.pendingReorder = null;
                 this.previewFlyoutRef = React.createRef();
@@ -253,9 +254,58 @@ export default class Navbar extends PureComponent {
         };
 
         getTaskbarButtonElement = (appId) => {
-                if (!appId || !this.taskbarListRef?.current) return null;
+                if (!appId || !this.navbarRef?.current) return null;
                 const selectorValue = this.escapeAttributeValue(appId);
-                return this.taskbarListRef.current.querySelector(`button[data-app-id="${selectorValue}"]`);
+                return this.navbarRef.current.querySelector(`button[data-app-id="${selectorValue}"]`);
+        };
+
+        getTaskbarButtons = () => {
+                if (!this.navbarRef?.current) return [];
+                const nodes = this.navbarRef.current.querySelectorAll('button[data-app-id]');
+                return Array.from(nodes).filter((button) => {
+                        if (!button || typeof button !== 'object') return false;
+                        if (button.disabled) return false;
+                        if (typeof button.getAttribute === 'function' && button.getAttribute('aria-hidden') === 'true') {
+                                return false;
+                        }
+                        return button.offsetParent !== null;
+                });
+        };
+
+        focusTaskbarButtonByIndex = (index) => {
+                const buttons = this.getTaskbarButtons();
+                if (!buttons.length) return;
+                const boundedIndex = Math.min(Math.max(index, 0), buttons.length - 1);
+                const button = buttons[boundedIndex];
+                if (button && typeof button.focus === 'function') {
+                        try {
+                                button.focus({ preventScroll: true });
+                        } catch (_error) {
+                                button.focus();
+                        }
+                }
+        };
+
+        moveTaskbarFocus = (currentTarget, direction) => {
+                if (!currentTarget) return;
+                const buttons = this.getTaskbarButtons();
+                if (!buttons.length) return;
+                const currentIndex = buttons.indexOf(currentTarget);
+                if (currentIndex === -1) return;
+                let nextIndex = currentIndex + direction;
+                if (nextIndex < 0) {
+                        nextIndex = buttons.length - 1;
+                } else if (nextIndex >= buttons.length) {
+                        nextIndex = 0;
+                }
+                const nextButton = buttons[nextIndex];
+                if (nextButton && typeof nextButton.focus === 'function') {
+                        try {
+                                nextButton.focus({ preventScroll: true });
+                        } catch (_error) {
+                                nextButton.focus();
+                        }
+                }
         };
 
         computePreviewPosition = (rect) => {
@@ -517,9 +567,38 @@ export default class Navbar extends PureComponent {
         };
 
         handleAppButtonKeyDown = (event, app) => {
+                const target = event.currentTarget;
+                if (event.key === 'ArrowRight') {
+                        event.preventDefault();
+                        this.moveTaskbarFocus(target, 1);
+                        return;
+                }
+                if (event.key === 'ArrowLeft') {
+                        event.preventDefault();
+                        this.moveTaskbarFocus(target, -1);
+                        return;
+                }
+                if (event.key === 'Home') {
+                        event.preventDefault();
+                        this.focusTaskbarButtonByIndex(0);
+                        return;
+                }
+                if (event.key === 'End') {
+                        event.preventDefault();
+                        const buttons = this.getTaskbarButtons();
+                        if (buttons.length) {
+                                this.focusTaskbarButtonByIndex(buttons.length - 1);
+                        }
+                        return;
+                }
                 if (event.key === 'ArrowDown') {
                         event.preventDefault();
-                        this.openPreviewForApp(app, event.currentTarget, { forceRefresh: true, shouldFocus: true });
+                        this.openPreviewForApp(app, target, { forceRefresh: true, shouldFocus: true });
+                        return;
+                }
+                if (event.key === 'ArrowUp' && this.state.preview) {
+                        event.preventDefault();
+                        this.hidePreview();
                         return;
                 }
                 if (event.key === 'Escape' && this.state.preview) {
@@ -577,6 +656,7 @@ export default class Navbar extends PureComponent {
 
                 return (
                         <ul
+                                ref={this.pinnedListRef}
                                 className="flex min-h-[2.5rem] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
                                 role="list"
                                 aria-label="Pinned applications"
@@ -719,7 +799,7 @@ export default class Navbar extends PureComponent {
                                 onMouseLeave={this.handleAppButtonMouseLeave}
                                 onFocus={(event) => this.handleAppButtonFocus(event, app)}
                                 onBlur={this.handleAppButtonBlur}
-                                className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
+                                className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--focus-outline-color)] focus-visible:outline-offset-2`}
                         >
                                 <span className="relative inline-flex items-center justify-center">
                                         <Image
