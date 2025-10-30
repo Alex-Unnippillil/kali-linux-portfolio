@@ -13,7 +13,10 @@
   },
   "urls": [
     "http://localhost:3000",
-    "http://localhost:3000/apps"
+    "http://localhost:3000/apps",
+    "http://localhost:3000/apps/blackjack",
+    "http://localhost:3000/apps/nmap-nse",
+    "http://localhost:3000/apps/weather_widget"
   ],
   "scenarios": [
     {},

@@ -4,7 +4,7 @@
   }
   body {
     background: var(--color-surface);
-    color: var(--color-inverse);
+    color: var(--color-text);
     -webkit-print-color-adjust: exact;
   }
   .no-print {

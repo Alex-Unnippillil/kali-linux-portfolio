@@ -12,7 +12,7 @@
   --color-error: #ff4d6d; /* alert and error states */
   --kali-blue: var(--color-primary);
   /* Utility colors */
-  --color-muted: #1a2533; /* muted surfaces */
+  --color-muted: #94a3b8; /* muted text on dark panels (7.3:1 vs bg) */
   --color-surface: #111b24; /* panel surfaces */
   --color-inverse: #000000; /* inverse of text */
   --color-border: var(--kali-border); /* subtle borders */
@@ -73,7 +73,7 @@ html[data-theme='dark'] {
   --color-secondary: #121212;
   --color-accent: #bb86fc;
   --color-error: #ff6b6b;
-  --color-muted: #1f1f1f;
+  --color-muted: #8b9bb5; /* muted text maintains 7.4:1 vs bg */
   --color-surface: #121212;
   --color-surface-muted: color-mix(in srgb, var(--color-surface) 84%, transparent 16%);
   --color-surface-raised: color-mix(in srgb, var(--color-surface) 92%, var(--color-bg) 8%);
@@ -98,7 +98,7 @@ html[data-theme='neon'] {
   --color-secondary: #1a1a1a;
   --color-accent: #ff00ff;
   --color-error: #ff5cf4;
-  --color-muted: #222222;
+  --color-muted: #c084fc; /* neon muted text keeps 8.0:1 vs bg */
   --color-surface: #111111;
   --color-surface-muted: color-mix(in srgb, var(--color-surface) 75%, transparent 25%);
   --color-surface-raised: color-mix(in srgb, var(--color-surface) 88%, var(--color-bg) 12%);
@@ -123,7 +123,7 @@ html[data-theme='matrix'] {
   --color-secondary: #001100;
   --color-accent: #00ff00;
   --color-error: #ff4d4d;
-  --color-muted: #003300;
+  --color-muted: #3cb371; /* matrix muted text keeps 7.3:1 vs panel */
   --color-surface: #001100;
   --color-surface-muted: color-mix(in srgb, var(--color-surface) 70%, transparent 30%);
   --color-surface-raised: color-mix(in srgb, var(--color-surface) 88%, var(--color-bg) 12%);
