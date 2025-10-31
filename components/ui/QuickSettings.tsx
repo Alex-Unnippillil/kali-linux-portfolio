@@ -11,6 +11,11 @@ interface Props {
 }
 
 const transitionDurationMs = 200;
+const edgeGestureThresholdPx = 28;
+const edgeGestureMinDistancePx = 42;
+const edgeGestureMaxHorizontalDeltaPx = 90;
+const edgeGestureMaxDurationMs = 425;
+const edgeGestureMinVelocity = 0.55;
 
 const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
   const { theme: activeTheme, setTheme: updateTheme } = useTheme();
@@ -34,6 +39,133 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
   const [shouldRender, setShouldRender] = useState(open);
   const [isVisible, setIsVisible] = useState(open);
   const focusableTabIndex = open ? 0 : -1;
+  const edgeGestureStateRef = useRef<{
+    tracking: boolean;
+    pointerId: number | null;
+    startX: number;
+    startY: number;
+    startTime: number;
+  }>({
+    tracking: false,
+    pointerId: null,
+    startX: 0,
+    startY: 0,
+    startTime: 0,
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia('(max-width: 900px)');
+    const hasCoarsePointer = window.matchMedia('(pointer: coarse)');
+
+    const resetState = () => {
+      edgeGestureStateRef.current.tracking = false;
+      edgeGestureStateRef.current.pointerId = null;
+      edgeGestureStateRef.current.startX = 0;
+      edgeGestureStateRef.current.startY = 0;
+      edgeGestureStateRef.current.startTime = 0;
+    };
+
+    const readSafeAreaInset = () => {
+      const rawValue = getComputedStyle(document.documentElement).getPropertyValue('--safe-area-top');
+      const parsed = Number.parseFloat(rawValue);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+
+    const isEligiblePointer = (event: PointerEvent) => {
+      if (event.pointerType === 'mouse') {
+        return false;
+      }
+      const coarseAllowed = hasCoarsePointer.matches;
+      const withinMobileViewport = mediaQuery.matches;
+      return coarseAllowed || withinMobileViewport;
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!isEligiblePointer(event)) {
+        return;
+      }
+
+      const safeInset = readSafeAreaInset();
+      const topLimit = safeInset + edgeGestureThresholdPx;
+      if (event.clientY > topLimit) {
+        return;
+      }
+
+      edgeGestureStateRef.current.tracking = true;
+      edgeGestureStateRef.current.pointerId = event.pointerId;
+      edgeGestureStateRef.current.startX = event.clientX;
+      edgeGestureStateRef.current.startY = event.clientY;
+      edgeGestureStateRef.current.startTime = performance.now();
+    };
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if (!edgeGestureStateRef.current.tracking) {
+        return;
+      }
+      if (edgeGestureStateRef.current.pointerId !== event.pointerId) {
+        return;
+      }
+    };
+
+    const maybeDispatchGesture = (event: PointerEvent) => {
+      if (!edgeGestureStateRef.current.tracking) {
+        return;
+      }
+      if (edgeGestureStateRef.current.pointerId !== event.pointerId) {
+        return;
+      }
+
+      const endTime = performance.now();
+      const duration = endTime - edgeGestureStateRef.current.startTime;
+      const deltaY = event.clientY - edgeGestureStateRef.current.startY;
+      const deltaX = Math.abs(event.clientX - edgeGestureStateRef.current.startX);
+      const velocity = duration > 0 ? deltaY / duration : 0;
+
+      if (
+        deltaY >= edgeGestureMinDistancePx &&
+        duration <= edgeGestureMaxDurationMs &&
+        velocity >= edgeGestureMinVelocity &&
+        deltaX <= edgeGestureMaxHorizontalDeltaPx
+      ) {
+        window.dispatchEvent(
+          new CustomEvent('quick-settings-gesture', {
+            detail: {
+              type: 'top-edge-pull',
+              velocity,
+              deltaY,
+            },
+          }),
+        );
+      }
+
+      resetState();
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      maybeDispatchGesture(event);
+    };
+
+    const handlePointerCancel = () => {
+      resetState();
+    };
+
+    const capture = true;
+    window.addEventListener('pointerdown', handlePointerDown, { passive: true, capture });
+    window.addEventListener('pointermove', handlePointerMove, { passive: true });
+    window.addEventListener('pointerup', handlePointerUp, { passive: true });
+    window.addEventListener('pointercancel', handlePointerCancel, { passive: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown, capture);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerCancel);
+    };
+  }, []);
 
   useEffect(() => {
     document.documentElement.toggleAttribute('data-sound-muted', !sound);

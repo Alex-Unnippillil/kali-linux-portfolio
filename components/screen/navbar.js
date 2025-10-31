@@ -132,6 +132,7 @@ export default class Navbar extends PureComponent {
                         window.dispatchEvent(new CustomEvent('workspace-request'));
                         window.addEventListener('resize', this.handleWindowResize);
                         window.addEventListener('orientationchange', this.handleWindowResize);
+                        window.addEventListener('quick-settings-gesture', this.handleQuickSettingsGesture);
                         this.initializeResizeObserver();
                         this.scheduleDesktopOffsetUpdate();
                 }
@@ -146,6 +147,7 @@ export default class Navbar extends PureComponent {
                         window.removeEventListener('taskbar-preview-response', this.handlePreviewResponse);
                         window.removeEventListener('resize', this.handleWindowResize);
                         window.removeEventListener('orientationchange', this.handleWindowResize);
+                        window.removeEventListener('quick-settings-gesture', this.handleQuickSettingsGesture);
                 }
                 if (typeof document !== 'undefined') {
                         document.removeEventListener('keydown', this.handleDocumentKeyDown);
@@ -954,6 +956,20 @@ export default class Navbar extends PureComponent {
                         event.preventDefault();
                         this.handleStatusToggle();
                 }
+        };
+
+        handleQuickSettingsGesture = (event) => {
+                if (!event || typeof event !== 'object') return;
+                const detail = event.detail || {};
+                if (detail && detail.type !== 'top-edge-pull') {
+                        return;
+                }
+                this.setState((state) => {
+                        if (state.status_card) {
+                                return null;
+                        }
+                        return { status_card: true };
+                });
         };
 
         render() {
