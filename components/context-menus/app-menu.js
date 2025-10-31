@@ -4,8 +4,8 @@ import useRovingTabIndex from '../../hooks/useRovingTabIndex'
 
 function AppMenu(props) {
     const menuRef = useRef(null)
-    useFocusTrap(menuRef, props.active)
-    useRovingTabIndex(menuRef, props.active, 'vertical')
+    useFocusTrap(menuRef, props.active, { restoreFocusRef: props.restoreFocusRef })
+    useRovingTabIndex(menuRef, props.active, { orientation: 'vertical', typeahead: true })
 
     const handleKeyDown = (e) => {
         if (e.key === 'Escape') {
@@ -25,6 +25,7 @@ function AppMenu(props) {
         <div
             id="app-menu"
             role="menu"
+            aria-orientation="vertical"
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}
