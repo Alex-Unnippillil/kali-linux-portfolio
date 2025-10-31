@@ -191,7 +191,7 @@ describe('Navbar running apps tray', () => {
     expect(taskbarEventCall).toBeTruthy();
     expect(taskbarEventCall && taskbarEventCall[0].detail).toEqual({
       action: 'reorder',
-      order: ['app2', 'app3', 'app1'],
+      order: ['app2', 'app3', 'running|app1'],
     });
   });
 
@@ -241,6 +241,127 @@ describe('Navbar running apps tray', () => {
     });
 
     expect(screen.queryByRole('dialog', { name: /app one preview/i })).not.toBeInTheDocument();
+  });
+
+  it('reuses cached previews on subsequent hovers without dispatching new requests', async () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('workspace-state', { detail: workspaceEventDetail }));
+    });
+
+    const button = screen.getByRole('button', { name: /app one/i });
+    Object.defineProperty(button, 'getBoundingClientRect', {
+      value: () => ({ left: 100, right: 140, top: 20, bottom: 52, width: 40, height: 32 }),
+    });
+
+    dispatchSpy.mockClear();
+
+    act(() => {
+      fireEvent.mouseEnter(button);
+    });
+
+    const previewRequestCall = dispatchSpy.mock.calls.find(([event]) => event.type === 'taskbar-preview-request');
+    expect(previewRequestCall).toBeTruthy();
+    const [previewRequestEvent] = previewRequestCall!;
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('taskbar-preview-response', {
+          detail: {
+            appId: 'app1',
+            requestId: previewRequestEvent.detail.requestId,
+            preview: 'data:image/png;base64,preview',
+          },
+        }),
+      );
+    });
+
+    expect(
+      await screen.findByRole('dialog', { name: /app one preview/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByAltText(/app one window preview/i)).toHaveAttribute('src', 'data:image/png;base64,preview');
+
+    act(() => {
+      fireEvent.keyDown(document, { key: 'Escape' });
+    });
+
+    expect(screen.queryByRole('dialog', { name: /app one preview/i })).not.toBeInTheDocument();
+
+    dispatchSpy.mockClear();
+
+    act(() => {
+      fireEvent.mouseEnter(button);
+    });
+
+    expect(
+      await screen.findByRole('dialog', { name: /app one preview/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByAltText(/app one window preview/i)).toHaveAttribute('src', 'data:image/png;base64,preview');
+
+    const secondRequest = dispatchSpy.mock.calls.find(([event]) => event.type === 'taskbar-preview-request');
+    expect(secondRequest).toBeUndefined();
+  });
+
+  it('stops rendering previews once the navbar unmounts', async () => {
+    const { unmount } = render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('workspace-state', { detail: workspaceEventDetail }));
+    });
+
+    const button = screen.getByRole('button', { name: /app one/i });
+    Object.defineProperty(button, 'getBoundingClientRect', {
+      value: () => ({ left: 100, right: 140, top: 20, bottom: 52, width: 40, height: 32 }),
+    });
+
+    dispatchSpy.mockClear();
+
+    act(() => {
+      fireEvent.mouseEnter(button);
+    });
+
+    const previewRequestCall = dispatchSpy.mock.calls.find(([event]) => event.type === 'taskbar-preview-request');
+    expect(previewRequestCall).toBeTruthy();
+    const [previewRequestEvent] = previewRequestCall!;
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('taskbar-preview-response', {
+          detail: {
+            appId: 'app1',
+            requestId: previewRequestEvent.detail.requestId,
+            preview: 'data:image/png;base64,preview',
+          },
+        }),
+      );
+    });
+
+    expect(
+      await screen.findByRole('dialog', { name: /app one preview/i }),
+    ).toBeInTheDocument();
+
+    act(() => {
+      unmount();
+    });
+
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('taskbar-preview-response', {
+          detail: {
+            appId: 'app1',
+            requestId: previewRequestEvent.detail.requestId,
+            preview: 'data:image/png;base64,preview',
+          },
+        }),
+      );
+    });
+
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+  });
+
   it('renders badge metadata for running apps', () => {
     render(<Navbar />);
 

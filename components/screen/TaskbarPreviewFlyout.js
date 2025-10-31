@@ -16,12 +16,39 @@ const TaskbarPreviewFlyout = React.forwardRef(
                 },
                 ref,
         ) => {
-                if (!visible) return null;
+                const cachedImageRef = React.useRef(null);
+
+                React.useEffect(() => {
+                        if (status === 'ready' && image) {
+                                cachedImageRef.current = image;
+                                return;
+                        }
+
+                        if (status === 'empty') {
+                                cachedImageRef.current = null;
+                        }
+                }, [status, image]);
+
+                React.useEffect(
+                        () => () => {
+                                cachedImageRef.current = null;
+                        },
+                        [],
+                );
+
+                if (!visible) {
+                        return null;
+                }
 
                 const top = Number.isFinite(position.top) ? Math.round(position.top) : 0;
                 const left = Number.isFinite(position.left) ? Math.round(position.left) : 0;
                 const heading = title ? `${title} preview` : 'Window preview';
                 const imageLabel = title ? `${title} window preview` : 'Window preview';
+
+                const resolvedImage = status === 'ready' && image ? image : cachedImageRef.current;
+                const shouldRenderImage = Boolean(resolvedImage);
+                const isLoading = status === 'loading' && !shouldRenderImage;
+                const isEmpty = status === 'empty' && !shouldRenderImage;
 
                 return (
                         <div
@@ -50,21 +77,21 @@ const TaskbarPreviewFlyout = React.forwardRef(
                                                         </span>
                                                 )}
                                                 <div className="relative overflow-hidden rounded-md border border-white/10 bg-black/50">
-                                                        {status === 'ready' && image ? (
+                                                        {shouldRenderImage ? (
                                                                 <img
-                                                                        src={image}
+                                                                        src={resolvedImage}
                                                                         alt={imageLabel}
                                                                         className="max-h-48 w-64 object-contain"
                                                                 />
                                                         ) : null}
-                                                        {status === 'loading' && (
+                                                        {isLoading && (
                                                                 <div className="flex h-32 w-64 items-center justify-center">
                                                                         <span className="text-[0.65rem] uppercase tracking-widest text-white/60">
                                                                                 Loading preview…
                                                                         </span>
                                                                 </div>
                                                         )}
-                                                        {status === 'empty' && (
+                                                        {isEmpty && (
                                                                 <div className="flex h-32 w-64 items-center justify-center">
                                                                         <span className="text-[0.65rem] uppercase tracking-widest text-white/60">
                                                                                 Preview unavailable
