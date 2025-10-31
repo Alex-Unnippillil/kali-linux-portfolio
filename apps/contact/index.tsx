@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import FormError from "../../components/ui/FormError";
 import Toast from "../../components/ui/Toast";
 import { processContactForm } from "../../components/apps/contact";
@@ -8,8 +8,20 @@ import { contactSchema } from "../../utils/contactSchema";
 import { copyToClipboard } from "../../utils/clipboard";
 import { openMailto } from "../../utils/mailto";
 import { trackEvent } from "@/lib/analytics-client";
+import {
+  clearContactQueue,
+  countQueuedContactSubmissions,
+  flushContactQueue,
+  notifyQueueUpdated,
+  queueContactSubmission,
+  queueUnavailableMessage,
+  registerContactBackgroundSync,
+  isQueueSupported,
+  ContactSubmissionRequest,
+} from "@/services/contactQueue";
 
 const DRAFT_KEY = "contact-draft";
+const SYNC_OPT_IN_KEY = "contact-sync-opt-in";
 const EMAIL = "alex.unnippillil@hotmail.com";
 
 const threatChecklist = [
@@ -50,6 +62,20 @@ const ContactApp: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [messageError, setMessageError] = useState("");
+  const [queueSupported, setQueueSupported] = useState(false);
+  const [hasBackgroundSync, setHasBackgroundSync] = useState(false);
+  const [syncOptIn, setSyncOptIn] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [queueNote, setQueueNote] = useState("");
+
+  const refreshQueueCount = useCallback(async () => {
+    if (!isQueueSupported()) {
+      setPendingCount(0);
+      return;
+    }
+    const count = await countQueuedContactSubmissions();
+    setPendingCount(count);
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem(DRAFT_KEY);
@@ -65,12 +91,106 @@ const ContactApp: React.FC = () => {
     }
     const meta = document.querySelector('meta[name="csrf-token"]');
     setCsrfToken(meta?.getAttribute("content") || "");
-  }, []);
+    setQueueSupported(isQueueSupported());
+    setHasBackgroundSync(typeof window !== "undefined" && "SyncManager" in window);
+    const storedOptIn = localStorage.getItem(SYNC_OPT_IN_KEY);
+    setSyncOptIn(storedOptIn === "true");
+    void refreshQueueCount();
+  }, [refreshQueueCount]);
 
   useEffect(() => {
     const draft = { name, email, message };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
   }, [name, email, message]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleOnline = () => {
+      if (!syncOptIn) return;
+      void (async () => {
+        await flushContactQueue();
+        notifyQueueUpdated();
+        await refreshQueueCount();
+      })();
+    };
+    window.addEventListener("online", handleOnline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+    };
+  }, [syncOptIn, refreshQueueCount]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
+      return;
+    }
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "contact-queue-updated") {
+        void refreshQueueCount();
+      }
+    };
+    navigator.serviceWorker.addEventListener("message", handleMessage);
+    return () => {
+      navigator.serviceWorker.removeEventListener("message", handleMessage);
+    };
+  }, [refreshQueueCount]);
+
+  const handleQueueToggle = async () => {
+    if (!queueSupported) {
+      setQueueNote(queueUnavailableMessage);
+      return;
+    }
+    const next = !syncOptIn;
+    setSyncOptIn(next);
+    localStorage.setItem(SYNC_OPT_IN_KEY, next ? "true" : "false");
+    if (next) {
+      if (hasBackgroundSync) {
+        const registered = await registerContactBackgroundSync();
+        if (!registered) {
+          setQueueNote(queueUnavailableMessage);
+        } else {
+          setQueueNote("");
+        }
+      } else {
+        setQueueNote(queueUnavailableMessage);
+      }
+    } else {
+      setQueueNote("");
+    }
+    await refreshQueueCount();
+  };
+
+  const handleClearQueue = async () => {
+    await clearContactQueue();
+    await refreshQueueCount();
+    notifyQueueUpdated();
+    setToast("Pending messages cleared");
+  };
+
+  const queueSubmissionForRetry = useCallback(
+    async (submission?: ContactSubmissionRequest) => {
+      if (!queueSupported || !syncOptIn || !submission) {
+        return false;
+      }
+      const id = await queueContactSubmission(submission);
+      if (id === null) {
+        return false;
+      }
+      await refreshQueueCount();
+      notifyQueueUpdated();
+      if (hasBackgroundSync) {
+        const registered = await registerContactBackgroundSync();
+        if (!registered) {
+          setQueueNote(queueUnavailableMessage);
+        } else {
+          setQueueNote("");
+        }
+      } else {
+        setQueueNote(queueUnavailableMessage);
+      }
+      return true;
+    },
+    [queueSupported, syncOptIn, refreshQueueCount, hasBackgroundSync],
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,6 +248,25 @@ const ContactApp: React.FC = () => {
         setHoneypot("");
         localStorage.removeItem(DRAFT_KEY);
         trackEvent("contact_submit", { method: "form" });
+      } else if (result.code === "network_error") {
+        const queued = await queueSubmissionForRetry(result.queuedSubmission);
+        if (queued) {
+          const offlineConfirmation =
+            "Saved offline. We'll resend it automatically once you're online.";
+          setToast("Queued for retry");
+          setSuccessMessage(offlineConfirmation);
+          setError("");
+          setName("");
+          setEmail("");
+          setMessage("");
+          setHoneypot("");
+          localStorage.removeItem(DRAFT_KEY);
+          trackEvent("contact_submit_queued", { method: "form" });
+          setSubmitting(false);
+          return;
+        }
+        setError(result.error || "Submission failed");
+        trackEvent("contact_submit_error", { method: "form" });
       } else {
         setError(result.error || "Submission failed");
         trackEvent("contact_submit_error", { method: "form" });
@@ -207,6 +346,56 @@ const ContactApp: React.FC = () => {
                   Open email app
                 </button>
               </div>
+            </div>
+            <div className="flex flex-col gap-3 rounded-lg border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-surface)_92%,transparent)] p-4 text-sm text-[color:var(--kali-text-muted)]">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="font-semibold text-[color:var(--kali-text)]">
+                    Retry automatically when you&apos;re back online
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-[color:var(--kali-text-subtle)]">
+                    Save your message locally and let the service worker send it once connectivity returns.
+                  </p>
+                </div>
+                <label className="inline-flex items-center gap-2 text-sm text-[color:var(--kali-text)]" htmlFor="contact-sync-toggle">
+                  <input
+                    id="contact-sync-toggle"
+                    type="checkbox"
+                    className="h-5 w-5 disabled:cursor-not-allowed"
+                    checked={syncOptIn}
+                    onChange={() => {
+                      void handleQueueToggle();
+                    }}
+                    aria-describedby="contact-sync-details"
+                    disabled={!queueSupported}
+                    aria-label="Enable automatic retries"
+                  />
+                  <span>Enable retries</span>
+                </label>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-[color:var(--kali-text-subtle)]">
+                <span>
+                  {pendingCount === 0
+                    ? "No pending messages."
+                    : `${pendingCount} pending message${pendingCount === 1 ? "" : "s"}.`}
+                </span>
+                {pendingCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleClearQueue();
+                    }}
+                    className="rounded-md border border-[color:color-mix(in_srgb,var(--kali-control)_60%,transparent)] px-3 py-1 font-medium text-[color:var(--kali-control)] transition hover:bg-[color:color-mix(in_srgb,var(--kali-control)_18%,transparent)] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--kali-control)]"
+                  >
+                    Clear pending
+                  </button>
+                )}
+              </div>
+              {(queueNote || !queueSupported) && (
+                <p id="contact-sync-details" className="text-xs leading-relaxed text-[color:var(--kali-control)]">
+                  {queueSupported ? queueNote : queueUnavailableMessage}
+                </p>
+              )}
             </div>
             <div className="space-y-6">
               <div className="space-y-2">
