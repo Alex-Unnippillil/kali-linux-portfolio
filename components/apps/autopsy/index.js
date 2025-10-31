@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { safeHTML } from '@/utils/safe-html';
 import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
@@ -590,7 +591,7 @@ function Autopsy({ initialArtifacts = null }) {
       <div
         aria-live="polite"
         className="sr-only"
-        dangerouslySetInnerHTML={{ __html: announcement }}
+        dangerouslySetInnerHTML={{ __html: safeHTML(announcement) }}
       />
       <div className="flex space-x-2">
         <input
@@ -796,7 +797,7 @@ function Autopsy({ initialArtifacts = null }) {
           </button>
           <div
             className="font-bold"
-            dangerouslySetInnerHTML={{ __html: escapeFilename(selectedArtifact.name) }}
+            dangerouslySetInnerHTML={{ __html: safeHTML(escapeFilename(selectedArtifact.name)) }}
           />
           <div className="text-kali-text/60">{selectedArtifact.type}</div>
           <div className="text-xs">
