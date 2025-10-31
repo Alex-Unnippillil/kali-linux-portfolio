@@ -6,6 +6,7 @@ import {
   measureWindowTopOffset,
 } from "../../utils/windowLayout";
 import { useDesktopZIndex } from "./zIndexManager";
+import useVisualViewport from "../../hooks/useVisualViewport";
 
 type BaseWindowProps = React.ComponentProps<typeof BaseWindow>;
 // BaseWindow is a class component, so the instance type exposes helper methods.
@@ -79,6 +80,8 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       },
       [forwardedRef],
     );
+
+    const viewport = useVisualViewport();
 
     const clampToViewport = useCallback(() => {
       if (typeof window === "undefined") return;
@@ -168,6 +171,10 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
         window.removeEventListener("resize", handler);
       };
     }, [clampToViewport]);
+
+    useEffect(() => {
+      clampToViewport();
+    }, [clampToViewport, viewport.width, viewport.height, viewport.left, viewport.top]);
 
     return (
       <BaseWindow

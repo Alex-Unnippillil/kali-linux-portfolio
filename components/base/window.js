@@ -1069,6 +1069,9 @@ export class Window extends Component {
 
     handleDrag = (e, data) => {
         this.scheduleDragUpdate(data);
+        if (!data || !data.node) {
+            this.flushPendingDragUpdate();
+        }
     }
 
     handleStop = () => {
