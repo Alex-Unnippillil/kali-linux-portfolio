@@ -1,10 +1,13 @@
 import dynamic from 'next/dynamic';
+import { createLiveRegionLoader } from './createLiveRegionLoader';
 
 // Dynamically load the full Weather application. This remains the default
 // export so existing imports continue to work.
 const WeatherApp = dynamic(() => import('../../apps/weather'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
+  loading: createLiveRegionLoader('Loading Weather App...', {
+    className: 'flex min-h-[4rem] w-full items-center justify-center rounded bg-ub-cool-grey px-4 py-3 text-center',
+  }),
 });
 
 /**
