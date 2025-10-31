@@ -260,6 +260,13 @@ Copy `.env.local.example` to `.env.local` and populate the keys relevant to your
 
 > Never commit secrets. Use local `.env.local`, CI secrets, or host-level configuration.
 
+#### Environment validation
+
+`next.config.js` imports `lib/validate.js` and halts the build as soon as required secrets are missing. Run `yarn validate:env` to
+check your configuration locally—the command prints a descriptive list of missing variables (for example, `RECAPTCHA_SECRET`) and
+exits successfully when everything is populated. CI mirrors this behaviour and includes a job that demonstrates the failure mode,
+so update your `.env.local` or repository secrets before pushing.
+
 ### Feature Flags & Static Export
 Set `NEXT_PUBLIC_STATIC_EXPORT=true` during `yarn export` to disable API routes. UI components should guard their behaviour with the flag or the presence of required environment variables.
 

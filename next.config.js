@@ -4,6 +4,9 @@
 
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
 
+const validatedServerEnv = validateEnv(process.env);
+Object.assign(process.env, validatedServerEnv);
+
 const ContentSecurityPolicy = [
   "default-src 'self'",
   // Prevent injection of external base URIs
@@ -195,12 +198,6 @@ function configureWebpack(config, { isServer }) {
     };
   }
   return config;
-}
-
-try {
-  validateEnv?.(process.env);
-} catch {
-  console.warn('Missing env vars; running without validation');
 }
 
 module.exports = withBundleAnalyzer(
