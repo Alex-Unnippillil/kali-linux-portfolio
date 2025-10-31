@@ -13,6 +13,41 @@ type BaseWindowInstance = InstanceType<typeof BaseWindow> | null;
 
 type MutableRef<T> = React.MutableRefObject<T>;
 
+const TRIGGER_SELECTOR = '[data-context="taskbar"], [data-context="app"]';
+
+const getTriggerElement = (
+  active: Element | null,
+): HTMLElement | null => {
+  if (!(active instanceof HTMLElement)) {
+    return null;
+  }
+  const candidate = active.closest(TRIGGER_SELECTOR);
+  return candidate instanceof HTMLElement ? candidate : null;
+};
+
+const focusElement = (element: HTMLElement | null) => {
+  if (!element) return;
+  if (typeof document !== "undefined") {
+    const isConnected =
+      typeof element.isConnected === "boolean"
+        ? element.isConnected
+        : document.contains(element);
+    if (!isConnected) {
+      return;
+    }
+  }
+
+  if (typeof element.focus !== "function") {
+    return;
+  }
+
+  try {
+    element.focus({ preventScroll: true });
+  } catch (error) {
+    element.focus();
+  }
+};
+
 const parsePx = (value?: string | null): number | null => {
   if (typeof value !== "string") return null;
   const parsed = parseFloat(value);
@@ -55,9 +90,12 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       focus: focusProp,
       isFocused,
       zIndex: _ignoredZIndex,
+      closed,
       ...rest
     } = props;
     const innerRef = useRef<BaseWindowInstance>(null);
+    const restoreFocusRef = useRef<HTMLElement | null>(null);
+    const isClosingRef = useRef(false);
     const {
       baseZIndex,
       registerWindow,
@@ -66,6 +104,14 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       getZIndex,
     } = useDesktopZIndex();
     const windowId = id ?? null;
+
+    if (
+      !restoreFocusRef.current &&
+      !isClosingRef.current &&
+      typeof document !== "undefined"
+    ) {
+      restoreFocusRef.current = getTriggerElement(document.activeElement);
+    }
 
     const assignRef = useCallback(
       (instance: BaseWindowInstance) => {
@@ -160,6 +206,23 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
 
     const computedZIndex = windowId ? getZIndex(windowId) : baseZIndex;
 
+    const handleClosed = useCallback(
+      (targetId?: string | null) => {
+        isClosingRef.current = true;
+        try {
+          if (typeof closed === "function") {
+            closed(targetId ?? undefined);
+          }
+        } finally {
+          const target = restoreFocusRef.current;
+          restoreFocusRef.current = null;
+          isClosingRef.current = false;
+          focusElement(target);
+        }
+      },
+      [closed],
+    );
+
     useEffect(() => {
       if (typeof window === "undefined") return undefined;
       const handler = () => clampToViewport();
@@ -176,6 +239,7 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
         id={id}
         focus={handleFocus}
         isFocused={isFocused}
+        closed={handleClosed}
         zIndex={computedZIndex}
       />
     );
