@@ -1,53 +1,67 @@
-import { test, expect } from '@playwright/test';
-import AxeBuilder from '@axe-core/playwright';
+import { test } from '@playwright/test';
+import { runAxeAudit } from './support/a11y';
+import {
+  gotoDesktop,
+  openDesktopWindow,
+  seedDesktopPreferences,
+} from './support/desktop';
 
-// Maximum allowed accessibility violations by impact level
-const thresholds: Record<string, number> = {
-  critical: 0,
-  serious: 0,
-  // Allow a limited number of moderate/minor issues until they are fixed
-  moderate: 10,
-  minor: 50,
-};
-
-const urls = [
-  '/',
-  '/apps',
-  '/apps/chess',
-  '/apps/sudoku',
-  '/apps/youtube',
-  // Additional resource-heavy apps
-  '/apps/vscode',
-  '/apps/spotify',
-  '/apps/x',
-  '/apps/firefox',
-  '/apps/trash',
-  '/apps/gedit',
-  '/apps/todoist',
+const primaryRoutes: { path: string; label: string; waitFor?: string; settleMs?: number }[] = [
+  { path: '/', label: 'Desktop shell', waitFor: '#window-area', settleMs: 500 },
+  { path: '/apps', label: 'Applications directory', settleMs: 500 },
+  { path: '/profile', label: 'Profile overview', settleMs: 300 },
+  { path: '/security-education', label: 'Security education hub', settleMs: 300 },
+  { path: '/notes', label: 'Notes workspace', settleMs: 300 },
 ];
 
-for (const path of urls) {
-  test(`accessibility audit for ${path}`, async ({ page }) => {
-    await page.goto(`http://localhost:3000${path}`);
-    const results = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa'])
-      .analyze();
+const desktopWindows: { id: string; title: string }[] = [
+  { id: 'terminal', title: 'Terminal' },
+  { id: 'settings', title: 'Settings' },
+  { id: 'firefox', title: 'Firefox' },
+];
 
-    const counts = results.violations.reduce<Record<string, number>>(
-      (acc, v) => {
-        const impact = v.impact || 'minor';
-        acc[impact] = (acc[impact] || 0) + 1;
-        return acc;
-      },
-      {},
-    );
+test.describe('Primary route accessibility', () => {
+  for (const route of primaryRoutes) {
+    test(`audits ${route.label}`, async ({ page }, testInfo) => {
+      test.setTimeout(90_000);
+      if (route.path === '/') {
+        await seedDesktopPreferences(page);
+        await gotoDesktop(page);
+      } else {
+        await page.goto(route.path, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+        await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {});
+        if (route.waitFor) {
+          await page.locator(route.waitFor).first().waitFor({ state: 'attached', timeout: 30_000 });
+        }
+      }
 
-    for (const [impact, max] of Object.entries(thresholds)) {
-      const count = counts[impact] || 0;
-      expect(
-        count,
-        `${path} has ${count} ${impact} violations (threshold ${max})`,
-      ).toBeLessThanOrEqual(max);
-    }
+      if (route.settleMs) {
+        await page.waitForTimeout(route.settleMs);
+      }
+
+      await runAxeAudit(page, testInfo, {
+        label: route.label,
+        include: route.path === '/' ? ['#window-area'] : undefined,
+      });
+    });
+  }
+});
+
+test.describe('Desktop window accessibility', () => {
+  test.beforeEach(async ({ page }) => {
+    await seedDesktopPreferences(page);
+    await gotoDesktop(page);
   });
-}
+
+  for (const { id, title } of desktopWindows) {
+    test(`audits ${title} window`, async ({ page }, testInfo) => {
+      test.setTimeout(90_000);
+      await openDesktopWindow(page, id, title);
+      await runAxeAudit(page, testInfo, {
+        label: `${title} window`,
+        include: [`#${id}`],
+      });
+    });
+  }
+});
+

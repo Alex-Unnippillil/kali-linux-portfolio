@@ -69,3 +69,30 @@ jobs:
       - run: npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel build --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+
+  accessibility:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: yarn dedupe --check
+      - run: npx playwright install --with-deps
+      - name: Start development server
+        run: |
+          yarn dev &
+          npx wait-on http://127.0.0.1:3000
+      - name: Run accessibility regression tests
+        run: npx playwright test --project accessibility
+      - name: Upload accessibility artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accessibility-playwright-report
+          path: |
+            playwright-report
+            playwright-results
+          if-no-files-found: warn
