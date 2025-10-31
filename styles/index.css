@@ -76,8 +76,18 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
 
 a:focus-visible,
 button:focus-visible {
-    outline: var(--focus-outline-width) solid var(--focus-outline-color) !important;
-    outline-offset: 2px;
+    outline: var(--focus-ring-width, var(--focus-outline-width)) solid
+        var(--focus-ring-color, var(--focus-outline-color)) !important;
+    outline-offset: var(--focus-ring-offset, 2px);
+    box-shadow: var(
+        --focus-ring-shadow,
+        0 0 0 calc(var(--focus-ring-width, 2px) + var(--focus-ring-offset, 2px))
+            color-mix(
+                in srgb,
+                var(--focus-ring-color, var(--focus-outline-color)) 55%,
+                transparent
+            )
+    );
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -123,7 +133,6 @@ button:focus-visible {
 
 input[type=range].kali-slider,
 input[type=range].ubuntu-slider {
-    outline: none;
     -webkit-appearance: none;
     background: linear-gradient(
         to right,
@@ -136,6 +145,21 @@ input[type=range].ubuntu-slider {
     /* width: 65%; */
     height: 6px;
     border-radius: 999px;
+}
+
+input[type=range].kali-slider:focus-visible,
+input[type=range].ubuntu-slider:focus-visible {
+    outline: var(--focus-ring-width, 2px) solid var(--focus-ring-color, var(--color-focus-ring));
+    outline-offset: var(--focus-ring-offset, 2px);
+    box-shadow: var(
+        --focus-ring-shadow,
+        0 0 0 calc(var(--focus-ring-width, 2px) + var(--focus-ring-offset, 2px))
+            color-mix(
+                in srgb,
+                var(--focus-ring-color, var(--color-focus-ring)) 55%,
+                transparent
+            )
+    );
 }
 
 input[type=range].kali-slider::-webkit-slider-thumb,
