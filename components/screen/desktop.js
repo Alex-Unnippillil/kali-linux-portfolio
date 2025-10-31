@@ -34,10 +34,17 @@ import {
     getSafeAreaInsets,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
+import { vibrateIfEnabled } from '../../utils/haptics';
 
 const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
 const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
 const PINNED_APPS_STORAGE_KEY = 'pinnedApps';
+
+const HAPTIC_PATTERNS = Object.freeze({
+    launcher: 18,
+    windowAction: 12,
+    contextMenu: 8,
+});
 
 const sanitizeFolderItem = (item) => {
     if (!item) return null;
@@ -192,6 +199,7 @@ const createOverlayStateMap = () => {
 export class Desktop extends Component {
     static defaultProps = {
         snapGrid: [8, 8],
+        hapticsEnabled: false,
     };
 
     constructor(props) {
@@ -375,6 +383,7 @@ export class Desktop extends Component {
         this.allAppsCloseTimeout = null;
         this.allAppsEnterRaf = null;
         this.allAppsFocusTrapHandler = null;
+        this.lastContextPointerType = null;
 
         this.desktopSelectionState = null;
 
@@ -402,6 +411,15 @@ export class Desktop extends Component {
         window_positions: { ...state.window_positions },
         window_sizes: { ...(state.window_sizes || {}) },
     });
+
+    triggerHaptic(pattern = HAPTIC_PATTERNS.windowAction) {
+        const enabled = Boolean(this.props && this.props.hapticsEnabled);
+        vibrateIfEnabled(enabled, pattern);
+    }
+
+    handleContextPointerDown = (event) => {
+        this.lastContextPointerType = event && event.pointerType ? event.pointerType : null;
+    };
 
     getActiveUserId = () => {
         const { user } = this.props || {};
@@ -2296,6 +2314,7 @@ export class Desktop extends Component {
     toggleOverlayMinimize = (id) => {
         if (!this.isOverlayId(id)) return;
         if (this.state.minimized_windows?.[id]) {
+            this.triggerHaptic(HAPTIC_PATTERNS.windowAction);
             this.openOverlay(id, { transitionState: 'entered' });
         } else {
             this.minimizeOverlay(id);
@@ -2304,6 +2323,8 @@ export class Desktop extends Component {
 
     minimizeOverlay = (id) => {
         if (!this.isOverlayId(id)) return;
+
+        this.triggerHaptic(HAPTIC_PATTERNS.windowAction);
 
         this.updateOverlayState(id, (current = {}) => ({
             ...current,
@@ -3804,12 +3825,14 @@ export class Desktop extends Component {
         document.addEventListener('click', this.hideAllContextMenu);
         // allow keyboard activation of context menus
         document.addEventListener('keydown', this.handleContextKey);
+        document.addEventListener('pointerdown', this.handleContextPointerDown, true);
     }
 
     removeContextListeners = () => {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+        document.removeEventListener('pointerdown', this.handleContextPointerDown, true);
     }
 
     handleGlobalShortcut = (e) => {
@@ -3945,6 +3968,7 @@ export class Desktop extends Component {
                 }
             }
 
+            this.triggerHaptic(HAPTIC_PATTERNS.launcher);
             this.openOverlay(LAUNCHER_OVERLAY_ID, { transitionState: 'entering' });
             if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
                 this.allAppsEnterRaf = window.requestAnimationFrame(enter);
@@ -3972,6 +3996,7 @@ export class Desktop extends Component {
             clearTimeout(this.allAppsCloseTimeout);
             this.allAppsCloseTimeout = null;
         }
+        this.triggerHaptic(HAPTIC_PATTERNS.launcher);
         this.closeOverlay(LAUNCHER_OVERLAY_ID, { transitionState: 'exiting' });
         this.allAppsCloseTimeout = setTimeout(() => {
             this.setState((state) => ({
@@ -4198,6 +4223,10 @@ export class Desktop extends Component {
     checkContextMenu = (e) => {
         e.preventDefault();
         this.hideAllContextMenu();
+        if (this.lastContextPointerType === 'touch') {
+            this.triggerHaptic(HAPTIC_PATTERNS.contextMenu);
+        }
+        this.lastContextPointerType = null;
         const target = e.target.closest('[data-context]');
         const context = target ? target.dataset.context : null;
         const appId = target ? target.dataset.appId : null;
@@ -4575,6 +4604,12 @@ export class Desktop extends Component {
                 snapEnabled: this.props.snapEnabled,
                 snapGrid,
                 context: this.state.window_context[id],
+                onHapticFeedback: (pattern) =>
+                    this.triggerHaptic(
+                        typeof pattern === 'number' || Array.isArray(pattern)
+                            ? pattern
+                            : HAPTIC_PATTERNS.windowAction,
+                    ),
             };
 
             return <Window key={id} {...props} />;
@@ -5406,7 +5441,7 @@ export class Desktop extends Component {
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
     const [snapGrid] = useSnapGridSetting();
-    const { density, fontScale, largeHitAreas, desktopTheme } = useSettings();
+    const { density, fontScale, largeHitAreas, desktopTheme, haptics } = useSettings();
     return (
         <Desktop
             {...props}
@@ -5416,6 +5451,7 @@ export default function DesktopWithSnap(props) {
             fontScale={fontScale}
             largeHitAreas={largeHitAreas}
             desktopTheme={desktopTheme}
+            hapticsEnabled={haptics}
         />
     );
 }
