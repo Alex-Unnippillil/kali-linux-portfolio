@@ -230,7 +230,11 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose, contai
                                         ) : (
                                             <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-white/10 to-white/5">
                                                 {window.icon ? (
-                                                    <img src={window.icon} alt="" className="h-12 w-12" />
+                                                    <img
+                                                        src={window.icon}
+                                                        alt={window.title ? `${window.title} icon` : 'Window icon'}
+                                                        className="h-12 w-12"
+                                                    />
                                                 ) : (
                                                     <span className="text-xs text-white/60">No preview</span>
                                                 )}
@@ -238,7 +242,11 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose, contai
                                         )}
                                         {window.icon && (
                                             <div className="absolute bottom-3 left-3 flex h-12 w-12 items-center justify-center rounded-xl bg-black/70 shadow-lg">
-                                                <img src={window.icon} alt="" className="h-8 w-8" />
+                                                <img
+                                                    src={window.icon}
+                                                    alt={window.title ? `${window.title} icon` : 'Window icon'}
+                                                    className="h-8 w-8"
+                                                />
                                             </div>
                                         )}
                                     </div>

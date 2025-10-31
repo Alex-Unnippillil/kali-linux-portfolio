@@ -168,7 +168,7 @@ const Firefox: React.FC = () => {
                 >
                   <img
                     src={getFaviconUrl(bookmark.url)}
-                    alt=""
+                    alt={`${bookmark.label} favicon`}
                     className="h-4 w-4"
                     loading="lazy"
                   />
@@ -227,7 +227,11 @@ const Firefox: React.FC = () => {
                   rel="noreferrer"
                   className="flex items-center gap-2 rounded border border-[color:var(--kali-border)] bg-[color-mix(in_srgb,var(--kali-overlay)_90%,var(--kali-bg))] px-2 py-1 text-[color:color-mix(in_srgb,var(--kali-text)_92%,var(--kali-bg))] transition hover:border-[color:var(--color-primary)] hover:text-[color:var(--kali-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)]"
                 >
-                  <img src={getFaviconUrl(bookmark.url)} alt="" className="h-4 w-4" />
+                  <img
+                    src={getFaviconUrl(bookmark.url)}
+                    alt={`${bookmark.label} favicon`}
+                    className="h-4 w-4"
+                  />
                   <span>{bookmark.label}</span>
                 </a>
               ))}

@@ -443,7 +443,7 @@ export default function YouTubeApp({ initialResults }: Props) {
                       {video.thumbnail ? (
                         <img
                           src={video.thumbnail}
-                          alt=""
+                          alt={`${video.title} thumbnail`}
                           className="h-12 w-20 rounded object-cover"
                         />
                       ) : (
@@ -503,7 +503,7 @@ export default function YouTubeApp({ initialResults }: Props) {
                   {video.thumbnail ? (
                     <img
                       src={video.thumbnail}
-                      alt=""
+                      alt={`${video.title} thumbnail`}
                       className="h-40 w-full object-cover"
                     />
                   ) : (

@@ -682,7 +682,11 @@ const OpenVASApp = () => {
           aria-label="Download summary"
           className="mt-2 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-kali-primary text-white transition hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
         >
-          <img src="/themes/Yaru/status/download.svg" alt="" className="w-4 h-4" />
+          <img
+            src="/themes/Yaru/status/download.svg"
+            alt="Download status icon"
+            className="w-4 h-4"
+          />
         </a>
       )}
       <footer className="mt-4 text-xs text-white/60">

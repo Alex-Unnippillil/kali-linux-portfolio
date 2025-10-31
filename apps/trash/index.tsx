@@ -214,7 +214,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
               >
                 <img
                   src={item.icon || DEFAULT_ICON}
-                  alt=""
+                  alt={item.title ? `${item.title} icon` : 'Window icon'}
                   className="h-6 w-6 shrink-0"
                 />
                 <span className="truncate font-mono text-sm" title={item.title}>

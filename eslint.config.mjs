@@ -40,6 +40,13 @@ const config = [
       '@next/next/no-page-custom-font': 'off',
       '@next/next/no-img-element': 'off',
       'jsx-a11y/control-has-associated-label': 'error',
+      'jsx-a11y/alt-text': [
+        'error',
+        {
+          elements: ['img', 'object', 'area', 'input[type="image"]'],
+          components: ['Image'],
+        },
+      ],
     },
   }),
 ];

@@ -67,7 +67,7 @@ const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) =>
               >
                 <img
                   src={src}
-                  alt=""
+                  alt={`${item.label} icon`}
                   width={28}
                   height={28}
                   className="h-7 w-7 flex-shrink-0"

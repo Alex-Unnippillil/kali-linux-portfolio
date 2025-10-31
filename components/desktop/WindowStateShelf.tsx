@@ -41,7 +41,7 @@ function renderIcon(entry: WindowShelfEntry) {
         return (
             <Image
                 src={entry.icon.replace('./', '/')}
-                alt=""
+                alt={entry.title ? `${entry.title} icon` : 'Window icon'}
                 width={32}
                 height={32}
                 className="h-8 w-8 flex-shrink-0 rounded"
