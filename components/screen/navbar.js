@@ -116,6 +116,8 @@ export default class Navbar extends PureComponent {
                 this.previewHideTimeout = null;
                 this.previewRequestSequence = 0;
                 this.previewFocusPending = false;
+                this.previewCache = new Map();
+                this.previewRequestIds = new Map();
                 this.pendingPinnedReorder = null;
                 this.draggingSection = null;
                 this.navbarRef = React.createRef();
@@ -153,6 +155,12 @@ export default class Navbar extends PureComponent {
                 this.clearPreviewHideTimeout();
                 this.teardownResizeObserver();
                 this.resetDesktopOffset();
+                if (this.previewCache) {
+                        this.previewCache.clear();
+                }
+                if (this.previewRequestIds) {
+                        this.previewRequestIds.clear();
+                }
         }
 
         componentDidUpdate() {
@@ -278,6 +286,9 @@ export default class Navbar extends PureComponent {
 
         dispatchPreviewRequest = (appId, requestId, bustCache = false) => {
                 if (typeof window === 'undefined') return;
+                if (this.previewRequestIds) {
+                        this.previewRequestIds.set(appId, requestId);
+                }
                 window.dispatchEvent(
                         new CustomEvent('taskbar-preview-request', {
                                 detail: { appId, requestId, bustCache },
@@ -310,6 +321,17 @@ export default class Navbar extends PureComponent {
                 const { appId, requestId, preview } = detail;
                 if (!appId || requestId === undefined || requestId === null) {
                         return;
+                }
+
+                const lastRequestId = this.previewRequestIds?.get(appId);
+                if (lastRequestId !== requestId) {
+                        return;
+                }
+
+                if (preview) {
+                        this.previewCache?.set(appId, preview);
+                } else {
+                        this.previewCache?.delete(appId);
                 }
 
                 this.setState((prevState) => {
@@ -364,13 +386,24 @@ export default class Navbar extends PureComponent {
                 let image = sameApp ? previous.image : null;
                 let requestId = sameApp ? previous.requestId : null;
                 let shouldRequest = false;
+                const cachedImage = this.previewCache?.get(app.id) || null;
 
                 if (!sameApp) {
-                        shouldRequest = true;
+                        if (cachedImage) {
+                                status = 'ready';
+                                image = cachedImage;
+                                requestId = null;
+                        } else {
+                                shouldRequest = true;
+                        }
                 } else if (options.forceRefresh) {
                         shouldRequest = true;
                 } else if (!image && status !== 'loading') {
                         shouldRequest = true;
+                }
+
+                if (options.forceRefresh) {
+                        this.previewCache?.delete(app.id);
                 }
 
                 if (shouldRequest) {
@@ -438,6 +471,9 @@ export default class Navbar extends PureComponent {
 
         handleRunningAppsChange = (runningApps) => {
                 const { preview } = this.state;
+                if (Array.isArray(runningApps)) {
+                        this.prunePreviewCache(runningApps);
+                }
                 if (!preview) return;
                 const nextApp = runningApps.find((item) => item.id === preview.appId);
                 if (!nextApp) {
@@ -450,6 +486,17 @@ export default class Navbar extends PureComponent {
                         return;
                 }
                 this.openPreviewForApp(nextApp, button, { forceRefresh: true });
+        };
+
+        prunePreviewCache = (runningApps = []) => {
+                if (!this.previewCache) return;
+                const activeIds = new Set(runningApps.map((item) => item.id));
+                for (const id of Array.from(this.previewCache.keys())) {
+                        if (!activeIds.has(id)) {
+                                this.previewCache.delete(id);
+                                this.previewRequestIds?.delete(id);
+                        }
+                }
         };
 
         handleAppButtonMouseEnter = (event, app) => {

@@ -3569,6 +3569,9 @@ export class Desktop extends Component {
             this.allAppsEnterRaf = null;
         }
         this.deactivateAllAppsFocusTrap();
+        if (this.windowPreviewCache && typeof this.windowPreviewCache.clear === 'function') {
+            this.windowPreviewCache.clear();
+        }
     }
 
     handleExternalTaskbarCommand = (event) => {
