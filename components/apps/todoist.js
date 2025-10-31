@@ -639,6 +639,7 @@ export default function Todoist() {
               onKeyDown={(e) => e.key === 'Enter' && saveEditing()}
               className="mt-1.5 w-full border p-1.5"
               autoFocus
+              aria-label="Edit task title"
             />
           )}
         </div>
@@ -672,7 +673,11 @@ export default function Todoist() {
         </h2>
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center text-gray-500 mt-3">
-            <img src="/empty-tasks.svg" alt="" className="w-16 h-16 mb-1.5" />
+            <img
+              src="/empty-tasks.svg"
+              alt="Illustration of an empty task list"
+              className="w-16 h-16 mb-1.5"
+            />
             <span className="text-sm">No tasks</span>
           </div>
         ) : (
@@ -821,13 +826,14 @@ export default function Todoist() {
       <div className="flex flex-1 flex-col">
         <div aria-live="polite" className="sr-only" ref={liveRef} />
         <div className="p-2 border-b flex flex-col gap-2">
-          <form onSubmit={handleQuickAdd} className="flex gap-2">
-            <input
-              ref={quickRef}
-              value={quick}
-              onChange={(e) => setQuick(e.target.value)}
+        <form onSubmit={handleQuickAdd} className="flex gap-2">
+          <input
+            ref={quickRef}
+            value={quick}
+            onChange={(e) => setQuick(e.target.value)}
             placeholder="Quick add (e.g., 'Pay bills tomorrow !1')"
             className="border p-1 flex-1"
+            aria-label="Quick add task"
           />
           <button
             type="submit"
@@ -845,6 +851,7 @@ export default function Todoist() {
             placeholder="Task"
             className="border p-1"
             required
+            aria-label="Task title"
           />
           <input
             type="date"
@@ -852,6 +859,7 @@ export default function Todoist() {
             value={form.due}
             onChange={handleChange}
             className="border p-1"
+            aria-label="Due date"
           />
           <input
             name="section"
@@ -859,6 +867,7 @@ export default function Todoist() {
             onChange={handleChange}
             placeholder="Section"
             className="border p-1"
+            aria-label="Section name"
           />
           <input
             name="recurring"
@@ -866,6 +875,7 @@ export default function Todoist() {
             onChange={handleChange}
             placeholder="Recurring (e.g., every mon)"
             className="border p-1"
+            aria-label="Recurring schedule"
           />
           {recurringPreview.length > 0 && (
             <div className="text-xs text-gray-500">
@@ -879,6 +889,7 @@ export default function Todoist() {
             value={form.priority}
             onChange={handleChange}
             className="border p-1"
+            aria-label="Task priority"
           >
             <option value="low">Low</option>
             <option value="medium">Medium</option>
@@ -897,11 +908,13 @@ export default function Todoist() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search"
             className="border p-1 flex-1"
+            aria-label="Search tasks"
           />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="border p-1"
+            aria-label="Filter by status"
           >
             <option value="all">All</option>
             <option value="active">Active</option>
@@ -911,6 +924,7 @@ export default function Todoist() {
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
             className="border p-1"
+            aria-label="Filter by priority"
           >
             <option value="all">All priorities</option>
             <option value="high">High</option>
@@ -927,11 +941,23 @@ export default function Todoist() {
           <button className="px-2 py-1 border rounded" onClick={handleExportCsv}>Export CSV</button>
           <label className="px-2 py-1 border rounded cursor-pointer">
             Import
-            <input type="file" accept="application/json" onChange={handleImport} className="sr-only" />
+            <input
+              type="file"
+              accept="application/json"
+              onChange={handleImport}
+              className="sr-only"
+              aria-label="Import tasks"
+            />
           </label>
           <label className="px-2 py-1 border rounded cursor-pointer">
             Import CSV
-            <input type="file" accept="text/csv" onChange={handleImportCsv} className="sr-only" />
+            <input
+              type="file"
+              accept="text/csv"
+              onChange={handleImportCsv}
+              className="sr-only"
+              aria-label="Import tasks from CSV"
+            />
           </label>
         </div>
         <div className="flex flex-1">

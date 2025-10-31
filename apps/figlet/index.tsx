@@ -550,7 +550,7 @@ const FigletApp: React.FC = () => {
           >
             <img
               src="/themes/Yaru/actions/document-save-as-png-symbolic.svg"
-              alt=""
+              alt="Save banner as PNG icon"
               className="h-6 w-6"
             />
           </button>
@@ -561,7 +561,7 @@ const FigletApp: React.FC = () => {
           >
             <img
               src="/themes/Yaru/actions/document-save-as-svg-symbolic.svg"
-              alt=""
+              alt="Save banner as SVG icon"
               className="h-6 w-6"
             />
           </button>

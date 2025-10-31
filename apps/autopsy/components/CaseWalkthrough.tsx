@@ -15,13 +15,19 @@ interface FileNode {
   children?: FileNode[];
 }
 
+const describeThumbnail = (label: string): string => `${label} icon`;
+
 const renderNode = (node: FileNode): React.ReactNode => {
   if (node.children && node.children.length > 0) {
     return (
       <div key={node.name} className="ml-4">
         <div className="flex items-center font-semibold">
           {node.thumbnail && (
-            <img src={node.thumbnail} alt="" className="w-4 h-4 mr-1" />
+            <img
+              src={node.thumbnail}
+              alt={describeThumbnail(node.name)}
+              className="w-4 h-4 mr-1"
+            />
           )}
           {node.name}
         </div>
@@ -36,7 +42,11 @@ const renderNode = (node: FileNode): React.ReactNode => {
   return (
     <div key={node.name} className="ml-4 flex items-center">
       {node.thumbnail && (
-        <img src={node.thumbnail} alt="" className="w-4 h-4 mr-1" />
+        <img
+          src={node.thumbnail}
+          alt={describeThumbnail(node.name)}
+          className="w-4 h-4 mr-1"
+        />
       )}
       {node.name}
     </div>
@@ -56,7 +66,11 @@ const CaseWalkthrough: React.FC = () => {
         <ul className="space-y-2">
           {timeline.map((item, idx) => (
             <li key={idx} className="flex items-center text-sm">
-              <img src={item.thumbnail} alt="" className="w-6 h-6 mr-2" />
+              <img
+                src={item.thumbnail}
+                alt={describeThumbnail(item.event)}
+                className="w-6 h-6 mr-2"
+              />
               <span>
                 {new Date(item.timestamp).toLocaleString()} – {item.event}
               </span>

@@ -844,7 +844,13 @@ const Reversi = () => {
               className="flex items-center justify-center gap-2 rounded border border-slate-700 bg-slate-900/70 px-3 py-2 font-semibold text-slate-100 transition hover:border-sky-400 hover:text-sky-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
               onClick={reset}
             >
-              <img src="/themes/Yaru/status/chrome_refresh.svg" width="18" height="18" alt="" />
+              <img
+                src="/themes/Yaru/status/chrome_refresh.svg"
+                width="18"
+                height="18"
+                alt=""
+                aria-hidden="true"
+              />
               Reset
             </button>
             <button

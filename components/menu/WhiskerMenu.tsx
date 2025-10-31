@@ -574,7 +574,7 @@ const WhiskerMenu: React.FC = () => {
                   <span className="flex items-center gap-2">
                     <Image
                       src={cat.icon}
-                      alt=""
+                      alt={`${cat.label} icon`}
                       width={20}
                       height={20}
                       className="h-5 w-5 opacity-80 group-hover:opacity-100"
@@ -628,7 +628,7 @@ const WhiskerMenu: React.FC = () => {
                   >
                     <Image
                       src={app.icon}
-                      alt=""
+                      alt={`${app.title} icon`}
                       width={24}
                       height={24}
                       className="h-6 w-6"
@@ -684,7 +684,7 @@ const WhiskerMenu: React.FC = () => {
                           <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#121f33]">
                             <Image
                               src={app.icon}
-                              alt=""
+                              alt={`${app.title} icon`}
                               width={28}
                               height={28}
                               className="h-7 w-7"

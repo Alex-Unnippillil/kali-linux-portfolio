@@ -108,6 +108,7 @@ const BluetoothApp: React.FC = () => {
           value={rssiFilter}
           onChange={(e) => setRssiFilter(e.target.value)}
           className="w-1/3 rounded bg-gray-800 p-2 text-white"
+          aria-label="Minimum RSSI"
         />
         <input
           type="text"
@@ -115,6 +116,7 @@ const BluetoothApp: React.FC = () => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-2/3 rounded bg-gray-800 p-2 text-white"
+          aria-label="Search devices"
         />
       </div>
       {error && <FormError className="mb-4 mt-0">{error}</FormError>}
@@ -131,7 +133,7 @@ const BluetoothApp: React.FC = () => {
                 >
                   <img
                     src="/themes/Yaru/status/emblem-system-symbolic.svg"
-                    alt=""
+                    alt="Bluetooth device placeholder icon"
                     className="h-16 w-16"
                   />
                   <p className="mt-[6px] text-center text-sm font-bold">

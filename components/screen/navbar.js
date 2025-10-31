@@ -724,7 +724,7 @@ export default class Navbar extends PureComponent {
                                 <span className="relative inline-flex items-center justify-center">
                                         <Image
                                                 src={app.icon}
-                                                alt=""
+                                                alt={app.title ? `${app.title} icon` : 'Application icon'}
                                                 width={28}
                                                 height={28}
                                                 className="h-6 w-6"

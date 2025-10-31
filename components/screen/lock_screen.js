@@ -42,6 +42,7 @@ export default function LockScreen(props) {
                 <img
                     src={`/wallpapers/${bgImageName}.webp`}
                     alt=""
+                    aria-hidden="true"
                     className={`absolute top-0 left-0 w-full h-full object-cover transform z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
                 />
             )}

@@ -48,6 +48,7 @@ const AppsPage = () => {
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search apps"
         className="mb-4 w-full rounded border p-2"
+        aria-label="Search apps"
       />
       <div
         id="app-grid"
@@ -78,7 +79,7 @@ const AppsPage = () => {
                     {app.icon && (
                       <Image
                         src={app.icon}
-                        alt=""
+                        alt={`${app.title} icon`}
                         width={64}
                         height={64}
                         sizes="64px"

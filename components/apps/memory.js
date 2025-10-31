@@ -28,6 +28,21 @@ const BUILT_IN_THEMES = {
   ],
 };
 
+const toTitleCase = (value) =>
+  value
+    .split(' ')
+    .map((segment) =>
+      segment ? segment.charAt(0).toUpperCase() + segment.slice(1) : segment,
+    )
+    .join(' ');
+
+const describeCardImage = (src) => {
+  const fileName = src.split('/').pop() || '';
+  const baseName = fileName.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ').trim();
+  const label = baseName ? toTitleCase(baseName) : 'Card';
+  return `${label} icon`;
+};
+
 /**
  * Single player memory board. This encapsulates the original memory game
  * logic and is rendered once or twice depending on the selected mode.
@@ -329,7 +344,11 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
                     } ${reduceMotion.current ? '' : 'transition-colors duration-300'}`}
                   >
                     {card.image ? (
-                      <img src={card.image} alt="" className="w-3/4 h-3/4 object-contain" />
+                      <img
+                        src={card.image}
+                        alt={describeCardImage(card.image)}
+                        className="w-3/4 h-3/4 object-contain"
+                      />
                     ) : (
                       <span className={`text-4xl ${card.color || ''}`}>{card.value}</span>
                     )}
@@ -453,6 +472,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
             value={previewTime}
             onChange={(e) => setPreviewTime(Number(e.target.value))}
             className="w-24"
+            aria-label={`Preview time for player ${player}`}
           />
         </div>
       </div>
