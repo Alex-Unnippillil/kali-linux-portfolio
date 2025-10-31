@@ -1,3 +1,5 @@
+import { useMainRegionProps } from './mainRegionContext';
+
 const PLAYLIST_EMBED_URL =
   'https://open.spotify.com/embed/playlist/37i9dQZF1E8NOMDYRneOXj?utm_source=generator';
 
@@ -25,6 +27,7 @@ const QUEUE = [
 ];
 
 export function SpotifyWebPlayerLayout({ description, className = '' }) {
+  const mainRegionProps = useMainRegionProps();
   return (
     <div className={`flex flex-1 flex-col ${className}`}>
       <div className="flex flex-1 min-h-[18rem] overflow-hidden rounded-3xl border border-white/10 bg-[#121212] text-white shadow-[0_40px_80px_rgba(5,8,15,0.6)]">
@@ -61,7 +64,7 @@ export function SpotifyWebPlayerLayout({ description, className = '' }) {
           </div>
         </aside>
 
-        <main className="flex min-w-0 flex-1 flex-col">
+        <main {...mainRegionProps} className="flex min-w-0 flex-1 flex-col">
           <header className="relative border-b border-white/5 bg-gradient-to-br from-[#1DB954]/20 via-[#121212] to-[#050505] px-8 py-8">
             <div className="absolute right-8 top-4 hidden rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/70 md:block">
               Live mix

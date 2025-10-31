@@ -10,8 +10,11 @@ import AboutSlides from './slides';
 import ScrollableTimeline from '../../ScrollableTimeline';
 import GitHubContributionHeatmap from './GitHubContributionHeatmap';
 import GitHubStars from '../../GitHubStars';
+import { MainRegionContext } from '../mainRegionContext';
 
 class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
+  static contextType = MainRegionContext;
+  declare context: React.ContextType<typeof MainRegionContext>;
   screens: Record<string, React.ReactNode> = {};
 
   constructor(props: unknown) {
@@ -24,6 +27,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
   }
 
   componentDidMount() {
+    this.context?.registerMainRegion?.();
     this.screens = {
       about: <About />,
       education: <Education />,
@@ -109,9 +113,16 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
       url: 'https://unnippillil.com',
     };
     const nonce = getCspNonce();
+    const { mainRegionId, titleId } = this.context ?? {};
 
     return (
-      <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
+      <main
+        className="w-full h-full flex bg-ub-cool-grey text-white select-none relative"
+        id={mainRegionId ?? undefined}
+        tabIndex={-1}
+        aria-labelledby={titleId ?? undefined}
+        data-window-main-region="true"
+      >
         <Head>
           <title>About</title>
           <script

@@ -13,20 +13,24 @@ export const createDynamicApp = (id, title) =>
         return mod.default;
       } catch (err) {
         console.error(`Failed to load ${title}`, err);
-        return () => (
-          <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-            {`Unable to load ${title}`}
-          </div>
-        );
+        return function DynamicAppErrorFallback() {
+          return (
+            <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+              {`Unable to load ${title}`}
+            </div>
+          );
+        };
       }
     },
     {
       ssr: false,
-      loading: () => (
-        <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-          {`Loading ${title}...`}
-        </div>
-      ),
+      loading: function DynamicAppLoadingFallback() {
+        return (
+          <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+            {`Loading ${title}...`}
+          </div>
+        );
+      },
     }
   );
 
@@ -34,15 +38,24 @@ export const createDisplay = (Component) => {
   const DynamicComponent = dynamic(() => Promise.resolve({ default: Component }), {
     ssr: false,
   });
-  const Display = (addFolder, openApp, context) => {
+  const Display = function DynamicAppDisplay(addFolder, openApp, context, options) {
     const extraProps =
       context && typeof context === 'object' ? context : undefined;
+    const mainRegionProps =
+      options && typeof options === 'object'
+        ? {
+            mainRegionId: options.mainRegionId,
+            mainRegionTitle: options.title,
+            mainRegionLabelId: options.titleId,
+          }
+        : {};
     return (
       <DynamicComponent
         addFolder={addFolder}
         openApp={openApp}
         context={context}
         {...(extraProps || {})}
+        {...mainRegionProps}
       />
     );
   };
