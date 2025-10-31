@@ -338,6 +338,14 @@ Additional guidance:
 
 Accessibility and performance checks using Lighthouse or Pa11y (`pa11yci.json`) are encouraged for desktop shell changes.
 
+### Maintenance cadence
+
+- **Weekly:** Run `yarn dedupe:check` before merging feature branches to catch divergent dependency trees early.
+- **Monthly:** Execute `yarn deps:health` in the default branch to combine dedupe verification with `yarn npm audit` and review the generated report for new advisories.
+- **Quarterly:** Regenerate the module report with `yarn module-report` and prune unused packages or large assets that slipped in over time.
+
+Document the outcome of each cadence in `CHANGELOG.md` or the release notes so downstream maintainers know when dependencies were last audited.
+
 ---
 
 ## Security Hardening
