@@ -29,6 +29,24 @@ type CategoryDefinitionBase = {
 
 const TRANSITION_DURATION = 180;
 const CATEGORY_STORAGE_KEY = 'whisker-menu-category';
+const EDGE_SWIPE_ZONE_PX = 24;
+const EDGE_SWIPE_HYSTERESIS_PX = 20;
+
+type EdgeSwipeState = {
+  pointerId: number | null;
+  startX: number;
+  safeAreaLeft: number;
+  tracking: boolean;
+  triggered: boolean;
+};
+
+const createEdgeSwipeState = (): EdgeSwipeState => ({
+  pointerId: null,
+  startX: 0,
+  safeAreaLeft: 0,
+  tracking: false,
+  triggered: false,
+});
 
 const CATEGORY_DEFINITIONS = [
   {
@@ -155,6 +173,11 @@ const WhiskerMenu: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const focusTimeoutRef = useRef<number | null>(null);
   const focusFrameRef = useRef<number | null>(null);
+  const edgeSwipeStateRef = useRef<EdgeSwipeState>(createEdgeSwipeState());
+
+  const resetEdgeSwipeState = useCallback(() => {
+    edgeSwipeStateRef.current = createEdgeSwipeState();
+  }, []);
 
 
   const allApps: AppMeta[] = apps as any;
@@ -444,6 +467,104 @@ const WhiskerMenu: React.FC = () => {
       window.removeEventListener('resize', updateMenuPosition);
     };
   }, [isVisible]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return undefined;
+    }
+
+    if (!('PointerEvent' in window)) {
+      return undefined;
+    }
+
+    const readSafeAreaLeft = () => {
+      try {
+        const computed = getComputedStyle(document.documentElement);
+        const raw = computed.getPropertyValue('--safe-area-left');
+        const numeric = parseFloat(raw);
+        return Number.isFinite(numeric) ? numeric : 0;
+      } catch (error) {
+        return 0;
+      }
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (isDesktop) {
+        return;
+      }
+
+      if (!event.isPrimary || event.pointerType !== 'touch') {
+        return;
+      }
+
+      const safeAreaLeft = readSafeAreaLeft();
+      const relativeX = event.clientX - safeAreaLeft;
+
+      if (relativeX < 0 || relativeX > EDGE_SWIPE_ZONE_PX) {
+        resetEdgeSwipeState();
+        return;
+      }
+
+      edgeSwipeStateRef.current = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        safeAreaLeft,
+        tracking: true,
+        triggered: false,
+      };
+    };
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const state = edgeSwipeStateRef.current;
+      if (!state.tracking || state.pointerId !== event.pointerId) {
+        return;
+      }
+
+      if (isDesktop) {
+        resetEdgeSwipeState();
+        return;
+      }
+
+      const deltaX = event.clientX - state.startX;
+      const relativeX = event.clientX - state.safeAreaLeft;
+
+      if (deltaX >= EDGE_SWIPE_HYSTERESIS_PX) {
+        state.triggered = true;
+        showMenu();
+        resetEdgeSwipeState();
+        return;
+      }
+
+      if (relativeX < -EDGE_SWIPE_HYSTERESIS_PX) {
+        resetEdgeSwipeState();
+        return;
+      }
+
+      if (relativeX > EDGE_SWIPE_ZONE_PX + EDGE_SWIPE_HYSTERESIS_PX) {
+        resetEdgeSwipeState();
+      }
+    };
+
+    const handlePointerEnd = (event: PointerEvent) => {
+      const state = edgeSwipeStateRef.current;
+      if (state.tracking && state.pointerId === event.pointerId) {
+        resetEdgeSwipeState();
+      }
+    };
+
+    window.addEventListener('pointerdown', handlePointerDown, { passive: true });
+    window.addEventListener('pointermove', handlePointerMove, { passive: true });
+    window.addEventListener('pointerup', handlePointerEnd, { passive: true });
+    window.addEventListener('pointercancel', handlePointerEnd, { passive: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', handlePointerDown);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerEnd);
+      window.removeEventListener('pointercancel', handlePointerEnd);
+      resetEdgeSwipeState();
+    };
+  }, [isDesktop, resetEdgeSwipeState, showMenu]);
 
   const focusCategoryButton = (index: number) => {
     const btn = categoryButtonRefs.current[index];
