@@ -2,7 +2,6 @@
 
 import React, { Component, useCallback, useEffect, useRef, useState } from 'react';
 import Draggable from 'react-draggable';
-import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import {
     clampWindowPositionWithinViewport,
@@ -14,6 +13,7 @@ import {
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
+import { MainRegionContext } from '../apps/mainRegionContext';
 
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
@@ -1670,6 +1670,9 @@ export class Window extends Component {
         const boundsRight = viewportLeft + this.state.parentSize.width;
         const boundsBottom = boundsTop + this.state.parentSize.height;
 
+        const mainRegionId = this.id ? `${this.id}-main` : undefined;
+        const titleId = this.id ? `${this.id}-title` : undefined;
+
         const windowState = this.props.minimized
             ? 'minimized'
             : (this.state.maximized
@@ -1745,14 +1748,22 @@ export class Window extends Component {
                         ].filter(Boolean).join(' ')}
                         id={this.id}
                         role="dialog"
+                        aria-labelledby={titleId}
                         data-window-state={windowState}
                         aria-hidden={this.props.minimized ? true : false}
-                        aria-label={this.props.title}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                         onPointerDown={this.focusWindow}
                         onFocus={this.focusWindow}
                     >
+                        {mainRegionId && (
+                            <a
+                                href={`#${mainRegionId}`}
+                                className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded focus:bg-ub-window-title focus:px-3 focus:py-2 focus:text-white focus:shadow-lg"
+                            >
+                                {`Skip to ${this.props.title} content`}
+                            </a>
+                        )}
                         {this.props.resizable !== false && !this.state.maximized && (
                             <>
                                 <WindowEdgeHandle direction="n" onResizeStart={this.beginResize} active={this.state.resizing === 'n'} />
@@ -1767,6 +1778,7 @@ export class Window extends Component {
                         )}
                         <WindowTopBar
                             title={this.props.title}
+                            titleId={titleId}
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
@@ -1783,12 +1795,15 @@ export class Window extends Component {
                                 />
                             )}
                         />
-                        {(this.id === "settings"
-                            ? <Settings />
-                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
-                                addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp}
-                                context={this.props.context} />)}
+                        <WindowMainScreen
+                            screen={this.props.screen}
+                            title={this.props.title}
+                            addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
+                            openApp={this.props.openApp}
+                            context={this.props.context}
+                            mainRegionId={mainRegionId}
+                            titleId={titleId}
+                        />
                     </div>
                 </Draggable >
             </>
@@ -1799,7 +1814,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, controls }) {
+export function WindowTopBar({ title, titleId, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, controls }) {
     return (
         <div
             className={`${styles.windowTitlebar} bg-ub-window-title text-white select-none`}
@@ -1814,7 +1829,11 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
             data-window-drag-handle=""
         >
             <span className={styles.windowTitleBalancer} aria-hidden="true" />
-            <div className={`${styles.windowTitle} text-sm font-bold`} title={title}>
+            <div
+                className={`${styles.windowTitle} text-sm font-bold`}
+                title={title}
+                id={titleId}
+            >
                 {title}
             </div>
             {controls}
@@ -2118,17 +2137,44 @@ export class WindowMainScreen extends Component {
         this.state = {
             setDarkBg: false,
         }
+        this.customRegionRegistered = false;
     }
     componentDidMount() {
         setTimeout(() => {
             this.setState({ setDarkBg: true });
         }, 3000);
     }
+    registerMainRegion = () => {
+        if (!this.customRegionRegistered) {
+            this.customRegionRegistered = true;
+            if (typeof this.forceUpdate === 'function') {
+                this.forceUpdate();
+            }
+        }
+    }
     render() {
+        const { mainRegionId, title, titleId } = this.props;
+        const regionClassName = "w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey");
+        const screenOptions = {
+            mainRegionId: mainRegionId || null,
+            title: title || null,
+            titleId: titleId || null,
+            registerMainRegion: this.registerMainRegion,
+        };
+        const fallbackRegionId = this.customRegionRegistered ? undefined : mainRegionId;
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
-                {this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
-            </div>
+            <MainRegionContext.Provider value={screenOptions}>
+                <section
+                    id={fallbackRegionId}
+                    role="region"
+                    tabIndex={fallbackRegionId ? -1 : undefined}
+                    aria-labelledby={fallbackRegionId ? (titleId || undefined) : undefined}
+                    data-window-main-region="true"
+                    className={regionClassName}
+                >
+                    {this.props.screen(this.props.addFolder, this.props.openApp, this.props.context, screenOptions)}
+                </section>
+            </MainRegionContext.Provider>
         )
     }
 }

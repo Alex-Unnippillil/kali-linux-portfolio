@@ -15,6 +15,7 @@ import {
   serialize as serializeRng,
   deserialize as deserializeRng,
 } from '../../apps/games/rng';
+import { useMainRegionProps } from './mainRegionContext';
 
 interface GameLayoutProps {
   gameId?: string;
@@ -53,6 +54,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   highScore,
   editor,
 }) => {
+  const mainRegionProps = useMainRegionProps();
   const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
   const [log, setLog] = useState<RecordedInput[]>([]);
@@ -228,7 +230,11 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 
   return (
     <RecorderContext.Provider value={contextValue}>
-      <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
+      <div
+        {...mainRegionProps}
+        className="relative h-full w-full"
+        data-reduced-motion={prefersReducedMotion}
+      >
         {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
         {paused && (
           <div
