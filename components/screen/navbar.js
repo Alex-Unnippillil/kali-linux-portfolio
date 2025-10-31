@@ -971,6 +971,8 @@ export default class Navbar extends PureComponent {
                                         paddingLeft: `calc(0.75rem + var(--safe-area-left, 0px))`,
                                         paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
                                 }}
+                                role="toolbar"
+                                aria-label="Desktop taskbar"
                         >
                                 <div className="flex items-center gap-2 text-xs md:text-sm">
                                         <WhiskerMenu />

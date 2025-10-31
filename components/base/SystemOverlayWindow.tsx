@@ -76,6 +76,9 @@ export default function SystemOverlayWindow({
 
     const bodyClasses = ['flex-1 overflow-auto', bodyClassName].filter(Boolean).join(' ');
 
+    const resolvedTitleId = ariaLabelledBy || `${id}-title`;
+    const labelledBy = ariaLabelledBy || resolvedTitleId;
+
     const handleMinimize = () => {
         if (typeof onMinimize === 'function') {
             onMinimize();
@@ -107,12 +110,13 @@ export default function SystemOverlayWindow({
                 role="dialog"
                 aria-modal={ariaModal}
                 aria-label={ariaLabel}
-                aria-labelledby={ariaLabelledBy}
+                aria-labelledby={labelledBy}
                 aria-describedby={ariaDescribedBy}
                 tabIndex={-1}
             >
                 <WindowTopBar
                     title={title}
+                    titleId={resolvedTitleId}
                     onKeyDown={undefined}
                     onBlur={undefined}
                     grabbed={false}

@@ -25,6 +25,18 @@ const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const DEFAULT_MIN_WIDTH = 20;
 const DEFAULT_MIN_HEIGHT = 20;
 
+let windowTitleIdSequence = 0;
+const createWindowTitleId = (explicitId, baseId) => {
+    if (typeof explicitId === 'string' && explicitId.trim()) {
+        return explicitId.trim();
+    }
+    if (typeof baseId === 'string' && baseId.trim()) {
+        return `${baseId.trim()}-title`;
+    }
+    windowTitleIdSequence += 1;
+    return `desktop-window-title-${windowTitleIdSequence}`;
+};
+
 const parsePxValue = (value) => {
     if (typeof value !== 'string') return null;
     const parsed = parseFloat(value);
@@ -203,11 +215,13 @@ export class Window extends Component {
         snapGrid: [8, 8],
         minWidth: DEFAULT_MIN_WIDTH,
         minHeight: DEFAULT_MIN_HEIGHT,
+        accessibilityRole: 'application',
     };
 
     constructor(props) {
         super(props);
         this.id = null;
+        this.windowTitleId = createWindowTitleId(props.titleElementId, props.id);
         const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = getViewportMetrics();
         const isPortrait = viewportHeight > viewportWidth;
         const initialTopInset = typeof window !== 'undefined'
@@ -271,6 +285,7 @@ export class Window extends Component {
     componentDidMount() {
         this._isUnmounted = false;
         this.id = this.props.id;
+        this.windowTitleId = createWindowTitleId(this.props.titleElementId, this.props.id);
         this.setDefaultWindowDimenstion();
 
         // google analytics
@@ -292,6 +307,10 @@ export class Window extends Component {
     }
 
     componentDidUpdate(prevProps) {
+        if (prevProps.id !== this.props.id || prevProps.titleElementId !== this.props.titleElementId) {
+            this.id = this.props.id;
+            this.windowTitleId = createWindowTitleId(this.props.titleElementId, this.props.id);
+        }
         if (prevProps.minWidth === this.props.minWidth && prevProps.minHeight === this.props.minHeight) {
             return;
         }
@@ -1678,6 +1697,11 @@ export class Window extends Component {
                     ? `snapped-${this.state.snapped}`
                     : 'active'));
 
+        const titleElementId = this.props.titleElementId || this.windowTitleId;
+        const labelledById = this.props.ariaLabelledBy || titleElementId;
+        const windowRole = this.props.accessibilityRole === 'dialog' ? 'dialog' : 'application';
+        const ariaLabel = labelledById ? undefined : this.props.title;
+
         return (
             <>
                 {this.state.snapPreview && (
@@ -1744,10 +1768,11 @@ export class Window extends Component {
                             this.state.resizing ? styles.windowFrameResizing : '',
                         ].filter(Boolean).join(' ')}
                         id={this.id}
-                        role="dialog"
+                        role={windowRole}
                         data-window-state={windowState}
                         aria-hidden={this.props.minimized ? true : false}
-                        aria-label={this.props.title}
+                        aria-labelledby={labelledById || undefined}
+                        aria-label={ariaLabel}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                         onPointerDown={this.focusWindow}
@@ -1767,6 +1792,7 @@ export class Window extends Component {
                         )}
                         <WindowTopBar
                             title={this.props.title}
+                            titleId={titleElementId}
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
@@ -1799,7 +1825,8 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, controls }) {
+export function WindowTopBar({ title, titleId, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, controls }) {
+    const headingId = typeof titleId === 'string' && titleId.trim() ? titleId : undefined;
     return (
         <div
             className={`${styles.windowTitlebar} bg-ub-window-title text-white select-none`}
@@ -1814,7 +1841,11 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
             data-window-drag-handle=""
         >
             <span className={styles.windowTitleBalancer} aria-hidden="true" />
-            <div className={`${styles.windowTitle} text-sm font-bold`} title={title}>
+            <div
+                className={`${styles.windowTitle} text-sm font-bold`}
+                id={headingId}
+                title={title}
+            >
                 {title}
             </div>
             {controls}
