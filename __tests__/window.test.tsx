@@ -217,6 +217,7 @@ describe('Window snapping preview', () => {
     });
 
     act(() => {
+      ref.current!.handleDragStart({ pointerType: 'mouse' } as any);
       ref.current!.handleDrag();
     });
 
@@ -258,6 +259,7 @@ describe('Window snapping preview', () => {
     });
 
     act(() => {
+      ref.current!.handleDragStart({ pointerType: 'mouse' } as any);
       ref.current!.handleDrag();
     });
 
@@ -294,6 +296,7 @@ describe('Window snapping preview', () => {
     });
 
     act(() => {
+      ref.current!.handleDragStart({ pointerType: 'mouse' } as any);
       ref.current!.handleDrag();
     });
 
@@ -334,6 +337,7 @@ describe('Window snapping preview', () => {
     });
 
     act(() => {
+      ref.current!.handleDragStart({ pointerType: 'mouse' } as any);
       ref.current!.handleDrag();
     });
 
@@ -375,6 +379,10 @@ describe('Window snapping preview', () => {
     });
 
     act(() => {
+      ref.current!.handleDragStart({ pointerType: 'mouse' } as any);
+    });
+    act(() => {
+      ref.current!.handleDragStart({ pointerType: 'mouse' } as any);
       ref.current!.handleDrag();
     });
 
@@ -387,6 +395,158 @@ describe('Window snapping preview', () => {
     expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx()}px`);
     expect(preview).toHaveAttribute('aria-label', 'Snap right half');
     expect(within(preview).getByText('Snap right half')).toBeInTheDocument();
+  });
+
+  it('renders snap overlays while dragging', () => {
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 200,
+      top: 200,
+      right: 320,
+      bottom: 320,
+      width: 120,
+      height: 120,
+      x: 200,
+      y: 200,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDragStart({ pointerType: 'mouse' }, { node: winEl } as any);
+      ref.current!.handleDrag({}, { node: winEl } as any);
+      ref.current!.flushPendingDragUpdate();
+    });
+
+    expect(screen.getByTestId('snap-overlay-left')).toBeInTheDocument();
+    expect(screen.getByTestId('snap-overlay-right')).toBeInTheDocument();
+    expect(screen.getByTestId('snap-overlay-top-left')).toBeInTheDocument();
+    expect(ref.current!.state.snapTargets).not.toBeNull();
+
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(screen.queryByTestId('snap-overlay-left')).toBeNull();
+  });
+
+  it('activates snap preview within desktop threshold', () => {
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    let rightOffset = 120;
+    winEl.getBoundingClientRect = () => ({
+      left: window.innerWidth - rightOffset - 120,
+      top: 200,
+      right: window.innerWidth - rightOffset,
+      bottom: 320,
+      width: 120,
+      height: 120,
+      x: window.innerWidth - rightOffset - 120,
+      y: 200,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDragStart({ pointerType: 'mouse' }, { node: winEl } as any);
+    });
+
+    act(() => {
+      ref.current!.handleDrag({}, { node: winEl } as any);
+      ref.current!.flushPendingDragUpdate();
+    });
+
+    expect(ref.current!.state.snapPosition).toBeNull();
+
+    act(() => {
+      rightOffset = 40;
+      ref.current!.handleDrag({}, { node: winEl } as any);
+      ref.current!.flushPendingDragUpdate();
+    });
+
+    expect(ref.current!.state.snapPosition).toBe('right');
+
+    act(() => {
+      ref.current!.handleStop();
+    });
+  });
+
+  it('uses wider snap threshold for touch input', () => {
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    let rightOffset = 140;
+    winEl.getBoundingClientRect = () => ({
+      left: window.innerWidth - rightOffset - 160,
+      top: 220,
+      right: window.innerWidth - rightOffset,
+      bottom: 380,
+      width: 160,
+      height: 160,
+      x: window.innerWidth - rightOffset - 160,
+      y: 220,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDragStart({ pointerType: 'touch' }, { node: winEl } as any);
+    });
+
+    act(() => {
+      ref.current!.handleDrag({}, { node: winEl } as any);
+      ref.current!.flushPendingDragUpdate();
+    });
+
+    expect(ref.current!.state.snapPosition).toBeNull();
+
+    act(() => {
+      rightOffset = 90;
+      ref.current!.handleDrag({}, { node: winEl } as any);
+      ref.current!.flushPendingDragUpdate();
+    });
+
+    expect(ref.current!.state.snapPosition).toBe('right');
+
+    act(() => {
+      ref.current!.handleStop();
+    });
   });
 });
 
@@ -422,6 +582,7 @@ describe('Window snapping finalize and release', () => {
     });
 
     act(() => {
+      ref.current!.handleDragStart({ pointerType: 'mouse' } as any);
       ref.current!.handleDrag();
     });
     act(() => {
@@ -466,6 +627,7 @@ describe('Window snapping finalize and release', () => {
     });
 
     act(() => {
+      ref.current!.handleDragStart({ pointerType: 'mouse' } as any);
       ref.current!.handleDrag();
     });
     act(() => {
@@ -529,6 +691,7 @@ describe('Window snapping finalize and release', () => {
     });
 
     act(() => {
+      ref.current!.handleDragStart({ pointerType: 'mouse' } as any);
       ref.current!.handleDrag();
     });
     act(() => {
@@ -571,6 +734,7 @@ describe('Window snapping finalize and release', () => {
     });
 
     act(() => {
+      ref.current!.handleDragStart({ pointerType: 'mouse' } as any);
       ref.current!.handleDrag();
     });
     act(() => {
@@ -614,6 +778,7 @@ describe('Window snapping finalize and release', () => {
     });
 
     act(() => {
+      ref.current!.handleDragStart({ pointerType: 'mouse' } as any);
       ref.current!.handleDrag();
     });
     act(() => {
@@ -657,6 +822,7 @@ describe('Window snapping finalize and release', () => {
     });
 
     act(() => {
+      ref.current!.handleDragStart({ pointerType: 'mouse' } as any);
       ref.current!.handleDrag();
     });
     act(() => {
