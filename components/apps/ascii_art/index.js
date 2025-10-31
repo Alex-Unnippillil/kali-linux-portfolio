@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import DOMPurify from 'dompurify';
+import { safeHTML } from '@/utils/safe-html';
 
 // Preset character sets and color palettes
 const presetCharSets = {
@@ -208,7 +208,7 @@ export default function AsciiArt() {
       }
       if (plainChunk) {
         setPlainAscii((p) => p + plainChunk);
-        setAsciiHtml((h) => h + DOMPurify.sanitize(htmlChunk));
+        setAsciiHtml((h) => h + safeHTML(htmlChunk));
         setAnsiAscii((a) => a + ansiChunk);
       }
       if (y < height) {
@@ -328,7 +328,7 @@ export default function AsciiArt() {
     undoStack.current.push(plainAscii);
     redoStack.current = [];
     setPlainAscii(e.target.value);
-    setAsciiHtml(DOMPurify.sanitize(e.target.value.replace(/\n/g, '<br/>')));
+    setAsciiHtml(safeHTML(e.target.value.replace(/\n/g, '<br/>')));
   };
 
   const undo = () => {
@@ -336,7 +336,7 @@ export default function AsciiArt() {
     redoStack.current.push(plainAscii);
     const prev = undoStack.current.pop();
     setPlainAscii(prev);
-    setAsciiHtml(DOMPurify.sanitize(prev.replace(/\n/g, '<br/>')));
+    setAsciiHtml(safeHTML(prev.replace(/\n/g, '<br/>')));
   };
 
   const redo = () => {
@@ -344,7 +344,7 @@ export default function AsciiArt() {
     undoStack.current.push(plainAscii);
     const next = redoStack.current.pop();
     setPlainAscii(next);
-    setAsciiHtml(DOMPurify.sanitize(next.replace(/\n/g, '<br/>')));
+    setAsciiHtml(safeHTML(next.replace(/\n/g, '<br/>')));
   };
 
   const handleEditorKeyDown = (e) => {
@@ -384,7 +384,7 @@ export default function AsciiArt() {
             type="text"
             value={charSet}
             onChange={(e) =>
-              setCharSet(DOMPurify.sanitize(e.target.value).slice(0, 256))
+              setCharSet(safeHTML(e.target.value).slice(0, 256))
             }
             className="px-1 bg-gray-700"
           />

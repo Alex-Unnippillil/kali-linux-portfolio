@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import DOMPurify from 'dompurify';
+import { DOMPurify, safeHTML } from '@/utils/safe-html';
 
 export default function TweetEmbed({ id }) {
   const [html, setHtml] = useState(null);
@@ -17,7 +17,7 @@ export default function TweetEmbed({ id }) {
       })
       .then((data) => {
         if (active) {
-          const sanitized = DOMPurify.sanitize(data?.html || '');
+          const sanitized = safeHTML(data?.html || '');
           setHtml(sanitized);
         }
       })

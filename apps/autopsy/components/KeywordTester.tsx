@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { safeHTML } from '@/utils/safe-html';
 import events from '../events.json';
 
 const escapeHtml = (str: string = '') =>
@@ -73,20 +74,20 @@ function KeywordTester() {
             >
               <div
                 className="font-bold"
-                dangerouslySetInnerHTML={{ __html: highlight(artifact.name) }}
+                dangerouslySetInnerHTML={{ __html: safeHTML(highlight(artifact.name)) }}
               />
               <div className="text-kali-text/60">{artifact.type}</div>
               {'user' in artifact && (
                 <div
                   className="text-xs"
                   dangerouslySetInnerHTML={{
-                    __html: `User: ${highlight(artifact.user)}`,
+                    __html: safeHTML(`User: ${highlight(artifact.user)}`),
                   }}
                 />
               )}
               <div
                 className="text-xs"
-                dangerouslySetInnerHTML={{ __html: highlight(artifact.description) }}
+                dangerouslySetInnerHTML={{ __html: safeHTML(highlight(artifact.description)) }}
               />
             </div>
           );
