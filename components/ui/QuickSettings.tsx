@@ -15,6 +15,7 @@ const transitionDurationMs = 200;
 const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
   const { theme: activeTheme, setTheme: updateTheme } = useTheme();
   const [sound, setSound] = usePersistentState('qs-sound', true);
+  const [windowSounds, setWindowSounds] = usePersistentState('qs-window-sounds', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
   const [focusMode, setFocusMode] = usePersistentState('qs-focus-mode', false);
@@ -40,12 +41,8 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
   }, [sound]);
 
   useEffect(() => {
-    document.documentElement.toggleAttribute('data-offline', !online);
-  }, [online]);
-
-  useEffect(() => {
-    document.documentElement.toggleAttribute('data-sound-muted', !sound);
-  }, [sound]);
+    document.documentElement.toggleAttribute('data-window-sounds-muted', !windowSounds);
+  }, [windowSounds]);
 
   useEffect(() => {
     document.documentElement.toggleAttribute('data-offline', !online);
@@ -166,6 +163,13 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
       tone: sound ? 'positive' : 'muted',
     },
     {
+      id: 'window-sounds',
+      label: 'Window chime',
+      value: windowSounds ? 'On' : 'Muted',
+      icon: <ChimeIcon />,
+      tone: windowSounds ? 'info' : 'muted',
+    },
+    {
       id: 'network',
       label: 'Network',
       value: online ? 'Online' : 'Offline',
@@ -205,6 +209,15 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
       onToggle: () => setSound(!sound),
       accent: 'from-sky-400/30 via-sky-500/10 to-transparent',
       icon: <SoundIcon />,
+    },
+    {
+      id: 'quick-settings-window-sounds',
+      label: 'Window chime',
+      description: 'Play tones for window animations.',
+      value: windowSounds,
+      onToggle: () => setWindowSounds(!windowSounds),
+      accent: 'from-indigo-400/30 via-indigo-500/10 to-transparent',
+      icon: <ChimeIcon />,
     },
     {
       id: 'quick-settings-network',
@@ -626,6 +639,46 @@ const FocusIcon = () => (
   >
     <path
       d="M4 12H2m10-8V2m8 10h2m-10 8v2M7 12a5 5 0 1 0 10 0 5 5 0 0 0-10 0Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const ChimeIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="text-white"
+  >
+    <path
+      d="M12 4a4 4 0 0 0-4 4v2.764c0 .52-.2 1.02-.558 1.4l-1.242 1.3A1 1 0 0 0 7 15.5h10a1 1 0 0 0 .8-1.636l-1.2-1.368A2 2 0 0 1 16 10.764V8a4 4 0 0 0-4-4Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M10 18a2 2 0 0 0 4 0"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M5 8.5a7 7 0 0 1 2.2-3.9"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M19 8.5a7 7 0 0 0-2.2-3.9"
       stroke="currentColor"
       strokeWidth="1.5"
       strokeLinecap="round"
