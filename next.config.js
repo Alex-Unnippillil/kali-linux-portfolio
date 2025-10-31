@@ -100,6 +100,39 @@ const normalizedBasePath = (() => {
   return prefixed.endsWith('/') && prefixed !== '/' ? prefixed.slice(0, -1) : prefixed;
 })();
 
+const topAppRoutes = [
+  '/apps/firefox',
+  '/apps/terminal',
+  '/apps/vscode',
+  '/apps/x',
+  '/apps/spotify',
+  '/apps/youtube',
+];
+
+const topAppIconPaths = [
+  '/themes/Yaru/apps/firefox.svg',
+  '/themes/Yaru/apps/bash.svg',
+  '/themes/Yaru/apps/vscode.png',
+  '/themes/Yaru/apps/x.png',
+  '/themes/Yaru/apps/spotify.svg',
+  '/themes/Yaru/apps/youtube.svg',
+];
+
+const createPathMatcher = (paths) => {
+  const lookup = new Set(paths);
+  return (pathname) => {
+    if (lookup.has(pathname)) return true;
+    if (normalizedBasePath !== '/' && pathname.startsWith(normalizedBasePath)) {
+      const trimmed = pathname.slice(normalizedBasePath.length) || '/';
+      return lookup.has(trimmed);
+    }
+    return false;
+  };
+};
+
+const matchesTopAppRoute = createPathMatcher(topAppRoutes);
+const matchesTopAppIcon = createPathMatcher(topAppIconPaths);
+
 const startUrlRuntimeCaching = {
   urlPattern: ({ sameOrigin, url }) => {
     if (!sameOrigin) return false;
@@ -126,6 +159,34 @@ const startUrlRuntimeCaching = {
 
 const runtimeCaching = [
   startUrlRuntimeCaching,
+  {
+    urlPattern: ({ sameOrigin, url }) => sameOrigin && matchesTopAppRoute(url.pathname),
+    handler: 'StaleWhileRevalidate',
+    options: {
+      cacheName: buildAwareCacheName('top-app-shells'),
+      expiration: {
+        maxEntries: topAppRoutes.length,
+        maxAgeSeconds: 7 * 24 * 60 * 60,
+      },
+      matchOptions: {
+        ignoreSearch: true,
+      },
+    },
+  },
+  {
+    urlPattern: ({ sameOrigin, url }) => sameOrigin && matchesTopAppIcon(url.pathname),
+    handler: 'CacheFirst',
+    options: {
+      cacheName: buildAwareCacheName('top-app-icons'),
+      cacheableResponse: {
+        statuses: [0, 200],
+      },
+      expiration: {
+        maxEntries: topAppIconPaths.length,
+        maxAgeSeconds: 30 * 24 * 60 * 60,
+      },
+    },
+  },
   ...defaultRuntimeCaching.map((entry) => ({
     ...entry,
     ...(entry.options
@@ -148,19 +209,31 @@ const withPWA = withPWAInit({
   buildExcludes: [/dynamic-css-manifest\.json$/],
   workboxOptions: {
     navigateFallback: '/offline.html',
-    additionalManifestEntries: [
-      { url: '/', revision: null },
-      { url: '/feeds', revision: null },
-      { url: '/about', revision: null },
-      { url: '/projects', revision: null },
-      { url: '/projects.json', revision: null },
-      { url: '/apps', revision: null },
-      { url: '/apps/weather', revision: null },
-      { url: '/apps/terminal', revision: null },
-      { url: '/apps/checkers', revision: null },
-      { url: '/offline.html', revision: null },
-      { url: '/manifest.webmanifest', revision: null },
-    ],
+    additionalManifestEntries: (() => {
+      const baseEntries = [
+        { url: '/', revision: null },
+        { url: '/feeds', revision: null },
+        { url: '/about', revision: null },
+        { url: '/projects', revision: null },
+        { url: '/projects.json', revision: null },
+        { url: '/apps', revision: null },
+        { url: '/apps/weather', revision: null },
+        { url: '/apps/terminal', revision: null },
+        { url: '/apps/checkers', revision: null },
+        { url: '/offline.html', revision: null },
+        { url: '/manifest.webmanifest', revision: null },
+      ];
+
+      const seen = new Set(baseEntries.map((entry) => entry.url));
+      for (const url of [...topAppRoutes, ...topAppIconPaths]) {
+        if (!seen.has(url)) {
+          baseEntries.push({ url, revision: null });
+          seen.add(url);
+        }
+      }
+
+      return baseEntries;
+    })(),
     runtimeCaching,
     ...(workboxCacheId && { cacheId: workboxCacheId }),
   },
