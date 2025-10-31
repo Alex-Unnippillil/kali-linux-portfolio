@@ -1,14 +1,51 @@
+import { LRUCache } from 'lru-cache';
 import { randomBytes } from 'crypto';
 import { contactSchema } from '../../utils/contactSchema';
 import { validateServerEnv } from '../../lib/validate';
 import { getServiceSupabase } from '../../lib/supabase';
 import { formatCookie } from '../../utils/cookies';
 
-// Simple in-memory rate limiter. Not suitable for distributed environments.
-export const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX = 5;
+const DEFAULT_RATE_LIMIT_WINDOW_MS = 60_000;
+const DEFAULT_RATE_LIMIT_MAX = 5;
+const DEFAULT_RATE_LIMIT_CACHE_SIZE = 500;
 
-export const rateLimit = new Map();
+const toPositiveInteger = (value, fallback) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
+};
+
+export const RATE_LIMIT_WINDOW_MS = toPositiveInteger(
+  process.env.CONTACT_RATE_LIMIT_WINDOW_MS,
+  DEFAULT_RATE_LIMIT_WINDOW_MS
+);
+
+export const RATE_LIMIT_MAX = toPositiveInteger(
+  process.env.CONTACT_RATE_LIMIT_MAX,
+  DEFAULT_RATE_LIMIT_MAX
+);
+
+export const RATE_LIMIT_CACHE_SIZE = toPositiveInteger(
+  process.env.CONTACT_RATE_LIMIT_CACHE_SIZE,
+  DEFAULT_RATE_LIMIT_CACHE_SIZE
+);
+
+export const rateLimit = new LRUCache({
+  max: RATE_LIMIT_CACHE_SIZE,
+  ttl: RATE_LIMIT_WINDOW_MS,
+  ttlAutopurge: true,
+  updateAgeOnGet: true,
+  updateAgeOnHas: true,
+});
+
+const logRejection = (ip, reason, extra = {}) => {
+  console.warn('Contact submission rejected', {
+    ip,
+    reason,
+    limit: RATE_LIMIT_MAX,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    ...extra,
+  });
+};
 
 export default async function handler(req, res) {
   try {
@@ -47,21 +84,11 @@ export default async function handler(req, res) {
 
   const ip =
     req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
-  const now = Date.now();
-  const entry = rateLimit.get(ip) || { count: 0, start: now };
-  if (now - entry.start > RATE_LIMIT_WINDOW_MS) {
-    entry.count = 0;
-    entry.start = now;
-  }
-  entry.count += 1;
-  rateLimit.set(ip, entry);
-  for (const [key, value] of rateLimit) {
-    if (now - value.start > RATE_LIMIT_WINDOW_MS) {
-      rateLimit.delete(key);
-    }
-  }
-  if (entry.count > RATE_LIMIT_MAX) {
-    console.warn('Contact submission rejected', { ip, reason: 'rate_limit' });
+  const existing = rateLimit.get(ip) || { count: 0 };
+  const nextCount = existing.count + 1;
+  rateLimit.set(ip, { count: nextCount });
+  if (nextCount > RATE_LIMIT_MAX) {
+    logRejection(ip, 'rate_limit', { count: nextCount });
     res.status(429).json({ ok: false, code: 'rate_limit' });
     return;
   }
@@ -69,7 +96,7 @@ export default async function handler(req, res) {
   const csrfHeader = req.headers['x-csrf-token'];
   const csrfCookie = req.cookies?.csrfToken;
   if (!csrfHeader || !csrfCookie || csrfHeader !== csrfCookie) {
-    console.warn('Contact submission rejected', { ip, reason: 'invalid_csrf' });
+    logRejection(ip, 'invalid_csrf');
     res.status(403).json({ ok: false, code: 'invalid_csrf' });
     return;
   }
@@ -77,12 +104,12 @@ export default async function handler(req, res) {
   const { recaptchaToken = '', ...rest } = req.body || {};
   const secret = process.env.RECAPTCHA_SECRET;
   if (!secret) {
-    console.warn('Contact submission rejected', { ip, reason: 'recaptcha_disabled' });
+    logRejection(ip, 'recaptcha_disabled');
     res.status(503).json({ ok: false, code: 'recaptcha_disabled' });
     return;
   }
   if (!recaptchaToken) {
-    console.warn('Contact submission rejected', { ip, reason: 'invalid_recaptcha' });
+    logRejection(ip, 'invalid_recaptcha');
     res.status(400).json({ ok: false, code: 'invalid_recaptcha' });
     return;
   }
@@ -102,12 +129,12 @@ export default async function handler(req, res) {
     );
     const captcha = await verify.json();
     if (!captcha.success) {
-      console.warn('Contact submission rejected', { ip, reason: 'invalid_recaptcha' });
+      logRejection(ip, 'invalid_recaptcha');
       res.status(400).json({ ok: false, code: 'invalid_recaptcha' });
       return;
     }
   } catch {
-    console.warn('Contact submission rejected', { ip, reason: 'invalid_recaptcha' });
+    logRejection(ip, 'invalid_recaptcha');
     res.status(400).json({ ok: false, code: 'invalid_recaptcha' });
     return;
   }
@@ -116,13 +143,13 @@ export default async function handler(req, res) {
   try {
     const parsed = contactSchema.parse({ ...rest, csrfToken: csrfHeader, recaptchaToken });
     if (parsed.honeypot) {
-      console.warn('Contact submission rejected', { ip, reason: 'honeypot' });
+      logRejection(ip, 'honeypot');
       res.status(400).json({ ok: false, code: 'invalid_input' });
       return;
     }
     sanitized = { name: parsed.name, email: parsed.email, message: parsed.message };
   } catch {
-    console.warn('Contact submission rejected', { ip, reason: 'invalid_input' });
+    logRejection(ip, 'invalid_input');
     res.status(400).json({ ok: false, code: 'invalid_input' });
     return;
   }
