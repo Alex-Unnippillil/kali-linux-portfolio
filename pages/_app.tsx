@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 import type { AppProps } from 'next/app';
 import { Analytics } from '@vercel/analytics/next';
@@ -20,6 +20,7 @@ import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 import { Rajdhani } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
+import { safeLocalStorage } from '../utils/safeStorage';
 
 type PeriodicSyncPermissionDescriptor = PermissionDescriptor & {
   name: 'periodic-background-sync';
@@ -76,12 +77,28 @@ type AnalyticsEventWithMetadata = BeforeSendEvent & {
   metadata?: (Record<string, unknown> & { email?: unknown }) | undefined;
 };
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed';
+    platform: string;
+  }>;
+}
+
+const INSTALL_DISMISS_KEY = 'pwa-install-banner-dismissed-at';
+const INSTALL_DISMISS_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+
 const kaliSans = Rajdhani({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
 });
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
+  const [installPromptEvent, setInstallPromptEvent] = useState<BeforeInstallPromptEvent | null>(
+    null
+  );
+  const [isInstallBannerVisible, setInstallBannerVisible] = useState(false);
+
   useEffect(() => {
     const initAnalytics = async (): Promise<void> => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
@@ -203,6 +220,71 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
     };
   }, []);
 
+  useEffect(() => {
+    const shouldRespectCooldown = (): boolean => {
+      const stored = safeLocalStorage?.getItem(INSTALL_DISMISS_KEY);
+      if (!stored) return false;
+
+      const parsed = Number(stored);
+      if (Number.isNaN(parsed)) return false;
+
+      return Date.now() - parsed < INSTALL_DISMISS_COOLDOWN_MS;
+    };
+
+    const handleBeforeInstallPrompt = (event: Event): void => {
+      event.preventDefault();
+      const promptEvent = event as BeforeInstallPromptEvent;
+
+      if (shouldRespectCooldown()) {
+        setInstallPromptEvent(null);
+        return;
+      }
+
+      setInstallPromptEvent(promptEvent);
+      setInstallBannerVisible(true);
+    };
+
+    const handleAppInstalled = (): void => {
+      setInstallBannerVisible(false);
+      setInstallPromptEvent(null);
+      safeLocalStorage?.removeItem(INSTALL_DISMISS_KEY);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallClick = useCallback(async () => {
+    const promptEvent = installPromptEvent;
+    if (!promptEvent) return;
+
+    setInstallBannerVisible(false);
+    setInstallPromptEvent(null);
+
+    try {
+      await promptEvent.prompt();
+      const choice = await promptEvent.userChoice;
+      if (choice?.outcome === 'dismissed') {
+        safeLocalStorage?.setItem(INSTALL_DISMISS_KEY, String(Date.now()));
+      } else if (choice?.outcome === 'accepted') {
+        safeLocalStorage?.removeItem(INSTALL_DISMISS_KEY);
+      }
+    } catch (error) {
+      console.error('PWA install prompt failed', error);
+    }
+  }, [installPromptEvent]);
+
+  const handleDismissBanner = useCallback(() => {
+    setInstallBannerVisible(false);
+    safeLocalStorage?.setItem(INSTALL_DISMISS_KEY, String(Date.now()));
+    setInstallPromptEvent(null);
+  }, []);
+
   return (
     <ErrorBoundary>
       <div className={kaliSans.className}>
@@ -216,9 +298,37 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
           <NotificationCenter>
             <PipPortalProvider>
               <div aria-live="polite" id="live-region" />
+              {isInstallBannerVisible && (
+                <div
+                  role="dialog"
+                  aria-modal="false"
+                  aria-label="Install application prompt"
+                  className="fixed bottom-4 left-1/2 z-50 w-[min(90vw,24rem)] -translate-x-1/2 rounded-lg border border-slate-200 bg-slate-900/95 p-4 text-slate-100 shadow-lg backdrop-blur"
+                >
+                  <p className="text-sm font-medium">
+                    Install this app for a faster desktop experience and offline access.
+                  </p>
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:justify-end">
+                    <button
+                      type="button"
+                      onClick={handleInstallClick}
+                      className="rounded bg-emerald-500 px-3 py-1.5 text-sm font-semibold text-black transition hover:bg-emerald-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+                    >
+                      Install
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDismissBanner}
+                      className="rounded border border-slate-500 px-3 py-1.5 text-sm font-medium text-slate-200 transition hover:border-slate-400 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                    >
+                      Not now
+                    </button>
+                  </div>
+                </div>
+              )}
               <Component {...pageProps} />
               <ShortcutOverlay />
-              <Analytics
+                <Analytics
                 beforeSend={(event) => {
                   if (event.url.includes('/admin') || event.url.includes('/private')) return null;
                   const evt = event as AnalyticsEventWithMetadata;
