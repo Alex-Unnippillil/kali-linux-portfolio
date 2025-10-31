@@ -219,6 +219,7 @@ export class Desktop extends Component {
         this.workspaceThemes = Array.from({ length: this.workspaceCount }, () => ({ ...initialTheme }));
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.contextMenuRestoreRef = { current: null };
 
         this.iconSizePresetStorageKey = 'desktop_icon_size_presets';
         this.iconSizePresetLegacyKey = 'desktop_icon_size_preset';
@@ -4195,10 +4196,25 @@ export class Desktop extends Component {
         });
     }
 
+    setContextMenuInvoker = (node) => {
+        if (node && typeof node.focus === 'function') {
+            this.contextMenuRestoreRef.current = node;
+            return;
+        }
+
+        const activeElement = document.activeElement;
+        if (activeElement && typeof activeElement.focus === 'function') {
+            this.contextMenuRestoreRef.current = activeElement;
+        } else {
+            this.contextMenuRestoreRef.current = null;
+        }
+    }
+
     checkContextMenu = (e) => {
         e.preventDefault();
-        this.hideAllContextMenu();
         const target = e.target.closest('[data-context]');
+        this.setContextMenuInvoker(target);
+        this.hideAllContextMenu();
         const context = target ? target.dataset.context : null;
         const appId = target ? target.dataset.appId : null;
         switch (context) {
@@ -4235,8 +4251,9 @@ export class Desktop extends Component {
     handleContextKey = (e) => {
         if (!(e.shiftKey && e.key === 'F10')) return;
         e.preventDefault();
-        this.hideAllContextMenu();
         const target = e.target.closest('[data-context]');
+        this.setContextMenuInvoker(target);
+        this.hideAllContextMenu();
         const context = target ? target.dataset.context : null;
         const appId = target ? target.dataset.appId : null;
         const rect = target ? target.getBoundingClientRect() : { left: 0, top: 0, height: 0 };
@@ -5319,14 +5336,21 @@ export class Desktop extends Component {
                     iconSizeBucketLabel={this.getViewportBucketLabel(this.state.iconSizeBucket)}
                     setIconSizePreset={this.setIconSizePreset}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    onClose={this.hideAllContextMenu}
+                    restoreFocusRef={this.contextMenuRestoreRef}
                 />
-                <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
+                <DefaultMenu
+                    active={this.state.context_menus.default}
+                    onClose={this.hideAllContextMenu}
+                    restoreFocusRef={this.contextMenuRestoreRef}
+                />
                 <AppMenu
                     active={this.state.context_menus.app}
                     pinned={this.initFavourite[this.state.context_app]}
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
                     onClose={this.hideAllContextMenu}
+                    restoreFocusRef={this.contextMenuRestoreRef}
                 />
                 <TaskbarMenu
                     active={this.state.context_menus.taskbar}
@@ -5358,6 +5382,7 @@ export class Desktop extends Component {
                             this.closeApp(id);
                         }
                     }}
+                    restoreFocusRef={this.contextMenuRestoreRef}
                     onCloseMenu={this.hideAllContextMenu}
                 />
 
