@@ -1,23 +1,26 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import FormError from '../../ui/FormError';
 import { copyToClipboard } from '../../../utils/clipboard';
 import { openMailto } from '../../../utils/mailto';
 import { contactSchema } from '../../../utils/contactSchema';
+import {
+  clearContactQueue,
+  countQueuedContactSubmissions,
+  flushContactQueue,
+  notifyQueueUpdated,
+  prepareContactSubmission,
+  queueContactSubmission,
+  queueUnavailableMessage,
+  registerContactBackgroundSync,
+  isQueueSupported,
+  ContactSubmissionRequest,
+} from '@/services/contactQueue';
 import AttachmentUploader, {
   MAX_TOTAL_ATTACHMENT_SIZE,
 } from '../../../apps/contact/components/AttachmentUploader';
 import AttachmentCarousel from '../../../apps/contact/components/AttachmentCarousel';
-
-const sanitize = (str: string) =>
-  str.replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  }[c]!));
 
 const errorMap: Record<string, string> = {
   rate_limit: 'Too many requests. Please try again later.',
@@ -26,8 +29,15 @@ const errorMap: Record<string, string> = {
   invalid_recaptcha: 'Captcha verification failed. Please try again.',
   recaptcha_disabled:
     'Captcha service is not configured. Please use the options above.',
+  network_error: 'Network error. Saved for retry when you are back online.',
 
 };
+export interface ProcessContactResult {
+  success: boolean;
+  error?: string;
+  code?: string;
+  queuedSubmission?: ContactSubmissionRequest;
+}
 
 export const processContactForm = async (
   data: {
@@ -39,39 +49,50 @@ export const processContactForm = async (
     recaptchaToken: string;
   },
   fetchImpl: typeof fetch = fetch,
-) => {
+): Promise<ProcessContactResult> => {
+  const parsed = contactSchema.safeParse(data);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: errorMap.invalid_input,
+      code: 'invalid_input',
+    };
+  }
+
+  const submission = prepareContactSubmission(parsed.data);
+
   try {
-    const parsed = contactSchema.parse(data);
     const res = await fetchImpl('/api/contact', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRF-Token': parsed.csrfToken,
+        'X-CSRF-Token': submission.csrfToken,
       },
-      body: JSON.stringify({
-        name: sanitize(parsed.name),
-        email: parsed.email,
-        message: sanitize(parsed.message),
-        honeypot: parsed.honeypot,
-        recaptchaToken: parsed.recaptchaToken,
-      }),
+      body: JSON.stringify(submission.requestBody),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
+      const code = (body.code as string) || 'submission_failed';
       return {
         success: false,
-        error: errorMap[body.code as string] || 'Submission failed',
-        code: body.code as string,
+        error: errorMap[code] || 'Submission failed',
+        code,
       };
     }
     return { success: true };
   } catch {
-    return { success: false, error: 'Submission failed' };
+    return {
+      success: false,
+      error: errorMap.network_error,
+      code: 'network_error',
+      queuedSubmission: submission,
+    };
   }
 };
 
 const DRAFT_FILE = 'contact-draft.json';
 const EMAIL = 'alex.unnippillil@hotmail.com';
+const SYNC_OPT_IN_KEY = 'contact-sync-opt-in';
 
 const getRecaptchaToken = (siteKey: string): Promise<string> =>
   new Promise((resolve) => {
@@ -154,6 +175,20 @@ const ContactApp: React.FC = () => {
   const [fallback, setFallback] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [messageError, setMessageError] = useState('');
+  const [queueSupported, setQueueSupported] = useState(false);
+  const [hasBackgroundSync, setHasBackgroundSync] = useState(false);
+  const [syncOptIn, setSyncOptIn] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [queueNote, setQueueNote] = useState('');
+
+  const refreshQueueCount = useCallback(async () => {
+    if (!isQueueSupported()) {
+      setPendingCount(0);
+      return;
+    }
+    const count = await countQueuedContactSubmissions();
+    setPendingCount(count);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -170,11 +205,105 @@ const ContactApp: React.FC = () => {
     if (!siteKey || !(window as any).grecaptcha) {
       setFallback(true);
     }
-  }, []);
+    setQueueSupported(isQueueSupported());
+    setHasBackgroundSync(typeof window !== 'undefined' && 'SyncManager' in window);
+    const storedOptIn = localStorage.getItem(SYNC_OPT_IN_KEY);
+    setSyncOptIn(storedOptIn === 'true');
+    void refreshQueueCount();
+  }, [refreshQueueCount]);
 
   useEffect(() => {
     void writeDraft({ name, email, message });
   }, [name, email, message]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handler = () => {
+      if (!syncOptIn) return;
+      void (async () => {
+        await flushContactQueue();
+        notifyQueueUpdated();
+        await refreshQueueCount();
+      })();
+    };
+    window.addEventListener('online', handler);
+    return () => {
+      window.removeEventListener('online', handler);
+    };
+  }, [syncOptIn, refreshQueueCount]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
+      return;
+    }
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'contact-queue-updated') {
+        void refreshQueueCount();
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handleMessage);
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleMessage);
+    };
+  }, [refreshQueueCount]);
+
+  const handleQueueToggle = async () => {
+    if (!queueSupported) {
+      setQueueNote(queueUnavailableMessage);
+      return;
+    }
+    const next = !syncOptIn;
+    setSyncOptIn(next);
+    localStorage.setItem(SYNC_OPT_IN_KEY, next ? 'true' : 'false');
+    if (next) {
+      if (hasBackgroundSync) {
+        const registered = await registerContactBackgroundSync();
+        if (!registered) {
+          setQueueNote(queueUnavailableMessage);
+        } else {
+          setQueueNote('');
+        }
+      } else {
+        setQueueNote(queueUnavailableMessage);
+      }
+    } else {
+      setQueueNote('');
+    }
+    await refreshQueueCount();
+  };
+
+  const handleClearQueue = async () => {
+    await clearContactQueue();
+    await refreshQueueCount();
+    notifyQueueUpdated();
+    setBanner({ type: 'success', message: 'Pending messages cleared' });
+  };
+
+  const queueSubmissionForRetry = useCallback(
+    async (submission?: ContactSubmissionRequest) => {
+      if (!queueSupported || !syncOptIn || !submission) {
+        return false;
+      }
+      const id = await queueContactSubmission(submission);
+      if (id === null) {
+        return false;
+      }
+      await refreshQueueCount();
+      notifyQueueUpdated();
+      if (hasBackgroundSync) {
+        const registered = await registerContactBackgroundSync();
+        if (!registered) {
+          setQueueNote(queueUnavailableMessage);
+        } else {
+          setQueueNote('');
+        }
+      } else {
+        setQueueNote(queueUnavailableMessage);
+      }
+      return true;
+    },
+    [queueSupported, syncOptIn, refreshQueueCount, hasBackgroundSync],
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -246,6 +375,21 @@ const ContactApp: React.FC = () => {
       setAttachments([]);
       void deleteDraft();
     } else {
+      if (result.code === 'network_error') {
+        const queued = await queueSubmissionForRetry(result.queuedSubmission);
+        if (queued) {
+          setBanner({
+            type: 'success',
+            message: 'Saved offline. We will retry once you are back online.',
+          });
+          setError('');
+          setAttachments([]);
+          setHoneypot('');
+          void deleteDraft();
+          setSubmitting(false);
+          return;
+        }
+      }
       const msg = result.error || 'Submission failed';
       setError(msg);
       setBanner({ type: 'error', message: msg });
@@ -298,6 +442,58 @@ const ContactApp: React.FC = () => {
           </button>
         </p>
       )}
+      <section className="mb-6 rounded border border-gray-800 bg-gray-900 p-4 text-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <label
+              htmlFor="contact-sync-opt-in"
+              id="contact-sync-opt-in-label"
+              className="font-semibold text-gray-100"
+            >
+              Retry automatically when online
+            </label>
+            <p className="mt-1 text-xs text-gray-400" id="contact-sync-opt-in-help">
+              Store your message locally and let the service worker resend it when connectivity returns.
+            </p>
+          </div>
+          <input
+            id="contact-sync-opt-in"
+            type="checkbox"
+            className="h-5 w-5 disabled:cursor-not-allowed"
+            checked={syncOptIn}
+            onChange={() => {
+              void handleQueueToggle();
+            }}
+            aria-describedby="contact-sync-opt-in-help"
+            aria-labelledby="contact-sync-opt-in-label"
+            disabled={!queueSupported}
+            aria-label="Enable automatic retries"
+          />
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <span className="text-xs text-gray-400">
+            {pendingCount === 0
+              ? 'No pending messages.'
+              : `${pendingCount} pending message${pendingCount === 1 ? '' : 's'}.`}
+          </span>
+          {pendingCount > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                void handleClearQueue();
+              }}
+              className="rounded bg-gray-700 px-3 py-1 text-xs text-white transition hover:bg-gray-600"
+            >
+              Clear pending
+            </button>
+          )}
+        </div>
+        {(queueNote || !queueSupported) && (
+          <p className="mt-3 text-xs text-yellow-400">
+            {queueSupported ? queueNote : queueUnavailableMessage}
+          </p>
+        )}
+      </section>
       <form onSubmit={handleSubmit} className="space-y-6 max-w-md">
         <div className="relative">
           <input
@@ -307,6 +503,7 @@ const ContactApp: React.FC = () => {
             onChange={(e) => setName(e.target.value)}
             required
             placeholder=" "
+            aria-label="Name"
           />
           <label
             htmlFor="contact-name"
@@ -326,6 +523,7 @@ const ContactApp: React.FC = () => {
             aria-invalid={!!emailError}
             aria-describedby={emailError ? 'contact-email-error' : undefined}
             placeholder=" "
+            aria-label="Email"
           />
           <label
             htmlFor="contact-email"
@@ -350,6 +548,7 @@ const ContactApp: React.FC = () => {
             aria-invalid={!!messageError}
             aria-describedby={messageError ? 'contact-message-error' : undefined}
             placeholder=" "
+            aria-label="Message"
           />
           <label
             htmlFor="contact-message"
@@ -381,6 +580,7 @@ const ContactApp: React.FC = () => {
           className="hidden"
           tabIndex={-1}
           autoComplete="off"
+          aria-hidden="true"
         />
         {error && <FormError className="mt-3">{error}</FormError>}
         <button
