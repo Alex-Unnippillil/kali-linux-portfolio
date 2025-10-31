@@ -18,6 +18,7 @@ import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { scheduleAnalyticsInitialization } from '../utils/analytics';
 import { Rajdhani } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
 
@@ -83,17 +84,7 @@ const kaliSans = Rajdhani({
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
   useEffect(() => {
-    const initAnalytics = async (): Promise<void> => {
-      const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
-      if (trackingId) {
-        const { default: ReactGA } = await import('react-ga4');
-        ReactGA.initialize(trackingId);
-      }
-    };
-
-    void initAnalytics().catch((err) => {
-      console.error('Analytics initialization failed', err);
-    });
+    const cancelAnalyticsInit = scheduleAnalyticsInitialization();
 
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
       const swPath = resolveServiceWorkerPath();
@@ -139,6 +130,9 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
       });
     }
 
+    return () => {
+      cancelAnalyticsInit?.();
+    };
   }, []);
 
   useEffect(() => {
