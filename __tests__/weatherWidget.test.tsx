@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import WeatherWidget from '../apps/weather_widget';
 import { SettingsContext } from '../hooks/useSettings';
-import { defaults } from '../utils/settingsStore';
+import { defaults } from '../utils/settingsStorage';
 import { resolveDesktopTheme } from '../utils/theme';
 
 type SettingsOverrides = Partial<React.ContextType<typeof SettingsContext>>;

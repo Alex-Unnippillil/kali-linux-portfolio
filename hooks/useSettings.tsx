@@ -31,7 +31,7 @@ import {
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
   defaults,
-} from '../utils/settingsStore';
+} from '../utils/settingsStorage';
 import {
   DesktopTheme,
   DESKTOP_THEME_PRESETS,
