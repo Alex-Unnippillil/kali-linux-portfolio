@@ -167,12 +167,26 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
   );
 
   useEffect(() => {
-    const nav: any = navigator;
-    if (nav && nav.setAppBadge) {
-      if (unreadCount > 0) nav.setAppBadge(unreadCount).catch(() => {});
-      else nav.clearAppBadge?.().catch(() => {});
-    }
-  }, [unreadCount]);
+    if (typeof window === 'undefined') return undefined;
+    const win = window as typeof window & {
+      __kaliNotifications?: {
+        pushNotification: typeof pushNotification;
+        clearNotifications: typeof clearNotifications;
+        markAllRead: typeof markAllRead;
+      };
+    };
+    const debugApi = {
+      pushNotification,
+      clearNotifications,
+      markAllRead,
+    };
+    win.__kaliNotifications = debugApi;
+    return () => {
+      if (win.__kaliNotifications === debugApi) {
+        delete win.__kaliNotifications;
+      }
+    };
+  }, [clearNotifications, markAllRead, pushNotification]);
 
   return (
     <NotificationsContext.Provider

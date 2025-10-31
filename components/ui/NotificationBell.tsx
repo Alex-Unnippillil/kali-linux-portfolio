@@ -14,6 +14,7 @@ import {
   NotificationPriority,
 } from '../../hooks/useNotifications';
 import { PRIORITY_ORDER } from '../../utils/notifications/ruleEngine';
+import useAppBadge from '../../hooks/useAppBadge';
 
 const focusableSelector =
   'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
@@ -79,6 +80,7 @@ const NotificationBell: React.FC = () => {
     clearNotifications,
     markAllRead,
   } = useNotifications();
+  const { isSupported: isBadgingSupported, setBadge, clearBadge } = useAppBadge();
 
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -187,6 +189,19 @@ const NotificationBell: React.FC = () => {
       markAllRead();
     }
   }, [isOpen, markAllRead, notifications]);
+
+  useEffect(() => {
+    if (!isBadgingSupported) return;
+    if (isOpen) {
+      clearBadge();
+      return;
+    }
+    if (unreadCount > 0) {
+      setBadge(unreadCount);
+    } else {
+      clearBadge();
+    }
+  }, [clearBadge, isBadgingSupported, isOpen, setBadge, unreadCount]);
 
   const timeFormatter = useMemo(
     () =>
