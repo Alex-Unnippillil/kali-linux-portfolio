@@ -166,6 +166,118 @@ const readMotionDuration = (customProperty, fallback) => {
     return parseDurationToMs(first, fallback);
 };
 
+const getDocumentElement = () => {
+    if (typeof document === 'undefined') {
+        return null;
+    }
+    return document.documentElement || null;
+};
+
+const shouldReduceMotion = () => {
+    if (typeof window === 'undefined') {
+        return false;
+    }
+    const prefersReduced = typeof window.matchMedia === 'function'
+        && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) {
+        return true;
+    }
+    const root = getDocumentElement();
+    if (!root) return false;
+    return root.classList.contains('reduce-motion');
+};
+
+const formatDistanceValue = (value, fallback = '0px') => {
+    if (typeof value === 'number') {
+        if (!Number.isFinite(value)) return fallback;
+        return `${value}px`;
+    }
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed) {
+            return trimmed;
+        }
+    }
+    return fallback;
+};
+
+let windowAudioContext = null;
+
+const resolveAudioContext = () => {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+    const Ctor = window.AudioContext || window.webkitAudioContext;
+    if (!Ctor) {
+        return null;
+    }
+    if (windowAudioContext && windowAudioContext.state === 'closed') {
+        windowAudioContext = null;
+    }
+    if (!windowAudioContext) {
+        try {
+            windowAudioContext = new Ctor();
+        } catch (error) {
+            windowAudioContext = null;
+        }
+    }
+    return windowAudioContext;
+};
+
+const isWindowSoundMuted = () => {
+    const root = getDocumentElement();
+    if (!root) {
+        return true;
+    }
+    if (root.hasAttribute('data-sound-muted')) {
+        return true;
+    }
+    if (root.hasAttribute('data-window-sounds-muted')) {
+        return true;
+    }
+    return false;
+};
+
+const WINDOW_SOUND_FREQUENCIES = {
+    minimize: 420,
+    maximize: 600,
+    restore: 500,
+};
+
+const playWindowSound = (type) => {
+    if (isWindowSoundMuted()) {
+        return;
+    }
+    const context = resolveAudioContext();
+    if (!context) {
+        return;
+    }
+    const frequency = WINDOW_SOUND_FREQUENCIES[type] || WINDOW_SOUND_FREQUENCIES.restore;
+    const now = context.currentTime;
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(frequency, now);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.12, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    if (typeof context.resume === 'function' && context.state === 'suspended') {
+        context.resume().catch(() => { /* ignore */ });
+    }
+    oscillator.start(now);
+    oscillator.stop(now + 0.3);
+    oscillator.addEventListener('ended', () => {
+        try {
+            gain.disconnect();
+            oscillator.disconnect();
+        } catch (error) {
+            // ignore cleanup errors
+        }
+    });
+};
+
 const scheduleTimeout = (callback, delay) => {
     if (typeof window !== 'undefined' && typeof window.setTimeout === 'function') {
         return window.setTimeout(callback, delay);
@@ -259,6 +371,7 @@ export class Window extends Component {
         this._lastSnapBottomInset = null;
         this._lastSafeAreaBottom = null;
         this._isUnmounted = false;
+        this._minimizeFrame = null;
     }
 
     notifySizeChange = () => {
@@ -292,6 +405,10 @@ export class Window extends Component {
     }
 
     componentDidUpdate(prevProps) {
+        if (prevProps.minimized !== this.props.minimized) {
+            this.handleMinimizedChange(this.props.minimized);
+        }
+
         if (prevProps.minWidth === this.props.minWidth && prevProps.minHeight === this.props.minHeight) {
             return;
         }
@@ -369,6 +486,10 @@ export class Window extends Component {
         if (this._dragFrame) {
             cancelScheduledAnimationFrame(this._dragFrame);
             this._dragFrame = null;
+        }
+        if (this._minimizeFrame !== null) {
+            cancelScheduledAnimationFrame(this._minimizeFrame);
+            this._minimizeFrame = null;
         }
         this._pendingDragUpdate = null;
         this.cancelResizeSession();
@@ -669,16 +790,91 @@ export class Window extends Component {
             maximize: '--window-motion-duration-maximize',
             restore: '--window-motion-duration-restore',
             snap: '--window-motion-duration-snap',
+            minimize: '--window-motion-duration-minimize',
         };
         const easingVars = {
             maximize: '--window-motion-ease-maximize',
             restore: '--window-motion-ease-restore',
             snap: '--window-motion-ease-snap',
+            minimize: '--window-motion-ease-minimize',
         };
         const duration = durationVars[preset] || durationVars.restore;
         const easing = easingVars[preset] || easingVars.restore;
-        node.style.setProperty('--window-motion-transform-duration', `var(${duration})`);
-        node.style.setProperty('--window-motion-transform-easing', `var(${easing})`);
+        if (shouldReduceMotion()) {
+            node.style.setProperty('--window-motion-transform-duration', '0ms');
+            node.style.setProperty('--window-motion-transform-easing', 'linear');
+        } else {
+            node.style.setProperty('--window-motion-transform-duration', `var(${duration})`);
+            node.style.setProperty('--window-motion-transform-easing', `var(${easing})`);
+        }
+    }
+
+    applyWindowTransform = (node, x, y, options = {}) => {
+        if (!node) return null;
+        const xValue = formatDistanceValue(x);
+        const yValue = formatDistanceValue(y);
+        const rawScale = typeof options.scale === 'number' && Number.isFinite(options.scale)
+            ? options.scale
+            : 1;
+        const scale = Math.max(rawScale, 0);
+        const style = node.style;
+        if (style) {
+            if (typeof style.setProperty === 'function') {
+                style.setProperty('--window-transform-x', xValue);
+                style.setProperty('--window-transform-y', yValue);
+                style.setProperty('--window-transform-scale', `${scale}`);
+            } else {
+                style['--window-transform-x'] = xValue;
+                style['--window-transform-y'] = yValue;
+                style['--window-transform-scale'] = `${scale}`;
+            }
+        }
+        const scaleFragment = scale !== 1 ? ` scale(${scale})` : '';
+        const transformValue = `translate(${xValue}, ${yValue})${scaleFragment}`;
+        if (!node.style || node.style.transform !== transformValue) {
+            node.style.transform = transformValue;
+        }
+        return transformValue;
+    }
+
+    handleMinimizedChange = (isMinimized) => {
+        const node = this.getWindowNode();
+        if (!node) return;
+        if (this._minimizeFrame !== null) {
+            cancelScheduledAnimationFrame(this._minimizeFrame);
+            this._minimizeFrame = null;
+        }
+        const style = node.style;
+        const x = style && typeof style.getPropertyValue === 'function'
+            ? style.getPropertyValue('--window-transform-x')
+            : (style?.['--window-transform-x'] || '0px');
+        const y = style && typeof style.getPropertyValue === 'function'
+            ? style.getPropertyValue('--window-transform-y')
+            : (style?.['--window-transform-y'] || '0px');
+
+        const reduceMotion = shouldReduceMotion();
+        const currentScale = style && typeof style.getPropertyValue === 'function'
+            ? parseFloat(style.getPropertyValue('--window-transform-scale'))
+            : parseFloat(style?.['--window-transform-scale']);
+        const normalizedScale = Number.isFinite(currentScale) ? currentScale : 1;
+        const startScale = isMinimized ? 1 : Math.min(Math.max(normalizedScale, 0.9), 1);
+        const targetScale = isMinimized ? 0.92 : 1;
+
+        const preset = isMinimized ? 'minimize' : 'restore';
+        this.setTransformMotionPreset(node, preset);
+
+        if (reduceMotion) {
+            this.applyWindowTransform(node, x, y, { scale: 1 });
+        } else {
+            this.applyWindowTransform(node, x, y, { scale: startScale });
+            this._minimizeFrame = scheduleAnimationFrame(() => {
+                this._minimizeFrame = null;
+                if (this._isUnmounted) return;
+                this.applyWindowTransform(node, x, y, { scale: targetScale });
+            });
+        }
+
+        playWindowSound(isMinimized ? 'minimize' : 'restore');
     }
 
     activateOverlay = () => {
@@ -760,8 +956,9 @@ export class Window extends Component {
         const maxY = minY + this.state.parentSize.height;
         const baseY = snappedRelativeY + minY;
         const absoluteY = Math.min(Math.max(clampWindowTopPosition(baseY, minY), minY), maxY);
-        node.style.setProperty('--window-transform-x', `${absoluteX.toFixed(1)}px`);
-        node.style.setProperty('--window-transform-y', `${absoluteY.toFixed(1)}px`);
+        const roundedX = Number.isFinite(absoluteX) ? parseFloat(absoluteX.toFixed(1)) : absoluteX;
+        const roundedY = Number.isFinite(absoluteY) ? parseFloat(absoluteY.toFixed(1)) : absoluteY;
+        this.applyWindowTransform(node, roundedX, roundedY, { scale: 1 });
 
         if (this.props.onPositionChange) {
             this.props.onPositionChange(absoluteX, absoluteY);
@@ -778,7 +975,7 @@ export class Window extends Component {
             const x = node.style.getPropertyValue('--window-transform-x');
             const y = node.style.getPropertyValue('--window-transform-y');
             if (x && y) {
-                node.style.transform = `translate(${x},${y})`;
+                this.applyWindowTransform(node, x, y, { scale: 1 });
             }
         }
         if (this.state.lastSize) {
@@ -883,7 +1080,7 @@ export class Window extends Component {
 
         if (node) {
             this.setTransformMotionPreset(node, 'snap');
-            node.style.transform = `translate(${translateX}px, ${translateY}px)`;
+            this.applyWindowTransform(node, translateX, translateY, { scale: 1 });
         }
 
         const widthBase = containerWidth || viewportWidth || region.width || 1;
@@ -1061,10 +1258,7 @@ export class Window extends Component {
 
         x = resist(x, viewportLeft, maxX);
         y = resist(y, topBound, maxY);
-        const nextTransform = `translate(${x}px, ${y}px)`;
-        if (node.style.transform !== nextTransform) {
-            node.style.transform = nextTransform;
-        }
+        this.applyWindowTransform(node, x, y, { scale: 1 });
     }
 
     handleDrag = (e, data) => {
@@ -1283,9 +1477,7 @@ export class Window extends Component {
 
         const node = this.getWindowNode();
         if (node) {
-            node.style.transform = `translate(${translateX}px, ${translateY}px)`;
-            node.style.setProperty('--window-transform-x', `${translateX}px`);
-            node.style.setProperty('--window-transform-y', `${translateY}px`);
+            this.applyWindowTransform(node, translateX, translateY, { scale: 1 });
         }
 
         const horizontalPercent = viewportWidth ? (widthPx / viewportWidth) * 100 : this.state.width;
@@ -1428,23 +1620,9 @@ export class Window extends Component {
             this.setState({ maximized: false, preMaximizeBounds: null });
         }
 
-        const endTransform = `translate(${targetX}px,${targetY}px)`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
         this.setTransformMotionPreset(node, 'restore');
-        if (style && typeof style.setProperty === 'function') {
-            style.setProperty('--window-transform-x', `${targetX}px`);
-            style.setProperty('--window-transform-y', `${targetY}px`);
-        } else if (style) {
-            style['--window-transform-x'] = `${targetX}px`;
-            style['--window-transform-y'] = `${targetY}px`;
-        }
-        if (prefersReducedMotion) {
-            node.style.transform = endTransform;
-            return;
-        }
-
-        node.style.transform = endTransform;
+        this.applyWindowTransform(node, targetX, targetY, { scale: 1 });
+        playWindowSound('restore');
     }
 
     maximizeWindow = () => {
@@ -1481,17 +1659,9 @@ export class Window extends Component {
             if (node) {
                 this.setTransformMotionPreset(node, 'maximize');
                 const translateYOffset = Math.max(0, (viewportTop + containerTopOffset) - translateBase);
-                const transformValue = `translate(-1pt, ${translateYOffset}px)`;
-                node.style.transform = transformValue;
-                const { style } = node;
-                if (style && typeof style.setProperty === 'function') {
-                    style.setProperty('--window-transform-x', '-1pt');
-                    style.setProperty('--window-transform-y', `${translateYOffset}px`);
-                } else if (style) {
-                    style['--window-transform-x'] = '-1pt';
-                    style['--window-transform-y'] = `${translateYOffset}px`;
-                }
+                this.applyWindowTransform(node, '-1pt', `${translateYOffset}px`, { scale: 1 });
             }
+            playWindowSound('maximize');
             this.setState({ maximized: true, height: heightPercent, width: 100.2, preMaximizeBounds: preBounds }, () => {
                 this.notifySizeChange();
             });
@@ -1552,7 +1722,7 @@ export class Window extends Component {
                     let y = match ? parseFloat(match[2]) : 0;
                     x += dx;
                     y += dy;
-                    node.style.transform = `translate(${x}px, ${y}px)`;
+                    this.applyWindowTransform(node, x, y, { scale: 1 });
                     const rect = this.readNodeRect(node);
                     this.checkSnapPreview(node, rect);
                     this.setWinowsPosition();
