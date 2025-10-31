@@ -100,6 +100,14 @@ const normalizedBasePath = (() => {
   return prefixed.endsWith('/') && prefixed !== '/' ? prefixed.slice(0, -1) : prefixed;
 })();
 
+const basePathPrefix = normalizedBasePath === '/' ? '' : normalizedBasePath;
+
+const withBasePath = (path) => {
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  if (!basePathPrefix) return normalized;
+  return normalized === '/' ? basePathPrefix : `${basePathPrefix}${normalized}`;
+};
+
 const startUrlRuntimeCaching = {
   urlPattern: ({ sameOrigin, url }) => {
     if (!sameOrigin) return false;
@@ -147,20 +155,23 @@ const withPWA = withPWAInit({
   disable: process.env.NODE_ENV === 'development',
   buildExcludes: [/dynamic-css-manifest\.json$/],
   workboxOptions: {
-    navigateFallback: '/offline.html',
+    navigateFallback: withBasePath('/offline.html'),
     additionalManifestEntries: [
-      { url: '/', revision: null },
-      { url: '/feeds', revision: null },
-      { url: '/about', revision: null },
-      { url: '/projects', revision: null },
-      { url: '/projects.json', revision: null },
-      { url: '/apps', revision: null },
-      { url: '/apps/weather', revision: null },
-      { url: '/apps/terminal', revision: null },
-      { url: '/apps/checkers', revision: null },
-      { url: '/offline.html', revision: null },
-      { url: '/manifest.webmanifest', revision: null },
-    ],
+      '/',
+      '/feeds',
+      '/about',
+      '/projects',
+      '/projects.json',
+      '/apps',
+      '/apps/weather',
+      '/apps/terminal',
+      '/apps/checkers',
+      '/offline.html',
+      '/manifest.webmanifest',
+    ].map((path) => ({
+      url: withBasePath(path),
+      revision: null,
+    })),
     runtimeCaching,
     ...(workboxCacheId && { cacheId: workboxCacheId }),
   },
