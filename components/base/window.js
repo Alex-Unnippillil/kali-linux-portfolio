@@ -40,6 +40,9 @@ const normalizePercentageDimension = (value, fallback) => {
 
 const computeEdgeThreshold = (size) => clamp(size * EDGE_THRESHOLD_RATIO, EDGE_THRESHOLD_MIN, EDGE_THRESHOLD_MAX);
 
+const KEYBOARD_VISIBILITY_THRESHOLD = 120;
+const KEYBOARD_PADDING = 16;
+
 const getViewportMetrics = () => {
     if (typeof window === 'undefined') {
         return { width: 0, height: 0, left: 0, top: 0 };
@@ -259,6 +262,11 @@ export class Window extends Component {
         this._lastSnapBottomInset = null;
         this._lastSafeAreaBottom = null;
         this._isUnmounted = false;
+        this._visualViewportCleanup = null;
+        this._focusedEditable = null;
+        this._pendingViewportFrame = null;
+        this._keyboardAdjustment = null;
+        this._focusListenersBound = false;
     }
 
     notifySizeChange = () => {
@@ -289,6 +297,9 @@ export class Window extends Component {
         if (this.props.isFocused) {
             this.focusWindow();
         }
+        this.bindFocusListeners();
+        this.subscribeVisualViewport();
+        this.scheduleViewportAdjustment({ immediate: true });
     }
 
     componentDidUpdate(prevProps) {
@@ -373,6 +384,13 @@ export class Window extends Component {
         this._pendingDragUpdate = null;
         this.cancelResizeSession();
         this._resizeSession = null;
+        this.unbindFocusListeners();
+        this.unsubscribeVisualViewport();
+        if (this._pendingViewportFrame) {
+            cancelScheduledAnimationFrame(this._pendingViewportFrame);
+            this._pendingViewportFrame = null;
+        }
+        this._keyboardAdjustment = null;
     }
 
     setDefaultWindowDimenstion = () => {
@@ -528,6 +546,302 @@ export class Window extends Component {
             return document.getElementById(this.id);
         }
         return null;
+    }
+
+    bindFocusListeners = () => {
+        if (this._focusListenersBound) {
+            return;
+        }
+        const node = this.getWindowNode();
+        if (!node) {
+            return;
+        }
+        node.addEventListener('focusin', this.handleWindowFocusIn);
+        node.addEventListener('focusout', this.handleWindowFocusOut);
+        this._focusListenersBound = true;
+    }
+
+    unbindFocusListeners = () => {
+        if (!this._focusListenersBound) {
+            return;
+        }
+        const node = this.getWindowNode();
+        if (node) {
+            node.removeEventListener('focusin', this.handleWindowFocusIn);
+            node.removeEventListener('focusout', this.handleWindowFocusOut);
+        }
+        this._focusListenersBound = false;
+    }
+
+    handleWindowFocusIn = (event) => {
+        if (this._isUnmounted) return;
+        const target = event?.target;
+        if (!this.isEditableElement(target)) {
+            return;
+        }
+        this._focusedEditable = target;
+        this.scheduleViewportAdjustment({ immediate: true });
+    }
+
+    handleWindowFocusOut = (event) => {
+        if (this._isUnmounted) return;
+        const target = event?.target;
+        if (this._focusedEditable === target) {
+            this._focusedEditable = null;
+        }
+        this.scheduleViewportAdjustment();
+    }
+
+    isEditableElement = (element) => {
+        if (!element || typeof element !== 'object') {
+            return false;
+        }
+        const nodeType = element.nodeType;
+        if (typeof nodeType === 'number' && nodeType !== 1) {
+            return false;
+        }
+        const tagName = typeof element.tagName === 'string'
+            ? element.tagName.toLowerCase()
+            : '';
+        if (tagName === 'textarea') {
+            return !element.disabled;
+        }
+        if (tagName === 'input') {
+            const type = typeof element.type === 'string'
+                ? element.type.toLowerCase()
+                : '';
+            const unsupported = new Set([
+                'button',
+                'submit',
+                'reset',
+                'checkbox',
+                'radio',
+                'range',
+                'color',
+                'file',
+                'image',
+                'hidden',
+            ]);
+            if (unsupported.has(type)) {
+                return false;
+            }
+            if (element.disabled) {
+                return false;
+            }
+            if (typeof element.readOnly === 'boolean' && element.readOnly) {
+                return false;
+            }
+            return true;
+        }
+        if (typeof element.isContentEditable === 'boolean' && element.isContentEditable) {
+            return true;
+        }
+        if (typeof element.getAttribute === 'function') {
+            const role = element.getAttribute('role');
+            if (typeof role === 'string' && role.toLowerCase() === 'textbox') {
+                const ariaDisabled = element.getAttribute('aria-disabled');
+                return ariaDisabled !== 'true';
+            }
+        }
+        return false;
+    }
+
+    subscribeVisualViewport = () => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        const visualViewport = window.visualViewport;
+        if (!visualViewport || typeof visualViewport.addEventListener !== 'function') {
+            return;
+        }
+        const handler = () => {
+            this.scheduleViewportAdjustment();
+        };
+        visualViewport.addEventListener('resize', handler);
+        visualViewport.addEventListener('scroll', handler);
+        this._visualViewportCleanup = () => {
+            visualViewport.removeEventListener('resize', handler);
+            visualViewport.removeEventListener('scroll', handler);
+        };
+    }
+
+    unsubscribeVisualViewport = () => {
+        if (typeof this._visualViewportCleanup === 'function') {
+            this._visualViewportCleanup();
+        }
+        this._visualViewportCleanup = null;
+    }
+
+    scheduleViewportAdjustment = ({ immediate } = {}) => {
+        if (this._isUnmounted) {
+            return;
+        }
+        if (immediate) {
+            this.adjustForVisualViewport();
+            return;
+        }
+        if (this._pendingViewportFrame) {
+            return;
+        }
+        this._pendingViewportFrame = scheduleAnimationFrame(() => {
+            this._pendingViewportFrame = null;
+            this.adjustForVisualViewport();
+        });
+    }
+
+    resolveFocusedEditable = () => {
+        const node = this.getWindowNode();
+        if (!node) {
+            this._focusedEditable = null;
+            return null;
+        }
+        const stored = this._focusedEditable;
+        if (stored && typeof node.contains === 'function' && node.contains(stored) && this.isEditableElement(stored)) {
+            return stored;
+        }
+        const active = typeof document !== 'undefined' ? document.activeElement : null;
+        if (active && typeof node.contains === 'function' && node.contains(active) && this.isEditableElement(active)) {
+            this._focusedEditable = active;
+            return active;
+        }
+        this._focusedEditable = null;
+        return null;
+    }
+
+    adjustForVisualViewport = () => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+        const visualViewport = window.visualViewport;
+        if (!visualViewport) {
+            if (this._keyboardAdjustment) {
+                this.restoreKeyboardAdjustedPosition();
+            }
+            return;
+        }
+
+        const viewportHeightDelta = (typeof window.innerHeight === 'number' && typeof visualViewport.height === 'number')
+            ? window.innerHeight - visualViewport.height
+            : 0;
+        const keyboardVisible = (viewportHeightDelta > KEYBOARD_VISIBILITY_THRESHOLD)
+            || (typeof visualViewport.offsetTop === 'number' && visualViewport.offsetTop > 0);
+        if (!keyboardVisible) {
+            this.restoreKeyboardAdjustedPosition();
+            return;
+        }
+
+        const node = this.getWindowNode();
+        if (!node) {
+            this.restoreKeyboardAdjustedPosition();
+            return;
+        }
+
+        const focusedElement = this.resolveFocusedEditable();
+        if (!focusedElement) {
+            this.restoreKeyboardAdjustedPosition();
+            return;
+        }
+
+        const rect = typeof focusedElement.getBoundingClientRect === 'function'
+            ? focusedElement.getBoundingClientRect()
+            : null;
+        if (!rect) {
+            return;
+        }
+
+        const viewportBottom = (Number.isFinite(visualViewport.offsetTop) ? visualViewport.offsetTop : 0)
+            + visualViewport.height;
+        const safeBottom = Math.max(0, measureSafeAreaInset('bottom'));
+        const visibleBottom = viewportBottom - safeBottom - KEYBOARD_PADDING;
+
+        if (rect.bottom <= visibleBottom) {
+            return;
+        }
+
+        const nodeRect = this.readNodeRect(node) || node.getBoundingClientRect();
+        const style = node.style || {};
+        const storedX = typeof style.getPropertyValue === 'function'
+            ? parsePxValue(style.getPropertyValue('--window-transform-x'))
+            : null;
+        const storedY = typeof style.getPropertyValue === 'function'
+            ? parsePxValue(style.getPropertyValue('--window-transform-y'))
+            : null;
+        const currentX = Number.isFinite(storedX) ? storedX : nodeRect.left;
+        const currentY = Number.isFinite(storedY) ? storedY : nodeRect.top;
+
+        const overflow = Math.max(rect.bottom - visibleBottom, 0);
+        const desiredY = currentY - overflow;
+        const viewportMetrics = this.getCachedViewportMetrics();
+        const clamped = clampWindowPositionWithinViewport(
+            { x: currentX, y: desiredY },
+            { width: nodeRect.width, height: nodeRect.height },
+            {
+                viewportWidth: viewportMetrics.width,
+                viewportHeight: viewportMetrics.height,
+                viewportLeft: viewportMetrics.left,
+                viewportTop: viewportMetrics.top,
+                topOffset: this.state.safeAreaTop ?? measureWindowTopOffset(),
+                bottomInset: Math.max(0, measureSafeAreaInset('bottom')),
+                snapBottomInset: this.getCachedSnapBottomInset(),
+            },
+        );
+
+        const targetY = clamped ? clamped.y : desiredY;
+        if (!this._keyboardAdjustment) {
+            this._keyboardAdjustment = {
+                originalX: currentX,
+                originalY: currentY,
+            };
+        }
+
+        if (typeof this._keyboardAdjustment.lastY === 'number'
+            && Math.abs(this._keyboardAdjustment.lastY - targetY) < 0.5) {
+            return;
+        }
+
+        this._keyboardAdjustment.lastY = targetY;
+        this.setTransformMotionPreset(node, 'restore');
+        node.style.transform = `translate(${currentX}px, ${targetY}px)`;
+        if (typeof style.setProperty === 'function') {
+            style.setProperty('--window-transform-x', `${currentX}px`);
+            style.setProperty('--window-transform-y', `${targetY}px`);
+        } else {
+            style['--window-transform-x'] = `${currentX}px`;
+            style['--window-transform-y'] = `${targetY}px`;
+        }
+        if (typeof this.props.onPositionChange === 'function') {
+            this.props.onPositionChange(currentX, targetY);
+        }
+    }
+
+    restoreKeyboardAdjustedPosition = () => {
+        if (!this._keyboardAdjustment) {
+            return;
+        }
+        const node = this.getWindowNode();
+        if (!node) {
+            this._keyboardAdjustment = null;
+            return;
+        }
+        const { originalX, originalY } = this._keyboardAdjustment;
+        if (!Number.isFinite(originalX) || !Number.isFinite(originalY)) {
+            this._keyboardAdjustment = null;
+            return;
+        }
+        this._keyboardAdjustment = null;
+        this.setTransformMotionPreset(node, 'restore');
+        node.style.transform = `translate(${originalX}px, ${originalY}px)`;
+        const style = node.style || {};
+        if (typeof style.setProperty === 'function') {
+            style.setProperty('--window-transform-x', `${originalX}px`);
+            style.setProperty('--window-transform-y', `${originalY}px`);
+        } else {
+            style['--window-transform-x'] = `${originalX}px`;
+            style['--window-transform-y'] = `${originalY}px`;
+        }
+        if (typeof this.props.onPositionChange === 'function') {
+            this.props.onPositionChange(originalX, originalY);
+        }
     }
 
     resolveDragNode = (dragData) => {

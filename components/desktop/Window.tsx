@@ -55,6 +55,9 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       focus: focusProp,
       isFocused,
       zIndex: _ignoredZIndex,
+      initialX,
+      initialY,
+      onPositionChange,
       ...rest
     } = props;
     const innerRef = useRef<BaseWindowInstance>(null);
@@ -98,10 +101,10 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       const combinedTopOffset = viewportTop + topOffset;
       const storedPosition = readNodePosition(node);
       const fallbackPosition = {
-        x: typeof props.initialX === "number"
-          ? props.initialX + viewportLeft
+        x: typeof initialX === "number"
+          ? initialX + viewportLeft
           : viewportLeft,
-        y: clampWindowTopPosition(props.initialY, combinedTopOffset),
+        y: clampWindowTopPosition(initialY, combinedTopOffset),
       };
       const currentPosition = storedPosition || fallbackPosition;
       const clamped = clampWindowPositionWithinViewport(currentPosition, rect, {
@@ -125,10 +128,10 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
         (node.style as unknown as Record<string, string>)["--window-transform-y"] = `${clamped.y}px`;
       }
 
-      if (typeof props.onPositionChange === "function") {
-        props.onPositionChange(clamped.x, clamped.y);
+      if (typeof onPositionChange === "function") {
+        onPositionChange(clamped.x, clamped.y);
       }
-    }, [props.initialX, props.initialY, props.onPositionChange]);
+    }, [initialX, initialY, onPositionChange]);
 
     useEffect(() => {
       if (!windowId) return;
@@ -169,14 +172,32 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       };
     }, [clampToViewport]);
 
+    useEffect(() => {
+      if (typeof window === "undefined") return undefined;
+      const viewport = window.visualViewport;
+      if (!viewport || typeof viewport.addEventListener !== "function") {
+        return undefined;
+      }
+      const handler = () => clampToViewport();
+      viewport.addEventListener("resize", handler);
+      viewport.addEventListener("scroll", handler);
+      return () => {
+        viewport.removeEventListener("resize", handler);
+        viewport.removeEventListener("scroll", handler);
+      };
+    }, [clampToViewport]);
+
     return (
       <BaseWindow
         ref={assignRef}
-        {...rest}
         id={id}
         focus={handleFocus}
         isFocused={isFocused}
         zIndex={computedZIndex}
+        initialX={initialX}
+        initialY={initialY}
+        onPositionChange={onPositionChange}
+        {...rest}
       />
     );
   },
