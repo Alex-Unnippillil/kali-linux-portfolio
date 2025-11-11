@@ -281,7 +281,7 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
       role="menu"
       aria-label="Quick settings"
       aria-hidden={!open}
-      className={`group/qs absolute top-9 right-3 w-[17.5rem] origin-top-right rounded-xl border border-white/10 bg-slate-950/90 p-4 text-xs text-slate-100 shadow-[0_24px_48px_-28px_rgba(15,23,42,0.9)] backdrop-blur-lg transition-all duration-200 focus:outline-none ${
+      className={`group/qs absolute top-9 right-3 w-[17.5rem] origin-top-right rounded-xl border border-white/10 bg-slate-950/90 p-4 text-xs text-slate-100 shadow-[0_24px_48px_-28px_rgba(15,23,42,0.9)] backdrop-blur-lg transition-all duration-200 focus:outline-none max-h-[min(38rem,calc(100vh-4.5rem))] overflow-y-auto overscroll-contain ${
         isVisible
           ? 'pointer-events-auto translate-y-0 scale-100 opacity-100'
           : 'pointer-events-none -translate-y-2 scale-95 opacity-0'
