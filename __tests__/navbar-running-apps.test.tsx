@@ -92,7 +92,7 @@ describe('Navbar running apps tray', () => {
     dispatchSpy.mockRestore();
   });
 
-  it('dispatches a taskbar command when clicking an open app', () => {
+  it('focuses a running app when clicking its dock entry', () => {
     render(<Navbar />);
 
     act(() => {
@@ -107,11 +107,120 @@ describe('Navbar running apps tray', () => {
     const taskbarEventCall = dispatchSpy.mock.calls.find(([event]) => event.type === 'taskbar-command');
     expect(taskbarEventCall).toBeTruthy();
     const [event] = taskbarEventCall!;
-    expect(event.detail).toEqual({ appId: 'app1', action: 'toggle' });
+    expect(event.detail).toEqual({ appId: 'app1', action: 'focus' });
     expect(button).toHaveAttribute('data-context', 'taskbar');
     expect(button).toHaveAttribute('aria-pressed', 'true');
     expect(button).toHaveAttribute('data-active', 'true');
     expect(button.querySelector('[data-testid="running-indicator"]')).toBeTruthy();
+  });
+
+  it('reopens minimized apps from the dock', () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('workspace-state', {
+          detail: {
+            ...workspaceEventDetail,
+            runningApps: [
+              {
+                id: 'app2',
+                title: 'App Two',
+                icon: '/icon.png',
+                isFocused: false,
+                isMinimized: true,
+              },
+            ],
+          },
+        }),
+      );
+    });
+
+    dispatchSpy.mockClear();
+
+    const button = screen.getByRole('button', { name: /app two/i });
+    fireEvent.click(button);
+
+    const taskbarEventCall = dispatchSpy.mock.calls.find(([evt]) => evt.type === 'taskbar-command');
+    expect(taskbarEventCall).toBeTruthy();
+    const [event] = taskbarEventCall!;
+    expect(event.detail).toEqual({ appId: 'app2', action: 'open' });
+  });
+
+  it('launches pinned apps that are not running', () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('workspace-state', {
+          detail: {
+            ...workspaceEventDetail,
+            runningApps: [],
+            pinnedApps: [
+              {
+                id: 'pinned-app',
+                title: 'Pinned App',
+                icon: '/icon.png',
+                isRunning: false,
+                isMinimized: false,
+                isFocused: false,
+              },
+            ],
+          },
+        }),
+      );
+    });
+
+    dispatchSpy.mockClear();
+
+    const pinnedList = screen.getByRole('list', { name: /pinned applications/i });
+    const button = within(pinnedList).getByRole('button', { name: /pinned app/i });
+    fireEvent.click(button);
+
+    const taskbarEventCall = dispatchSpy.mock.calls.find(([evt]) => evt.type === 'taskbar-command');
+    expect(taskbarEventCall).toBeTruthy();
+    const [event] = taskbarEventCall!;
+    expect(event.detail).toEqual({ appId: 'pinned-app', action: 'open' });
+  });
+
+  it('shows a dock indicator and accessible description for running pinned apps', () => {
+    render(<Navbar />);
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent('workspace-state', {
+          detail: {
+            ...workspaceEventDetail,
+            runningApps: [
+              {
+                id: 'pinned-app',
+                title: 'Pinned App',
+                icon: '/icon.png',
+                isFocused: false,
+                isMinimized: false,
+              },
+            ],
+            pinnedApps: [
+              {
+                id: 'pinned-app',
+                title: 'Pinned App',
+                icon: '/icon.png',
+              },
+            ],
+          },
+        }),
+      );
+    });
+
+    const pinnedList = screen.getByRole('list', { name: /pinned applications/i });
+    const button = within(pinnedList).getByRole('button', { name: /pinned app/i });
+    const indicator = within(button).getByTestId('dock-running-indicator');
+    expect(indicator).toBeInTheDocument();
+    const describedBy = button.getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    const descriptionNode = describedBy ? document.getElementById(describedBy) : null;
+    expect(descriptionNode).toBeTruthy();
+    expect(descriptionNode).toHaveTextContent(/running/i);
   });
 
   it('shows minimized state on button attributes', () => {
@@ -166,7 +275,7 @@ describe('Navbar running apps tray', () => {
       fireEvent.dragStart(firstItem, { dataTransfer });
     });
 
-    expect(dataTransfer.getData('application/x-taskbar-app-id')).toBe('app1');
+    expect(dataTransfer.getData('application/x-taskbar-app-id')).toBe('running|app1');
 
     act(() => {
       fireEvent.dragOver(thirdItem, { dataTransfer, clientX: 100 });
@@ -241,6 +350,8 @@ describe('Navbar running apps tray', () => {
     });
 
     expect(screen.queryByRole('dialog', { name: /app one preview/i })).not.toBeInTheDocument();
+  });
+
   it('renders badge metadata for running apps', () => {
     render(<Navbar />);
 

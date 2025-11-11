@@ -472,13 +472,58 @@ export default class Navbar extends PureComponent {
                 this.schedulePreviewHide();
         };
 
+        mergePinnedAppsWithRunning = (pinnedApps, runningApps) => {
+                if (!Array.isArray(pinnedApps)) return [];
+                const runningMap = new Map();
+                if (Array.isArray(runningApps)) {
+                        runningApps.forEach((app) => {
+                                if (app && typeof app.id === 'string') {
+                                        runningMap.set(app.id, app);
+                                }
+                        });
+                }
+
+                return pinnedApps
+                        .map((app) => {
+                                if (!app || typeof app !== 'object' || typeof app.id !== 'string') {
+                                        return null;
+                                }
+                                const running = runningMap.get(app.id);
+                                const baseIcon = typeof app.icon === 'string' ? app.icon : null;
+                                const runningIcon = typeof running?.icon === 'string' ? running.icon : null;
+                                const normalized = {
+                                        ...app,
+                                        icon: runningIcon || baseIcon || '',
+                                };
+
+                                if (running) {
+                                        normalized.isRunning = true;
+                                        normalized.isFocused = Boolean(running.isFocused);
+                                        normalized.isMinimized = Boolean(running.isMinimized);
+                                        if (running.badge && typeof running.badge === 'object') {
+                                                normalized.badge = { ...running.badge };
+                                        }
+                                } else {
+                                        normalized.isRunning = Boolean(app.isRunning);
+                                        normalized.isFocused = Boolean(app.isFocused);
+                                        normalized.isMinimized = Boolean(app.isMinimized);
+                                        if (app.badge && typeof app.badge === 'object') {
+                                                normalized.badge = { ...app.badge };
+                                        }
+                                }
+
+                                return normalized;
+                        })
+                        .filter(Boolean);
+        };
+
         handleWorkspaceStateUpdate = (event) => {
                 const detail = event?.detail || {};
                 const { workspaces, activeWorkspace } = detail;
                 const nextWorkspaces = Array.isArray(workspaces) ? workspaces : [];
                 const nextActiveWorkspace = typeof activeWorkspace === 'number' ? activeWorkspace : 0;
                 const nextRunningApps = Array.isArray(detail.runningApps) ? detail.runningApps : [];
-                const nextPinnedApps = Array.isArray(detail.pinnedApps) ? detail.pinnedApps : [];
+                const mergedPinnedApps = this.mergePinnedAppsWithRunning(detail.pinnedApps, nextRunningApps);
 
                 let runningAppsChanged = false;
 
@@ -486,7 +531,7 @@ export default class Navbar extends PureComponent {
                         const workspacesChanged = !areWorkspacesEqual(nextWorkspaces, previousState.workspaces);
                         const activeChanged = previousState.activeWorkspace !== nextActiveWorkspace;
                         runningAppsChanged = !areRunningAppsEqual(nextRunningApps, previousState.runningApps);
-                        const pinnedAppsChanged = !arePinnedAppsEqual(nextPinnedApps, previousState.pinnedApps);
+                        const pinnedAppsChanged = !arePinnedAppsEqual(mergedPinnedApps, previousState.pinnedApps);
 
                         if (!workspacesChanged && !activeChanged && !runningAppsChanged && !pinnedAppsChanged) {
                                 return null;
@@ -496,7 +541,7 @@ export default class Navbar extends PureComponent {
                                 workspaces: workspacesChanged ? nextWorkspaces : previousState.workspaces,
                                 activeWorkspace: nextActiveWorkspace,
                                 runningApps: runningAppsChanged ? nextRunningApps : previousState.runningApps,
-                                pinnedApps: pinnedAppsChanged ? nextPinnedApps : previousState.pinnedApps,
+                                pinnedApps: pinnedAppsChanged ? mergedPinnedApps : previousState.pinnedApps,
                         };
                 }, () => {
                         if (runningAppsChanged) {
@@ -510,13 +555,20 @@ export default class Navbar extends PureComponent {
                 window.dispatchEvent(new CustomEvent('taskbar-command', { detail }));
         };
 
-        handleAppButtonClick = (app) => {
+        handleAppButtonClick = (app, section) => {
+                if (!app || !app.id) return;
                 this.hidePreview();
-                const detail = { appId: app.id, action: 'toggle' };
+                const isRunning = section === 'running' ? true : Boolean(app.isRunning);
+                const isMinimized = Boolean(app.isMinimized);
+                let action = 'open';
+                if (isRunning) {
+                        action = isMinimized ? 'open' : 'focus';
+                }
+                const detail = { appId: app.id, action };
                 this.dispatchTaskbarCommand(detail);
         };
 
-        handleAppButtonKeyDown = (event, app) => {
+        handleAppButtonKeyDown = (event, app, section) => {
                 if (event.key === 'ArrowDown') {
                         event.preventDefault();
                         this.openPreviewForApp(app, event.currentTarget, { forceRefresh: true, shouldFocus: true });
@@ -529,7 +581,7 @@ export default class Navbar extends PureComponent {
                 }
                 if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
-                        this.handleAppButtonClick(app);
+                        this.handleAppButtonClick(app, section);
                 }
         };
 
@@ -704,17 +756,21 @@ export default class Navbar extends PureComponent {
                 const badge = app && typeof app.badge === 'object' ? app.badge : null;
                 const badgeNode = this.renderAppBadge(badge);
                 const buttonLabel = badge?.label ? `${app.title} — ${badge.label}` : app.title;
+                const shouldShowDockIndicator = section === 'pinned' && isRunning;
+                const indicatorId = shouldShowDockIndicator ? `dock-indicator-${app.id}` : undefined;
+                const indicatorMessage = isMinimized ? 'Running (minimized)' : 'Running';
 
                 return (
                         <button
                                 type="button"
                                 aria-label={buttonLabel}
                                 aria-pressed={isActive}
+                                aria-describedby={indicatorId || undefined}
                                 data-context="taskbar"
                                 data-app-id={app.id}
                                 data-active={isActive ? 'true' : 'false'}
-                                onClick={() => this.handleAppButtonClick(app)}
-                                onKeyDown={(event) => this.handleAppButtonKeyDown(event, app)}
+                                onClick={() => this.handleAppButtonClick(app, section)}
+                                onKeyDown={(event) => this.handleAppButtonKeyDown(event, app, section)}
                                 onMouseEnter={(event) => this.handleAppButtonMouseEnter(event, app)}
                                 onMouseLeave={this.handleAppButtonMouseLeave}
                                 onFocus={(event) => this.handleAppButtonFocus(event, app)}
@@ -730,6 +786,18 @@ export default class Navbar extends PureComponent {
                                                 className="h-6 w-6"
                                         />
                                         {badgeNode}
+                                        {shouldShowDockIndicator && (
+                                                <>
+                                                        <span
+                                                                aria-hidden="true"
+                                                                data-testid="dock-running-indicator"
+                                                                className="pointer-events-none absolute -bottom-1 left-1/2 h-1 w-2 -translate-x-1/2 rounded-full bg-current md:h-1.5 md:w-3"
+                                                        />
+                                                        <span id={indicatorId} className="sr-only">
+                                                                {indicatorMessage}
+                                                        </span>
+                                                </>
+                                        )}
                                         {isActive && (
                                                 <span
                                                         aria-hidden="true"
