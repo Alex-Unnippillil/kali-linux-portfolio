@@ -347,10 +347,10 @@ Default headers are configured in [`next.config.js`](./next.config.js):
 - `Content-Security-Policy`
 - `X-Content-Type-Options: nosniff`
 - `Referrer-Policy: strict-origin-when-cross-origin`
-- `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+- `Permissions-Policy: accelerometer=(), autoplay=(), camera=(), clipboard-read=(), clipboard-write=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()`
 - `X-Frame-Options: SAMEORIGIN`
 
-CSP whitelists hosts such as `*.twitter.com`, `embed.x.com`, `cdn.jsdelivr.net`, `cdnjs.cloudflare.com`, `stackblitz.com`, `www.youtube.com`, and `vercel.live`. Update the whitelist whenever you embed a new external resource. Consider removing `'unsafe-inline'` from `style-src` once inline styles are eliminated.
+CSP whitelists hosts such as `*.twitter.com`, `embed.x.com`, `cdn.jsdelivr.net`, `cdnjs.cloudflare.com`, `stackblitz.com`, `www.youtube-nocookie.com`, `open.spotify.com`, `developer.mozilla.org`, `en.wikipedia.org`, `www.kali.org`, `forums.kali.org`, `www.offsec.com`, `www.exploit-db.com`, and `icons.duckduckgo.com`. Update the whitelist whenever you embed a new external resource. Consider removing `'unsafe-inline'` from `style-src` once inline styles are eliminated.
 
 ### Production Checklist
 - [x] Pin Node.js to 20.19.5 across local, CI, and hosting environments.

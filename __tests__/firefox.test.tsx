@@ -13,6 +13,8 @@ describe('Firefox app', () => {
     render(<Firefox />);
     const input = screen.getByLabelText('Address');
     expect(input).toHaveValue('https://www.kali.org/docs/');
+    const sandboxNotice = screen.getByRole('region', { name: 'Sandboxed Firefox view' });
+    expect(sandboxNotice).toHaveTextContent('Downloads, device permissions, pop-up windows, and clipboard access are blocked');
     expect(screen.getByRole('heading', { name: 'Kali Linux Documentation' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /open kali.org\/docs/i })).toHaveAttribute(
       'href',
@@ -29,6 +31,7 @@ describe('Firefox app', () => {
     await user.click(screen.getByRole('button', { name: 'Go' }));
     const frame = await screen.findByTitle('Firefox');
     expect(frame).toHaveAttribute('src', 'https://example.com/');
+    expect(frame).toHaveAttribute('sandbox', 'allow-same-origin allow-scripts allow-forms');
     expect(localStorage.getItem('firefox:last-url')).toBe('https://example.com/');
   });
 

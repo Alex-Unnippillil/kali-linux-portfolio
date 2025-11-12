@@ -210,13 +210,32 @@ const Firefox: React.FC = () => {
           })}
         </div>
       </nav>
+      <section
+        aria-labelledby="firefox-sandbox-heading"
+        role="region"
+        className="border-b border-[color:var(--kali-border)] bg-[color-mix(in_srgb,var(--kali-overlay)_95%,var(--kali-bg))] px-4 py-4 text-xs text-[color:color-mix(in_srgb,var(--kali-text)_90%,var(--kali-bg))] sm:text-sm"
+      >
+        <h2
+          id="firefox-sandbox-heading"
+          className="flex items-center gap-2 text-sm font-semibold text-[color:var(--color-primary)] sm:text-base"
+        >
+          Sandboxed Firefox view
+        </h2>
+        <p className="mt-2 max-w-3xl">
+          This simulated browser runs inside a restricted iframe. Downloads, device permissions, pop-up windows, and clipboard
+          access are blocked by design so sites stay read-only inside the portfolio.
+        </p>
+        <p className="mt-2 max-w-3xl text-[color:color-mix(in_srgb,var(--kali-text)_82%,var(--kali-bg))]">
+          If a page refuses to load or needs elevated access, open it in a dedicated tab outside this environment.
+        </p>
+      </section>
       <div className="relative flex-1 min-h-0 bg-[var(--kali-bg)]">
         {!simulation && (
           <aside className="pointer-events-auto absolute left-3 top-3 z-10 max-w-sm rounded-lg border border-[color:color-mix(in_srgb,var(--color-primary)_70%,transparent)] bg-[color-mix(in_srgb,var(--kali-bg)_94%,transparent)] p-4 text-xs text-[color:color-mix(in_srgb,var(--kali-text)_92%,var(--kali-bg))] shadow-[0_24px_60px_-24px_var(--kali-blue-glow)] backdrop-blur">
             <h2 className="text-sm font-semibold text-[color:var(--color-primary)]">Sandboxed live preview</h2>
             <p className="mt-2 text-[color:color-mix(in_srgb,var(--kali-text)_88%,var(--kali-bg))]">
-              This window loads external sites inside a sandboxed iframe for safety. Some sites may block embedding. Use the
-              quick links below to open them directly in a new tab.
+              External pages stay isolated here. Requests for downloads, additional windows, and device features are denied.
+              Some sites may block embedding entirely—use the quick links below to open them directly in a new tab.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {BOOKMARKS.map((bookmark) => (
@@ -242,8 +261,7 @@ const Firefox: React.FC = () => {
             title="Firefox"
             src={address}
             className="h-full w-full border-0"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            sandbox="allow-same-origin allow-scripts allow-forms"
             onLoad={() => setIsLoading(false)}
             onError={() => setIsLoading(false)}
           />
