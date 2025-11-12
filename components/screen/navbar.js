@@ -544,7 +544,7 @@ export default class Navbar extends PureComponent {
                 return (
                         <ul
                                 ref={this.taskbarListRef}
-                                className="flex max-w-[40vw] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
+                                className="flex w-full max-w-full items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1 sm:max-w-[40vw]"
                                 role="list"
                                 aria-label="Open applications"
                                 onDragOver={this.handleTaskbarDragOver}
@@ -577,7 +577,7 @@ export default class Navbar extends PureComponent {
 
                 return (
                         <ul
-                                className="flex min-h-[2.5rem] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
+                                className="flex w-full min-h-[2.5rem] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1 sm:w-auto"
                                 role="list"
                                 aria-label="Pinned applications"
                                 onDragOver={this.handlePinnedDragOver}
@@ -960,10 +960,11 @@ export default class Navbar extends PureComponent {
                 const { workspaces, activeWorkspace, preview } = this.state;
                 const pinnedApps = this.renderPinnedApps();
                 const runningApps = this.renderRunningApps();
+                const hasWorkspaces = workspaces.length > 0;
                 return (
                         <div
                                 ref={this.navbarRef}
-                                className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
+                                className="main-navbar-vp fixed inset-x-0 top-0 z-[260] w-full bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
                                 style={{
                                         minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
                                         paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
@@ -972,35 +973,47 @@ export default class Navbar extends PureComponent {
                                         paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
                                 }}
                         >
-                                <div className="flex items-center gap-2 text-xs md:text-sm">
-                                        <WhiskerMenu />
-                                        {workspaces.length > 0 && (
-                                                <WorkspaceSwitcher
-                                                        workspaces={workspaces}
-                                                        activeWorkspace={activeWorkspace}
-                                                        onSelect={this.handleWorkspaceSelect}
-                                                />
-                                        )}
-                                        {pinnedApps}
-                                        {runningApps}
-                                        <PerformanceGraph />
-                                </div>
-                                <div className="flex items-center gap-4 text-xs md:text-sm">
-                                        <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
-                                        <div
-                                                id="status-bar"
-                                                role="button"
-                                                tabIndex={0}
-                                                aria-label="System status"
-                                                aria-expanded={this.state.status_card}
-                                                onClick={this.handleStatusToggle}
-                                                onKeyDown={this.handleStatusKeyDown}
-                                                className={
-                                                        'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
-                                                }
-                                        >
-                                                <Status />
-                                                <QuickSettings open={this.state.status_card} />
+                                <div className="flex w-full flex-col gap-2 md:gap-3">
+                                        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="flex flex-wrap items-center gap-2 text-xs sm:flex-1 md:text-sm">
+                                                        <WhiskerMenu />
+                                                        {hasWorkspaces && (
+                                                                <WorkspaceSwitcher
+                                                                        workspaces={workspaces}
+                                                                        activeWorkspace={activeWorkspace}
+                                                                        onSelect={this.handleWorkspaceSelect}
+                                                                />
+                                                        )}
+                                                </div>
+                                                <div className="flex w-full items-center justify-between gap-2 text-xs sm:w-auto sm:justify-end sm:gap-3 md:text-sm">
+                                                        <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
+                                                        <div
+                                                                id="status-bar"
+                                                                role="button"
+                                                                tabIndex={0}
+                                                                aria-label="System status"
+                                                                aria-expanded={this.state.status_card}
+                                                                onClick={this.handleStatusToggle}
+                                                                onKeyDown={this.handleStatusKeyDown}
+                                                                className={
+                                                                        'relative flex-shrink-0 rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
+                                                                }
+                                                        >
+                                                                <Status />
+                                                                <QuickSettings open={this.state.status_card} />
+                                                        </div>
+                                                </div>
+                                        </div>
+                                        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:gap-3 md:items-stretch">
+                                                <div className="min-w-0 flex-1">
+                                                        {pinnedApps}
+                                                </div>
+                                                {runningApps ? (
+                                                        <div className="min-w-0 flex-1">
+                                                                {runningApps}
+                                                        </div>
+                                                ) : null}
+                                                <PerformanceGraph className="sm:ml-auto" />
                                         </div>
                                 </div>
                                 <TaskbarPreviewFlyout
@@ -1018,7 +1031,7 @@ export default class Navbar extends PureComponent {
                                 />
                         </div>
                 );
-                }
+        }
 
 
 }
