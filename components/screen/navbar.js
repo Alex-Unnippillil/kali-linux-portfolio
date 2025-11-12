@@ -108,6 +108,9 @@ export default class Navbar extends PureComponent {
                         runningApps: [],
                         preview: null,
                         pinnedApps: [],
+                        dragContext: null,
+                        dropSection: null,
+                        dropTargetId: null,
                 };
                 this.taskbarListRef = React.createRef();
                 this.draggingAppId = null;
@@ -461,6 +464,7 @@ export default class Navbar extends PureComponent {
         };
 
         handleAppButtonFocus = (event, app) => {
+                if (this.state.dragContext) return;
                 this.openPreviewForApp(app, event.currentTarget);
         };
 
@@ -534,20 +538,36 @@ export default class Navbar extends PureComponent {
         };
 
         renderRunningApps = () => {
-                const { runningApps, pinnedApps } = this.state;
+                const { runningApps, pinnedApps, dragContext, dropSection, dropTargetId } = this.state;
                 if (!runningApps.length) return null;
 
                 const pinnedIds = new Set((pinnedApps || []).map((item) => item.id));
                 const visibleApps = runningApps.filter((app) => !pinnedIds.has(app.id));
                 if (!visibleApps.length) return null;
 
+                const containerClasses = [
+                        'flex w-full flex-wrap items-stretch gap-2 rounded-lg border border-white/10 bg-[#1b2231]/90 px-3 py-2 shadow-sm transition-colors',
+                        'md:max-w-[40vw] md:w-auto md:flex-nowrap md:items-center md:overflow-x-auto md:px-2 md:py-1',
+                ];
+
+                if (dropSection === 'running') {
+                        containerClasses.push('ring-1 ring-cyan-400/60 ring-offset-0');
+                        if (dropTargetId === 'container') {
+                                containerClasses.push('border-cyan-400/50 border-dashed');
+                        }
+                }
+
                 return (
                         <ul
                                 ref={this.taskbarListRef}
-                                className="flex max-w-[40vw] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
+                                className={containerClasses.join(' ')}
+                                data-taskbar-rail="running"
+                                data-dragging={dragContext ? 'true' : 'false'}
                                 role="list"
                                 aria-label="Open applications"
                                 onDragOver={this.handleTaskbarDragOver}
+                                onDragEnter={(event) => this.handleRailDragEnter(event, 'running', 'container')}
+                                onDragLeave={(event) => this.handleRailDragLeave(event, 'running')}
                                 onDrop={this.handleTaskbarDrop}
                         >
                                 {visibleApps.map((app) => this.renderRunningAppItem(app))}
@@ -558,12 +578,14 @@ export default class Navbar extends PureComponent {
         renderRunningAppItem = (app) => (
                 <li
                         key={app.id}
-                        className="flex"
+                        className="relative flex"
                         draggable
                         data-app-id={app.id}
                         role="listitem"
                         onDragStart={(event) => this.handleAppDragStart(event, app)}
+                        onDragEnter={(event) => this.handleAppDragEnter(event, app.id)}
                         onDragOver={this.handleAppDragOver}
+                        onDragLeave={(event) => this.handleAppDragLeave(event, app.id)}
                         onDrop={(event) => this.handleAppDrop(event, app.id)}
                         onDragEnd={this.handleAppDragEnd}
                 >
@@ -572,15 +594,31 @@ export default class Navbar extends PureComponent {
         );
 
         renderPinnedApps = () => {
-                const { pinnedApps = [] } = this.state;
+                const { pinnedApps = [], dragContext, dropSection, dropTargetId } = this.state;
                 const hasItems = pinnedApps.length > 0;
+
+                const containerClasses = [
+                        'flex w-full flex-wrap items-stretch gap-2 rounded-lg border border-white/10 bg-[#1b2231]/90 px-3 py-2 shadow-sm transition-colors',
+                        'md:w-auto md:flex-nowrap md:items-center md:overflow-x-auto md:px-2 md:py-1',
+                ];
+
+                if (dropSection === 'pinned') {
+                        containerClasses.push('ring-1 ring-cyan-400/60 ring-offset-0');
+                        if (dropTargetId === 'container') {
+                                containerClasses.push('border-cyan-400/50 border-dashed');
+                        }
+                }
 
                 return (
                         <ul
-                                className="flex min-h-[2.5rem] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
+                                className={containerClasses.join(' ')}
+                                data-taskbar-rail="pinned"
+                                data-dragging={dragContext ? 'true' : 'false'}
                                 role="list"
                                 aria-label="Pinned applications"
                                 onDragOver={this.handlePinnedDragOver}
+                                onDragEnter={(event) => this.handleRailDragEnter(event, 'pinned', 'container')}
+                                onDragLeave={(event) => this.handleRailDragLeave(event, 'pinned')}
                                 onDrop={this.handlePinnedContainerDrop}
                         >
                                 {hasItems
@@ -597,12 +635,14 @@ export default class Navbar extends PureComponent {
         renderPinnedAppItem = (app) => (
                 <li
                         key={app.id}
-                        className="flex"
+                        className="relative flex"
                         draggable
                         data-app-id={app.id}
                         role="listitem"
                         onDragStart={(event) => this.handlePinnedDragStart(event, app)}
-                        onDragOver={this.handlePinnedDragOver}
+                        onDragEnter={(event) => this.handlePinnedDragEnter(event, app.id)}
+                        onDragOver={this.handlePinnedItemDragOver}
+                        onDragLeave={(event) => this.handlePinnedDragLeave(event, app.id)}
                         onDrop={(event) => this.handlePinnedDrop(event, app.id)}
                         onDragEnd={this.handlePinnedDragEnd}
                 >
@@ -719,15 +759,24 @@ export default class Navbar extends PureComponent {
                                 onMouseLeave={this.handleAppButtonMouseLeave}
                                 onFocus={(event) => this.handleAppButtonFocus(event, app)}
                                 onBlur={this.handleAppButtonBlur}
-                                className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
+                                className={`${
+                                        isFocused ? 'bg-white/20' : 'bg-transparent'
+                                } relative flex min-h-[44px] min-w-[44px] items-center gap-3 rounded-md px-3 py-2 text-left text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)] md:text-xs`}
+                                data-drop-target={isDropTarget ? 'true' : undefined}
                         >
+                                {isDropTarget && (
+                                        <span
+                                                aria-hidden="true"
+                                                className="pointer-events-none absolute -left-1 top-1/2 h-[calc(100%+0.5rem)] w-px -translate-y-1/2 rounded bg-cyan-400"
+                                        />
+                                )}
                                 <span className="relative inline-flex items-center justify-center">
                                         <Image
                                                 src={app.icon}
                                                 alt=""
                                                 width={28}
                                                 height={28}
-                                                className="h-6 w-6"
+                                                className="h-7 w-7"
                                         />
                                         {badgeNode}
                                         {isActive && (
@@ -738,7 +787,7 @@ export default class Navbar extends PureComponent {
                                                 />
                                         )}
                                 </span>
-                                <span className="hidden whitespace-nowrap text-white md:inline">{app.title}</span>
+                                <span className="hidden min-w-0 whitespace-normal text-sm text-white md:inline">{app.title}</span>
                         </button>
                 );
         };
@@ -748,6 +797,7 @@ export default class Navbar extends PureComponent {
                 if (event.dataTransfer) {
                         event.dataTransfer.dropEffect = 'move';
                 }
+                this.setDropState('running', 'container');
         };
 
         handleTaskbarDrop = (event) => {
@@ -759,21 +809,44 @@ export default class Navbar extends PureComponent {
                         return;
                 }
                 this.reorderRunningApps(source.id, null, true);
+                this.clearDropState();
         };
 
         handleAppDragStart = (event, app) => {
                 this.draggingAppId = app.id;
                 this.draggingSection = 'running';
+                this.setState({
+                        dragContext: { section: 'running', id: app.id },
+                        dropSection: 'running',
+                        dropTargetId: app.id,
+                });
                 if (event.dataTransfer) {
                         event.dataTransfer.effectAllowed = 'move';
                         event.dataTransfer.setData('application/x-taskbar-app-id', `running|${app.id}`);
                 }
         };
 
+        handleAppDragEnter = (event, targetId) => {
+                event.preventDefault();
+                this.setDropState('running', targetId);
+        };
+
         handleAppDragOver = (event) => {
                 event.preventDefault();
                 if (event.dataTransfer) {
                         event.dataTransfer.dropEffect = 'move';
+                }
+        };
+
+        handleAppDragLeave = (event, targetId) => {
+                const related = event.relatedTarget;
+                const container = event.currentTarget?.closest?.('[data-taskbar-rail]');
+                if (!container) return;
+                if (related && container.contains(related)) {
+                        return;
+                }
+                if (this.state.dropSection === 'running' && this.state.dropTargetId === targetId) {
+                        this.setDropState('running', 'container');
                 }
         };
 
@@ -786,28 +859,68 @@ export default class Navbar extends PureComponent {
                         return;
                 }
                 const rect = event.currentTarget?.getBoundingClientRect?.();
-                const insertAfter = rect ? (event.clientX - rect.left) > rect.width / 2 : false;
+                const orientation = this.getRailOrientation(event.currentTarget);
+                let insertAfter = false;
+                if (rect) {
+                        if (orientation === 'horizontal') {
+                                insertAfter = (event.clientX - rect.left) > rect.width / 2;
+                        } else {
+                                insertAfter = (event.clientY - rect.top) > rect.height / 2;
+                        }
+                }
                 this.reorderRunningApps(source.id, targetId, insertAfter);
+                this.clearDropState();
         };
 
         handleAppDragEnd = () => {
                 this.draggingAppId = null;
                 this.draggingSection = null;
+                this.clearDragState();
         };
 
         handlePinnedDragStart = (event, app) => {
                 this.draggingAppId = app.id;
                 this.draggingSection = 'pinned';
+                this.setState({
+                        dragContext: { section: 'pinned', id: app.id },
+                        dropSection: 'pinned',
+                        dropTargetId: app.id,
+                });
                 if (event.dataTransfer) {
                         event.dataTransfer.effectAllowed = 'move';
                         event.dataTransfer.setData('application/x-taskbar-app-id', `pinned|${app.id}`);
                 }
         };
 
+        handlePinnedDragEnter = (event, targetId) => {
+                event.preventDefault();
+                this.setDropState('pinned', targetId);
+        };
+
         handlePinnedDragOver = (event) => {
                 event.preventDefault();
                 if (event.dataTransfer) {
                         event.dataTransfer.dropEffect = 'move';
+                }
+                this.setDropState('pinned', 'container');
+        };
+
+        handlePinnedItemDragOver = (event) => {
+                event.preventDefault();
+                if (event.dataTransfer) {
+                        event.dataTransfer.dropEffect = 'move';
+                }
+        };
+
+        handlePinnedDragLeave = (event, targetId) => {
+                const related = event.relatedTarget;
+                const container = event.currentTarget?.closest?.('[data-taskbar-rail]');
+                if (!container) return;
+                if (related && container.contains(related)) {
+                        return;
+                }
+                if (this.state.dropSection === 'pinned' && this.state.dropTargetId === targetId) {
+                        this.setDropState('pinned', 'container');
                 }
         };
 
@@ -816,12 +929,22 @@ export default class Navbar extends PureComponent {
                 const source = this.getDragSource(event);
                 if (!source.id) return;
                 const rect = event.currentTarget?.getBoundingClientRect?.();
-                const insertAfter = rect ? (event.clientX - rect.left) > rect.width / 2 : false;
+                const orientation = this.getRailOrientation(event.currentTarget);
+                let insertAfter = false;
+                if (rect) {
+                        if (orientation === 'horizontal') {
+                                insertAfter = (event.clientX - rect.left) > rect.width / 2;
+                        } else {
+                                insertAfter = (event.clientY - rect.top) > rect.height / 2;
+                        }
+                }
                 if (source.section === 'running') {
                         this.pinAppFromDrag(source.id, targetId, insertAfter);
+                        this.clearDropState();
                         return;
                 }
                 this.reorderPinnedApps(source.id, targetId, insertAfter);
+                this.clearDropState();
         };
 
         handlePinnedContainerDrop = (event) => {
@@ -830,14 +953,17 @@ export default class Navbar extends PureComponent {
                 if (!source.id) return;
                 if (source.section === 'running') {
                         this.pinAppFromDrag(source.id, null, true);
+                        this.clearDropState();
                         return;
                 }
                 this.reorderPinnedApps(source.id, null, true);
+                this.clearDropState();
         };
 
         handlePinnedDragEnd = () => {
                 this.draggingAppId = null;
                 this.draggingSection = null;
+                this.clearDragState();
         };
 
         getDragSource = (event) => {
@@ -856,6 +982,62 @@ export default class Navbar extends PureComponent {
                         return { id: this.draggingAppId, section: this.draggingSection || 'running' };
                 }
                 return { id: null, section: null };
+        };
+
+        getRailOrientation = (element) => {
+                if (typeof window === 'undefined') return 'horizontal';
+                if (!element || typeof element.closest !== 'function') return 'horizontal';
+                const container = element.closest('[data-taskbar-rail]');
+                if (!container) return 'horizontal';
+                const styles = window.getComputedStyle(container);
+                if (styles.flexWrap && styles.flexWrap !== 'nowrap') {
+                        return 'wrapped';
+                }
+                return 'horizontal';
+        };
+
+        setDropState = (section, targetId) => {
+                this.setState((previous) => {
+                        if (previous.dropSection === section && previous.dropTargetId === targetId) {
+                                return null;
+                        }
+                        return { dropSection: section, dropTargetId: targetId };
+                });
+        };
+
+        clearDropState = () => {
+                this.setState((previous) => {
+                        if (!previous.dropSection && !previous.dropTargetId) {
+                                return null;
+                        }
+                        return { dropSection: null, dropTargetId: null };
+                });
+        };
+
+        clearDragState = () => {
+                this.setState((previous) => {
+                        if (!previous.dragContext && !previous.dropSection && !previous.dropTargetId) {
+                                return null;
+                        }
+                        return { dragContext: null, dropSection: null, dropTargetId: null };
+                });
+        };
+
+        handleRailDragEnter = (event, section, targetId) => {
+                event.preventDefault();
+                this.setDropState(section, targetId);
+        };
+
+        handleRailDragLeave = (event, section) => {
+                const related = event.relatedTarget;
+                const container = event.currentTarget;
+                if (!container) return;
+                if (related && typeof related.closest === 'function' && container.contains(related)) {
+                        return;
+                }
+                if (this.state.dropSection === section) {
+                        this.setDropState(section, null);
+                }
         };
 
         pinAppFromDrag = (sourceId, targetId, insertAfter = false) => {
@@ -960,10 +1142,16 @@ export default class Navbar extends PureComponent {
                 const { workspaces, activeWorkspace, preview } = this.state;
                 const pinnedApps = this.renderPinnedApps();
                 const runningApps = this.renderRunningApps();
+                const dockSeparator = runningApps ? (
+                        <span
+                                aria-hidden="true"
+                                className="h-px w-full rounded-full bg-white/10 md:h-8 md:w-px md:self-stretch"
+                        />
+                ) : null;
                 return (
                         <div
                                 ref={this.navbarRef}
-                                className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
+                                className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full flex-wrap items-start justify-between gap-3 bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md md:flex-nowrap md:items-center"
                                 style={{
                                         minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
                                         paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
@@ -972,20 +1160,31 @@ export default class Navbar extends PureComponent {
                                         paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
                                 }}
                         >
-                                <div className="flex items-center gap-2 text-xs md:text-sm">
-                                        <WhiskerMenu />
-                                        {workspaces.length > 0 && (
-                                                <WorkspaceSwitcher
-                                                        workspaces={workspaces}
-                                                        activeWorkspace={activeWorkspace}
-                                                        onSelect={this.handleWorkspaceSelect}
-                                                />
-                                        )}
-                                        {pinnedApps}
-                                        {runningApps}
-                                        <PerformanceGraph />
+                                <div className="flex w-full flex-wrap items-start gap-3 md:w-auto md:flex-nowrap md:items-center">
+                                        <div className="flex items-center gap-2 text-xs md:text-sm">
+                                                <WhiskerMenu />
+                                                {workspaces.length > 0 && (
+                                                        <WorkspaceSwitcher
+                                                                workspaces={workspaces}
+                                                                activeWorkspace={activeWorkspace}
+                                                                onSelect={this.handleWorkspaceSelect}
+                                                        />
+                                                )}
+                                        </div>
+                                        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center md:gap-3">
+                                                <div className="w-full md:w-auto">{pinnedApps}</div>
+                                                {dockSeparator && (
+                                                        <span className="flex w-full items-center md:w-auto md:items-stretch" aria-hidden="true">
+                                                                {dockSeparator}
+                                                        </span>
+                                                )}
+                                                {runningApps && <div className="w-full md:w-auto">{runningApps}</div>}
+                                        </div>
+                                        <div className="flex w-full justify-end md:w-auto md:justify-start">
+                                                <PerformanceGraph />
+                                        </div>
                                 </div>
-                                <div className="flex items-center gap-4 text-xs md:text-sm">
+                                <div className="flex w-full items-center justify-end gap-4 text-xs md:w-auto md:text-sm">
                                         <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
                                         <div
                                                 id="status-bar"
