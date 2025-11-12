@@ -450,4 +450,86 @@ describe('Desktop gesture handlers', () => {
 
     document.body.innerHTML = '';
   });
+
+  it('uses passive touch listeners when overscroll containment is supported', () => {
+    const originalCSS = window.CSS;
+    Object.defineProperty(window, 'CSS', {
+      configurable: true,
+      value: {
+        supports: jest.fn().mockReturnValue(true),
+      },
+    });
+
+    const desktop = new Desktop({});
+    desktop.setState = jest.fn();
+    const node = document.createElement('div');
+    desktop.desktopRef.current = node;
+    const addSpy = jest.spyOn(node, 'addEventListener');
+
+    desktop.setupGestureListeners();
+
+    const touchMoveCall = addSpy.mock.calls.find(([type]) => type === 'touchmove');
+    expect(desktop.supportsOverscrollBehavior).toBe(true);
+    expect(touchMoveCall?.[2]).toEqual({ passive: true });
+
+    desktop.teardownGestureListeners();
+
+    if (typeof originalCSS === 'undefined') {
+      // @ts-expect-error allow cleanup of mocked CSS interface
+      delete window.CSS;
+    } else {
+      Object.defineProperty(window, 'CSS', {
+        configurable: true,
+        value: originalCSS,
+      });
+    }
+  });
+
+  it('falls back to preventDefault when overscroll containment is unavailable', () => {
+    const originalCSS = window.CSS;
+    Object.defineProperty(window, 'CSS', {
+      configurable: true,
+      value: {
+        supports: jest.fn().mockReturnValue(false),
+      },
+    });
+
+    const desktop = new Desktop({});
+    desktop.setState = jest.fn();
+    const node = document.createElement('div');
+    desktop.desktopRef.current = node;
+    const addSpy = jest.spyOn(node, 'addEventListener');
+
+    desktop.setupGestureListeners();
+
+    const touchMoveCall = addSpy.mock.calls.find(([type]) => type === 'touchmove');
+    expect(desktop.supportsOverscrollBehavior).toBe(false);
+    expect(touchMoveCall?.[2]).toEqual({ passive: false });
+
+    const preventDefault = jest.fn();
+    const touchEvent = {
+      touches: [{ clientX: 0, clientY: 0 }],
+      cancelable: true,
+      preventDefault,
+    } as unknown as TouchEvent;
+
+    desktop.handleShellTouchStart(touchEvent);
+    desktop.handleShellTouchMove(touchEvent);
+    expect(preventDefault).toHaveBeenCalled();
+
+    desktop.handleShellTouchEnd({ touches: [] } as TouchEvent);
+    expect(desktop.shouldBlockPullToRefresh).toBe(false);
+
+    desktop.teardownGestureListeners();
+
+    if (typeof originalCSS === 'undefined') {
+      // @ts-expect-error allow cleanup of mocked CSS interface
+      delete window.CSS;
+    } else {
+      Object.defineProperty(window, 'CSS', {
+        configurable: true,
+        value: originalCSS,
+      });
+    }
+  });
 });
