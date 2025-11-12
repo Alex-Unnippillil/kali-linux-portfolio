@@ -11,7 +11,7 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
         <div
           ref={ref}
           className={clsx(
-            "desktop-shell isolate relative min-h-screen w-full overflow-hidden bg-transparent text-white antialiased",
+            "desktop-shell isolate relative min-h-screen w-full overflow-hidden bg-transparent text-[color:var(--color-text)] antialiased",
             className,
           )}
           {...props}
