@@ -6,14 +6,17 @@ const { defaults = {}, urls = [], scenarios = [{}] } = JSON.parse(
   fs.readFileSync(configPath),
 );
 
+const baseUrl = process.env.BASE_URL ?? 'http://localhost:3000';
+
 (async () => {
   let hasErrors = false;
   for (const url of urls) {
+    const targetUrl = url.startsWith('http') ? url : new URL(url, baseUrl).toString();
     for (const scenario of scenarios) {
       const options = { ...defaults, ...scenario };
       const label = scenario.label ? ` (${scenario.label})` : '';
-      console.log(`Testing ${url}${label}`);
-      const results = await pa11y(url, options);
+      console.log(`Testing ${targetUrl}${label}`);
+      const results = await pa11y(targetUrl, options);
       if (results.issues.length > 0) {
         hasErrors = true;
         for (const issue of results.issues) {
