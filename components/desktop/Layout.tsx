@@ -38,6 +38,9 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
             --desktop-icon-gap: 0.375rem;
             --desktop-icon-image: 2.5rem;
             --desktop-icon-font-size: 0.75rem;
+            padding-left: var(--safe-area-left, 0px);
+            padding-right: var(--safe-area-right, 0px);
+            padding-bottom: var(--safe-area-bottom, 0px);
             touch-action: manipulation;
             font-size: clamp(0.95rem, 0.9rem + 0.2vw, 1rem);
             min-height: 100vh;

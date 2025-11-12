@@ -222,6 +222,11 @@ const Clock = ({
         }
         const margin = 12
 
+        const parseInset = (value) => {
+            const numeric = parseFloat(value)
+            return Number.isFinite(numeric) ? numeric : 0
+        }
+
         const updatePosition = () => {
             const button = buttonRef.current
             const popover = popoverRef.current
@@ -233,24 +238,40 @@ const Clock = ({
             const viewportWidth = window.innerWidth
             const viewportHeight = window.innerHeight
 
+            const rootStyle = window.getComputedStyle(document.documentElement)
+            const safeInsets = {
+                top: parseInset(rootStyle.getPropertyValue('--safe-area-top')),
+                right: parseInset(rootStyle.getPropertyValue('--safe-area-right')),
+                bottom: parseInset(rootStyle.getPropertyValue('--safe-area-bottom')),
+                left: parseInset(rootStyle.getPropertyValue('--safe-area-left'))
+            }
+
+            const minLeft = margin + safeInsets.left
+            const maxRightInset = margin + safeInsets.right
+            const minTop = margin + safeInsets.top
+            const maxBottomInset = margin + safeInsets.bottom
+
             let top = buttonRect.bottom + margin
             let left = buttonRect.right - popoverRect.width
 
-            const horizontalMargin = margin
-            if (left < horizontalMargin) {
-                left = horizontalMargin
+            if (left < minLeft) {
+                left = minLeft
             }
-            if (left + popoverRect.width > viewportWidth - horizontalMargin) {
-                left = Math.max(horizontalMargin, viewportWidth - horizontalMargin - popoverRect.width)
+            const maxLeft = viewportWidth - maxRightInset - popoverRect.width
+            if (Number.isFinite(maxLeft) && left > maxLeft) {
+                left = Math.max(minLeft, maxLeft)
             }
 
-            if (top + popoverRect.height > viewportHeight - margin) {
+            const maxTop = viewportHeight - maxBottomInset - popoverRect.height
+            if (Number.isFinite(maxTop) && top > maxTop) {
                 const aboveTop = buttonRect.top - margin - popoverRect.height
-                if (aboveTop >= margin) {
+                if (aboveTop >= minTop) {
                     top = aboveTop
                 } else {
-                    top = Math.max(margin, viewportHeight - margin - popoverRect.height)
+                    top = Math.max(minTop, maxTop)
                 }
+            } else if (top < minTop) {
+                top = minTop
             }
 
             setPopoverStyles({

@@ -45,6 +45,11 @@
   --qs-brightness: 75;
   --qs-volume: 70;
   accent-color: var(--color-control-accent);
+  /* Safe area fallbacks */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
 }
 
 body {
@@ -322,6 +327,41 @@ html {
   100% {
     opacity: 0.12;
   }
+}
+
+/* Safe-area aware fixed UI offsets */
+
+.beta-badge {
+  bottom: calc(1rem + var(--safe-area-bottom, 0px));
+  right: calc(1rem + var(--safe-area-right, 0px));
+}
+
+.window-state-shelf {
+  bottom: calc(1rem + var(--safe-area-bottom, 0px));
+}
+
+.window-state-shelf--left {
+  left: calc(1rem + var(--safe-area-left, 0px));
+}
+
+.window-state-shelf--right {
+  right: calc(1rem + var(--safe-area-right, 0px));
+}
+
+.toast-notification {
+  top: calc(1rem + var(--safe-area-top, 0px));
+}
+
+.help-panel-trigger {
+  top: calc(0.5rem + var(--safe-area-top, 0px));
+  right: calc(0.5rem + var(--safe-area-right, 0px));
+}
+
+.help-panel-overlay {
+  padding-top: calc(1rem + var(--safe-area-top, 0px));
+  padding-right: calc(1rem + var(--safe-area-right, 0px));
+  padding-bottom: calc(1rem + var(--safe-area-bottom, 0px));
+  padding-left: calc(1rem + var(--safe-area-left, 0px));
 }
 
 ::-webkit-scrollbar {
