@@ -352,13 +352,13 @@ dialog {
 
 .card-front {
     background: var(--color-surface);
-    color: var(--color-inverse);
+    color: var(--color-text);
     transform: rotateY(180deg);
 }
 
 .card-back {
     background: var(--color-dark);
-    color: var(--color-surface);
+    color: var(--color-text);
 }
 
 .card.flipped {
