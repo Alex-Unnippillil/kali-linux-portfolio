@@ -24,6 +24,15 @@ import { MinimizedWindowShelf, ClosedWindowShelf } from '../desktop/WindowStateS
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import {
+    DESKTOP_WINDOW_SIZES_KEY,
+    normalizeDesktopFolderContents,
+    normalizeWindowSizes,
+    readDesktopFolderContents,
+    readWindowSizes,
+    writeDesktopFolderContents,
+    writeWindowSizes,
+} from '../../utils/desktopStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
 import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
@@ -35,77 +44,7 @@ import {
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
 
-const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
-const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
 const PINNED_APPS_STORAGE_KEY = 'pinnedApps';
-
-const sanitizeFolderItem = (item) => {
-    if (!item) return null;
-    if (typeof item === 'string') {
-        return { id: item, title: item };
-    }
-    if (typeof item === 'object' && typeof item.id === 'string') {
-        const title = typeof item.title === 'string' ? item.title : item.id;
-        const icon = typeof item.icon === 'string' ? item.icon : undefined;
-        return { id: item.id, title, icon };
-    }
-    return null;
-};
-
-const loadStoredFolderContents = () => {
-    if (!safeLocalStorage) return {};
-    try {
-        const raw = safeLocalStorage.getItem(FOLDER_CONTENTS_STORAGE_KEY);
-        if (!raw) return {};
-        const parsed = JSON.parse(raw);
-        if (!parsed || typeof parsed !== 'object') return {};
-        const normalized = {};
-        Object.entries(parsed).forEach(([folderId, value]) => {
-            if (!folderId || !Array.isArray(value)) return;
-            const items = value
-                .map((entry) => sanitizeFolderItem(entry))
-                .filter(Boolean);
-            normalized[folderId] = items;
-        });
-        return normalized;
-    } catch (e) {
-        return {};
-    }
-};
-
-const persistStoredFolderContents = (contents) => {
-    if (!safeLocalStorage) return;
-    try {
-        safeLocalStorage.setItem(
-            FOLDER_CONTENTS_STORAGE_KEY,
-            JSON.stringify(contents || {}),
-        );
-    } catch (e) {
-        // ignore storage errors
-    }
-};
-
-const loadStoredWindowSizes = (storageKey = WINDOW_SIZE_STORAGE_KEY) => {
-    if (!safeLocalStorage) return {};
-    try {
-        const stored = safeLocalStorage.getItem(storageKey);
-        if (!stored) return {};
-        const parsed = JSON.parse(stored);
-        if (!parsed || typeof parsed !== 'object') return {};
-        const normalized = {};
-        Object.entries(parsed).forEach(([key, value]) => {
-            if (!value || typeof value !== 'object') return;
-            const width = Number(value.width);
-            const height = Number(value.height);
-            if (Number.isFinite(width) && Number.isFinite(height)) {
-                normalized[key] = { width, height };
-            }
-        });
-        return normalized;
-    } catch (e) {
-        return {};
-    }
-};
 
 
 const OVERLAY_WINDOWS = Object.freeze({
@@ -205,7 +144,7 @@ export class Desktop extends Component {
             'window_positions',
             'window_sizes',
         ]);
-        this.windowSizeStorageKey = 'desktop_window_sizes';
+        this.windowSizeStorageKey = DESKTOP_WINDOW_SIZES_KEY;
         this.defaultThemeConfig = {
             id: 'default',
             accent: (props.desktopTheme && props.desktopTheme.accent) || '#1793d1',
@@ -273,7 +212,7 @@ export class Desktop extends Component {
         const initialOverlayFocused = createOverlayFlagMap(false);
 
         const initialWindowSizes = this.loadWindowSizes();
-        const storedFolderContents = loadStoredFolderContents();
+        const storedFolderContents = readDesktopFolderContents();
 
         this.state = {
             focused_windows: { ...initialOverlayFocused },
@@ -1490,32 +1429,15 @@ export class Desktop extends Component {
 
     persistFolderContents = (contents) => {
         const source = contents ?? this.state.folder_contents ?? {};
-        const normalized = {};
-        if (source && typeof source === 'object') {
-            Object.entries(source).forEach(([folderId, entries]) => {
-                if (!folderId) return;
-                if (!Array.isArray(entries)) {
-                    normalized[folderId] = [];
-                    return;
-                }
-                const sanitized = entries
-                    .map((entry) => sanitizeFolderItem(entry))
-                    .filter(Boolean);
-                normalized[folderId] = sanitized;
-            });
-        }
-        persistStoredFolderContents(normalized);
+        const normalized = normalizeDesktopFolderContents(source);
+        writeDesktopFolderContents(normalized);
     };
 
-    loadWindowSizes = () => loadStoredWindowSizes(this.windowSizeStorageKey);
+    loadWindowSizes = () => readWindowSizes(this.windowSizeStorageKey);
 
     persistWindowSizes = (sizes) => {
-        if (!safeLocalStorage) return;
-        try {
-            safeLocalStorage.setItem(this.windowSizeStorageKey, JSON.stringify(sizes));
-        } catch (e) {
-            // ignore write errors (storage may be unavailable)
-        }
+        const normalized = normalizeWindowSizes(sizes ?? {});
+        writeWindowSizes(normalized, this.windowSizeStorageKey);
     };
 
     ensureIconPositions = (desktopApps = []) => {
@@ -1970,9 +1892,8 @@ export class Desktop extends Component {
                 return;
             }
 
-            const sanitizedItems = currentItems
-                .map((entry) => sanitizeFolderItem(entry))
-                .filter(Boolean);
+            const sanitized = normalizeDesktopFolderContents({ [folderId]: currentItems });
+            const sanitizedItems = sanitized[folderId] || [];
 
             const lengthChanged = sanitizedItems.length !== currentItems.length;
             const contentChanged = sanitizedItems.some((item, index) => {

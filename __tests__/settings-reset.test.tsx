@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Settings } from '../components/apps/settings';
 import { SettingsProvider } from '../hooks/useSettings';
-import { defaults, resetSettings } from '../utils/settingsStore';
+import { defaults, resetSettings } from '../utils/settingsStorage';
 
 describe('Settings reset flow', () => {
   beforeEach(async () => {
