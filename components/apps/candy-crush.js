@@ -104,7 +104,7 @@ const fallbackGem = {
   pattern: '#475569',
 };
 
-const useGem = (id) => GEM_LIBRARY[id] ?? fallbackGem;
+const getGem = (id) => GEM_LIBRARY[id] ?? fallbackGem;
 
 const GemSprite = ({ cell, gem, streak, colorblindMode }) => {
   const gradientId = useMemo(() => `gem-gradient-${cell.id}`, [cell.id]);
@@ -629,7 +629,14 @@ const CandyCrush = () => {
 
   return (
     <div className="relative flex flex-col gap-6 rounded-3xl border border-cyan-500/10 bg-gradient-to-br from-slate-950 via-slate-950/85 to-slate-900/90 p-6 text-sm text-cyan-100 shadow-[0_0_32px_rgba(8,47,73,0.45)] backdrop-blur-xl sm:text-base">
-      <Overlay onPause={handlePause} onResume={handleResume} muted={muted} onToggleSound={handleToggleSound} />
+      <Overlay
+        gameId="candy-crush"
+        paused={paused}
+        onPause={handlePause}
+        onResume={handleResume}
+        muted={muted}
+        onToggleSound={handleToggleSound}
+      />
       <div className="flex flex-col gap-6 xl:flex-row xl:items-start">
         <div className="flex w-full flex-col gap-6 xl:max-w-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -776,7 +783,7 @@ const CandyCrush = () => {
               <div className="relative">
                 <div className="grid gap-2" style={gridStyle}>
                   {board.map((cell, index) => {
-                    const gem = useGem(cell.gem);
+                    const gem = getGem(cell.gem);
                     const row = Math.floor(index / BOARD_WIDTH) + 1;
                     const col = (index % BOARD_WIDTH) + 1;
                     const isDisabled = levelComplete || levelFailed || showEndScreen;
@@ -831,7 +838,7 @@ const CandyCrush = () => {
                       {burst.positions.map((index, particleIndex) => {
                         const row = Math.floor(index / BOARD_WIDTH);
                         const col = index % BOARD_WIDTH;
-                        const gem = useGem(burst.colors[particleIndex] ?? GEM_IDS[0]);
+                        const gem = getGem(burst.colors[particleIndex] ?? GEM_IDS[0]);
                         const left = col * (cellSize + gridGap) + cellSize / 2;
                         const top = row * (cellSize + gridGap) + cellSize / 2;
                         return (
