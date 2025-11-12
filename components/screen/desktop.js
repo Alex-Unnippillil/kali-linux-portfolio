@@ -16,6 +16,7 @@ import AllApplications from '../screen/all-applications'
 import ShortcutSelector from '../screen/shortcut-selector'
 import WindowSwitcher from '../screen/window-switcher'
 import CommandPalette from '../ui/CommandPalette';
+import CompactAppDrawer from '../ui/CompactAppDrawer';
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
@@ -316,6 +317,8 @@ export class Desktop extends Component {
             minimizedShelfOpen: false,
             closedShelfOpen: false,
             appBadges: {},
+            layoutMode: 'desktop',
+            compactDrawerOpen: false,
         };
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -357,6 +360,9 @@ export class Desktop extends Component {
         this.windowPreviewCache = new Map();
         this.windowSwitcherRequestId = 0;
         this.refreshAppRegistry();
+        this.compactLayoutMediaQuery = null;
+        this.compactLayoutListener = null;
+        this.compactLayoutUsesFallback = false;
 
         if (!this.hasStoredPinnedAppIds) {
             this.persistPinnedAppIds(initialPinnedAppIds);
@@ -1073,6 +1079,9 @@ export class Desktop extends Component {
 
         const viewportWidth = typeof window.innerWidth === 'number' ? window.innerWidth : 0;
         const viewportHeight = typeof window.innerHeight === 'number' ? window.innerHeight : 0;
+        if (this.compactLayoutUsesFallback) {
+            this.evaluateCompactLayout(viewportWidth, viewportHeight);
+        }
         this.handleViewportBucketChange(viewportWidth);
         const topOffset = measureWindowTopOffset();
         const closedWindows = this.state.closed_windows || {};
@@ -3439,7 +3448,10 @@ export class Desktop extends Component {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
+        this.setDocumentLayoutMode(this.state.layoutMode);
+
         if (typeof window !== 'undefined') {
+            this.setupCompactLayoutWatcher();
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
@@ -3546,6 +3558,8 @@ export class Desktop extends Component {
         window.removeEventListener('open-app', this.handleOpenAppEvent);
         window.removeEventListener('resize', this.handleViewportResize);
         this.detachIconKeyboardListeners();
+        this.teardownCompactLayoutWatcher();
+        this.setDocumentLayoutMode(null);
         if (typeof window !== 'undefined') {
             window.removeEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.removeEventListener('workspace-request', this.broadcastWorkspaceState);
@@ -3921,6 +3935,10 @@ export class Desktop extends Component {
             this.allAppsCloseTimeout = null;
         }
 
+        if (this.isCompactLayoutActive()) {
+            this.ensureCompactDrawerOpen();
+        }
+
         const enter = () => {
             this.setState((state) => {
                 const launcher = state.overlayWindows?.[LAUNCHER_OVERLAY_ID];
@@ -3965,12 +3983,18 @@ export class Desktop extends Component {
     closeAllAppsOverlay = () => {
         if (!this.isOverlayOpen(LAUNCHER_OVERLAY_ID)) {
             this.allAppsTriggerKey = null;
+            if (this.isCompactLayoutActive()) {
+                this.closeCompactDrawer();
+            }
             return;
         }
 
         if (this.allAppsCloseTimeout) {
             clearTimeout(this.allAppsCloseTimeout);
             this.allAppsCloseTimeout = null;
+        }
+        if (this.isCompactLayoutActive()) {
+            this.closeCompactDrawer();
         }
         this.closeOverlay(LAUNCHER_OVERLAY_ID, { transitionState: 'exiting' });
         this.allAppsCloseTimeout = setTimeout(() => {
@@ -4406,15 +4430,123 @@ export class Desktop extends Component {
         this.initFavourite = { ...favourite_apps };
     }
 
-    hasVisibleWindows = () => {
-        const closed = this.state.closed_windows || {};
-        const minimized = this.state.minimized_windows || {};
+    hasVisibleWindowsFromState = (state) => {
+        if (!state) return false;
+        const closed = state.closed_windows || {};
+        const minimized = state.minimized_windows || {};
         return Object.keys(closed).some(
             (id) => this.validAppIds.has(id) && closed[id] === false && !minimized[id],
         );
     };
 
+    hasVisibleWindows = () => this.hasVisibleWindowsFromState(this.state);
+
+    isCompactLayoutActive = () => this.state.layoutMode === 'compact';
+
+    setDocumentLayoutMode = (mode) => {
+        if (typeof document === 'undefined') return;
+        const root = document.documentElement;
+        if (!root) return;
+        if (mode) {
+            root.setAttribute('data-desktop-layout', mode);
+        } else {
+            root.removeAttribute('data-desktop-layout');
+        }
+    };
+
+    applyLayoutMode = (isCompact) => {
+        const nextMode = isCompact ? 'compact' : 'desktop';
+        this.setDocumentLayoutMode(nextMode);
+        this.setState((prev) => {
+            const updates = {};
+            let changed = false;
+            if (prev.layoutMode !== nextMode) {
+                updates.layoutMode = nextMode;
+                changed = true;
+            }
+            if (isCompact) {
+                const shouldOpenDrawer = !this.hasVisibleWindowsFromState(prev);
+                if (shouldOpenDrawer && !prev.compactDrawerOpen) {
+                    updates.compactDrawerOpen = true;
+                    changed = true;
+                }
+            } else if (prev.compactDrawerOpen) {
+                updates.compactDrawerOpen = false;
+                changed = true;
+            }
+            return changed ? updates : null;
+        });
+    };
+
+    ensureCompactDrawerClosed = (callback) => {
+        if (!this.isCompactLayoutActive() || !this.state.compactDrawerOpen) {
+            if (typeof callback === 'function') callback();
+            return;
+        }
+        this.setState({ compactDrawerOpen: false }, () => {
+            if (typeof callback === 'function') callback();
+        });
+    };
+
+    ensureCompactDrawerOpen = (callback) => {
+        if (!this.isCompactLayoutActive()) {
+            if (typeof callback === 'function') callback();
+            return;
+        }
+        this.setState((prev) => (
+            prev.compactDrawerOpen ? null : { compactDrawerOpen: true }
+        ), () => {
+            if (typeof callback === 'function') callback();
+        });
+    };
+
+    evaluateCompactLayout = (width, height) => {
+        if (typeof window === 'undefined') return;
+        const viewportWidth = typeof width === 'number' ? width : window.innerWidth;
+        const viewportHeight = typeof height === 'number' ? height : window.innerHeight;
+        if (!Number.isFinite(viewportWidth) || !Number.isFinite(viewportHeight)) return;
+        const matches = viewportWidth <= 720 || viewportHeight <= 640;
+        this.applyLayoutMode(matches);
+    };
+
+    setupCompactLayoutWatcher = () => {
+        if (typeof window === 'undefined') return;
+        if (typeof window.matchMedia === 'function') {
+            const query = window.matchMedia('screen and (max-width: 720px), screen and (max-height: 640px)');
+            this.compactLayoutMediaQuery = query;
+            const listener = (event) => {
+                this.applyLayoutMode(Boolean(event.matches));
+            };
+            this.compactLayoutListener = listener;
+            if (typeof query.addEventListener === 'function') {
+                query.addEventListener('change', listener);
+            } else if (typeof query.addListener === 'function') {
+                query.addListener(listener);
+            }
+            this.applyLayoutMode(Boolean(query.matches));
+            this.compactLayoutUsesFallback = false;
+            return;
+        }
+        this.compactLayoutUsesFallback = true;
+        this.evaluateCompactLayout();
+    };
+
+    teardownCompactLayoutWatcher = () => {
+        const query = this.compactLayoutMediaQuery;
+        const listener = this.compactLayoutListener;
+        if (query && listener) {
+            if (typeof query.removeEventListener === 'function') {
+                query.removeEventListener('change', listener);
+            } else if (typeof query.removeListener === 'function') {
+                query.removeListener(listener);
+            }
+        }
+        this.compactLayoutMediaQuery = null;
+        this.compactLayoutListener = null;
+    };
+
     renderDesktopApps = () => {
+        if (this.isCompactLayoutActive()) return null;
         const {
             desktop_apps: desktopApps,
             desktop_icon_positions: positions = {},
@@ -4520,9 +4652,8 @@ export class Desktop extends Component {
         );
     }
 
-    renderWindows = () => {
-        const { closed_windows = {}, minimized_windows = {}, focused_windows = {} } = this.state;
-        const safeTopOffset = measureWindowTopOffset();
+    getOrderedWindowIds = () => {
+        const { closed_windows = {} } = this.state;
         const stack = this.getActiveStack();
         const orderedIds = [];
         const seen = new Set();
@@ -4541,12 +4672,221 @@ export class Desktop extends Component {
             }
         });
 
+        return orderedIds;
+    };
+
+    getTopVisibleWindowId = () => {
+        const orderedIds = this.getOrderedWindowIds();
+        if (!orderedIds.length) return null;
+        const { minimized_windows = {} } = this.state;
+        for (let index = orderedIds.length - 1; index >= 0; index -= 1) {
+            const id = orderedIds[index];
+            if (!minimized_windows[id]) {
+                return id;
+            }
+        }
+        return null;
+    };
+
+    normalizeCompactIcon = (icon) => {
+        if (typeof icon !== 'string' || !icon.length) {
+            return '/themes/Yaru/apps/system-default-app.png';
+        }
+        if (icon.startsWith('./')) {
+            return icon.replace('./', '/');
+        }
+        return icon;
+    };
+
+    mapAppToCompactItem = (app) => {
+        if (!app) return null;
+        const description = typeof app.description === 'string'
+            ? app.description
+            : (typeof app.subtitle === 'string' ? app.subtitle : undefined);
+        const keywords = Array.isArray(app.keywords)
+            ? app.keywords.join(' ')
+            : (typeof app.keywords === 'string' ? app.keywords : undefined);
+        return {
+            id: app.id,
+            title: app.title,
+            icon: this.normalizeCompactIcon(app.icon),
+            description,
+            keywords,
+        };
+    };
+
+    mapSummaryToCompactItem = (summary) => {
+        if (!summary) return null;
+        return {
+            id: summary.id,
+            title: summary.title,
+            icon: this.normalizeCompactIcon(summary.icon),
+        };
+    };
+
+    getCompactAppItems = () => apps
+        .map((app) => this.mapAppToCompactItem(app))
+        .filter(Boolean);
+
+    getCompactPinnedApps = () => this.getPinnedAppSummaries()
+        .map((summary) => this.mapSummaryToCompactItem(summary))
+        .filter(Boolean);
+
+    getCompactRunningApps = () => this.getRunningAppSummaries()
+        .map((summary) => this.mapSummaryToCompactItem(summary))
+        .filter(Boolean);
+
+    getCompactRecentApps = () => {
+        const stack = this.getActiveStack();
+        const closed = this.state.closed_windows || {};
+        const seen = new Set();
+        const items = [];
+        stack.forEach((id) => {
+            if (seen.has(id)) return;
+            if (closed[id] !== false) return;
+            const app = this.getAppById(id);
+            const meta = this.mapAppToCompactItem(app);
+            if (meta) {
+                items.push(meta);
+                seen.add(id);
+            }
+        });
+        return items;
+    };
+
+    openCompactDrawer = () => {
+        if (!this.isCompactLayoutActive()) return;
+        this.setState({ compactDrawerOpen: true });
+    };
+
+    closeCompactDrawer = () => {
+        if (!this.isCompactLayoutActive()) return;
+        this.setState({ compactDrawerOpen: false });
+    };
+
+    handleCompactAppLaunch = (id) => {
+        if (!id) return;
+        this.ensureCompactDrawerClosed(() => {
+            this.openApp(id);
+        });
+    };
+
+    renderCompactActiveWindow = () => {
+        if (!this.isCompactLayoutActive()) return null;
+        const windowId = this.getTopVisibleWindowId();
+        if (!windowId) return null;
+        const app = this.getAppById(windowId);
+        if (!app || typeof app.screen !== 'function') return null;
+        const context = this.state.window_context?.[windowId];
+        const icon = this.normalizeCompactIcon(app.icon);
+        return (
+            <section
+                key={`compact-window-${windowId}`}
+                className="pointer-events-auto absolute inset-0 z-[640] flex flex-col bg-slate-950/80 backdrop-blur-xl"
+                role="region"
+                aria-label={`${app.title} window`}
+            >
+                <div className="flex items-center gap-3 border-b border-slate-700/50 bg-slate-900/80 px-4 py-3 text-slate-100">
+                    <button
+                        type="button"
+                        onClick={() => this.ensureCompactDrawerOpen()}
+                        className="inline-flex items-center gap-2 rounded-full border border-slate-700/60 bg-slate-800/80 px-4 py-2 text-sm font-medium text-slate-100 shadow shadow-slate-950/40 transition active:scale-95"
+                    >
+                        <svg
+                            aria-hidden="true"
+                            viewBox="0 0 24 24"
+                            className="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                        >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h6V4H4v2zm10 0h6V4h-6v2zM4 13h6v-2H4v2zm10 0h6v-2h-6v2zM4 20h6v-2H4v2zm10 0h6v-2h-6v2z" />
+                        </svg>
+                        <span>Apps</span>
+                    </button>
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <img src={icon} alt="" className="h-10 w-10 rounded-xl border border-slate-600/60 bg-slate-900/70 object-contain p-2" />
+                        <span className="truncate text-base font-semibold">{app.title}</span>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => this.closeApp(windowId)}
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-700/60 bg-slate-800/80 text-slate-100 shadow shadow-slate-950/40 transition active:scale-95"
+                    >
+                        <span className="sr-only">Close {app.title}</span>
+                        <svg
+                            aria-hidden="true"
+                            viewBox="0 0 24 24"
+                            className="h-5 w-5"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                        >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
+                        </svg>
+                    </button>
+                </div>
+                <div className="flex-1 overflow-y-auto bg-slate-900/40">
+                    {app.screen(this.addToDesktop, this.openApp, context)}
+                </div>
+            </section>
+        );
+    };
+
+    renderCompactDrawer = () => {
+        if (!this.isCompactLayoutActive()) return null;
+        const open = this.state.compactDrawerOpen || !this.hasVisibleWindows();
+        return (
+            <CompactAppDrawer
+                open={open}
+                onClose={this.closeCompactDrawer}
+                onLaunch={this.handleCompactAppLaunch}
+                apps={this.getCompactAppItems()}
+                pinnedApps={this.getCompactPinnedApps()}
+                runningApps={this.getCompactRunningApps()}
+                recentApps={this.getCompactRecentApps()}
+            />
+        );
+    };
+
+    renderCompactControls = () => {
+        if (!this.isCompactLayoutActive()) return null;
+        if (this.state.compactDrawerOpen || !this.hasVisibleWindows()) return null;
+        return (
+            <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[650] flex justify-center px-6">
+                <button
+                    type="button"
+                    onClick={this.openCompactDrawer}
+                    className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-slate-700/60 bg-slate-900/80 px-6 py-3 text-sm font-semibold text-slate-100 shadow-lg shadow-slate-950/50 transition active:scale-95"
+                >
+                    <svg
+                        aria-hidden="true"
+                        viewBox="0 0 24 24"
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                    >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h6V4H4v2zm10 0h6V4h-6v2zM4 13h6v-2H4v2zm10 0h6v-2h-6v2zM4 20h6v-2H4v2zm10 0h6v-2h-6v2z" />
+                    </svg>
+                    <span>Open app drawer</span>
+                </button>
+            </div>
+        );
+    };
+
+    renderWindows = () => {
+        if (this.isCompactLayoutActive()) return null;
+        const { closed_windows = {}, minimized_windows = {}, focused_windows = {} } = this.state;
+        const safeTopOffset = measureWindowTopOffset();
+        const orderedIds = this.getOrderedWindowIds();
+
         if (!orderedIds.length) return null;
 
         const appMap = new Map(apps.map((app) => [app.id, app]));
         const snapGrid = this.getSnapGrid();
 
-        return orderedIds.map((id, index) => {
+        return orderedIds.map((id) => {
             const app = appMap.get(id);
             if (!app) return null;
             const pos = this.state.window_positions[id];
@@ -4586,7 +4926,7 @@ export class Desktop extends Component {
         const overlays = this.state.overlayWindows || {};
 
         const launcherState = overlays[LAUNCHER_OVERLAY_ID];
-        if (launcherState) {
+        if (launcherState && !this.isCompactLayoutActive()) {
             const transitionState = launcherState.transitionState || (launcherState.open ? 'entered' : 'exited');
             const shouldRender = launcherState.open || ['entering', 'exiting'].includes(transitionState);
             const overlayActive = launcherState.open && !launcherState.minimized;
@@ -4866,6 +5206,9 @@ export class Desktop extends Component {
             this.openOverlay(objId);
             return;
         }
+        if (this.isCompactLayoutActive()) {
+            this.setState((prev) => (prev.compactDrawerOpen ? { compactDrawerOpen: false } : null));
+        }
         const baseContext = params && typeof params === 'object'
             ? {
                 ...params,
@@ -5053,7 +5396,12 @@ export class Desktop extends Component {
                 nextState.focused_windows = { ...prevState.focused_windows, [objId]: false };
             }
             return nextState;
-        }, this.saveSession);
+        }, () => {
+            this.saveSession();
+            if (this.isCompactLayoutActive() && !this.hasVisibleWindows()) {
+                this.setState((state) => (state.compactDrawerOpen ? null : { compactDrawerOpen: true }));
+            }
+        });
 
         this.clearAppBadge(objId, { force: true });
     }
@@ -5282,15 +5630,22 @@ export class Desktop extends Component {
         const windowSwitcherOverlay = overlayWindows.windowSwitcher || { open: false, minimized: false, maximized: false };
         const minimizedEntries = this.getMinimizedWindowEntries();
         const closedEntries = this.getClosedWindowEntries();
-        const showMinimizedShelf = this.state.minimizedShelfOpen || minimizedEntries.length > 0;
-        const showClosedShelf = this.state.closedShelfOpen || closedEntries.length > 0;
+        const isCompactLayout = this.isCompactLayoutActive();
+        const showMinimizedShelf = !isCompactLayout && (this.state.minimizedShelfOpen || minimizedEntries.length > 0);
+        const showClosedShelf = !isCompactLayout && (this.state.closedShelfOpen || closedEntries.length > 0);
+        const mainClassName = [
+            'min-h-screen h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent',
+            isCompactLayout ? 'compact-desktop' : '',
+        ].join(' ').trim();
+        const windowContent = isCompactLayout ? this.renderCompactActiveWindow() : this.renderWindows();
         return (
             <main
                 id="desktop"
                 role="main"
                 ref={this.desktopRef}
-                className={" min-h-screen h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent"}
+                className={mainClassName}
                 style={desktopStyle}
+                data-layout-mode={this.state.layoutMode}
             >
 
                 {/* Window Area */}
@@ -5299,7 +5654,7 @@ export class Desktop extends Component {
                     className="absolute h-full w-full bg-transparent"
                     data-context="desktop-area"
                 >
-                    {this.renderWindows()}
+                    {windowContent}
                 </div>
 
                 {/* Background Image */}
@@ -5393,6 +5748,8 @@ export class Desktop extends Component {
                 ) : null}
 
                 {this.renderOverlayWindows()}
+                {this.renderCompactDrawer()}
+                {this.renderCompactControls()}
 
                 <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
                     {this.state.liveRegionMessage}
