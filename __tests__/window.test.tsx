@@ -785,6 +785,42 @@ describe('Window snapping finalize and release', () => {
   });
 });
 
+describe('Window drag visuals', () => {
+  it('toggles dragging class when drag state changes', () => {
+    const ref = React.createRef<any>();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window');
+    expect(winEl).not.toBeNull();
+    const element = winEl as HTMLElement;
+    expect(element).not.toHaveClass(windowStyles.windowFrameDragging);
+
+    act(() => {
+      ref.current!.changeCursorToMove();
+    });
+
+    expect(element).toHaveClass(windowStyles.windowFrameDragging);
+
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(element).not.toHaveClass(windowStyles.windowFrameDragging);
+  });
+});
+
 describe('Window maximize behavior', () => {
   it('respects safe-area aware top offset when maximizing', () => {
     const safeTop = DESKTOP_TOP_PADDING + 48;
