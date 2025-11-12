@@ -73,7 +73,15 @@ Verify that features relying on `/api/*` degrade gracefully when served statical
 ### Install as a Progressive Web App
 1. Open the deployed site in a supported browser (Chrome, Edge, Brave, etc.).
 2. Use the browser’s **Install** / **Add to Home Screen** action.
-3. On mobile, share text/links to the installed app to create sticky notes automatically.
+3. Launch the installed app once to grant storage permissions for sticky notes.
+4. On mobile, use the system **Share** sheet to send text or URLs to “Kali Linux Portfolio” and a new sticky note will be created automatically.
+
+#### Mobile share workflow
+1. Install the PWA and pin it to the home screen.
+2. In a mobile browser (Chrome, Edge, Brave), open a page you want to save and tap **Share**.
+3. Pick **Kali Linux Portfolio** from the share target list and wait for the app to launch.
+4. The Sticky Notes window opens with a fresh note containing the shared text or link; close the window or adjust the note as needed.
+5. Re-open the Sticky Notes app later to confirm the note persists.
 
 The service worker is generated during `next build` by [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa) and outputs to `public/sw.js`.
 
