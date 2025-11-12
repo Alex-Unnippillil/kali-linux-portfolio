@@ -19,6 +19,15 @@ function DefaultMenu(props) {
         setIsFullScreen(Boolean(document.fullscreenElement))
     }, [])
 
+    const runAndClose = (action) => {
+        if (typeof action === 'function') {
+            action()
+        }
+        if (props.onClose) {
+            props.onClose()
+        }
+    }
+
     useFocusTrap(menuRef, props.active)
     useRovingTabIndex(menuRef, props.active, 'vertical')
 
@@ -34,40 +43,37 @@ function DefaultMenu(props) {
     }, [checkFullScreen])
 
     const openTerminal = () => {
-        if (typeof props.openApp === 'function') {
-            props.openApp('terminal')
-        }
-        if (props.onClose) {
-            props.onClose()
-        }
+        runAndClose(() => {
+            if (typeof props.openApp === 'function') {
+                props.openApp('terminal')
+            }
+        })
     }
 
     const openSettings = () => {
-        if (typeof props.openApp === 'function') {
-            props.openApp('settings')
-        }
-        if (props.onClose) {
-            props.onClose()
-        }
+        runAndClose(() => {
+            if (typeof props.openApp === 'function') {
+                props.openApp('settings')
+            }
+        })
     }
 
     const goFullScreen = () => {
-        if (typeof document === 'undefined') {
-            return
-        }
-
-        try {
-            if (document.fullscreenElement) {
-                document.exitFullscreen()
-            } else {
-                document.documentElement.requestFullscreen()
+        runAndClose(() => {
+            if (typeof document === 'undefined') {
+                return
             }
-        } catch (e) {
-            logger.error(e)
-        }
-        if (props.onClose) {
-            props.onClose()
-        }
+
+            try {
+                if (document.fullscreenElement) {
+                    document.exitFullscreen()
+                } else {
+                    document.documentElement.requestFullscreen()
+                }
+            } catch (e) {
+                logger.error(e)
+            }
+        })
     }
 
     const handleKeyDown = (e) => {
@@ -77,30 +83,27 @@ function DefaultMenu(props) {
     }
 
     const handleClearSession = () => {
-        if (typeof props.clearSession === 'function') {
-            props.clearSession()
-        }
-        if (props.onClose) {
-            props.onClose()
-        }
+        runAndClose(() => {
+            if (typeof props.clearSession === 'function') {
+                props.clearSession()
+            }
+        })
     }
 
     const handleNewFolder = () => {
-        if (typeof props.addNewFolder === 'function') {
-            props.addNewFolder()
-        }
-        if (props.onClose) {
-            props.onClose()
-        }
+        runAndClose(() => {
+            if (typeof props.addNewFolder === 'function') {
+                props.addNewFolder()
+            }
+        })
     }
 
     const handleCreateShortcut = () => {
-        if (typeof props.openShortcutSelector === 'function') {
-            props.openShortcutSelector()
-        }
-        if (props.onClose) {
-            props.onClose()
-        }
+        runAndClose(() => {
+            if (typeof props.openShortcutSelector === 'function') {
+                props.openShortcutSelector()
+            }
+        })
     }
 
     return (
