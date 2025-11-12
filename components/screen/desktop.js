@@ -20,6 +20,7 @@ import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import TaskbarMenu from '../context-menus/taskbar-menu';
+import WindowMenu from '../context-menus/window-menu';
 import { MinimizedWindowShelf, ClosedWindowShelf } from '../desktop/WindowStateShelf';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
@@ -293,6 +294,7 @@ export class Desktop extends Component {
                 default: false,
                 app: false,
                 taskbar: false,
+                window: false,
             },
             context_app: null,
             showNameBar: false,
@@ -4223,6 +4225,13 @@ export class Desktop extends Component {
                 });
                 this.setState({ context_app: appId }, () => this.showContextMenu(e, "taskbar"));
                 break;
+            case "window":
+                ReactGA.event({
+                    category: `Context Menu`,
+                    action: `Opened Window Context Menu`
+                });
+                this.setState({ context_app: appId }, () => this.showContextMenu(e, "window"));
+                break;
             default:
                 ReactGA.event({
                     category: `Context Menu`,
@@ -4254,6 +4263,10 @@ export class Desktop extends Component {
                 ReactGA.event({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar"));
                 break;
+            case "window":
+                ReactGA.event({ category: `Context Menu`, action: `Opened Window Context Menu` });
+                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "window"));
+                break;
             default:
                 ReactGA.event({ category: `Context Menu`, action: `Opened Default Context Menu` });
                 this.showContextMenu(fakeEvent, "default");
@@ -4284,6 +4297,49 @@ export class Desktop extends Component {
             menus[key] = false;
         });
         this.setState({ context_menus: menus, context_app: null });
+    }
+
+    getViewportDimensions = () => {
+        if (typeof window === 'undefined') {
+            return { width: 0, height: 0 };
+        }
+        const visualViewport = window.visualViewport;
+        const width = Number.isFinite(visualViewport?.width) ? visualViewport.width : window.innerWidth;
+        const height = Number.isFinite(visualViewport?.height) ? visualViewport.height : window.innerHeight;
+        return {
+            width: typeof width === 'number' && Number.isFinite(width) ? width : 0,
+            height: typeof height === 'number' && Number.isFinite(height) ? height : 0,
+        };
+    }
+
+    resizeWindowToDimensions = (id, widthPx, heightPx) => {
+        if (!id) return null;
+        const normalizedWidth = Number(widthPx);
+        const normalizedHeight = Number(heightPx);
+        if (!Number.isFinite(normalizedWidth) || !Number.isFinite(normalizedHeight)) {
+            return null;
+        }
+        const { width: viewportWidth, height: viewportHeight } = this.getViewportDimensions();
+        if (viewportWidth <= 0 || viewportHeight <= 0) {
+            return null;
+        }
+        const clampPercent = (percent) => {
+            if (!Number.isFinite(percent)) return 0;
+            return Math.max(0, Math.min(100, Math.round(percent)));
+        };
+        const widthPercent = clampPercent((normalizedWidth / viewportWidth) * 100);
+        const heightPercent = clampPercent((normalizedHeight / viewportHeight) * 100);
+        this.updateWindowSize(id, widthPercent, heightPercent);
+        this.focus(id);
+        return { width: widthPercent, height: heightPercent };
+    }
+
+    handleWindowMenuPreset = (preset) => {
+        if (!preset) return null;
+        const id = this.state.context_app;
+        if (!id) return null;
+        const result = this.resizeWindowToDimensions(id, preset.width, preset.height);
+        return result;
     }
 
     getMenuPosition = (e) => {
@@ -5358,6 +5414,11 @@ export class Desktop extends Component {
                             this.closeApp(id);
                         }
                     }}
+                    onCloseMenu={this.hideAllContextMenu}
+                />
+                <WindowMenu
+                    active={this.state.context_menus.window}
+                    onSelectPreset={this.handleWindowMenuPreset}
                     onCloseMenu={this.hideAllContextMenu}
                 />
 
