@@ -72,3 +72,10 @@ export const useSnapGridSetting = () =>
         (item) => typeof item === 'number' && Number.isFinite(item) && item > 0,
       ),
   );
+
+export const useSnapToGridSetting = () =>
+  usePersistentState<boolean>(
+    'snap-to-grid',
+    true,
+    (value): value is boolean => typeof value === 'boolean',
+  );

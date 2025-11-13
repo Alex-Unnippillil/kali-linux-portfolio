@@ -26,7 +26,7 @@ import { toPng } from 'html-to-image';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
-import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
+import { useSnapSetting, useSnapGridSetting, useSnapToGridSetting } from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
 import {
     clampWindowPositionWithinViewport,
@@ -192,6 +192,7 @@ const createOverlayStateMap = () => {
 export class Desktop extends Component {
     static defaultProps = {
         snapGrid: [8, 8],
+        snapToGrid: true,
     };
 
     constructor(props) {
@@ -4573,6 +4574,7 @@ export class Desktop extends Component {
                 onPositionChange: (x, y) => this.updateWindowPosition(id, x, y),
                 onSizeChange: (width, height) => this.updateWindowSize(id, width, height),
                 snapEnabled: this.props.snapEnabled,
+                snapToGrid: this.props.snapToGrid,
                 snapGrid,
                 context: this.state.window_context[id],
             };
@@ -4688,7 +4690,7 @@ export class Desktop extends Component {
     updateWindowPosition = (id, x, y) => {
         const [gridX, gridY] = this.getSnapGrid();
         const snapValue = (value, size) => {
-            if (!this.props.snapEnabled) return value;
+            if (this.props.snapToGrid === false) return value;
             if (typeof size !== 'number' || !Number.isFinite(size) || size <= 0) return value;
             return Math.round(value / size) * size;
         };
@@ -5406,11 +5408,13 @@ export class Desktop extends Component {
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
     const [snapGrid] = useSnapGridSetting();
+    const [snapToGrid] = useSnapToGridSetting();
     const { density, fontScale, largeHitAreas, desktopTheme } = useSettings();
     return (
         <Desktop
             {...props}
             snapEnabled={snapEnabled}
+            snapToGrid={snapToGrid}
             snapGrid={snapGrid}
             density={density}
             fontScale={fontScale}

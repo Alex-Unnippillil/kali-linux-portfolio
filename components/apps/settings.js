@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
+import { useSnapToGridSetting } from '../../hooks/usePersistentState';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
     const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const [snapToGrid, setSnapToGrid] = useSnapToGridSetting();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -170,6 +172,18 @@ export function Settings() {
                 <label className="mr-2 text-kali-text/80 flex items-center">
                     <input
                         type="checkbox"
+                        checked={snapToGrid}
+                        onChange={(e) => setSnapToGrid(e.target.checked)}
+                        className="mr-2"
+                        aria-label="Snap windows to grid"
+                    />
+                    Snap Windows to Grid
+                </label>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-kali-text/80 flex items-center">
+                    <input
+                        type="checkbox"
                         checked={highContrast}
                         onChange={(e) => setHighContrast(e.target.checked)}
                         className="mr-2"
@@ -292,6 +306,7 @@ export function Settings() {
                         setAllowNetwork(defaults.allowNetwork);
                         setHaptics(defaults.haptics);
                         setTheme('default');
+                        setSnapToGrid(true);
                     }}
                     className="px-4 py-2 rounded-md bg-kali-primary text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
                 >
