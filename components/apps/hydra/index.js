@@ -5,6 +5,17 @@ import AttemptTimeline from './Timeline';
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
 
+const servicePortMeta = {
+  ssh: { label: 'SSH', ports: [22, 2222] },
+  ftp: { label: 'FTP', ports: [21, 990] },
+  'http-get': { label: 'HTTP GET', ports: [80, 8080, 8000, 443] },
+  'http-post-form': {
+    label: 'HTTP POST Form',
+    ports: [80, 8080, 8000, 443],
+  },
+  smtp: { label: 'SMTP', ports: [25, 465, 587] },
+};
+
 export const registerHydraProtocol = (protocol) => {
   if (typeof window === 'undefined') {
     return;
@@ -58,6 +69,7 @@ const saveConfigStorage = (config) => {
 
 const HydraApp = () => {
   const [target, setTarget] = useState('');
+  const [targetTouched, setTargetTouched] = useState(false);
   const [service, setService] = useState('ssh');
   const [availableServices, setAvailableServices] = useState([
     ...baseServices,
@@ -87,15 +99,49 @@ const HydraApp = () => {
   const LOCKOUT_THRESHOLD = 10;
   const BACKOFF_THRESHOLD = 5;
 
-  const isTargetValid = useMemo(() => {
+  const targetValidation = useMemo(() => {
     const trimmed = target.trim();
-    if (!trimmed) return false;
+    if (!trimmed) {
+      return { valid: false, message: 'Target is required.' };
+    }
     const [host, port] = trimmed.split(':');
-    if (port && !/^\d+$/.test(port)) return false;
     const ipv4 = /^(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}$/;
     const hostname = /^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*$/;
-    return ipv4.test(host) || hostname.test(host);
-  }, [target]);
+    if (!ipv4.test(host) && !hostname.test(host)) {
+      return {
+        valid: false,
+        message: 'Enter a valid hostname or IPv4 address.',
+      };
+    }
+    if (!port) {
+      return { valid: true, message: '' };
+    }
+    if (!/^\d+$/.test(port)) {
+      return { valid: false, message: 'Port must be numeric.' };
+    }
+    const portNumber = Number(port);
+    if (portNumber < 1 || portNumber > 65535) {
+      return {
+        valid: false,
+        message: 'Port must be between 1 and 65535.',
+      };
+    }
+    const meta = servicePortMeta[service];
+    if (meta && !meta.ports.includes(portNumber)) {
+      const suggestion = meta.ports.map(String).join(', ');
+      return {
+        valid: false,
+        message: `Port ${portNumber} is not allowed for ${meta.label}. Try ${suggestion}.`,
+      };
+    }
+    return { valid: true, message: '' };
+  }, [service, target]);
+
+  const isTargetValid = targetValidation.valid;
+  const targetError = targetValidation.message;
+  const showTargetError = Boolean(
+    targetError && (targetTouched || target.trim().length > 0)
+  );
 
   useEffect(() => {
     setUserLists(loadWordlists('hydraUserLists'));
@@ -308,6 +354,7 @@ const HydraApp = () => {
   };
 
   const runHydra = async () => {
+    setTargetTouched(true);
     const user = selectedUserList;
     const pass = selectedPassList;
     if (!isTargetValid || !user || !pass) {
@@ -361,6 +408,10 @@ const HydraApp = () => {
   };
 
   const dryRunHydra = () => {
+    setTargetTouched(true);
+    if (!isTargetValid) {
+      return;
+    }
     const user = selectedUserList;
     const pass = selectedPassList;
     const userCount = user?.content.split('\n').filter(Boolean).length || 0;
@@ -460,18 +511,40 @@ const HydraApp = () => {
           ))}
         </div>
         <div>
-          <label className="block mb-1">Target</label>
+          <label className="block mb-1" htmlFor="hydra-target">
+            Target
+          </label>
           <input
+            id="hydra-target"
             type="text"
             value={target}
-            onChange={(e) => setTarget(e.target.value)}
+            onChange={(e) => {
+              if (!targetTouched) {
+                setTargetTouched(true);
+              }
+              setTarget(e.target.value);
+            }}
             className="w-full p-2 rounded text-black"
+            aria-invalid={showTargetError}
+            aria-describedby={showTargetError ? 'hydra-target-error' : undefined}
             placeholder="192.168.0.1"
           />
+          {showTargetError && (
+            <p
+              id="hydra-target-error"
+              role="alert"
+              className="mt-1 text-sm text-red-400"
+            >
+              {targetError}
+            </p>
+          )}
         </div>
         <div>
-          <label className="block mb-1">Service</label>
+          <label className="block mb-1" htmlFor="hydra-service">
+            Service
+          </label>
           <select
+            id="hydra-service"
             value={service}
             onChange={(e) => setService(e.target.value)}
             className="w-full p-2 rounded text-black"
@@ -594,7 +667,7 @@ const HydraApp = () => {
           </button>
           <button
             onClick={dryRunHydra}
-            disabled={running}
+            disabled={running || !isTargetValid}
             className="px-4 py-2 bg-purple-600 rounded disabled:opacity-50"
           >
             Dry Run
