@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import Reports from './Reports';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -447,34 +448,44 @@ const HydraApp = () => {
             { label: 'SSH', value: 'ssh', icon: '/themes/Yaru/apps/ssh.svg' },
             { label: 'FTP', value: 'ftp', icon: '/themes/Yaru/apps/ftp.svg' },
           ].map((m) => (
-            <div
+            <button
               key={m.value}
+              type="button"
               onClick={() => setService(m.value)}
-              className={`flex items-center p-2 rounded border cursor-pointer text-sm ${
+              className={`flex items-center p-2 rounded border text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${
                 service === m.value ? 'bg-blue-600' : 'bg-gray-700'
               }`}
+              aria-pressed={service === m.value}
             >
               <img src={m.icon} alt={m.label} className="w-6 h-6 mr-2" />
               <span>{m.label}</span>
-            </div>
+            </button>
           ))}
         </div>
         <div>
-          <label className="block mb-1">Target</label>
+          <label className="block mb-1" htmlFor="hydra-target-input">
+            Target
+          </label>
           <input
+            id="hydra-target-input"
             type="text"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="192.168.0.1"
+            aria-label="Target host"
           />
         </div>
         <div>
-          <label className="block mb-1">Service</label>
+          <label className="block mb-1" htmlFor="hydra-service-select">
+            Service
+          </label>
           <select
+            id="hydra-service-select"
             value={service}
             onChange={(e) => setService(e.target.value)}
             className="w-full p-2 rounded text-black"
+            aria-label="Select service"
           >
             {availableServices.map((s) => (
               <option key={s} value={s}>
@@ -484,11 +495,15 @@ const HydraApp = () => {
           </select>
         </div>
         <div>
-          <label className="block mb-1">User List</label>
+          <label className="block mb-1" htmlFor="hydra-user-select">
+            User List
+          </label>
           <select
+            id="hydra-user-select"
             value={selectedUser}
             onChange={(e) => setSelectedUser(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Select user wordlist"
           >
             {userLists.map((l) => (
               <option key={l.name} value={l.name}>
@@ -504,6 +519,7 @@ const HydraApp = () => {
               addWordList(e.target.files[0], setUserLists, userLists)
             }
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Upload user wordlist"
           />
           <ul>
             {userLists.map((l) => (
@@ -520,11 +536,15 @@ const HydraApp = () => {
           </ul>
         </div>
         <div>
-          <label className="block mb-1">Password List</label>
+          <label className="block mb-1" htmlFor="hydra-pass-select">
+            Password List
+          </label>
           <select
+            id="hydra-pass-select"
             value={selectedPass}
             onChange={(e) => setSelectedPass(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Select password wordlist"
           >
             {passLists.map((l) => (
               <option key={l.name} value={l.name}>
@@ -540,6 +560,7 @@ const HydraApp = () => {
               addWordList(e.target.files[0], setPassLists, passLists)
             }
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Upload password wordlist"
           />
           <ul>
             {passLists.map((l) => (
@@ -556,23 +577,31 @@ const HydraApp = () => {
           </ul>
         </div>
         <div>
-          <label className="block mb-1">Charset</label>
+          <label className="block mb-1" htmlFor="hydra-charset-input">
+            Charset
+          </label>
           <input
+            id="hydra-charset-input"
             type="text"
             value={charset}
             onChange={(e) => setCharset(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="abc123"
+            aria-label="Candidate charset"
           />
         </div>
         <div className="col-span-2">
-          <label className="block mb-1">Rule (min:max length)</label>
+          <label className="block mb-1" htmlFor="hydra-rule-input">
+            Rule (min:max length)
+          </label>
           <input
+            id="hydra-rule-input"
             type="text"
             value={rule}
             onChange={(e) => setRule(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="1:3"
+            aria-label="Charset rule"
           />
           <p className="mt-1 text-sm">
             Candidate space: {candidateSpace.toLocaleString()}
@@ -582,58 +611,73 @@ const HydraApp = () => {
             width="300"
             height="100"
             className="bg-gray-800 mt-2 w-full"
+            aria-label="Candidate space distribution"
           ></canvas>
         </div>
         <div className="col-span-2 flex flex-wrap gap-1.5 mt-2">
           <button
+            type="button"
             onClick={runHydra}
             disabled={running || !isTargetValid}
             className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
+            aria-label="Run Hydra simulation"
           >
             {running ? 'Running...' : 'Run Hydra'}
           </button>
           <button
+            type="button"
             onClick={dryRunHydra}
             disabled={running}
             className="px-4 py-2 bg-purple-600 rounded disabled:opacity-50"
+            aria-label="Run Hydra dry run"
           >
             Dry Run
           </button>
           <button
+            type="button"
             onClick={handleSaveConfig}
             className="px-4 py-2 bg-gray-700 rounded"
+            aria-label="Save Hydra configuration"
           >
             Save Config
           </button>
           <button
+            type="button"
             onClick={handleCopyConfig}
             className="px-4 py-2 bg-gray-700 rounded"
+            aria-label="Copy Hydra configuration"
           >
             Copy Config
           </button>
           {running && !paused && (
             <button
+              type="button"
               data-testid="pause-button"
               onClick={pauseHydra}
               className="px-4 py-2 bg-yellow-600 rounded"
+              aria-label="Pause Hydra simulation"
             >
               Pause
             </button>
           )}
           {running && paused && (
             <button
+              type="button"
               data-testid="resume-button"
               onClick={resumeHydra}
               className="px-4 py-2 bg-blue-600 rounded"
+              aria-label="Resume Hydra simulation"
             >
               Resume
             </button>
           )}
           {running && (
             <button
+              type="button"
               data-testid="cancel-button"
               onClick={cancelHydra}
               className="px-4 py-2 bg-red-600 rounded"
+              aria-label="Cancel Hydra simulation"
             >
               Cancel
             </button>
@@ -669,6 +713,17 @@ const HydraApp = () => {
         account lockout.
       </p>
       <AttemptTimeline attempts={timeline} />
+      <Reports
+        target={target}
+        service={service}
+        attempts={timeline}
+        totalAttempts={totalAttempts}
+        candidateSpace={candidateSpace}
+        charset={charset}
+        rule={rule}
+        backoffThreshold={BACKOFF_THRESHOLD}
+        lockoutThreshold={LOCKOUT_THRESHOLD}
+      />
       {timeline.length > 0 && (
         <table className="mt-4 w-full text-sm">
           <thead>
