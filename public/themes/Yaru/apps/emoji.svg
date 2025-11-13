@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title>Emoji Picker Icon</title>
+  <defs>
+    <radialGradient id="emojiFace" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#fff176" />
+      <stop offset="65%" stop-color="#fbc02d" />
+      <stop offset="100%" stop-color="#f57f17" />
+    </radialGradient>
+  </defs>
+  <circle cx="32" cy="32" r="28" fill="url(#emojiFace)" stroke="#f9a825" stroke-width="2" />
+  <ellipse cx="22" cy="26" rx="4" ry="6" fill="#3e2723" />
+  <ellipse cx="42" cy="26" rx="4" ry="6" fill="#3e2723" />
+  <path
+    d="M20 38c2.5 6 8 10 12 10s9.5-4 12-10"
+    fill="none"
+    stroke="#3e2723"
+    stroke-width="3"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
