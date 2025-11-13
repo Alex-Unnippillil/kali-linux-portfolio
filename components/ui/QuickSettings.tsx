@@ -3,6 +3,8 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import { useTheme } from '../../hooks/useTheme';
+import useNotifications from '../../hooks/useNotifications';
+import useAppBadge from '../../hooks/useAppBadge';
 import { isDarkTheme } from '../../utils/theme';
 
 interface Props {
@@ -14,6 +16,8 @@ const transitionDurationMs = 200;
 
 const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
   const { theme: activeTheme, setTheme: updateTheme } = useTheme();
+  const { unreadCount } = useNotifications();
+  const { isSupported: isBadgingSupported, setBadge, clearBadge } = useAppBadge();
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
@@ -111,6 +115,19 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
     };
   }, [volume]);
 
+  useEffect(() => {
+    if (!isBadgingSupported) return;
+    if (focusMode) {
+      clearBadge();
+      return;
+    }
+    if (unreadCount > 0) {
+      setBadge(unreadCount);
+    } else {
+      clearBadge();
+    }
+  }, [clearBadge, focusMode, isBadgingSupported, setBadge, unreadCount]);
+
   if (!shouldRender) {
     return null;
   }
@@ -144,6 +161,24 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
   const isDarkMode = isDarkTheme(activeTheme);
   const quickTheme = isDarkMode ? 'dark' : 'light';
 
+  const notificationStatus: { value: string; tone: keyof typeof statusToneStyles } = (() => {
+    if (!isBadgingSupported) {
+      if (unreadCount > 0) {
+        const displayCount = unreadCount > 99 ? '99+' : `${unreadCount}`;
+        return { value: `${displayCount} pending (no badge)`, tone: 'muted' as const };
+      }
+      return { value: 'Badge unsupported', tone: 'muted' as const };
+    }
+    if (focusMode) {
+      return { value: 'Muted', tone: 'muted' as const };
+    }
+    if (unreadCount > 0) {
+      const displayCount = unreadCount > 99 ? '99+' : `${unreadCount}`;
+      return { value: `${displayCount} pending`, tone: 'warning' as const };
+    }
+    return { value: 'All clear', tone: 'positive' as const };
+  })();
+
   const statusBadges: Array<{
     id: string;
     label: string;
@@ -151,6 +186,13 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
     icon: ReactNode;
     tone: keyof typeof statusToneStyles;
   }> = [
+    {
+      id: 'notifications',
+      label: 'Notifications',
+      value: notificationStatus.value,
+      icon: <BellIcon />,
+      tone: notificationStatus.tone,
+    },
     {
       id: 'theme',
       label: 'Theme',
@@ -518,6 +560,23 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
     </div>
   );
 };
+
+const BellIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 20 20"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="text-white"
+  >
+    <path
+      d="M10 2a4 4 0 00-4 4v1.09c0 .471-.158.93-.45 1.3L4.3 10.2A1 1 0 005 11.8h10a1 1 0 00.7-1.6l-1.25-1.81a2 2 0 01-.45-1.3V6a4 4 0 00-4-4z"
+      fill="currentColor"
+    />
+    <path d="M7 12a3 3 0 006 0H7z" fill="currentColor" />
+  </svg>
+);
 
 const SunIcon = () => (
   <svg
