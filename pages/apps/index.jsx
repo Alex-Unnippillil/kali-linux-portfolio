@@ -37,7 +37,13 @@ const AppsPage = () => {
   );
 
   return (
-    <div className="p-4">
+    <main
+      id="app-grid"
+      data-skip-target="app-grid"
+      tabIndex={-1}
+      aria-label="Applications"
+      className="p-4"
+    >
       <label htmlFor="app-search" className="sr-only">
         Search apps
       </label>
@@ -47,13 +53,10 @@ const AppsPage = () => {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search apps"
+        aria-label="Search apps"
         className="mb-4 w-full rounded border p-2"
       />
-      <div
-        id="app-grid"
-        tabIndex="-1"
-        className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
-      >
+      <section aria-label="Application grid" className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {filteredApps.map((app) => {
           const meta = metadata[app.id] ?? buildAppMetadata(app);
           return (
@@ -92,8 +95,8 @@ const AppsPage = () => {
             </DelayedTooltip>
           );
         })}
-      </div>
-    </div>
+      </section>
+    </main>
   );
 };
 
