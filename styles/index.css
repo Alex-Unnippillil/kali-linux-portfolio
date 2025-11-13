@@ -216,9 +216,42 @@ input[type=range].ubuntu-slider:focus-visible::-webkit-slider-thumb {
     background-color: transparent;
 }
 
-.windowMainScreen::-webkit-scrollbar {
+.windowMainScreen::-webkit-scrollbar { 
     width: 6px;
     background-color: transparent;
+}
+
+.game-overlay {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    background-color: color-mix(in srgb, var(--color-surface), transparent 35%);
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    z-index: 25;
+    pointer-events: auto;
+}
+
+.game-overlay button {
+    background-color: color-mix(in srgb, var(--color-bg), transparent 45%);
+    color: var(--color-text);
+    border: none;
+    border-radius: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+}
+
+.game-overlay button:hover {
+    background-color: color-mix(in srgb, var(--color-bg), transparent 35%);
+}
+
+.game-overlay .fps {
+    color: var(--color-text);
+    font-variant-numeric: tabular-nums;
 }
 
 .windowMainScreen::-webkit-scrollbar-thumb {
