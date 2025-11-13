@@ -350,7 +350,7 @@ Default headers are configured in [`next.config.js`](./next.config.js):
 - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
 - `X-Frame-Options: SAMEORIGIN`
 
-CSP whitelists hosts such as `*.twitter.com`, `embed.x.com`, `cdn.jsdelivr.net`, `cdnjs.cloudflare.com`, `stackblitz.com`, `www.youtube.com`, and `vercel.live`. Update the whitelist whenever you embed a new external resource. Consider removing `'unsafe-inline'` from `style-src` once inline styles are eliminated.
+CSP allowlists the providers configured in [`lib/csp/sources.js`](./lib/csp/sources.js), including social embeds (`*.twitter.com`, `embed.x.com`), media players (`open.spotify.com`, `www.youtube-nocookie.com`), documentation viewers (`react.dev`), and API providers such as `cdn.jsdelivr.net`, `cdnjs.cloudflare.com`, `stackblitz.com`, and `vercel.live`. Update the shared source list whenever you embed a new external resource. Consider removing `'unsafe-inline'` from `style-src` once inline styles are eliminated.
 
 ### Production Checklist
 - [x] Pin Node.js to 20.19.5 across local, CI, and hosting environments.

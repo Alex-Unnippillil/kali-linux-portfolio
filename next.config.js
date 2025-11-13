@@ -1,37 +1,11 @@
 // Security headers configuration for Next.js.
 // Allows external badges and same-origin PDF embedding.
-// Update README (section "CSP External Domains") when editing domains below.
+// Update README (section "CSP External Domains") when editing the shared CSP sources.
 
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+const { buildCsp } = require('./lib/csp/sources.js');
 
-const ContentSecurityPolicy = [
-  "default-src 'self'",
-  // Prevent injection of external base URIs
-  "base-uri 'self'",
-  // Restrict form submissions to same origin
-  "form-action 'self'",
-  // Disallow all plugins and other embedded objects
-  "object-src 'none'",
-  // Allow external images and data URIs for badges/icons
-  "img-src 'self' https: data:",
-  // Allow inline styles
-  "style-src 'self' 'unsafe-inline'",
-  // Explicitly allow inline style tags
-  "style-src-elem 'self' 'unsafe-inline'",
-  // Restrict fonts to same origin
-  "font-src 'self'",
-  // External scripts required for embedded timelines
-  "script-src 'self' 'unsafe-inline' https://vercel.live https://platform.twitter.com https://embed.x.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
-  // Allow outbound connections for embeds and the in-browser Chrome app
-  "connect-src 'self' https://example.com https://developer.mozilla.org https://en.wikipedia.org https://www.google.com https://platform.twitter.com https://embed.x.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://stackblitz.com",
-  // Allow iframes from specific providers so the Chrome and StackBlitz apps can load allowed content
-  "frame-src 'self' https://vercel.live https://stackblitz.com https://*.google.com https://platform.twitter.com https://embed.x.com https://syndication.twitter.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://example.com https://developer.mozilla.org https://en.wikipedia.org",
-
-  // Allow this site to embed its own resources (resume PDF)
-  "frame-ancestors 'self'",
-  // Enforce HTTPS for all requests
-  'upgrade-insecure-requests',
-].join('; ');
+const ContentSecurityPolicy = buildCsp();
 
 const securityHeaders = [
   {
@@ -215,16 +189,14 @@ module.exports = withBundleAnalyzer(
     images: {
       unoptimized: true,
       domains: [
-        'opengraph.githubassets.com',
-        'raw.githubusercontent.com',
-        'avatars.githubusercontent.com',
         'i.ytimg.com',
         'yt3.ggpht.com',
-        'i.scdn.co',
-        'www.google.com',
-        'example.com',
-        'developer.mozilla.org',
-        'en.wikipedia.org',
+        'ghchart.rshah.org',
+        'img.shields.io',
+        'images.credly.com',
+        'icons.duckduckgo.com',
+        'staticmap.openstreetmap.de',
+        'data.typeracer.com',
       ],
       deviceSizes: [640, 750, 828, 1080, 1200, 1280, 1920, 2048, 3840],
       imageSizes: [16, 32, 48, 64, 96, 128, 256],
