@@ -11,7 +11,7 @@ This document establishes a shared roadmap for the desktop shell services that p
 - Emits screen change analytics via `ReactGA.send` and `ReactGA.event`, keeping navigation events consistent for dashboards and simulations.
 - Exposes actions (`lockScreen`, `unLockScreen`, `shutDown`, `turnOn`, `changeBackgroundImage`) consumed by child components, centralizing side effects such as DOM focus management and persistence.
 
-### `components/base/ubuntu_app.js`
+### `components/base/app-tile.tsx`
 - Provides the canonical “desktop icon” behavior including keyboard accessibility, drag state tracking, touch activation, and icon launch animation.
 - Delegates actual app launch through the `openApp(id)` callback, ensuring shell services can manage window instantiation.
 - Prefetches app modules through an optional `prefetch` prop and caches the attempt per icon to avoid redundant network work.
@@ -27,7 +27,7 @@ This document establishes a shared roadmap for the desktop shell services that p
 | Feature | Description | Required Hooks / APIs |
 | --- | --- | --- |
 | Session switching | Multiple user personas with distinct local state profiles and lock screen identities. | Extend `safeLocalStorage` keys with per-session namespaces; add session selector component that consumes `Ubuntu` actions and exposes a session change event for analytics. |
-| Notification center | Unified toast/history pane for system and app alerts. | Introduce pub/sub channel (can leverage `utils/pubsub.ts`) and register `UbuntuApp` instances to forward app-level notifications. Requires analytics events for notification delivery/open and QA hooks for unread counts. |
+| Notification center | Unified toast/history pane for system and app alerts. | Introduce pub/sub channel (can leverage `utils/pubsub.ts`) and register `AppTile` instances to forward app-level notifications. Requires analytics events for notification delivery/open and QA hooks for unread counts. |
 | Power management simulation | Simulate suspend/resume, low-power modes, and timed sleep. | Add timers in `Ubuntu` shell plus feature-flagged APIs to apps (`window.desktop.power`) so experiences can respond. Include hooks for mock battery telemetry sourced from a new mock service module. |
 | Background task orchestration | Scheduler for long-running mock operations (downloads, scans). | Expand existing worker utilities or add a `TaskManager` service that integrates with mock services. Provide an API for apps to register tasks with status callbacks and analytics for task lifecycle. |
 

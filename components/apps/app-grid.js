@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import UbuntuApp from '../base/ubuntu_app';
+import AppTile from '../base/app-tile';
 import apps from '../../apps.config';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { Grid } from 'react-window';
@@ -168,13 +168,14 @@ export default function AppGrid({ openApp }) {
             onFocus={onFocus}
             onBlur={onBlur}
           >
-            <UbuntuApp
+            <AppTile
               id={app.id}
               icon={app.icon}
               name={app.title}
               displayName={<>{app.nodes}</>}
               style={data.layout.iconStyle}
               openApp={() => openApp && openApp(app.id)}
+              href={meta.path}
             />
           </div>
         )}

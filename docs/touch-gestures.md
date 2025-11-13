@@ -6,7 +6,7 @@ The desktop shell now exposes responsive breakpoints and gesture affordances so 
 
 - The new `components/desktop/Layout.tsx` component defines CSS custom properties for taskbar height, padding, and desktop icon sizing.
 - Breakpoints progressively scale hit targets from 40px to 60px+ widths, and `(pointer: coarse)` media queries ensure touch-first devices immediately receive larger dimensions.
-- `UbuntuApp` tiles, the dock/taskbar, and window chrome consume these variables so every interactive surface respects the same sizing rules.
+- `AppTile` components, the dock/taskbar, and window chrome consume these variables so every interactive surface respects the same sizing rules.
 
 ## Panel defaults on tablets
 
