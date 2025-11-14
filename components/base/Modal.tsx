@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { lockScroll, unlockScroll } from '../../utils/scrollLock';
 
 interface ModalProps {
     isOpen: boolean;
@@ -106,6 +107,14 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
             inertRootRef.current?.removeAttribute('inert');
         };
     }, [isOpen, getOverlayRoot]);
+
+    useEffect(() => {
+        if (!isOpen) return undefined;
+        lockScroll();
+        return () => {
+            unlockScroll();
+        };
+    }, [isOpen]);
 
     if (!isOpen || !portalRef.current) return null;
 

@@ -14,6 +14,7 @@ import {
   NotificationPriority,
 } from '../../hooks/useNotifications';
 import { PRIORITY_ORDER } from '../../utils/notifications/ruleEngine';
+import { lockScroll, unlockScroll } from '../../utils/scrollLock';
 
 const focusableSelector =
   'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
@@ -113,6 +114,14 @@ const NotificationBell: React.FC = () => {
       return !prev;
     });
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    lockScroll();
+    return () => {
+      unlockScroll();
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
