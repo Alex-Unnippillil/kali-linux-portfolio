@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react';
 import Image from 'next/image';
+import EmptyState from '../common/EmptyState';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { readRecentAppIds } from '../../utils/recentStorage';
@@ -302,6 +303,11 @@ const WhiskerMenu: React.FC = () => {
     window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
     setIsOpen(false);
   };
+
+  const clearSearch = useCallback(() => {
+    setQuery('');
+    setHighlight(0);
+  }, []);
 
   useEffect(() => {
     if (!isOpen && isVisible) {
@@ -640,26 +646,34 @@ const WhiskerMenu: React.FC = () => {
             </div>
             <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-3">
               {currentApps.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-gray-500">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#121f33] text-[#4aa8ff]">
-                    <svg
-                      width="24"
-                      height="24"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden="true"
-                    >
-                      <circle cx="12" cy="12" r="9" />
-                      <line x1="12" y1="8" x2="12" y2="12" />
-                      <line x1="12" y1="16" x2="12.01" y2="16" />
-                    </svg>
-                  </span>
-                  <p>No applications match your search.</p>
-                </div>
+                <EmptyState
+                  className="h-full justify-center bg-transparent"
+                  featureId="launcher-search"
+                  variant="filtered-out"
+                  illustration={{
+                    kind: 'node',
+                    className:
+                      'flex h-12 w-12 items-center justify-center rounded-full bg-[#121f33] text-[#4aa8ff]',
+                    element: (
+                      <svg
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <circle cx="12" cy="12" r="9" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                    ),
+                  }}
+                  primaryAction={{ onClick: clearSearch }}
+                />
               ) : (
                 <ul className="space-y-2" data-testid="whisker-menu-app-list">
                   {currentApps.map((app, idx) => (
