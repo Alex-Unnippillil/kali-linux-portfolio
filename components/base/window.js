@@ -1,9 +1,11 @@
 "use client";
 
-import React, { Component, useCallback, useEffect, useRef, useState } from 'react';
+import React, { Component, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
+import DelayedTooltip from '../ui/DelayedTooltip';
+import { isElementTextTruncated } from './windowTitleUtils';
 import {
     clampWindowPositionWithinViewport,
     clampWindowTopPosition,
@@ -14,6 +16,8 @@ import {
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
+
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
@@ -1800,26 +1804,148 @@ export default Window
 
 // Window's title bar
 export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, controls }) {
-    return (
-        <div
-            className={`${styles.windowTitlebar} bg-ub-window-title text-white select-none`}
-            tabIndex={0}
-            role="button"
-            aria-grabbed={grabbed}
-            onKeyDown={onKeyDown}
-            onBlur={onBlur}
-            onPointerDown={onPointerDown}
-            onDoubleClick={onDoubleClick}
-            data-window-titlebar=""
-            data-window-drag-handle=""
-        >
-            <span className={styles.windowTitleBalancer} aria-hidden="true" />
-            <div className={`${styles.windowTitle} text-sm font-bold`} title={title}>
-                {title}
+    const titleRef = useRef(null);
+    const [isTitleTruncated, setIsTitleTruncated] = useState(false);
+
+    const measureTruncation = useCallback(() => {
+        const node = titleRef.current;
+        setIsTitleTruncated(isElementTextTruncated(node));
+    }, []);
+
+    useIsomorphicLayoutEffect(() => {
+        measureTruncation();
+    }, [title, measureTruncation]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            measureTruncation();
+            return undefined;
+        }
+
+        if (typeof window.requestAnimationFrame !== 'function') {
+            measureTruncation();
+            return undefined;
+        }
+
+        const frame = window.requestAnimationFrame(() => {
+            measureTruncation();
+        });
+
+        return () => {
+            window.cancelAnimationFrame(frame);
+        };
+    }, [measureTruncation, title]);
+
+    useEffect(() => {
+        const node = titleRef.current;
+        if (!node || typeof ResizeObserver !== 'function') {
+            return undefined;
+        }
+
+        const observer = new ResizeObserver(() => {
+            measureTruncation();
+        });
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [measureTruncation, title]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return undefined;
+        }
+
+        const handleResize = () => {
+            measureTruncation();
+        };
+        window.addEventListener('resize', handleResize);
+        return () => {
+            window.removeEventListener('resize', handleResize);
+        };
+    }, [measureTruncation]);
+
+    const renderTopBar = (triggerProps = {}) => {
+        const {
+            ref: triggerRef,
+            onMouseEnter,
+            onMouseLeave,
+            onFocus,
+            onBlur: triggerBlur,
+            onPointerDown: triggerPointerDown,
+            onPointerUp: triggerPointerUp,
+            onPointerCancel: triggerPointerCancel,
+            'aria-describedby': describedBy,
+        } = triggerProps;
+
+        const handleBlur = (event) => {
+            if (typeof triggerBlur === 'function') {
+                triggerBlur(event);
+            }
+            if (typeof onBlur === 'function') {
+                onBlur(event);
+            }
+        };
+
+        const handlePointerDown = (event) => {
+            if (typeof triggerPointerDown === 'function') {
+                triggerPointerDown(event);
+            }
+            if (typeof onPointerDown === 'function') {
+                onPointerDown(event);
+            }
+        };
+
+        const assignRef = (node) => {
+            if (typeof triggerRef === 'function') {
+                triggerRef(node);
+            }
+        };
+
+        return (
+            <div
+                ref={assignRef}
+                className={`${styles.windowTitlebar} bg-ub-window-title text-white select-none`}
+                tabIndex={0}
+                role="button"
+                aria-grabbed={grabbed}
+                onKeyDown={onKeyDown}
+                onBlur={handleBlur}
+                onPointerDown={(typeof triggerPointerDown === 'function' || typeof onPointerDown === 'function') ? handlePointerDown : undefined}
+                onPointerUp={triggerPointerUp}
+                onPointerCancel={triggerPointerCancel}
+                onMouseEnter={onMouseEnter}
+                onMouseLeave={onMouseLeave}
+                onFocus={onFocus}
+                onDoubleClick={onDoubleClick}
+                data-window-titlebar=""
+                data-window-drag-handle=""
+                data-testid="window-top-bar"
+                {...(typeof describedBy === 'string' ? { 'aria-describedby': describedBy } : {})}
+            >
+                <span className={styles.windowTitleBalancer} aria-hidden="true" />
+                <div
+                    ref={titleRef}
+                    className={`${styles.windowTitle} text-sm font-bold`}
+                    title={title}
+                    aria-label={title}
+                    data-testid="window-title"
+                    data-truncated={isTitleTruncated ? 'true' : 'false'}
+                >
+                    {title}
+                </div>
+                {controls}
             </div>
-            {controls}
-        </div>
-    )
+        );
+    };
+
+    if (!isTitleTruncated) {
+        return renderTopBar();
+    }
+
+    return (
+        <DelayedTooltip content={<span className="block text-center">{title}</span>}>
+            {(triggerProps) => renderTopBar(triggerProps)}
+        </DelayedTooltip>
+    );
 }
 
 // Window resize handles
