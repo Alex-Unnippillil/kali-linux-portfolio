@@ -1658,9 +1658,11 @@ export class Window extends Component {
     }
 
     render() {
+        const isWindowFocused = Boolean(this.props.isFocused);
+
         const computedZIndex = typeof this.props.zIndex === 'number'
             ? this.props.zIndex
-            : (this.props.isFocused ? 30 : 20);
+            : (isWindowFocused ? 30 : 20);
 
         const snapGrid = this.getSnapGrid();
 
@@ -1737,15 +1739,16 @@ export class Window extends Component {
                             this.props.minimized ? styles.windowFrameMinimized : '',
                             this.state.grabbed ? 'opacity-70' : '',
                             this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
-                            'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',
+                            'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col',
                             styles.windowFrame,
-                            this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
+                            isWindowFocused ? styles.windowFrameActive : styles.windowFrameInactive,
                             this.state.maximized ? styles.windowFrameMaximized : '',
                             this.state.resizing ? styles.windowFrameResizing : '',
                         ].filter(Boolean).join(' ')}
                         id={this.id}
                         role="dialog"
                         data-window-state={windowState}
+                        data-window-focused={isWindowFocused ? 'true' : 'false'}
                         aria-hidden={this.props.minimized ? true : false}
                         aria-label={this.props.title}
                         tabIndex={0}

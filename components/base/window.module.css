@@ -1,11 +1,39 @@
+:global(:root) {
+  --window-shadow-inactive:
+    0 1px 1px rgba(15, 23, 42, 0.24),
+    0 10px 28px rgba(15, 23, 42, 0.22),
+    0 0 0 1px rgba(30, 64, 175, 0.28);
+  --window-shadow-active:
+    0 1px 2px rgba(15, 23, 42, 0.42),
+    0 16px 42px rgba(15, 23, 42, 0.45),
+    0 0 0 1px rgba(56, 189, 248, 0.45);
+  --window-shadow-focus-ring:
+    0 0 0 1px color-mix(in srgb, var(--focus-outline-color, #38bdf8) 65%, transparent),
+    0 0 0 6px color-mix(in srgb, var(--focus-outline-color, #38bdf8) 25%, transparent);
+}
+
+:global(.dark) {
+  --window-shadow-inactive:
+    0 1px 1px rgba(15, 23, 42, 0.28),
+    0 10px 32px rgba(15, 23, 42, 0.26),
+    0 0 0 1px rgba(12, 74, 110, 0.4);
+  --window-shadow-active:
+    0 2px 6px rgba(15, 23, 42, 0.55),
+    0 18px 48px rgba(15, 23, 42, 0.5),
+    0 0 0 1px rgba(56, 189, 248, 0.5);
+}
+
+:global(.high-contrast) {
+  --window-shadow-inactive: 0 0 0 2px color-mix(in srgb, var(--focus-outline-color, #0f94d2) 65%, transparent);
+  --window-shadow-active: 0 0 0 3px var(--focus-outline-color, #0f94d2);
+  --window-shadow-focus-ring: 0 0 0 3px var(--focus-outline-color, #0f94d2);
+}
+
 .windowFrame {
   position: relative;
   border: 1px solid var(--color-window-border);
   border-radius: var(--radius-6);
-  box-shadow:
-    0 1px 1px rgba(15, 23, 42, 0.32),
-    0 8px 24px rgba(15, 23, 42, 0.28),
-    0 0 0 1px rgba(12, 74, 110, 0.5);
+  box-shadow: var(--window-shadow-inactive);
   overflow: hidden;
   --window-motion-transform-duration: var(--window-motion-duration-restore);
   --window-motion-transform-easing: var(--window-motion-ease-restore);
@@ -23,10 +51,8 @@
 }
 
 .windowFrameActive {
-  box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.42),
-    0 16px 42px rgba(15, 23, 42, 0.45),
-    0 0 0 1px rgba(56, 189, 248, 0.45);
+  box-shadow: var(--window-shadow-active);
+  filter: brightness(1) saturate(1);
 }
 
 .windowFrame::before {
@@ -51,10 +77,42 @@
 
 .windowFrameInactive {
   filter: brightness(0.94) saturate(0.9);
-  box-shadow:
-    0 1px 1px rgba(15, 23, 42, 0.24),
-    0 10px 28px rgba(15, 23, 42, 0.22),
-    0 0 0 1px rgba(30, 64, 175, 0.28);
+  box-shadow: var(--window-shadow-inactive);
+}
+
+.windowFrame[data-window-focused='true'] {
+  box-shadow: var(--window-shadow-active);
+  filter: brightness(1) saturate(1);
+}
+
+.windowFrame:focus-visible {
+  outline: var(--focus-outline-width, 2px) solid var(--focus-outline-color, #38bdf8);
+  outline-offset: -1px;
+  box-shadow: var(--window-shadow-focus-ring), var(--window-shadow-active);
+  filter: brightness(1) saturate(1);
+}
+
+.windowFrame[data-window-focused='false']:focus-visible {
+  box-shadow: var(--window-shadow-focus-ring), var(--window-shadow-inactive);
+}
+
+.windowFrameInactive:focus-visible {
+  filter: brightness(1) saturate(1);
+}
+
+:global(.high-contrast) .windowFrame {
+  border-width: 2px;
+  filter: none;
+}
+
+:global(.high-contrast) .windowFrameInactive {
+  filter: none;
+}
+
+:global(.high-contrast) .windowFrame:focus-visible {
+  outline-width: max(3px, var(--focus-outline-width, 2px));
+  outline-offset: 3px;
+  box-shadow: var(--window-shadow-focus-ring);
 }
 
 .windowFrameResizing {

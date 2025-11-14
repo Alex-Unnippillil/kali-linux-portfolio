@@ -141,6 +141,47 @@ describe('Window lifecycle', () => {
     expect(frame).toHaveFocus();
     expect(focus).toHaveBeenCalledWith('focused-window');
   });
+
+  it('applies active and inactive styling based on focus state', () => {
+    const noop = () => {};
+    const { rerender } = render(
+      <Window
+        id="focus-style"
+        title="Focus Style"
+        screen={() => <div>content</div>}
+        focus={noop}
+        hasMinimised={noop}
+        closed={noop}
+        openApp={noop}
+        isFocused
+      />,
+    );
+
+    const frame = document.getElementById('focus-style');
+    expect(frame).not.toBeNull();
+    expect(frame).toHaveAttribute('data-window-focused', 'true');
+    expect(frame).toHaveClass(windowStyles.windowFrameActive);
+    expect(frame).not.toHaveClass(windowStyles.windowFrameInactive);
+
+    rerender(
+      <Window
+        id="focus-style"
+        title="Focus Style"
+        screen={() => <div>content</div>}
+        focus={noop}
+        hasMinimised={noop}
+        closed={noop}
+        openApp={noop}
+        isFocused={false}
+      />,
+    );
+
+    const updatedFrame = document.getElementById('focus-style');
+    expect(updatedFrame).not.toBeNull();
+    expect(updatedFrame).toHaveAttribute('data-window-focused', 'false');
+    expect(updatedFrame).toHaveClass(windowStyles.windowFrameInactive);
+    expect(updatedFrame).not.toHaveClass(windowStyles.windowFrameActive);
+  });
 });
 
 describe('Window snap grid configuration', () => {
