@@ -81,19 +81,24 @@ if (typeof HTMLCanvasElement !== 'undefined') {
 }
 
 // Basic matchMedia mock for libraries that expect it
-if (typeof window !== 'undefined' && !window.matchMedia) {
-  // @ts-ignore
-  window.matchMedia = () => ({
+const globalScope = globalThis as typeof globalThis & {
+  matchMedia?: (query: string) => MediaQueryList;
+  IntersectionObserver?: typeof IntersectionObserver;
+  localStorage?: Storage;
+};
+
+if (typeof globalScope.matchMedia !== 'function') {
+  globalScope.matchMedia = () => ({
     matches: false,
     addEventListener: () => {},
     removeEventListener: () => {},
     addListener: () => {},
     removeListener: () => {},
-  });
+  }) as unknown as typeof globalScope.matchMedia;
 }
 
 // Minimal IntersectionObserver mock so components relying on it don't crash in tests
-if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
+if (!('IntersectionObserver' in globalScope)) {
   class IntersectionObserverMock {
     constructor() {}
     observe() {}
@@ -102,7 +107,7 @@ if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
     takeRecords() { return []; }
   }
   // @ts-ignore
-  window.IntersectionObserver = IntersectionObserverMock;
+  globalScope.IntersectionObserver = IntersectionObserverMock;
   // @ts-ignore
   global.IntersectionObserver = IntersectionObserverMock as any;
 }
@@ -110,15 +115,14 @@ if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
 // jsdom does not implement scrollIntoView; provide a no-op stub so components
 // depending on it do not fail during tests.
 if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
-  // eslint-disable-next-line no-empty-function
   Element.prototype.scrollIntoView = () => {};
 }
 
 // Simple localStorage mock for environments without it
-if (typeof window !== 'undefined' && !window.localStorage) {
+if (!globalScope.localStorage) {
   const store: Record<string, string> = {};
   // @ts-ignore
-  window.localStorage = {
+  globalScope.localStorage = {
     getItem: (key: string) => (key in store ? store[key] : null),
     setItem: (key: string, value: string) => {
       store[key] = String(value);
@@ -132,15 +136,52 @@ if (typeof window !== 'undefined' && !window.localStorage) {
   } as Storage;
 }
 
-// Minimal Worker mock for tests
+// Minimal Worker mock for tests with deterministic messaging
+type WorkerListener = (event: { data: any }) => void;
+
 class WorkerMock {
-  postMessage() {}
-  terminate() {}
-  addEventListener() {}
-  removeEventListener() {}
+  static instances: WorkerMock[] = [];
+  onmessage: WorkerListener | null = null;
+  private listeners = new Set<WorkerListener>();
+
+  constructor() {
+    WorkerMock.instances.push(this);
+  }
+
+  private dispatch(payload: any) {
+    const event = { data: payload };
+    if (this.onmessage) this.onmessage(event);
+    this.listeners.forEach((listener) => listener(event));
+  }
+
+  postMessage(data: any) {
+    if (!data || typeof data !== 'object') return;
+    if (data.type === 'start') {
+      this.dispatch({ type: 'tick', delta: 1 / 60 });
+    } else if (data.type === 'step') {
+      const ms = typeof data.delta === 'number' ? data.delta : 16;
+      this.dispatch({ type: 'tick', delta: ms / 1000 });
+    }
+  }
+
+  terminate() {
+    this.listeners.clear();
+    this.onmessage = null;
+    WorkerMock.instances = WorkerMock.instances.filter((instance) => instance !== this);
+  }
+
+  addEventListener(type: string, listener: WorkerListener) {
+    if (type === 'message') this.listeners.add(listener);
+  }
+
+  removeEventListener(type: string, listener: WorkerListener) {
+    if (type === 'message') this.listeners.delete(listener);
+  }
 }
 // @ts-ignore
 global.Worker = WorkerMock as any;
+// @ts-ignore
+global.__WorkerMock = WorkerMock;
 
 // Mock xterm and addons so terminal tests run without the real library
 jest.mock(
