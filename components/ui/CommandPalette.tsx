@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 
-type CommandPaletteItemType = 'app' | 'window' | 'action';
+import { HELP_ENTRIES } from '../HelpPanel';
+
+type CommandPaletteItemType = 'app' | 'window' | 'action' | 'help';
 
 type BasicItem = {
   id: string;
@@ -30,6 +32,7 @@ const SECTION_METADATA: Record<CommandPaletteItemType, { label: string }> = {
   window: { label: 'Recent Windows' },
   app: { label: 'Applications' },
   action: { label: 'Settings & Actions' },
+  help: { label: 'Help Topics' },
 };
 
 const isMacLike = (): boolean => {
@@ -85,23 +88,65 @@ export default function CommandPalette({
     ];
   }, [apps, recentWindows, settingsActions]);
 
+  const helpItems = useMemo(
+    () =>
+      buildItems(
+        HELP_ENTRIES.map((entry) => ({
+          id: entry.id,
+          title: entry.title,
+          subtitle: entry.subtitle,
+          icon: entry.icon,
+          keywords: entry.keywords,
+          data: {
+            docPath: entry.docPath,
+            helpId: entry.id,
+          },
+        })),
+        'help'
+      ),
+    []
+  );
+
   const filteredSections = useMemo(() => {
-    const term = query.trim().toLowerCase();
-    return sections.map((section) => ({
+    const rawTerm = query.trim().toLowerCase();
+    const sanitizedTerm = rawTerm.replace(/\?/g, '').trim();
+    const matchTerm = sanitizedTerm || (rawTerm.includes('?') ? '' : rawTerm);
+    const includeHelp = rawTerm.includes('help') || rawTerm.includes('?');
+
+    const baseSections = sections.map((section) => ({
       ...section,
-      items: section.items.filter((item) => matchesQuery(item, term)),
+      items: section.items.filter((item) => matchesQuery(item, matchTerm)),
     }));
-  }, [query, sections]);
+
+    if (!includeHelp) {
+      return baseSections;
+    }
+
+    const helpMatches = helpItems.filter((item) => matchesQuery(item, matchTerm));
+    if (!helpMatches.length) {
+      return baseSections;
+    }
+
+    const sectionsWithHelp = [...baseSections];
+    const insertIndex = Math.min(1, sectionsWithHelp.length);
+    sectionsWithHelp.splice(insertIndex, 0, {
+      type: 'help' as const,
+      label: SECTION_METADATA.help.label,
+      items: helpMatches,
+    });
+
+    return sectionsWithHelp;
+  }, [helpItems, query, sections]);
 
   const flatItems = useMemo(() => {
-  const list: CommandPaletteItem[] = [];
-  filteredSections.forEach((section) => {
-    section.items.forEach((item) => {
-      list.push(item);
+    const list: CommandPaletteItem[] = [];
+    filteredSections.forEach((section) => {
+      section.items.forEach((item) => {
+        list.push(item);
+      });
     });
-  });
-  return list;
-}, [filteredSections]);
+    return list;
+  }, [filteredSections]);
 
   const indexLookup = useMemo(() => {
     const map = new Map<string, number>();
