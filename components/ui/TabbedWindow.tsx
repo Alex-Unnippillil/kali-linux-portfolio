@@ -40,6 +40,11 @@ interface TabContextValue {
 const TabContext = createContext<TabContextValue>({ id: '', active: false, close: () => {} });
 export const useTab = () => useContext(TabContext);
 
+interface WindowTabTitleEventDetail {
+  title?: string | null;
+  tabTitle?: string | null;
+}
+
 const TabbedWindow: React.FC<TabbedWindowProps> = ({
   initialTabs,
   onNewTab,
@@ -52,6 +57,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const dragSrc = useRef<number | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const rootRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [overflowedIds, setOverflowedIds] = useState<string[]>([]);
@@ -274,6 +280,36 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     focusTab(activeId);
   }, [activeId, focusTab]);
 
+  const dispatchTabTitleEvent = useCallback(
+    (detail: WindowTabTitleEventDetail) => {
+      const root = rootRef.current;
+      if (!root) return;
+      const event = new CustomEvent<WindowTabTitleEventDetail>('desktop-window-tab-title', {
+        bubbles: true,
+        detail,
+      });
+      root.dispatchEvent(event);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    const activeTab = tabs.find((t) => t.id === activeId);
+    dispatchTabTitleEvent({ tabTitle: activeTab?.title ?? null });
+  }, [activeId, tabs, dispatchTabTitleEvent]);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return () => {};
+    return () => {
+      const resetEvent = new CustomEvent<WindowTabTitleEventDetail>('desktop-window-tab-title', {
+        bubbles: true,
+        detail: { tabTitle: null, title: null },
+      });
+      root.dispatchEvent(resetEvent);
+    };
+  }, []);
+
   const overflowTabs = useMemo(() => {
     if (overflowedIds.length === 0) return [] as TabDefinition[];
     const overflowSet = new Set(overflowedIds);
@@ -304,6 +340,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
 
   return (
     <div
+      ref={rootRef}
       className={`flex h-full w-full flex-col ${className}`.trim()}
       tabIndex={0}
       onKeyDown={onKeyDown}
