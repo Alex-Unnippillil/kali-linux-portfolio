@@ -20,11 +20,11 @@ export default function LockScreen(props) {
         const handleUnlock = props.unLockScreen;
 
         window.addEventListener('click', handleUnlock);
-        window.addEventListener('keypress', handleUnlock);
+        window.addEventListener('keydown', handleUnlock);
 
         return () => {
             window.removeEventListener('click', handleUnlock);
-            window.removeEventListener('keypress', handleUnlock);
+            window.removeEventListener('keydown', handleUnlock);
         };
     }, [props.isLocked, props.unLockScreen]);
 
