@@ -23,6 +23,17 @@ describe('WhiskerMenu keyboard shortcuts', () => {
 
     expect(screen.getByText('Categories')).toBeInTheDocument();
   });
+
+  it('opens the menu when Ctrl+Space is pressed', async () => {
+    render(<WhiskerMenu />);
+
+    fireEvent.keyDown(window, { key: 'Space', code: 'Space', ctrlKey: true });
+
+    await screen.findByText('Categories');
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Search applications')).toHaveFocus();
+    });
+  });
 });
 
 describe('WhiskerMenu focus management', () => {
@@ -80,5 +91,21 @@ describe('WhiskerMenu focus management', () => {
 
     firstFocusSpy.mockRestore();
     lastFocusSpy.mockRestore();
+  });
+
+  it('restores focus to the launcher button when closing with Escape', async () => {
+    render(<WhiskerMenu />);
+
+    const launcherButton = screen.getByRole('button', { name: /Applications/ });
+
+    fireEvent.keyDown(window, { key: 'Space', code: 'Space', ctrlKey: true });
+
+    await screen.findByPlaceholderText('Search applications');
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+
+    await waitFor(() => {
+      expect(launcherButton).toHaveFocus();
+    });
   });
 });
