@@ -5,6 +5,7 @@ import useDailyQuote from '../hooks/useDailyQuote';
 import { toPng } from 'html-to-image';
 import share, { canShare } from '../utils/share';
 import copyToClipboard from '../utils/clipboard';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -22,6 +23,7 @@ const TwitterIcon = (props: React.SVGProps<SVGSVGElement>) => (
 export default function DailyQuote() {
   const quote = useDailyQuote();
   const cardRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   const exportCard = () => {
     const node = cardRef.current;
@@ -62,7 +64,7 @@ export default function DailyQuote() {
         className="group relative p-6 rounded text-center bg-gradient-to-br from-[var(--color-primary)]/30 to-[var(--color-secondary)]/30 text-white"
       >
         {quote ? (
-          <div key={quote.content} className="animate-quote">
+          <div key={quote.content} className={prefersReducedMotion ? undefined : 'animate-quote'}>
             <span
               className="absolute -top-4 left-4 text-[64px] text-white/20 select-none"
               aria-hidden="true"
@@ -124,6 +126,12 @@ export default function DailyQuote() {
           to {
             opacity: 1;
             transform: translateY(0);
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .animate-quote {
+            animation: none;
+            transform: none;
           }
         }
       `}</style>

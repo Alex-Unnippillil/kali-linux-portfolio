@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import data from './data/handshakes.json';
 import SmallArrow from '../../util-components/small_arrow';
+import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
 
 const ReaverStepper = () => {
   const { handshakes, risks, defenses } = data;
@@ -10,6 +11,10 @@ const ReaverStepper = () => {
   const direction =
     messages[current]?.from === 'Access Point' ? 'right' : 'left';
   const logMessages = messages.slice(0, Math.min(current + 1, messages.length));
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const arrowPositionStyle = prefersReducedMotion
+    ? { left: direction === 'right' ? 'calc(100% - 1rem)' : '0' }
+    : undefined;
 
   const next = () => setCurrent((c) => Math.min(messages.length, c + 1));
   const prev = () => setCurrent((c) => Math.max(0, c - 1));
@@ -30,8 +35,13 @@ const ReaverStepper = () => {
           <div
             key={current}
             className={`arrow absolute top-1/2 -translate-y-1/2 ${
-              direction === 'right' ? 'arrow-right' : 'arrow-left'
+              prefersReducedMotion
+                ? ''
+                : direction === 'right'
+                ? 'arrow-right'
+                : 'arrow-left'
             }`}
+            style={arrowPositionStyle}
           >
             <SmallArrow angle={direction} />
           </div>
@@ -119,6 +129,12 @@ const ReaverStepper = () => {
         }
         .arrow-left {
           animation: move-left 1s forwards;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .arrow-right,
+          .arrow-left {
+            animation: none;
+          }
         }
         @keyframes move-right {
           from {

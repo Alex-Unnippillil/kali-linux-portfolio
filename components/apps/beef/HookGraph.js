@@ -1,8 +1,10 @@
 import React from 'react';
 import modulesData from './modules.json';
+import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
 
 // Render a grid of animated cards for each executed module
 export default function HookGraph({ hooks, steps }) {
+  const prefersReducedMotion = usePrefersReducedMotion();
   const findModule = (id) => modulesData.modules.find((m) => m.id === id);
 
   return (
@@ -20,7 +22,9 @@ export default function HookGraph({ hooks, steps }) {
             href={mod.link}
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-ub-gray-50 text-black p-3 rounded shadow transition-transform duration-300 transform hover:scale-105 fade-in"
+            className={`bg-ub-gray-50 text-black p-3 rounded shadow transition-transform duration-300 transform hover:scale-105 ${
+              prefersReducedMotion ? '' : 'fade-in'
+            }`}
           >
             <h3 className="font-bold text-sm mb-1">{mod.name}</h3>
             <p className="text-xs mb-2">{mod.description}</p>
@@ -40,6 +44,12 @@ export default function HookGraph({ hooks, steps }) {
         @keyframes fadeIn {
           from { opacity: 0; transform: scale(0.95); }
           to { opacity: 1; transform: scale(1); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .fade-in {
+            animation: none;
+            transform: none;
+          }
         }
       `}</style>
     </div>
