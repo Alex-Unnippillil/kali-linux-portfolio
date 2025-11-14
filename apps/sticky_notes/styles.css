@@ -70,6 +70,39 @@
   box-sizing: border-box;
 }
 
+.sticky-notes-toast {
+  position: fixed;
+  bottom: var(--space-6, 2rem);
+  left: 50%;
+  z-index: 2000;
+  transform: translateX(-50%) translateY(16px);
+  min-width: min(320px, 90vw);
+  max-width: calc(100vw - 2rem);
+  padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--kali-blue, #0f94d2) 45%, transparent);
+  background: color-mix(in srgb, var(--kali-blue, #0f94d2) 85%, rgba(3, 7, 18, 0.05));
+  color: color-mix(in srgb, var(--kali-bg-solid, #0b121a) 88%, rgba(15, 148, 210, 0.1));
+  box-shadow: 0 20px 36px
+    color-mix(in srgb, var(--kali-blue-glow, rgba(15, 148, 210, 0.42)) 65%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-fast, 160ms) ease,
+    transform var(--motion-fast, 160ms) ease;
+}
+
+.sticky-notes-toast[data-visible='true'] {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.sticky-notes-toast[data-tone='error'] {
+  border-color: color-mix(in srgb, #ef4444 55%, transparent);
+  background: color-mix(in srgb, #dc2626 86%, rgba(15, 23, 42, 0.1));
+  color: #fef2f2;
+  box-shadow: 0 20px 36px color-mix(in srgb, #dc2626 45%, transparent);
+}
+
 .sticky-notes-app .note {
   position: absolute;
   width: 200px;

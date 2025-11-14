@@ -11,6 +11,7 @@ interface ClipItem {
 
 const DB_NAME = 'clipboard-manager';
 const STORE_NAME = 'items';
+const SHARE_QUEUE_KEY = 'clipboard-share-queue';
 
 let dbPromise: ReturnType<typeof getDb> | null = null;
 function getDB() {
@@ -129,6 +130,38 @@ const ClipboardManager: React.FC = () => {
     loadItems();
     evaluatePermissions();
   }, [loadItems, evaluatePermissions]);
+
+  const importSharedItems = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const storage = window.sessionStorage;
+      if (!storage) return;
+      const raw = storage.getItem(SHARE_QUEUE_KEY);
+      if (!raw) return;
+      storage.removeItem(SHARE_QUEUE_KEY);
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return;
+      let imported = 0;
+      for (const entry of parsed) {
+        if (entry && typeof entry.text === 'string' && entry.text.trim()) {
+          await addItem(entry.text);
+          imported += 1;
+        }
+      }
+      if (imported) {
+        setStatusMessage(
+          `Imported ${imported} shared ${imported === 1 ? 'item' : 'items'} from the share sheet.`
+        );
+      }
+    } catch (error) {
+      console.warn('Failed to import clipboard share queue', error);
+      setStatusMessage('Unable to import shared clipboard items.');
+    }
+  }, [addItem]);
+
+  useEffect(() => {
+    importSharedItems();
+  }, [importSharedItems]);
 
   const handleCopy = useCallback(async () => {
     try {

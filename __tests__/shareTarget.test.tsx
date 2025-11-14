@@ -1,4 +1,4 @@
-import { act, render, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ShareTarget from '../pages/share-target';
 import InputHub from '../pages/input-hub';
 import { useRouter } from 'next/router';
@@ -15,16 +15,18 @@ describe('Share target workflow', () => {
 
   beforeEach(() => {
     replaceMock = jest.fn();
-    currentRouter = { isReady: true, query: {}, replace: replaceMock };
+    currentRouter = { isReady: true, query: {}, asPath: '/share-target', replace: replaceMock };
     useRouterMock.mockImplementation(() => currentRouter);
+    window.sessionStorage.clear();
   });
 
   afterEach(() => {
     delete (window as any).launchQueue;
+    delete (navigator as any).clipboard;
     jest.clearAllMocks();
   });
 
-  it('passes shared file metadata through to the input hub message', async () => {
+  it('routes to Input Hub with shared metadata when the action is selected', async () => {
     let consumer: ((params: any) => Promise<void> | void) | undefined;
     (window as any).launchQueue = {
       setConsumer: jest.fn((cb: typeof consumer) => {
@@ -35,6 +37,7 @@ describe('Share target workflow', () => {
     currentRouter.query = {
       text: 'Shared message',
     };
+    currentRouter.asPath = '/share-target?text=Shared%20message';
 
     const { unmount } = render(<ShareTarget />);
 
@@ -56,6 +59,12 @@ describe('Share target workflow', () => {
     await act(async () => {
       await consumer?.(launchParams);
     });
+
+    const inputHubButton = await screen.findByRole('button', {
+      name: /send to input hub/i,
+    });
+
+    fireEvent.click(inputHubButton);
 
     await waitFor(() => {
       expect(replaceMock).toHaveBeenCalled();
@@ -86,5 +95,50 @@ describe('Share target workflow', () => {
       expect(messageField.value).toContain('File: evidence.txt (text/plain)');
       expect(messageField.value).toContain('File: report.pdf (application/pdf)');
     });
+  });
+
+  it('stores shared text for Sticky Notes and updates session storage cache', async () => {
+    currentRouter.query = { text: 'Note content' };
+    currentRouter.asPath = '/share-target?text=Note%20content';
+    render(<ShareTarget />);
+
+    const notesButton = await screen.findByRole('button', { name: /send to sticky notes/i });
+
+    fireEvent.click(notesButton);
+
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith(expect.stringMatching(/^\/apps\/sticky_notes\?/));
+    });
+
+    const cache = window.sessionStorage.getItem('sticky-notes-share-cache');
+    expect(cache).toBeTruthy();
+    const parsed = cache ? JSON.parse(cache) : null;
+    expect(parsed?.text).toBe('Note content');
+  });
+
+  it('queues shared text for the clipboard manager and attempts to copy', async () => {
+    currentRouter.query = { text: 'Clipboard item' };
+    currentRouter.asPath = '/share-target?text=Clipboard%20item';
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    (navigator as any).clipboard = { writeText };
+
+    render(<ShareTarget />);
+
+    const clipboardButton = await screen.findByRole('button', {
+      name: /copy to clipboard manager/i,
+    });
+
+    fireEvent.click(clipboardButton);
+
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith('/apps/clipboard-manager');
+    });
+
+    expect(writeText).toHaveBeenCalledWith('Clipboard item');
+    const queue = window.sessionStorage.getItem('clipboard-share-queue');
+    expect(queue).toBeTruthy();
+    const parsedQueue = queue ? JSON.parse(queue) : null;
+    expect(Array.isArray(parsedQueue)).toBe(true);
+    expect(parsedQueue?.[0]?.text).toBe('Clipboard item');
   });
 });
