@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { readRecentAppIds } from '../../utils/recentStorage';
@@ -585,16 +586,36 @@ const WhiskerMenu: React.FC = () => {
                 </button>
               ))}
             </div>
-            <div className="border-t border-[#1d2a3c] px-4 py-3 text-sm text-gray-400">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#142132] text-sm font-semibold uppercase text-[#53b9ff]">k</span>
-                <div>
-                  <p className="text-sm font-semibold text-white">kali</p>
-                  <p className="text-xs uppercase tracking-[0.3em] text-gray-500">User Session</p>
-                </div>
+          <div className="border-t border-[#1d2a3c] px-4 py-3 text-sm text-gray-400">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#142132] text-sm font-semibold uppercase text-[#53b9ff]">k</span>
+              <div>
+                <p className="text-sm font-semibold text-white">kali</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-gray-500">User Session</p>
               </div>
             </div>
+            <Link
+              href="/docs/feedback"
+              className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[#17273d] px-3 py-2 text-xs font-medium text-[#8bc9ff] transition hover:bg-[#1e3350] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111c2b]"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4Z" />
+              </svg>
+              <span>Feedback workflow</span>
+            </Link>
           </div>
+        </div>
           <div className="flex max-h-[44vh] flex-1 flex-col bg-[#0f1a29] sm:max-h-full">
             <div className="border-b border-[#1d2a3c] px-4 py-4 sm:px-5">
               <div className="relative mb-4">
