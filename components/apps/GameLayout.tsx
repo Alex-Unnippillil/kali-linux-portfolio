@@ -10,7 +10,10 @@ import React, {
 import clsx from 'clsx';
 import HelpOverlay from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
+import MobileBackButton from './MobileBackButton';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+
+let activeMobileGameLayouts = 0;
 import {
   serialize as serializeRng,
   deserialize as deserializeRng,
@@ -226,6 +229,24 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 
   const contextValue = { record, registerReplay };
 
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    activeMobileGameLayouts += 1;
+    document.body.dataset.gameLayoutBack = 'true';
+    return () => {
+      activeMobileGameLayouts = Math.max(0, activeMobileGameLayouts - 1);
+      if (activeMobileGameLayouts === 0) {
+        delete document.body.dataset.gameLayoutBack;
+      }
+    };
+  }, []);
+
+  const hasStatusInfo =
+    stage !== undefined ||
+    lives !== undefined ||
+    score !== undefined ||
+    highScore !== undefined;
+
   return (
     <RecorderContext.Provider value={contextValue}>
       <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
@@ -295,41 +316,48 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         </button>
       </div>
       {children}
-      <div
-        className="absolute top-2 left-2 z-10 text-sm flex flex-col gap-1"
-        role="status"
-        aria-live="polite"
-      >
-        {stage !== undefined && (
-          <div className="rounded px-2 py-1 bg-slate-900/60 border border-slate-700/70 backdrop-blur">
-            Stage: {stage}
-          </div>
-        )}
-        {lives !== undefined && (
-          <div className="rounded px-2 py-1 bg-slate-900/60 border border-slate-700/70 backdrop-blur">
-            Lives: {lives}
-          </div>
-        )}
-        {score !== undefined && (
+      <div className="absolute top-2 left-2 z-40 flex flex-col items-start gap-2">
+        <MobileBackButton appId={gameId} className="self-start" />
+        {hasStatusInfo && (
           <div
-            className={clsx(
-              'rounded px-2 py-1 bg-slate-900/70 border border-emerald-500/20 backdrop-blur shadow-sm transition-transform duration-300 ease-out',
-              !prefersReducedMotion && scorePulse &&
-                'scale-110 text-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.45)]',
-            )}
+            className="text-sm flex flex-col gap-1"
+            role="status"
+            aria-live="polite"
           >
-            Score: {score}
-          </div>
-        )}
-        {highScore !== undefined && (
-          <div
-            className={clsx(
-              'rounded px-2 py-1 bg-slate-900/70 border border-indigo-400/20 backdrop-blur shadow-sm transition-transform duration-300 ease-out',
-              !prefersReducedMotion && highScorePulse &&
-                'scale-105 text-indigo-300 shadow-[0_0_16px_rgba(129,140,248,0.35)]',
+            {stage !== undefined && (
+              <div className="rounded px-2 py-1 bg-slate-900/60 border border-slate-700/70 backdrop-blur">
+                Stage: {stage}
+              </div>
             )}
-          >
-            High: {highScore}
+            {lives !== undefined && (
+              <div className="rounded px-2 py-1 bg-slate-900/60 border border-slate-700/70 backdrop-blur">
+                Lives: {lives}
+              </div>
+            )}
+            {score !== undefined && (
+              <div
+                className={clsx(
+                  'rounded px-2 py-1 bg-slate-900/70 border border-emerald-500/20 backdrop-blur shadow-sm transition-transform duration-300 ease-out',
+                  !prefersReducedMotion &&
+                    scorePulse &&
+                    'scale-110 text-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.45)]',
+                )}
+              >
+                Score: {score}
+              </div>
+            )}
+            {highScore !== undefined && (
+              <div
+                className={clsx(
+                  'rounded px-2 py-1 bg-slate-900/70 border border-indigo-400/20 backdrop-blur shadow-sm transition-transform duration-300 ease-out',
+                  !prefersReducedMotion &&
+                    highScorePulse &&
+                    'scale-105 text-indigo-300 shadow-[0_0_16px_rgba(129,140,248,0.35)]',
+                )}
+              >
+                High: {highScore}
+              </div>
+            )}
           </div>
         )}
       </div>

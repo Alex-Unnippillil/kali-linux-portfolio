@@ -2,9 +2,10 @@
 
 import { useRouter } from 'next/router';
 import type { TouchEvent } from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
 import FilterChip from '../components/FilterChip';
+import MobileBackButton from '../../../components/apps/MobileBackButton';
 
 const TagIcon = () => (
   <svg
@@ -498,8 +499,24 @@ export default function ProjectGalleryPage() {
     console.info(`Comparing projects: ${summary}`);
   };
 
+  const handleBack = useCallback(() => {
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const { referrer } = document;
+      if (referrer && referrer.startsWith(window.location.origin)) {
+        router.back();
+        return;
+      }
+    }
+    router.push('/apps');
+  }, [router]);
+
   return (
     <div className="relative text-[var(--color-text)]">
+      <MobileBackButton
+        appId="project-gallery"
+        onBack={handleBack}
+        className="fixed left-4 top-4 z-40 sm:left-6"
+      />
       <div className="mx-auto flex max-w-6xl flex-col gap-6 p-4 pb-32 sm:p-6 lg:p-8">
         <div className="sticky top-0 z-20 -mx-4 flex flex-col gap-3 border-b border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           <div className="flex flex-wrap items-center justify-between gap-2">

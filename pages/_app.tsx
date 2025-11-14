@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import type { ReactElement } from 'react';
 import type { AppProps } from 'next/app';
 import { Analytics } from '@vercel/analytics/next';
@@ -20,6 +20,8 @@ import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 import { Rajdhani } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
+import { useRouter } from 'next/router';
+import MobileBackButton from '../components/apps/MobileBackButton';
 
 type PeriodicSyncPermissionDescriptor = PermissionDescriptor & {
   name: 'periodic-background-sync';
@@ -82,6 +84,29 @@ const kaliSans = Rajdhani({
 });
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
+  const router = useRouter();
+
+  const handleMobileBack = useCallback(() => {
+    void router.push('/apps');
+  }, [router]);
+
+  const { showMobileBackButton, mobileBackAppId } = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      if (document.body?.dataset?.gameLayoutBack === 'true') {
+        return { showMobileBackButton: false, mobileBackAppId: '' };
+      }
+    }
+
+    const path = router.asPath.split('?')[0];
+    if (!path.startsWith('/apps') || path === '/apps') {
+      return { showMobileBackButton: false, mobileBackAppId: '' };
+    }
+
+    const segments = path.split('/').filter(Boolean);
+    const appId = segments[1] ?? 'app';
+    return { showMobileBackButton: true, mobileBackAppId: appId };
+  }, [router.asPath]);
+
   useEffect(() => {
     const initAnalytics = async (): Promise<void> => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
@@ -214,6 +239,13 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
         </a>
         <SettingsProvider>
           <NotificationCenter>
+            {showMobileBackButton ? (
+              <MobileBackButton
+                appId={mobileBackAppId}
+                onBack={handleMobileBack}
+                className="fixed left-4 top-4 z-[2200]"
+              />
+            ) : null}
             <PipPortalProvider>
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
