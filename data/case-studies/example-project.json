@@ -1,0 +1,27 @@
+{
+  "slug": "example-project",
+  "title": "Example Project",
+  "role": "Lead Developer",
+  "timeframe": "Jan 2024 - Mar 2024",
+  "outcomes": ["Improved performance by 30%", "Reduced costs"],
+  "cta": { "label": "View Project", "href": "https://example.com" },
+  "facts": [
+    { "label": "Team", "value": "5 engineers" },
+    { "label": "Platform", "value": "Web" }
+  ],
+  "problem": {
+    "content": "We needed to modernize an aging system to support new business goals.",
+    "callouts": [
+      { "type": "info", "text": "Legacy technology slowed development." }
+    ]
+  },
+  "approach": {
+    "content": "We adopted a modular architecture and incremental migration strategy."
+  },
+  "results": {
+    "content": "Deployment frequency increased and performance improved."
+  },
+  "lessons": {
+    "content": "Start migrations early and communicate often."
+  }
+}
