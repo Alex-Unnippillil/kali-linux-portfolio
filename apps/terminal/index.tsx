@@ -85,6 +85,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const fitRef = useRef<any>(null);
   const searchRef = useRef<any>(null);
   const contentRef = useRef('');
+  const announcementQueueRef = useRef<string[]>([]);
+  const announcementTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const announcementToggleRef = useRef(false);
   const registryRef = useRef(commandRegistry);
   const workerRef = useRef<Worker | null>(null);
   const filesRef = useRef<Record<string, string>>(files);
@@ -106,6 +109,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [liveRegionText, setLiveRegionText] = useState('');
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
@@ -136,6 +140,28 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     setOverflow({ top: viewportY > 0, bottom: viewportY < baseY });
   }, []);
 
+  const flushAnnouncements = useCallback(() => {
+    announcementTimeoutRef.current = null;
+    if (announcementQueueRef.current.length === 0) return;
+    const joined = announcementQueueRef.current.join('\n');
+    announcementQueueRef.current = [];
+    if (!joined) return;
+    announcementToggleRef.current = !announcementToggleRef.current;
+    setLiveRegionText(
+      `${joined}${announcementToggleRef.current ? '\u200b' : '\u200c'}`,
+    );
+  }, []);
+
+  const queueAnnouncement = useCallback(
+    (line: string) => {
+      if (!line) return;
+      announcementQueueRef.current.push(line);
+      if (announcementTimeoutRef.current) return;
+      announcementTimeoutRef.current = setTimeout(flushAnnouncements, 300);
+    },
+    [flushAnnouncements],
+  );
+
   const writeLine = useCallback(
     (text: string) => {
       const historyColor = '\x1b[38;2;206;214;227m';
@@ -145,12 +171,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         text.length === 0 ? '' : hasAnsi ? text : `${historyColor}${text}${reset}`;
       if (termRef.current) termRef.current.writeln(content);
       contentRef.current += `${text}\n`;
+      const accessibleText = text.replace(/\x1b\[[0-9;]*m/g, '').trim();
+      queueAnnouncement(accessibleText);
       if (opfsSupported && dirRef.current) {
         writeFile('history.txt', contentRef.current, dirRef.current);
       }
       updateOverflow();
     },
-    [opfsSupported, updateOverflow, writeFile],
+    [opfsSupported, queueAnnouncement, updateOverflow, writeFile],
   );
 
   contextRef.current.writeLine = writeLine;
@@ -186,6 +214,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const clearTerminal = useCallback(() => {
     termRef.current?.clear();
     contentRef.current = '';
+    announcementQueueRef.current = [];
+    if (announcementTimeoutRef.current) {
+      clearTimeout(announcementTimeoutRef.current);
+      announcementTimeoutRef.current = null;
+    }
+    setLiveRegionText('');
     if (opfsSupported && dirRef.current) {
       deleteFile('history.txt', dirRef.current);
     }
@@ -370,7 +404,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       disposed = true;
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, sessionManager, updateOverflow]);
+  }, [opfsSupported, getDir, readFile, writeLine, prompt, sessionManager, updateOverflow]);
+
+  useEffect(
+    () => () => {
+      if (announcementTimeoutRef.current) {
+        clearTimeout(announcementTimeoutRef.current);
+        announcementTimeoutRef.current = null;
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
@@ -404,6 +448,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
 
   return (
     <div className="relative h-full w-full">
+      <div aria-live="polite" aria-atomic="false" className="sr-only">
+        {liveRegionText}
+      </div>
       {paletteOpen && (
         <div className="absolute inset-0 z-10 flex items-start justify-center bg-[color:var(--kali-overlay)] backdrop-blur-sm">
           <div className="mt-10 w-80 rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] p-4 shadow-lg shadow-[rgba(8,13,18,0.6)]">
