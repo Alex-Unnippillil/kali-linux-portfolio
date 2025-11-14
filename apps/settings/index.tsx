@@ -97,6 +97,7 @@ export default function Settings() {
     setDensity,
     reducedMotion,
     setReducedMotion,
+    prefersReducedMotion,
     fontScale,
     setFontScale,
     highContrast,
@@ -108,6 +109,8 @@ export default function Settings() {
     allowNetwork,
     setAllowNetwork,
     haptics,
+    hapticsPreference,
+    hapticsLocked,
     setHaptics,
     theme,
     setTheme,
@@ -185,6 +188,18 @@ export default function Settings() {
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
+
+  const hapticsHelperText = hapticsLocked
+    ? prefersReducedMotion && !reducedMotion
+      ? "Disabled because your system preference for reduced motion is active."
+      : "Disabled while Reduced Motion is enabled."
+    : "Toggle click feedback for supported devices.";
+
+  const hapticsAriaLabel = hapticsLocked
+    ? hapticsPreference
+      ? "Haptics preference (disabled while Reduced Motion is active)"
+      : "Haptics (disabled while Reduced Motion is active)"
+    : "Haptics";
 
   return (
     <div className="windowMainScreen z-20 flex max-h-full w-full flex-grow select-none flex-col overflow-y-auto bg-[var(--kali-panel)]">
@@ -419,12 +434,13 @@ export default function Settings() {
             >
               <SettingRow
                 label="Haptics"
-                helperText="Toggle click feedback for supported devices."
+                helperText={hapticsHelperText}
               >
                 <ToggleSwitch
                   checked={haptics}
                   onChange={setHaptics}
-                  ariaLabel="Haptics"
+                  ariaLabel={hapticsAriaLabel}
+                  disabled={hapticsLocked}
                 />
               </SettingRow>
 

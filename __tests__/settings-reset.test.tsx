@@ -50,7 +50,6 @@ describe('Settings reset flow', () => {
     await user.click(largeHitAreasToggle);
     await user.click(highContrastToggle);
     await user.click(allowNetworkToggle);
-    await user.click(hapticsToggle);
     await user.click(pongSpinToggle);
 
     expect(themeSelect).toHaveValue('dark');
@@ -62,6 +61,7 @@ describe('Settings reset flow', () => {
     expect(largeHitAreasToggle).toBeChecked();
     expect(highContrastToggle).toBeChecked();
     expect(allowNetworkToggle).toBeChecked();
+    await waitFor(() => expect(hapticsToggle).toBeDisabled());
     expect(hapticsToggle).not.toBeChecked();
     expect(pongSpinToggle).not.toBeChecked();
 
@@ -76,7 +76,8 @@ describe('Settings reset flow', () => {
     expect(largeHitAreasToggle.checked).toBe(defaults.largeHitAreas);
     expect(highContrastToggle.checked).toBe(defaults.highContrast);
     expect(allowNetworkToggle.checked).toBe(defaults.allowNetwork);
-    expect(hapticsToggle.checked).toBe(defaults.haptics);
+    await waitFor(() => expect(hapticsToggle).not.toBeDisabled());
+    expect(hapticsToggle).toHaveProperty('checked', defaults.haptics);
     expect(pongSpinToggle.checked).toBe(defaults.pongSpin);
   });
 });

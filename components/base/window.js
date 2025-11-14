@@ -20,6 +20,9 @@ const EDGE_THRESHOLD_MAX = 160;
 const EDGE_THRESHOLD_RATIO = 0.05;
 const DRAG_BOUNDS_PADDING = 96;
 
+const WINDOW_MINIMIZE_VIBRATION = 12;
+const WINDOW_MAXIMIZE_VIBRATION = 18;
+
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 const DEFAULT_MIN_WIDTH = 20;
@@ -1006,6 +1009,8 @@ export class Window extends Component {
         };
         this._pendingDragUpdate = update;
         this.applyEdgeResistance(node, update);
+        const immediateRect = this.readNodeRect(node);
+        this.checkSnapPreview(node, immediateRect);
 
         if (this._dragFrame !== null) {
             return;
@@ -1369,6 +1374,13 @@ export class Window extends Component {
         }
     }
 
+    triggerHapticFeedback = (pattern = WINDOW_MINIMIZE_VIBRATION) => {
+        const handler = this.props && this.props.onHapticFeedback;
+        if (typeof handler === 'function') {
+            handler(pattern);
+        }
+    }
+
     handleTitleBarDoubleClick = (event) => {
         if (event) {
             event.preventDefault();
@@ -1383,6 +1395,7 @@ export class Window extends Component {
     }
 
     minimizeWindow = () => {
+        this.triggerHapticFeedback(WINDOW_MINIMIZE_VIBRATION);
         this.setWinowsPosition();
         this.props.hasMinimised(this.id);
     }
@@ -1453,6 +1466,7 @@ export class Window extends Component {
             this.restoreWindow();
         }
         else {
+            this.triggerHapticFeedback(WINDOW_MAXIMIZE_VIBRATION);
             this.focusWindow();
             const node = this.getWindowNode();
             this.setWinowsPosition();

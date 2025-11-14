@@ -4,7 +4,7 @@ import { resetSettings, defaults, exportSettings as exportSettingsData, importSe
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, hapticsLocked, prefersReducedMotion, setHaptics, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -55,6 +55,12 @@ export function Settings() {
         });
         return () => cancelAnimationFrame(raf);
     }, [accent, accentText, contrastRatio]);
+
+    const hapticsMessage = hapticsLocked
+        ? prefersReducedMotion && !reducedMotion
+            ? 'Disabled because your system preference for reduced motion is active.'
+            : 'Disabled while Reduced Motion is enabled.'
+        : null;
 
     return (
         <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-kali-surface text-kali-text">
@@ -197,9 +203,15 @@ export function Settings() {
                         checked={haptics}
                         onChange={(e) => setHaptics(e.target.checked)}
                         className="mr-2"
-                        aria-label="Enable haptics"
+                        aria-label={hapticsLocked ? 'Haptics disabled while Reduced Motion is active' : 'Enable haptics'}
+                        disabled={hapticsLocked}
                     />
                     Haptics
+                    {hapticsMessage ? (
+                        <span className="ml-2 text-xs text-kali-text/70">
+                            {hapticsMessage}
+                        </span>
+                    ) : null}
                 </label>
             </div>
             <div className="flex justify-center my-4">
