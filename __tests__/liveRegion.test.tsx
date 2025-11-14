@@ -11,6 +11,15 @@ describe('live region components', () => {
     unmount();
   });
 
+  it('Toast can announce assertive alerts when requested', () => {
+    const { unmount } = render(
+      <Toast message="Intrusion detected" announceAs="alert" />,
+    );
+    const region = screen.getByRole('alert');
+    expect(region).toHaveAttribute('aria-live', 'assertive');
+    unmount();
+  });
+
   it('FormError announces politely', () => {
     render(<FormError>Required field</FormError>);
     const region = screen.getByRole('status');
