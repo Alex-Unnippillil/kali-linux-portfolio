@@ -73,6 +73,8 @@ export interface TerminalProps {
 export interface TerminalHandle {
   runCommand: (cmd: string) => void;
   getContent: () => string;
+  focus: () => void;
+  blur: () => void;
 }
 
 const files: Record<string, string> = {
@@ -253,6 +255,16 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   useImperativeHandle(ref, () => ({
     runCommand: (c: string) => sessionManager.runCommand(c),
     getContent: () => contentRef.current,
+    focus: () => {
+      if (termRef.current?.focus) {
+        termRef.current.focus();
+      } else {
+        containerRef.current?.focus?.();
+      }
+    },
+    blur: () => {
+      termRef.current?.blur?.();
+    },
   }));
 
   useEffect(() => {
