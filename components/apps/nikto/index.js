@@ -163,13 +163,17 @@ const NiktoApp = () => {
   };
 
   return (
-    <div className="p-4 bg-gray-900 text-white min-h-screen space-y-4">
-      <h1 className="text-2xl mb-4">Nikto Scanner</h1>
-      <p className="text-sm text-yellow-300 mb-4">
-        Build a nikto command without running any scans. Data and reports are
-        static and for learning only.
-      </p>
-      <form onSubmit={(e) => e.preventDefault()} className="grid gap-4 md:grid-cols-3">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-gray-900 p-4 text-white">
+      <div
+        className="flex-1 min-h-0 space-y-4 overflow-y-auto"
+        data-testid="nikto-scroll-region"
+      >
+        <h1 className="text-2xl mb-4">Nikto Scanner</h1>
+        <p className="text-sm text-yellow-300 mb-4">
+          Build a nikto command without running any scans. Data and reports are
+          static and for learning only.
+        </p>
+        <form onSubmit={(e) => e.preventDefault()} className="grid gap-4 md:grid-cols-3">
         <div>
           <label htmlFor="nikto-host" className="block text-sm mb-1">
             Host
@@ -205,160 +209,161 @@ const NiktoApp = () => {
             SSL
           </label>
         </div>
-      </form>
-      <div>
-        <h2 className="text-lg mb-2">Command Preview</h2>
-        <pre className="bg-black text-green-400 p-2 rounded overflow-auto">
-          {command}
-        </pre>
-      </div>
-      <div>
-        <h2 className="text-lg mb-2">Findings</h2>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-700">
-              <th className="p-2 text-left">Path</th>
-              <th className="p-2 text-left">Finding</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(grouped).map(([sev, list]) => (
-              <React.Fragment key={sev}>
-                <tr className="bg-gray-800">
-                  <td colSpan={2} className="p-2 font-bold">
-                    {sev}
-                  </td>
-                </tr>
-                {list.map((f) => (
-                  <tr
-                    key={f.path}
-                    className="odd:bg-gray-900 cursor-pointer hover:bg-gray-700"
-                    onClick={() => setSelected(f)}
-                  >
-                    <td className="p-2">{f.path}</td>
-                    <td className="p-2">{f.finding}</td>
+        </form>
+        <div>
+          <h2 className="text-lg mb-2">Command Preview</h2>
+          <pre className="bg-black text-green-400 p-2 rounded overflow-auto">
+            {command}
+          </pre>
+        </div>
+        <div>
+          <h2 className="text-lg mb-2">Findings</h2>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-700">
+                <th className="p-2 text-left">Path</th>
+                <th className="p-2 text-left">Finding</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(grouped).map(([sev, list]) => (
+                <React.Fragment key={sev}>
+                  <tr className="bg-gray-800">
+                    <td colSpan={2} className="p-2 font-bold">
+                      {sev}
+                    </td>
                   </tr>
-                ))}
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {selected && (
-        <div className="fixed top-0 right-0 w-80 h-full bg-gray-800 p-4 overflow-auto shadow-lg">
-          <button
-            type="button"
-            onClick={() => setSelected(null)}
-            className="mb-2 bg-red-600 px-2 py-1 rounded text-sm"
-          >
-            Close
-          </button>
-          <h3 className="text-xl mb-2">{selected.path}</h3>
-          <p className="mb-2">{selected.finding}</p>
-          <p className="mb-2">
-            <span className="font-bold">Severity:</span> {selected.severity}
-          </p>
-          <p className="mb-2">
-            <span className="font-bold">References:</span> {selected.references.join(', ')}
-          </p>
-          <p className="mb-4">{selected.details}</p>
-          <p className="text-sm text-green-300">
-            {suggestions[selected.path] || 'No suggestion available.'}
-          </p>
+                  {list.map((f) => (
+                    <tr
+                      key={f.path}
+                      className="odd:bg-gray-900 cursor-pointer hover:bg-gray-700"
+                      onClick={() => setSelected(f)}
+                    >
+                      <td className="p-2">{f.path}</td>
+                      <td className="p-2">{f.finding}</td>
+                    </tr>
+                  ))}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
-      <div>
-        <h2 className="text-lg mb-2">HTML Report Preview</h2>
-        <div className="flex space-x-2 mb-2">
-          <button
-            type="button"
-            onClick={copyReport}
-            className="px-2 py-1 bg-blue-600 rounded text-sm"
-          >
-            Copy HTML
-          </button>
-          <button
-            type="button"
-            onClick={exportReport}
-            className="px-2 py-1 bg-blue-600 rounded text-sm"
-          >
-            Export HTML
-          </button>
-        </div>
-        <iframe
-          title="Nikto HTML Report"
-          srcDoc={htmlReport}
-          className="w-full h-64 bg-white"
-        />
-      </div>
-      <div>
-        <h2 className="text-lg mb-2">Parse Report</h2>
-        <div
-          data-testid="drop-zone"
-          onDrop={handleDrop}
-          onDragOver={(e) => e.preventDefault()}
-          className="border-2 border-dashed border-gray-600 p-4 text-center mb-4"
-        >
-          Drop Nikto text or XML report here
-        </div>
-        {error && <p className="text-red-500 mb-2">{error}</p>}
-        {entries.length > 0 && (
-          <div>
-            <div className="flex space-x-2 mb-2">
-              <input
-                placeholder="Filter host"
-                value={filterHost}
-                onChange={(e) => setFilterHost(e.target.value)}
-                className="p-1 rounded text-black flex-1"
-              />
-              <input
-                placeholder="Filter path"
-                value={filterPath}
-                onChange={(e) => setFilterPath(e.target.value)}
-                className="p-1 rounded text-black flex-1"
-              />
-              <select
-                aria-label="Filter severity"
-                value={filterSeverity}
-                onChange={(e) => setFilterSeverity(e.target.value)}
-                className="p-1 rounded text-black"
-              >
-                {['All', 'Info', 'Low', 'Medium', 'High', 'Critical'].map(
-                  (s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  )
-                )}
-              </select>
-              <button
-                type="button"
-                onClick={exportCsv}
-                className="px-2 py-1 bg-blue-600 rounded text-sm"
-              >
-                Export CSV
-              </button>
-            </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-700">
-                  <th className="p-2 text-left">Host</th>
-                  <th className="p-2 text-left">Path</th>
-                  <th className="p-2 text-left">Severity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r, i) => (
-                  <tr key={i} className="odd:bg-gray-900">
-                    <td className="p-2">{r.host}</td>
-                    <td className="p-2">{r.path}</td>
-                    <td className="p-2">{r.severity}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {selected && (
+          <div className="fixed top-0 right-0 w-80 h-full bg-gray-800 p-4 overflow-auto shadow-lg">
+            <button
+              type="button"
+              onClick={() => setSelected(null)}
+              className="mb-2 bg-red-600 px-2 py-1 rounded text-sm"
+            >
+              Close
+            </button>
+            <h3 className="text-xl mb-2">{selected.path}</h3>
+            <p className="mb-2">{selected.finding}</p>
+            <p className="mb-2">
+              <span className="font-bold">Severity:</span> {selected.severity}
+            </p>
+            <p className="mb-2">
+              <span className="font-bold">References:</span> {selected.references.join(', ')}
+            </p>
+            <p className="mb-4">{selected.details}</p>
+            <p className="text-sm text-green-300">
+              {suggestions[selected.path] || 'No suggestion available.'}
+            </p>
           </div>
         )}
+        <div>
+          <h2 className="text-lg mb-2">HTML Report Preview</h2>
+          <div className="flex space-x-2 mb-2">
+            <button
+              type="button"
+              onClick={copyReport}
+              className="px-2 py-1 bg-blue-600 rounded text-sm"
+            >
+              Copy HTML
+            </button>
+            <button
+              type="button"
+              onClick={exportReport}
+              className="px-2 py-1 bg-blue-600 rounded text-sm"
+            >
+              Export HTML
+            </button>
+          </div>
+          <iframe
+            title="Nikto HTML Report"
+            srcDoc={htmlReport}
+            className="w-full h-64 bg-white"
+          />
+        </div>
+        <div>
+          <h2 className="text-lg mb-2">Parse Report</h2>
+          <div
+            data-testid="drop-zone"
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
+            className="border-2 border-dashed border-gray-600 p-4 text-center mb-4"
+          >
+            Drop Nikto text or XML report here
+          </div>
+          {error && <p className="text-red-500 mb-2">{error}</p>}
+          {entries.length > 0 && (
+            <div>
+              <div className="flex space-x-2 mb-2">
+                <input
+                  placeholder="Filter host"
+                  value={filterHost}
+                  onChange={(e) => setFilterHost(e.target.value)}
+                  className="p-1 rounded text-black flex-1"
+                />
+                <input
+                  placeholder="Filter path"
+                  value={filterPath}
+                  onChange={(e) => setFilterPath(e.target.value)}
+                  className="p-1 rounded text-black flex-1"
+                />
+                <select
+                  aria-label="Filter severity"
+                  value={filterSeverity}
+                  onChange={(e) => setFilterSeverity(e.target.value)}
+                  className="p-1 rounded text-black"
+                >
+                  {['All', 'Info', 'Low', 'Medium', 'High', 'Critical'].map(
+                    (s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    )
+                  )}
+                </select>
+                <button
+                  type="button"
+                  onClick={exportCsv}
+                  className="px-2 py-1 bg-blue-600 rounded text-sm"
+                >
+                  Export CSV
+                </button>
+              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-700">
+                    <th className="p-2 text-left">Host</th>
+                    <th className="p-2 text-left">Path</th>
+                    <th className="p-2 text-left">Severity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((r, i) => (
+                    <tr key={i} className="odd:bg-gray-900">
+                      <td className="p-2">{r.host}</td>
+                      <td className="p-2">{r.path}</td>
+                      <td className="p-2">{r.severity}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -152,7 +152,33 @@ html[data-theme='matrix'] {
 }
 
 html {
-  scrollbar-color: var(--kali-border, var(--color-border)) transparent;
+  scrollbar-color: color-mix(in srgb, var(--color-primary) 55%, transparent) color-mix(in srgb, var(--color-overlay-soft) 82%, transparent);
+  scrollbar-width: thin;
+}
+
+* {
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 0.65rem;
+  height: 0.65rem;
+}
+
+*::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--color-overlay-soft) 82%, transparent);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-primary) 55%, var(--color-overlay-strong));
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--color-bg) 70%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-primary) 70%, var(--color-overlay-strong));
 }
 
 @keyframes ambientGlowDrift {
