@@ -36,6 +36,14 @@
     {
       "label": "taskbar-menu",
       "beforeScript": "scripts/a11y-open-taskbar-menu.js"
+    },
+    {
+      "label": "taskbar-keyboard",
+      "beforeScript": "scripts/a11y-taskbar-keyboard.js"
+    },
+    {
+      "label": "window-controls",
+      "beforeScript": "scripts/a11y-window-controls.js"
     }
   ]
 }

@@ -1898,9 +1898,13 @@ export function WindowEditButtons(props) {
     const minimizeAriaLabel = 'Window minimize';
     const maximizeAriaLabel = isMaximized ? 'Restore window size' : 'Window maximize';
     const closeAriaLabel = 'Window close';
+    const { minimize: onMinimize, maximize: onMaximize, close: onClose } = props;
     const controlsRef = useRef(null);
     const [pressedControl, setPressedControl] = useState(null);
     const pointerActiveRef = useRef(null);
+    const minimizeButtonRef = useRef(null);
+    const maximizeButtonRef = useRef(null);
+    const closeButtonRef = useRef(null);
 
     useEffect(() => {
         const node = controlsRef.current;
@@ -2006,8 +2010,8 @@ export function WindowEditButtons(props) {
             event?.preventDefault?.();
             return;
         }
-        if (typeof props.maximize === 'function') {
-            props.maximize(event);
+        if (typeof onMaximize === 'function') {
+            onMaximize(event);
         }
     };
 
@@ -2047,6 +2051,72 @@ export function WindowEditButtons(props) {
         }
     }, []);
 
+    const focusControlElement = useCallback((button) => {
+        if (!button || typeof button.focus !== 'function') return;
+        try {
+            button.focus({ preventScroll: true });
+        } catch (_error) {
+            button.focus();
+        }
+    }, []);
+
+    const getControlSequence = useCallback(() => {
+        const controls = [];
+        if (minimizeButtonRef.current) {
+            controls.push(minimizeButtonRef.current);
+        }
+        if (allowMaximize && maximizeButtonRef.current && !maximizeButtonRef.current.disabled) {
+            controls.push(maximizeButtonRef.current);
+        }
+        if (closeButtonRef.current) {
+            controls.push(closeButtonRef.current);
+        }
+        return controls;
+    }, [allowMaximize]);
+
+    const handleControlKeyDown = useCallback((event) => {
+        const target = event.currentTarget;
+        if (!target) return;
+        const controls = getControlSequence();
+        if (!controls.length) return;
+        const index = controls.indexOf(target);
+        if (index === -1) return;
+
+        const focusByIndex = (nextIndex) => {
+            const bounded = (nextIndex + controls.length) % controls.length;
+            focusControlElement(controls[bounded]);
+        };
+
+        switch (event.key) {
+            case 'ArrowRight':
+                event.preventDefault();
+                focusByIndex(index + 1);
+                break;
+            case 'ArrowLeft':
+                event.preventDefault();
+                focusByIndex(index - 1);
+                break;
+            case 'Home':
+                event.preventDefault();
+                focusControlElement(controls[0]);
+                break;
+            case 'End':
+                event.preventDefault();
+                focusControlElement(controls[controls.length - 1]);
+                break;
+            case 'Escape':
+                event.preventDefault();
+                if (target === closeButtonRef.current && typeof onClose === 'function') {
+                    onClose(event);
+                } else if (typeof target.blur === 'function') {
+                    target.blur();
+                }
+                break;
+            default:
+                break;
+        }
+    }, [focusControlElement, getControlSequence, onClose]);
+
     return (
         <div
             ref={controlsRef}
@@ -2059,20 +2129,23 @@ export function WindowEditButtons(props) {
             data-window-controls=""
         >
             <button
+                ref={minimizeButtonRef}
                 type="button"
                 aria-label={minimizeAriaLabel}
                 title="Minimize"
                 className={`${styles.windowControlButton} ${pressedControl === 'minimize' ? styles.windowControlButtonPressed : ''}`.trim()}
                 onPointerDown={handlePointerDown('minimize')}
-                onPointerUp={handlePointerUp('minimize', props.minimize)}
+                onPointerUp={handlePointerUp('minimize', onMinimize)}
                 onPointerLeave={resetPressedControl}
                 onPointerCancel={resetPressedControl}
                 onBlur={resetPressedControl}
-                onClick={handleButtonClick(props.minimize)}
+                onClick={handleButtonClick(onMinimize)}
+                onKeyDown={handleControlKeyDown}
             >
                 <MinimizeIcon />
             </button>
             <button
+                ref={maximizeButtonRef}
                 type="button"
                 aria-label={maximizeAriaLabel}
                 title={isMaximized ? 'Restore' : 'Maximize'}
@@ -2089,21 +2162,24 @@ export function WindowEditButtons(props) {
                 onPointerLeave={resetPressedControl}
                 onPointerCancel={resetPressedControl}
                 onBlur={resetPressedControl}
+                onKeyDown={handleControlKeyDown}
             >
                 {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
             </button>
             <button
+                ref={closeButtonRef}
                 type="button"
                 id={`close-${props.id}`}
                 aria-label={closeAriaLabel}
                 title="Close"
                 className={[styles.windowControlButton, styles.windowControlButtonClose, pressedControl === 'close' ? styles.windowControlButtonPressed : ''].filter(Boolean).join(' ')}
                 onPointerDown={handlePointerDown('close')}
-                onPointerUp={handlePointerUp('close', props.close)}
+                onPointerUp={handlePointerUp('close', onClose)}
                 onPointerLeave={resetPressedControl}
                 onPointerCancel={resetPressedControl}
                 onBlur={resetPressedControl}
-                onClick={handleButtonClick(props.close)}
+                onClick={handleButtonClick(onClose)}
+                onKeyDown={handleControlKeyDown}
             >
                 <CloseIcon />
             </button>
