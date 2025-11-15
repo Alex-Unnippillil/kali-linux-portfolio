@@ -57,6 +57,16 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       zIndex: _ignoredZIndex,
       ...rest
     } = props;
+    const {
+      ariaLabelledBy: providedLabelledBy,
+      accessibilityRole: providedRole,
+      titleElementId: providedTitleId,
+      ...remainingProps
+    } = rest as BaseWindowProps & {
+      ariaLabelledBy?: string;
+      accessibilityRole?: "dialog" | "application";
+      titleElementId?: string;
+    };
     const innerRef = useRef<BaseWindowInstance>(null);
     const {
       baseZIndex,
@@ -66,6 +76,14 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       getZIndex,
     } = useDesktopZIndex();
     const windowId = id ?? null;
+    const generatedTitleIdRef = useRef<string>();
+    if (!generatedTitleIdRef.current) {
+      generatedTitleIdRef.current = `desktop-window-title-${Math.random().toString(36).slice(2)}`;
+    }
+    const fallbackTitleId = windowId ? `${windowId}-title` : generatedTitleIdRef.current;
+    const resolvedTitleId = providedTitleId ?? fallbackTitleId;
+    const resolvedLabelledBy = providedLabelledBy ?? resolvedTitleId;
+    const resolvedRole = providedRole ?? "application";
 
     const assignRef = useCallback(
       (instance: BaseWindowInstance) => {
@@ -172,11 +190,14 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
     return (
       <BaseWindow
         ref={assignRef}
-        {...rest}
+        {...(remainingProps as BaseWindowProps)}
         id={id}
         focus={handleFocus}
         isFocused={isFocused}
         zIndex={computedZIndex}
+        accessibilityRole={resolvedRole}
+        ariaLabelledBy={resolvedLabelledBy}
+        titleElementId={resolvedTitleId}
       />
     );
   },
