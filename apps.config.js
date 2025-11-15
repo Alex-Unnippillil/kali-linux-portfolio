@@ -66,6 +66,10 @@ const QrApp = createDynamicApp('qr', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
 const QuoteApp = createDynamicApp('quote', 'Quote');
 const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
+const WorkspaceSwitcherApp = createDynamicApp(
+  'workspace-switcher',
+  'Workspace Switcher',
+);
 const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
 const SubnetCalculatorApp = createDynamicApp('subnet-calculator', 'Subnet Calculator');
@@ -157,6 +161,7 @@ const displayQr = createDisplay(QrApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
 const displayQuote = createDisplay(QuoteApp);
 const displayProjectGallery = createDisplay(ProjectGalleryApp);
+const displayWorkspaceSwitcher = createDisplay(WorkspaceSwitcherApp);
 const displayTrash = createDisplay(TrashApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
@@ -255,6 +260,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayProjectGallery,
+  },
+  {
+    id: 'workspace-switcher',
+    title: 'Workspace Switcher',
+    icon: '/themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayWorkspaceSwitcher,
   },
   {
     id: 'input-lab',
@@ -715,6 +729,15 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displaySettings,
+  },
+  {
+    id: 'workspace-switcher',
+    title: 'Workspace Switcher',
+    icon: '/themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayWorkspaceSwitcher,
   },
   {
     id: 'files',
