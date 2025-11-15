@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Default",
+    "baseImage": "kali-rolling",
+    "metapackages": ["default"],
+    "kernel": false,
+    "persistence": false
+  },
+  {
+    "name": "Forensics",
+    "baseImage": "kali-rolling",
+    "metapackages": ["top10", "forensic"],
+    "kernel": true,
+    "persistence": false
+  },
+  {
+    "name": "Persistent",
+    "baseImage": "kali-last-snapshot",
+    "metapackages": ["default"],
+    "kernel": false,
+    "persistence": true
+  }
+]
