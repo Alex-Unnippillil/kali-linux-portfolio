@@ -1,7 +1,29 @@
 /* eslint-disable no-top-level-window/no-top-level-window-or-document */
+const FALLBACK_STORAGE_KEY = 'offlineFallbackUsed';
+
+const markFallbackUsed = (details) => {
+  try {
+    const payload = { ...details, ts: Date.now() };
+    window.localStorage?.setItem(FALLBACK_STORAGE_KEY, JSON.stringify(payload));
+    if (typeof window.CustomEvent === 'function') {
+      window.dispatchEvent(new CustomEvent('offline:fallback-open', { detail: payload }));
+    }
+  } catch (err) {
+    // ignore storage errors
+  }
+};
+
 document.getElementById('retry').addEventListener('click', () => {
   window.location.reload();
 });
+
+const openCachedButton = document.getElementById('open-cached');
+if (openCachedButton) {
+  openCachedButton.addEventListener('click', () => {
+    markFallbackUsed({ source: 'offline-page', path: '/' });
+    window.location.href = '/';
+  });
+}
 
 (async () => {
   const list = document.getElementById('apps');
@@ -26,6 +48,9 @@ document.getElementById('retry').addEventListener('click', () => {
         const a = document.createElement('a');
         a.href = path;
         a.textContent = path.replace('/apps/', '');
+        a.addEventListener('click', () => {
+          markFallbackUsed({ source: 'offline-page-app', path });
+        });
         li.appendChild(a);
         list.appendChild(li);
       });
