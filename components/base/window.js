@@ -1654,6 +1654,10 @@ export class Window extends Component {
             } else if (this.state.snapped) {
                 this.unsnapWindow();
             }
+        } else if (key === 'minimizeWindow') {
+            this.minimizeWindow();
+        } else if (key === 'restoreWindow') {
+            this.restoreWindow();
         }
     }
 
