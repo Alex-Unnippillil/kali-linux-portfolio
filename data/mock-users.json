@@ -1,0 +1,5 @@
+[
+  { "username": "root", "uid": 0, "groups": ["root"] },
+  { "username": "kali", "uid": 1000, "groups": ["kali", "sudo"] },
+  { "username": "guest", "uid": 1001, "groups": ["guest"] }
+]
