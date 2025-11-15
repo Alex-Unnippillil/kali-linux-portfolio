@@ -4,6 +4,30 @@ on:
   pull_request:
 
 jobs:
+  env-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - name: Missing secrets should fail validation
+        run: |
+          set +e
+          yarn validate:env
+          status=$?
+          set -e
+          if [ "$status" -eq 0 ]; then
+            echo "Expected environment validation to fail when secrets are missing."
+            exit 1
+          fi
+          echo "Environment validation failed as expected without secrets."
+      - name: Validation passes when secrets are provided
+        run: yarn validate:env
+        env:
+          RECAPTCHA_SECRET: test-secret
   lint:
     runs-on: ubuntu-latest
     steps:
