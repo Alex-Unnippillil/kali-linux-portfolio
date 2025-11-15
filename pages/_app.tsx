@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect } from 'react';
-import type { ReactElement } from 'react';
+import type { PropsWithChildren, ReactElement } from 'react';
 import type { AppProps } from 'next/app';
+import dynamic from 'next/dynamic';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -13,9 +14,6 @@ import '../styles/print.css';
 import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
-import ShortcutOverlay from '../components/common/ShortcutOverlay';
-import NotificationCenter from '../components/common/NotificationCenter';
-import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 import { Rajdhani } from 'next/font/google';
@@ -80,6 +78,27 @@ const kaliSans = Rajdhani({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
 });
+
+const ShortcutOverlay = dynamic(
+  () => import('../components/common/ShortcutOverlay'),
+  { ssr: false, loading: () => null },
+);
+
+const NotificationCenter = dynamic<PropsWithChildren<unknown>>(
+  () => import('../components/common/NotificationCenter'),
+  {
+    ssr: false,
+    loading: ({ children }) => <>{children}</>,
+  },
+);
+
+const PipPortalProvider = dynamic<PropsWithChildren<unknown>>(
+  () => import('../components/common/PipPortal'),
+  {
+    ssr: false,
+    loading: ({ children }) => <>{children}</>,
+  },
+);
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
   useEffect(() => {
