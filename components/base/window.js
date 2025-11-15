@@ -21,6 +21,15 @@ const EDGE_THRESHOLD_RATIO = 0.05;
 const DRAG_BOUNDS_PADDING = 96;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+const DOUBLE_TAP_TIMEOUT = 320;
+const DOUBLE_TAP_DISTANCE = 32;
+
+const distanceBetweenPoints = (a, b) => {
+    if (!a || !b) return 0;
+    const dx = (a.x ?? 0) - (b.x ?? 0);
+    const dy = (a.y ?? 0) - (b.y ?? 0);
+    return Math.hypot(dx, dy);
+};
 
 const DEFAULT_MIN_WIDTH = 20;
 const DEFAULT_MIN_HEIGHT = 20;
@@ -259,6 +268,17 @@ export class Window extends Component {
         this._lastSnapBottomInset = null;
         this._lastSafeAreaBottom = null;
         this._isUnmounted = false;
+        this._gestureState = {
+            activePointers: new Map(),
+            pinch: null,
+        };
+        this._gestureListenersAttached = false;
+        this._prefersReducedMotion = false;
+        this._reducedMotionQuery = null;
+        this._handleReducedMotionChange = null;
+        this._lastTitlebarTap = null;
+        this._suppressNextTitlebarDoubleClick = false;
+        this._suppressDoubleClickReset = null;
     }
 
     notifySizeChange = () => {
@@ -288,6 +308,24 @@ export class Window extends Component {
         }
         if (this.props.isFocused) {
             this.focusWindow();
+        }
+        if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+            try {
+                const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+                this._prefersReducedMotion = !!query.matches;
+                this._reducedMotionQuery = query;
+                const handler = (event) => {
+                    this._prefersReducedMotion = !!event.matches;
+                };
+                this._handleReducedMotionChange = handler;
+                if (typeof query.addEventListener === 'function') {
+                    query.addEventListener('change', handler);
+                } else if (typeof query.addListener === 'function') {
+                    query.addListener(handler);
+                }
+            } catch (error) {
+                // Ignore errors from matchMedia in unsupported environments
+            }
         }
     }
 
@@ -373,6 +411,21 @@ export class Window extends Component {
         this._pendingDragUpdate = null;
         this.cancelResizeSession();
         this._resizeSession = null;
+        this.cancelPinch();
+        this.detachGestureListeners();
+        if (this._reducedMotionQuery && this._handleReducedMotionChange) {
+            if (typeof this._reducedMotionQuery.removeEventListener === 'function') {
+                this._reducedMotionQuery.removeEventListener('change', this._handleReducedMotionChange);
+            } else if (typeof this._reducedMotionQuery.removeListener === 'function') {
+                this._reducedMotionQuery.removeListener(this._handleReducedMotionChange);
+            }
+        }
+        this._reducedMotionQuery = null;
+        this._handleReducedMotionChange = null;
+        if (this._suppressDoubleClickReset) {
+            clearScheduledTimeout(this._suppressDoubleClickReset);
+            this._suppressDoubleClickReset = null;
+        }
     }
 
     setDefaultWindowDimenstion = () => {
@@ -663,6 +716,320 @@ export class Window extends Component {
         };
     }
 
+    disableWindowTransformAnimation = (node) => {
+        if (!node || !node.style) {
+            return () => {};
+        }
+        const { style } = node;
+        const previousTransition = style.transition;
+        const hadTransition = typeof previousTransition === 'string' && previousTransition.length > 0;
+        const previousDuration = typeof style.getPropertyValue === 'function'
+            ? style.getPropertyValue('--window-motion-transform-duration')
+            : style['--window-motion-transform-duration'];
+        const hadDuration = typeof previousDuration === 'string' && previousDuration.length > 0;
+        style.transition = 'none';
+        if (typeof style.setProperty === 'function') {
+            style.setProperty('--window-motion-transform-duration', '0ms');
+        } else {
+            style['--window-motion-transform-duration'] = '0ms';
+        }
+        return () => {
+            if (hadTransition) {
+                style.transition = previousTransition;
+            } else if (typeof style.removeProperty === 'function') {
+                style.removeProperty('transition');
+            } else {
+                style.transition = '';
+            }
+            if (hadDuration && typeof previousDuration === 'string') {
+                if (typeof style.setProperty === 'function') {
+                    style.setProperty('--window-motion-transform-duration', previousDuration);
+                } else {
+                    style['--window-motion-transform-duration'] = previousDuration;
+                }
+            } else if (typeof style.removeProperty === 'function') {
+                style.removeProperty('--window-motion-transform-duration');
+            } else if ('--window-motion-transform-duration' in style) {
+                style['--window-motion-transform-duration'] = '';
+            }
+        };
+    }
+
+    prefersReducedMotion = () => {
+        if (this._reducedMotionQuery) {
+            return !!this._prefersReducedMotion;
+        }
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+            return !!this._prefersReducedMotion;
+        }
+        try {
+            return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        } catch (error) {
+            return !!this._prefersReducedMotion;
+        }
+    }
+
+    shouldReduceMotionForGestures = () => this.prefersReducedMotion()
+
+    attachGestureListeners = () => {
+        if (this._gestureListenersAttached || typeof window === 'undefined') {
+            return;
+        }
+        window.addEventListener('pointermove', this.handleGlobalPointerMove, { passive: false });
+        window.addEventListener('pointerup', this.handleGlobalPointerUp, true);
+        window.addEventListener('pointercancel', this.handleGlobalPointerUp, true);
+        this._gestureListenersAttached = true;
+    }
+
+    detachGestureListeners = () => {
+        if (!this._gestureListenersAttached || typeof window === 'undefined') {
+            return;
+        }
+        window.removeEventListener('pointermove', this.handleGlobalPointerMove);
+        window.removeEventListener('pointerup', this.handleGlobalPointerUp, true);
+        window.removeEventListener('pointercancel', this.handleGlobalPointerUp, true);
+        this._gestureListenersAttached = false;
+    }
+
+    getGestureTimestamp = () => {
+        if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+            return performance.now();
+        }
+        return Date.now();
+    }
+
+    registerGesturePointer = (event) => {
+        if (!event || event.pointerType !== 'touch') {
+            return;
+        }
+        if (!this._gestureState || !this._gestureState.activePointers) {
+            return;
+        }
+        if (typeof event.pointerId !== 'number') {
+            return;
+        }
+        const pointers = this._gestureState.activePointers;
+        if (!pointers.has(event.pointerId) && pointers.size >= 2) {
+            return;
+        }
+        pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        this.attachGestureListeners();
+        if (pointers.size === 2) {
+            this.maybeStartPinch();
+        }
+    }
+
+    unregisterGesturePointer = (pointerId) => {
+        if (!this._gestureState || !this._gestureState.activePointers) {
+            return;
+        }
+        const pointers = this._gestureState.activePointers;
+        if (!pointers.has(pointerId)) {
+            return;
+        }
+        pointers.delete(pointerId);
+        if (this._gestureState.pinch && this._gestureState.pinch.pointerIds?.includes(pointerId)) {
+            this.finishPinch();
+        }
+        if (pointers.size === 0) {
+            this.detachGestureListeners();
+        }
+    }
+
+    handleGlobalPointerMove = (event) => {
+        if (!event || event.pointerType !== 'touch' || typeof event.pointerId !== 'number') {
+            return;
+        }
+        if (!this._gestureState || !this._gestureState.activePointers) {
+            return;
+        }
+        const pointers = this._gestureState.activePointers;
+        if (!pointers.has(event.pointerId)) {
+            return;
+        }
+        pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        if (this._gestureState.pinch && this._gestureState.pinch.pointerIds?.includes(event.pointerId)) {
+            if (typeof event.preventDefault === 'function') {
+                event.preventDefault();
+            }
+            this.updatePinch();
+        }
+    }
+
+    handleGlobalPointerUp = (event) => {
+        if (!event || typeof event.pointerId !== 'number') {
+            return;
+        }
+        this.unregisterGesturePointer(event.pointerId);
+    }
+
+    maybeStartPinch = () => {
+        if (!this._gestureState || !this._gestureState.activePointers) {
+            return;
+        }
+        if (this._gestureState.pinch) {
+            return;
+        }
+        if (this.props.resizable === false) {
+            return;
+        }
+        if (this.state.maximized) {
+            return;
+        }
+        const pointers = Array.from(this._gestureState.activePointers.entries());
+        if (pointers.length !== 2) {
+            return;
+        }
+        const [first, second] = pointers;
+        const initialDistance = distanceBetweenPoints(first[1], second[1]);
+        if (!initialDistance || initialDistance <= 0) {
+            return;
+        }
+        const node = this.getWindowNode();
+        if (!node || typeof node.getBoundingClientRect !== 'function') {
+            return;
+        }
+        if (this.state.snapped) {
+            this.unsnapWindow();
+        }
+        const rect = node.getBoundingClientRect();
+        const viewportMetrics = this.getCachedViewportMetrics();
+        const clampOptions = {
+            viewportWidth: viewportMetrics.width,
+            viewportHeight: viewportMetrics.height,
+            viewportLeft: viewportMetrics.left,
+            viewportTop: viewportMetrics.top,
+            topOffset: this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET,
+            bottomInset: this.getCachedSafeAreaBottom(),
+            snapBottomInset: this.getCachedSnapBottomInset(),
+        };
+        const restoreAnimation = this.shouldReduceMotionForGestures()
+            ? this.disableWindowTransformAnimation(node)
+            : null;
+        this._gestureState.pinch = {
+            pointerIds: [first[0], second[0]],
+            initialDistance,
+            initialWidthPx: rect.width,
+            initialHeightPx: rect.height,
+            clampOptions,
+            restoreAnimation,
+        };
+    }
+
+    updatePinch = () => {
+        if (!this._gestureState || !this._gestureState.pinch || !this._gestureState.activePointers) {
+            return;
+        }
+        const pinch = this._gestureState.pinch;
+        const pointers = this._gestureState.activePointers;
+        const [firstId, secondId] = pinch.pointerIds || [];
+        const first = pointers.get(firstId);
+        const second = pointers.get(secondId);
+        if (!first || !second) {
+            this.finishPinch();
+            return;
+        }
+        if (!pinch.initialDistance || pinch.initialDistance <= 0) {
+            return;
+        }
+        const distance = distanceBetweenPoints(first, second);
+        if (!distance || distance <= 0) {
+            return;
+        }
+        const node = this.getWindowNode();
+        if (!node) {
+            return;
+        }
+        const scale = distance / pinch.initialDistance;
+        const clampOptions = pinch.clampOptions || {};
+        const viewportWidth = clampOptions.viewportWidth || (typeof window !== 'undefined' ? window.innerWidth : 0) || pinch.initialWidthPx;
+        const viewportHeight = clampOptions.viewportHeight || (typeof window !== 'undefined' ? window.innerHeight : 0) || pinch.initialHeightPx;
+        const minWidthPx = viewportWidth ? (this.state.minWidth / 100) * viewportWidth : pinch.initialWidthPx;
+        const minHeightPx = viewportHeight ? (this.state.minHeight / 100) * viewportHeight : pinch.initialHeightPx;
+        const rawWidthPx = pinch.initialWidthPx * scale;
+        const rawHeightPx = pinch.initialHeightPx * scale;
+        const widthPx = clamp(rawWidthPx, Math.max(minWidthPx, 0), Math.max(viewportWidth, minWidthPx));
+        const heightPx = clamp(rawHeightPx, Math.max(minHeightPx, 0), Math.max(viewportHeight, minHeightPx));
+        const centerX = (first.x + second.x) / 2;
+        const centerY = (first.y + second.y) / 2;
+        const desiredPosition = {
+            x: centerX - (widthPx / 2),
+            y: centerY - (heightPx / 2),
+        };
+        const clamped = clampWindowPositionWithinViewport(
+            desiredPosition,
+            { width: widthPx, height: heightPx },
+            clampOptions,
+        );
+        const translateX = clamped?.x ?? desiredPosition.x;
+        const translateY = clamped?.y ?? desiredPosition.y;
+        const widthPercent = viewportWidth ? (widthPx / viewportWidth) * 100 : this.state.width;
+        const heightPercent = viewportHeight ? (heightPx / viewportHeight) * 100 : this.state.height;
+        const clampedWidthPercent = clamp(widthPercent, this.state.minWidth, 100);
+        const clampedHeightPercent = clamp(heightPercent, this.state.minHeight, 100);
+        node.style.transform = `translate(${translateX}px, ${translateY}px)`;
+        if (typeof node.style.setProperty === 'function') {
+            node.style.setProperty('--window-transform-x', `${translateX}px`);
+            node.style.setProperty('--window-transform-y', `${translateY}px`);
+        } else {
+            node.style['--window-transform-x'] = `${translateX}px`;
+            node.style['--window-transform-y'] = `${translateY}px`;
+        }
+        pinch.lastPosition = { x: translateX, y: translateY };
+        pinch.lastSize = { width: clampedWidthPercent, height: clampedHeightPercent };
+        this.setState((prevState) => {
+            const updates = {};
+            let changed = false;
+            if (Math.abs(prevState.width - clampedWidthPercent) > 0.05) {
+                updates.width = clampedWidthPercent;
+                changed = true;
+            }
+            if (Math.abs(prevState.height - clampedHeightPercent) > 0.05) {
+                updates.height = clampedHeightPercent;
+                changed = true;
+            }
+            if (!changed) {
+                return null;
+            }
+            updates.preMaximizeBounds = null;
+            return updates;
+        });
+    }
+
+    finishPinch = () => {
+        if (!this._gestureState || !this._gestureState.pinch) {
+            return;
+        }
+        const pinch = this._gestureState.pinch;
+        if (pinch.restoreAnimation) {
+            try {
+                pinch.restoreAnimation();
+            } catch (error) {
+                // Ignore errors restoring animation state
+            }
+        }
+        this._gestureState.pinch = null;
+        this.resizeBoundries();
+        this.notifySizeChange();
+    }
+
+    cancelPinch = () => {
+        if (this._gestureState && this._gestureState.pinch && this._gestureState.pinch.restoreAnimation) {
+            try {
+                this._gestureState.pinch.restoreAnimation();
+            } catch (error) {
+                // Ignore errors restoring animation state
+            }
+        }
+        if (this._gestureState) {
+            this._gestureState.pinch = null;
+            if (this._gestureState.activePointers) {
+                this._gestureState.activePointers.clear();
+            }
+        }
+        this.detachGestureListeners();
+    }
+
     setTransformMotionPreset = (node, preset) => {
         if (!node) return;
         const durationVars = {
@@ -713,6 +1080,50 @@ export class Window extends Component {
 
     changeCursorToDefault = () => {
         this.setState({ cursorType: "cursor-default", grabbed: false })
+    }
+
+    handleWindowPointerDown = (event) => {
+        this.focusWindow();
+        if (event && event.pointerType === 'touch') {
+            this.registerGesturePointer(event);
+        }
+    }
+
+    handleTitleBarPointerDown = () => {
+        this.focusWindow();
+    }
+
+    handleTitleBarPointerUp = (event) => {
+        if (!event || event.pointerType !== 'touch') {
+            return;
+        }
+        const now = this.getGestureTimestamp();
+        const tapPoint = { x: event.clientX, y: event.clientY };
+        const previous = this._lastTitlebarTap;
+        if (previous && (now - previous.time) <= DOUBLE_TAP_TIMEOUT) {
+            const distance = distanceBetweenPoints(previous, tapPoint);
+            if (distance <= DOUBLE_TAP_DISTANCE) {
+                if (typeof event.preventDefault === 'function') {
+                    event.preventDefault();
+                }
+                if (typeof event.stopPropagation === 'function') {
+                    event.stopPropagation();
+                }
+                this._lastTitlebarTap = null;
+                this._suppressNextTitlebarDoubleClick = true;
+                if (this._suppressDoubleClickReset) {
+                    clearScheduledTimeout(this._suppressDoubleClickReset);
+                }
+                this._suppressDoubleClickReset = scheduleTimeout(() => {
+                    this._suppressNextTitlebarDoubleClick = false;
+                    this._suppressDoubleClickReset = null;
+                }, DOUBLE_TAP_TIMEOUT);
+                const animated = !this.shouldReduceMotionForGestures();
+                this.handleTitleBarDoubleClick(null, { animated });
+                return;
+            }
+        }
+        this._lastTitlebarTap = { time: now, ...tapPoint };
     }
 
     getSnapGrid = () => {
@@ -1369,16 +1780,34 @@ export class Window extends Component {
         }
     }
 
-    handleTitleBarDoubleClick = (event) => {
+    handleTitleBarDoubleClick = (event, options = {}) => {
+        if (this._suppressNextTitlebarDoubleClick) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                this._suppressNextTitlebarDoubleClick = false;
+                if (this._suppressDoubleClickReset) {
+                    clearScheduledTimeout(this._suppressDoubleClickReset);
+                    this._suppressDoubleClickReset = null;
+                }
+                return;
+            }
+            this._suppressNextTitlebarDoubleClick = false;
+            if (this._suppressDoubleClickReset) {
+                clearScheduledTimeout(this._suppressDoubleClickReset);
+                this._suppressDoubleClickReset = null;
+            }
+        }
         if (event) {
             event.preventDefault();
             event.stopPropagation();
         }
         if (this.props.allowMaximize === false) return;
+        const shouldAnimate = typeof options.animated === 'boolean' ? options.animated : true;
         if (this.state.maximized) {
-            this.restoreWindow();
+            this.restoreWindow({ animated: shouldAnimate });
         } else {
-            this.maximizeWindow();
+            this.maximizeWindow({ animated: shouldAnimate });
         }
     }
 
@@ -1387,7 +1816,7 @@ export class Window extends Component {
         this.props.hasMinimised(this.id);
     }
 
-    restoreWindow = () => {
+    restoreWindow = (options = {}) => {
         const node = this.getWindowNode();
         if (!node) return;
         const storedBounds = this.state.preMaximizeBounds;
@@ -1429,9 +1858,14 @@ export class Window extends Component {
         }
 
         const endTransform = `translate(${targetX}px,${targetY}px)`;
-        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-        this.setTransformMotionPreset(node, 'restore');
+        const systemPrefersReducedMotion = this.prefersReducedMotion();
+        const shouldAnimate = typeof options.animated === 'boolean' ? options.animated : !systemPrefersReducedMotion;
+        let restoreAnimation = null;
+        if (shouldAnimate) {
+            this.setTransformMotionPreset(node, 'restore');
+        } else {
+            restoreAnimation = this.disableWindowTransformAnimation(node);
+        }
         if (style && typeof style.setProperty === 'function') {
             style.setProperty('--window-transform-x', `${targetX}px`);
             style.setProperty('--window-transform-y', `${targetY}px`);
@@ -1439,18 +1873,16 @@ export class Window extends Component {
             style['--window-transform-x'] = `${targetX}px`;
             style['--window-transform-y'] = `${targetY}px`;
         }
-        if (prefersReducedMotion) {
-            node.style.transform = endTransform;
-            return;
-        }
-
         node.style.transform = endTransform;
+        if (restoreAnimation) {
+            restoreAnimation();
+        }
     }
 
-    maximizeWindow = () => {
+    maximizeWindow = (options = {}) => {
         if (this.props.allowMaximize === false) return;
         if (this.state.maximized) {
-            this.restoreWindow();
+            this.restoreWindow(options);
         }
         else {
             this.focusWindow();
@@ -1479,7 +1911,13 @@ export class Window extends Component {
             const heightPercent = percentOf(availableHeight, viewportHeight);
             const preBounds = this.getCurrentBounds();
             if (node) {
-                this.setTransformMotionPreset(node, 'maximize');
+                const shouldAnimate = typeof options.animated === 'boolean' ? options.animated : true;
+                let restoreAnimation = null;
+                if (shouldAnimate) {
+                    this.setTransformMotionPreset(node, 'maximize');
+                } else {
+                    restoreAnimation = this.disableWindowTransformAnimation(node);
+                }
                 const translateYOffset = Math.max(0, (viewportTop + containerTopOffset) - translateBase);
                 const transformValue = `translate(-1pt, ${translateYOffset}px)`;
                 node.style.transform = transformValue;
@@ -1490,6 +1928,9 @@ export class Window extends Component {
                 } else if (style) {
                     style['--window-transform-x'] = '-1pt';
                     style['--window-transform-y'] = `${translateYOffset}px`;
+                }
+                if (restoreAnimation) {
+                    restoreAnimation();
                 }
             }
             this.setState({ maximized: true, height: heightPercent, width: 100.2, preMaximizeBounds: preBounds }, () => {
@@ -1750,7 +2191,7 @@ export class Window extends Component {
                         aria-label={this.props.title}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
-                        onPointerDown={this.focusWindow}
+                        onPointerDown={this.handleWindowPointerDown}
                         onFocus={this.focusWindow}
                     >
                         {this.props.resizable !== false && !this.state.maximized && (
@@ -1770,7 +2211,8 @@ export class Window extends Component {
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
-                            onPointerDown={this.focusWindow}
+                            onPointerDown={this.handleTitleBarPointerDown}
+                            onPointerUp={this.handleTitleBarPointerUp}
                             onDoubleClick={this.handleTitleBarDoubleClick}
                             controls={(
                                 <WindowEditButtons
@@ -1799,7 +2241,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, controls }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onPointerUp, onDoubleClick, controls }) {
     return (
         <div
             className={`${styles.windowTitlebar} bg-ub-window-title text-white select-none`}
@@ -1809,6 +2251,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
             onKeyDown={onKeyDown}
             onBlur={onBlur}
             onPointerDown={onPointerDown}
+            onPointerUp={onPointerUp}
             onDoubleClick={onDoubleClick}
             data-window-titlebar=""
             data-window-drag-handle=""
