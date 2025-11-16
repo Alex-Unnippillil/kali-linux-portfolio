@@ -227,7 +227,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [reducedMotion]);
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
+    document.documentElement.style.setProperty('--font-scale', fontScale.toString());
     saveFontScale(fontScale);
   }, [fontScale]);
 
