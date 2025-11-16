@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import Autopsy from '../components/apps/autopsy';
 
 describe('Autopsy plugins and timeline', () => {
@@ -33,6 +33,24 @@ describe('Autopsy plugins and timeline', () => {
                   timestamp: '2023-01-02T00:00:00Z',
                 },
               ],
+            }),
+        });
+      }
+      if (url === '/demo-data/autopsy/filetree.json') {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              name: 'root',
+              children: [],
+            }),
+        });
+      }
+      if (url === '/demo-data/autopsy/hashes.json') {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              '0efd846c4a6c66f82460152159e5605aa4aeeb7eb942dc300a7c6cbd9a5a3ff4':
+                'notes.txt',
             }),
         });
       }
@@ -76,5 +94,35 @@ describe('Autopsy plugins and timeline', () => {
     });
     expect(screen.queryByText('resume.docx')).toBeNull();
     expect(screen.getByText('system.log')).toBeInTheDocument();
+  });
+
+  it('shows read-only forensic datasets with commentary', async () => {
+    render(<Autopsy />);
+    fireEvent.change(screen.getByPlaceholderText('Case name'), {
+      target: { value: 'Demo' },
+    });
+    fireEvent.click(screen.getByText('Create Case'));
+
+    const timelineGroup = await screen.findByRole('group', {
+      name: /Forensic timeline dataset/i,
+    });
+    expect(
+      within(timelineGroup).getByText(/fictional FIELD-USB investigation/i)
+    ).toBeInTheDocument();
+    expect(
+      within(timelineGroup).getByRole('note')
+    ).toHaveTextContent('Instructor insight');
+
+    const hashGroup = await screen.findByRole('group', {
+      name: /Hash set reference/i,
+    });
+    expect(
+      within(hashGroup).getByText(/Synthetic SHA-256 values generated/i)
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        within(hashGroup).getByText(/Matches demo hash DB entry/i)
+      ).toBeInTheDocument()
+    );
   });
 });
