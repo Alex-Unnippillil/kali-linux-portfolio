@@ -1,9 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
+import { ensureServerEnv } from '../../../../lib/runtime-env';
 
 export default async function handler(
   req,
   res,
 ) {
+  ensureServerEnv();
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     res.status(405).end('Method Not Allowed');

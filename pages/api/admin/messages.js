@@ -1,10 +1,12 @@
 import { getServiceClient } from '../../../lib/service-client';
 import { createLogger } from '../../../lib/logger';
+import { ensureServerEnv } from '../../../../lib/runtime-env';
 
 export default async function handler(
   req,
   res
 ) {
+  ensureServerEnv();
   const logger = createLogger(req.headers['x-correlation-id']);
   if (req.method !== 'GET') {
     logger.warn('method not allowed', { method: req.method });
