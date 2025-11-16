@@ -2,6 +2,7 @@
 
 import React, { Component, useCallback, useEffect, useRef, useState } from 'react';
 import Draggable from 'react-draggable';
+import clsx from 'clsx';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import {
@@ -2047,10 +2048,34 @@ export function WindowEditButtons(props) {
         }
     }, []);
 
+    const baseButtonClasses = clsx(
+        styles.windowControlButton,
+        'group/window-control flex h-10 w-10 items-center justify-center rounded-lg px-0 transition-all duration-150 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/80'
+    );
+
+    const minimizeButtonClasses = clsx(
+        baseButtonClasses,
+        styles.windowControlButtonMinimize,
+        pressedControl === 'minimize' && styles.windowControlButtonPressed
+    );
+
+    const maximizeButtonClasses = clsx(
+        baseButtonClasses,
+        styles.windowControlButtonMaximize,
+        !allowMaximize && styles.windowControlButtonDisabled,
+        pressedControl === 'maximize' && styles.windowControlButtonPressed
+    );
+
+    const closeButtonClasses = clsx(
+        baseButtonClasses,
+        styles.windowControlButtonClose,
+        pressedControl === 'close' && styles.windowControlButtonPressed
+    );
+
     return (
         <div
             ref={controlsRef}
-            className={styles.windowControls}
+            className={clsx(styles.windowControls, 'flex h-full items-center gap-2 pr-1')}
             role="group"
             aria-label="Window controls"
             onPointerDown={(event) => event.stopPropagation()}
@@ -2062,7 +2087,7 @@ export function WindowEditButtons(props) {
                 type="button"
                 aria-label={minimizeAriaLabel}
                 title="Minimize"
-                className={`${styles.windowControlButton} ${pressedControl === 'minimize' ? styles.windowControlButtonPressed : ''}`.trim()}
+                className={minimizeButtonClasses}
                 onPointerDown={handlePointerDown('minimize')}
                 onPointerUp={handlePointerUp('minimize', props.minimize)}
                 onPointerLeave={resetPressedControl}
@@ -2076,11 +2101,7 @@ export function WindowEditButtons(props) {
                 type="button"
                 aria-label={maximizeAriaLabel}
                 title={isMaximized ? 'Restore' : 'Maximize'}
-                className={[
-                    styles.windowControlButton,
-                    allowMaximize ? '' : styles.windowControlButtonDisabled,
-                    pressedControl === 'maximize' ? styles.windowControlButtonPressed : '',
-                ].filter(Boolean).join(' ')}
+                className={maximizeButtonClasses}
                 onClick={handleButtonClick(handleMaximize)}
                 disabled={!allowMaximize}
                 aria-disabled={!allowMaximize}
@@ -2097,7 +2118,7 @@ export function WindowEditButtons(props) {
                 id={`close-${props.id}`}
                 aria-label={closeAriaLabel}
                 title="Close"
-                className={[styles.windowControlButton, styles.windowControlButtonClose, pressedControl === 'close' ? styles.windowControlButtonPressed : ''].filter(Boolean).join(' ')}
+                className={closeButtonClasses}
                 onPointerDown={handlePointerDown('close')}
                 onPointerUp={handlePointerUp('close', props.close)}
                 onPointerLeave={resetPressedControl}
