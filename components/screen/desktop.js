@@ -189,6 +189,68 @@ const createOverlayStateMap = () => {
     return next;
 };
 
+const describeWindowContext = (context) => {
+    if (!context || typeof context !== 'object') {
+        return undefined;
+    }
+
+    const pickString = (value) => (typeof value === 'string' && value.trim() ? value.trim() : null);
+
+    const subtitle = pickString(context.subtitle) || pickString(context.hint);
+    if (subtitle) {
+        return subtitle;
+    }
+
+    if (typeof context.folderTitle === 'string' && context.folderTitle.trim()) {
+        const count = Array.isArray(context.folderItems) ? context.folderItems.length : null;
+        if (typeof count === 'number') {
+            return `${context.folderTitle.trim()} • ${count} item${count === 1 ? '' : 's'}`;
+        }
+        return context.folderTitle.trim();
+    }
+
+    const folderDescription = pickString(context.folderDescription);
+    if (folderDescription) {
+        return folderDescription;
+    }
+
+    const description = pickString(context.description);
+    if (description) {
+        return description;
+    }
+
+    const prioritizedKeys = ['initialPath', 'path', 'label', 'name'];
+    for (const key of prioritizedKeys) {
+        const value = pickString(context[key]);
+        if (value) {
+            return value;
+        }
+    }
+
+    const searchKeys = ['search', 'query', 'term'];
+    for (const key of searchKeys) {
+        const value = pickString(context[key]);
+        if (value) {
+            const prefix = key === 'search' ? 'Search' : key === 'query' ? 'Query' : 'Term';
+            return `${prefix}: ${value}`;
+        }
+    }
+
+    if (Array.isArray(context.folderItems)) {
+        const count = context.folderItems.length;
+        return count === 0 ? 'Empty folder' : `${count} item${count === 1 ? '' : 's'}`;
+    }
+
+    const fallbackEntry = Object.entries(context).find(([key, value]) => (
+        key !== 'id' && key !== 'folderId' && typeof value === 'string' && value.trim()
+    ));
+    if (fallbackEntry) {
+        return fallbackEntry[1].trim();
+    }
+
+    return undefined;
+};
+
 export class Desktop extends Component {
     static defaultProps = {
         snapGrid: [8, 8],
@@ -355,6 +417,7 @@ export class Desktop extends Component {
         this.overlayRegistry = new Map(OVERLAY_WINDOW_LIST.map((meta) => [meta.id, meta]));
         this.folderMetadata = new Map(DEFAULT_DESKTOP_FOLDERS.map((folder) => [folder.id, folder]));
         this.windowPreviewCache = new Map();
+        this.windowActivity = new Map();
         this.windowSwitcherRequestId = 0;
         this.refreshAppRegistry();
 
@@ -2390,12 +2453,20 @@ export class Desktop extends Component {
         return this.appMap.get(id);
     };
 
+    recordWindowActivity = (id) => {
+        if (!id) return;
+        this.windowActivity.set(id, Date.now());
+    };
+
     buildWindowShelfEntry = (id) => {
         const app = this.getAppById(id);
         if (!app) return null;
         const title = app.title || app.name || id;
         const icon = typeof app.icon === 'string' ? app.icon : undefined;
-        return { id, title, icon };
+        const context = this.state.window_context?.[id];
+        const hint = describeWindowContext(context);
+        const lastActiveAt = this.windowActivity?.get(id) || undefined;
+        return { id, title, icon, hint, lastActiveAt };
     };
 
     getMinimizedWindowEntries = () => {
@@ -2456,7 +2527,7 @@ export class Desktop extends Component {
             }
         });
         entries.sort((a, b) => (b.closedAt || 0) - (a.closedAt || 0));
-        return entries.map(({ id, title, icon }) => ({ id, title, icon }));
+        return entries;
     };
 
     getDesktopAppIndex = (id) => {
@@ -4761,6 +4832,7 @@ export class Desktop extends Component {
             this.minimizeOverlay(objId);
             return;
         }
+        this.recordWindowActivity(objId);
         this.setState((prev) => {
             const minimized_windows = { ...prev.minimized_windows, [objId]: true };
             const focused_windows = { ...prev.focused_windows, [objId]: false };
@@ -5021,6 +5093,10 @@ export class Desktop extends Component {
             this.windowPreviewCache.delete(objId);
         }
 
+        if (this.windowActivity?.has(objId)) {
+            this.windowActivity.delete(objId);
+        }
+
         this.giveFocusToLastApp();
 
         // close window
@@ -5088,6 +5164,7 @@ export class Desktop extends Component {
     }
 
     focus = (objId) => {
+        this.recordWindowActivity(objId);
         this.promoteWindowInStack(objId);
         this.setState((prev) => {
             const nextFocused = { ...prev.focused_windows };
