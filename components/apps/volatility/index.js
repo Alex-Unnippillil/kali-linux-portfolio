@@ -5,6 +5,7 @@ import PluginWalkthrough from '../../../apps/volatility/components/PluginWalkthr
 import memoryFixture from '../../../public/demo-data/volatility/memory.json';
 import pslistJson from '../../../public/demo-data/volatility/pslist.json';
 import netscanJson from '../../../public/demo-data/volatility/netscan.json';
+import { buildDocsLatestPath } from '../../../lib/docs/urls';
 
 // pull demo data for various volatility plugins from the memory fixture
 const pstree = Array.isArray(memoryFixture.pstree)
@@ -52,36 +53,38 @@ const rowSeverityAccent = Object.fromEntries(
   Object.entries(severityPalette).map(([key, value]) => [key, value.row])
 );
 
+const templateGlossaryBase = buildDocsLatestPath('template-glossary');
+
 const glossary = {
   pstree: {
     title: 'Process Tree',
     description: 'Hierarchy of running processes.',
-    link: '/docs/template-glossary#process-tree',
+    link: `${templateGlossaryBase}#process-tree`,
   },
   pslist: {
     title: 'Process List',
     description: 'Active processes captured from memory.',
-    link: '/docs/template-glossary#pslist',
+    link: `${templateGlossaryBase}#pslist`,
   },
   dlllist: {
     title: 'Module List',
     description: 'DLLs and modules loaded by the selected process.',
-    link: '/docs/template-glossary#module',
+    link: `${templateGlossaryBase}#module`,
   },
   netscan: {
     title: 'Network Connections',
     description: 'Sockets and network endpoints identified in memory.',
-    link: '/docs/template-glossary#netscan',
+    link: `${templateGlossaryBase}#netscan`,
   },
   malfind: {
     title: 'Malfind',
     description: 'Heuristics to locate injected or malicious code.',
-    link: '/docs/template-glossary#malfind',
+    link: `${templateGlossaryBase}#malfind`,
   },
   yara: {
     title: 'Yara Scan',
     description: 'Pattern-based rules that highlight suspicious memory content.',
-    link: '/docs/template-glossary#yara',
+    link: `${templateGlossaryBase}#yara`,
   },
 };
 
