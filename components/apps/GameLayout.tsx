@@ -6,6 +6,7 @@ import React, {
   useCallback,
   createContext,
   useContext,
+  useMemo,
 } from 'react';
 import clsx from 'clsx';
 import HelpOverlay from './HelpOverlay';
@@ -44,6 +45,20 @@ const RecorderContext = createContext<RecorderContextValue>({
 
 export const useInputRecorder = () => useContext(RecorderContext);
 
+interface GameLayoutStateValue {
+  paused: boolean;
+  setPaused: React.Dispatch<React.SetStateAction<boolean>>;
+  suspended: boolean;
+}
+
+const GameLayoutStateContext = createContext<GameLayoutStateValue>({
+  paused: false,
+  setPaused: () => {},
+  suspended: false,
+});
+
+export const useGameLayoutState = () => useContext(GameLayoutStateContext);
+
 const GameLayout: React.FC<GameLayoutProps> = ({
   gameId = 'unknown',
   children,
@@ -55,6 +70,9 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [suspended, setSuspended] = useState(
+    typeof document !== 'undefined' ? document.visibilityState === 'hidden' : false,
+  );
   const [log, setLog] = useState<RecordedInput[]>([]);
   const [replayHandler, setReplayHandler] = useState<
     ((input: any, index: number) => void) | undefined
@@ -210,7 +228,10 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
+        setSuspended(true);
         setPaused(true);
+      } else {
+        setSuspended(false);
       }
     };
     const handleBlur = () => setPaused(true);
@@ -225,119 +246,125 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   const resume = useCallback(() => setPaused(false), []);
 
   const contextValue = { record, registerReplay };
+  const stateValue = useMemo(
+    () => ({ paused, setPaused, suspended }),
+    [paused, suspended],
+  );
 
   return (
     <RecorderContext.Provider value={contextValue}>
-      <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
-        {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
-        {paused && (
+      <GameLayoutStateContext.Provider value={stateValue}>
+        <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
+          {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
+          {paused && (
+            <div
+              className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
+              role="dialog"
+              aria-modal="true"
+            >
+              <button
+                type="button"
+                onClick={resume}
+                className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+                autoFocus
+              >
+                Resume
+              </button>
+            </div>
+          )}
+          <div className="absolute top-2 right-2 z-40 flex space-x-2">
+            <button
+              type="button"
+              onClick={() => setPaused((p) => !p)}
+              className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            >
+              {paused ? 'Resume' : 'Pause'}
+            </button>
+            <button
+              type="button"
+              onClick={snapshot}
+              className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            >
+              Snapshot
+            </button>
+            <button
+              type="button"
+              onClick={replay}
+              className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            >
+              Replay
+            </button>
+            <button
+              type="button"
+              onClick={shareApp}
+              className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            >
+              Share
+            </button>
+            {highScore !== undefined && (
+              <button
+                type="button"
+                onClick={shareScore}
+                className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+              >
+                Share Score
+              </button>
+            )}
+            <button
+              type="button"
+              aria-label="Help"
+              aria-expanded={showHelp}
+              onClick={toggle}
+              className="bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
+            >
+              ?
+            </button>
+          </div>
+          {children}
           <div
-            className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
-            role="dialog"
-          aria-modal="true"
-        >
-          <button
-            type="button"
-            onClick={resume}
-            className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-            autoFocus
+            className="absolute top-2 left-2 z-10 text-sm flex flex-col gap-1"
+            role="status"
+            aria-live="polite"
           >
-            Resume
-          </button>
+            {stage !== undefined && (
+              <div className="rounded px-2 py-1 bg-slate-900/60 border border-slate-700/70 backdrop-blur">
+                Stage: {stage}
+              </div>
+            )}
+            {lives !== undefined && (
+              <div className="rounded px-2 py-1 bg-slate-900/60 border border-slate-700/70 backdrop-blur">
+                Lives: {lives}
+              </div>
+            )}
+            {score !== undefined && (
+              <div
+                className={clsx(
+                  'rounded px-2 py-1 bg-slate-900/70 border border-emerald-500/20 backdrop-blur shadow-sm transition-transform duration-300 ease-out',
+                  !prefersReducedMotion && scorePulse &&
+                    'scale-110 text-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.45)]',
+                )}
+              >
+                Score: {score}
+              </div>
+            )}
+            {highScore !== undefined && (
+              <div
+                className={clsx(
+                  'rounded px-2 py-1 bg-slate-900/70 border border-indigo-400/20 backdrop-blur shadow-sm transition-transform duration-300 ease-out',
+                  !prefersReducedMotion && highScorePulse &&
+                    'scale-105 text-indigo-300 shadow-[0_0_16px_rgba(129,140,248,0.35)]',
+                )}
+              >
+                High: {highScore}
+              </div>
+            )}
+          </div>
+          {!prefersReducedMotion && <PerfOverlay />}
+          {editor && (
+            <div className="absolute bottom-2 left-2 z-30">{editor}</div>
+          )}
         </div>
-      )}
-      <div className="absolute top-2 right-2 z-40 flex space-x-2">
-        <button
-          type="button"
-          onClick={() => setPaused((p) => !p)}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          {paused ? 'Resume' : 'Pause'}
-        </button>
-        <button
-          type="button"
-          onClick={snapshot}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          Snapshot
-        </button>
-        <button
-          type="button"
-          onClick={replay}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          Replay
-        </button>
-        <button
-          type="button"
-          onClick={shareApp}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-        >
-          Share
-        </button>
-        {highScore !== undefined && (
-          <button
-            type="button"
-            onClick={shareScore}
-            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-          >
-            Share Score
-          </button>
-        )}
-        <button
-          type="button"
-          aria-label="Help"
-          aria-expanded={showHelp}
-          onClick={toggle}
-          className="bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
-        >
-          ?
-        </button>
-      </div>
-      {children}
-      <div
-        className="absolute top-2 left-2 z-10 text-sm flex flex-col gap-1"
-        role="status"
-        aria-live="polite"
-      >
-        {stage !== undefined && (
-          <div className="rounded px-2 py-1 bg-slate-900/60 border border-slate-700/70 backdrop-blur">
-            Stage: {stage}
-          </div>
-        )}
-        {lives !== undefined && (
-          <div className="rounded px-2 py-1 bg-slate-900/60 border border-slate-700/70 backdrop-blur">
-            Lives: {lives}
-          </div>
-        )}
-        {score !== undefined && (
-          <div
-            className={clsx(
-              'rounded px-2 py-1 bg-slate-900/70 border border-emerald-500/20 backdrop-blur shadow-sm transition-transform duration-300 ease-out',
-              !prefersReducedMotion && scorePulse &&
-                'scale-110 text-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.45)]',
-            )}
-          >
-            Score: {score}
-          </div>
-        )}
-        {highScore !== undefined && (
-          <div
-            className={clsx(
-              'rounded px-2 py-1 bg-slate-900/70 border border-indigo-400/20 backdrop-blur shadow-sm transition-transform duration-300 ease-out',
-              !prefersReducedMotion && highScorePulse &&
-                'scale-105 text-indigo-300 shadow-[0_0_16px_rgba(129,140,248,0.35)]',
-            )}
-          >
-            High: {highScore}
-          </div>
-        )}
-      </div>
-      {!prefersReducedMotion && <PerfOverlay />}
-      {editor && (
-        <div className="absolute bottom-2 left-2 z-30">{editor}</div>
-      )}
-      </div>
+      </GameLayoutStateContext.Provider>
     </RecorderContext.Provider>
   );
 };
