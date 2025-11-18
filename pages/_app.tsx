@@ -20,6 +20,7 @@ import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 import { Rajdhani } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
+import InstallPrompt from '../components/ui/InstallPrompt';
 
 type PeriodicSyncPermissionDescriptor = PermissionDescriptor & {
   name: 'periodic-background-sync';
@@ -217,6 +218,7 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
             <PipPortalProvider>
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
+              <InstallPrompt />
               <ShortcutOverlay />
               <Analytics
                 beforeSend={(event) => {
