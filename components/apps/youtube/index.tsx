@@ -18,6 +18,7 @@ export type VideoResult = {
   title: string;
   description: string;
   channelTitle: string;
+  channelId?: string;
   publishedAt: string;
   thumbnail: string;
 };
@@ -40,6 +41,7 @@ function normalizeVideo(video: VideoResult): VideoResult {
     channelTitle: hasOwnText(video.channelTitle)
       ? video.channelTitle
       : 'Unknown channel',
+    channelId: video.channelId ?? '',
     publishedAt: video.publishedAt ?? new Date().toISOString(),
     thumbnail: video.thumbnail ?? '',
   };
@@ -75,6 +77,7 @@ function isVideoList(value: unknown): value is VideoResult[] {
         typeof item.title === 'string' &&
         typeof item.description === 'string' &&
         typeof item.channelTitle === 'string' &&
+        (typeof item.channelId === 'string' || typeof item.channelId === 'undefined') &&
         typeof item.publishedAt === 'string' &&
         typeof item.thumbnail === 'string',
     )
@@ -105,6 +108,7 @@ async function fetchVideosFromYouTube(
       title: item.snippet?.title ?? 'Untitled video',
       description: item.snippet?.description ?? '',
       channelTitle: item.snippet?.channelTitle ?? 'Unknown channel',
+      channelId: item.snippet?.channelId ?? '',
       publishedAt: item.snippet?.publishedAt ?? new Date().toISOString(),
       thumbnail:
         item.snippet?.thumbnails?.high?.url ||
@@ -113,6 +117,20 @@ async function fetchVideosFromYouTube(
         '',
     }))
     .filter((item): item is VideoResult => Boolean(item.id));
+}
+
+function getVideoUrl(video: VideoResult) {
+  return `https://www.youtube.com/watch?v=${video.id}`;
+}
+
+function getChannelUrl(video: VideoResult) {
+  if (hasOwnText(video.channelId)) {
+    return `https://www.youtube.com/channel/${video.channelId}`;
+  }
+
+  return `https://www.youtube.com/results?search_query=${encodeURIComponent(
+    video.channelTitle,
+  )}&sp=EgIQAg%253D%253D`;
 }
 
 function filterDemoVideos(query: string): VideoResult[] {
@@ -411,6 +429,28 @@ export default function YouTubeApp({ initialResults }: Props) {
                   {selectedVideo.description}
                 </p>
               )}
+              <div className="flex flex-wrap gap-2 pt-2">
+                <a
+                  href={getVideoUrl(selectedVideo)}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  onClick={() => handleSelectVideo(selectedVideo)}
+                  className="inline-flex items-center gap-1 rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:border-kali-control hover:text-kali-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+                >
+                  Open on YouTube
+                  <span className="sr-only"> (opens on youtube.com)</span>
+                </a>
+                <a
+                  href={getChannelUrl(selectedVideo)}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  onClick={() => handleSelectVideo(selectedVideo)}
+                  className="inline-flex items-center gap-1 rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:border-kali-control hover:text-kali-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+                >
+                  Open channel
+                  <span className="sr-only"> (opens on youtube.com)</span>
+                </a>
+              </div>
             </div>
           )}
         </section>
@@ -434,32 +474,58 @@ export default function YouTubeApp({ initialResults }: Props) {
               {history.length ? (
                 history.map((video) => (
                   <li key={video.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectVideo(video)}
-                      className="flex w-full items-center gap-3 rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] p-3 text-left shadow-[0_6px_16px_rgba(8,15,26,0.32)] transition-colors hover:border-kali-control hover:text-kali-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
-                      aria-label={`Watch ${video.title} again`}
+                    <div
+                      className="group rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] p-3 shadow-[0_6px_16px_rgba(8,15,26,0.32)] transition-colors hover:border-kali-control focus-within:border-kali-control focus-within:ring-2 focus-within:ring-[var(--color-focus-ring)] focus-within:ring-offset-2 focus-within:ring-offset-[var(--kali-bg)]"
                     >
-                      {video.thumbnail ? (
-                        <img
-                          src={video.thumbnail}
-                          alt=""
-                          className="h-12 w-20 rounded object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-12 w-20 items-center justify-center rounded bg-[var(--kali-panel-highlight)] text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                          No preview
+                      <button
+                        type="button"
+                        onClick={() => handleSelectVideo(video)}
+                        className="flex w-full items-center gap-3 text-left text-[var(--color-text)] transition hover:text-kali-control focus-visible:outline-none"
+                        aria-label={`Watch ${video.title} again`}
+                      >
+                        {video.thumbnail ? (
+                          <img
+                            src={video.thumbnail}
+                            alt=""
+                            className="h-12 w-20 rounded object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-12 w-20 items-center justify-center rounded bg-[var(--kali-panel-highlight)] text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                            No preview
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-[var(--color-text)] line-clamp-2">
+                            {video.title}
+                          </p>
+                          <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                            {video.channelTitle}
+                          </p>
                         </div>
-                      )}
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-[var(--color-text)] line-clamp-2">
-                          {video.title}
-                        </p>
-                        <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                          {video.channelTitle}
-                        </p>
+                      </button>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <a
+                          href={getVideoUrl(video)}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          onClick={() => handleSelectVideo(video)}
+                          className="inline-flex items-center gap-1 rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] font-semibold text-[var(--color-text)] transition hover:border-kali-control hover:text-kali-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+                        >
+                          Open on YouTube
+                          <span className="sr-only"> (opens on youtube.com)</span>
+                        </a>
+                        <a
+                          href={getChannelUrl(video)}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          onClick={() => handleSelectVideo(video)}
+                          className="inline-flex items-center gap-1 rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] font-semibold text-[var(--color-text)] transition hover:border-kali-control hover:text-kali-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+                        >
+                          Open channel
+                          <span className="sr-only"> (opens on youtube.com)</span>
+                        </a>
                       </div>
-                    </button>
+                    </div>
                   </li>
                 ))
               ) : (
@@ -488,44 +554,79 @@ export default function YouTubeApp({ initialResults }: Props) {
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {results.map((video) => {
               const isActive = selectedVideo?.id === video.id;
+              const videoUrl = getVideoUrl(video);
+              const channelUrl = getChannelUrl(video);
               return (
-                <button
+                <article
                   key={video.id}
-                  type="button"
-                  onClick={() => handleSelectVideo(video)}
-                  className={`flex h-full flex-col overflow-hidden rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] text-left shadow-[0_8px_22px_rgba(8,15,26,0.4)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-kali-control ${
+                  className={`flex h-full flex-col overflow-hidden rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] text-left shadow-[0_8px_22px_rgba(8,15,26,0.4)] transition focus-within:outline-none focus-within:ring-2 focus-within:ring-[var(--color-focus-ring)] focus-within:ring-offset-2 focus-within:ring-offset-[var(--kali-bg)] hover:border-kali-control ${
                     isActive
                       ? 'border-kali-control shadow-[0_10px_30px_rgba(15,148,210,0.28)]'
                       : 'hover:shadow-[0_10px_35px_rgba(2,6,23,0.45)]'
                   }`}
-                  aria-label={`Watch ${video.title}`}
                 >
-                  {video.thumbnail ? (
-                    <img
-                      src={video.thumbnail}
-                      alt=""
-                      className="h-40 w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-40 w-full items-center justify-center bg-[var(--kali-panel-highlight)] text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                      No preview available
+                  <button
+                    type="button"
+                    onClick={() => handleSelectVideo(video)}
+                    className="flex flex-1 flex-col gap-2 text-left text-[var(--color-text)] focus-visible:outline-none"
+                    aria-label={`Watch ${video.title}`}
+                  >
+                    {video.thumbnail ? (
+                      <img
+                        src={video.thumbnail}
+                        alt=""
+                        className="h-40 w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-40 w-full items-center justify-center bg-[var(--kali-panel-highlight)] text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                        No preview available
+                      </div>
+                    )}
+                    <div className="flex flex-1 flex-col gap-2 p-4">
+                      <h3 className="text-base font-semibold text-[var(--color-text)] line-clamp-2">
+                        {video.title}
+                      </h3>
+                      <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                        {video.channelTitle}
+                      </p>
+                      <p className="line-clamp-3 text-xs text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
+                        {video.description || 'No description available.'}
+                      </p>
+                      <p className="mt-auto text-[11px] uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                        {formatDate(video.publishedAt)}
+                      </p>
                     </div>
-                  )}
-                  <div className="flex flex-1 flex-col gap-2 p-4">
-                    <h3 className="text-base font-semibold text-[var(--color-text)] line-clamp-2">
-                      {video.title}
-                    </h3>
-                    <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                      {video.channelTitle}
-                    </p>
-                    <p className="line-clamp-3 text-xs text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
-                      {video.description || 'No description available.'}
-                    </p>
-                    <p className="mt-auto text-[11px] uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                      {formatDate(video.publishedAt)}
-                    </p>
+                  </button>
+                  <div className="flex flex-wrap gap-2 border-t border-[color:color-mix(in_srgb,var(--kali-panel-border)_65%,transparent)] bg-[color:color-mix(in_srgb,var(--color-surface)_96%,transparent)] p-3">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectVideo(video)}
+                      className="inline-flex items-center gap-1 rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:border-kali-control hover:text-kali-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+                    >
+                      Watch here
+                    </button>
+                    <a
+                      href={videoUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      onClick={() => handleSelectVideo(video)}
+                      className="inline-flex items-center gap-1 rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:border-kali-control hover:text-kali-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+                    >
+                      Open on YouTube
+                      <span className="sr-only"> (opens on youtube.com)</span>
+                    </a>
+                    <a
+                      href={channelUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      onClick={() => handleSelectVideo(video)}
+                      className="inline-flex items-center gap-1 rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text)] transition hover:border-kali-control hover:text-kali-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+                    >
+                      Open channel
+                      <span className="sr-only"> (opens on youtube.com)</span>
+                    </a>
                   </div>
-                </button>
+                </article>
               );
             })}
           </div>
