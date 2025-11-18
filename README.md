@@ -72,8 +72,9 @@ Verify that features relying on `/api/*` degrade gracefully when served statical
 
 ### Install as a Progressive Web App
 1. Open the deployed site in a supported browser (Chrome, Edge, Brave, etc.).
-2. Use the browser’s **Install** / **Add to Home Screen** action.
-3. On mobile, share text/links to the installed app to create sticky notes automatically.
+2. When the browser surfaces the install prompt, open **Settings → Privacy → Install** or the in-app **Help** overlay and choose **Install as App** to trigger it on demand.
+3. Alternatively, use the browser’s native **Install** / **Add to Home Screen** action.
+4. On mobile, share text/links to the installed app to create sticky notes automatically.
 
 The service worker is generated during `next build` by [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa) and outputs to `public/sw.js`.
 
