@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { blobManager, useBlobManagerScope } from '@/utils/blobManager';
 
 interface PluginInfo {
   id: string;
@@ -89,6 +90,7 @@ export default function PluginManager() {
     }
     return null;
   });
+  const { register: registerBlobUrl, release: releaseBlobUrl } = useBlobManagerScope();
 
   useEffect(() => {
     fetch('/api/plugins')
@@ -127,7 +129,7 @@ export default function PluginManager() {
 
     if (manifest.sandbox === 'worker') {
       const blob = new Blob([manifest.code], { type: 'text/javascript' });
-      const url = URL.createObjectURL(blob);
+      const url = registerBlobUrl(blob);
       const worker = new Worker(url);
       worker.onmessage = (e) => {
         output.push(String(e.data));
@@ -139,13 +141,13 @@ export default function PluginManager() {
       // collect messages briefly then terminate
       setTimeout(() => {
         worker.terminate();
-        URL.revokeObjectURL(url);
+        releaseBlobUrl(url);
         finalize();
       }, 10);
     } else {
       const html = `<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; connect-src 'none';"></head><body><script>${manifest.code}<\/script></body></html>`;
       const blob = new Blob([html], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
+      const url = registerBlobUrl(blob);
       const iframe = document.createElement('iframe');
       iframe.sandbox.add('allow-scripts');
       const handleError = () => {
@@ -165,7 +167,7 @@ export default function PluginManager() {
         window.removeEventListener('message', listener);
         iframe.removeEventListener('error', handleError);
         document.body.removeChild(iframe);
-        URL.revokeObjectURL(url);
+        releaseBlobUrl(url);
         finalize();
       }, 10);
     }
@@ -175,12 +177,12 @@ export default function PluginManager() {
     if (!lastRun) return;
     const csv = ['result', ...lastRun.output.map((line) => JSON.stringify(line))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
+    const url = blobManager.register(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `${lastRun.id}.csv`;
     a.click();
-    URL.revokeObjectURL(url);
+    blobManager.release(url);
   };
 
   const [filter, setFilter] = useState<FilterOption>('all');
