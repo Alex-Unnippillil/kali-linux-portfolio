@@ -355,6 +355,8 @@ export class Desktop extends Component {
         this.overlayRegistry = new Map(OVERLAY_WINDOW_LIST.map((meta) => [meta.id, meta]));
         this.folderMetadata = new Map(DEFAULT_DESKTOP_FOLDERS.map((folder) => [folder.id, folder]));
         this.windowPreviewCache = new Map();
+        this.windowPreviewRequests = new Map();
+        this.windowPreviewTimers = new Map();
         this.windowSwitcherRequestId = 0;
         this.refreshAppRegistry();
 
@@ -3569,6 +3571,17 @@ export class Desktop extends Component {
             this.allAppsEnterRaf = null;
         }
         this.deactivateAllAppsFocusTrap();
+        if (this.windowPreviewTimers && this.windowPreviewTimers.size) {
+            this.windowPreviewTimers.forEach((timeoutId) => {
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
+            });
+            this.windowPreviewTimers.clear();
+        }
+        if (this.windowPreviewRequests) {
+            this.windowPreviewRequests.clear();
+        }
     }
 
     handleExternalTaskbarCommand = (event) => {
@@ -4085,9 +4098,15 @@ export class Desktop extends Component {
         this.focus(windows[next]);
     }
 
-    getWindowPreview = async (id) => {
-        if (this.windowPreviewCache.has(id)) {
+    getWindowPreview = async (id, options = {}) => {
+        const forceRefresh = Boolean(options?.forceRefresh);
+
+        if (!forceRefresh && this.windowPreviewCache.has(id)) {
             return this.windowPreviewCache.get(id);
+        }
+
+        if (forceRefresh && this.windowPreviewCache.has(id)) {
+            this.windowPreviewCache.delete(id);
         }
 
         let preview = null;
@@ -4114,23 +4133,52 @@ export class Desktop extends Component {
             return;
         }
 
-        if (detail.bustCache && this.windowPreviewCache?.has(appId)) {
-            this.windowPreviewCache.delete(appId);
+        const bustCache = Boolean(detail.bustCache);
+
+        const respond = (preview) => {
+            if (typeof window === 'undefined') return;
+            window.dispatchEvent(new CustomEvent('taskbar-preview-response', {
+                detail: { appId, requestId, preview },
+            }));
+        };
+
+        if (this.windowPreviewTimers.has(appId)) {
+            clearTimeout(this.windowPreviewTimers.get(appId));
+            this.windowPreviewTimers.delete(appId);
         }
 
-        Promise.resolve(this.getWindowPreview(appId))
-            .then((preview) => {
-                if (typeof window === 'undefined') return;
-                window.dispatchEvent(new CustomEvent('taskbar-preview-response', {
-                    detail: { appId, requestId, preview },
-                }));
-            })
-            .catch(() => {
-                if (typeof window === 'undefined') return;
-                window.dispatchEvent(new CustomEvent('taskbar-preview-response', {
-                    detail: { appId, requestId, preview: null },
-                }));
-            });
+        this.windowPreviewRequests.set(appId, requestId);
+
+        if (!bustCache && this.windowPreviewCache.has(appId)) {
+            respond(this.windowPreviewCache.get(appId));
+            this.windowPreviewRequests.delete(appId);
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            this.windowPreviewTimers.delete(appId);
+            if (this.windowPreviewRequests.get(appId) !== requestId) {
+                return;
+            }
+
+            Promise.resolve(this.getWindowPreview(appId, { forceRefresh: bustCache }))
+                .then((preview) => {
+                    if (this.windowPreviewRequests.get(appId) !== requestId) {
+                        return;
+                    }
+                    respond(preview);
+                    this.windowPreviewRequests.delete(appId);
+                })
+                .catch(() => {
+                    if (this.windowPreviewRequests.get(appId) !== requestId) {
+                        return;
+                    }
+                    respond(null);
+                    this.windowPreviewRequests.delete(appId);
+                });
+        }, 300);
+
+        this.windowPreviewTimers.set(appId, timer);
     };
 
     buildWindowSwitcherEntries = async (ids) => {
