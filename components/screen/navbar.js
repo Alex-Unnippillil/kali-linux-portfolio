@@ -8,6 +8,8 @@ import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
 import TaskbarPreviewFlyout from './TaskbarPreviewFlyout';
+import { SettingsContext } from '../../hooks/useSettings';
+import styles from './navbar.module.css';
 
 const BADGE_TONE_COLORS = Object.freeze({
         accent: { bg: '#3b82f6', fg: '#020817', glow: 'rgba(59,130,246,0.45)', track: 'rgba(8,15,26,0.82)' },
@@ -97,6 +99,8 @@ const arePinnedAppsEqual = (next = [], prev = []) => {
 };
 
 export default class Navbar extends PureComponent {
+        static contextType = SettingsContext;
+
         constructor() {
                 super();
                 this.state = {
@@ -958,21 +962,27 @@ export default class Navbar extends PureComponent {
 
         render() {
                 const { workspaces, activeWorkspace, preview } = this.state;
+                const contextDensity = this.context?.density;
+                const density =
+                        contextDensity === 'compact' || contextDensity === 'spacious' || contextDensity === 'comfortable'
+                                ? contextDensity
+                                : 'comfortable';
+                const densityClass = `taskbar-density--${density}`;
                 const pinnedApps = this.renderPinnedApps();
                 const runningApps = this.renderRunningApps();
                 return (
                         <div
                                 ref={this.navbarRef}
-                                className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
+                                data-testid="taskbar-root"
+                                className={`${styles.taskbarRoot} ${densityClass} main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md`}
                                 style={{
-                                        minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
-                                        paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
-                                        paddingBottom: '0.25rem',
-                                        paddingLeft: `calc(0.75rem + var(--safe-area-left, 0px))`,
-                                        paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
+                                        '--taskbar-height': `${NAVBAR_HEIGHT}px`,
                                 }}
                         >
-                                <div className="flex items-center gap-2 text-xs md:text-sm">
+                                <div
+                                        className="flex items-center text-xs md:text-sm"
+                                        style={{ gap: 'var(--taskbar-content-gap)' }}
+                                >
                                         <WhiskerMenu />
                                         {workspaces.length > 0 && (
                                                 <WorkspaceSwitcher
@@ -985,7 +995,10 @@ export default class Navbar extends PureComponent {
                                         {runningApps}
                                         <PerformanceGraph />
                                 </div>
-                                <div className="flex items-center gap-4 text-xs md:text-sm">
+                                <div
+                                        className="flex items-center text-xs md:text-sm"
+                                        style={{ gap: 'var(--taskbar-status-gap)' }}
+                                >
                                         <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
                                         <div
                                                 id="status-bar"

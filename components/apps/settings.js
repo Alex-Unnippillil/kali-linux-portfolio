@@ -124,8 +124,9 @@ export function Settings() {
                     onChange={(e) => setDensity(e.target.value)}
                     className="bg-kali-surface-muted text-kali-text px-2 py-1 rounded-md border border-kali-border/70 transition-colors hover:border-kali-focus/60 focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-surface"
                 >
-                    <option value="regular">Regular</option>
                     <option value="compact">Compact</option>
+                    <option value="comfortable">Comfortable</option>
+                    <option value="spacious">Spacious</option>
                 </select>
             </div>
             <div className="flex justify-center my-4">
@@ -312,7 +313,8 @@ export function Settings() {
                         if (parsed.accent !== undefined) setAccent(parsed.accent);
                         if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
                         if (parsed.useKaliWallpaper !== undefined) setUseKaliWallpaper(parsed.useKaliWallpaper);
-                        if (parsed.density !== undefined) setDensity(parsed.density);
+                        if (parsed.density !== undefined)
+                            setDensity(parsed.density === 'regular' ? 'comfortable' : parsed.density);
                         if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
                         if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
                         if (parsed.pongSpin !== undefined) setPongSpin(parsed.pongSpin);

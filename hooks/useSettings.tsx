@@ -39,7 +39,28 @@ import {
   getTheme as loadTheme,
   setTheme as saveTheme,
 } from '../utils/theme';
-type Density = 'regular' | 'compact';
+import usePersistentState from './usePersistentState';
+
+const DENSITY_STORAGE_KEY = 'desktop-density';
+const LEGACY_DENSITY_KEY = 'density';
+
+type Density = 'compact' | 'comfortable' | 'spacious';
+
+const isDensity = (value: unknown): value is Density =>
+  value === 'compact' || value === 'comfortable' || value === 'spacious';
+
+const resolveInitialDensity = (): Density => {
+  if (typeof window === 'undefined') return defaults.density as Density;
+  try {
+    const legacy = window.localStorage.getItem(LEGACY_DENSITY_KEY);
+    if (legacy && isDensity(legacy)) {
+      return legacy;
+    }
+  } catch {
+    // ignore access issues and fall back to defaults
+  }
+  return defaults.density as Density;
+};
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -137,7 +158,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [useKaliWallpaper, setUseKaliWallpaper] = useState<boolean>(defaults.useKaliWallpaper);
-  const [density, setDensity] = useState<Density>(defaults.density as Density);
+  const [density, setDensity] = usePersistentState<Density>(
+    DENSITY_STORAGE_KEY,
+    resolveInitialDensity,
+    isDensity,
+  );
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
@@ -154,7 +179,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAccent(await loadAccent());
       setWallpaper(await loadWallpaper());
       setUseKaliWallpaper(await loadUseKaliWallpaper());
-      setDensity((await loadDensity()) as Density);
+      const loadedDensity = await loadDensity();
+      if (isDensity(loadedDensity)) {
+        setDensity(loadedDensity);
+      }
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
       setHighContrast(await loadHighContrast());
@@ -197,14 +225,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
-      regular: {
-        '--space-1': '0.25rem',
-        '--space-2': '0.5rem',
-        '--space-3': '0.75rem',
-        '--space-4': '1rem',
-        '--space-5': '1.5rem',
-        '--space-6': '2rem',
-      },
       compact: {
         '--space-1': '0.125rem',
         '--space-2': '0.25rem',
@@ -212,6 +232,22 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         '--space-4': '0.75rem',
         '--space-5': '1rem',
         '--space-6': '1.5rem',
+      },
+      comfortable: {
+        '--space-1': '0.25rem',
+        '--space-2': '0.5rem',
+        '--space-3': '0.75rem',
+        '--space-4': '1rem',
+        '--space-5': '1.5rem',
+        '--space-6': '2rem',
+      },
+      spacious: {
+        '--space-1': '0.35rem',
+        '--space-2': '0.7rem',
+        '--space-3': '1rem',
+        '--space-4': '1.35rem',
+        '--space-5': '1.85rem',
+        '--space-6': '2.5rem',
       },
     };
     const vars = spacing[density];
