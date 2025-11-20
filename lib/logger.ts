@@ -1,4 +1,13 @@
-const SENSITIVE_KEYS = new Set(['password', 'secret', 'token', 'key']);
+const SENSITIVE_KEYS = new Set([
+  'password',
+  'secret',
+  'token',
+  'key',
+  'email',
+  'name',
+  'message',
+  'ip',
+]);
 
 export interface Logger {
   info(message: string, meta?: Record<string, any>): void;
