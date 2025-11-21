@@ -17,10 +17,10 @@ const WIP_LIMITS = {
   Someday: 0,
 };
 
-const PRIORITY_COLORS = {
-  high: 'bg-red-500',
-  medium: 'bg-ubt-gedit-orange',
-  low: 'bg-ubt-green',
+const PRIORITY_STYLES = {
+  high: { backgroundColor: 'var(--priority-high)' },
+  medium: { backgroundColor: 'var(--priority-medium)' },
+  low: { backgroundColor: 'var(--priority-low)' },
 };
 
 export default function Todoist() {
@@ -575,11 +575,15 @@ export default function Todoist() {
   const renderTask = (group, task) => {
     const isEditing = editingTask.id === task.id;
     const today = new Date().toISOString().split('T')[0];
-    let chipColor = 'bg-blue-100 text-blue-700';
+    let chipColor = 'bg-[color:color-mix(in_srgb,var(--color-info)_14%,transparent)] text-[color:var(--color-info)]';
     if (task.due) {
-      if (task.due < today) chipColor = 'bg-red-100 text-red-700';
-      else if (task.due === today) chipColor = 'bg-yellow-100 text-yellow-700';
+      if (task.due < today)
+        chipColor = 'bg-[color:color-mix(in_srgb,var(--color-danger)_18%,transparent)] text-[color:var(--color-danger)]';
+      else if (task.due === today)
+        chipColor = 'bg-[color:color-mix(in_srgb,var(--color-warning)_18%,transparent)] text-[color:var(--color-warning)]';
     }
+    const priorityStyle =
+      PRIORITY_STYLES[task.priority] || PRIORITY_STYLES.medium;
     return (
       <div key={task.id} className="mb-1.5">
         <div
@@ -587,7 +591,7 @@ export default function Todoist() {
           draggable
           onDragStart={handleDragStart(group, task)}
           onKeyDown={handleKeyDown(group, task)}
-          className="rounded shadow bg-white text-black flex items-center px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex items-center rounded-lg border border-[color:var(--todoist-card-border)] bg-[color:var(--todoist-card-surface)] px-2 py-1.5 text-[color:var(--todoist-card-text)] shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)]"
           role="listitem"
         >
           <label className="mr-2 inline-flex items-center">
@@ -596,18 +600,27 @@ export default function Todoist() {
               aria-label="Toggle completion"
               checked={!!task.completed}
               onChange={() => toggleCompleted(group, task.id)}
-              className="w-6 h-6 focus:ring-2 focus:ring-blue-500"
+              className="h-6 w-6 accent-[color:var(--color-control-accent)] focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)]"
             />
           </label>
           <div className="flex-1">
             <div className="flex items-center">
               <span
-                className={`w-2 h-2 rounded-full mr-2 ${PRIORITY_COLORS[task.priority]}`}
+                className="mr-2 h-2 w-2 rounded-full"
+                style={priorityStyle}
                 aria-label={`priority ${task.priority}`}
               />
-              <div className={`font-medium ${task.completed ? 'line-through text-gray-500' : ''}`}>{task.title}</div>
+              <div
+                className={`font-medium ${
+                  task.completed
+                    ? 'line-through text-[color:var(--todoist-card-muted)]'
+                    : ''
+                }`}
+              >
+                {task.title}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+            <div className="flex flex-wrap gap-2 text-xs text-[color:var(--todoist-card-muted)]">
               {task.due && (
                 <span className={`inline-flex items-center gap-1 px-2 py-[2px] rounded-full ${chipColor}`}>
                   <span aria-hidden>📅</span>
@@ -621,7 +634,7 @@ export default function Todoist() {
             onClick={() =>
               setEditingTask({ id: task.id, group, title: task.title })
             }
-            className="ml-2 text-xs text-blue-600"
+            className="ml-2 text-xs font-semibold text-[color:var(--color-accent)] transition-colors hover:text-[color:color-mix(in_srgb,var(--color-accent)_82%,var(--color-text))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--todoist-card-surface)]"
           >
             Edit
           </button>
@@ -654,9 +667,13 @@ export default function Todoist() {
       if (!bySection[sec]) bySection[sec] = [];
       bySection[sec].push(t);
     });
-    const groupClass = `flex-1 px-2 py-1.5 border-r last:border-r-0 border-gray-300 overflow-y-auto ${
+    const groupClass = `flex-1 px-2 py-1.5 border-r last:border-r-0 border-[color:var(--todoist-card-border)] overflow-y-auto ${
       !prefersReducedMotion.current ? 'transition-colors' : ''
-    } ${animating === name ? 'bg-blue-200' : ''}`;
+    } ${
+      animating === name
+        ? 'bg-[color:color-mix(in_srgb,var(--color-accent)_18%,transparent)]'
+        : ''
+    }`;
     return (
       <div
         key={name}
@@ -666,12 +683,12 @@ export default function Todoist() {
         role="list"
         aria-label={name}
       >
-        <h2 className="mb-1.5 font-bold text-lg text-gray-800">
+        <h2 className="mb-1.5 text-lg font-bold text-[color:var(--color-text)]">
           {name}
           {WIP_LIMITS[name] ? ` (${groups[name].length}/${WIP_LIMITS[name]})` : ''}
         </h2>
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center text-gray-500 mt-3">
+          <div className="mt-3 flex flex-col items-center text-[color:var(--todoist-card-muted)]">
             <img src="/empty-tasks.svg" alt="" className="w-16 h-16 mb-1.5" />
             <span className="text-sm">No tasks</span>
           </div>

@@ -33,6 +33,13 @@
   --color-severity-medium: #ca8a04;
   --color-severity-high: #ea580c;
   --color-severity-critical: #ef4444;
+  --priority-high: color-mix(in srgb, var(--color-severity-high) 94%, transparent);
+  --priority-medium: color-mix(in srgb, var(--color-severity-medium) 92%, transparent);
+  --priority-low: color-mix(in srgb, var(--color-severity-low) 92%, transparent);
+  --todoist-card-surface: var(--color-surface-raised);
+  --todoist-card-border: color-mix(in srgb, var(--color-border) 70%, transparent);
+  --todoist-card-text: var(--color-text);
+  --todoist-card-muted: var(--kali-text-subtle);
   --kali-text: var(--color-text);
   --kali-text-muted: color-mix(in srgb, var(--color-text) 82%, var(--color-bg) 18%);
   --kali-text-subtle: color-mix(in srgb, var(--color-text) 68%, var(--color-bg) 32%);
