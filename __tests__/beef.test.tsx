@@ -1,33 +1,46 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+
 import Beef from '../components/apps/beef';
 
-describe('BeEF app', () => {
-  test('advances through lab steps to payload builder', () => {
-    render(<Beef />);
-    fireEvent.click(screen.getByRole('button', { name: /begin/i }));
-    // move through sandbox, simulated hook and demo module steps
-    fireEvent.click(screen.getByRole('button', { name: /next/i }));
-    fireEvent.click(screen.getByRole('button', { name: /next/i }));
-    fireEvent.click(screen.getByRole('button', { name: /next/i }));
-    expect(screen.getByText(/Payload Builder/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/Payloads run locally in a sandbox and never touch the network./i)
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /copy/i })).toBeInTheDocument();
+const enableLabMode = () => {
+  fireEvent.click(screen.getByRole('checkbox', { name: /self-contained/i }));
+  fireEvent.click(screen.getByRole('button', { name: /enable lab mode/i }));
+};
+
+describe('BeEF lab dashboard component', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
   });
 
-  test('can reset lab back to disclaimer', () => {
+  test('requires acknowledgement before lab mode unlocks controls', () => {
     render(<Beef />);
-    fireEvent.click(screen.getByRole('button', { name: /begin/i }));
-    // advance to final step
-    for (let i = 0; i < 4; i += 1) {
-      fireEvent.click(screen.getByRole('button', { name: /next/i }));
-    }
-    fireEvent.click(screen.getByRole('button', { name: /reset lab/i }));
-    expect(screen.getByText(/Disclaimer/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/Use these security tools only in environments where you have explicit authorization./i)
-    ).toBeInTheDocument();
+
+    expect(screen.getByText(/Lab mode is locked/i)).toBeInTheDocument();
+
+    // Try enabling without acknowledgement
+    fireEvent.click(screen.getByRole('button', { name: /enable lab mode/i }));
+    expect(screen.getByText(/Lab mode is locked/i)).toBeInTheDocument();
+
+    enableLabMode();
+
+    expect(screen.getByRole('heading', { name: /Hooked clients/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Command composer/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Module explorer/i })).toBeInTheDocument();
+  });
+
+  test('adds command entries to history with deterministic preview', () => {
+    render(<Beef />);
+    enableLabMode();
+
+    fireEvent.change(screen.getByLabelText(/target hook/i), { target: { value: 'hook-3' } });
+    fireEvent.change(screen.getByRole('combobox', { name: /module/i }), { target: { value: 'alert' } });
+    fireEvent.change(screen.getByLabelText(/parameters/i), { target: { value: '{"message":"demo"}' } });
+    fireEvent.click(screen.getByRole('button', { name: /run command/i }));
+
+    expect(screen.getAllByText(/Alert displayed with static training copy/i)[0]).toBeInTheDocument();
+    expect(screen.getByText(/hook: helpdesk tablet/i)).toBeInTheDocument();
+    expect(screen.getByText(/{"message":"demo"}/i)).toBeInTheDocument();
   });
 });
+
