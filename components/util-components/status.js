@@ -1,42 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import SmallArrow from "./small_arrow";
 import { useSettings } from '../../hooks/useSettings';
 import VolumeControl from '../ui/VolumeControl';
 import NetworkIndicator from '../ui/NetworkIndicator';
 import BatteryIndicator from '../ui/BatteryIndicator';
+import useNetworkStatus from '../../hooks/useNetworkStatus';
 
 export default function Status({ className = "" }) {
   const { allowNetwork } = useSettings();
-  const [online, setOnline] = useState(true);
-
-  useEffect(() => {
-    const pingServer = async () => {
-      if (!window?.location) return;
-      try {
-        const url = new URL('/favicon.ico', window.location.href).toString();
-        await fetch(url, { method: 'HEAD', cache: 'no-store' });
-        setOnline(true);
-      } catch (e) {
-        setOnline(false);
-      }
-    };
-
-    const updateStatus = () => {
-      const isOnline = navigator.onLine;
-      setOnline(isOnline);
-      if (isOnline) {
-        pingServer();
-      }
-    };
-
-    updateStatus();
-    window.addEventListener('online', updateStatus);
-    window.addEventListener('offline', updateStatus);
-    return () => {
-      window.removeEventListener('online', updateStatus);
-      window.removeEventListener('offline', updateStatus);
-    };
-  }, []);
+  const online = useNetworkStatus();
 
   const containerClasses = [
     "status-cluster flex items-center gap-2 text-[0.75rem] font-medium text-white/70",

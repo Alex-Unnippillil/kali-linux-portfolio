@@ -13,6 +13,30 @@ const ASSETS = [
   '/manifest.webmanifest',
 ];
 
+const FALLBACK_HTML = '/offline.html';
+const DOCUMENTATION_PREFIXES = ['/docs', '/documentation'];
+const SIMULATOR_PREFIXES = ['/apps', '/simulators'];
+
+const normalizePath = (path) => {
+  if (!path) return '/';
+  if (path === '/') return '/';
+  return path.endsWith('/') ? path.slice(0, -1) : path;
+};
+
+const matchesPrefix = (path, prefixes) => {
+  const normalizedPath = normalizePath(path);
+  return prefixes.some((prefixRaw) => {
+    const prefix = normalizePath(prefixRaw);
+    return normalizedPath === prefix || normalizedPath.startsWith(`${prefix}/`);
+  });
+};
+
+const expectsHtml = (request) => {
+  if (request.mode === 'navigate') return true;
+  const acceptHeader = request.headers.get('accept') || '';
+  return acceptHeader.includes('text/html');
+};
+
 async function prefetchAssets() {
   const cache = await caches.open(CACHE_NAME);
   await Promise.all(
@@ -47,19 +71,41 @@ self.addEventListener('message', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  const url = new URL(request.url);
 
-  if (url.pathname.startsWith('/apps/')) {
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  const url = new URL(request.url);
+  const isDocumentationRoute = matchesPrefix(url.pathname, DOCUMENTATION_PREFIXES);
+  const isSimulatorRoute = matchesPrefix(url.pathname, SIMULATOR_PREFIXES);
+
+  if (isDocumentationRoute || isSimulatorRoute) {
     event.respondWith(
       caches.open(CACHE_NAME).then(async (cache) => {
         try {
           const response = await fetch(request);
-          if (response.ok) {
-            cache.put(request, response.clone());
+          if (response && response.ok) {
+            await cache.put(request, response.clone());
           }
           return response;
         } catch (err) {
-          return cache.match(request);
+          const cachedResponse = await cache.match(request);
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+
+          if (expectsHtml(request)) {
+            const fallback = await cache.match(FALLBACK_HTML);
+            if (fallback) {
+              return fallback;
+            }
+          }
+
+          return new Response('Offline', {
+            status: 503,
+            headers: { 'Content-Type': 'text/plain' },
+          });
         }
       }),
     );
