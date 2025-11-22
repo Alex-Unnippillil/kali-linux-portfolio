@@ -21,6 +21,12 @@ type TimelineStep = {
   status: TimelineStatus;
 };
 
+type TimelineStep = {
+  title: string;
+  description: string;
+  status: TimelineStatus;
+};
+
 const STATUS_TONE_MAP: Record<TimelineStatus, StatusTone> = {
   done: 'success',
   current: 'warning',
