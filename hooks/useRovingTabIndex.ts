@@ -9,7 +9,8 @@ import { useEffect } from 'react';
 export default function useRovingTabIndex(
   ref: React.RefObject<HTMLElement>,
   active: boolean = true,
-  orientation: 'horizontal' | 'vertical' = 'horizontal'
+  orientation: 'horizontal' | 'vertical' = 'horizontal',
+  refresh?: unknown
 ) {
   useEffect(() => {
     const node = ref.current;
@@ -46,5 +47,5 @@ export default function useRovingTabIndex(
     return () => {
       node.removeEventListener('keydown', handleKey);
     };
-  }, [ref, active, orientation]);
+  }, [ref, active, orientation, refresh]);
 }
