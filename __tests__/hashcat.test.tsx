@@ -3,6 +3,8 @@ import { render, fireEvent, waitFor, act } from '@testing-library/react';
 import HashcatApp, {
   detectHashType,
   generateWordlist,
+  decodeHash,
+  hashDatasets,
 } from '../components/apps/hashcat';
 import progressInfo from '../components/apps/hashcat/progress.json';
 
@@ -20,12 +22,30 @@ describe('HashcatApp', () => {
     ).toBe('3200');
   });
 
+  it('exposes curated hash datasets', () => {
+    expect(hashDatasets.length).toBeGreaterThan(0);
+    expect(hashDatasets[0].entries[0].plaintext).toBe('password');
+  });
+
+  it('decodes hashes using curated dataset helper', () => {
+    const decoded = decodeHash('5f4dcc3b5aa765d61d8327deb882cf99');
+    expect(decoded?.entry.plaintext).toBe('password');
+    expect(decoded?.datasetId).toBe('demo-md5');
+  });
+
   it('displays benchmark results', async () => {
     const { getByText, getByTestId } = render(<HashcatApp />);
     fireEvent.click(getByText('Run Benchmark'));
     await waitFor(() => {
       expect(getByTestId('benchmark-output').textContent).toMatch(/GPU0/);
     });
+  });
+
+  it('gates dataset UI behind lab mode toggle', () => {
+    const { getByRole, getByText, queryByText } = render(<HashcatApp />);
+    expect(queryByText('Hash sample datasets')).toBeNull();
+    fireEvent.click(getByRole('button', { name: /enable/i }));
+    expect(getByText('Hash sample datasets')).toBeInTheDocument();
   });
 
   it('animates attempts/sec and ETA from JSON', () => {
@@ -64,17 +84,23 @@ describe('HashcatApp', () => {
     ).toBeInTheDocument();
   });
 
-  it('generates demo command and shows sample output', () => {
-    const { getByLabelText, getByTestId, getByText } = render(
+  it('builds sanitized commands inside lab mode and shows sample output', () => {
+    const { getByLabelText, getByTestId, getByText, queryByRole } = render(
       <HashcatApp />
     );
-    fireEvent.change(getByLabelText('Hash:'), {
+    fireEvent.change(getByLabelText('Hash value'), {
       target: { value: '5f4dcc3b5aa765d61d8327deb882cf99' },
     });
     fireEvent.change(getByLabelText('Wordlist:'), {
       target: { value: 'rockyou' },
     });
-    expect(getByTestId('demo-command').textContent).toContain(
+    const labToggle =
+      queryByRole('button', { name: /enable/i }) ||
+      queryByRole('button', { name: /disable/i });
+    if (labToggle && /enable/i.test(labToggle.textContent || '')) {
+      fireEvent.click(labToggle);
+    }
+    expect(getByTestId('lab-command').textContent).toContain(
       'hashcat -m 0 -a 0 5f4dcc3b5aa765d61d8327deb882cf99 rockyou.txt'
     );
     expect(getByText('Sample Output:')).toBeInTheDocument();
@@ -91,13 +117,22 @@ describe('HashcatApp', () => {
     const { getByLabelText, getByText } = render(<HashcatApp />);
     fireEvent.change(getByLabelText('Attack Mode:'), { target: { value: '3' } });
     fireEvent.click(getByText('?d'));
-    expect((getByLabelText('Mask') as HTMLInputElement).value).toBe('?d');
+    expect(
+      (getByLabelText('Mask pattern', {
+        selector: 'input',
+      }) as HTMLInputElement).value
+    ).toBe('?d');
   });
 
   it('estimates candidate space for mask', () => {
     const { getByLabelText, getByText } = render(<HashcatApp />);
     fireEvent.change(getByLabelText('Attack Mode:'), { target: { value: '3' } });
-    fireEvent.change(getByLabelText('Mask'), { target: { value: '?d?d' } });
+    fireEvent.change(
+      getByLabelText('Mask pattern', { selector: 'input' }),
+      {
+        target: { value: '?d?d' },
+      }
+    );
     expect(getByText(/Candidate space:/).textContent).toContain('100');
   });
 
