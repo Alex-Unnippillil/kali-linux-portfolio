@@ -3,6 +3,9 @@
 // Update README (section "CSP External Domains") when editing domains below.
 
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -93,12 +96,57 @@ function buildAwareCacheName(name) {
   return resolvedBuildId ? `${name}-${resolvedBuildId}` : name;
 }
 
-const normalizedBasePath = (() => {
+const offlineAssetBasePath = '/offline.html';
+
+const resolveBasePath = () => {
   const rawBasePath = process.env.NEXT_PUBLIC_BASE_PATH ?? process.env.BASE_PATH ?? '';
   if (!rawBasePath) return '/';
   const prefixed = rawBasePath.startsWith('/') ? rawBasePath : `/${rawBasePath}`;
   return prefixed.endsWith('/') && prefixed !== '/' ? prefixed.slice(0, -1) : prefixed;
-})();
+};
+
+const normalizedBasePath = resolveBasePath();
+
+const offlineFallbackPath =
+  normalizedBasePath === '/' ? offlineAssetBasePath : `${normalizedBasePath}${offlineAssetBasePath}`;
+
+function resolvePublicFile(relativeUrl) {
+  if (!relativeUrl) return undefined;
+  const trimmed = relativeUrl.startsWith('/') ? relativeUrl.slice(1) : relativeUrl;
+  return path.join(__dirname, 'public', trimmed);
+}
+
+function createRevisionEntry(url) {
+  const absolutePath = resolvePublicFile(url);
+  if (!absolutePath) {
+    return { url, revision: null };
+  }
+
+  try {
+    const stats = fs.statSync(absolutePath);
+    if (!stats.isFile()) {
+      return { url, revision: null };
+    }
+
+    const fileBuffer = fs.readFileSync(absolutePath);
+    const revision = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+    return { url, revision };
+  } catch (error) {
+    console.warn(`Unable to create precache entry for ${url}:`, error);
+    return { url, revision: null };
+  }
+}
+
+const staticPrecacheAssets = [
+  '/offline.html',
+  '/offline.css',
+  '/offline.js',
+  '/manifest.webmanifest',
+  '/images/logos/fevicon.png',
+  '/images/logos/logo_1024.png',
+];
+
+const staticPrecacheEntries = staticPrecacheAssets.map((url) => createRevisionEntry(url));
 
 const startUrlRuntimeCaching = {
   urlPattern: ({ sameOrigin, url }) => {
@@ -124,6 +172,25 @@ const startUrlRuntimeCaching = {
   },
 };
 
+const offlineReadyRoutes = [
+  '/',
+  '/feeds',
+  '/about',
+  '/projects',
+  '/projects.json',
+  '/apps',
+  '/apps/terminal',
+  '/apps/2048',
+  '/apps/checkers',
+  '/apps/sticky_notes',
+  '/apps/minesweeper',
+  '/apps/weather',
+];
+
+const routePrecacheEntries = offlineReadyRoutes.map((url) => ({ url, revision: null }));
+
+const additionalPrecacheEntries = [...routePrecacheEntries, ...staticPrecacheEntries];
+
 const runtimeCaching = [
   startUrlRuntimeCaching,
   ...defaultRuntimeCaching.map((entry) => ({
@@ -147,20 +214,8 @@ const withPWA = withPWAInit({
   disable: process.env.NODE_ENV === 'development',
   buildExcludes: [/dynamic-css-manifest\.json$/],
   workboxOptions: {
-    navigateFallback: '/offline.html',
-    additionalManifestEntries: [
-      { url: '/', revision: null },
-      { url: '/feeds', revision: null },
-      { url: '/about', revision: null },
-      { url: '/projects', revision: null },
-      { url: '/projects.json', revision: null },
-      { url: '/apps', revision: null },
-      { url: '/apps/weather', revision: null },
-      { url: '/apps/terminal', revision: null },
-      { url: '/apps/checkers', revision: null },
-      { url: '/offline.html', revision: null },
-      { url: '/manifest.webmanifest', revision: null },
-    ],
+    navigateFallback: offlineFallbackPath,
+    additionalManifestEntries: additionalPrecacheEntries,
     runtimeCaching,
     ...(workboxCacheId && { cacheId: workboxCacheId }),
   },
