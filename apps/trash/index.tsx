@@ -1,14 +1,22 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import useTrashState from './state';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import useTrashState, {
+  ConflictAction,
+  ConflictResolutionRequest,
+  ConflictResolutionResponse,
+  OperationSummary,
+} from './state';
 import HistoryList from './components/HistoryList';
+import ConflictResolutionModal from './components/ConflictResolutionModal';
 
 const DEFAULT_ICON = '/themes/Yaru/system/folder.png';
 const EMPTY_ICON = '/themes/Yaru/status/user-trash-symbolic.svg';
 const FULL_ICON = '/themes/Yaru/status/user-trash-full-symbolic.svg';
 
 export default function Trash({ openApp }: { openApp: (id: string) => void }) {
+  const pendingDecision = useRef<((response: ConflictResolutionResponse) => void) | null>(null);
+  const [conflictRequest, setConflictRequest] = useState<ConflictResolutionRequest | null>(null);
   const {
     items,
     setItems,
@@ -16,11 +24,24 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     pushHistory,
     restoreFromHistory,
     restoreAllFromHistory,
-  } = useTrashState();
+  } = useTrashState({
+    resolveConflict: request =>
+      new Promise<ConflictResolutionResponse>(resolve => {
+        pendingDecision.current = resolve;
+        setConflictRequest(request);
+      }),
+  });
   const [selected, setSelected] = useState<number | null>(null);
   const [purgeDays, setPurgeDays] = useState(30);
   const [emptyCountdown, setEmptyCountdown] = useState<number | null>(null);
   const [, setTick] = useState(0);
+  const [summary, setSummary] = useState<OperationSummary | null>(null);
+  const historyCounts = {
+    restored: summary?.restored.length ?? 0,
+    replaced: summary?.replaced.length ?? 0,
+    skipped: summary?.skipped.length ?? 0,
+    keptBoth: summary?.keptBoth.length ?? 0,
+  };
   const daysLeft = useCallback(
     (closedAt: number) =>
       Math.max(
@@ -41,7 +62,25 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     return () => clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    if (history.length === 0) {
+      setSummary(null);
+    }
+  }, [history.length]);
+
   const notifyChange = () => window.dispatchEvent(new Event('trash-change'));
+
+  const handleConflictDecision = useCallback(
+    (action: ConflictAction, applyToAll: boolean) => {
+      const resolver = pendingDecision.current;
+      pendingDecision.current = null;
+      if (resolver) {
+        resolver({ action, applyToAll });
+      }
+      setConflictRequest(null);
+    },
+    [],
+  );
 
   const restore = useCallback(() => {
     if (selected === null) return;
@@ -124,15 +163,25 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   }, [handleKey]);
 
   const handleRestoreFromHistory = useCallback(
-    (idx: number) => {
-      restoreFromHistory(idx);
+    async (idx: number) => {
+      await restoreFromHistory(idx);
       notifyChange();
     },
     [restoreFromHistory],
   );
 
-  const handleRestoreAllFromHistory = useCallback(() => {
-    restoreAllFromHistory();
+  const handleRestoreAllFromHistory = useCallback(async () => {
+    const result = await restoreAllFromHistory();
+    if (
+      result.restored.length ||
+      result.replaced.length ||
+      result.skipped.length ||
+      result.keptBoth.length
+    ) {
+      setSummary(result);
+    } else {
+      setSummary(null);
+    }
     notifyChange();
   }, [restoreAllFromHistory]);
 
@@ -234,7 +283,52 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
           </ul>
         )}
       </div>
-      <HistoryList history={history} onRestore={handleRestoreFromHistory} onRestoreAll={handleRestoreAllFromHistory} />
+      <HistoryList
+        history={history}
+        onRestore={handleRestoreFromHistory}
+        onRestoreAll={handleRestoreAllFromHistory}
+      />
+      {summary && (
+        <div className="border-t border-black border-opacity-50 bg-black bg-opacity-30 px-4 py-3 text-xs">
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-sm">Restore summary</span>
+            <button
+              onClick={() => setSummary(null)}
+              className="rounded border border-ub-orange px-2 py-1 text-ub-orange hover:bg-ub-orange hover:text-black focus:outline-none focus:ring-2 focus:ring-ub-orange"
+            >
+              Dismiss
+            </button>
+          </div>
+          <div className="mt-2 grid gap-2 sm:grid-cols-4">
+            <div>Restored: {historyCounts.restored}</div>
+            <div>Replaced: {historyCounts.replaced}</div>
+            <div>Skipped: {historyCounts.skipped}</div>
+            <div>Kept both: {historyCounts.keptBoth}</div>
+          </div>
+          {summary.keptBoth.length > 0 && (
+            <div className="mt-3">
+              <p className="font-semibold text-ub-orange">Renamed items</p>
+              <ul className="mt-1 space-y-1">
+                {summary.keptBoth.map(({ original, renamed }) => (
+                  <li key={`${original.closedAt}-${renamed.title}`} className="font-mono">
+                    {original.title} → {renamed.title}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {summary.skipped.length > 0 && (
+            <p className="mt-3 text-ubt-grey">
+              Skipped items remain available in history for future restores.
+            </p>
+          )}
+        </div>
+      )}
+      <ConflictResolutionModal
+        isOpen={Boolean(conflictRequest)}
+        request={conflictRequest}
+        onDecision={handleConflictDecision}
+      />
     </div>
   );
 }

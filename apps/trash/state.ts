@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo, useRef } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 
 export interface TrashItem {
@@ -9,13 +9,104 @@ export interface TrashItem {
   closedAt: number;
 }
 
+export type ConflictAction = 'replace' | 'skip' | 'keep-both';
+
+export interface ConflictResolutionRequest {
+  restored: TrashItem;
+  existing: TrashItem;
+  suggestedName: string;
+}
+
+export interface ConflictResolutionResponse {
+  action: ConflictAction;
+  applyToAll?: boolean;
+}
+
+export interface OperationResult {
+  action: 'restored' | 'replaced' | 'skipped' | 'kept-both';
+  item: TrashItem;
+  renamed?: TrashItem;
+}
+
+export interface KeptBothEntry {
+  original: TrashItem;
+  renamed: TrashItem;
+}
+
+export interface OperationSummary {
+  restored: TrashItem[];
+  replaced: TrashItem[];
+  skipped: TrashItem[];
+  keptBoth: KeptBothEntry[];
+}
+
+export type ConflictResolver = (
+  request: ConflictResolutionRequest,
+) => Promise<ConflictResolutionResponse>;
+
+const createDefaultResolver = (): ConflictResolver => async request => {
+  const replace = window.confirm(
+    `${request.restored.title} already exists. Replace the existing entry?`,
+  );
+  if (replace) return { action: 'replace' };
+
+  const skip = window.confirm(
+    `Skip restoring ${request.restored.title}? Cancel will keep both entries.`,
+  );
+  if (skip) return { action: 'skip' };
+
+  return { action: 'keep-both' };
+};
+
+const generateCopyName = (base: string, existingTitles: Set<string>) => {
+  if (!existingTitles.has(base)) return base;
+
+  const match = base.match(/^(.*?)(\s*\((\d+)\))?$/);
+  const stem = match?.[1]?.trim() || base;
+  let counter = match?.[3] ? parseInt(match[3], 10) + 1 : 1;
+  let candidate = '';
+  do {
+    candidate = `${stem} (${counter})`;
+    counter += 1;
+  } while (existingTitles.has(candidate));
+  return candidate;
+};
+
+interface UseTrashStateOptions {
+  resolveConflict?: ConflictResolver;
+}
+
 const ITEMS_KEY = 'window-trash';
 const HISTORY_KEY = 'window-trash-history';
 const HISTORY_LIMIT = 20;
 
-export default function useTrashState() {
+interface ConflictPolicy {
+  action: ConflictAction;
+}
+
+export default function useTrashState(options: UseTrashStateOptions = {}) {
   const [items, setItems] = usePersistentState<TrashItem[]>(ITEMS_KEY, []);
   const [history, setHistory] = usePersistentState<TrashItem[]>(HISTORY_KEY, []);
+  const conflictPolicyRef = useRef<ConflictPolicy | null>(null);
+  const itemsRef = useRef(items);
+  const historyRef = useRef(history);
+  const resolver = useMemo(
+    () => options.resolveConflict || createDefaultResolver(),
+    [options.resolveConflict],
+  );
+  const resolverRef = useRef(resolver);
+
+  useEffect(() => {
+    resolverRef.current = resolver;
+  }, [resolver]);
+
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+
+  useEffect(() => {
+    historyRef.current = history;
+  }, [history]);
 
   useEffect(() => {
     const purgeDays = parseInt(
@@ -38,72 +129,168 @@ export default function useTrashState() {
     [setHistory],
   );
 
-  const resolveNameConflict = (
-    restored: TrashItem,
-    items: TrashItem[],
-  ): { resolved: boolean; items: TrashItem[] } => {
-    if (items.some(item => item.title === restored.title)) {
-      const replace = window.confirm(
-        `${restored.title} already exists. Click OK to replace or Cancel to rename.`,
-      );
-      if (replace) {
-        const filtered = items.filter(item => item.title !== restored.title);
-        return { resolved: true, items: [...filtered, restored] };
-      }
-      const newName = window.prompt('Enter new name', restored.title);
-      if (newName && newName.trim()) {
+  const resolveNameConflict = useCallback(
+    async (
+      restored: TrashItem,
+      currentItems: TrashItem[],
+      allowApplyAll: boolean,
+    ): Promise<{
+      items: TrashItem[];
+      action: OperationResult['action'];
+      keepInHistory: boolean;
+      renamed?: TrashItem;
+    }> => {
+      const existing = currentItems.find(item => item.title === restored.title);
+      if (!existing) {
         return {
-          resolved: true,
-          items: [...items, { ...restored, title: newName.trim() }],
+          items: [...currentItems, restored],
+          action: 'restored',
+          keepInHistory: false,
         };
       }
-      return { resolved: false, items };
-    }
-    return { resolved: true, items: [...items, restored] };
-  };
 
-  const restoreFromHistory = useCallback(
-    (index: number) => {
-      setHistory(prev => {
-        const next = [...prev];
-        const [restored] = next.splice(index, 1);
-        if (restored) {
-          let didRestore = false;
-          setItems(items => {
-            const result = resolveNameConflict(restored, items);
-            didRestore = result.resolved;
-            return result.items;
-          });
-          if (!didRestore) {
-            next.splice(index, 0, restored);
-          }
+      let decision: ConflictPolicy | null = allowApplyAll
+        ? conflictPolicyRef.current
+        : null;
+
+      const titleSet = new Set(currentItems.map(item => item.title));
+      const suggestedName = generateCopyName(restored.title, titleSet);
+
+      if (!decision) {
+        const response = await resolverRef.current({
+          restored,
+          existing,
+          suggestedName,
+        });
+        decision = { action: response.action };
+        if (allowApplyAll && response.applyToAll) {
+          conflictPolicyRef.current = { action: response.action };
+        } else if (allowApplyAll) {
+          conflictPolicyRef.current = null;
         }
-        return next;
-      });
+      }
+
+      if (decision.action === 'replace') {
+        const filtered = currentItems.filter(
+          item => item.title !== restored.title,
+        );
+        return {
+          items: [...filtered, restored],
+          action: 'replaced',
+          keepInHistory: false,
+        };
+      }
+
+      if (decision.action === 'skip') {
+        return {
+          items: currentItems,
+          action: 'skipped',
+          keepInHistory: true,
+        };
+      }
+
+      const copyName = generateCopyName(restored.title, titleSet);
+      const renamed = { ...restored, title: copyName };
+      return {
+        items: [...currentItems, renamed],
+        action: 'kept-both',
+        keepInHistory: false,
+        renamed,
+      };
     },
-    [setHistory, setItems],
+    [],
   );
 
-  const restoreAllFromHistory = useCallback(() => {
-    setHistory(prev => {
-      if (!prev.length) return prev;
-      const remaining: TrashItem[] = [];
-      setItems(items => {
-        let nextItems = [...items];
-        prev.forEach(restored => {
-          const result = resolveNameConflict(restored, nextItems);
-          if (result.resolved) {
-            nextItems = result.items;
-          } else {
-            remaining.push(restored);
-          }
-        });
-        return nextItems;
-      });
-      return remaining;
-    });
-  }, [setHistory, setItems]);
+  const restoreFromHistory = useCallback(
+    async (index: number): Promise<OperationResult | null> => {
+      const currentHistory = historyRef.current;
+      const nextHistory = [...currentHistory];
+      const [restored] = nextHistory.splice(index, 1);
+      if (!restored) return null;
 
-  return { items, setItems, history, pushHistory, restoreFromHistory, restoreAllFromHistory };
+      conflictPolicyRef.current = null;
+
+      const currentItems = itemsRef.current;
+      const result = await resolveNameConflict(restored, currentItems, false);
+      const updatedItems = result.items;
+
+      if (result.keepInHistory) {
+        nextHistory.splice(index, 0, restored);
+      }
+
+      itemsRef.current = updatedItems;
+      historyRef.current = nextHistory;
+      setItems(updatedItems);
+      setHistory(nextHistory);
+
+      return {
+        action: result.action,
+        item: restored,
+        renamed: result.renamed,
+      };
+    },
+    [resolveNameConflict, setHistory, setItems],
+  );
+
+  const restoreAllFromHistory = useCallback(async (): Promise<OperationSummary> => {
+    const originalHistory = historyRef.current;
+    if (!originalHistory.length) {
+      return { restored: [], replaced: [], skipped: [], keptBoth: [] };
+    }
+
+    conflictPolicyRef.current = null;
+    const remaining: TrashItem[] = [];
+    let nextItems = itemsRef.current;
+    const summary: OperationSummary = {
+      restored: [],
+      replaced: [],
+      skipped: [],
+      keptBoth: [],
+    };
+
+    for (const restored of originalHistory) {
+      const result = await resolveNameConflict(restored, nextItems, true);
+      nextItems = result.items;
+
+      switch (result.action) {
+        case 'restored':
+          summary.restored.push(restored);
+          break;
+        case 'replaced':
+          summary.replaced.push(restored);
+          break;
+        case 'skipped':
+          summary.skipped.push(restored);
+          break;
+        case 'kept-both':
+          if (result.renamed) {
+            summary.keptBoth.push({ original: restored, renamed: result.renamed });
+          }
+          break;
+      }
+
+      if (result.keepInHistory) {
+        remaining.push(restored);
+      }
+    }
+
+    conflictPolicyRef.current = null;
+
+    itemsRef.current = nextItems;
+    historyRef.current = remaining;
+    setItems(nextItems);
+    setHistory(remaining);
+
+    return summary;
+  }, [resolveNameConflict, setHistory, setItems]);
+
+  return {
+    items,
+    setItems,
+    history,
+    pushHistory,
+    restoreFromHistory,
+    restoreAllFromHistory,
+  };
 }
 
