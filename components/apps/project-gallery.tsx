@@ -9,6 +9,7 @@ interface Project {
   stack: string[];
   tags: string[];
   year: number;
+  datePublished: string;
   type: string;
   thumbnail: string;
   repo: string;
