@@ -21,7 +21,7 @@
   --color-warning: #f5b74d;
   --color-danger: #f87272;
   --color-dark: #09121c; /* card back */
-  --color-focus-ring: var(--color-accent);
+  --color-focus-ring: var(--focus-ring-color);
   --color-selection: var(--color-accent);
   --color-control-accent: var(--color-accent);
   --color-surface-muted: color-mix(in srgb, var(--color-surface) 82%, transparent 18%);
@@ -147,8 +147,18 @@ html[data-theme='matrix'] {
 }
 
 *:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
+  outline: var(--focus-ring-width, 2px) solid
+    var(--focus-ring-color, var(--color-focus-ring));
+  outline-offset: var(--focus-ring-offset, 2px);
+  box-shadow: var(
+    --focus-ring-shadow,
+    0 0 0 calc(var(--focus-ring-width, 2px) + var(--focus-ring-offset, 2px))
+      color-mix(
+        in srgb,
+        var(--focus-ring-color, var(--color-focus-ring)) 55%,
+        transparent
+      )
+  );
 }
 
 html {
