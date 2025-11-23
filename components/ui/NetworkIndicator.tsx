@@ -5,6 +5,7 @@ import type { FC, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import usePersistentState from "../../hooks/usePersistentState";
+import { useFocusTrap } from "../../hooks/useFocusTrap";
 
 type NetworkType = "wired" | "wifi";
 type SignalStrength = "excellent" | "good" | "fair" | "weak";
@@ -399,6 +400,9 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
   const [shareStatus, setShareStatus] = useState<ShareStatus>({ state: "idle" });
   const [shareConfirmed, setShareConfirmed] = useState(false);
   const [nfcStatus, setNfcStatus] = useState<string | null>(null);
+  const shareDialogRef = useRef<HTMLDivElement | null>(null);
+  const shareCloseButtonRef = useRef<HTMLButtonElement | null>(null);
+  const shareTriggerRef = useRef<HTMLElement | null>(null);
   const [showLogs, setShowLogs] = useState(false);
   const [shareLogs, setShareLogs] = usePersistentState<ShareLogEntry[]>(
     "status-network-share-log",
@@ -486,8 +490,14 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
     setNfcStatus(null);
   }, [appendShareLog, shareTarget]);
 
+  useFocusTrap(shareDialogRef, Boolean(shareTarget), {
+    initialFocusRef: shareCloseButtonRef,
+    restoreFocusRef: shareTriggerRef,
+  });
+
   const handleShare = useCallback(
-    (network: Network) => {
+    (event: MouseEvent<HTMLButtonElement>, network: Network) => {
+      shareTriggerRef.current = event.currentTarget;
       setShareTarget(network);
       setShareStatus({ state: "idle" });
       setShareConfirmed(false);
@@ -644,7 +654,7 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
                       <button
                         type="button"
                         className="h-full min-h-[2.75rem] rounded border border-white/20 px-2 text-[11px] uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white"
-                        onClick={() => handleShare(network)}
+                        onClick={(event) => handleShare(event, network)}
                         aria-label={`Share ${network.name}`}
                       >
                         Share
@@ -693,11 +703,13 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
           onClick={closeShare}
         >
           <div
+            ref={shareDialogRef}
             role="dialog"
             aria-modal="true"
             aria-label={`Share ${shareTarget.name}`}
             className="w-full max-w-md rounded-lg border border-white/20 bg-ub-cool-grey p-5 text-sm text-white shadow-xl"
             onClick={(event) => event.stopPropagation()}
+            tabIndex={-1}
           >
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -711,6 +723,7 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
                 className="rounded border border-white/20 px-2 py-1 text-[11px] uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white"
                 onClick={closeShare}
                 aria-label="Close share dialog"
+                ref={shareCloseButtonRef}
               >
                 Close
               </button>

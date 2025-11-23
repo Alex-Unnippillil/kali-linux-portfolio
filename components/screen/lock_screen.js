@@ -1,12 +1,21 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import Clock from '../util-components/clock';
 import { useSettings } from '../../hooks/useSettings';
 import KaliWallpaper from '../util-components/kali-wallpaper';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 export default function LockScreen(props) {
 
     const { bgImageName, useKaliWallpaper } = useSettings();
     const useKaliTheme = useKaliWallpaper || bgImageName === 'kali-gradient';
+    const dialogRef = useRef(null);
+    const unlockButtonRef = useRef(null);
+    const titleId = useId();
+    const messageId = useId();
+
+    useFocusTrap(dialogRef, Boolean(props.isLocked), {
+        initialFocusRef: unlockButtonRef,
+    });
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -28,11 +37,29 @@ export default function LockScreen(props) {
         };
     }, [props.isLocked, props.unLockScreen]);
 
+    const handleKeyDown = (event) => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            props.unLockScreen();
+        }
+    };
+
     return (
         <div
             id="ubuntu-lock-screen"
             style={{ zIndex: "100", contentVisibility: 'auto' }}
-            aria-hidden={props.isLocked ? "false" : "true"}
+            aria-hidden={!props.isLocked}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            aria-describedby={messageId}
+            ref={dialogRef}
+            tabIndex={-1}
+            onKeyDown={handleKeyDown}
             className={(props.isLocked ? " visible translate-y-0 " : " invisible -translate-y-full ") + " absolute outline-none bg-black bg-opacity-90 transform duration-500 select-none top-0 right-0 overflow-hidden m-0 p-0 h-screen w-screen"}>
             {useKaliTheme ? (
                 <KaliWallpaper
@@ -46,15 +73,23 @@ export default function LockScreen(props) {
                 />
             )}
             <div className="w-full h-full z-50 overflow-hidden relative flex flex-col justify-center items-center text-white">
-                <div className=" text-7xl">
+                <div className=" text-7xl" id={titleId}>
                     <Clock onlyTime={true} />
                 </div>
                 <div className="mt-4 text-xl font-medium">
                     <Clock onlyDay={true} />
                 </div>
-                <div className=" mt-16 text-base">
-                    Click or Press a key to unlock
-                </div>
+                <p className=" mt-10 text-base text-center" id={messageId}>
+                    Press enter or use the button below to unlock.
+                </p>
+                <button
+                    type="button"
+                    ref={unlockButtonRef}
+                    onClick={props.unLockScreen}
+                    className="mt-6 rounded-full border border-white/30 bg-white/10 px-6 py-2 text-sm font-semibold uppercase tracking-wide text-white transition hover:border-white/60 hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                >
+                    Unlock desktop
+                </button>
             </div>
         </div>
     )
