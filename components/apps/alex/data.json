@@ -1,6 +1,6 @@
 {
   "sections": [
-    {"id": "about", "label": "About Me", "icon": "/themes/Yaru/status/about.svg", "alt": "about Unnippillil"},
+    {"id": "about", "label": "About Alex", "icon": "/themes/Yaru/status/about.svg", "alt": "About Alex Unnippillil"},
     {"id": "education", "label": "Education", "icon": "/themes/Yaru/status/education.svg", "alt": "Unnippillil' education"},
     {"id": "skills", "label": "Skills", "icon": "/themes/Yaru/status/skills.svg", "alt": "Unnippillil' skills"},
     {"id": "certs", "label": "Certs", "icon": "/themes/Yaru/status/experience.svg", "alt": "Unnippillil's certifications"},
