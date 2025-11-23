@@ -3,12 +3,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import apps from '../../apps.config';
+import VsCodeSkeleton from './VsCodeSkeleton';
 
 // Load the actual VSCode app lazily so no editor dependencies are required
-const VsCode = dynamic(() => import('../../apps/vscode'), { ssr: false });
+const VsCode = dynamic(() => import('../../apps/vscode'), {
+  ssr: false,
+  loading: () => <VsCodeSkeleton />,
+});
 
 // Simple fuzzy match: returns true if query characters appear in order
-function fuzzyMatch(text, query) {
+function fuzzyMatch(text: string, query: string) {
   const t = text.toLowerCase();
   const q = query.toLowerCase();
   let ti = 0;
@@ -21,23 +25,33 @@ function fuzzyMatch(text, query) {
 }
 
 // Static files that can be opened directly in a new tab
-const files = ['README.md', 'CHANGELOG.md', 'package.json'];
+const files: string[] = ['README.md', 'CHANGELOG.md', 'package.json'];
 
-export default function VsCodeWrapper({ openApp }) {
+type QuickPickItem = {
+  type: 'app' | 'file';
+  id: string;
+  title: string;
+};
+
+interface VsCodeWrapperProps {
+  openApp?: (id: string) => void;
+}
+
+export default function VsCodeWrapper({ openApp }: VsCodeWrapperProps) {
   const [visible, setVisible] = useState(false);
   const [query, setQuery] = useState('');
 
-  const items = useMemo(() => {
-    const list = [
-      ...apps.map((a) => ({ type: 'app', id: a.id, title: a.title })),
-      ...files.map((f) => ({ type: 'file', id: f, title: f })),
+  const items = useMemo<QuickPickItem[]>(() => {
+    const list: QuickPickItem[] = [
+      ...apps.map((a: any) => ({ type: 'app' as const, id: String(a.id), title: String(a.title) })),
+      ...files.map((f) => ({ type: 'file' as const, id: f, title: f })),
     ];
     if (!query) return list;
     return list.filter((item) => fuzzyMatch(item.title, query));
   }, [query]);
 
   useEffect(() => {
-    const handler = (e) => {
+    const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'p') {
         e.preventDefault();
         setVisible((v) => !v);
@@ -49,7 +63,7 @@ export default function VsCodeWrapper({ openApp }) {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  const selectItem = (item) => {
+  const selectItem = (item: QuickPickItem) => {
     setVisible(false);
     setQuery('');
     if (item.type === 'app' && openApp) {
@@ -69,6 +83,7 @@ export default function VsCodeWrapper({ openApp }) {
               autoFocus
               className="w-full p-2 mb-2 bg-gray-700 rounded outline-none"
               placeholder="Search apps or files"
+              aria-label="Search apps or files"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -94,5 +109,7 @@ export default function VsCodeWrapper({ openApp }) {
   );
 }
 
-export const displayVsCode = (openApp) => <VsCodeWrapper openApp={openApp} />;
+export const displayVsCode = (openApp?: (id: string) => void) => (
+  <VsCodeWrapper openApp={openApp} />
+);
 

@@ -1,8 +1,9 @@
 import dynamic from 'next/dynamic';
+import VsCodeSkeleton from '../../components/apps/VsCodeSkeleton';
 
 const VSCode = dynamic(() => import('../../apps/vscode'), {
   ssr: false,
-  loading: () => <p>Loading...</p>,
+  loading: () => <VsCodeSkeleton />,
 });
 
 export default function VSCodePage() {
