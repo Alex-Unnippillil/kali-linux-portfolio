@@ -37,7 +37,6 @@ const Checkers = () => {
 
   const workerRef = useRef<Worker | null>(null);
   const hintRequest = useRef(false);
-  const pathRef = useRef<[number, number][]>([]);
   const makeMoveRef = useRef<((move: Move) => void) | null>(null);
   const crownFrame = useRef<number>(0);
   const cellRefs = useRef<(HTMLDivElement | null)[][]>([]);
@@ -164,8 +163,8 @@ const Checkers = () => {
     if (winner || draw || !piece || piece.color !== turn) return;
     setCursor([r, c]);
     const pieceMoves = getPieceMoves(board, r, c, rule === 'forced');
-    const mustCapture = rule === 'forced' && allMoves.some((m) => m.captured);
-    const filtered = mustCapture ? pieceMoves.filter((m) => m.captured) : pieceMoves;
+    const mustCapture = rule === 'forced' && allMoves.some((m) => m.captures.length);
+    const filtered = mustCapture ? pieceMoves.filter((m) => m.captures.length) : pieceMoves;
     if (filtered.length) {
       setSelected([r, c]);
       setMoves(filtered);
@@ -182,17 +181,16 @@ const Checkers = () => {
     focusBoard();
   };
 
-    const makeMove = (move: Move) => {
-    if (pathRef.current.length === 0) pathRef.current = [move.from, move.to];
-    else pathRef.current.push(move.to);
+  const makeMove = (move: Move) => {
     const { board: newBoard, capture, king } = applyMove(board, move);
-    const further = capture
-      ? getPieceMoves(newBoard, move.to[0], move.to[1]).filter((m) => m.captured)
-      : [];
+    const destination = move.path[move.path.length - 1];
+    const movePath = move.path.map(([pr, pc]) => [pr, pc] as [number, number]);
     setBoard(newBoard);
     if (king) {
-      setCrowned([move.to[0], move.to[1]]);
-      setAriaMessage(`Piece crowned at row ${move.to[0] + 1}, column ${move.to[1] + 1}`);
+      setCrowned([destination[0], destination[1]]);
+      setAriaMessage(
+        `Piece crowned at row ${destination[0] + 1}, column ${destination[1] + 1}`,
+      );
       if (crownFrame.current) cancelAnimationFrame(crownFrame.current);
       const start = performance.now();
       const step = (now: number) => {
@@ -204,16 +202,7 @@ const Checkers = () => {
       };
       crownFrame.current = requestAnimationFrame(step);
     }
-    if (capture && further.length) {
-      setSelected([move.to[0], move.to[1]]);
-      setMoves(further);
-      setNoCapture(0);
-      return;
-    }
-    const newHistory = [
-      ...history,
-      { board, turn, no: noCapture, move: pathRef.current },
-    ];
+    const newHistory = [...history, { board, turn, no: noCapture, move: movePath }];
     setHistory(newHistory);
     setFuture([]);
     const next = turn === 'red' ? 'black' : 'red';
@@ -234,8 +223,7 @@ const Checkers = () => {
     if (isDraw(newNo)) {
       setDraw(true);
       ReactGA.event({ category: 'Checkers', action: 'game_over', label: 'draw' });
-      setLastMove(pathRef.current);
-      pathRef.current = [];
+      setLastMove(movePath);
       return;
     }
     if (!hasMoves(newBoard, next, rule === 'forced')) {
@@ -255,13 +243,12 @@ const Checkers = () => {
     setSelected(null);
     setMoves([]);
     setHint(null);
-    setLastMove(pathRef.current);
+    setLastMove(movePath);
     setAriaMessage('');
-    pathRef.current = [];
     focusBoard();
-    };
+  };
 
-    makeMoveRef.current = makeMove;
+  makeMoveRef.current = makeMove;
 
   const reset = () => {
     if (crownFrame.current) cancelAnimationFrame(crownFrame.current);
@@ -278,7 +265,6 @@ const Checkers = () => {
     setLastMove([]);
     setCrowned(null);
     setAriaMessage('');
-    pathRef.current = [];
     setCursor([0, 0]);
     localStorage.removeItem('checkersState');
     focusBoard();
@@ -300,7 +286,6 @@ const Checkers = () => {
     setLastMove(prev.move || []);
     if (crownFrame.current) cancelAnimationFrame(crownFrame.current);
     setAriaMessage('');
-    pathRef.current = [];
     if (prev.turn === 'black') {
       workerRef.current?.postMessage({
         board: prev.board,
@@ -328,7 +313,6 @@ const Checkers = () => {
     setLastMove(next.move || []);
     if (crownFrame.current) cancelAnimationFrame(crownFrame.current);
     setAriaMessage('');
-    pathRef.current = [];
     if (next.turn === 'black') {
       workerRef.current?.postMessage({
         board: next.board,
@@ -439,8 +423,10 @@ const Checkers = () => {
           row.map((cell, c) => {
             const isDark = (r + c) % 2 === 1;
             const isMove = moves.some((m) => m.to[0] === r && m.to[1] === c);
-            const isHint = hint && hint.from[0] === r && hint.from[1] === c;
-            const isHintDest = hint && hint.to[0] === r && hint.to[1] === c;
+            const hintPath = hint?.path ?? [];
+            const isHint =
+              hintPath.length > 0 && hintPath[0][0] === r && hintPath[0][1] === c;
+            const isHintDest = hintPath.slice(1).some(([hr, hc]) => hr === r && hc === c);
             const isSelected = selected && selected[0] === r && selected[1] === c;
             const isLast = lastMove.some((p) => p[0] === r && p[1] === c);
             const isCrowned = crowned && crowned[0] === r && crowned[1] === c;
