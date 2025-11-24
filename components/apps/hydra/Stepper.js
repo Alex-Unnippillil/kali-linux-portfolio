@@ -101,26 +101,28 @@ const Stepper = ({
           <div
             key={i}
             className={`w-4 h-4 rounded ${
-              i < attempt ? 'bg-green-400' : 'bg-gray-500'
+              i < attempt
+                ? 'bg-kali-terminal'
+                : 'bg-kali-muted/70 border border-kali-border/60'
             }`}
           />
         ))}
       </div>
       {locked ? (
-        <div className="text-red-400 mt-1">Locked out</div>
+        <div className="mt-1 text-[var(--game-color-danger)]">Locked out</div>
       ) : (
         <>
-          <div className="text-white mt-1">
+          <div className="mt-1 text-[var(--color-text)]">
             Attempt {attempt} of {lockoutThreshold}
           </div>
-          <div className="mt-2 w-full bg-gray-700 h-2 rounded">
+          <div className="mt-2 w-full bg-kali-muted h-2 rounded">
             <div
               data-testid="backoff-bar"
-              className="bg-yellow-500 h-2 rounded"
+              className="h-2 rounded bg-[var(--game-color-warning)]"
               style={{ width: `${(delayMs / 4000) * 100}%` }}
             />
           </div>
-          <div className="text-xs text-yellow-300 mt-1">
+          <div className="mt-1 text-xs text-[var(--game-color-warning)]">
             Delay: {delayMs}ms
           </div>
         </>
