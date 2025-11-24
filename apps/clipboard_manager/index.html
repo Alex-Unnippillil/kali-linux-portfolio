@@ -8,9 +8,46 @@
   <link rel="stylesheet" href="index.css">
 </head>
 <body>
-  <h1>Clipboard Manager</h1>
-  <button id="clear" class="clipboard-button">Clear History</button>
-  <ul id="history" class="history-list"></ul>
+  <div class="clipboard-app">
+    <header class="clipboard-header">
+      <h1>Clipboard Manager</h1>
+      <p class="clipboard-subtitle">Persist your clipboard history, fuzzy search past snippets, and stage multi-paste queues.</p>
+      <div class="toolbar" role="search">
+        <label class="visually-hidden" for="search">Search clipboard history</label>
+        <input id="search" type="search" name="search" placeholder="Search history (fuzzy matching)" autocomplete="off" />
+        <div class="toolbar__buttons">
+          <button id="clear" class="clipboard-button" type="button">Clear History</button>
+          <button id="dedupe" class="clipboard-button" type="button">Remove Duplicates</button>
+        </div>
+      </div>
+      <div class="status-row">
+        <span id="history-count" class="history-count">0 items</span>
+        <span id="search-meta" class="search-meta">Loading history…</span>
+      </div>
+      <div id="status" class="status-message" role="status" aria-live="polite"></div>
+    </header>
+    <main class="clipboard-layout">
+      <section class="panel history-panel" aria-label="Clipboard history">
+        <header class="panel__header">
+          <h2>History</h2>
+          <p class="panel__description">The latest clipboard snapshots are stored locally in IndexedDB.</p>
+        </header>
+        <ul id="history" class="history-list" aria-live="polite"></ul>
+      </section>
+      <section class="panel queue-panel" aria-label="Multi-paste queue">
+        <header class="panel__header">
+          <h2>Multi-paste Queue</h2>
+          <p class="panel__description">Queue snippets to paste sequentially or copy them all at once.</p>
+        </header>
+        <div class="queue-controls">
+          <button id="queue-copy-next" class="clipboard-button" type="button">Copy Next</button>
+          <button id="queue-copy-all" class="clipboard-button" type="button">Copy All</button>
+          <button id="queue-clear" class="clipboard-button" type="button">Clear Queue</button>
+        </div>
+        <ul id="queue" class="queue-list" aria-live="polite"></ul>
+      </section>
+    </main>
+  </div>
   <script src="main.js"></script>
 </body>
 </html>
