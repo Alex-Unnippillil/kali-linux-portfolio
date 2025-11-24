@@ -2,15 +2,26 @@
 
 import React, { useState, useEffect } from 'react';
 import FormError from '../components/ui/FormError';
+import { sendWithOfflineQueue } from '../utils/offlineQueue';
 
 const STORAGE_KEY = 'dummy-form-draft';
+
+const createDedupeKey = (name: string, email: string, message: string): string => {
+  const normalized = `${name.trim().toLowerCase()}::${email.trim().toLowerCase()}::${message}`;
+  let hash = 0;
+  for (let i = 0; i < normalized.length; i += 1) {
+    hash = (hash * 31 + normalized.charCodeAt(i)) >>> 0;
+  }
+  return `dummy:${hash.toString(16)}`;
+};
 
 const DummyForm: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [queued, setQueued] = useState(false);
   const [recovered, setRecovered] = useState(false);
 
   useEffect(() => {
@@ -67,17 +78,38 @@ const DummyForm: React.FC = () => {
       return;
     }
     setError('');
-    setSuccess(false);
+    setStatusMessage(null);
+    setQueued(false);
+    let nextMessage: string | null = null;
+    let nextQueued = false;
+
     if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-      await fetch('/api/dummy', {
+      const result = await sendWithOfflineQueue({
+        url: '/api/dummy',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, email, message }),
+        body: { name, email, message },
+        dedupeKey: createDedupeKey(name, email, message),
       });
+
+      if (result.status === 'sent') {
+        if (!result.response.ok) {
+          setError('Submission failed');
+          return;
+        }
+        nextMessage = 'Form submitted successfully!';
+      } else {
+        nextMessage = 'You are offline. Submission saved and will resend automatically.';
+        nextQueued = true;
+      }
     }
-    setSuccess(true);
+    if (!nextMessage) {
+      nextMessage = 'Form submitted successfully!';
+    }
+    setStatusMessage(nextMessage);
+    setQueued(nextQueued);
     window.localStorage.removeItem(STORAGE_KEY);
     setName('');
     setEmail('');
@@ -91,7 +123,15 @@ const DummyForm: React.FC = () => {
         <h1 className="mb-4 text-xl font-bold">Contact Us</h1>
         {recovered && <p className="mb-4 text-sm text-blue-600">Recovered draft</p>}
         {error && <FormError className="mb-4 mt-0">{error}</FormError>}
-        {success && <p className="mb-4 text-sm text-green-600">Form submitted successfully!</p>}
+        {statusMessage && (
+          <p
+            className={`mb-4 text-sm ${
+              queued ? 'text-amber-600' : 'text-green-600'
+            }`}
+          >
+            {statusMessage}
+          </p>
+        )}
         <label className="mb-2 block text-sm font-medium" htmlFor="name">Name</label>
         <input
           id="name"

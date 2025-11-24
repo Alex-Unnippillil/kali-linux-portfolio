@@ -9,6 +9,7 @@ import AttachmentUploader, {
   MAX_TOTAL_ATTACHMENT_SIZE,
 } from '../../../apps/contact/components/AttachmentUploader';
 import AttachmentCarousel from '../../../apps/contact/components/AttachmentCarousel';
+import { sendWithOfflineQueue } from '../../../utils/offlineQueue';
 
 const sanitize = (str: string) =>
   str.replace(/[&<>"']/g, (c) => ({
@@ -29,6 +30,22 @@ const errorMap: Record<string, string> = {
 
 };
 
+interface ContactFormResult {
+  success: boolean;
+  error?: string;
+  code?: string;
+  queued?: boolean;
+}
+
+const createSubmissionKey = (email: string, message: string): string => {
+  const normalized = `${email.trim().toLowerCase()}::${message}`;
+  let hash = 0;
+  for (let i = 0; i < normalized.length; i += 1) {
+    hash = (hash * 31 + normalized.charCodeAt(i)) >>> 0;
+  }
+  return `contact:${hash.toString(16)}`;
+};
+
 export const processContactForm = async (
   data: {
     name: string;
@@ -39,23 +56,34 @@ export const processContactForm = async (
     recaptchaToken: string;
   },
   fetchImpl: typeof fetch = fetch,
-) => {
+): Promise<ContactFormResult> => {
   try {
     const parsed = contactSchema.parse(data);
-    const res = await fetchImpl('/api/contact', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': parsed.csrfToken,
+    const submission = await sendWithOfflineQueue(
+      {
+        url: '/api/contact',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': parsed.csrfToken,
+        },
+        body: {
+          name: sanitize(parsed.name),
+          email: parsed.email,
+          message: sanitize(parsed.message),
+          honeypot: parsed.honeypot,
+          recaptchaToken: parsed.recaptchaToken,
+        },
+        dedupeKey: createSubmissionKey(parsed.email, parsed.message),
       },
-      body: JSON.stringify({
-        name: sanitize(parsed.name),
-        email: parsed.email,
-        message: sanitize(parsed.message),
-        honeypot: parsed.honeypot,
-        recaptchaToken: parsed.recaptchaToken,
-      }),
-    });
+      fetchImpl,
+    );
+
+    if (submission.status === 'queued') {
+      return { success: true, queued: true };
+    }
+
+    const res = submission.response;
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       return {
@@ -212,6 +240,14 @@ const ContactApp: React.FC = () => {
       setSubmitting(false);
       return;
     }
+
+    if (typeof navigator !== 'undefined' && navigator.onLine === false && attachments.length) {
+      const message = 'Attachments require an active connection. Remove them or retry when online.';
+      setError(message);
+      setBanner({ type: 'error', message });
+      setSubmitting(false);
+      return;
+    }
     let recaptchaToken = '';
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
     let shouldFallback = fallback;
@@ -237,12 +273,20 @@ const ContactApp: React.FC = () => {
       recaptchaToken,
     });
     if (result.success) {
-      setBanner({ type: 'success', message: 'Message sent' });
+      const queued = result.queued === true;
+      setBanner({
+        type: 'success',
+        message: queued
+          ? 'Message saved offline. It will send automatically when you are back online.'
+          : 'Message sent',
+      });
       setName('');
       setEmail('');
       setMessage('');
       setHoneypot('');
-      await uploadAttachments(attachments);
+      if (!queued) {
+        await uploadAttachments(attachments);
+      }
       setAttachments([]);
       void deleteDraft();
     } else {
