@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import data from './data.json';
 import ArpLab from './components/ArpLab';
 import vendors from '../kismet/oui.json';
+import { safeHTML } from '@/utils/safe-html';
 
 const { arpTable, flows } = data;
 const attackerMac = 'aa:aa:aa:aa:aa:aa';
@@ -724,7 +725,7 @@ const stopSpoof = () => {
           aria-label="syntax highlighted filter"
         >
           <code
-            dangerouslySetInnerHTML={{ __html: highlightFilter(filterText) }}
+            dangerouslySetInnerHTML={{ __html: safeHTML(highlightFilter(filterText)) }}
           />
         </pre>
       </div>

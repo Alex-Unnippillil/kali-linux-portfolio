@@ -1,4 +1,5 @@
 import React from 'react';
+import { safeHTML } from '@/utils/safe-html';
 
 const escapeHtml = (str = '') =>
   str
@@ -71,7 +72,7 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
                 {typeIcons[a.type] || '📁'}
               </span>
               <span
-                dangerouslySetInnerHTML={{ __html: highlight(a.name) }}
+                dangerouslySetInnerHTML={{ __html: safeHTML(highlight(a.name)) }}
               />
             </div>
             <div className="text-kali-text/60">{a.type}</div>
@@ -81,12 +82,12 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
             {a.user && (
               <div
                 className="text-xs"
-                dangerouslySetInnerHTML={{ __html: `User: ${highlight(a.user)}` }}
+                dangerouslySetInnerHTML={{ __html: safeHTML(`User: ${highlight(a.user)}`) }}
               />
             )}
             <div
               className="text-xs"
-              dangerouslySetInnerHTML={{ __html: highlight(a.description) }}
+              dangerouslySetInnerHTML={{ __html: safeHTML(highlight(a.description)) }}
             />
           </button>
         ))}

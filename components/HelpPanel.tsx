@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import DOMPurify from 'dompurify';
+import { safeHTML } from '@/utils/safe-html';
 import { marked } from 'marked';
 
 interface HelpPanelProps {
@@ -23,7 +23,7 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
           setHtml("<p>No help available.</p>");
           return;
         }
-        const rendered = DOMPurify.sanitize(marked.parse(md) as string);
+        const rendered = safeHTML(marked.parse(md) as string);
         setHtml(rendered);
       })
       .catch(() => setHtml("<p>No help available.</p>"));
