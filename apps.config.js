@@ -66,6 +66,7 @@ const QrApp = createDynamicApp('qr', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
 const QuoteApp = createDynamicApp('quote', 'Quote');
 const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
+const CalendarApp = createDynamicApp('calendar', 'Calendar');
 const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
 const SubnetCalculatorApp = createDynamicApp('subnet-calculator', 'Subnet Calculator');
@@ -157,6 +158,7 @@ const displayQr = createDisplay(QrApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
 const displayQuote = createDisplay(QuoteApp);
 const displayProjectGallery = createDisplay(ProjectGalleryApp);
+const displayCalendar = createDisplay(CalendarApp);
 const displayTrash = createDisplay(TrashApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
@@ -787,6 +789,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayTodoist,
+  },
+  {
+    id: 'calendar',
+    title: 'Calendar',
+    icon: '/themes/Yaru/apps/calendar.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCalendar,
   },
   {
     id: 'sticky_notes',
