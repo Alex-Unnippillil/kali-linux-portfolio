@@ -40,6 +40,70 @@ jobs:
       - run: yarn dedupe --check
       - run: yarn test --coverage
 
+  module-report:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: yarn dedupe --check
+      - name: Build with analyzer
+        run: ANALYZE=true BUNDLE_ANALYZER_MODE=json yarn build
+      - name: Run module budget report
+        id: module_report
+        continue-on-error: true
+        run: node scripts/module-report.mjs --markdown module-report.md --json module-report.json
+      - name: Comment module report
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const marker = '<!-- module-report -->';
+            const markdownPath = path.join(process.cwd(), 'module-report.md');
+            let body;
+            if (fs.existsSync(markdownPath)) {
+              body = fs.readFileSync(markdownPath, 'utf8');
+            } else {
+              body = 'Module report not available.';
+            }
+            const finalBody = `${marker}\n${body}`;
+            const { owner, repo, number } = context.issue;
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: number,
+            });
+            const existing = comments.find(
+              (comment) =>
+                comment.user?.type === 'Bot' && comment.body && comment.body.includes(marker),
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body: finalBody,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: number,
+                body: finalBody,
+              });
+            }
+      - name: Fail on budget regressions
+        if: steps.module_report.outcome == 'failure'
+        run: exit 1
+
   security:
     runs-on: ubuntu-latest
     steps:
