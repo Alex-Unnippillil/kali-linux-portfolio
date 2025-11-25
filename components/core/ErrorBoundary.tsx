@@ -1,5 +1,8 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
+import { reportClientError } from '../../lib/client-error-reporter';
 import { createLogger } from '../../lib/logger';
+import { captureClientException } from '../../lib/monitoring/sentry';
+import { sanitizeErrorForLog, scrubValue } from '../../lib/monitoring/scrub';
 
 interface Props {
   children: ReactNode;
@@ -22,7 +25,22 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: unknown, errorInfo: ErrorInfo) {
-    log.error('ErrorBoundary caught an error', { error, errorInfo });
+    const safeInfo = scrubValue({ componentStack: errorInfo.componentStack });
+
+    const normalizedError =
+      error instanceof Error ? error : new Error(typeof error === 'string' ? error : 'Unknown boundary error');
+
+    captureClientException(normalizedError, {
+      componentStack: safeInfo.componentStack,
+      boundary: 'components/core/ErrorBoundary',
+    });
+
+    void reportClientError(normalizedError, errorInfo.componentStack, { skipCapture: true });
+
+    log.error('ErrorBoundary caught an error', {
+      error: sanitizeErrorForLog(normalizedError),
+      errorInfo: safeInfo,
+    });
   }
 
   componentDidUpdate(prevProps: Props) {
