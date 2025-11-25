@@ -1,7 +1,12 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect } from 'react';
 import useKeymap from '../../apps/settings/keymapRegistry';
+import {
+  useOverlayManager,
+  useOverlayRegistration,
+  useOverlaySnapshot,
+} from './OverlayManager';
 
 const formatEvent = (e: KeyboardEvent) => {
   const parts = [
@@ -14,11 +19,14 @@ const formatEvent = (e: KeyboardEvent) => {
   return parts.filter(Boolean).join('+');
 };
 
-const ShortcutOverlay: React.FC = () => {
-  const [open, setOpen] = useState(false);
-  const { shortcuts } = useKeymap();
+const OVERLAY_ID = 'global-shortcut-overlay';
 
-  const toggle = useCallback(() => setOpen((o) => !o), []);
+const ShortcutOverlay: React.FC = () => {
+  const { shortcuts } = useKeymap();
+  useOverlayRegistration({ id: OVERLAY_ID, modal: true, overlay: true });
+  const { closeOverlay, restoreOverlay } = useOverlayManager();
+  const overlayState = useOverlaySnapshot(OVERLAY_ID);
+  const open = Boolean(overlayState?.open && !overlayState?.minimized);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -33,15 +41,15 @@ const ShortcutOverlay: React.FC = () => {
         '?';
       if (formatEvent(e) === show) {
         e.preventDefault();
-        toggle();
+        restoreOverlay(OVERLAY_ID);
       } else if (e.key === 'Escape' && open) {
         e.preventDefault();
-        setOpen(false);
+        closeOverlay(OVERLAY_ID);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, toggle, shortcuts]);
+  }, [closeOverlay, open, restoreOverlay, shortcuts]);
 
   const handleExport = () => {
     const data = JSON.stringify(shortcuts, null, 2);
@@ -63,7 +71,7 @@ const ShortcutOverlay: React.FC = () => {
   const conflicts = new Set(
     Array.from(keyCounts.entries())
       .filter(([, count]) => count > 1)
-      .map(([key]) => key)
+      .map(([key]) => key),
   );
 
   return (
@@ -77,7 +85,7 @@ const ShortcutOverlay: React.FC = () => {
           <h2 className="text-xl font-bold">Keyboard Shortcuts</h2>
           <button
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={() => closeOverlay(OVERLAY_ID)}
             className="text-sm underline"
           >
             Close
