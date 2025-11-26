@@ -1,3 +1,45 @@
+import { rentUint8Array, releaseTypedArray } from './pools';
+
+const perfEnabled =
+  typeof performance !== 'undefined' &&
+  typeof performance.mark === 'function' &&
+  typeof performance.measure === 'function';
+
+const perfCanClear =
+  typeof performance !== 'undefined' && typeof performance.clearMarks === 'function';
+
+const perfMark = (name: string) => {
+  if (!perfEnabled) return;
+  try {
+    performance.mark(name);
+  } catch {
+    // ignore unsupported marks
+  }
+};
+
+const perfMeasure = (name: string, start: string, end: string) => {
+  if (!perfEnabled) return;
+  try {
+    performance.measure(name, start, end);
+  } catch {
+    // ignore duplicate mark failures
+  }
+  if (perfCanClear) {
+    try {
+      performance.clearMarks(start);
+      performance.clearMarks(end);
+    } catch {
+      // ignore
+    }
+  }
+};
+
+const copyPacketData = (buf: ArrayBuffer, offset: number, length: number) => {
+  const slice = rentUint8Array(length);
+  slice.set(new Uint8Array(buf, offset, length));
+  return slice;
+};
+
 export interface ParsedPacket {
   timestamp: string;
   len: number;
@@ -35,6 +77,9 @@ const parseEthernetIpv4 = (data: Uint8Array) => {
 };
 
 const parseClassicPcap = (buf: ArrayBuffer): ParsedPacket[] => {
+  const start = 'pcap:classic:start';
+  const end = 'pcap:classic:end';
+  perfMark(start);
   const view = new DataView(buf);
   const magic = view.getUint32(0, false);
   const little = magic === 0xd4c3b2a1;
@@ -47,7 +92,7 @@ const parseClassicPcap = (buf: ArrayBuffer): ParsedPacket[] => {
     const origLen = view.getUint32(offset + 12, little);
     offset += 16;
     if (offset + capLen > view.byteLength) break;
-    const data = new Uint8Array(buf.slice(offset, offset + capLen));
+    const data = copyPacketData(buf, offset, capLen);
     const meta = parseEthernetIpv4(data);
     packets.push({
       timestamp: `${tsSec}.${tsUsec.toString().padStart(6, '0')}`,
@@ -63,10 +108,15 @@ const parseClassicPcap = (buf: ArrayBuffer): ParsedPacket[] => {
     });
     offset += capLen;
   }
+  perfMark(end);
+  perfMeasure('pcap:classic:duration', start, end);
   return packets;
 };
 
 const parsePcapNg = (buf: ArrayBuffer): ParsedPacket[] => {
+  const start = 'pcap:ng:start';
+  const end = 'pcap:ng:end';
+  perfMark(start);
   const view = new DataView(buf);
   let offset = 0;
   let little = true;
@@ -90,7 +140,7 @@ const parsePcapNg = (buf: ArrayBuffer): ParsedPacket[] => {
       const capLen = view.getUint32(offset + 20, little);
       const origLen = view.getUint32(offset + 24, little);
       const dataStart = offset + 28;
-      const data = new Uint8Array(buf.slice(dataStart, dataStart + capLen));
+      const data = copyPacketData(buf, dataStart, capLen);
       const meta = parseEthernetIpv4(data);
       const ts = (BigInt(tsHigh) << 32n) + BigInt(tsLow);
       const tsSec = Number(ts / 1000000n);
@@ -110,19 +160,38 @@ const parsePcapNg = (buf: ArrayBuffer): ParsedPacket[] => {
     }
     offset += blockTotalLength;
   }
+  perfMark(end);
+  perfMeasure('pcap:ng:duration', start, end);
   return packets;
 };
 
 export const parsePcap = (buf: ArrayBuffer): ParsedPacket[] => {
+  const start = 'pcap:parse:start';
+  const end = 'pcap:parse:end';
+  perfMark(start);
   const view = new DataView(buf);
   const magic = view.getUint32(0, false);
   if (magic === 0xa1b2c3d4 || magic === 0xd4c3b2a1) {
-    return parseClassicPcap(buf);
+    const parsed = parseClassicPcap(buf);
+    perfMark(end);
+    perfMeasure('pcap:parse:duration', start, end);
+    return parsed;
   }
   if (magic === 0x0a0d0d0a) {
-    return parsePcapNg(buf);
+    const parsed = parsePcapNg(buf);
+    perfMark(end);
+    perfMeasure('pcap:parse:duration', start, end);
+    return parsed;
   }
+  perfMark(end);
+  perfMeasure('pcap:parse:duration', start, end);
   throw new Error('Unsupported pcap format');
+};
+
+export const releaseParsedPackets = (packets: ParsedPacket[]) => {
+  packets.forEach((pkt) => {
+    releaseTypedArray(pkt.data);
+  });
 };
 
 export default parsePcap;
