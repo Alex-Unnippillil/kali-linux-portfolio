@@ -15,9 +15,18 @@ import {
 import styles from './window.module.css';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
 
-const EDGE_THRESHOLD_MIN = 48;
-const EDGE_THRESHOLD_MAX = 160;
-const EDGE_THRESHOLD_RATIO = 0.05;
+const EDGE_THRESHOLD_CONFIG = {
+    fine: {
+        min: 48,
+        max: 160,
+        ratio: 0.05,
+    },
+    coarse: {
+        min: 88,
+        max: 220,
+        ratio: 0.08,
+    },
+};
 const DRAG_BOUNDS_PADDING = 96;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -38,7 +47,36 @@ const normalizePercentageDimension = (value, fallback) => {
     return value;
 };
 
-const computeEdgeThreshold = (size) => clamp(size * EDGE_THRESHOLD_RATIO, EDGE_THRESHOLD_MIN, EDGE_THRESHOLD_MAX);
+const isCoarsePointerInput = (pointerType) => {
+    if (pointerType === 'touch') {
+        return true;
+    }
+    if (pointerType === 'mouse' || pointerType === 'pen') {
+        return false;
+    }
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+        try {
+            if (window.matchMedia('(pointer: coarse)').matches) {
+                return true;
+            }
+        } catch (error) {
+            // Ignore errors from unsupported media queries
+        }
+    }
+    if (typeof navigator !== 'undefined') {
+        const coarseViaTouchPoints = typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 0;
+        const coarseViaTouchEvents = typeof navigator.msMaxTouchPoints === 'number' && navigator.msMaxTouchPoints > 0;
+        if (coarseViaTouchPoints || coarseViaTouchEvents) {
+            return true;
+        }
+    }
+    return false;
+};
+
+const computeEdgeThreshold = (size, pointerType) => {
+    const config = isCoarsePointerInput(pointerType) ? EDGE_THRESHOLD_CONFIG.coarse : EDGE_THRESHOLD_CONFIG.fine;
+    return clamp(size * config.ratio, config.min, config.max);
+};
 
 const getViewportMetrics = () => {
     if (typeof window === 'undefined') {
@@ -123,7 +161,7 @@ const computeSnapRegions = (
     const rightStart = viewportLeft + Math.max(viewportWidth - halfWidth, 0);
     const bottomStart = topEdge + halfHeight;
 
-    return {
+    const regions = {
         left: { left: leftEdge, top: topEdge, width: halfWidth, height: availableHeight },
         right: { left: rightStart, top: topEdge, width: halfWidth, height: availableHeight },
         top: { left: leftEdge, top: topEdge, width: viewportWidth, height: availableHeight },
@@ -131,7 +169,37 @@ const computeSnapRegions = (
         'top-right': { left: rightStart, top: topEdge, width: halfWidth, height: halfHeight },
         'bottom-left': { left: leftEdge, top: bottomStart, width: halfWidth, height: halfHeight },
         'bottom-right': { left: rightStart, top: bottomStart, width: halfWidth, height: halfHeight },
+    };
 
+    const createOverlay = (key, kind) => {
+        const rect = regions[key];
+        if (!rect || rect.width <= 0 || rect.height <= 0) {
+            return null;
+        }
+        return {
+            id: `snap-${key}`,
+            key,
+            kind,
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height,
+        };
+    };
+
+    const overlays = [
+        createOverlay('left', 'edge'),
+        createOverlay('right', 'edge'),
+        createOverlay('top', 'edge'),
+        createOverlay('top-left', 'quadrant'),
+        createOverlay('top-right', 'quadrant'),
+        createOverlay('bottom-left', 'quadrant'),
+        createOverlay('bottom-right', 'quadrant'),
+    ].filter(Boolean);
+
+    return {
+        ...regions,
+        overlays,
     };
 };
 
@@ -246,6 +314,7 @@ export class Window extends Component {
             minWidth,
             minHeight,
             resizing: null,
+            snapTargets: null,
         };
         this.windowRef = React.createRef();
         this._usageTimeout = null;
@@ -258,6 +327,9 @@ export class Window extends Component {
         this._lastViewportMetrics = null;
         this._lastSnapBottomInset = null;
         this._lastSafeAreaBottom = null;
+        this._activePointerType = null;
+        this._dragSessionActive = false;
+        this._snapOverlaySignature = null;
         this._isUnmounted = false;
     }
 
@@ -579,6 +651,44 @@ export class Window extends Component {
         };
     }
 
+    resolvePointerType = (event) => {
+        if (!event) {
+            return null;
+        }
+        if (typeof event.pointerType === 'string') {
+            return event.pointerType;
+        }
+        if (typeof event.type === 'string' && event.type.startsWith('touch')) {
+            return 'touch';
+        }
+        return 'mouse';
+    }
+
+    updateSnapOverlays = (overlays) => {
+        if (!this._dragSessionActive) {
+            return;
+        }
+        const normalized = Array.isArray(overlays)
+            ? overlays.map((overlay) => ({
+                id: overlay.id,
+                key: overlay.key,
+                kind: overlay.kind,
+                left: overlay.left,
+                top: overlay.top,
+                width: overlay.width,
+                height: overlay.height,
+            }))
+            : [];
+        const signature = normalized
+            .map((overlay) => `${overlay.id}:${overlay.left}:${overlay.top}:${overlay.width}:${overlay.height}`)
+            .join('|');
+        if (this._snapOverlaySignature === signature) {
+            return;
+        }
+        this._snapOverlaySignature = signature;
+        this.setState({ snapTargets: normalized.length > 0 ? normalized : null });
+    }
+
     readNodeRect = (node) => {
         if (!node || typeof node.getBoundingClientRect !== 'function') return null;
         const rect = node.getBoundingClientRect();
@@ -890,6 +1000,7 @@ export class Window extends Component {
         const heightBase = containerHeight || viewportHeight || region.height || 1;
         const snappedWidthPercent = Math.max(percentOf(region.width, widthBase), this.state.minWidth);
         const snappedHeightPercent = Math.max(percentOf(region.height, heightBase), this.state.minHeight);
+        this._snapOverlaySignature = null;
         this.setState({
             snapPreview: null,
             snapPosition: null,
@@ -898,6 +1009,7 @@ export class Window extends Component {
             width: snappedWidthPercent,
             height: snappedHeightPercent,
             preMaximizeBounds: null,
+            snapTargets: null,
         }, () => {
             this.resizeBoundries();
             this.notifySizeChange();
@@ -927,8 +1039,9 @@ export class Window extends Component {
         const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = this.getCachedViewportMetrics();
         if (!viewportWidth || !viewportHeight) return;
 
-        const horizontalThreshold = computeEdgeThreshold(viewportWidth);
-        const verticalThreshold = computeEdgeThreshold(viewportHeight);
+        const pointerType = this._activePointerType;
+        const horizontalThreshold = computeEdgeThreshold(viewportWidth, pointerType);
+        const verticalThreshold = computeEdgeThreshold(viewportHeight, pointerType);
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         const snapBottomInset = this.getCachedSnapBottomInset();
         const safeAreaBottom = this.getCachedSafeAreaBottom();
@@ -941,6 +1054,8 @@ export class Window extends Component {
             snapBottomInset,
             safeAreaBottom,
         );
+
+        this.updateSnapOverlays(regions.overlays);
 
         const topEdge = viewportTop + topInset;
         const bottomEdge = viewportTop + viewportHeight - safeAreaBottom;
@@ -1067,18 +1182,41 @@ export class Window extends Component {
         }
     }
 
+    handleDragStart = (event, data) => {
+        this._dragSessionActive = true;
+        this._activePointerType = this.resolvePointerType(event);
+        this._snapOverlaySignature = null;
+        this.changeCursorToMove();
+        if (data) {
+            this.scheduleDragUpdate(data);
+        }
+    }
+
     handleDrag = (e, data) => {
+        if (!this._dragSessionActive) {
+            this._dragSessionActive = true;
+            const inferredPointer = this.resolvePointerType(e);
+            if (inferredPointer) {
+                this._activePointerType = inferredPointer;
+            }
+        }
         this.scheduleDragUpdate(data);
+        if (!data) {
+            this.flushPendingDragUpdate();
+        }
     }
 
     handleStop = () => {
+        this._dragSessionActive = false;
+        this._activePointerType = null;
+        this._snapOverlaySignature = null;
         this.flushPendingDragUpdate();
         this.changeCursorToDefault();
         const snapPos = this.state.snapPosition;
         if (snapPos) {
             this.snapWindow(snapPos);
         } else {
-            this.setState({ snapPreview: null, snapPosition: null });
+            this.setState({ snapPreview: null, snapPosition: null, snapTargets: null });
         }
     }
 
@@ -1680,6 +1818,22 @@ export class Window extends Component {
 
         return (
             <>
+                {Array.isArray(this.state.snapTargets) && this.state.snapTargets.length > 0 && (
+                    this.state.snapTargets.map((target) => (
+                        <div
+                            key={target.id}
+                            data-testid={`snap-overlay-${target.key}`}
+                            aria-hidden="true"
+                            className={`fixed pointer-events-none z-30 transition-opacity ${styles.snapOverlay} ${target.kind === 'edge' ? styles.snapOverlayEdge : styles.snapOverlayQuadrant}`}
+                            style={{
+                                left: `${target.left}px`,
+                                top: `${target.top}px`,
+                                width: `${target.width}px`,
+                                height: `${target.height}px`,
+                            }}
+                        />
+                    ))
+                )}
                 {this.state.snapPreview && (
                     <div
                         data-testid="snap-preview"
@@ -1709,7 +1863,7 @@ export class Window extends Component {
                     cancel={`.${styles.windowControls}`}
                     grid={this.props.snapEnabled ? snapGrid : [1, 1]}
                     scale={1}
-                    onStart={this.changeCursorToMove}
+                    onStart={this.handleDragStart}
                     onStop={this.handleStop}
                     onDrag={this.handleDrag}
                     allowAnyClick={false}
