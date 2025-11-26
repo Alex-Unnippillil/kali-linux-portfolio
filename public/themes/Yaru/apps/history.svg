@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="historyGradient" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1f3b63" />
+      <stop offset="1" stop-color="#11172b" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#historyGradient)" />
+  <path
+    d="M22 18H12V28"
+    stroke="#38bdf8"
+    stroke-width="3"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <polyline
+    points="12 28 8 24 16 24"
+    fill="none"
+    stroke="#38bdf8"
+    stroke-width="3"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="36" cy="36" r="18" fill="rgba(15,23,42,0.85)" stroke="#94a3b8" stroke-width="2" />
+  <path
+    d="M36 24V36L48 42"
+    stroke="#f8fafc"
+    stroke-width="3"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="36" cy="36" r="3" fill="#f8fafc" />
+</svg>
