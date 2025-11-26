@@ -109,6 +109,7 @@ const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
 const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
 const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
 const ContactApp = createDynamicApp('contact', 'Contact');
+const KaliDesktopApp = createDynamicApp('kali-desktop', 'Kali Desktop');
 
 
 
@@ -196,6 +197,7 @@ const displayHTTP = createDisplay(HTTPApp);
 const displayHtmlRewrite = createDisplay(HtmlRewriteApp);
 const displayContact = createDisplay(ContactApp);
 
+const displayKaliDesktop = createDisplay(KaliDesktopApp);
 const displayHashcat = createDisplay(HashcatApp);
 
 const displayKismet = createDisplay(KismetApp);
@@ -1002,6 +1004,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayVolatility,
+  },
+  {
+    id: 'kali-desktop',
+    title: 'Kali Desktop',
+    icon: '/themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayKaliDesktop,
   },
   {
     id: 'hashcat',
