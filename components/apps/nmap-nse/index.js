@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
 import DiscoveryMap from './DiscoveryMap';
+import Compare from './Compare.tsx';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
 const scripts = [
@@ -85,6 +86,8 @@ const NmapNSEApp = () => {
   const [activeScript, setActiveScript] = useState(scripts[0].name);
   const [phaseStep, setPhaseStep] = useState(0);
   const [toast, setToast] = useState('');
+  const [runHistory, setRunHistory] = useState([]);
+  const [runsLoading, setRunsLoading] = useState(false);
   const outputRef = useRef(null);
   const phases = ['prerule', 'hostrule', 'portrule'];
 
@@ -97,6 +100,34 @@ const NmapNSEApp = () => {
       .then((r) => r.json())
       .then(setResults)
       .catch(() => setResults({ hosts: [] }));
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadRuns = async () => {
+      try {
+        setRunsLoading(true);
+        const res = await fetch('/demo-data/nmap/run-history.json');
+        if (!res.ok) throw new Error('Failed to load run history');
+        const json = await res.json();
+        if (!cancelled) {
+          const runs = Array.isArray(json?.runs) ? json.runs : [];
+          setRunHistory(runs);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setRunHistory([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setRunsLoading(false);
+        }
+      }
+    };
+    loadRuns();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const toggleScript = (name) => {
@@ -450,6 +481,7 @@ const NmapNSEApp = () => {
             Select All
           </button>
         </div>
+        <Compare runs={runHistory} isLoading={runsLoading} />
       </div>
       {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
