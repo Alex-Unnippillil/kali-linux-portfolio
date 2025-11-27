@@ -1,14 +1,70 @@
 :root {
-  --window-motion-duration-minimize: 200ms;
+  --motion-duration-base-scale: 1;
+  --motion-duration-user-scale: var(--motion-duration-base-scale);
+  --motion-duration-scale: var(--motion-duration-user-scale);
+  --motion-animation-base-state: running;
+  --motion-animation-user-state: var(--motion-animation-base-state);
+  --motion-animation-state: var(--motion-animation-user-state);
+
+  --window-motion-duration-minimize-base: 200ms;
+  --window-motion-duration-restore-base: 300ms;
+  --window-motion-duration-snap-base: 240ms;
+  --window-motion-duration-maximize-base: 320ms;
+
+  --window-motion-duration-minimize: calc(
+    var(--window-motion-duration-minimize-base) * var(--motion-duration-scale)
+  );
   --window-motion-ease-minimize: cubic-bezier(0.4, 0, 0.2, 1);
-  --window-motion-duration-restore: 300ms;
+  --window-motion-duration-restore: calc(
+    var(--window-motion-duration-restore-base) * var(--motion-duration-scale)
+  );
   --window-motion-ease-restore: cubic-bezier(0.2, 0.8, 0.4, 1);
-  --window-motion-duration-snap: 240ms;
+  --window-motion-duration-snap: calc(
+    var(--window-motion-duration-snap-base) * var(--motion-duration-scale)
+  );
   --window-motion-ease-snap: cubic-bezier(0.2, 0.8, 0.4, 1);
-  --window-motion-duration-maximize: 320ms;
+  --window-motion-duration-maximize: calc(
+    var(--window-motion-duration-maximize-base) * var(--motion-duration-scale)
+  );
   --window-motion-ease-maximize: cubic-bezier(0.2, 0.8, 0.4, 1);
   --window-motion-duration-snap-preview: var(--window-motion-duration-snap);
   --window-motion-ease-snap-preview: var(--window-motion-ease-snap);
   --window-motion-duration-close: 180ms;
   --window-motion-ease-close: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-base-scale: 0;
+    --motion-animation-base-state: paused;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    animation-play-state: var(--motion-animation-state) !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+:root.reduce-motion,
+:root[data-motion='reduced'] {
+  --motion-duration-user-scale: 0;
+  --motion-animation-user-state: paused;
+}
+
+:root.reduce-motion *,
+:root[data-motion='reduced'] *,
+:root.reduce-motion *::before,
+:root[data-motion='reduced'] *::before,
+:root.reduce-motion *::after,
+:root[data-motion='reduced'] *::after {
+  transition-duration: 0ms !important;
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  animation-play-state: var(--motion-animation-state) !important;
+  scroll-behavior: auto !important;
 }

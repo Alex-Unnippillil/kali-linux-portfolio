@@ -16,7 +16,10 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
   const { theme: activeTheme, setTheme: updateTheme } = useTheme();
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
-  const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
+  const [disableAnimations, setDisableAnimations] = usePersistentState(
+    'qs-reduce-motion',
+    false,
+  );
   const [focusMode, setFocusMode] = usePersistentState('qs-focus-mode', false);
   const [brightness, setBrightness] = usePersistentState(
     'qs-brightness',
@@ -52,8 +55,19 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
   }, [online]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('reduce-motion', reduceMotion);
-  }, [reduceMotion]);
+    const root = document.documentElement;
+    root.classList.toggle('reduce-motion', disableAnimations);
+
+    if (disableAnimations) {
+      root.setAttribute('data-motion', 'reduced');
+      root.style.setProperty('--motion-duration-user-scale', '0');
+      root.style.setProperty('--motion-animation-user-state', 'paused');
+    } else {
+      root.removeAttribute('data-motion');
+      root.style.removeProperty('--motion-duration-user-scale');
+      root.style.removeProperty('--motion-animation-user-state');
+    }
+  }, [disableAnimations]);
 
   useEffect(() => {
     if (open) {
@@ -217,10 +231,10 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
     },
     {
       id: 'quick-settings-reduced-motion',
-      label: 'Reduced motion',
-      description: 'Limit animations for accessibility.',
-      value: reduceMotion,
-      onToggle: () => setReduceMotion(!reduceMotion),
+      label: 'Disable animations',
+      description: 'Stop non-essential transitions and effects.',
+      value: disableAnimations,
+      onToggle: () => setDisableAnimations(!disableAnimations),
       accent: 'from-purple-400/30 via-purple-500/10 to-transparent',
       icon: <MotionIcon />,
     },
