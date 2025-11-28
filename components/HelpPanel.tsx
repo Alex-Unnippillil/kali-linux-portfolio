@@ -1,8 +1,25 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
+
+let mermaidLoader: Promise<typeof import('mermaid')> | null = null;
+
+const loadMermaid = async () => {
+  if (!mermaidLoader) {
+    mermaidLoader = import('mermaid')
+      .then((mod) => {
+        mod.default.initialize({ startOnLoad: false });
+        return mod;
+      })
+      .catch((err) => {
+        mermaidLoader = null;
+        throw err;
+      });
+  }
+  return mermaidLoader;
+};
 
 interface HelpPanelProps {
   appId: string;
@@ -12,6 +29,8 @@ interface HelpPanelProps {
 export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
   const [open, setOpen] = useState(false);
   const [html, setHtml] = useState("<p>Loading...</p>");
+  const [mermaidNeeded, setMermaidNeeded] = useState(false);
+  const contentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -21,12 +40,27 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
       .then((md) => {
         if (!md) {
           setHtml("<p>No help available.</p>");
+          setMermaidNeeded(false);
           return;
         }
-        const rendered = DOMPurify.sanitize(marked.parse(md) as string);
-        setHtml(rendered);
+        const containsMermaid = /```\s*mermaid/i.test(md);
+        const renderer = new marked.Renderer();
+        const originalCode = renderer.code.bind(renderer);
+        renderer.code = (code, infostring, escaped) => {
+          if ((infostring || "").trim().toLowerCase() === "mermaid") {
+            return `<div class="mermaid">${code}</div>`;
+          }
+          return originalCode(code, infostring, escaped);
+        };
+        const rendered = marked.parse(md, { renderer }) as string;
+        const sanitized = DOMPurify.sanitize(rendered);
+        setHtml(sanitized);
+        setMermaidNeeded(containsMermaid);
       })
-      .catch(() => setHtml("<p>No help available.</p>"));
+      .catch(() => {
+        setHtml("<p>No help available.</p>");
+        setMermaidNeeded(false);
+      });
   }, [open, appId, docPath]);
 
   useEffect(() => {
@@ -48,6 +82,30 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
 
   const toggle = () => setOpen((o) => !o);
 
+  useEffect(() => {
+    if (!open || !mermaidNeeded) return;
+    const container = contentRef.current;
+    if (!container) return;
+    const nodes = container.querySelectorAll('.mermaid');
+    if (!nodes.length) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const mermaid = await loadMermaid();
+        if (cancelled) return;
+        await mermaid.default.run({ nodes });
+      } catch (err) {
+        console.error('Mermaid rendering failed', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, mermaidNeeded, html]);
+
   return (
     <>
       <button
@@ -68,7 +126,7 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
             className="bg-white text-black p-4 rounded max-w-md w-full h-full overflow-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div dangerouslySetInnerHTML={{ __html: html }} />
+            <div ref={contentRef} dangerouslySetInnerHTML={{ __html: html }} />
           </div>
         </div>
       )}
