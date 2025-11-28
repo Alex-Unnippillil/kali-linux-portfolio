@@ -257,8 +257,16 @@ Copy `.env.local.example` to `.env.local` and populate the keys relevant to your
 | `RECAPTCHA_SECRET` | Server-side verification for ReCAPTCHA. |
 | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_ANON_KEY` | Server-side Supabase credentials. |
 | `ADMIN_READ_KEY` | Secret used by admin message APIs; configure in the hosting platform. |
+| `CONTENT_PROVIDER` / `NEXT_PUBLIC_CONTENT_PROVIDER` | Selects the content provider: `local` (default) or `notion`. |
+| `CONTENT_LOCAL_PATH` | Optional server-side path to a JSON file when using the local provider. |
+| `NOTION_DATABASE_ID` / `NOTION_API_KEY` | Required when `CONTENT_PROVIDER=notion`; points to the Notion database and integration token. |
+| `NOTION_SLUG_PROPERTY` / `NOTION_TITLE_PROPERTY` / `NOTION_EXCERPT_PROPERTY` / `NOTION_BODY_PROPERTY` / `NOTION_TAGS_PROPERTY` | Override the property names used by the Notion provider. |
 
 > Never commit secrets. Use local `.env.local`, CI secrets, or host-level configuration.
+
+When `CONTENT_PROVIDER` is left unset the app falls back to the bundled data in [`data/content.local.json`](./data/content.local.json).
+Switching to the Notion provider requires the database schema to expose slug, title, optional excerpt/body rich text, and tags as
+properties matching the configured names.
 
 ### Feature Flags & Static Export
 Set `NEXT_PUBLIC_STATIC_EXPORT=true` during `yarn export` to disable API routes. UI components should guard their behaviour with the flag or the presence of required environment variables.

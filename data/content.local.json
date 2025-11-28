@@ -1,0 +1,20 @@
+[
+  {
+    "id": "welcome",
+    "slug": "welcome",
+    "title": "Welcome to the Portfolio",
+    "excerpt": "An overview of the Kali Linux themed workspace.",
+    "body": "This static dataset powers local development without external APIs.",
+    "tags": ["general", "intro"],
+    "updatedAt": "2023-12-01T00:00:00.000Z"
+  },
+  {
+    "id": "roadmap",
+    "slug": "roadmap",
+    "title": "Project Roadmap",
+    "excerpt": "What's planned next for the portfolio.",
+    "body": "Detailed milestones and experiments queued up for the coming months.",
+    "tags": ["planning"],
+    "updatedAt": "2024-01-10T00:00:00.000Z"
+  }
+]
