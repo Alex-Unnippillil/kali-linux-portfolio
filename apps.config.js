@@ -74,6 +74,7 @@ const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
 const TrashApp = createDynamicApp('trash', 'Trash');
 const SerialTerminalApp = createDynamicApp('serial-terminal', 'Serial Terminal');
+const WorkspacesApp = createDynamicApp('workspaces', 'Workspaces');
 
 
 const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
@@ -159,6 +160,7 @@ const displayQuote = createDisplay(QuoteApp);
 const displayProjectGallery = createDisplay(ProjectGalleryApp);
 const displayTrash = createDisplay(TrashApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
+const displayWorkspaces = createDisplay(WorkspacesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 const displayInputLab = createDisplay(InputLabApp);
@@ -715,6 +717,15 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displaySettings,
+  },
+  {
+    id: 'workspaces',
+    title: 'Workspaces',
+    icon: '/themes/Yaru/system/view-app-grid-symbolic.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayWorkspaces,
   },
   {
     id: 'files',
