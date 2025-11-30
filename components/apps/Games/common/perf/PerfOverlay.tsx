@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import { publish } from '../../../../../utils/pubsub';
 import { hasOffscreenCanvas } from '../../../../../utils/feature';
+import { useGameLayoutTheme } from '../../../GameLayout';
 
 interface PerfSample {
   t: number;
@@ -38,6 +39,20 @@ const PerfOverlay: React.FC = () => {
   const lastRef = useRef<number>(0);
   const rafRef = useRef<number>(0);
   const workerRef = useRef<Worker | null>(null);
+  const loopRef = useRef<(now: number) => void>();
+  const { isActive } = useGameLayoutTheme();
+  const activeRef = useRef(isActive);
+
+  useEffect(() => {
+    activeRef.current = isActive;
+    if (!isActive && rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    }
+    if (isActive && !rafRef.current && loopRef.current) {
+      rafRef.current = requestAnimationFrame(loopRef.current);
+    }
+  }, [isActive]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -51,6 +66,11 @@ const PerfOverlay: React.FC = () => {
       worker.postMessage({ type: 'init', canvas: offscreen }, [offscreen]);
 
       const loop = (now: number) => {
+        if (!activeRef.current) {
+          lastRef.current = now;
+          rafRef.current = 0;
+          return;
+        }
         if (lastRef.current) {
           const dt = now - lastRef.current;
           publish('fps', 1000 / dt);
@@ -59,7 +79,10 @@ const PerfOverlay: React.FC = () => {
         lastRef.current = now;
         rafRef.current = requestAnimationFrame(loop);
       };
-      rafRef.current = requestAnimationFrame(loop);
+      loopRef.current = loop;
+      if (activeRef.current) {
+        rafRef.current = requestAnimationFrame(loop);
+      }
 
       worker.onmessage = (e) => {
         if (e.data?.type === 'dump') {
@@ -79,6 +102,11 @@ const PerfOverlay: React.FC = () => {
 
     const loop = (now: number) => {
       if (!mounted) return;
+      if (!activeRef.current) {
+        rafRef.current = 0;
+        lastRef.current = now;
+        return;
+      }
       if (lastRef.current) {
         const dt = now - lastRef.current;
         const samples = samplesRef.current;
@@ -110,10 +138,14 @@ const PerfOverlay: React.FC = () => {
       rafRef.current = requestAnimationFrame(loop);
     };
 
-    rafRef.current = requestAnimationFrame(loop);
+    loopRef.current = loop;
+    if (activeRef.current) {
+      rafRef.current = requestAnimationFrame(loop);
+    }
     return () => {
       mounted = false;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      loopRef.current = undefined;
     };
   }, []);
 

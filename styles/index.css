@@ -517,8 +517,7 @@ dialog {
 }
 
 .tile-pop {
-    animation: tile-pop 0.15s ease-out;
-
+    animation: tile-pop var(--game-tile-pop-duration, 0.2s) ease-out;
 }
 
 @keyframes tile-merge-bounce {
@@ -528,7 +527,7 @@ dialog {
 }
 
 .tile-merge {
-    animation: tile-merge-bounce 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: tile-merge-bounce var(--game-tile-merge-duration, 0.4s) cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @keyframes tile-glow-pulse {
@@ -547,7 +546,7 @@ dialog {
 }
 
 .tile-glow {
-    animation: tile-glow-pulse 0.9s ease-out;
+    animation: tile-glow-pulse var(--game-tile-glow-duration, 0.9s) ease-out;
 }
 
 @keyframes merge-ripple {
@@ -560,7 +559,7 @@ dialog {
     inset: 0;
     border-radius: inherit;
     background: color-mix(in srgb, var(--color-text), transparent 50%);
-    animation: merge-ripple 0.4s ease-out;
+    animation: merge-ripple var(--game-tile-ripple-duration, 0.4s) ease-out;
     pointer-events: none;
 }
 
@@ -572,7 +571,7 @@ dialog {
 
 .score-pop {
     display: inline-block;
-    animation: score-pop 0.3s ease-out;
+    animation: score-pop var(--game-tile-score-duration, 0.3s) ease-out;
 }
 
 @keyframes hangman-draw {

@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import useOPFS from '../../hooks/useOPFS.js';
-import GameLayout, { useInputRecorder } from './GameLayout';
+import GameLayout, { useInputRecorder, useGameLayoutTheme } from './GameLayout';
 import useGameControls from './useGameControls';
 import { vibrate } from './Games/common/haptics';
 import {
@@ -12,6 +12,7 @@ import {
 } from '../../apps/games/rng';
 import { useSettings } from '../../hooks/useSettings';
 import GameShell from '../games/GameShell';
+import { startRecording as startReplayRecording, recordMove as recordReplayMove } from '../../games/2048/replay';
 
 // Basic 2048 game logic with tile merging mechanics.
 
@@ -145,53 +146,38 @@ const hasMoves = (board) => {
   return false;
 };
 
-const tileColors = {
-  2: 'bg-gradient-to-br from-amber-100 via-amber-200 to-amber-300 text-slate-900',
-  4: 'bg-gradient-to-br from-amber-200 via-amber-300 to-amber-400 text-slate-900',
-  8: 'bg-gradient-to-br from-orange-300 via-orange-400 to-orange-500 text-white',
-  16: 'bg-gradient-to-br from-orange-400 via-orange-500 to-orange-600 text-white',
-  32: 'bg-gradient-to-br from-rose-400 via-rose-500 to-rose-600 text-white',
-  64: 'bg-gradient-to-br from-rose-500 via-rose-600 to-rose-700 text-white',
-  128: 'bg-gradient-to-br from-amber-300 via-amber-400 to-amber-500 text-slate-900',
-  256: 'bg-gradient-to-br from-lime-300 via-lime-400 to-lime-500 text-slate-900',
-  512: 'bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 text-white',
-  1024: 'bg-gradient-to-br from-teal-500 via-teal-600 to-teal-700 text-white',
-  2048: 'bg-gradient-to-br from-cyan-500 via-blue-500 to-indigo-600 text-white',
+const TILE_VALUES = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048];
+
+const MIX_PERCENTAGES = {
+  2: 12,
+  4: 18,
+  8: 28,
+  16: 36,
+  32: 44,
+  64: 54,
+  128: 62,
+  256: 70,
+  512: 78,
+  1024: 86,
+  2048: 90,
 };
 
-const colorBlindColors = {
-  2: 'bg-gradient-to-br from-sky-200 via-sky-300 to-sky-400 text-slate-900',
-  4: 'bg-gradient-to-br from-sky-300 via-sky-400 to-sky-500 text-slate-900',
-  8: 'bg-gradient-to-br from-indigo-300 via-indigo-400 to-indigo-500 text-white',
-  16: 'bg-gradient-to-br from-indigo-400 via-indigo-500 to-indigo-600 text-white',
-  32: 'bg-gradient-to-br from-violet-400 via-violet-500 to-violet-600 text-white',
-  64: 'bg-gradient-to-br from-purple-500 via-purple-600 to-purple-700 text-white',
-  128: 'bg-gradient-to-br from-green-300 via-green-400 to-green-500 text-slate-900',
-  256: 'bg-gradient-to-br from-green-400 via-green-500 to-green-600 text-white',
-  512: 'bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-700 text-white',
-  1024: 'bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 text-slate-900',
-  2048: 'bg-gradient-to-br from-yellow-500 via-amber-500 to-orange-500 text-slate-900',
-};
-
-const neonColors = {
-  2: 'bg-gradient-to-br from-pink-400 via-pink-500 to-pink-600 text-white',
-  4: 'bg-gradient-to-br from-fuchsia-400 via-fuchsia-500 to-fuchsia-600 text-white',
-  8: 'bg-gradient-to-br from-purple-500 via-purple-600 to-purple-700 text-white',
-  16: 'bg-gradient-to-br from-indigo-500 via-indigo-600 to-indigo-700 text-white',
-  32: 'bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 text-white',
-  64: 'bg-gradient-to-br from-cyan-500 via-cyan-600 to-cyan-700 text-white',
-  128: 'bg-gradient-to-br from-teal-500 via-teal-600 to-teal-700 text-white',
-  256: 'bg-gradient-to-br from-lime-400 via-lime-500 to-lime-600 text-slate-900',
-  512: 'bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 text-slate-900',
-  1024: 'bg-gradient-to-br from-orange-500 via-orange-600 to-orange-700 text-white',
-  2048: 'bg-gradient-to-br from-rose-500 via-rose-600 to-red-600 text-white',
-};
+const createPalette = (skin) =>
+  TILE_VALUES.reduce((acc, value) => {
+    const pct = MIX_PERCENTAGES[value] || 50;
+    acc[value] = `bg-[color:color-mix(in_srgb,var(--kali-panel)_${100 - pct}%,var(--game-2048-${skin}-${value}-hue)_${pct}%)] text-[color:var(--game-2048-${skin}-${value}-fg)]`;
+    return acc;
+  }, {});
 
 const SKINS = {
-  classic: tileColors,
-  colorblind: colorBlindColors,
-  neon: neonColors,
+  classic: createPalette('classic'),
+  colorblind: createPalette('colorblind'),
+  neon: createPalette('neon'),
 };
+
+const FALLBACK_TILE_CLASS = 'bg-slate-700/80 text-slate-100';
+const EMPTY_TILE_CLASS =
+  'bg-[color:var(--game-2048-empty-bg)] text-transparent shadow-inner border border-[color:var(--game-2048-empty-border)]';
 
 const MILESTONES = [256, 512, 1024, 2048, 4096];
 
@@ -270,6 +256,7 @@ const Game2048 = () => {
   const workerRef = useRef(null);
   const { highContrast } = useSettings();
   const { record, registerReplay } = useInputRecorder();
+  const { durations, scaleDuration } = useGameLayoutTheme();
   const outcomeLoggedRef = useRef(false);
   const triggerConfetti = useCallback((options = {}) => {
     if (typeof window === 'undefined') return;
@@ -296,55 +283,71 @@ const Game2048 = () => {
 
   useEffect(() => {
     if (animCells.size > 0) {
+      if (durations.tilePop === 0) {
+        setAnimCells(new Set());
+        return;
+      }
       let frame;
-      const t = setTimeout(() => {
+      const timeout = setTimeout(() => {
         frame = requestAnimationFrame(() => setAnimCells(new Set()));
-      }, 200);
+      }, durations.tilePop);
       return () => {
-        clearTimeout(t);
-        frame && cancelAnimationFrame(frame);
+        clearTimeout(timeout);
+        if (frame) cancelAnimationFrame(frame);
       };
     }
-  }, [animCells]);
+  }, [animCells, durations.tilePop]);
 
   useEffect(() => {
     if (mergeCells.size > 0) {
+      if (durations.tileMerge === 0) {
+        setMergeCells(new Set());
+        return;
+      }
       let frame;
-      const t = setTimeout(() => {
+      const timeout = setTimeout(() => {
         frame = requestAnimationFrame(() => setMergeCells(new Set()));
-      }, 400);
+      }, durations.tileMerge);
       return () => {
-        clearTimeout(t);
-        frame && cancelAnimationFrame(frame);
+        clearTimeout(timeout);
+        if (frame) cancelAnimationFrame(frame);
       };
     }
-  }, [mergeCells]);
+  }, [mergeCells, durations.tileMerge]);
 
   useEffect(() => {
     if (scorePop) {
+      if (durations.scorePop === 0) {
+        setScorePop(false);
+        return;
+      }
       let frame;
-      const t = setTimeout(() => {
+      const timeout = setTimeout(() => {
         frame = requestAnimationFrame(() => setScorePop(false));
-      }, 300);
+      }, durations.scorePop);
       return () => {
-        clearTimeout(t);
-        frame && cancelAnimationFrame(frame);
+        clearTimeout(timeout);
+        if (frame) cancelAnimationFrame(frame);
       };
     }
-  }, [scorePop]);
+  }, [scorePop, durations.scorePop]);
 
   useEffect(() => {
     if (glowCells.size > 0) {
+      if (durations.tileGlow === 0) {
+        setGlowCells(new Set());
+        return;
+      }
       let frame;
-      const t = setTimeout(() => {
+      const timeout = setTimeout(() => {
         frame = requestAnimationFrame(() => setGlowCells(new Set()));
-      }, 900);
+      }, durations.tileGlow);
       return () => {
-        clearTimeout(t);
-        frame && cancelAnimationFrame(frame);
+        clearTimeout(timeout);
+        if (frame) cancelAnimationFrame(frame);
       };
     }
-  }, [glowCells]);
+  }, [glowCells, durations.tileGlow]);
 
   useEffect(() => {
     if (moveLock.current && animCells.size === 0 && mergeCells.size === 0) {
@@ -353,6 +356,47 @@ const Game2048 = () => {
   }, [animCells, mergeCells]);
 
   const today = typeof window !== 'undefined' ? new Date().toISOString().slice(0, 10) : '';
+
+  const initializeRun = useCallback(
+    (seedValue) => {
+      const activeSeed = seedValue ?? today;
+      resetRng(activeSeed);
+      const freshBoard = initBoard(hardMode);
+      startReplayRecording(freshBoard, activeSeed);
+      setBoard(freshBoard);
+      setHistory([]);
+      setMoves(0);
+      setWon(false);
+      setLost(false);
+      setAnimCells(new Set());
+      setMergeCells(new Set());
+      setScore(0);
+      setUndosLeft(UNDO_LIMIT);
+      setGlowCells(new Set());
+      setMilestoneValue(0);
+      setCombo(0);
+      setPaused(false);
+      outcomeLoggedRef.current = false;
+    },
+    [
+      hardMode,
+      setBoard,
+      setHistory,
+      setMoves,
+      setWon,
+      setLost,
+      setAnimCells,
+      setMergeCells,
+      setScore,
+      setUndosLeft,
+      setGlowCells,
+      setMilestoneValue,
+      setCombo,
+      setPaused,
+      today,
+      startReplayRecording,
+    ],
+  );
 
   useEffect(() => {
     if (typeof Worker !== 'function') return;
@@ -368,29 +412,21 @@ const Game2048 = () => {
   useEffect(() => {
     if (!bestReady) return;
     if (seed !== today) {
-      resetRng(today);
-      setSeedState(today);
-      setBoard(initBoard(hardMode));
-      setHistory([]);
-      setMoves(0);
-      setWon(false);
-      setLost(false);
-      setAnimCells(new Set());
-      setMergeCells(new Set());
-      setScore(0);
-      setUndosLeft(UNDO_LIMIT);
-      setBest(bestMap[today] || 0);
-      setGlowCells(new Set());
-      setMilestoneValue(0);
-      setCombo(0);
-      setPaused(false);
-      outcomeLoggedRef.current = false;
+      const nextSeed = today || seed;
+      if (nextSeed) {
+        setSeedState(nextSeed);
+        initializeRun(nextSeed);
+        setBest(bestMap[nextSeed] || 0);
+      }
     } else {
-      resetRng(seed);
-      setBest(bestMap[seed] || 0);
+      const activeSeed = seed || today;
+      if (activeSeed) {
+        resetRng(activeSeed);
+        setBest(bestMap[activeSeed] || 0);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bestReady, seed, hardMode, bestMap]);
+  }, [bestReady, seed, hardMode, bestMap, today, initializeRun]);
 
   useEffect(() => {
     if (!workerRef.current) return;
@@ -436,11 +472,20 @@ const Game2048 = () => {
       if (won || lost || moveLock.current || paused) return;
       record({ x, y });
       let result;
-      if (x === -1) result = moveLeft(board);
-      else if (x === 1) result = moveRight(board);
-      else if (y === -1) result = moveUp(board);
-      else if (y === 1) result = moveDown(board);
-      else return;
+      let directionKey = null;
+      if (x === -1) {
+        result = moveLeft(board);
+        directionKey = 'ArrowLeft';
+      } else if (x === 1) {
+        result = moveRight(board);
+        directionKey = 'ArrowRight';
+      } else if (y === -1) {
+        result = moveUp(board);
+        directionKey = 'ArrowUp';
+      } else if (y === 1) {
+        result = moveDown(board);
+        directionKey = 'ArrowDown';
+      } else return;
       const { board: moved, merged, score: gained, mergedCells } = result;
       if (!boardsEqual(board, moved)) {
         moveLock.current = true;
@@ -463,6 +508,7 @@ const Game2048 = () => {
         }
         setBoard(cloneBoard(moved));
         setMoves((m) => m + 1);
+        if (directionKey) recordReplayMove(directionKey);
         const hi = Math.max(...moved.flat());
         if (hi > best) {
           setBest(hi);
@@ -516,6 +562,7 @@ const Game2048 = () => {
       setGlowCells,
       setMilestoneValue,
       triggerConfetti,
+      recordReplayMove,
     ],
   );
 
@@ -535,15 +582,22 @@ const Game2048 = () => {
       ArrowUp: { x: 0, y: -1 },
       ArrowDown: { x: 0, y: 1 },
     };
+    const delay = scaleDuration(400);
+    if (delay === 0) {
+      const direction = dirMap[hint];
+      if (direction) handleDirection(direction);
+      return;
+    }
     const id = setTimeout(() => {
       if (!hint) {
         setDemo(false);
         return;
       }
-      handleDirection(dirMap[hint]);
-    }, 400);
+      const direction = dirMap[hint];
+      if (direction) handleDirection(direction);
+    }, delay);
     return () => clearTimeout(id);
-  }, [demo, hint, handleDirection, paused]);
+  }, [demo, hint, handleDirection, paused, scaleDuration]);
 
   useEffect(() => {
     const esc = (e) => {
@@ -556,39 +610,8 @@ const Game2048 = () => {
   }, []);
 
   const reset = useCallback(() => {
-    resetRng(seed || today);
-    setBoard(initBoard(hardMode));
-    setHistory([]);
-    setMoves(0);
-    setWon(false);
-    setLost(false);
-    setAnimCells(new Set());
-    setMergeCells(new Set());
-    setScore(0);
-    setUndosLeft(UNDO_LIMIT);
-    setGlowCells(new Set());
-    setMilestoneValue(0);
-    setCombo(0);
-    setPaused(false);
-    outcomeLoggedRef.current = false;
-  }, [
-    hardMode,
-    seed,
-    today,
-    setBoard,
-    setHistory,
-    setMoves,
-    setWon,
-    setLost,
-    setAnimCells,
-    setMergeCells,
-    setScore,
-    setUndosLeft,
-    setGlowCells,
-    setMilestoneValue,
-    setCombo,
-    setPaused,
-  ]);
+    initializeRun(seed || today);
+  }, [initializeRun, seed, today]);
 
   useEffect(() => {
     registerReplay((dir, idx) => {
@@ -660,9 +683,9 @@ const Game2048 = () => {
     if (demo) return 'Autoplay demo is exploring moves.';
     return 'Combine matching tiles to climb the power ladder.';
   }, [won, lost, paused, demo]);
-  const colors = SKINS[skin] || tileColors;
+  const colors = SKINS[skin] || SKINS.classic;
   const tileBaseClasses =
-    'relative flex aspect-square w-full items-center justify-center rounded-xl border border-white/5 text-2xl font-bold shadow-[0_18px_35px_rgba(15,23,42,0.55)] transition-transform duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform backdrop-blur-sm';
+    'relative flex aspect-square w-full items-center justify-center rounded-xl border border-[color:var(--game-2048-tile-border,rgba(255,255,255,0.06))] text-2xl font-bold shadow-[0_18px_35px_rgba(15,23,42,0.55)] transition-transform [transition-duration:var(--game-tile-pop-duration,200ms)] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform backdrop-blur-sm';
   const infoCardClass =
     'rounded-2xl border border-white/5 bg-slate-900/60 p-4 shadow-[0_35px_60px_rgba(2,6,23,0.45)] backdrop-blur';
   const boardContainerClass =
@@ -784,8 +807,13 @@ const Game2048 = () => {
                 <p className="text-2xl font-bold text-amber-300">{milestoneDisplay}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Moves</p>
-                <p className="text-xl font-semibold">{moves}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  <span className="sr-only">Moves: {moves}</span>
+                  <span aria-hidden="true">Moves</span>
+                </p>
+                <p className="text-xl font-semibold" data-testid="move-count" aria-hidden="true">
+                  {moves}
+                </p>
               </div>
               <div data-testid="combo-meter">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Combo</p>
@@ -825,13 +853,14 @@ const Game2048 = () => {
                 {board.map((row, rIdx) =>
                   row.map((cell, cIdx) => {
                     const key = `${rIdx}-${cIdx}`;
-                    const classes = `${tileBaseClasses} ${
-                      cell
-                        ? colors[cell] || 'bg-slate-700/80 text-slate-100'
-                        : 'bg-slate-900/40 text-transparent shadow-inner border border-slate-800/60'
-                    } ${animCells.has(key) ? 'tile-pop' : ''} ${
-                      mergeCells.has(key) ? 'tile-merge' : ''
-                    } ${glowCells.has(key) ? 'tile-glow' : ''}`;
+                    const fillClass = cell
+                      ? colors[cell] || FALLBACK_TILE_CLASS
+                      : EMPTY_TILE_CLASS;
+                    const classes = `${tileBaseClasses} ${fillClass} ${
+                      animCells.has(key) ? 'tile-pop' : ''
+                    } ${mergeCells.has(key) ? 'tile-merge' : ''} ${
+                      glowCells.has(key) ? 'tile-glow' : ''
+                    }`;
                     return (
                       <div key={key} className="relative">
                         <div
