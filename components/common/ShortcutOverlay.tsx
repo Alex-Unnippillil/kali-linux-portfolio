@@ -1,22 +1,22 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
-import useKeymap from '../../apps/settings/keymapRegistry';
-
-const formatEvent = (e: KeyboardEvent) => {
-  const parts = [
-    e.ctrlKey ? 'Ctrl' : '',
-    e.altKey ? 'Alt' : '',
-    e.shiftKey ? 'Shift' : '',
-    e.metaKey ? 'Meta' : '',
-    e.key.length === 1 ? e.key.toUpperCase() : e.key,
-  ];
-  return parts.filter(Boolean).join('+');
-};
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import useKeymap, {
+  keyboardEventToCombo,
+  ShortcutId,
+  getShortcutDescription,
+} from '../../apps/settings/keymapRegistry';
 
 const ShortcutOverlay: React.FC = () => {
   const [open, setOpen] = useState(false);
   const { shortcuts } = useKeymap();
+
+  const descriptions = useMemo(() => {
+    return shortcuts.reduce<Record<ShortcutId, string>>((acc, shortcut) => {
+      acc[shortcut.id] = shortcut.description;
+      return acc;
+    }, {} as Record<ShortcutId, string>);
+  }, [shortcuts]);
 
   const toggle = useCallback(() => setOpen((o) => !o), []);
 
@@ -29,9 +29,8 @@ const ShortcutOverlay: React.FC = () => {
         (target as HTMLElement).isContentEditable;
       if (isInput) return;
       const show =
-        shortcuts.find((s) => s.description === 'Show keyboard shortcuts')?.keys ||
-        '?';
-      if (formatEvent(e) === show) {
+        shortcuts.find((s) => s.id === 'show-shortcuts')?.keys || '?';
+      if (keyboardEventToCombo(e) === show) {
         e.preventDefault();
         toggle();
       } else if (e.key === 'Escape' && open) {
@@ -55,16 +54,6 @@ const ShortcutOverlay: React.FC = () => {
   };
 
   if (!open) return null;
-
-  const keyCounts = shortcuts.reduce<Map<string, number>>((map, s) => {
-    map.set(s.keys, (map.get(s.keys) || 0) + 1);
-    return map;
-  }, new Map());
-  const conflicts = new Set(
-    Array.from(keyCounts.entries())
-      .filter(([, count]) => count > 1)
-      .map(([key]) => key)
-  );
 
   return (
     <div
@@ -94,15 +83,23 @@ const ShortcutOverlay: React.FC = () => {
           {shortcuts.map((s, i) => (
             <li
               key={i}
-              data-conflict={conflicts.has(s.keys) ? 'true' : 'false'}
+              data-conflict={s.conflicts.length > 0 ? 'true' : 'false'}
               className={
-                conflicts.has(s.keys)
+                s.conflicts.length > 0
                   ? 'flex justify-between bg-red-600/70 px-2 py-1 rounded'
                   : 'flex justify-between px-2 py-1'
               }
             >
               <span className="font-mono mr-4">{s.keys}</span>
               <span className="flex-1">{s.description}</span>
+              {s.conflicts.length > 0 && (
+                <span className="text-xs text-red-200 ml-2">
+                  Conflicts with{' '}
+                  {s.conflicts
+                    .map((id) => descriptions[id] || getShortcutDescription(id))
+                    .join(', ')}
+                </span>
+              )}
             </li>
           ))}
         </ul>

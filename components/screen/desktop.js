@@ -34,6 +34,10 @@ import {
     getSafeAreaInsets,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
+import {
+    getResolvedShortcutMap,
+    keyboardEventToCombo,
+} from '../../apps/settings/keymapRegistry';
 
 const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
 const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
@@ -3813,24 +3817,49 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
+        const target = e.target;
+        const tagName = typeof target?.tagName === 'string'
+            ? target.tagName.toUpperCase()
+            : null;
+        const isEditable = Boolean(
+            tagName &&
+            (tagName === 'INPUT' || tagName === 'TEXTAREA' || target?.isContentEditable)
+        );
+
+        const shortcutMap = getResolvedShortcutMap();
+        const combo = keyboardEventToCombo(e);
+
+        if (combo === shortcutMap['open-settings']) {
+            if (isEditable) return;
+            e.preventDefault();
+            this.openApp('settings');
+            return;
+        }
+
+        if (combo === shortcutMap['open-clipboard-manager']) {
+            if (isEditable) return;
+            e.preventDefault();
+            this.openApp('clipboard-manager');
+            return;
+        }
+
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.isOverlayOpen(SWITCHER_OVERLAY_ID)) {
                 this.openWindowSwitcher();
+            } else {
+                this.cycleApps(e.shiftKey ? -1 : 1);
             }
-        } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
-            e.preventDefault();
-            this.openApp('clipboard-manager');
+            return;
         }
-        else if (e.altKey && e.key === 'Tab') {
-            e.preventDefault();
-            this.cycleApps(e.shiftKey ? -1 : 1);
-        }
-        else if (e.altKey && (e.key === '`' || e.key === '~')) {
+
+        if (e.altKey && (e.key === '`' || e.key === '~')) {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
+            return;
         }
-        else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+
+        if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
             e.preventDefault();
             const id = this.getFocusedWindowId();
             if (id) {
