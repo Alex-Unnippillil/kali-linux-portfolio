@@ -188,10 +188,50 @@ function configureWebpack(config, { isServer }) {
     ...(config.resolve.alias || {}),
     'react-dom$': require('path').resolve(__dirname, 'lib/react-dom-shim.js'),
   };
+  config.optimization = {
+    ...(config.optimization || {}),
+  };
+
   if (isProd) {
-    config.optimization = {
-      ...(config.optimization || {}),
-      mangleExports: false,
+    config.optimization.mangleExports = false;
+  }
+
+  if (!isServer) {
+    const heavyVendorPatterns = {
+      monaco: /[\\/]node_modules[\\/](?:@monaco-editor|monaco-editor)[\\/]/,
+      xterm: /[\\/]node_modules[\\/]@xterm[\\/]/,
+      cytoscape:
+        /[\\/]node_modules[\\/](?:cytoscape|cytoscape-cose-bilkent|react-cytoscapejs)[\\/]/,
+      forceGraph: /[\\/]node_modules[\\/]react-force-graph[\\/]/,
+      three:
+        /[\\/]node_modules[\\/](?:three|three-forcegraph|three-render-objects|three-pathfinding)[\\/]/,
+      howler: /[\\/]node_modules[\\/]howler[\\/]/,
+      leaflet:
+        /[\\/]node_modules[\\/](?:leaflet|react-leaflet|@react-leaflet)[\\/]/,
+    };
+
+    const existingSplitChunks = config.optimization.splitChunks || {};
+    const existingCacheGroups = existingSplitChunks.cacheGroups || {};
+    const vendorGroups = {};
+
+    Object.entries(heavyVendorPatterns).forEach(([key, test]) => {
+      const name = `vendor-${key}`;
+      vendorGroups[name] = {
+        name,
+        test,
+        chunks: 'all',
+        priority: 25,
+        enforce: true,
+      };
+    });
+
+    config.optimization.splitChunks = {
+      ...existingSplitChunks,
+      chunks: 'all',
+      cacheGroups: {
+        ...existingCacheGroups,
+        ...vendorGroups,
+      },
     };
   }
   return config;
