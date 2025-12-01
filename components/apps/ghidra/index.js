@@ -4,6 +4,7 @@ import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
 import ImportAnnotate from './ImportAnnotate';
 import { Capstone, Const, loadCapstone } from 'capstone-wasm';
+import { logEvent } from '../../../utils/analytics';
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
 const DEFAULT_WASM = '/wasm/ghidra.wasm';
@@ -90,6 +91,12 @@ export default function GhidraApp() {
   const capstoneRef = useRef(null);
   const [instructions, setInstructions] = useState([]);
   const [arch, setArch] = useState('x86');
+  const warmupCacheRef = useRef({ instance: null, module: null, promise: null });
+  const warmupTelemetryRef = useRef({ cold: false, warm: false });
+  const [warmupStatus, setWarmupStatus] = useState('idle');
+  const [warmupMetrics, setWarmupMetrics] = useState({ cold: null, warm: null });
+  const [warmupError, setWarmupError] = useState('');
+  const [warmupAnnouncement, setWarmupAnnouncement] = useState('');
   // S1: Detect GHIDRA web support and fall back to Capstone
   const ensureCapstone = useCallback(async () => {
     if (capstoneRef.current) return capstoneRef.current;
@@ -98,17 +105,136 @@ export default function GhidraApp() {
     return mod;
   }, []);
 
-  useEffect(() => {
+  const ensureGhidraEngine = useCallback(async () => {
+    if (typeof window === 'undefined') return null;
+    if (typeof WebAssembly === 'undefined') {
+      throw new Error('WebAssembly is not available in this browser');
+    }
+    if (warmupCacheRef.current.instance) {
+      return warmupCacheRef.current.instance;
+    }
+    if (warmupCacheRef.current.promise) {
+      return warmupCacheRef.current.promise;
+    }
     const wasmUrl = process.env.NEXT_PUBLIC_GHIDRA_WASM || DEFAULT_WASM;
+    const promise = (async () => {
+      const fetchStart = performance.now();
+      const response = await fetch(wasmUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch Ghidra WebAssembly (${response.status})`);
+      }
+      const fetchEnd = performance.now();
+      const bufferStart = performance.now();
+      const bytes = await response.arrayBuffer();
+      const bufferEnd = performance.now();
+      const instantiateStart = performance.now();
+      const result = await WebAssembly.instantiate(bytes, {});
+      const instantiateEnd = performance.now();
+      const instance = result.instance || result;
+      const module = result.module || null;
+      warmupCacheRef.current.instance = instance;
+      warmupCacheRef.current.module = module;
+      const coldDuration = instantiateEnd - fetchStart;
+      const downloadDuration = fetchEnd - fetchStart + (bufferEnd - bufferStart);
+      const instantiateDuration = instantiateEnd - instantiateStart;
+      setWarmupMetrics((prev) => ({
+        cold: Math.max(0, Math.round(coldDuration)),
+        warm: prev.warm,
+      }));
+      if (!warmupTelemetryRef.current.cold) {
+        console.info('[ghidra] wasm warmup', {
+          coldMs: coldDuration,
+          downloadMs: downloadDuration,
+          instantiateMs: instantiateDuration,
+        });
+        logEvent({
+          category: 'wasm',
+          action: 'warmup_cold',
+          label: 'ghidra',
+          value: Math.max(0, Math.round(coldDuration)),
+        });
+        warmupTelemetryRef.current.cold = true;
+      }
+      return instance;
+    })();
+    warmupCacheRef.current.promise = promise;
+    try {
+      const instance = await promise;
+      warmupCacheRef.current.promise = null;
+      return instance;
+    } catch (err) {
+      warmupCacheRef.current.promise = null;
+      warmupCacheRef.current.instance = null;
+      warmupCacheRef.current.module = null;
+      warmupTelemetryRef.current.cold = false;
+      throw err;
+    }
+  }, []);
+
+  const finalizeWarmAccess = useCallback((instance) => {
+    if (!instance) return null;
+    const warmStart = performance.now();
+    if (instance && typeof instance.exports === 'object') {
+      Object.keys(instance.exports || {});
+    }
+    const warmDuration = performance.now() - warmStart;
+    const warmRounded = Math.max(0, Math.round(warmDuration));
+    setWarmupMetrics((prev) => ({
+      cold: prev.cold,
+      warm: warmRounded,
+    }));
+    if (!warmupTelemetryRef.current.warm) {
+      console.info('[ghidra] wasm warm access', {
+        warmMs: warmDuration,
+      });
+      logEvent({
+        category: 'wasm',
+        action: 'warmup_warm',
+        label: 'ghidra',
+        value: warmRounded,
+      });
+      warmupTelemetryRef.current.warm = true;
+    }
+    return warmRounded;
+  }, []);
+
+  const warmUpEngine = useCallback(async () => {
+    if (warmupStatus === 'warming') return;
+    setWarmupError('');
+    setWarmupStatus('warming');
+    setWarmupAnnouncement('Warming up the WebAssembly engine…');
+    try {
+      const instance = await ensureGhidraEngine();
+      setWarmupStatus('ready');
+      const warmMs = finalizeWarmAccess(instance);
+      setWarmupAnnouncement(
+        warmMs !== null
+          ? `Warmup complete. Cached instance ready; warm call ${warmMs} ms.`
+          : 'Warmup complete. Cached instance ready for analysis.',
+      );
+    } catch (err) {
+      console.error('Failed to warm up Ghidra WebAssembly', err);
+      const message =
+        err && typeof err.message === 'string'
+          ? err.message
+          : 'Failed to warm up WebAssembly engine.';
+      setWarmupError(message);
+      setWarmupStatus('failed');
+      setWarmupAnnouncement('Warmup failed. Capstone mode remains available.');
+      setEngine('capstone');
+      await ensureCapstone();
+    }
+  }, [ensureCapstone, ensureGhidraEngine, finalizeWarmAccess, warmupStatus]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
     if (typeof WebAssembly === 'undefined') {
       setEngine('capstone');
+      setWarmupStatus('failed');
+      setWarmupError('WebAssembly is not available in this browser.');
+      setWarmupAnnouncement('WebAssembly unavailable; using the Capstone engine.');
       ensureCapstone();
-      return;
     }
-    WebAssembly.instantiateStreaming(fetch(wasmUrl), {}).catch(() => {
-      setEngine('capstone');
-      ensureCapstone();
-    });
   }, [ensureCapstone]);
 
   const handleDrop = useCallback(
@@ -137,13 +263,37 @@ export default function GhidraApp() {
     [arch, ensureCapstone]
   );
 
-  const switchEngine = async () => {
+  const switchEngine = useCallback(async () => {
     const next = engine === 'ghidra' ? 'capstone' : 'ghidra';
-    setEngine(next);
     if (next === 'capstone') {
+      setEngine(next);
       await ensureCapstone();
+      return;
     }
-  };
+    try {
+      const instance = await ensureGhidraEngine();
+      setEngine(next);
+      setWarmupStatus('ready');
+      setWarmupError('');
+      const warmMs = finalizeWarmAccess(instance);
+      setWarmupAnnouncement(
+        warmMs !== null
+          ? `Ghidra engine loaded. Warm call ${warmMs} ms.`
+          : 'Ghidra engine loaded with cached instance.',
+      );
+    } catch (err) {
+      console.error('Failed to enable Ghidra WebAssembly', err);
+      setEngine('capstone');
+      await ensureCapstone();
+      const message =
+        err && typeof err.message === 'string'
+          ? err.message
+          : 'Unable to load WebAssembly module.';
+      setWarmupError(message);
+      setWarmupStatus('failed');
+      setWarmupAnnouncement('Ghidra WebAssembly unavailable; staying on Capstone.');
+    }
+  }, [engine, ensureCapstone, ensureGhidraEngine, finalizeWarmAccess]);
 
   // Load pre-generated disassembly JSON
   useEffect(() => {
@@ -241,6 +391,14 @@ export default function GhidraApp() {
     };
   }, []);
 
+  const warmupHelpId = 'ghidra-warmup-help';
+  const warmupButtonLabel =
+    warmupStatus === 'warming'
+      ? 'Warming…'
+      : warmupStatus === 'ready'
+      ? 'Engine warmed'
+      : 'Warm up engine';
+
   if (engine === 'capstone') {
     return (
       <div
@@ -248,12 +406,20 @@ export default function GhidraApp() {
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
       >
-        <div className="p-2 flex space-x-2">
+        <div className="p-2 flex flex-wrap items-center gap-2">
           <button
             onClick={switchEngine}
             className="px-2 py-1 bg-gray-700 rounded"
           >
             Use Ghidra
+          </button>
+          <button
+            onClick={warmUpEngine}
+            disabled={warmupStatus === 'warming'}
+            aria-describedby={warmupHelpId}
+            className="px-2 py-1 bg-yellow-600 text-black rounded disabled:opacity-60"
+          >
+            {warmupButtonLabel}
           </button>
           <select
             value={arch}
@@ -263,6 +429,28 @@ export default function GhidraApp() {
             <option value="x86">x86</option>
             <option value="arm">ARM</option>
           </select>
+          {warmupMetrics.cold !== null && (
+            <span className="text-xs text-gray-400">
+              Cold: {warmupMetrics.cold} ms
+            </span>
+          )}
+          {warmupMetrics.warm !== null && (
+            <span className="text-xs text-gray-400">
+              Warm: {warmupMetrics.warm} ms
+            </span>
+          )}
+          {warmupStatus === 'warming' && (
+            <span className="text-xs text-yellow-300">Preloading…</span>
+          )}
+          {warmupStatus === 'failed' && warmupError && (
+            <span className="text-xs text-red-400">{warmupError}</span>
+          )}
+        </div>
+        <p id={warmupHelpId} className="px-2 text-xs text-gray-400 md:text-sm">
+          Warm up downloads the WebAssembly analyzer now so the first analysis call stays under 100 ms and keeps heavy modules responsive.
+        </p>
+        <div aria-live="polite" className="sr-only">
+          {warmupAnnouncement}
         </div>
         {instructions.length === 0 ? (
           <div className="flex-1 flex items-center justify-center m-2 border-2 border-dashed border-gray-600">
@@ -294,13 +482,43 @@ export default function GhidraApp() {
 
   return (
     <div className="w-full h-full flex flex-col bg-gray-900 text-gray-100">
-      <div className="p-2">
+      <div className="p-2 flex flex-wrap items-center gap-2">
         <button
           onClick={switchEngine}
           className="px-2 py-1 bg-gray-700 rounded"
         >
           Use Capstone
         </button>
+        <button
+          onClick={warmUpEngine}
+          disabled={warmupStatus === 'warming'}
+          aria-describedby={warmupHelpId}
+          className="px-2 py-1 bg-yellow-600 text-black rounded disabled:opacity-60"
+        >
+          {warmupButtonLabel}
+        </button>
+        {warmupMetrics.cold !== null && (
+          <span className="text-xs text-gray-400">
+            Cold: {warmupMetrics.cold} ms
+          </span>
+        )}
+        {warmupMetrics.warm !== null && (
+          <span className="text-xs text-gray-400">
+            Warm: {warmupMetrics.warm} ms
+          </span>
+        )}
+        {warmupStatus === 'warming' && (
+          <span className="text-xs text-yellow-300">Preloading…</span>
+        )}
+        {warmupStatus === 'failed' && warmupError && (
+          <span className="text-xs text-red-400">{warmupError}</span>
+        )}
+      </div>
+      <p id={warmupHelpId} className="px-2 text-xs text-gray-400 md:text-sm">
+        Warm up downloads the WebAssembly analyzer now so the first analysis call stays under 100 ms and keeps heavy modules responsive.
+      </p>
+      <div aria-live="polite" className="sr-only">
+        {warmupAnnouncement}
       </div>
       <div className="p-2 border-t border-gray-700">
         <ImportAnnotate />
