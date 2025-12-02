@@ -3,6 +3,7 @@
 import React, { Component } from 'react';
 import BootingScreen from './screen/booting_screen';
 import Desktop from './screen/desktop';
+import CommandPalette from './common/CommandPalette';
 import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import Layout from './desktop/Layout';
@@ -224,7 +225,8 @@ export default class Ubuntu extends Component {
 				/>
                                 <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
                                 <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+                                <CommandPalette />
                 </Layout>
         );
-	}
+        }
 }
