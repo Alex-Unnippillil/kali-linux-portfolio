@@ -10,6 +10,7 @@ import React, {
 } from 'react';
 import { demoYouTubeVideos } from '../../../data/youtube/demoVideos';
 import usePersistentState from '../../../hooks/usePersistentState';
+import { useMainRegionProps } from '../mainRegionContext';
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
@@ -147,6 +148,7 @@ function formatDate(value?: string) {
 }
 
 export default function YouTubeApp({ initialResults }: Props) {
+  const mainRegionProps = useMainRegionProps();
   const fallbackInitial = useMemo(() => {
     if (initialResults?.length) {
       return initialResults.map((video) => normalizeVideo(video));
@@ -377,7 +379,7 @@ export default function YouTubeApp({ initialResults }: Props) {
         )}
       </header>
 
-      <main className="flex flex-1 flex-col gap-6 px-6 py-6 lg:flex-row">
+      <main {...mainRegionProps} className="flex flex-1 flex-col gap-6 px-6 py-6 lg:flex-row">
         <section className="flex-1 rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface)] p-5 shadow-kali-panel">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
             Watch
