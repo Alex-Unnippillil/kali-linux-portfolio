@@ -1,6 +1,13 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import CredHygiene from './CredHygiene';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -82,7 +89,27 @@ const HydraApp = () => {
   const [candidateStats, setCandidateStats] = useState([]);
   const canvasRef = useRef(null);
   const [progress, setProgress] = useState(0);
-  const [showSaved, setShowSaved] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const toastTimeoutRef = useRef(null);
+
+  const showToast = useCallback((message) => {
+    setToastMessage(message);
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    toastTimeoutRef.current = setTimeout(() => {
+      setToastMessage('');
+      toastTimeoutRef.current = null;
+    }, 1500);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const LOCKOUT_THRESHOLD = 10;
   const BACKOFF_THRESHOLD = 5;
@@ -381,8 +408,7 @@ const HydraApp = () => {
 
   const handleSaveConfig = () => {
     saveConfigStorage({ target, service, selectedUser, selectedPass });
-    setShowSaved(true);
-    setTimeout(() => setShowSaved(false), 1500);
+    showToast('Config saved');
   };
 
   const handleCopyConfig = async () => {
@@ -390,12 +416,18 @@ const HydraApp = () => {
       await navigator.clipboard.writeText(
         JSON.stringify({ target, service, selectedUser, selectedPass }, null, 2)
       );
-      setShowSaved(true);
-      setTimeout(() => setShowSaved(false), 1500);
+      showToast('Config copied');
     } catch {
       // ignore clipboard errors
     }
   };
+
+  const handleExportSession = useCallback(
+    ({ redacted }) => {
+      showToast(redacted ? 'Redacted session export copied' : 'Full session export copied');
+    },
+    [showToast]
+  );
 
   const pauseHydra = async () => {
     setPaused(true);
@@ -669,6 +701,14 @@ const HydraApp = () => {
         account lockout.
       </p>
       <AttemptTimeline attempts={timeline} />
+      <CredHygiene
+        target={target}
+        service={service}
+        userList={selectedUserList}
+        passList={selectedPassList}
+        attempts={timeline}
+        onExport={handleExportSession}
+      />
       {timeline.length > 0 && (
         <table className="mt-4 w-full text-sm">
           <thead>
@@ -704,9 +744,9 @@ const HydraApp = () => {
       {output && (
         <pre className="mt-4 bg-black p-2 overflow-auto h-64 whitespace-pre-wrap font-mono">{output}</pre>
       )}
-      {showSaved && (
-        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-3 py-1 rounded text-sm">
-          Saved
+      {toastMessage && (
+        <div className="fixed bottom-4 right-4 rounded bg-green-600 px-3 py-1 text-sm text-white">
+          {toastMessage}
         </div>
       )}
     </div>
