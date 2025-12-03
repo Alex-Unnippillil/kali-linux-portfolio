@@ -719,7 +719,7 @@ export default class Navbar extends PureComponent {
                                 onMouseLeave={this.handleAppButtonMouseLeave}
                                 onFocus={(event) => this.handleAppButtonFocus(event, app)}
                                 onBlur={this.handleAppButtonBlur}
-                                className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
+                                className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors transition-transform duration-100 ease-out hover:bg-white/10 active:bg-white/20 active:translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
                         >
                                 <span className="relative inline-flex items-center justify-center">
                                         <Image
@@ -996,7 +996,7 @@ export default class Navbar extends PureComponent {
                                                 onClick={this.handleStatusToggle}
                                                 onKeyDown={this.handleStatusKeyDown}
                                                 className={
-                                                        'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
+                                                        'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition-colors transition-transform duration-100 ease-out hover:border-white/20 hover:bg-white/10 active:border-white/30 active:bg-white/15 active:translate-y-px focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
                                                 }
                                         >
                                                 <Status />
