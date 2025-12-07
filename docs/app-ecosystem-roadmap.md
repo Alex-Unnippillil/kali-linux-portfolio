@@ -38,7 +38,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | weather | Weather | Core maintainers | **In progress** – city groups refresh from Open-Meteo; surface settings tie-ins for alerts | Demo data, settings |
 | weather_widget | Weather Widget | Core maintainers | **Ready** – shares Open-Meteo data, respects Settings, and ships offline fallback | Settings integration |
 | qr | QR Tool | Core maintainers | **In progress** – camera selector and downloadable output | MediaDevices API |
-| ascii_art | ASCII Art | Core maintainers | **In progress** – text/image conversion pipeline | Canvas sampling |
+| ascii_art | ASCII Art | Core maintainers | **Shipped** – text/image conversion pipeline with canvas sampling controls | Canvas sampling |
 | quote | Quote | Core maintainers | **In progress** – offline JSON source and no-repeat option | Local JSON |
 | input-lab | Input Lab | Core maintainers | **Needs polish** – ensure device coverage (keyboard, mouse, gamepad) | Device APIs |
 | subnet-calculator | Subnet Calculator | Core maintainers | **Needs polish** – validation UX and shared presets | Network calc utils |
