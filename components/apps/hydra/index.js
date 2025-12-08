@@ -1,6 +1,11 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import {
+  createHydraSimulation,
+  DEFAULT_HYDRA_SEED,
+  normalizeHydraSeed,
+} from './simulation';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -69,14 +74,16 @@ const HydraApp = () => {
   const [selectedUser, setSelectedUser] = useState('');
   const [selectedPass, setSelectedPass] = useState('');
   const [output, setOutput] = useState('');
-  const [running, setRunning] = useState(false);
+  const [mode, setMode] = useState('idle');
   const [paused, setPaused] = useState(false);
   const [runId, setRunId] = useState(0);
   const [announce, setAnnounce] = useState('');
-  const announceRef = useRef(0);
+  const simulationRef = useRef(null);
+  const modeRef = useRef('idle');
   const [timeline, setTimeline] = useState([]);
   const [initialAttempt, setInitialAttempt] = useState(0);
-  const startRef = useRef(null);
+  const resumedRef = useRef(false);
+  const [seed, setSeed] = useState(DEFAULT_HYDRA_SEED);
   const [charset, setCharset] = useState('abc123');
   const [rule, setRule] = useState('1:3');
   const [candidateStats, setCandidateStats] = useState([]);
@@ -86,6 +93,11 @@ const HydraApp = () => {
 
   const LOCKOUT_THRESHOLD = 10;
   const BACKOFF_THRESHOLD = 5;
+
+  const updateMode = (nextMode) => {
+    modeRef.current = nextMode;
+    setMode(nextMode);
+  };
 
   const isTargetValid = useMemo(() => {
     const trimmed = target.trim();
@@ -106,6 +118,9 @@ const HydraApp = () => {
       setService(cfg.service || 'ssh');
       setSelectedUser(cfg.selectedUser || '');
       setSelectedPass(cfg.selectedPass || '');
+      if (cfg.seed) {
+        setSeed(normalizeHydraSeed(cfg.seed));
+      }
     }
   }, []);
 
@@ -122,11 +137,29 @@ const HydraApp = () => {
     const pass = passLists.find((l) => l.name === session.selectedPass);
     if (!user || !pass) return;
 
-    setRunning(true);
+    const resumeSeed = normalizeHydraSeed(session.seed || seed);
+    const simulation = createHydraSimulation({
+      seed: resumeSeed,
+      userList: user.content,
+      passList: pass.content,
+      backoffThreshold: BACKOFF_THRESHOLD,
+      lockoutThreshold: LOCKOUT_THRESHOLD,
+    });
+    simulationRef.current = simulation;
+
+    const resumeAttempt = session.attempt || session.timeline?.length || 0;
+    const existingTimeline = simulation.events.filter(
+      (event) => event.attempt <= resumeAttempt
+    );
+
+    setTimeline(existingTimeline);
+    setInitialAttempt(resumeAttempt);
+    setSeed(resumeSeed);
+    updateMode('run');
     setPaused(false);
     setRunId((id) => id + 1);
     setAnnounce('Hydra resumed');
-    announceRef.current = Date.now();
+
     try {
       if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
         const res = await fetch('/api/hydra', {
@@ -151,22 +184,21 @@ const HydraApp = () => {
       setOutput(err.message);
       setAnnounce('Hydra failed');
     } finally {
-      setRunning(false);
       clearSession();
+      setPaused(false);
+      updateMode('idle');
     }
   };
 
   useEffect(() => {
+    if (resumedRef.current) return;
     const session = loadSession();
     if (session && userLists.length && passLists.length) {
+      resumedRef.current = true;
       setTarget(session.target || '');
       setService(session.service || 'ssh');
       setSelectedUser(session.selectedUser || '');
       setSelectedPass(session.selectedPass || '');
-      setTimeline(session.timeline || []);
-      setInitialAttempt(session.attempt || 0);
-      const lastTime = session.timeline?.slice(-1)[0]?.time || 0;
-      startRef.current = Date.now() - lastTime * 1000;
       resumeAttack(session);
     }
     // resumeAttack is stable
@@ -268,46 +300,49 @@ const HydraApp = () => {
   }, [candidateStats]);
 
   const handleAttempt = (attempt) => {
-    const now = Date.now();
-    if (attempt > 0 && startRef.current) {
-      const elapsed = ((now - startRef.current) / 1000).toFixed(1);
-      const users =
-        selectedUserList?.content.split('\n').filter(Boolean) || [];
-      const passes =
-        selectedPassList?.content.split('\n').filter(Boolean) || [];
-      const passCount = passes.length || 1;
-      const user = users[Math.floor((attempt - 1) / passCount)] || '';
-      const password = passes[(attempt - 1) % passCount] || '';
-      const result =
-        attempt >= LOCKOUT_THRESHOLD
-          ? 'lockout'
-          : attempt >= BACKOFF_THRESHOLD
-          ? 'throttled'
-          : 'attempt';
-      setTimeline((t) => {
-        const newTimeline = [
-          ...t,
-          { time: parseFloat(elapsed), user, password, result },
-        ];
+    const limit = Math.min(LOCKOUT_THRESHOLD, totalAttempts);
+    if (attempt <= 0 || attempt > limit) return;
+
+    const simulation = simulationRef.current;
+    if (!simulation) return;
+
+    const event = simulation.next(attempt);
+    if (!event) return;
+
+    setTimeline((prev) => {
+      if (prev.some((existing) => existing.attempt === attempt)) {
+        return prev;
+      }
+      const nextTimeline = [...prev, event];
+      if (modeRef.current === 'run') {
         saveSession({
           target,
           service,
           selectedUser,
           selectedPass,
+          seed: simulation.seed,
           attempt,
-          timeline: newTimeline,
+          timeline: nextTimeline,
         });
-        return newTimeline;
-      });
-    }
-    if (now - announceRef.current > 1000) {
-      const limit = Math.min(LOCKOUT_THRESHOLD, totalAttempts);
-      setAnnounce(`Attempt ${attempt} of ${limit}`);
-      announceRef.current = now;
+      }
+      return nextTimeline;
+    });
+
+    setAnnounce(`Attempt ${attempt} of ${limit}`);
+
+    if (modeRef.current !== 'run' && attempt >= limit) {
+      setAnnounce(
+        modeRef.current === 'replay'
+          ? `Replay complete (seed ${simulation.seed})`
+          : 'Hydra finished (demo)'
+      );
+      updateMode('idle');
+      setPaused(false);
+      clearSession();
     }
   };
 
-  const runHydra = async () => {
+  const runHydra = async ({ replay = false } = {}) => {
     const user = selectedUserList;
     const pass = selectedPassList;
     if (!isTargetValid || !user || !pass) {
@@ -315,48 +350,82 @@ const HydraApp = () => {
       return;
     }
 
-    setRunning(true);
+    const normalizedSeed = normalizeHydraSeed(seed);
+    const simulation = createHydraSimulation({
+      seed: normalizedSeed,
+      userList: user.content,
+      passList: pass.content,
+      backoffThreshold: BACKOFF_THRESHOLD,
+      lockoutThreshold: LOCKOUT_THRESHOLD,
+    });
+
+    if (simulation.totalAttempts === 0) {
+      setTimeline([]);
+      setInitialAttempt(0);
+      setAnnounce('No attempts available with the selected lists');
+      setOutput('No attempts available with the selected lists');
+      updateMode('idle');
+      return;
+    }
+
+    simulationRef.current = simulation;
+    const scenarioMode = replay
+      ? 'replay'
+      : process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true'
+      ? 'demo'
+      : 'run';
+
+    updateMode(scenarioMode);
     setPaused(false);
     setRunId((id) => id + 1);
-    setOutput('');
     setTimeline([]);
-    startRef.current = Date.now();
     setInitialAttempt(0);
-    saveSession({
-      target,
-      service,
-      selectedUser,
-      selectedPass,
-      attempt: 0,
-      timeline: [],
-    });
-    setAnnounce('Hydra started');
-    announceRef.current = Date.now();
+
+    if (scenarioMode === 'run') {
+      saveSession({
+        target,
+        service,
+        selectedUser,
+        selectedPass,
+        seed: simulation.seed,
+        attempt: 0,
+        timeline: [],
+      });
+      setOutput('');
+      setAnnounce(`Hydra started (seed ${simulation.seed})`);
+    } else if (scenarioMode === 'replay') {
+      setOutput(`Replaying simulation with seed ${simulation.seed}`);
+      setAnnounce(`Replaying scenario (seed ${simulation.seed})`);
+      clearSession();
+      return;
+    } else {
+      setOutput('Hydra demo output: feature disabled in static export');
+      setAnnounce('Hydra demo started');
+      clearSession();
+      return;
+    }
+
     try {
-      if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-        const res = await fetch('/api/hydra', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            target,
-            service,
-            userList: user.content,
-            passList: pass.content,
-          }),
-        });
-        const data = await res.json();
-        setOutput(data.output || data.error || 'No output');
-        setAnnounce('Hydra finished');
-      } else {
-        setOutput('Hydra demo output: feature disabled in static export');
-        setAnnounce('Hydra finished (demo)');
-      }
+      const res = await fetch('/api/hydra', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target,
+          service,
+          userList: user.content,
+          passList: pass.content,
+        }),
+      });
+      const data = await res.json();
+      setOutput(data.output || data.error || 'No output');
+      setAnnounce('Hydra finished');
     } catch (err) {
       setOutput(err.message);
       setAnnounce('Hydra failed');
     } finally {
-      setRunning(false);
       clearSession();
+      setPaused(false);
+      updateMode('idle');
     }
   };
 
@@ -370,6 +439,7 @@ const HydraApp = () => {
       `Service: ${service}`,
       `Users: ${userCount}`,
       `Passwords: ${passCount}`,
+      `Seed: ${normalizeHydraSeed(seed)}`,
       `Charset: ${charset} (${charset.length})`,
       `Rule: ${rule}`,
       `Estimated candidate space: ${candidateSpace.toLocaleString()}`,
@@ -380,7 +450,13 @@ const HydraApp = () => {
   };
 
   const handleSaveConfig = () => {
-    saveConfigStorage({ target, service, selectedUser, selectedPass });
+    saveConfigStorage({
+      target,
+      service,
+      selectedUser,
+      selectedPass,
+      seed: normalizeHydraSeed(seed),
+    });
     setShowSaved(true);
     setTimeout(() => setShowSaved(false), 1500);
   };
@@ -388,7 +464,17 @@ const HydraApp = () => {
   const handleCopyConfig = async () => {
     try {
       await navigator.clipboard.writeText(
-        JSON.stringify({ target, service, selectedUser, selectedPass }, null, 2)
+        JSON.stringify(
+          {
+            target,
+            service,
+            selectedUser,
+            selectedPass,
+            seed: normalizeHydraSeed(seed),
+          },
+          null,
+          2
+        )
       );
       setShowSaved(true);
       setTimeout(() => setShowSaved(false), 1500);
@@ -397,7 +483,35 @@ const HydraApp = () => {
     }
   };
 
+  const handleImportConfig = () => {
+    const input = window.prompt('Paste Hydra config JSON');
+    if (!input) return;
+    try {
+      const data = JSON.parse(input);
+      setTarget(data.target || '');
+      setService(data.service || 'ssh');
+      if (data.selectedUser) setSelectedUser(data.selectedUser);
+      if (data.selectedPass) setSelectedPass(data.selectedPass);
+      if (data.seed) setSeed(normalizeHydraSeed(data.seed));
+      setShowSaved(true);
+      setTimeout(() => setShowSaved(false), 1500);
+    } catch (err) {
+      setAnnounce('Failed to import config');
+    }
+  };
+
+  const randomizeSeed = () => {
+    if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
+      const buffer = new Uint32Array(1);
+      window.crypto.getRandomValues(buffer);
+      setSeed(buffer[0].toString(36));
+    } else {
+      setSeed(Math.random().toString(36).slice(2, 10));
+    }
+  };
+
   const pauseHydra = async () => {
+    if (modeRef.current !== 'run') return;
     setPaused(true);
     setAnnounce('Hydra paused');
     if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
@@ -410,6 +524,7 @@ const HydraApp = () => {
   };
 
   const resumeHydra = async () => {
+    if (modeRef.current !== 'run') return;
     setPaused(false);
     setAnnounce('Hydra resumed');
     if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
@@ -422,13 +537,14 @@ const HydraApp = () => {
   };
 
   const cancelHydra = async () => {
-    setRunning(false);
+    const wasRunning = modeRef.current === 'run';
+    updateMode('idle');
     setPaused(false);
     setRunId((id) => id + 1);
     setOutput('');
     setTimeline([]);
-    startRef.current = null;
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+    simulationRef.current = null;
+    if (wasRunning && process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
       await fetch('/api/hydra', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -438,6 +554,9 @@ const HydraApp = () => {
     setAnnounce('Hydra cancelled');
     clearSession();
   };
+
+  const isActive = mode !== 'idle';
+  const isRealRun = mode === 'run';
 
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
@@ -482,6 +601,31 @@ const HydraApp = () => {
               </option>
             ))}
           </select>
+        </div>
+        <div className="col-span-2">
+          <label className="block mb-1">Simulation Seed</label>
+          <div className="flex flex-wrap gap-1.5">
+            <input
+              type="text"
+              value={seed}
+              onChange={(e) => setSeed(e.target.value)}
+              className="w-full p-2 rounded text-black md:flex-1 md:w-auto"
+              placeholder={DEFAULT_HYDRA_SEED}
+            />
+            <button
+              onClick={randomizeSeed}
+              className="px-4 py-2 bg-gray-700 rounded"
+            >
+              Randomize
+            </button>
+            <button
+              onClick={() => runHydra({ replay: true })}
+              disabled={isActive || !isTargetValid}
+              className="px-4 py-2 bg-blue-700 rounded disabled:opacity-50"
+            >
+              Replay Seed
+            </button>
+          </div>
         </div>
         <div>
           <label className="block mb-1">User List</label>
@@ -587,14 +731,14 @@ const HydraApp = () => {
         <div className="col-span-2 flex flex-wrap gap-1.5 mt-2">
           <button
             onClick={runHydra}
-            disabled={running || !isTargetValid}
+            disabled={isActive || !isTargetValid}
             className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
           >
-            {running ? 'Running...' : 'Run Hydra'}
+            {isActive ? 'Running...' : 'Run Hydra'}
           </button>
           <button
             onClick={dryRunHydra}
-            disabled={running}
+            disabled={isActive}
             className="px-4 py-2 bg-purple-600 rounded disabled:opacity-50"
           >
             Dry Run
@@ -611,7 +755,13 @@ const HydraApp = () => {
           >
             Copy Config
           </button>
-          {running && !paused && (
+          <button
+            onClick={handleImportConfig}
+            className="px-4 py-2 bg-gray-700 rounded"
+          >
+            Import Config
+          </button>
+          {isRealRun && !paused && (
             <button
               data-testid="pause-button"
               onClick={pauseHydra}
@@ -620,7 +770,7 @@ const HydraApp = () => {
               Pause
             </button>
           )}
-          {running && paused && (
+          {isRealRun && paused && (
             <button
               data-testid="resume-button"
               onClick={resumeHydra}
@@ -629,7 +779,7 @@ const HydraApp = () => {
               Resume
             </button>
           )}
-          {running && (
+          {isRealRun && (
             <button
               data-testid="cancel-button"
               onClick={cancelHydra}
@@ -642,7 +792,7 @@ const HydraApp = () => {
       </div>
 
       <Stepper
-        active={running && !paused}
+        active={isActive && !paused}
         totalAttempts={totalAttempts}
         backoffThreshold={BACKOFF_THRESHOLD}
         lockoutThreshold={LOCKOUT_THRESHOLD}
