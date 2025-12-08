@@ -14,6 +14,7 @@ import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayScreenRecorder } from './components/apps/screen-recorder';
 import { displayNikto } from './components/apps/nikto';
+import { displayKaliTweaks } from './components/apps/kali-tweaks';
 
 // Dynamic applications and games
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
@@ -715,6 +716,15 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displaySettings,
+  },
+  {
+    id: 'kali-tweaks',
+    title: 'Kali Tweaks',
+    icon: '/themes/Yaru/apps/gnome-control-center.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayKaliTweaks,
   },
   {
     id: 'files',
