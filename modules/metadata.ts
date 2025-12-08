@@ -9,6 +9,8 @@ export interface ModuleMetadata {
   description: string;
   tags: string[];
   options: ModuleOption[];
+  /** Relative path to the module documentation Markdown file. */
+  docPath: string;
 }
 
 const MODULES: Record<string, ModuleMetadata> = {
@@ -23,6 +25,7 @@ const MODULES: Record<string, ModuleMetadata> = {
         description: 'The session to run this module on.',
       },
     ],
+    docPath: '/docs/modules/getsystem.md',
   },
   keyscan_start: {
     name: 'keyscan_start',
@@ -35,6 +38,7 @@ const MODULES: Record<string, ModuleMetadata> = {
         description: 'The session to run this module on.',
       },
     ],
+    docPath: '/docs/modules/keyscan_start.md',
   },
   persistence_service: {
     name: 'persistence_service',
@@ -52,6 +56,7 @@ const MODULES: Record<string, ModuleMetadata> = {
         description: 'Remote port used for callback.',
       },
     ],
+    docPath: '/docs/modules/persistence_service.md',
   },
   hashdump: {
     name: 'hashdump',
@@ -64,6 +69,7 @@ const MODULES: Record<string, ModuleMetadata> = {
         description: 'The session to run this module on.',
       },
     ],
+    docPath: '/docs/modules/hashdump.md',
   },
 };
 
