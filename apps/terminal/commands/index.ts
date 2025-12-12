@@ -1,4 +1,4 @@
-import type { CommandHandler, CommandContext } from './types';
+import type { CommandContext, CommandDefinition, CommandHandler } from './types';
 
 async function man(args: string, ctx: CommandContext) {
   const name = args.trim();
@@ -37,9 +37,27 @@ function alias(args: string, ctx: CommandContext) {
   }
 }
 
-const help: CommandHandler = (_args, ctx) => {
+const help: CommandHandler = (args, ctx) => {
+  const termWidth = 80;
   const commands = ctx.listCommands();
-  ctx.writeLine(`Available commands: ${commands.join(', ')}`);
+  const query = args.trim();
+  if (query) {
+    const cmd = commands.find((c) => c.name === query);
+    if (cmd) {
+      ctx.writeLine(`${cmd.name} - ${cmd.description}`);
+      if (cmd.usage) ctx.writeLine(`usage: ${cmd.usage}`);
+    } else {
+      ctx.writeLine(`Unknown command: ${query}`);
+    }
+    return;
+  }
+
+  ctx.writeLine('Available commands (type "help <command>" for details):');
+  for (const { name, description } of commands) {
+    const padded = `${name}${' '.repeat(Math.max(2, 16 - name.length))}`;
+    const line = `${padded}${description}`;
+    ctx.writeLine(line.slice(0, termWidth));
+  }
   ctx.writeLine(
     'Example scripts: https://github.com/unnippillil/kali-linux-portfolio/tree/main/scripts/examples',
   );
@@ -89,20 +107,26 @@ const date: CommandHandler = (_args, ctx) => {
   ctx.writeLine(new Date().toString());
 };
 
-const registry: Record<string, CommandHandler> = {
-  man,
-  history,
-  alias,
-  help,
-  ls,
-  cat,
-  clear,
-  open,
-  about,
-  date,
-  grep: (args, ctx) => ctx.runWorker(`grep ${args}`),
-  jq: (args, ctx) => ctx.runWorker(`jq ${args}`),
-};
+const commandList: CommandDefinition[] = [
+  { name: 'help', description: 'Show this index or details for a single command.', usage: 'help [command]', handler: help },
+  { name: 'man', description: 'Read the simulated manual pages.', usage: 'man <command>', handler: man },
+  { name: 'history', description: 'Print command history for this session.', handler: history },
+  { name: 'alias', description: 'Create or list aliases.', usage: "alias [name]='value'", handler: alias },
+  { name: 'ls', description: 'List available demo files.', handler: ls },
+  { name: 'cat', description: 'Print a file or pipe stdin.', usage: 'cat <file>', handler: cat },
+  { name: 'clear', description: 'Clear the terminal buffer.', handler: clear },
+  { name: 'open', description: 'Open another desktop app.', usage: 'open <app-id>', handler: open },
+  { name: 'about', description: 'Show information about this terminal.', handler: about },
+  { name: 'date', description: 'Print the current date.', handler: date },
+  { name: 'grep', description: 'Search through text (simulated).', usage: 'grep <pattern> [file]', handler: (args, ctx) => ctx.runWorker(`grep ${args}`) },
+  { name: 'jq', description: 'Filter JSON input (simulated).', usage: 'jq <path> [file]', handler: (args, ctx) => ctx.runWorker(`jq ${args}`) },
+];
+
+const registry: Record<string, CommandDefinition> = Object.fromEntries(
+  commandList.map((def) => [def.name, def]),
+);
+
+export const getCommandList = () => commandList;
 
 export default registry;
-export type { CommandHandler, CommandContext } from './types';
+export type { CommandDefinition, CommandHandler, CommandContext } from './types';

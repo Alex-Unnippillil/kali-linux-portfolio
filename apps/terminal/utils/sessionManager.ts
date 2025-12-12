@@ -1,12 +1,13 @@
 import type { Terminal as XTerm } from '@xterm/xterm';
-import type { CommandContext, CommandHandler } from '../commands';
+import type { CommandContext, CommandDefinition, CommandHandler } from '../commands';
 
 export interface SessionManagerConfig {
-  getRegistry: () => Record<string, CommandHandler>;
+  getRegistry: () => Record<string, CommandDefinition>;
   context: CommandContext;
   prompt: () => void;
   write: (text: string) => void;
   writeLine: (text: string) => void;
+  onHistoryUpdate?: (history: string[]) => void;
 }
 
 export interface SessionManager {
@@ -27,6 +28,7 @@ export function createSessionManager({
   prompt,
   write,
   writeLine,
+  onHistoryUpdate,
 }: SessionManagerConfig): SessionManager {
   let terminal: XTerm | null = null;
   let buffer = '';
@@ -58,8 +60,16 @@ export function createSessionManager({
       : trimmed;
     const [cmdName, ...cmdArgs] = expanded.split(/\s+/);
     const registry = getRegistry();
-    const handler = registry[cmdName];
+    const handler = registry[cmdName]?.handler;
     context.history.push(trimmed);
+    onHistoryUpdate?.(context.history);
+    const riskyCommands = ['nmap', 'curl', 'wget', 'ssh', 'nc', 'netcat', 'telnet', 'ping'];
+    const looksNetworkBound = /https?:\/\//i.test(expanded) || riskyCommands.includes(cmdName);
+    if (context.safeMode && looksNetworkBound) {
+      writeLine('Safe mode: this command is simulated and cannot reach the network.');
+      writeLine(`[simulated] ${expanded}`);
+      return;
+    }
     if (handler) {
       await handler(cmdArgs.join(' '), context);
     } else if (cmdName) {
@@ -69,13 +79,19 @@ export function createSessionManager({
 
   const autocomplete = () => {
     const registry = getRegistry();
-    const matches = Object.keys(registry).filter((c) => c.startsWith(buffer));
+    const entries = Object.values(registry);
+    const matches = entries.filter((c) => c.name.startsWith(buffer));
     if (matches.length === 1) {
-      const completion = matches[0].slice(buffer.length);
+      const completion = matches[0].name.slice(buffer.length);
       if (completion) write(completion);
-      buffer = matches[0];
+      buffer = matches[0].name;
     } else if (matches.length > 1) {
-      writeLine(matches.join('  '));
+      matches
+        .map(({ name, description }) => {
+          const padded = `${name}${' '.repeat(Math.max(2, 16 - name.length))}`;
+          return `${padded}${description}`;
+        })
+        .forEach((line) => writeLine(line));
       prompt();
       if (buffer) write(buffer);
     }

@@ -11,7 +11,7 @@ import React, {
   useMemo,
 } from 'react';
 import useOPFS from '../../hooks/useOPFS';
-import commandRegistry, { CommandContext } from './commands';
+import commandRegistry, { CommandContext, CommandDefinition, getCommandList } from './commands';
 import TerminalContainer from './components/Terminal';
 import { createSessionManager } from './utils/sessionManager';
 
@@ -66,6 +66,10 @@ const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+const SETTINGS_KEY = 'terminal-settings';
+const HISTORY_FILE = 'history.txt';
+const COMMAND_HISTORY_KEY = 'terminal-command-history';
+
 export interface TerminalProps {
   openApp?: (id: string) => void;
 }
@@ -85,23 +89,31 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const fitRef = useRef<any>(null);
   const searchRef = useRef<any>(null);
   const contentRef = useRef('');
-  const registryRef = useRef(commandRegistry);
+  const commandList = useMemo(() => getCommandList(), []);
+  const registryRef = useRef<Record<string, CommandDefinition>>(commandRegistry);
   const workerRef = useRef<Worker | null>(null);
   const filesRef = useRef<Record<string, string>>(files);
   const aliasesRef = useRef<Record<string, string>>({});
   const historyRef = useRef<string[]>([]);
+  const safeModeRef = useRef(true);
+  const [safeMode, setSafeMode] = useState(true);
+  const [persistHistory, setPersistHistory] = useState(false);
+  const [copyStatus, setCopyStatus] = useState('');
+  const settingsLoadedRef = useRef(false);
+  const historyLoadedRef = useRef(false);
   const contextRef = useRef<CommandContext>({
     writeLine: () => {},
     files: filesRef.current,
     history: historyRef.current,
     aliases: aliasesRef.current,
+    safeMode: safeModeRef.current,
     setAlias: (n, v) => {
       aliasesRef.current[n] = v;
     },
     runWorker: async () => {},
     clear: () => {},
     openApp,
-    listCommands: () => Object.keys(registryRef.current),
+    listCommands: () => Object.values(registryRef.current),
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
@@ -129,12 +141,102 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     '#FFFFFF',
   ];
 
+  const persistTranscript = useCallback(
+    async (value: string) => {
+      if (!persistHistory) return;
+      try {
+        if (opfsSupported && dirRef.current) {
+          await writeFile(HISTORY_FILE, value, dirRef.current);
+        } else if (typeof window !== 'undefined') {
+          window.localStorage.setItem(HISTORY_FILE, value);
+        }
+      } catch {}
+    },
+    [persistHistory, opfsSupported, writeFile],
+  );
+
+  const persistCommandHistory = useCallback(
+    async (history: string[]) => {
+      if (!persistHistory) return;
+      try {
+        if (opfsSupported && dirRef.current) {
+          await writeFile(COMMAND_HISTORY_KEY, JSON.stringify(history), dirRef.current);
+        } else if (typeof window !== 'undefined') {
+          window.localStorage.setItem(COMMAND_HISTORY_KEY, JSON.stringify(history));
+        }
+      } catch {}
+    },
+    [persistHistory, opfsSupported, writeFile],
+  );
+
+  const restoreHistory = useCallback(async () => {
+    if (!persistHistory || historyLoadedRef.current) return;
+    historyLoadedRef.current = true;
+    if (opfsSupported && !dirRef.current) {
+      dirRef.current = await getDir('terminal');
+    }
+    let transcript = '';
+    let commandHistory: string[] = [];
+    try {
+      if (opfsSupported && dirRef.current) {
+        transcript = (await readFile(HISTORY_FILE, dirRef.current)) || '';
+        const savedHistory = await readFile(COMMAND_HISTORY_KEY, dirRef.current);
+        if (savedHistory) commandHistory = JSON.parse(savedHistory);
+      } else if (typeof window !== 'undefined') {
+        transcript = window.localStorage.getItem(HISTORY_FILE) || '';
+        const saved = window.localStorage.getItem(COMMAND_HISTORY_KEY);
+        if (saved) commandHistory = JSON.parse(saved);
+      }
+    } catch {}
+
+    if (transcript && termRef.current) {
+      const historyColor = '\x1b[38;2;206;214;227m';
+      const reset = '\x1b[0m';
+      transcript
+        .split('\n')
+        .filter(Boolean)
+        .forEach((l) => {
+          if (termRef.current)
+            termRef.current.writeln(/\x1b\[[0-9;]*m/.test(l) ? l : `${historyColor}${l}${reset}`);
+        });
+      contentRef.current = transcript.endsWith('\n') ? transcript : `${transcript}\n`;
+    }
+    if (commandHistory.length) {
+      historyRef.current = commandHistory;
+    }
+  }, [getDir, opfsSupported, persistHistory, readFile]);
+
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
     if (!term || !term.buffer) return;
     const { viewportY, baseY } = term.buffer.active;
     setOverflow({ top: viewportY > 0, bottom: viewportY < baseY });
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || settingsLoadedRef.current) return;
+    const stored = window.localStorage.getItem(SETTINGS_KEY);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        setSafeMode(parsed.safeMode ?? true);
+        safeModeRef.current = parsed.safeMode ?? true;
+        setPersistHistory(parsed.persistHistory ?? false);
+      } catch {}
+    }
+    settingsLoadedRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    safeModeRef.current = safeMode;
+    contextRef.current.safeMode = safeModeRef.current;
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(
+        SETTINGS_KEY,
+        JSON.stringify({ safeMode: safeModeRef.current, persistHistory }),
+      );
+    }
+  }, [persistHistory, safeMode]);
 
   const writeLine = useCallback(
     (text: string) => {
@@ -145,13 +247,29 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         text.length === 0 ? '' : hasAnsi ? text : `${historyColor}${text}${reset}`;
       if (termRef.current) termRef.current.writeln(content);
       contentRef.current += `${text}\n`;
-      if (opfsSupported && dirRef.current) {
-        writeFile('history.txt', contentRef.current, dirRef.current);
-      }
+      void persistTranscript(contentRef.current);
       updateOverflow();
     },
-    [opfsSupported, updateOverflow, writeFile],
+    [persistTranscript, updateOverflow],
   );
+
+  useEffect(() => {
+    if (!persistHistory) {
+      historyLoadedRef.current = false;
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(HISTORY_FILE);
+        window.localStorage.removeItem(COMMAND_HISTORY_KEY);
+      }
+      if (opfsSupported && dirRef.current) {
+        deleteFile(HISTORY_FILE, dirRef.current);
+        deleteFile(COMMAND_HISTORY_KEY, dirRef.current);
+      }
+      return;
+    }
+    if (termRef.current) {
+      void restoreHistory();
+    }
+  }, [deleteFile, opfsSupported, persistHistory, restoreHistory]);
 
   contextRef.current.writeLine = writeLine;
 
@@ -179,23 +297,43 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           if (termRef.current) termRef.current.write(text);
         },
         writeLine,
+        onHistoryUpdate: (history) => void persistCommandHistory(history),
       }),
-    [prompt, writeLine],
+    [persistCommandHistory, prompt, writeLine],
   );
 
   const clearTerminal = useCallback(() => {
     termRef.current?.clear();
     contentRef.current = '';
-    if (opfsSupported && dirRef.current) {
-      deleteFile('history.txt', dirRef.current);
+    historyRef.current = [];
+    if (persistHistory) {
+      if (opfsSupported && dirRef.current) {
+        deleteFile(HISTORY_FILE, dirRef.current);
+        deleteFile(COMMAND_HISTORY_KEY, dirRef.current);
+      } else if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(HISTORY_FILE);
+        window.localStorage.removeItem(COMMAND_HISTORY_KEY);
+      }
     }
     setOverflow({ top: false, bottom: false });
     sessionManager.setBuffer('');
-  }, [opfsSupported, deleteFile, sessionManager]);
+  }, [deleteFile, opfsSupported, persistHistory, sessionManager]);
 
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(contentRef.current).catch(() => {});
+    const term = termRef.current;
+    const hasSelection = term?.hasSelection?.();
+    const selection = hasSelection ? term?.getSelection?.() : '';
+    const textToCopy = selection || contentRef.current;
+    if (!textToCopy) return;
+    navigator.clipboard
+      .writeText(textToCopy)
+      .then(() =>
+        setCopyStatus(
+          selection ? 'Copied selected text to clipboard.' : 'Copied terminal buffer to clipboard.',
+        ),
+      )
+      .catch(() => setCopyStatus('Copy failed. Please try again.'));
   };
 
   const handlePaste = async () => {
@@ -204,6 +342,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       sessionManager.handlePaste(text);
     } catch {}
   };
+
+  useEffect(() => {
+    if (!copyStatus) return;
+    const timer = window.setTimeout(() => setCopyStatus(''), 2000);
+    return () => window.clearTimeout(timer);
+  }, [copyStatus]);
 
   const runWorker = useCallback(
     async (command: string) => {
@@ -236,10 +380,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   contextRef.current.runWorker = runWorker;
   contextRef.current.clear = clearTerminal;
   contextRef.current.openApp = openApp;
-  contextRef.current.listCommands = () => Object.keys(registryRef.current);
+  contextRef.current.listCommands = () => Object.values(registryRef.current);
   contextRef.current.files = filesRef.current;
   contextRef.current.history = historyRef.current;
   contextRef.current.aliases = aliasesRef.current;
+  contextRef.current.safeMode = safeModeRef.current;
 
   useEffect(() => {
     if (typeof Worker === 'function') {
@@ -269,6 +414,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         scrollback: sessionManager.getScrollbackLimit(),
         cols: 80,
         rows: 24,
+        screenReaderMode: true,
         fontFamily: '"Fira Code", monospace',
         fontSize: 15,
         letterSpacing: 0.75,
@@ -308,28 +454,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       sessionManager.setTerminal(term);
       fit.fit();
       term.focus();
-      if (opfsSupported) {
-        dirRef.current = await getDir('terminal');
-        const existing = await readFile('history.txt', dirRef.current || undefined);
-        if (existing) {
-          const historyColor = '\x1b[38;2;206;214;227m';
-          const reset = '\x1b[0m';
-          existing
-            .split('\n')
-            .filter(Boolean)
-            .forEach((l) => {
-              if (termRef.current)
-                termRef.current.writeln(
-                  /\x1b\[[0-9;]*m/.test(l) ? l : `${historyColor}${l}${reset}`,
-                );
-            });
-          contentRef.current = existing.endsWith('\n')
-            ? existing
-            : `${existing}\n`;
-        }
+      if (persistHistory) {
+        await restoreHistory();
       }
       writeLine('Welcome to the web terminal!');
       writeLine('Type "help" to see available commands.');
+      if (safeMode) {
+        writeLine('Safe mode is ON: network-like commands are simulated only.');
+      }
       prompt();
       term.onData((d: string) => sessionManager.handleInput(d));
       term.onKey(({ domEvent }: any) => {
@@ -370,7 +502,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       disposed = true;
       termRef.current?.dispose();
     };
-    }, [opfsSupported, getDir, readFile, writeLine, prompt, sessionManager, updateOverflow]);
+    }, [persistHistory, prompt, restoreHistory, safeMode, sessionManager, updateOverflow, writeLine]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
@@ -426,16 +558,23 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               }}
             />
             <ul className="max-h-40 overflow-y-auto rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-overlay)]" role="menu">
-              {Object.keys(registryRef.current)
-                .filter((c) => c.startsWith(paletteInput))
+              {commandList
+                .filter((c) => {
+                  const query = paletteInput.toLowerCase();
+                  return (
+                    !query ||
+                    c.name.toLowerCase().includes(query) ||
+                    c.description.toLowerCase().includes(query)
+                  );
+                })
                 .map((c) => (
                   <li
-                    key={c}
+                    key={c.name}
                     tabIndex={0}
                     role="menuitem"
                     className="cursor-pointer px-2 py-1 text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-control-overlay)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-accent)]"
                     onClick={() => {
-                      sessionManager.runCommand(c);
+                      sessionManager.runCommand(c.name);
                       setPaletteInput('');
                       setPaletteOpen(false);
                       termRef.current?.focus();
@@ -443,14 +582,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
                     onKeyDown={(event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
-                        sessionManager.runCommand(c);
+                        sessionManager.runCommand(c.name);
                         setPaletteInput('');
                         setPaletteOpen(false);
                         termRef.current?.focus();
                       }
                     }}
                   >
-                    {c}
+                    <div className="font-mono text-sm">{c.name}</div>
+                    <p className="text-xs text-[color:color-mix(in_srgb,var(--kali-text)_65%,transparent)]">
+                      {c.description}
+                    </p>
                   </li>
                 ))}
             </ul>
@@ -470,6 +612,36 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
               <span className="text-green-400">script.sh</span>{' '}
               <span className="text-[color:color-mix(in_srgb,var(--kali-text)_70%,_transparent)]">README.md</span>
             </pre>
+            <div className="space-y-2 text-sm text-[color:var(--kali-text)]">
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={persistHistory}
+                  onChange={(e) => setPersistHistory(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-[color:var(--kali-border)] bg-[color:var(--kali-overlay)] text-[color:var(--color-accent)] focus:ring-[color:var(--color-accent)]"
+                />
+                <span>
+                  Persist command history across sessions
+                  <span className="block text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)]">
+                    Stores history locally so you can pick up where you left off.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  checked={safeMode}
+                  onChange={(e) => setSafeMode(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-[color:var(--kali-border)] bg-[color:var(--kali-overlay)] text-[color:var(--color-accent)] focus:ring-[color:var(--color-accent)]"
+                />
+                <span>
+                  Safe mode
+                  <span className="block text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)]">
+                    Simulates network-heavy commands and blocks real outbound calls.
+                  </span>
+                </span>
+              </label>
+            </div>
             <div className="flex justify-end gap-2">
               <button
                 className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-overlay)] px-2 py-1 text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-control-overlay)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-accent)]"
@@ -520,7 +692,25 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           >
             <SettingsIcon />
           </button>
+          <div className="ml-auto flex flex-wrap items-center gap-3 text-xs text-[color:color-mix(in_srgb,var(--kali-text)_80%,transparent)]">
+            <span className="rounded-sm bg-[color:var(--kali-overlay)] px-2 py-1 font-semibold text-[color:var(--kali-text)]">
+              {safeMode ? 'Safe mode on' : 'Safe mode off'}
+            </span>
+            <span aria-label="History persistence">
+              History: {persistHistory ? 'saved to device' : 'session only'}
+            </span>
+            {copyStatus && (
+              <span className="rounded-sm bg-[color:var(--kali-overlay)] px-2 py-1" aria-live="polite">
+                {copyStatus}
+              </span>
+            )}
+          </div>
         </div>
+        {!copyStatus && (
+          <div className="sr-only" aria-live="polite">
+            {safeMode ? 'Safe mode enabled. Network commands are simulated.' : 'Safe mode disabled.'}
+          </div>
+        )}
         <div className="relative flex-1 min-h-0">
           <TerminalContainer
             ref={containerRef}
