@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 export default function AdminMessages() {
   const [key, setKey] = useState('');
+  const [otp, setOtp] = useState('');
   const [data, setData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -12,6 +13,7 @@ export default function AdminMessages() {
       const res = await fetch('/api/admin/messages', {
         headers: {
           'x-admin-key': key,
+          'x-admin-otp': otp,
         },
       });
       const json = await res.json();
@@ -34,6 +36,13 @@ export default function AdminMessages() {
           className="border p-2 flex-grow"
           placeholder="Admin key"
         />
+        <input
+          type="password"
+          value={otp}
+          onChange={(e) => setOtp(e.target.value)}
+          className="border p-2 flex-grow"
+          placeholder="OTP token"
+        />
         <button onClick={fetchMessages} className="border px-4 py-2">
           Load
         </button>
@@ -46,4 +55,14 @@ export default function AdminMessages() {
       )}
     </div>
   );
+}
+
+export async function getServerSideProps() {
+  if (process.env.ADMIN_UI_ENABLED !== 'true') {
+    return {
+      notFound: true,
+    };
+  }
+
+  return { props: {} };
 }
