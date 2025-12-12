@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import useFileSystemNavigator from '../../hooks/useFileSystemNavigator';
 import { ensureHandlePermission } from '../../services/fileExplorer/permissions';
 import Breadcrumbs from '../ui/Breadcrumbs';
+import DOMPurify from 'dompurify';
+import { marked } from 'marked';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -64,8 +66,11 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const [supported, setSupported] = useState(true);
   const [currentFile, setCurrentFile] = useState(null);
   const [content, setContent] = useState('');
+  const [savedContent, setSavedContent] = useState('');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
 
@@ -93,6 +98,11 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setLocationError,
   } = useFileSystemNavigator();
   const [unsavedDir, setUnsavedDir] = useState(null);
+
+  const hasUnsavedChanges = useMemo(
+    () => currentFile && content !== savedContent,
+    [content, currentFile, savedContent],
+  );
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
@@ -140,52 +150,153 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     const text = await file.text();
     setCurrentFile({ name: file.name });
     setContent(text);
+    setSavedContent(text);
+    setPreviewData(buildPreview(file.name, file, text));
   };
 
   const openFolder = async () => {
+    const proceed = await ensureSaved();
+    if (!proceed) return;
     try {
       const handle = await window.showDirectoryPicker();
       const allowed = await ensureHandlePermission(handle);
       if (!allowed) {
-        setLocationError('Permission required to open folder');
+        setLocationError('Permission denied while opening folder. Please allow access in the browser prompt.');
         return;
       }
       await openHandle(handle, { recordRecent: true });
-    } catch {}
+    } catch (error) {
+      const message =
+        error?.name === 'NotAllowedError'
+          ? 'Folder access was blocked. Re-run and grant permission to continue.'
+          : 'Unable to open folder. Please check your browser permissions.';
+      setLocationError(message);
+    }
   };
 
   const openRecent = async (entry) => {
+    const proceed = await ensureSaved();
+    if (!proceed) return;
     try {
       const allowed = await ensureHandlePermission(entry.handle);
-      if (!allowed) return;
+      if (!allowed) {
+        setLocationError('Permission denied for this recent location. Please re-authorize access.');
+        return;
+      }
       await openHandle(entry.handle, { breadcrumbName: entry.name });
-    } catch {}
+    } catch (error) {
+      setLocationError(
+        error?.name === 'NotAllowedError'
+          ? 'Access to this location was blocked. Try reopening and granting permission.'
+          : 'Unable to reopen recent location.',
+      );
+    }
+  };
+
+  const readFileContent = async (fileHandle, streamToUI = true) => {
+    const file = await fileHandle.getFile();
+    if (!file.stream) {
+      return { text: await file.text(), file };
+    }
+
+    const reader = file.stream().getReader();
+    const decoder = new TextDecoder();
+    let text = '';
+    let chunkCount = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      text += decoder.decode(value, { stream: true });
+      chunkCount += 1;
+      if (chunkCount % 8 === 0 && streamToUI) {
+        setContent(text);
+      }
+    }
+    text += decoder.decode();
+    return { text, file };
+  };
+
+  const buildPreview = (fileName, file, text) => {
+    const lower = fileName.toLowerCase();
+    if (lower.match(/\.(png|jpg|jpeg|gif|webp|svg)$/)) {
+      return { type: 'image', url: URL.createObjectURL(file) };
+    }
+    if (lower.endsWith('.json')) {
+      try {
+        const parsed = JSON.parse(text);
+        return { type: 'json', text: JSON.stringify(parsed, null, 2) };
+      } catch {
+        return { type: 'text', text };
+      }
+    }
+    if (lower.endsWith('.md') || lower.endsWith('.markdown')) {
+      const html = DOMPurify.sanitize(marked.parse(text));
+      return { type: 'markdown', html };
+    }
+    return { type: 'text', text };
+  };
+
+  const ensureSaved = async () => {
+    if (!hasUnsavedChanges) return true;
+    const shouldSave = window.confirm(
+      'You have unsaved changes. Click OK to save before continuing, or Cancel to stay on this file.',
+    );
+    if (!shouldSave) return false;
+    await saveFile();
+    return true;
   };
 
   const openFile = async (file) => {
+    const proceed = await ensureSaved();
+    if (!proceed) return;
     setCurrentFile(file);
+    setPreviewData(null);
+    setContent('');
+    setSavedContent('');
     let text = '';
     if (opfsSupported) {
       const unsaved = await loadBuffer(file.name);
       if (unsaved !== null) text = unsaved;
     }
-    if (!text) {
-      const f = await file.handle.getFile();
-      text = await f.text();
+    try {
+      setLoading(true);
+      const { text: streamed, file: fetched } = await readFileContent(file.handle, !text);
+      if (!text) {
+        text = streamed;
+      }
+      setPreviewData(buildPreview(file.name, fetched, text));
+      setContent(text);
+      setSavedContent(streamed);
+    } catch (error) {
+      const message =
+        error?.name === 'NotAllowedError'
+          ? 'Permission denied while opening file. Please allow access and retry.'
+          : 'Unable to open file. The handle may no longer be available.';
+      setLocationError(message);
+    } finally {
+      setLoading(false);
     }
-    setContent(text);
   };
 
   const openDir = (dir) => {
-    void enterDirectory(dir);
+    void (async () => {
+      const proceed = await ensureSaved();
+      if (proceed) enterDirectory(dir);
+    })();
   };
 
   const navigateToBreadcrumb = (index) => {
-    void navigateTo(index);
+    void (async () => {
+      const proceed = await ensureSaved();
+      if (proceed) navigateTo(index);
+    })();
   };
 
   const goBack = () => {
-    void goBackNav();
+    void (async () => {
+      const proceed = await ensureSaved();
+      if (proceed) goBackNav();
+    })();
   };
 
   const saveFile = async () => {
@@ -195,7 +306,14 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       await writable.write(content);
       await writable.close();
       if (opfsSupported) await removeBuffer(currentFile.name);
-    } catch {}
+      setSavedContent(content);
+    } catch (error) {
+      setLocationError(
+        error?.name === 'NotAllowedError'
+          ? 'Save permission denied. Please allow file writes in the browser prompt.'
+          : 'Failed to save file.',
+      );
+    }
   };
 
   const onChange = (e) => {
@@ -225,10 +343,22 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
 
   useEffect(() => () => workerRef.current?.terminate(), []);
 
+  useEffect(() => () => {
+    if (previewData?.type === 'image' && previewData.url) {
+      URL.revokeObjectURL(previewData.url);
+    }
+  }, [previewData]);
+
   if (!supported) {
     return (
       <div className="p-4 flex flex-col h-full">
-        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+        <input
+          ref={fallbackInputRef}
+          type="file"
+          onChange={openFallback}
+          className="hidden"
+          aria-label="Upload file"
+        />
         {!currentFile && (
           <button
             onClick={() => fallbackInputRef.current?.click()}
@@ -239,11 +369,12 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         )}
         {currentFile && (
           <>
-            <textarea
-              className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
-              value={content}
-              onChange={onChange}
-            />
+              <textarea
+                className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
+                value={content}
+                onChange={onChange}
+                aria-label="File content"
+              />
             <button
               onClick={async () => {
                 const handle = await saveFileDialog({ suggestedName: currentFile.name });
@@ -279,9 +410,24 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           </div>
         )}
         {currentFile && (
-          <button onClick={saveFile} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-            Save
-          </button>
+          <div className="flex items-center space-x-2 ml-auto">
+            {hasUnsavedChanges && (
+              <span className="text-xs text-yellow-200" aria-live="polite">
+                Unsaved changes
+              </span>
+            )}
+            <button
+              onClick={saveFile}
+              disabled={!hasUnsavedChanges}
+              className={`px-2 py-1 rounded ${
+                hasUnsavedChanges
+                  ? 'bg-green-700 hover:bg-green-600'
+                  : 'bg-black bg-opacity-40 cursor-not-allowed'
+              }`}
+            >
+              {hasUnsavedChanges ? 'Save changes' : 'Saved'}
+            </button>
+          </div>
         )}
       </div>
       <div className="flex flex-1 overflow-hidden">
@@ -319,7 +465,34 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+            <div className="flex flex-col flex-1 overflow-auto">
+              <div className="flex items-center justify-between px-2 py-1 border-b border-gray-600 bg-black bg-opacity-20">
+                <div className="font-semibold">{currentFile.name}</div>
+                {loading && <div className="text-xs text-gray-300">Loading...</div>}
+              </div>
+              {previewData && (
+                <div className="p-2 border-b border-gray-700 overflow-auto max-h-64 bg-black bg-opacity-20">
+                  {previewData.type === 'image' && (
+                    <img src={previewData.url} alt={`${currentFile.name} preview`} className="max-h-60 mx-auto" />
+                  )}
+                  {previewData.type === 'json' && (
+                    <pre className="whitespace-pre-wrap text-xs bg-black bg-opacity-30 p-2 rounded">{previewData.text}</pre>
+                  )}
+                  {previewData.type === 'markdown' && (
+                    <div
+                      className="prose prose-invert max-w-none"
+                      dangerouslySetInnerHTML={{ __html: previewData.html }}
+                    />
+                  )}
+                </div>
+              )}
+              <textarea
+                className="flex-1 p-2 bg-ub-cool-grey outline-none"
+                value={content}
+                onChange={onChange}
+                aria-label="File content"
+              />
+            </div>
           )}
           <div className="p-2 border-t border-gray-600">
             <input
@@ -327,6 +500,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find in files"
               className="px-1 py-0.5 text-black"
+              aria-label="Find in files"
             />
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
