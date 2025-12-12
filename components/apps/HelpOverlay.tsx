@@ -42,6 +42,18 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   blackjack: {
     objective: "Get as close to 21 as possible without busting.",
     controls: "Use on-screen buttons to hit or stand.",
+    actions: {
+      deal: "Enter",
+      hit: "h",
+      stand: "s",
+      double: "d",
+      split: "p",
+      surrender: "r",
+      chip1: "1",
+      chip5: "2",
+      chip25: "3",
+      chip100: "4",
+    },
   },
   breakout: {
     objective: "Clear all bricks with the ball.",
