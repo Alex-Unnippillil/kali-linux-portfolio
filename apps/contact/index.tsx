@@ -47,6 +47,7 @@ const ContactApp: React.FC = () => {
   const [toast, setToast] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [csrfToken, setCsrfToken] = useState("");
+  const [fallback, setFallback] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [messageError, setMessageError] = useState("");
@@ -63,8 +64,24 @@ const ContactApp: React.FC = () => {
         /* ignore */
       }
     }
-    const meta = document.querySelector('meta[name="csrf-token"]');
-    setCsrfToken(meta?.getAttribute("content") || "");
+    (async () => {
+      try {
+        const res = await fetch("/api/contact", { credentials: "same-origin" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.csrfToken) {
+            setCsrfToken(data.csrfToken);
+            return;
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+      setFallback(true);
+      setError(
+        "The form is unavailable in this preview. Use the email options above."
+      );
+    })();
   }, []);
 
   useEffect(() => {
@@ -74,6 +91,10 @@ const ContactApp: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (fallback) {
+      setError("Form disabled here. Please use the email options above.");
+      return;
+    }
     if (submitting) return;
     setSubmitting(true);
     setError("");
@@ -149,6 +170,36 @@ const ContactApp: React.FC = () => {
             collaboration idea.
           </p>
         </div>
+        {fallback && (
+          <div
+            role="status"
+            className="flex items-start gap-3 rounded-lg border border-[color:color-mix(in_srgb,var(--kali-warning)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-warning)_16%,var(--kali-panel))] px-5 py-4 text-sm text-[color:var(--kali-text)] shadow-lg shadow-kali-panel"
+          >
+            <span
+              aria-hidden="true"
+              className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--kali-warning)_30%,transparent)] text-[color:var(--kali-warning)]"
+            >
+              <svg
+                className="h-4 w-4"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l6.518 11.593C19.023 15.98 18.228 17 17.018 17H2.982c-1.21 0-2.005-1.02-1.243-2.308L8.257 3.1ZM10 7a.75.75 0 0 0-.75.75v3.5a.75.75 0 0 0 1.5 0v-3.5A.75.75 0 0 0 10 7Zm0 6a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </span>
+            <div>
+              <p className="font-semibold text-[color:var(--kali-warning)]">Static preview</p>
+              <p className="mt-1 leading-relaxed text-[color:var(--kali-text-muted)]">
+                This static build cannot reach the contact API. Copy the email address or open your mail client to get in touch directly.
+              </p>
+            </div>
+          </div>
+        )}
         {successMessage && (
           <div
             role="alert"
@@ -345,7 +396,7 @@ const ContactApp: React.FC = () => {
             <div className="space-y-3">
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || fallback}
                 className="flex h-12 w-full items-center justify-center rounded-lg bg-[color:var(--kali-control)] px-4 text-sm font-semibold uppercase tracking-wide text-[color:var(--color-inverse)] shadow-[0_12px_38px_color-mix(in_srgb,var(--kali-control)_35%,transparent)] transition hover:bg-[color:color-mix(in_srgb,var(--kali-control)_92%,var(--kali-text)_8%)] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--kali-control)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {submitting ? "Sending..." : "Send message"}
