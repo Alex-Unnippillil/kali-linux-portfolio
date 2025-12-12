@@ -29,7 +29,17 @@ export class Gedit extends Component {
 
     componentDidMount() {
         emailjs.init(process.env.NEXT_PUBLIC_USER_ID);
-        this.updateTime();
+        // Retrieve timezone once and store in state
+        let timezone;
+        try {
+            timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+        } catch (e) {
+            // Fallback to UTC if Intl API is not available
+            timezone = 'UTC';
+        }
+        this.setState({ timezone }, () => {
+            this.updateTime();
+        });
     }
 
     componentWillUnmount() {
@@ -39,14 +49,20 @@ export class Gedit extends Component {
     }
 
     updateTime = () => {
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        // Use timezone from state instead of retrieving it every frame
+        // Guard against empty timezone in test environments
+        if (!this.state.timezone) {
+            this.timeFrame = requestAnimationFrame(this.updateTime);
+            return;
+        }
+        
         const formatter = new Intl.DateTimeFormat([], {
             hour: '2-digit',
             minute: '2-digit',
             second: '2-digit',
-            timeZone: timezone,
+            timeZone: this.state.timezone,
         });
-        this.setState({ timezone, localTime: formatter.format(new Date()) });
+        this.setState({ localTime: formatter.format(new Date()) });
         this.timeFrame = requestAnimationFrame(this.updateTime);
     }
 
