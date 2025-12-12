@@ -89,7 +89,11 @@ export const isSoft = (hand) => {
     total += cardValue(card);
     if (card.value === 'A') aces += 1;
   });
-  return aces > 0 && total <= 21;
+  while (total > 21 && aces > 0) {
+    total -= 10;
+    aces -= 1;
+  }
+  return aces > 0;
 };
 
 // Basic strategy for 4-8 decks, dealer stands on soft 17, double after split allowed
@@ -184,6 +188,19 @@ export class BlackjackGame {
     this.playerHands = players;
     this.dealerHand = dealer;
     this.dealerBlackjack = handValue(dealer) === 21;
+    this.playerHands.forEach((hand) => {
+      const blackjack = hand.cards.length === 2 && handValue(hand.cards) === 21;
+      hand.blackjack = blackjack;
+      if (blackjack) hand.finished = true;
+    });
+    this.current = this.playerHands.findIndex((h) => !h.finished);
+    if (this.current === -1) this.current = this.playerHands.length;
+    if (this.dealerBlackjack || this.current >= this.playerHands.length) {
+      this.playerHands.forEach((hand) => {
+        hand.finished = true;
+      });
+      this.dealerPlayAndSettle();
+    }
     return { player: players[0], dealer };
   }
 
@@ -193,6 +210,7 @@ export class BlackjackGame {
 
   hit() {
     const hand = this.currentHand();
+    if (!hand || hand.finished) throw new Error('Hand already finished');
     hand.cards.push(this.shoe.draw());
     if (handValue(hand.cards) > 21) {
       hand.finished = true;
@@ -203,12 +221,15 @@ export class BlackjackGame {
 
   stand() {
     const hand = this.currentHand();
+    if (!hand || hand.finished) throw new Error('Hand already finished');
     hand.finished = true;
     this.nextHand();
   }
 
   double() {
     const hand = this.currentHand();
+    if (!hand || hand.finished) throw new Error('Hand already finished');
+    if (hand.cards.length !== 2) throw new Error('Can only double on first two cards');
     if (this.bankroll < hand.bet) throw new Error('Not enough bankroll');
     this.bankroll -= hand.bet;
     hand.bet *= 2;
@@ -221,6 +242,8 @@ export class BlackjackGame {
 
   split() {
     const hand = this.currentHand();
+    if (!hand || hand.finished) throw new Error('Hand already finished');
+    if (hand.cards.length !== 2) throw new Error('Cannot split');
     const card1 = hand.cards[0];
     const card2 = hand.cards[1];
     if (cardValue(card1) !== cardValue(card2)) throw new Error('Cannot split');
