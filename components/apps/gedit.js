@@ -52,7 +52,24 @@ export class Gedit extends Component {
         // Use timezone from state instead of retrieving it every frame
         // Guard against empty timezone in test environments
         if (!this.state.timezone) {
-            this.timeFrame = requestAnimationFrame(this.updateTime);
+            // Attempt to retrieve timezone again
+            let timezone;
+            try {
+                timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+            } catch (e) {
+                timezone = 'UTC';
+            }
+            if (timezone) {
+                this.setState({ timezone }, () => {
+                    this.updateTime();
+                });
+            } else {
+                // Could not determine timezone, stop the loop and log a warning
+                if (process.env.NODE_ENV !== 'production') {
+                    // eslint-disable-next-line no-console
+                    console.warn('Could not determine timezone, stopping updateTime loop.');
+                }
+            }
             return;
         }
         
