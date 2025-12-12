@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { enforceRateLimit, sendError, sendMethodNotAllowed } from '../../../utils/api-helpers';
 
 const filePath = path.join(process.cwd(), 'data', 'pacman-leaderboard.json');
 const MAX_ENTRIES = 10;
@@ -27,6 +28,8 @@ export default function handler(
   req,
   res,
 ) {
+  if (enforceRateLimit(req, res, { max: 30 })) return;
+
   if (req.method === 'GET') {
     res.status(200).json(readBoard());
     return;
@@ -35,7 +38,7 @@ export default function handler(
   if (req.method === 'POST') {
     const { name, score } = req.body || {};
     if (typeof name !== 'string' || typeof score !== 'number') {
-      res.status(400).json(readBoard());
+      sendError(res, 400, 'invalid_input', 'Name and score are required');
       return;
     }
     const board = readBoard();
@@ -47,6 +50,5 @@ export default function handler(
     return;
   }
 
-  res.setHeader('Allow', ['GET', 'POST']);
-  res.status(405).end(`Method ${req.method} Not Allowed`);
+  sendMethodNotAllowed(req, res, ['GET', 'POST']);
 }
