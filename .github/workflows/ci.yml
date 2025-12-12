@@ -8,35 +8,50 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
+      - run: corepack enable
+      - run: corepack prepare yarn@4.9.2 --activate
+      - run: yarn --version
+      - run: yarn install --immutable
       - run: yarn dedupe --check
-      - run: npm run lint
+      - run: yarn lint
 
   typecheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
+      - run: corepack enable
+      - run: corepack prepare yarn@4.9.2 --activate
+      - run: yarn --version
+      - run: yarn install --immutable
       - run: yarn dedupe --check
-      - run: npm run tsc -- --noEmit
+      - run: yarn tsc --noEmit
 
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
+      - run: corepack enable
+      - run: corepack prepare yarn@4.9.2 --activate
+      - run: yarn --version
+      - run: yarn install --immutable
       - run: yarn dedupe --check
       - run: yarn test --coverage
 
@@ -44,28 +59,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
+      - run: corepack enable
+      - run: corepack prepare yarn@4.9.2 --activate
+      - run: yarn --version
+      - run: yarn install --immutable
       - run: yarn dedupe --check
-      - run: yarn npm audit
+      - run: yarn npm audit --severity high
 
   vercel-preview:
     runs-on: ubuntu-latest
+    if: ${{ !github.event.pull_request.head.repo.fork && secrets.VERCEL_TOKEN != '' && secrets.VERCEL_ORG_ID != '' && secrets.VERCEL_PROJECT_ID != '' }}
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
+      - run: corepack enable
+      - run: corepack prepare yarn@4.9.2 --activate
+      - run: yarn --version
+      - run: yarn install --immutable
       - run: yarn dedupe --check
-      - run: npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
-      - run: npx vercel build --token=${{ secrets.VERCEL_TOKEN }}
-      - run: npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+      - run: yarn dlx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+      - run: yarn dlx vercel build --token=${{ secrets.VERCEL_TOKEN }}
+      - run: yarn dlx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
