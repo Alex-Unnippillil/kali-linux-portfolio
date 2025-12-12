@@ -25,6 +25,10 @@ const fillForm = () => {
 beforeEach(() => {
   document.head.innerHTML =
     '<meta name="csrf-token" content="csrf-token-from-test" />';
+  (global as any).fetch = jest.fn().mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve({ csrfToken: 'csrf-token-from-test' }),
+  });
   (window as any).grecaptcha = {
     ready: (cb: () => void) => cb(),
     execute: jest.fn().mockResolvedValue('recaptcha-token'),
@@ -34,13 +38,20 @@ beforeEach(() => {
   localStorage.clear();
 });
 
+afterEach(() => {
+  delete (global as any).fetch;
+});
+
 describe('ContactApp UI', () => {
   it('shows a success toast and banner after a successful submission', async () => {
     processContactFormMock.mockResolvedValue({ success: true });
 
     render(<ContactApp />);
     fillForm();
-    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+    const sendButton = await screen.findByRole('button', {
+      name: /send message/i,
+    });
+    fireEvent.click(sendButton);
 
     await waitFor(() => {
       expect(processContactFormMock).toHaveBeenCalled();
@@ -63,7 +74,10 @@ describe('ContactApp UI', () => {
 
     render(<ContactApp />);
     fillForm();
-    fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+    const sendButton = await screen.findByRole('button', {
+      name: /send message/i,
+    });
+    fireEvent.click(sendButton);
 
     const sendingButton = await screen.findByRole('button', {
       name: /sending/i,

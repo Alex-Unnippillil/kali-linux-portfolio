@@ -2574,6 +2574,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@noble/hashes@npm:^1.1.5":
+  version: 1.8.0
+  resolution: "@noble/hashes@npm:1.8.0"
+  checksum: 10c0/06a0b52c81a6fa7f04d67762e08b2c476a00285858150caeaaff4037356dd5e119f45b2a530f638b77a5eeca013168ec1b655db41bae3236cb2e9d511484fc77
+  languageName: node
+  linkType: hard
+
 "@nodelib/fs.scandir@npm:2.1.5":
   version: 2.1.5
   resolution: "@nodelib/fs.scandir@npm:2.1.5"
@@ -2627,6 +2634,15 @@ __metadata:
   dependencies:
     semver: "npm:^7.3.5"
   checksum: 10c0/c90935d5ce670c87b6b14fab04a965a3b8137e585f8b2a6257263bd7f97756dd736cb165bb470e5156a9e718ecd99413dccc54b1138c1a46d6ec7cf325982fe5
+  languageName: node
+  linkType: hard
+
+"@paralleldrive/cuid2@npm:^2.2.2":
+  version: 2.3.1
+  resolution: "@paralleldrive/cuid2@npm:2.3.1"
+  dependencies:
+    "@noble/hashes": "npm:^1.1.5"
+  checksum: 10c0/6576b73de49d826b0f33cbab88424dec1f6fa454a9e59a7b621f78c2cfdd2e59d7f48175826d698940a717f45eeb5e87a508583a7316e608f6a05a861a40c129
   languageName: node
   linkType: hard
 
@@ -3483,6 +3499,15 @@ __metadata:
   version: 1.7.0
   resolution: "@types/figlet@npm:1.7.0"
   checksum: 10c0/d33a07727e35d6b9ccb47c863d2d9c84b6cd23d2935cf904c495fce687558c842063a7e01176c03a354a2f40f2781004cce66ae446462e5f73c4ee23d7956daa
+  languageName: node
+  linkType: hard
+
+"@types/formidable@npm:^3":
+  version: 3.4.6
+  resolution: "@types/formidable@npm:3.4.6"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10c0/605f95671438f9d5f5d40927faad1bd0a0a3bd47a79d339a1d30c93ead0f2d1db10b6b1bb37516b95815001c3feea630b142b63096de17bdaf48ec6813667bda
   languageName: node
   linkType: hard
 
@@ -4885,6 +4910,13 @@ __metadata:
   version: 1.0.0
   resolution: "as-number@npm:1.0.0"
   checksum: 10c0/8861a7216f8baf2b8e26a641fb0c27a1a3012d2b49de0a0441712c430c8f4db2e28e848beacb56215e81439e0126e83b81013ff9cf49c52eac680ec0bb2d5f52
+  languageName: node
+  linkType: hard
+
+"asap@npm:^2.0.0":
+  version: 2.0.6
+  resolution: "asap@npm:2.0.6"
+  checksum: 10c0/c6d5e39fe1f15e4b87677460bd66b66050cd14c772269cee6688824c1410a08ab20254bb6784f9afb75af9144a9f9a7692d49547f4d19d715aeb7c0318f3136d
   languageName: node
   linkType: hard
 
@@ -6325,6 +6357,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"dezalgo@npm:^1.0.4":
+  version: 1.0.4
+  resolution: "dezalgo@npm:1.0.4"
+  dependencies:
+    asap: "npm:^2.0.0"
+    wrappy: "npm:1"
+  checksum: 10c0/8a870ed42eade9a397e6141fe5c025148a59ed52f1f28b1db5de216b4d57f0af7a257070c3af7ce3d5508c1ce9dd5009028a76f4b2cc9370dc56551d2355fad8
+  languageName: node
+  linkType: hard
+
 "didyoumean@npm:^1.2.2":
   version: 1.2.2
   resolution: "didyoumean@npm:1.2.2"
@@ -7522,6 +7564,17 @@ __metadata:
     hasown: "npm:^2.0.2"
     mime-types: "npm:^2.1.12"
   checksum: 10c0/373525a9a034b9d57073e55eab79e501a714ffac02e7a9b01be1c820780652b16e4101819785e1e18f8d98f0aee866cc654d660a435c378e16a72f2e7cac9695
+  languageName: node
+  linkType: hard
+
+"formidable@npm:^3.5.4":
+  version: 3.5.4
+  resolution: "formidable@npm:3.5.4"
+  dependencies:
+    "@paralleldrive/cuid2": "npm:^2.2.2"
+    dezalgo: "npm:^1.0.4"
+    once: "npm:^1.4.0"
+  checksum: 10c0/3a311ce57617eb8f532368e91c0f2bbfb299a0f1a35090e085bd6ca772298f196fbb0b66f0d4b5549d7bf3c5e1844439338d4402b7b6d1fedbe206ad44a931f8
   languageName: node
   linkType: hard
 
@@ -13907,6 +13960,7 @@ __metadata:
     "@testing-library/user-event": "npm:^14.6.1"
     "@types/canvas-confetti": "npm:^1"
     "@types/figlet": "npm:^1"
+    "@types/formidable": "npm:^3"
     "@types/howler": "npm:^2"
     "@types/jest": "npm:30.0.0"
     "@types/leaflet": "npm:^1"
@@ -13949,6 +14003,7 @@ __metadata:
     fast-glob: "npm:^3.3.3"
     fast-xml-parser: "npm:^4.3.5"
     figlet: "npm:^1.8.2"
+    formidable: "npm:^3.5.4"
     framer-motion: "npm:^11.0.3"
     hash-wasm: "npm:^4.12.0"
     howler: "npm:^2.2.4"

@@ -50,6 +50,11 @@ const ContactApp: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [messageError, setMessageError] = useState("");
+  const [recaptchaReady, setRecaptchaReady] = useState(false);
+  const [recaptchaMessage, setRecaptchaMessage] = useState("");
+  const [staticMode, setStaticMode] = useState(false);
+
+  const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === "true";
 
   useEffect(() => {
     const saved = localStorage.getItem(DRAFT_KEY);
@@ -63,9 +68,58 @@ const ContactApp: React.FC = () => {
         /* ignore */
       }
     }
-    const meta = document.querySelector('meta[name="csrf-token"]');
-    setCsrfToken(meta?.getAttribute("content") || "");
-  }, []);
+    if (isStaticExport) {
+      setStaticMode(true);
+      setRecaptchaMessage(
+        "Static export mode detected. Use the email shortcuts to reach me."
+      );
+      return;
+    }
+    (async () => {
+      try {
+        const res = await fetch("/api/contact");
+        if (!res.ok) throw new Error("csrf");
+        const body = await res.json().catch(() => ({}));
+        setCsrfToken(body.csrfToken || "");
+      } catch {
+        setStaticMode(true);
+        setRecaptchaMessage(
+          "Contact service is offline. Use the copy + mailto actions below."
+        );
+      }
+    })();
+  }, [isStaticExport]);
+
+  useEffect(() => {
+    if (staticMode || isStaticExport) return;
+    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
+    if (!siteKey) {
+      setStaticMode(true);
+      setRecaptchaMessage(
+        "Captcha is not configured. Please use the email options to contact me."
+      );
+      return;
+    }
+    const grecaptcha = (window as any).grecaptcha;
+    if (!grecaptcha) {
+      setRecaptchaMessage("Loading security checks…");
+      const timer = window.setInterval(() => {
+        const g = (window as any).grecaptcha;
+        if (g) {
+          g.ready(() => {
+            setRecaptchaReady(true);
+            setRecaptchaMessage("");
+          });
+          window.clearInterval(timer);
+        }
+      }, 400);
+      return () => window.clearInterval(timer);
+    }
+    grecaptcha.ready(() => {
+      setRecaptchaReady(true);
+      setRecaptchaMessage("");
+    });
+  }, [staticMode, isStaticExport]);
 
   useEffect(() => {
     const draft = { name, email, message };
@@ -74,7 +128,7 @@ const ContactApp: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (submitting) return;
+    if (submitting || staticMode) return;
     setSubmitting(true);
     setError("");
     setSuccessMessage("");
@@ -99,10 +153,21 @@ const ContactApp: React.FC = () => {
       return;
     }
 
+    if (!recaptchaReady) {
+      setError("Security checks are still loading. Please wait a moment.");
+      setRecaptchaMessage("Preparing captcha challenge...");
+      setSubmitting(false);
+      trackEvent("contact_submit_error", { method: "form" });
+      return;
+    }
+
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
     const recaptchaToken = await getRecaptchaToken(siteKey);
     if (!recaptchaToken) {
-      setError("Captcha verification failed. Please try again.");
+      setError(
+        "Captcha verification failed. Refresh the page or use the email shortcuts."
+      );
+      setRecaptchaReady(false);
       setSubmitting(false);
       trackEvent("contact_submit_error", { method: "form" });
       return;
@@ -149,6 +214,19 @@ const ContactApp: React.FC = () => {
             collaboration idea.
           </p>
         </div>
+        {(staticMode || recaptchaMessage) && (
+          <div
+            role="alert"
+            className="rounded-lg border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-surface)_85%,transparent)] px-4 py-3 text-sm text-[color:var(--kali-text)]"
+          >
+            <p className="font-semibold text-[color:var(--kali-control)]">
+              {recaptchaMessage || "Contact form is offline right now."}
+            </p>
+            <p className="mt-1 text-[color:var(--kali-text-muted)]">
+              Use the copy and mailto shortcuts below while the server features are unavailable.
+            </p>
+          </div>
+        )}
         {successMessage && (
           <div
             role="alert"
@@ -345,11 +423,22 @@ const ContactApp: React.FC = () => {
             <div className="space-y-3">
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || staticMode || !recaptchaReady}
                 className="flex h-12 w-full items-center justify-center rounded-lg bg-[color:var(--kali-control)] px-4 text-sm font-semibold uppercase tracking-wide text-[color:var(--color-inverse)] shadow-[0_12px_38px_color-mix(in_srgb,var(--kali-control)_35%,transparent)] transition hover:bg-[color:color-mix(in_srgb,var(--kali-control)_92%,var(--kali-text)_8%)] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--kali-control)] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {submitting ? "Sending..." : "Send message"}
+                {submitting
+                  ? "Sending..."
+                  : staticMode
+                    ? "Form unavailable"
+                    : !recaptchaReady
+                      ? "Preparing security checks..."
+                      : "Send message"}
               </button>
+              {recaptchaMessage && (
+                <p className="text-xs text-[color:var(--kali-text-muted)]" role="status">
+                  {recaptchaMessage}
+                </p>
+              )}
               {submitting && (
                 <div
                   role="progressbar"

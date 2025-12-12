@@ -1,4 +1,7 @@
-import handler, { rateLimit, RATE_LIMIT_WINDOW_MS } from '../pages/api/contact';
+import handler, {
+  rateLimit,
+  RATE_LIMIT_WINDOW_MS,
+} from '../pages/api/contact/index';
 
 describe('contact api rate limiter', () => {
   afterEach(() => {

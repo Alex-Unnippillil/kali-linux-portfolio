@@ -1,27 +1,17 @@
 import { randomBytes } from 'crypto';
-import { contactSchema } from '../../utils/contactSchema';
-import { validateServerEnv } from '../../lib/validate';
-import { getServiceSupabase } from '../../lib/supabase';
-import { formatCookie } from '../../utils/cookies';
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { contactSchema } from '../../../utils/contactSchema';
+import { validateServerEnv } from '../../../lib/validate';
+import { getServiceSupabase } from '../../../lib/supabase';
+import { formatCookie } from '../../../utils/cookies';
 
 // Simple in-memory rate limiter. Not suitable for distributed environments.
 export const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 5;
 
-export const rateLimit = new Map();
+export const rateLimit = new Map<string, { count: number; start: number }>();
 
-export default async function handler(req, res) {
-  try {
-    validateServerEnv(process.env);
-  } catch {
-    if (!process.env.RECAPTCHA_SECRET) {
-      res.status(503).json({ ok: false, code: 'recaptcha_disabled' });
-    } else {
-      res.status(500).json({ ok: false });
-    }
-
-    return;
-  }
+const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
     const token = randomBytes(32).toString('hex');
     const shouldUseSecure =
@@ -40,13 +30,28 @@ export default async function handler(req, res) {
     return;
   }
 
+  try {
+    validateServerEnv(process.env);
+  } catch {
+    if (!process.env.RECAPTCHA_SECRET) {
+      res.status(503).json({ ok: false, code: 'recaptcha_disabled' });
+    } else {
+      res.status(500).json({ ok: false });
+    }
+
+    return;
+  }
+
   if (req.method !== 'POST') {
     res.status(405).json({ ok: false });
     return;
   }
 
+  const forwarded = req.headers['x-forwarded-for'];
   const ip =
-    req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+    (Array.isArray(forwarded) ? forwarded[0] : forwarded) ||
+    req.socket.remoteAddress ||
+    '';
   const now = Date.now();
   const entry = rateLimit.get(ip) || { count: 0, start: now };
   if (now - entry.start > RATE_LIMIT_WINDOW_MS) {
@@ -74,7 +79,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { recaptchaToken = '', ...rest } = req.body || {};
+  const { recaptchaToken = '', ...rest } = (req.body as Record<string, unknown>) || {};
   const secret = process.env.RECAPTCHA_SECRET;
   if (!secret) {
     console.warn('Contact submission rejected', { ip, reason: 'recaptcha_disabled' });
@@ -112,7 +117,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  let sanitized;
+  let sanitized: { name: string; email: string; message: string } | null = null;
   try {
     const parsed = contactSchema.parse({ ...rest, csrfToken: csrfHeader, recaptchaToken });
     if (parsed.honeypot) {
@@ -140,4 +145,6 @@ export default async function handler(req, res) {
 
 
   res.status(200).json({ ok: true });
-}
+};
+
+export default handler;

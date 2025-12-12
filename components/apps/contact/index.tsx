@@ -125,19 +125,35 @@ const deleteDraft = async () => {
   }
 };
 
-const uploadAttachments = async (files: File[]) => {
-  if (!files.length) return;
-  const form = new FormData();
-  files.forEach((f) => form.append('files', f));
-  try {
-    await fetch('/api/contact/attachments', {
-      method: 'POST',
-      body: form,
-    });
-  } catch {
-    /* ignore */
-  }
-};
+const uploadAttachmentsWithProgress = async (
+  files: File[],
+  onProgress?: (value: number) => void
+) =>
+  new Promise<void>((resolve, reject) => {
+    if (!files.length) {
+      resolve();
+      return;
+    }
+    const form = new FormData();
+    files.forEach((f) => form.append('files', f));
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/contact/attachments');
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress) {
+        const percent = Math.round((event.loaded / event.total) * 100);
+        onProgress(percent);
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+      } else {
+        reject(new Error('upload_failed'));
+      }
+    };
+    xhr.onerror = () => reject(new Error('upload_failed'));
+    xhr.send(form);
+  });
 
 const ContactApp: React.FC = () => {
   const [name, setName] = useState('');
@@ -154,6 +170,13 @@ const ContactApp: React.FC = () => {
   const [fallback, setFallback] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [messageError, setMessageError] = useState('');
+  const [recaptchaReady, setRecaptchaReady] = useState(false);
+  const [recaptchaMessage, setRecaptchaMessage] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [attachmentStatus, setAttachmentStatus] = useState('');
+
+  const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 
   useEffect(() => {
     (async () => {
@@ -164,13 +187,59 @@ const ContactApp: React.FC = () => {
         setMessage(draft.message || '');
       }
     })();
-    const meta = document.querySelector('meta[name="csrf-token"]');
-    setCsrfToken(meta?.getAttribute('content') || '');
-    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
-    if (!siteKey || !(window as any).grecaptcha) {
+    if (isStaticExport) {
       setFallback(true);
+      setRecaptchaMessage(
+        'Static export detected. Use the email shortcuts to reach me directly.'
+      );
+      return;
     }
-  }, []);
+    (async () => {
+      try {
+        const res = await fetch('/api/contact');
+        if (!res.ok) throw new Error('csrf');
+        const body = await res.json().catch(() => ({}));
+        setCsrfToken(body.csrfToken || '');
+      } catch {
+        setFallback(true);
+        setRecaptchaMessage(
+          'Contact service is offline right now. Use the copy + mailto actions below.'
+        );
+      }
+    })();
+  }, [isStaticExport]);
+
+  useEffect(() => {
+    if (fallback || isStaticExport) return;
+    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
+    if (!siteKey) {
+      setRecaptchaMessage(
+        'Captcha is not configured. Use the email options to reach me.'
+      );
+      setFallback(true);
+      setRecaptchaReady(false);
+      return;
+    }
+    const grecaptcha = (window as any).grecaptcha;
+    if (!grecaptcha) {
+      setRecaptchaMessage('Loading security checks…');
+      const timer = window.setInterval(() => {
+        const g = (window as any).grecaptcha;
+        if (g) {
+          g.ready(() => {
+            setRecaptchaReady(true);
+            setRecaptchaMessage('');
+          });
+          window.clearInterval(timer);
+        }
+      }, 400);
+      return () => window.clearInterval(timer);
+    }
+    grecaptcha.ready(() => {
+      setRecaptchaReady(true);
+      setRecaptchaMessage('');
+    });
+  }, [fallback, isStaticExport]);
 
   useEffect(() => {
     void writeDraft({ name, email, message });
@@ -178,12 +247,13 @@ const ContactApp: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (submitting) return;
+    if (submitting || uploading) return;
     setSubmitting(true);
     setError('');
     setBanner(null);
     setEmailError('');
     setMessageError('');
+    setAttachmentStatus('');
 
     const emailResult = contactSchema.shape.email.safeParse(email);
     const messageResult = contactSchema.shape.message.safeParse(message);
@@ -201,6 +271,18 @@ const ContactApp: React.FC = () => {
       setSubmitting(false);
       return;
     }
+    if (fallback) {
+      setError('Server actions are offline. Use the email shortcuts above.');
+      setBanner({ type: 'error', message: 'Form unavailable right now' });
+      setSubmitting(false);
+      return;
+    }
+    if (!recaptchaReady) {
+      setError('Security checks are still loading. Please try again in a moment.');
+      setBanner({ type: 'error', message: 'ReCAPTCHA not ready' });
+      setSubmitting(false);
+      return;
+    }
     const totalSize = attachments.reduce((s, f) => s + f.size, 0);
     if (totalSize > MAX_TOTAL_ATTACHMENT_SIZE) {
       setError(
@@ -212,19 +294,13 @@ const ContactApp: React.FC = () => {
       setSubmitting(false);
       return;
     }
-    let recaptchaToken = '';
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
-    let shouldFallback = fallback;
-    if (!shouldFallback && siteKey && (window as any).grecaptcha) {
-      recaptchaToken = await getRecaptchaToken(siteKey);
-      if (!recaptchaToken) shouldFallback = true;
-    } else {
-      shouldFallback = true;
-    }
-    if (shouldFallback) {
-      setFallback(true);
-      setError('Email service unavailable. Use the options above.');
-      setBanner({ type: 'error', message: 'Failed to send' });
+    let recaptchaToken = await getRecaptchaToken(siteKey);
+    if (!recaptchaToken) {
+      setRecaptchaReady(false);
+      setRecaptchaMessage('Captcha verification failed. Reload or use email options.');
+      setError('Captcha verification failed. Reload or use the email options.');
+      setBanner({ type: 'error', message: 'Security verification failed' });
       setSubmitting(false);
       return;
     }
@@ -242,8 +318,20 @@ const ContactApp: React.FC = () => {
       setEmail('');
       setMessage('');
       setHoneypot('');
-      await uploadAttachments(attachments);
-      setAttachments([]);
+      if (attachments.length) {
+        setUploading(true);
+        setUploadProgress(0);
+        try {
+          await uploadAttachmentsWithProgress(attachments, setUploadProgress);
+          setAttachmentStatus('Attachments uploaded successfully.');
+          setAttachments([]);
+        } catch {
+          setAttachmentStatus(
+            'Attachments could not be uploaded. You can send them via email instead.'
+          );
+        }
+        setUploading(false);
+      }
       void deleteDraft();
     } else {
       const msg = result.error || 'Submission failed';
@@ -272,31 +360,38 @@ const ContactApp: React.FC = () => {
           {banner.message}
         </div>
       )}
-      {fallback && (
-        <p className="mb-6 text-sm">
-          Service unavailable. You can{' '}
-          <button
-            type="button"
-            onClick={() => copyToClipboard(EMAIL)}
-            className="underline mr-2"
-          >
-            Copy address
-          </button>
-          <button
-            type="button"
-            onClick={() => copyToClipboard(message)}
-            className="underline mr-2"
-          >
-            Copy message
-          </button>
-          <button
-            type="button"
-            onClick={() => openMailto(EMAIL, '', message)}
-            className="underline"
-          >
-            Open email app
-          </button>
-        </p>
+      {(fallback || recaptchaMessage) && (
+        <div className="mb-6 space-y-2 rounded border border-gray-700 bg-gray-800 p-4 text-sm">
+          <p className="font-semibold text-red-200">
+            {recaptchaMessage || 'The contact service is offline right now.'}
+          </p>
+          <p className="text-gray-300">
+            Reach out directly while the form is unavailable:
+          </p>
+          <div className="flex flex-wrap gap-3 text-sm">
+            <button
+              type="button"
+              onClick={() => copyToClipboard(EMAIL)}
+              className="rounded border border-gray-600 px-3 py-1 hover:border-gray-400"
+            >
+              Copy address
+            </button>
+            <button
+              type="button"
+              onClick={() => copyToClipboard(message)}
+              className="rounded border border-gray-600 px-3 py-1 hover:border-gray-400"
+            >
+              Copy message
+            </button>
+            <button
+              type="button"
+              onClick={() => openMailto(EMAIL, '', message)}
+              className="rounded border border-gray-600 px-3 py-1 hover:border-gray-400"
+            >
+              Open email app
+            </button>
+          </div>
+        </div>
       )}
       <form onSubmit={handleSubmit} className="space-y-6 max-w-md">
         <div className="relative">
@@ -385,15 +480,39 @@ const ContactApp: React.FC = () => {
         {error && <FormError className="mt-3">{error}</FormError>}
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || uploading || fallback || !recaptchaReady}
           className="flex items-center justify-center rounded bg-blue-600 px-4 py-2 disabled:opacity-50"
         >
           {submitting ? (
             <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : uploading ? (
+            'Uploading attachments...'
+          ) : fallback ? (
+            'Form unavailable'
+          ) : !recaptchaReady ? (
+            'Preparing security checks...'
           ) : (
             'Send'
           )}
         </button>
+        {recaptchaMessage && (
+          <p className="text-xs text-gray-400" role="status">
+            {recaptchaMessage}
+          </p>
+        )}
+        {uploading && (
+          <div className="mt-3 h-2 w-full overflow-hidden rounded bg-gray-700" role="progressbar" aria-valuenow={uploadProgress} aria-valuemin={0} aria-valuemax={100}>
+            <div
+              className="h-full bg-blue-500 transition-[width]"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+        )}
+        {attachmentStatus && (
+          <p className="text-xs text-gray-300" role="status">
+            {attachmentStatus}
+          </p>
+        )}
       </form>
     </div>
   );
