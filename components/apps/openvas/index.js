@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { escapeHtml } from '../../../lib/sanitize';
 import TaskOverview from './task-overview';
 import PolicySettings from './policy-settings';
 import pciProfile from './templates/pci.json';
@@ -33,14 +34,6 @@ const notify = (title, body) => {
     alert(`${title}: ${body}`);
   }
 };
-
-const escapeHtml = (str = '') =>
-  str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 
 const severityKeys = ['low', 'medium', 'high', 'critical'];
 

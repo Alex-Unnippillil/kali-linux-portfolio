@@ -1,24 +1,11 @@
-import { FlatCompat } from '@eslint/eslintrc';
+import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
 import noTopLevelWindow from './eslint-plugin-no-top-level-window/index.js';
-
-const compat = new FlatCompat();
 
 const jsFilePatterns = ['**/*.{js,cjs,mjs,jsx,ts,tsx}'];
 
 const config = [
-  {
-    files: jsFilePatterns,
-    languageOptions: {
-      ecmaVersion: 'latest',
-      sourceType: 'module',
-      parserOptions: {
-        ecmaFeatures: {
-          jsx: true,
-        },
-      },
-    },
-  },
-  { ignores: ['components/apps/Chrome/index.tsx'] },
+  { ignores: ['components/apps/Chrome/index.tsx', 'next-env.d.ts'] },
+  ...nextCoreWebVitals,
   {
     files: jsFilePatterns,
     plugins: {
@@ -26,6 +13,10 @@ const config = [
     },
     rules: {
       'no-top-level-window/no-top-level-window-or-document': 'error',
+      '@next/next/no-page-custom-font': 'off',
+      '@next/next/no-img-element': 'off',
+      'jsx-a11y/control-has-associated-label': 'error',
+      'react-hooks/set-state-in-effect': 'off',
     },
   },
   {
@@ -34,14 +25,6 @@ const config = [
       'no-restricted-globals': ['error', 'window', 'document'],
     },
   },
-  ...compat.config({
-    extends: ['next/core-web-vitals'],
-    rules: {
-      '@next/next/no-page-custom-font': 'off',
-      '@next/next/no-img-element': 'off',
-      'jsx-a11y/control-has-associated-label': 'error',
-    },
-  }),
 ];
 
 export default config;

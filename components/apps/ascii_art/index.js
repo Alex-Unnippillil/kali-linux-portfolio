@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import DOMPurify from 'dompurify';
+import { sanitizeHtml } from '../../../lib/sanitize';
 
 // Preset character sets and color palettes
 const presetCharSets = {
@@ -208,7 +208,7 @@ export default function AsciiArt() {
       }
       if (plainChunk) {
         setPlainAscii((p) => p + plainChunk);
-        setAsciiHtml((h) => h + DOMPurify.sanitize(htmlChunk));
+        setAsciiHtml((h) => h + sanitizeHtml(htmlChunk));
         setAnsiAscii((a) => a + ansiChunk);
       }
       if (y < height) {
@@ -328,7 +328,7 @@ export default function AsciiArt() {
     undoStack.current.push(plainAscii);
     redoStack.current = [];
     setPlainAscii(e.target.value);
-    setAsciiHtml(DOMPurify.sanitize(e.target.value.replace(/\n/g, '<br/>')));
+    setAsciiHtml(sanitizeHtml(e.target.value.replace(/\n/g, '<br/>')));
   };
 
   const undo = () => {
@@ -336,7 +336,7 @@ export default function AsciiArt() {
     redoStack.current.push(plainAscii);
     const prev = undoStack.current.pop();
     setPlainAscii(prev);
-    setAsciiHtml(DOMPurify.sanitize(prev.replace(/\n/g, '<br/>')));
+    setAsciiHtml(sanitizeHtml(prev.replace(/\n/g, '<br/>')));
   };
 
   const redo = () => {
@@ -344,7 +344,7 @@ export default function AsciiArt() {
     undoStack.current.push(plainAscii);
     const next = redoStack.current.pop();
     setPlainAscii(next);
-    setAsciiHtml(DOMPurify.sanitize(next.replace(/\n/g, '<br/>')));
+    setAsciiHtml(sanitizeHtml(next.replace(/\n/g, '<br/>')));
   };
 
   const handleEditorKeyDown = (e) => {
@@ -372,22 +372,24 @@ export default function AsciiArt() {
   return (
     <div className="h-full w-full flex flex-col p-4 bg-ub-cool-grey text-white overflow-auto">
       <div className="mb-2 flex flex-wrap gap-2">
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleFile}
-          className="mb-2"
-        />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFile}
+            className="mb-2"
+            aria-label="Upload image to convert to ASCII"
+          />
         <label className="flex items-center gap-2">
           Charset:
           <input
-            type="text"
-            value={charSet}
-            onChange={(e) =>
-              setCharSet(DOMPurify.sanitize(e.target.value).slice(0, 256))
-            }
-            className="px-1 bg-gray-700"
-          />
+              type="text"
+              value={charSet}
+              onChange={(e) =>
+                setCharSet(sanitizeHtml(e.target.value).slice(0, 256))
+              }
+              className="px-1 bg-gray-700"
+              aria-label="Custom character set"
+            />
         </label>
         <label className="flex items-center gap-2">
           Preset:
@@ -406,13 +408,14 @@ export default function AsciiArt() {
         <label className="flex items-center gap-2">
           Cell:
           <input
-            type="number"
-            min="4"
-            max="32"
-            value={cellSize}
-            onChange={(e) => setCellSize(Number(e.target.value))}
-            className="w-16 px-1 bg-gray-700"
-          />
+              type="number"
+              min="4"
+              max="32"
+              value={cellSize}
+              onChange={(e) => setCellSize(Number(e.target.value))}
+              className="w-16 px-1 bg-gray-700"
+              aria-label="Cell size"
+            />
         </label>
         <label className="flex items-center gap-2">
           Brightness:
@@ -482,12 +485,13 @@ export default function AsciiArt() {
         </label>
         <label className="flex items-center gap-2">
           Color
-          <input
-            type="checkbox"
-            checked={useColor}
-            onChange={(e) => setUseColor(e.target.checked)}
-          />
-        </label>
+            <input
+              type="checkbox"
+              checked={useColor}
+              onChange={(e) => setUseColor(e.target.checked)}
+              aria-label="Enable color output"
+            />
+          </label>
         <button
           type="button"
           onClick={copyAscii}
@@ -557,27 +561,28 @@ export default function AsciiArt() {
         />
       )}
       {typingMode ? (
-        <textarea
-          ref={editorRef}
-          value={plainAscii}
-          onChange={handleEditorChange}
-          onKeyDown={handleEditorKeyDown}
-          className="flex-1 font-mono bg-gray-800 text-white resize-none"
-          style={{
-            lineHeight: `${cellSize}px`,
-            fontSize: `${cellSize}px`,
-            backgroundSize: `${cellSize}px ${cellSize}px`,
-            backgroundImage:
-              'linear-gradient(0deg, transparent calc(100% - 1px), rgba(255,255,255,0.1) calc(100% - 1px)), linear-gradient(90deg, transparent calc(100% - 1px), rgba(255,255,255,0.1) calc(100% - 1px))',
-          }}
-        />
+          <textarea
+            ref={editorRef}
+            value={plainAscii}
+            onChange={handleEditorChange}
+            onKeyDown={handleEditorKeyDown}
+            className="flex-1 font-mono bg-gray-800 text-white resize-none"
+            style={{
+              lineHeight: `${cellSize}px`,
+              fontSize: `${cellSize}px`,
+              backgroundSize: `${cellSize}px ${cellSize}px`,
+              backgroundImage:
+                'linear-gradient(0deg, transparent calc(100% - 1px), rgba(255,255,255,0.1) calc(100% - 1px)), linear-gradient(90deg, transparent calc(100% - 1px), rgba(255,255,255,0.1) calc(100% - 1px))',
+            }}
+            aria-label="ASCII typing editor"
+          />
       ) : (
         <pre
           className="font-mono whitespace-pre overflow-auto flex-1"
           dangerouslySetInnerHTML={{ __html: asciiHtml }}
         />
       )}
-      <canvas ref={canvasRef} className="hidden w-full h-full" />
+      <canvas ref={canvasRef} className="hidden w-full h-full" aria-hidden="true" />
       <div className="sr-only" aria-live="polite">
         {altText}
       </div>

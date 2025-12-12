@@ -97,6 +97,7 @@ const run = () => {
   if (!hasMaxWarnings) {
     eslintArgs.push('--max-warnings=0');
   }
+  eslintArgs.push('--no-warn-ignored');
   if (!hasExplicitConfig) {
     const configPath = path.resolve(
       path.dirname(fileURLToPath(import.meta.url)),

@@ -1,15 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { escapeHtml } from '../../../lib/sanitize';
 import events from '../events.json';
-
-const escapeHtml = (str: string = '') =>
-  str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 
 function KeywordTester() {
   const [keywords, setKeywords] = useState<string[]>([]);
@@ -58,6 +51,7 @@ function KeywordTester() {
           accept=".txt"
           onChange={handleUpload}
           className="rounded border border-kali-border/60 bg-kali-dark p-2 text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus/80"
+          aria-label="Upload keyword list"
         />
       </div>
       {keywords.length > 0 && (

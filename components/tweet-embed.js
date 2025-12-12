@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import DOMPurify from 'dompurify';
+import { ensureAnchorTargetHook, sanitizeHtml } from '../lib/sanitize';
 
 export default function TweetEmbed({ id }) {
   const [html, setHtml] = useState(null);
@@ -17,7 +17,7 @@ export default function TweetEmbed({ id }) {
       })
       .then((data) => {
         if (active) {
-          const sanitized = DOMPurify.sanitize(data?.html || '');
+          const sanitized = sanitizeHtml(data?.html || '');
           setHtml(sanitized);
         }
       })
@@ -29,16 +29,7 @@ export default function TweetEmbed({ id }) {
   }, [id]);
 
   useEffect(() => {
-    const hook = (node) => {
-      if (node.tagName === 'A') {
-        node.setAttribute('target', '_blank');
-        node.setAttribute('rel', 'noopener noreferrer');
-      }
-    };
-    DOMPurify.addHook('afterSanitizeAttributes', hook);
-    return () => {
-      DOMPurify.removeHook('afterSanitizeAttributes', hook);
-    };
+    ensureAnchorTargetHook();
   }, []);
 
   if (error) {

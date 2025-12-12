@@ -1,12 +1,5 @@
 import React from 'react';
-
-const escapeHtml = (str = '') =>
-  str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+import { escapeHtml } from '../../../lib/sanitize';
 
 // Map common artifact types to simple emoji icons so the case browser cards
 // give a quick visual cue about the evidence type. These are intentionally
@@ -49,6 +42,7 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
           placeholder="Keyword search"
+          aria-label="Keyword search"
           className="flex-grow rounded border border-kali-border/60 bg-kali-dark px-2 py-1 text-kali-text focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus/80"
         />
         <button

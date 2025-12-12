@@ -8,7 +8,7 @@ import {
   KeyboardEvent,
   type SVGProps,
 } from 'react';
-import DOMPurify from 'dompurify';
+import { sanitizeHtml } from '../../lib/sanitize';
 import usePersistentState from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
 import useScheduledTweets, {
@@ -248,7 +248,7 @@ export default function XTimeline() {
 
   const handleAddPreset = (e: FormEvent) => {
     e.preventDefault();
-    let value = DOMPurify.sanitize(input.trim());
+    let value = sanitizeHtml(input.trim());
     if (timelineType === 'profile') value = value.replace('@', '');
     if (value) {
       if (!presets.includes(value)) {
@@ -264,7 +264,7 @@ export default function XTimeline() {
     if (!tweetText.trim() || !tweetTime) return;
     const newTweet: ScheduledTweet = {
       id: Date.now().toString(),
-      text: DOMPurify.sanitize(tweetText.trim()),
+      text: sanitizeHtml(tweetText.trim()),
       time: new Date(tweetTime).getTime(),
     };
     setScheduled([...scheduled, newTweet]);
