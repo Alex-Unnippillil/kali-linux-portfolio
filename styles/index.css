@@ -96,6 +96,32 @@ button:focus-visible {
     scroll-behavior: auto !important;
 }
 
+.low-end-mode *, .low-end-mode *::before, .low-end-mode *::after {
+    transition-duration: 120ms !important;
+    animation-duration: calc(var(--animation-speed-scale, 1) * 240ms) !important;
+}
+
+.low-end-mode [class*="backdrop-blur"],
+.low-end-mode [class*="backdrop-filter"],
+.low-end-mode .windowFrame,
+.low-end-mode .windowFrameActive,
+.low-end-mode .windowFrameInactive,
+.low-end-mode .windowFrameMaximized,
+.low-end-mode .windowFrameResizing {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.low-end-mode .blur,
+.low-end-mode .blur-2xl,
+.low-end-mode .blur-3xl,
+.low-end-mode .blur-lg,
+.low-end-mode .blur-md,
+.low-end-mode .blur-sm,
+.low-end-mode .blur-xl {
+    filter: none !important;
+}
+
 /* Top NavBar styling */
 
 .top-arrow-up {

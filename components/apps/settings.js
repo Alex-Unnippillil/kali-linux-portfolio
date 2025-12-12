@@ -4,7 +4,7 @@ import { resetSettings, defaults, exportSettings as exportSettingsData, importSe
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, lowEndMode, setLowEndMode, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -152,6 +152,18 @@ export function Settings() {
                         aria-label="Enable reduced motion"
                     />
                     Reduced Motion
+                </label>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-kali-text/80 flex items-center">
+                    <input
+                        type="checkbox"
+                        checked={lowEndMode}
+                        onChange={(e) => setLowEndMode(e.target.checked)}
+                        className="mr-2"
+                        aria-label="Enable low-end device optimizations"
+                    />
+                    Low-End Device Mode
                 </label>
             </div>
             <div className="flex justify-center my-4">

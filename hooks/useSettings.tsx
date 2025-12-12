@@ -18,6 +18,8 @@ import {
   setDensity as saveDensity,
   getReducedMotion as loadReducedMotion,
   setReducedMotion as saveReducedMotion,
+  getLowEndMode as loadLowEndMode,
+  setLowEndMode as saveLowEndMode,
   getFontScale as loadFontScale,
   setFontScale as saveFontScale,
   getHighContrast as loadHighContrast,
@@ -74,6 +76,7 @@ interface SettingsContextValue {
   useKaliWallpaper: boolean;
   density: Density;
   reducedMotion: boolean;
+  lowEndMode: boolean;
   fontScale: number;
   highContrast: boolean;
   largeHitAreas: boolean;
@@ -87,6 +90,7 @@ interface SettingsContextValue {
   setUseKaliWallpaper: (value: boolean) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
+  setLowEndMode: (value: boolean) => void;
   setFontScale: (value: number) => void;
   setHighContrast: (value: boolean) => void;
   setLargeHitAreas: (value: boolean) => void;
@@ -111,6 +115,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   useKaliWallpaper: defaults.useKaliWallpaper,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
+  lowEndMode: defaults.lowEndMode,
   fontScale: defaults.fontScale,
   highContrast: defaults.highContrast,
   largeHitAreas: defaults.largeHitAreas,
@@ -124,6 +129,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setUseKaliWallpaper: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
+  setLowEndMode: () => {},
   setFontScale: () => {},
   setHighContrast: () => {},
   setLargeHitAreas: () => {},
@@ -139,6 +145,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [useKaliWallpaper, setUseKaliWallpaper] = useState<boolean>(defaults.useKaliWallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
+  const [lowEndMode, setLowEndMode] = useState<boolean>(defaults.lowEndMode);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
@@ -156,6 +163,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setUseKaliWallpaper(await loadUseKaliWallpaper());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
+      setLowEndMode(await loadLowEndMode());
       setFontScale(await loadFontScale());
       setHighContrast(await loadHighContrast());
       setLargeHitAreas(await loadLargeHitAreas());
@@ -225,6 +233,19 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle('reduced-motion', reducedMotion);
     saveReducedMotion(reducedMotion);
   }, [reducedMotion]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('low-end-mode', lowEndMode);
+    document.documentElement.style.setProperty(
+      '--animation-speed-scale',
+      lowEndMode ? '0.75' : '1',
+    );
+    document.documentElement.style.setProperty(
+      '--low-end-backdrop',
+      lowEndMode ? 'none' : 'var(--tw-backdrop-filter, initial)',
+    );
+    saveLowEndMode(lowEndMode);
+  }, [lowEndMode]);
 
   useEffect(() => {
     document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
@@ -351,8 +372,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         bgImageName,
         useKaliWallpaper,
         density,
-        reducedMotion,
-        fontScale,
+      reducedMotion,
+      lowEndMode,
+      fontScale,
         highContrast,
         largeHitAreas,
         pongSpin,
@@ -364,8 +386,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setWallpaper,
         setUseKaliWallpaper,
         setDensity,
-        setReducedMotion,
-        setFontScale,
+      setReducedMotion,
+      setLowEndMode,
+      setFontScale,
         setHighContrast,
         setLargeHitAreas,
         setPongSpin,
