@@ -164,8 +164,22 @@ const ContactApp: React.FC = () => {
         setMessage(draft.message || '');
       }
     })();
-    const meta = document.querySelector('meta[name="csrf-token"]');
-    setCsrfToken(meta?.getAttribute('content') || '');
+    (async () => {
+      try {
+        const res = await fetch('/api/contact', { credentials: 'same-origin' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.csrfToken) {
+            setCsrfToken(data.csrfToken);
+            return;
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+      setFallback(true);
+      setError('Form unavailable in this static preview. Use the options above.');
+    })();
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
     if (!siteKey || !(window as any).grecaptcha) {
       setFallback(true);
@@ -274,7 +288,7 @@ const ContactApp: React.FC = () => {
       )}
       {fallback && (
         <p className="mb-6 text-sm">
-          Service unavailable. You can{' '}
+          Service unavailable in this mode. You can{' '}
           <button
             type="button"
             onClick={() => copyToClipboard(EMAIL)}
