@@ -189,6 +189,9 @@ const createOverlayStateMap = () => {
     return next;
 };
 
+const CONTEXT_LONG_PRESS_DELAY = 350;
+const CONTEXT_LONG_PRESS_MOVE_TOLERANCE = 10;
+
 export class Desktop extends Component {
     static defaultProps = {
         snapGrid: [8, 8],
@@ -198,6 +201,12 @@ export class Desktop extends Component {
         super(props);
         this.workspaceCount = 4;
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
+        this.longPressTimer = null;
+        this.longPressPointerId = null;
+        this.longPressTarget = null;
+        this.longPressOrigin = null;
+        this.longPressTriggered = false;
+        this.longPressPreventClick = false;
         this.workspaceKeys = new Set([
             'focused_windows',
             'closed_windows',
@@ -3804,12 +3813,21 @@ export class Desktop extends Component {
         document.addEventListener('click', this.hideAllContextMenu);
         // allow keyboard activation of context menus
         document.addEventListener('keydown', this.handleContextKey);
+        document.addEventListener('pointerdown', this.handleContextPointerDown);
+        document.addEventListener('pointermove', this.handleContextPointerMove);
+        document.addEventListener('pointerup', this.handleContextPointerUp, true);
+        document.addEventListener('pointercancel', this.handleContextPointerUp, true);
     }
 
     removeContextListeners = () => {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+        document.removeEventListener('pointerdown', this.handleContextPointerDown);
+        document.removeEventListener('pointermove', this.handleContextPointerMove);
+        document.removeEventListener('pointerup', this.handleContextPointerUp, true);
+        document.removeEventListener('pointercancel', this.handleContextPointerUp, true);
+        this.resetLongPressTracking();
     }
 
     handleGlobalShortcut = (e) => {
@@ -4195,70 +4213,257 @@ export class Desktop extends Component {
         });
     }
 
-    checkContextMenu = (e) => {
-        e.preventDefault();
-        this.hideAllContextMenu();
-        const target = e.target.closest('[data-context]');
-        const context = target ? target.dataset.context : null;
-        const appId = target ? target.dataset.appId : null;
+    getScrollOffsets = () => {
+        if (typeof window !== 'undefined') {
+            const scrollX = window.scrollX ?? window.pageXOffset ?? 0;
+            const scrollY = window.scrollY ?? window.pageYOffset ?? 0;
+            return { scrollX, scrollY };
+        }
+        if (typeof document !== 'undefined') {
+            const doc = document.documentElement || document.body;
+            const scrollX = doc?.scrollLeft ?? 0;
+            const scrollY = doc?.scrollTop ?? 0;
+            return { scrollX, scrollY };
+        }
+        return { scrollX: 0, scrollY: 0 };
+    };
+
+    createMenuEventFromPoint = (pageX = 0, pageY = 0) => {
+        const { scrollX, scrollY } = this.getScrollOffsets();
+        const clientX = pageX - scrollX;
+        const clientY = pageY - scrollY;
+        return {
+            pageX,
+            pageY,
+            clientX,
+            clientY,
+        };
+    };
+
+    createMenuEventFromTarget = (target) => {
+        if (!target || typeof target.getBoundingClientRect !== 'function') {
+            const { scrollX, scrollY } = this.getScrollOffsets();
+            return this.createMenuEventFromPoint(scrollX, scrollY);
+        }
+        const rect = target.getBoundingClientRect();
+        const { scrollX, scrollY } = this.getScrollOffsets();
+        const pageX = rect.left + scrollX;
+        const pageY = rect.top + rect.height + scrollY;
+        return this.createMenuEventFromPoint(pageX, pageY);
+    };
+
+    createMenuEventFromNativeEvent = (event) => {
+        if (!event) {
+            const { scrollX, scrollY } = this.getScrollOffsets();
+            return this.createMenuEventFromPoint(scrollX, scrollY);
+        }
+        const { scrollX, scrollY } = this.getScrollOffsets();
+        const pageX = typeof event.pageX === 'number'
+            ? event.pageX
+            : (typeof event.clientX === 'number' ? event.clientX + scrollX : scrollX);
+        const pageY = typeof event.pageY === 'number'
+            ? event.pageY
+            : (typeof event.clientY === 'number' ? event.clientY + scrollY : scrollY);
+        return this.createMenuEventFromPoint(pageX, pageY);
+    };
+
+    openContextMenuForTarget = (target, eventLike) => {
+        const contextTarget = target && typeof target.dataset === 'object'
+            ? target
+            : null;
+        const context = contextTarget?.dataset?.context || null;
+        const appId = contextTarget?.dataset?.appId || null;
+        const eventForMenu = eventLike || this.createMenuEventFromTarget(contextTarget);
+
+        const openMenu = (menuName, action) => {
+            ReactGA.event({ category: 'Context Menu', action });
+            if (menuName === 'app' || menuName === 'taskbar') {
+                this.setState({ context_app: appId }, () => this.showContextMenu(eventForMenu, menuName));
+                return;
+            }
+            this.showContextMenu(eventForMenu, menuName);
+        };
+
         switch (context) {
-            case "desktop-area":
-                ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened Desktop Context Menu`
-                });
-                this.showContextMenu(e, "desktop");
+            case 'desktop-area':
+                openMenu('desktop', 'Opened Desktop Context Menu');
                 break;
-            case "app":
-                ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened App Context Menu`
-                });
-                this.setState({ context_app: appId }, () => this.showContextMenu(e, "app"));
+            case 'app':
+                openMenu('app', 'Opened App Context Menu');
                 break;
-            case "taskbar":
-                ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened Taskbar Context Menu`
-                });
-                this.setState({ context_app: appId }, () => this.showContextMenu(e, "taskbar"));
+            case 'taskbar':
+                openMenu('taskbar', 'Opened Taskbar Context Menu');
+                break;
+            case 'window':
+            case 'default':
+                openMenu('default', 'Opened Default Context Menu');
                 break;
             default:
-                ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened Default Context Menu`
-                });
-                this.showContextMenu(e, "default");
+                openMenu('default', 'Opened Default Context Menu');
         }
-    }
+    };
+
+    resetLongPressTracking = ({ preserveClickBlocker = false } = {}) => {
+        if (this.longPressTimer != null) {
+            if (typeof window !== 'undefined' && typeof window.clearTimeout === 'function') {
+                window.clearTimeout(this.longPressTimer);
+            } else {
+                clearTimeout(this.longPressTimer);
+            }
+        }
+        this.longPressTimer = null;
+        this.longPressPointerId = null;
+        this.longPressTarget = null;
+        this.longPressOrigin = null;
+        this.longPressTriggered = false;
+        if (!preserveClickBlocker && this.longPressPreventClick && typeof document !== 'undefined') {
+            document.removeEventListener('click', this.consumeNextClickAfterLongPress, true);
+            this.longPressPreventClick = false;
+        }
+    };
+
+    consumeNextClickAfterLongPress = (event) => {
+        if (!this.longPressPreventClick) {
+            return;
+        }
+        this.longPressPreventClick = false;
+        if (typeof document !== 'undefined') {
+            document.removeEventListener('click', this.consumeNextClickAfterLongPress, true);
+        }
+        if (event && typeof event.preventDefault === 'function') {
+            event.preventDefault();
+        }
+        if (event && typeof event.stopPropagation === 'function') {
+            event.stopPropagation();
+        }
+    };
+
+    handleContextPointerDown = (event) => {
+        this.resetLongPressTracking({ preserveClickBlocker: true });
+        if (!event || (event.pointerType !== 'touch' && event.pointerType !== 'pen')) {
+            return;
+        }
+        const target = event.target && typeof event.target.closest === 'function'
+            ? event.target.closest('[data-context]')
+            : null;
+        if (!target) {
+            return;
+        }
+        const { scrollX, scrollY } = this.getScrollOffsets();
+        const activePointerId = typeof event.pointerId === 'number' ? event.pointerId : null;
+        const pageX = typeof event.pageX === 'number'
+            ? event.pageX
+            : (typeof event.clientX === 'number' ? event.clientX + scrollX : scrollX);
+        const pageY = typeof event.pageY === 'number'
+            ? event.pageY
+            : (typeof event.clientY === 'number' ? event.clientY + scrollY : scrollY);
+        const clientX = typeof event.clientX === 'number' ? event.clientX : pageX - scrollX;
+        const clientY = typeof event.clientY === 'number' ? event.clientY : pageY - scrollY;
+
+        this.longPressPointerId = activePointerId;
+        this.longPressTarget = target;
+        this.longPressOrigin = { pageX, pageY, clientX, clientY };
+        this.longPressTriggered = false;
+
+        const schedule = (typeof window !== 'undefined' && typeof window.setTimeout === 'function')
+            ? window.setTimeout.bind(window)
+            : setTimeout;
+        this.longPressTimer = schedule(() => {
+            this.longPressTimer = null;
+            if (!this.longPressTarget) {
+                return;
+            }
+            if (this.longPressPointerId !== null && typeof activePointerId === 'number' && this.longPressPointerId !== activePointerId) {
+                return;
+            }
+            this.triggerLongPressMenu();
+        }, CONTEXT_LONG_PRESS_DELAY);
+    };
+
+    handleContextPointerMove = (event) => {
+        if (!event || (event.pointerType !== 'touch' && event.pointerType !== 'pen')) {
+            return;
+        }
+        if (this.longPressPointerId !== null && typeof event.pointerId === 'number' && event.pointerId !== this.longPressPointerId) {
+            return;
+        }
+        if (!this.longPressOrigin || this.longPressTimer == null) {
+            return;
+        }
+        if (typeof event.clientX !== 'number' || typeof event.clientY !== 'number') {
+            return;
+        }
+        const deltaX = event.clientX - this.longPressOrigin.clientX;
+        const deltaY = event.clientY - this.longPressOrigin.clientY;
+        if (Math.abs(deltaX) > CONTEXT_LONG_PRESS_MOVE_TOLERANCE || Math.abs(deltaY) > CONTEXT_LONG_PRESS_MOVE_TOLERANCE) {
+            this.resetLongPressTracking({ preserveClickBlocker: true });
+        }
+    };
+
+    handleContextPointerUp = (event) => {
+        if (!event || (event.pointerType !== 'touch' && event.pointerType !== 'pen')) {
+            this.resetLongPressTracking();
+            return;
+        }
+        if (this.longPressPointerId !== null && typeof event.pointerId === 'number' && event.pointerId !== this.longPressPointerId) {
+            return;
+        }
+        const wasTriggered = this.longPressTriggered;
+        if (wasTriggered) {
+            if (typeof event.preventDefault === 'function') {
+                event.preventDefault();
+            }
+            if (typeof event.stopPropagation === 'function') {
+                event.stopPropagation();
+            }
+            this.resetLongPressTracking({ preserveClickBlocker: true });
+            this.longPressTriggered = false;
+        } else {
+            this.resetLongPressTracking();
+        }
+    };
+
+    triggerLongPressMenu = () => {
+        if (!this.longPressTarget || !this.longPressOrigin) {
+            return;
+        }
+        const { pageX, pageY } = this.longPressOrigin;
+        const eventForMenu = this.createMenuEventFromPoint(pageX, pageY);
+        this.hideAllContextMenu();
+        this.openContextMenuForTarget(this.longPressTarget, eventForMenu);
+        this.longPressTriggered = true;
+        this.longPressPreventClick = true;
+        if (typeof document !== 'undefined') {
+            document.addEventListener('click', this.consumeNextClickAfterLongPress, true);
+        }
+    };
+
+    checkContextMenu = (e) => {
+        if (e && typeof e.preventDefault === 'function') {
+            e.preventDefault();
+        }
+        this.resetLongPressTracking({ preserveClickBlocker: true });
+        this.hideAllContextMenu();
+        const target = e?.target && typeof e.target.closest === 'function'
+            ? e.target.closest('[data-context]')
+            : null;
+        const eventForMenu = this.createMenuEventFromNativeEvent(e);
+        this.openContextMenuForTarget(target, eventForMenu);
+    };
 
     handleContextKey = (e) => {
         if (!(e.shiftKey && e.key === 'F10')) return;
         e.preventDefault();
+        this.resetLongPressTracking({ preserveClickBlocker: true });
         this.hideAllContextMenu();
-        const target = e.target.closest('[data-context]');
-        const context = target ? target.dataset.context : null;
-        const appId = target ? target.dataset.appId : null;
-        const rect = target ? target.getBoundingClientRect() : { left: 0, top: 0, height: 0 };
-        const fakeEvent = { pageX: rect.left, pageY: rect.top + rect.height };
-        switch (context) {
-            case "desktop-area":
-                ReactGA.event({ category: `Context Menu`, action: `Opened Desktop Context Menu` });
-                this.showContextMenu(fakeEvent, "desktop");
-                break;
-            case "app":
-                ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
-                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app"));
-                break;
-            case "taskbar":
-                ReactGA.event({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
-                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar"));
-                break;
-            default:
-                ReactGA.event({ category: `Context Menu`, action: `Opened Default Context Menu` });
-                this.showContextMenu(fakeEvent, "default");
-        }
-    }
+        const target = e.target && typeof e.target.closest === 'function'
+            ? e.target.closest('[data-context]')
+            : null;
+        const eventForMenu = target
+            ? this.createMenuEventFromTarget(target)
+            : this.createMenuEventFromNativeEvent(e);
+        this.openContextMenuForTarget(target, eventForMenu);
+    };
 
     showContextMenu = (e, menuName /* context menu name */) => {
         let { posx, posy } = this.getMenuPosition(e);
