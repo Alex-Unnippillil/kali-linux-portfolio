@@ -1,4 +1,5 @@
 import React, { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import EmbedFrame from '../../EmbedFrame';
 import { FirefoxSimulationView, SIMULATIONS, toSimulationKey } from './simulations';
 
 const DEFAULT_URL = 'https://www.kali.org/docs/';
@@ -53,6 +54,16 @@ const getFaviconUrl = (url: string) => {
     return 'https://icons.duckduckgo.com/ip3/kali.org.ico';
   }
 };
+
+const FIREFOX_ALLOWED_ORIGINS = [
+  'https://www.kali.org',
+  'https://www.offsec.com',
+  'https://www.exploit-db.com',
+  'https://forums.kali.org',
+  'https://developer.mozilla.org',
+  'https://en.wikipedia.org',
+  'https://www.google.com',
+];
 
 const Firefox: React.FC = () => {
   const initialUrl = useMemo(() => {
@@ -237,15 +248,18 @@ const Firefox: React.FC = () => {
         {simulation ? (
           <FirefoxSimulationView simulation={simulation} />
         ) : (
-          <iframe
+          <EmbedFrame
             key={address}
             title="Firefox"
             src={address}
             className="h-full w-full border-0"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+            containerClassName="relative h-full w-full"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowedOrigins={FIREFOX_ALLOWED_ORIGINS}
+            loadingLabel="Loading site preview…"
             onLoad={() => setIsLoading(false)}
             onError={() => setIsLoading(false)}
+            onBlocked={() => setIsLoading(false)}
           />
         )}
       </div>
