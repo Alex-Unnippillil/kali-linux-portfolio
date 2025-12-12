@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import FormError from '../components/ui/FormError';
+import { isStaticExport } from '../utils/isStaticExport';
 
 const STORAGE_KEY = 'dummy-form-draft';
 
@@ -68,7 +69,7 @@ const DummyForm: React.FC = () => {
     }
     setError('');
     setSuccess(false);
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+    if (!isStaticExport()) {
       await fetch('/api/dummy', {
         method: 'POST',
         headers: {
@@ -99,6 +100,7 @@ const DummyForm: React.FC = () => {
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          aria-label="Name"
         />
         <label className="mb-2 block text-sm font-medium" htmlFor="email">Email</label>
         <input
@@ -107,6 +109,7 @@ const DummyForm: React.FC = () => {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          aria-label="Email"
         />
         <label className="mb-2 block text-sm font-medium" htmlFor="message">Message</label>
         <textarea
@@ -114,6 +117,7 @@ const DummyForm: React.FC = () => {
           className="mb-4 w-full rounded border p-2"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
+          aria-label="Message"
         />
         <button type="submit" className="w-full rounded bg-blue-600 p-2 text-white">Submit</button>
         <p className="mt-4 text-xs text-gray-500">

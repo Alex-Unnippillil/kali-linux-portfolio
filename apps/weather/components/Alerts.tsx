@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import usePersistentState from "../../../hooks/usePersistentState";
+import { useNotifier } from "../../../hooks/useNotifier";
 
 interface AlertsProps {
   latitude: number;
@@ -12,6 +13,7 @@ const isNumber = (v: unknown): v is number => typeof v === "number";
 const isBoolean = (v: unknown): v is boolean => typeof v === "boolean";
 
 const Alerts = ({ latitude, longitude }: AlertsProps) => {
+  const { notify } = useNotifier();
   const [enabled, setEnabled] = usePersistentState<boolean>(
     "weather-alerts-enabled",
     false,
@@ -47,12 +49,16 @@ const Alerts = ({ latitude, longitude }: AlertsProps) => {
         const numbers = temps.filter((t): t is number => typeof t === "number");
         if (numbers.some((t) => t >= high)) {
           const max = Math.max(...numbers);
-          new Notification("High temperature forecast", {
+          void notify({
+            appId: "weather",
+            title: "High temperature forecast",
             body: `${max}\u00B0`,
           });
         } else if (numbers.some((t) => t <= low)) {
           const min = Math.min(...numbers);
-          new Notification("Low temperature forecast", {
+          void notify({
+            appId: "weather",
+            title: "Low temperature forecast",
             body: `${min}\u00B0`,
           });
         }
@@ -83,7 +89,7 @@ const Alerts = ({ latitude, longitude }: AlertsProps) => {
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("blur", handleBlur);
     };
-  }, [enabled, high, low, latitude, longitude]);
+  }, [enabled, high, latitude, longitude, low, notify]);
 
   return (
     <div className="space-y-2 p-2">
@@ -92,6 +98,7 @@ const Alerts = ({ latitude, longitude }: AlertsProps) => {
           type="checkbox"
           checked={enabled}
           onChange={(e) => setEnabled(e.target.checked)}
+          aria-label="Enable alerts"
         />
         <span>Enable alerts</span>
       </label>
@@ -103,6 +110,7 @@ const Alerts = ({ latitude, longitude }: AlertsProps) => {
             value={low}
             onChange={(e) => setLow(Number(e.target.value))}
             className="w-16 text-black"
+            aria-label="Low temperature threshold"
           />
         </label>
         <label className="flex items-center space-x-1">
@@ -112,6 +120,7 @@ const Alerts = ({ latitude, longitude }: AlertsProps) => {
             value={high}
             onChange={(e) => setHigh(Number(e.target.value))}
             className="w-16 text-black"
+            aria-label="High temperature threshold"
           />
         </label>
       </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import { isStaticExport } from '../../../utils/isStaticExport';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -128,7 +129,7 @@ const HydraApp = () => {
     setAnnounce('Hydra resumed');
     announceRef.current = Date.now();
     try {
-      if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+      if (!isStaticExport()) {
         const res = await fetch('/api/hydra', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -333,7 +334,7 @@ const HydraApp = () => {
     setAnnounce('Hydra started');
     announceRef.current = Date.now();
     try {
-      if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+      if (!isStaticExport()) {
         const res = await fetch('/api/hydra', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -400,7 +401,7 @@ const HydraApp = () => {
   const pauseHydra = async () => {
     setPaused(true);
     setAnnounce('Hydra paused');
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+    if (!isStaticExport()) {
       await fetch('/api/hydra', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -412,7 +413,7 @@ const HydraApp = () => {
   const resumeHydra = async () => {
     setPaused(false);
     setAnnounce('Hydra resumed');
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+    if (!isStaticExport()) {
       await fetch('/api/hydra', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -428,7 +429,7 @@ const HydraApp = () => {
     setOutput('');
     setTimeline([]);
     startRef.current = null;
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+    if (!isStaticExport()) {
       await fetch('/api/hydra', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -467,6 +468,7 @@ const HydraApp = () => {
             onChange={(e) => setTarget(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="192.168.0.1"
+            aria-label="Hydra target host"
           />
         </div>
         <div>
@@ -504,6 +506,7 @@ const HydraApp = () => {
               addWordList(e.target.files[0], setUserLists, userLists)
             }
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Upload username wordlist"
           />
           <ul>
             {userLists.map((l) => (
@@ -540,6 +543,7 @@ const HydraApp = () => {
               addWordList(e.target.files[0], setPassLists, passLists)
             }
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Upload password wordlist"
           />
           <ul>
             {passLists.map((l) => (
@@ -563,6 +567,7 @@ const HydraApp = () => {
             onChange={(e) => setCharset(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="abc123"
+            aria-label="Charset characters"
           />
         </div>
         <div className="col-span-2">
@@ -573,6 +578,7 @@ const HydraApp = () => {
             onChange={(e) => setRule(e.target.value)}
             className="w-full p-2 rounded text-black"
             placeholder="1:3"
+            aria-label="Rule length range"
           />
           <p className="mt-1 text-sm">
             Candidate space: {candidateSpace.toLocaleString()}
@@ -582,6 +588,7 @@ const HydraApp = () => {
             width="300"
             height="100"
             className="bg-gray-800 mt-2 w-full"
+            aria-label="Hydra brute force progress"
           ></canvas>
         </div>
         <div className="col-span-2 flex flex-wrap gap-1.5 mt-2">

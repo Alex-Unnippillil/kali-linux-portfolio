@@ -20,6 +20,8 @@ import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 import { Rajdhani } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
+import { LIVE_REGION_EVENT } from '../utils/liveRegion';
+import { isStaticExport } from '../utils/isStaticExport';
 
 type PeriodicSyncPermissionDescriptor = PermissionDescriptor & {
   name: 'periodic-background-sync';
@@ -155,51 +157,23 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
     const handleCopy = (): void => update('Copied to clipboard');
     const handleCut = (): void => update('Cut to clipboard');
     const handlePaste = (): void => update('Pasted from clipboard');
+    const handleLiveRegionEvent = (event: Event): void => {
+      const message = (event as CustomEvent<string>).detail;
+      if (typeof message === 'string' && message.trim()) {
+        update(message);
+      }
+    };
 
     window.addEventListener('copy', handleCopy);
     window.addEventListener('cut', handleCut);
     window.addEventListener('paste', handlePaste);
-
-    const { clipboard } = navigator;
-    const originalWrite = clipboard?.writeText?.bind(clipboard);
-    const originalRead = clipboard?.readText?.bind(clipboard);
-    if (clipboard && originalWrite) {
-      clipboard.writeText = async (text: string): Promise<void> => {
-        update('Copied to clipboard');
-        await originalWrite(text);
-      };
-    }
-    if (clipboard && originalRead) {
-      clipboard.readText = async (): Promise<string> => {
-        const text = await originalRead();
-        update('Pasted from clipboard');
-        return text;
-      };
-    }
-
-    const OriginalNotification = window.Notification;
-    if (OriginalNotification) {
-      const WrappedNotification = class extends OriginalNotification {
-        constructor(title: string, options?: NotificationOptions) {
-          super(title, options);
-          update(`${title}${options?.body ? ` ${options.body}` : ''}`);
-        }
-      };
-
-      window.Notification = WrappedNotification;
-    }
+    window.addEventListener(LIVE_REGION_EVENT, handleLiveRegionEvent as EventListener);
 
     return () => {
       window.removeEventListener('copy', handleCopy);
       window.removeEventListener('cut', handleCut);
       window.removeEventListener('paste', handlePaste);
-      if (clipboard) {
-        if (originalWrite) clipboard.writeText = originalWrite;
-        if (originalRead) clipboard.readText = originalRead;
-      }
-      if (OriginalNotification) {
-        window.Notification = OriginalNotification;
-      }
+      window.removeEventListener(LIVE_REGION_EVENT, handleLiveRegionEvent as EventListener);
     };
   }, []);
 
@@ -229,7 +203,7 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
                 }}
               />
 
-              {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+              {!isStaticExport() && <SpeedInsights />}
             </PipPortalProvider>
           </NotificationCenter>
         </SettingsProvider>

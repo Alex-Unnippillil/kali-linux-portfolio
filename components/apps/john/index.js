@@ -9,6 +9,7 @@ import {
 import FormError from '../../ui/FormError';
 import StatsChart from '../../StatsChart';
 import johnPlaceholders from './placeholders';
+import { isStaticExport } from '../../../utils/isStaticExport';
 
 // Enhanced John the Ripper interface that supports rule uploads,
 // basic hash analysis and mock distribution of cracking tasks.
@@ -245,7 +246,7 @@ const JohnApp = () => {
         for (const h of hs) {
           if (signal.aborted) throw new Error('cancelled');
           incrementProgress('wordlist');
-          if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+          if (!isStaticExport()) {
             const res = await fetch('/api/john', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
