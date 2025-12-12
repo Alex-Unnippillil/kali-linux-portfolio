@@ -126,7 +126,11 @@ export default function useFileSystemNavigator(): UseFileSystemNavigatorReturn {
       } catch (error) {
         if (activeRequestRef.current !== requestId) return;
         const message =
-          error instanceof Error ? error.message : 'Unable to read directory contents';
+          error instanceof Error
+            ? error.name === 'NotAllowedError'
+              ? 'Permission denied when reading directory. Please re-open and grant access.'
+              : error.message
+            : 'Unable to read directory contents';
         setLocationError(message);
       }
     },
