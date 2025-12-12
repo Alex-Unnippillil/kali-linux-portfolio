@@ -30,7 +30,13 @@ export class Gedit extends Component {
     componentDidMount() {
         emailjs.init(process.env.NEXT_PUBLIC_USER_ID);
         // Retrieve timezone once and store in state
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+        let timezone = 'UTC';
+        try {
+            timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+        } catch (e) {
+            // Fallback to UTC if Intl API is not available
+            timezone = 'UTC';
+        }
         this.setState({ timezone }, () => {
             this.updateTime();
         });
