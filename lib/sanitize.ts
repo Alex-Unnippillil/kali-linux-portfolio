@@ -26,13 +26,11 @@ const anchorHook = (node: Element) => {
   node.setAttribute('rel', Array.from(rel).join(' '));
 };
 
-let anchorHookInstalled = false;
-
+// Always add the anchorHook before sanitizing. DOMPurify allows duplicate hooks,
+// but our hook is idempotent, so this is safe.
 export const ensureAnchorTargetHook = () => {
-  if (anchorHookInstalled) return;
   if (typeof window === 'undefined' || !DOMPurify.isSupported) return;
   DOMPurify.addHook('afterSanitizeAttributes', anchorHook);
-  anchorHookInstalled = true;
 };
 
 export const sanitizeHtml = (dirty = '', config?: Config) => {
