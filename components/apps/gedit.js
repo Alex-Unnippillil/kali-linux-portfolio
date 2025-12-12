@@ -163,10 +163,10 @@ export class Gedit extends Component {
                     </div>
                 </div>
                 {
-                    this.state.timezone &&
+                    this.state.localTime &&
                     <div className="bg-ub-gedit-dark border-t border-b border-ubt-gedit-blue p-2">
                         <h2 className="font-bold text-sm mb-1">Your Local Time</h2>
-                        <p className="text-center" aria-live="polite">{this.state.localTime}</p>
+                        <p className="text-center">{this.state.localTime}</p>
                         <p className="text-center text-xs text-ubt-gedit-blue">{this.state.timezone}</p>
                     </div>
                 }
