@@ -29,6 +29,18 @@ export class Gedit extends Component {
 
     componentDidMount() {
         emailjs.init(process.env.NEXT_PUBLIC_USER_ID);
+        
+        // Get timezone once since it doesn't change during runtime
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        this.timezone = timezone;
+        this.timeFormatter = new Intl.DateTimeFormat([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            timeZone: timezone,
+        });
+        
+        this.setState({ timezone });
         this.updateTime();
     }
 
@@ -39,14 +51,8 @@ export class Gedit extends Component {
     }
 
     updateTime = () => {
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const formatter = new Intl.DateTimeFormat([], {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            timeZone: timezone,
-        });
-        this.setState({ timezone, localTime: formatter.format(new Date()) });
+        // Only update the time, timezone is already set in componentDidMount
+        this.setState({ localTime: this.timeFormatter.format(new Date()) });
         this.timeFrame = requestAnimationFrame(this.updateTime);
     }
 
