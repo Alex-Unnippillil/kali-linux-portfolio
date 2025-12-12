@@ -6,6 +6,16 @@ import { getDb } from '../../utils/safeIDB';
 let notesContainer = null;
 let addNoteBtn = null;
 
+const NOTE_CLASS =
+  'absolute w-52 min-h-[200px] resize overflow-auto rounded-xl border border-[color:color-mix(in_srgb,var(--note-color,#fef08a)_36%,transparent)] bg-[color:var(--note-color,#fef08a)] p-3 text-[color:var(--note-ink,#0b121a)] shadow-[var(--sticky-note-shadow)] backdrop-saturate-[125%] transition hover:-translate-y-0.5 hover:shadow-[0_24px_48px_color-mix(in_srgb,var(--note-color,#fef08a)_30%,rgba(2,6,23,0.35))] focus-within:shadow-[0_24px_48px_color-mix(in_srgb,var(--note-color,#fef08a)_30%,rgba(2,6,23,0.35))] focus-within:ring-2 focus-within:ring-[color:color-mix(in_srgb,var(--note-color,#fef08a)_30%,transparent)]';
+const CONTROLS_CLASS = 'mb-2 flex items-center justify-between gap-2';
+const COLOR_INPUT_CLASS =
+  'h-9 w-9 cursor-pointer rounded-md border border-[color:var(--sticky-note-border,rgba(15,148,210,0.25))] bg-transparent p-0';
+const DELETE_BUTTON_CLASS =
+  'rounded-md border border-[color:color-mix(in_srgb,var(--note-color,#fef08a)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--note-color,#fef08a)_20%,transparent)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[color:var(--note-ink,#0b121a)] transition hover:bg-[color:color-mix(in_srgb,var(--note-color,#fef08a)_35%,transparent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:color-mix(in_srgb,var(--note-color,#fef08a)_55%,transparent)]';
+const TEXTAREA_CLASS =
+  'h-[150px] w-full resize-none border-0 bg-transparent text-sm leading-relaxed text-[color:inherit] outline-none';
+
 function initDom() {
   if (!isBrowser) return;
   notesContainer = document.getElementById('notes');
@@ -205,7 +215,7 @@ function createNoteElement(note) {
   if (!notesContainer) return;
   normalizeNote(note);
   const el = document.createElement('div');
-  el.className = 'note';
+  el.className = NOTE_CLASS;
   el.style.left = note.x + 'px';
   el.style.top = note.y + 'px';
   el.style.width = (note.width || 200) + 'px';
@@ -215,9 +225,10 @@ function createNoteElement(note) {
   const { background } = applyNoteColorToElement(note, el);
 
   const controls = document.createElement('div');
-  controls.className = 'controls';
+  controls.className = CONTROLS_CLASS;
 
   const colorInput = document.createElement('input');
+  colorInput.className = COLOR_INPUT_CLASS;
   colorInput.type = 'color';
   colorInput.value = background;
   colorInput.defaultValue = background;
@@ -239,7 +250,7 @@ function createNoteElement(note) {
 
   const deleteBtn = document.createElement('button');
   deleteBtn.textContent = 'Delete';
-  deleteBtn.className = 'delete-note';
+  deleteBtn.className = DELETE_BUTTON_CLASS;
   deleteBtn.addEventListener('click', () => {
     notes = notes.filter((n) => n.id !== note.id);
     el.remove();
@@ -251,6 +262,7 @@ function createNoteElement(note) {
   el.appendChild(controls);
 
   const textarea = document.createElement('textarea');
+  textarea.className = TEXTAREA_CLASS;
   textarea.value = note.content;
   textarea.addEventListener('input', (e) => {
     note.content = e.target.value;

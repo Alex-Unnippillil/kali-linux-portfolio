@@ -9,12 +9,12 @@ import {
   useRef,
   useState,
 } from 'react';
+import clsx from 'clsx';
 import WeatherIcon from '../weather/components/WeatherIcon';
 import { fetchWeather } from '../../components/apps/weather';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSettings } from '../../hooks/useSettings';
 import demoCity from './demoCity.json';
-import './styles.css';
 
 type Unit = 'metric' | 'imperial';
 
@@ -442,30 +442,57 @@ export default function WeatherWidget() {
   const temperature = Math.round(convertTemperature(snapshot.temperatureC, unit));
   const feelsLike = Math.round(convertTemperature(snapshot.feelsLikeC, unit));
 
-  const rootClass = [
-    'weather-widget',
-    reducedMotion ? 'weather-widget--static' : '',
-    largeHitAreas ? 'weather-widget--large-hit' : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const rootClass = clsx(
+    'flex min-w-0 flex-col gap-4 rounded-2xl border border-kali-border/70 bg-[color:var(--kali-surface)] p-5 text-[color:var(--kali-text)] shadow-kali-panel',
+    reducedMotion && 'motion-reduce:animate-none',
+  );
+
+  const inputClass = clsx(
+    'w-full rounded-lg border border-kali-border/70 bg-[color:color-mix(in_srgb,var(--kali-panel-border)_22%,transparent)] px-3 py-2 text-sm text-[color:var(--kali-text)] shadow-sm transition',
+    'focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-accent)]',
+    largeHitAreas && 'min-h-[44px]',
+  );
+
+  const buttonBase = clsx(
+    'rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wide transition',
+    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus',
+    largeHitAreas && 'min-h-[44px]',
+  );
+
+  const primaryButtonClass = clsx(
+    buttonBase,
+    'border border-[color:var(--color-accent)] bg-[color:var(--color-accent)] text-[color:var(--color-inverse)] shadow-sm hover:bg-[color:color-mix(in_srgb,var(--color-accent)_88%,transparent)]',
+    status === 'loading' && 'cursor-not-allowed opacity-70',
+  );
+
+  const subtleButtonClass = clsx(
+    buttonBase,
+    'border border-kali-border/70 text-[color:var(--color-accent)] hover:bg-[color:color-mix(in_srgb,var(--color-accent)_12%,transparent)]',
+    (status === 'loading' || !allowNetwork) && 'cursor-not-allowed opacity-60',
+  );
+
+  const pinButtonClass = clsx(
+    buttonBase,
+    'border border-kali-border/70 text-[color:var(--kali-text)] hover:bg-[color:color-mix(in_srgb,var(--kali-panel-border)_16%,transparent)]',
+  );
 
   return (
     <section className={rootClass} aria-label="Weather widget">
-      <form className="weather-widget__controls" onSubmit={handleSubmit}>
-        <div className="weather-widget__field">
-          <label htmlFor="weather-widget-city">City</label>
-            <input
-              id="weather-widget-city"
-              name="city"
-              type="text"
-              list="weather-widget-saved"
-              autoComplete="off"
-              aria-label="Search city"
-              value={cityQuery}
-              onChange={(event) => setCityQuery(event.target.value)}
-              placeholder="Search city"
-            />
+      <form className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" onSubmit={handleSubmit}>
+        <label className="flex flex-col gap-2 text-sm font-medium">
+          <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-[color:var(--kali-text)]">City</span>
+          <input
+            id="weather-widget-city"
+            name="city"
+            type="text"
+            list="weather-widget-saved"
+            autoComplete="off"
+            aria-label="Search city"
+            value={cityQuery}
+            onChange={(event) => setCityQuery(event.target.value)}
+            placeholder="Search city"
+            className={inputClass}
+          />
           <datalist id="weather-widget-saved">
             {savedCities.map((city) => (
               <option value={city} key={city}>
@@ -473,34 +500,32 @@ export default function WeatherWidget() {
               </option>
             ))}
           </datalist>
-        </div>
-        <div className="weather-widget__field">
-          <label htmlFor="weather-widget-unit">Units</label>
+        </label>
+        <label className="flex flex-col gap-2 text-sm font-medium">
+          <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-[color:var(--kali-text)]">Units</span>
           <select
             id="weather-widget-unit"
             name="unit"
             value={unit}
             onChange={handleUnitChange}
+            className={inputClass}
           >
             <option value="metric">Celsius (°C)</option>
             <option value="imperial">Fahrenheit (°F)</option>
           </select>
-        </div>
-        <div className="weather-widget__actions">
-          <button type="submit" disabled={status === 'loading'}>
+        </label>
+        <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-1 xl:col-span-2">
+          <button type="submit" className={primaryButtonClass} disabled={status === 'loading'}>
             Update
           </button>
-          <button
-            type="button"
-            onClick={refresh}
-            disabled={status === 'loading' || !allowNetwork}
-          >
+          <button type="button" onClick={refresh} className={subtleButtonClass} disabled={status === 'loading' || !allowNetwork}>
             Refresh
           </button>
           <button
             type="button"
             onClick={togglePin}
             aria-pressed={pinnedCity === snapshot.cityLabel}
+            className={pinButtonClass}
           >
             {pinnedCity === snapshot.cityLabel ? 'Unpin' : 'Pin'}
           </button>
@@ -508,92 +533,84 @@ export default function WeatherWidget() {
       </form>
       {message && (
         <div
-          className="weather-widget__alert"
+          className="flex items-center gap-3 rounded-xl border border-[color:var(--color-accent)]/35 bg-[color:color-mix(in_srgb,var(--color-accent)_14%,transparent)] p-4 text-sm shadow-sm"
           role="status"
           aria-live="assertive"
         >
-          <span className="weather-widget__alert-badge" aria-hidden="true">
+          <span
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[color:var(--color-accent)] text-[color:var(--color-inverse)] text-xs font-bold uppercase"
+            aria-hidden="true"
+          >
             !
           </span>
-          <span className="weather-widget__alert-text">{message}</span>
+          <span className="leading-relaxed text-[color:color-mix(in_srgb,var(--kali-text)_90%,transparent)]">{message}</span>
         </div>
       )}
       <div
-        className="weather-widget__current"
+        className="rounded-xl border border-kali-border/70 bg-[color:color-mix(in_srgb,var(--kali-control)_8%,transparent)] p-4 shadow-inner"
         role="group"
         aria-label={`Current conditions for ${snapshot.cityLabel}`}
       >
-        <div className="weather-widget__header">
-          <h2 className="weather-widget__city">{snapshot.cityLabel}</h2>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-xl font-semibold tracking-tight text-[color:var(--kali-text)]">{snapshot.cityLabel}</h2>
           {status === 'loading' && (
-            <span className="weather-widget__loading" role="status">
+            <span className="text-xs uppercase tracking-wide text-kali-muted" role="status">
               Loading…
             </span>
           )}
         </div>
-        <div className="weather-widget__summary-grid">
-          <div className="weather-widget__summary">
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div className="flex items-center gap-4">
             <WeatherIcon
               code={snapshot.conditionCode}
-              className="weather-widget__icon"
+              className={clsx('h-16 w-16 text-[color:var(--color-accent)]', reducedMotion && 'motion-reduce:animate-none')}
             />
-            <div className="weather-widget__readings">
-              <div className="weather-widget__temperature" aria-live="polite">
+            <div className="grid gap-1">
+              <div className="text-3xl font-bold" aria-live="polite">
                 {temperature}°{unitSymbol}
               </div>
-              <div className="weather-widget__feels">
-                Feels like {feelsLike}°{unitSymbol}
-              </div>
-              <div className="weather-widget__condition">{snapshot.conditionText}</div>
+              <div className="text-sm text-kali-muted">Feels like {feelsLike}°{unitSymbol}</div>
+              <div className="text-sm text-[color:var(--kali-text)]">{snapshot.conditionText}</div>
             </div>
           </div>
-          <dl
-            className="weather-widget__metrics"
-            aria-label="Sunrise and sunset times"
-          >
-            <div className="weather-widget__metric">
-              <dt>
-                <span
-                  className="weather-widget__metric-icon"
-                  aria-hidden="true"
-                >
+          <dl className="grid grid-cols-2 gap-3 md:gap-4" aria-label="Sunrise and sunset times">
+            <div className="rounded-lg border border-kali-border/70 bg-[color:color-mix(in_srgb,var(--kali-control)_12%,transparent)] p-3 shadow-sm">
+              <dt className="flex items-center gap-2 text-[0.7rem] font-semibold uppercase tracking-wide text-kali-muted">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[color:var(--color-accent)] text-[color:var(--color-inverse)] text-sm" aria-hidden="true">
                   ↑
                 </span>
-                <span>Sunrise</span>
+                Sunrise
               </dt>
-              <dd>{formatTime(snapshot.sunrise)}</dd>
+              <dd className="mt-1 text-lg font-semibold text-[color:var(--kali-text)]">{formatTime(snapshot.sunrise)}</dd>
             </div>
-            <div className="weather-widget__metric">
-              <dt>
-                <span
-                  className="weather-widget__metric-icon weather-widget__metric-icon--sunset"
-                  aria-hidden="true"
-                >
+            <div className="rounded-lg border border-kali-border/70 bg-[color:color-mix(in_srgb,var(--kali-control)_12%,transparent)] p-3 shadow-sm">
+              <dt className="flex items-center gap-2 text-[0.7rem] font-semibold uppercase tracking-wide text-kali-muted">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--color-accent)_70%,transparent)] text-[color:var(--color-inverse)] text-sm" aria-hidden="true">
                   ↓
                 </span>
-                <span>Sunset</span>
+                Sunset
               </dt>
-              <dd>{formatTime(snapshot.sunset)}</dd>
+              <dd className="mt-1 text-lg font-semibold text-[color:var(--kali-text)]">{formatTime(snapshot.sunset)}</dd>
             </div>
           </dl>
         </div>
       </div>
       {formattedForecast.length > 0 && (
-        <div className="weather-widget__forecast" role="list" aria-label="5-day forecast">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5" role="list" aria-label="5-day forecast">
           {formattedForecast.map((entry) => (
             <div
               key={entry.key}
               role="listitem"
-              className="weather-widget__forecast-day"
+              className="rounded-xl border border-kali-border/60 bg-[color:color-mix(in_srgb,var(--kali-control)_10%,transparent)] p-3 text-center shadow-sm"
             >
-              <span className="weather-widget__forecast-label">{entry.label}</span>
+              <span className="text-[0.75rem] font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_86%,transparent)]">
+                {entry.label}
+              </span>
               <WeatherIcon
                 code={entry.code}
-                className="weather-widget__forecast-icon"
+                className={clsx('mx-auto h-11 w-11 text-[color:var(--color-accent)]', reducedMotion && 'motion-reduce:animate-none')}
               />
-              <span className="weather-widget__forecast-temp">
-                {entry.temp}°{unitSymbol}
-              </span>
+              <span className="text-sm font-semibold text-[color:var(--kali-text)]">{entry.temp}°{unitSymbol}</span>
             </div>
           ))}
         </div>
