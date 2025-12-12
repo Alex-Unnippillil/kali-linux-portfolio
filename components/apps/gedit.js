@@ -32,7 +32,7 @@ export class Gedit extends Component {
         // Retrieve timezone once and store in state
         let timezone;
         try {
-            timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+            timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         } catch (e) {
             // Fallback to UTC if Intl API is not available
             timezone = 'UTC';
