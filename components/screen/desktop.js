@@ -5314,10 +5314,6 @@ export class Desktop extends Component {
                     openApp={this.openApp}
                     addNewFolder={this.addNewFolder}
                     openShortcutSelector={this.openShortcutSelector}
-                    iconSizePreset={this.state.iconSizePreset}
-                    iconSizeBucket={this.state.iconSizeBucket}
-                    iconSizeBucketLabel={this.getViewportBucketLabel(this.state.iconSizeBucket)}
-                    setIconSizePreset={this.setIconSizePreset}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
