@@ -37,9 +37,8 @@ export class Gedit extends Component {
             // Fallback to UTC if Intl API is not available
             timezone = 'UTC';
         }
-        this.setState({ timezone }, () => {
-            this.updateTime();
-        });
+        this.setState({ timezone });
+        this.updateTime();
     }
 
     componentWillUnmount() {
