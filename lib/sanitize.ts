@@ -6,11 +6,11 @@ const escapeMap: Record<string, string> = {
   '>': '&gt;',
   '"': '&quot;',
   "'": '&#39;',
-  '/': '&#x2F;',
 };
 
+
 export const escapeHtml = (input = ''): string =>
-  input.replace(/[&<>"'/]/g, (char) => escapeMap[char] ?? char);
+  input.replace(/[&<>"']/g, (char) => escapeMap[char] ?? char);
 
 const baseConfig: Config = {
   USE_PROFILES: { html: true },
