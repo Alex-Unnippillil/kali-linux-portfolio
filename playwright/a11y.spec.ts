@@ -28,6 +28,7 @@ const urls = [
 
 for (const path of urls) {
   test(`accessibility audit for ${path}`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto(`http://localhost:3000${path}`);
     const results = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa'])

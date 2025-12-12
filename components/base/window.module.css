@@ -62,6 +62,20 @@
   transition: filter var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .windowFrame,
+  .windowFrame::before,
+  .windowFrameActive,
+  .windowFrameInactive,
+  .windowFrameResizing,
+  .snapPreview,
+  .snapPreviewGlass,
+  .windowFrameMinimized {
+    transition-duration: 0ms !important;
+    transition-property: none !important;
+  }
+}
+
 @supports ((backdrop-filter: blur(0)) or (-webkit-backdrop-filter: blur(0))) {
   .windowFrameActive {
     background-color: rgba(15, 23, 42, 0.72);

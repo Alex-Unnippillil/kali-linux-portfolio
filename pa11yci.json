@@ -22,6 +22,10 @@
       "beforeScript": "scripts/a11y-high-contrast.js"
     },
     {
+      "label": "reduced-motion",
+      "beforeScript": "scripts/a11y-reduced-motion.js"
+    },
+    {
       "label": "window-open",
       "beforeScript": "scripts/a11y-open-window.js"
     },

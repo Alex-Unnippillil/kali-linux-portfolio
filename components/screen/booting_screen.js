@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import Image from 'next/image'
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion'
 
 export const BOOT_MESSAGES = [
     'Securing environment',
@@ -15,11 +16,12 @@ function BootingScreen(props) {
     const isVisible = props.visible || props.isShutDown
     const visibilityClass = isVisible ? 'visible opacity-100' : 'invisible opacity-0'
     const [activeMessageIndex, setActiveMessageIndex] = useState(0)
+    const prefersReducedMotion = usePrefersReducedMotion()
 
     const isBooting = props.visible && !props.isShutDown
 
     useEffect(() => {
-        if (!isBooting) {
+        if (!isBooting || prefersReducedMotion) {
             setActiveMessageIndex(0)
             return
         }
@@ -40,7 +42,7 @@ function BootingScreen(props) {
         return () => {
             window.clearInterval(intervalId)
         }
-    }, [isBooting])
+    }, [isBooting, prefersReducedMotion])
 
     const bootMessages = BOOT_MESSAGES
 
@@ -53,7 +55,9 @@ function BootingScreen(props) {
                 ...(isVisible ? { zIndex: '2147483647' } : { zIndex: '-20' }),
                 contentVisibility: 'auto',
             }}
-            className={`${visibilityClass} absolute inset-0 select-none overflow-hidden transition-opacity duration-700`}
+            className={`${visibilityClass} absolute inset-0 select-none overflow-hidden ${
+                prefersReducedMotion ? 'transition-none duration-0' : 'transition-opacity duration-700'
+            }`}
         >
             <div className={`${visibilityClass} relative flex h-full w-full flex-col items-center justify-center gap-12 bg-[#030712] text-slate-100`}>
                 <div className="pointer-events-none absolute inset-0">
@@ -94,7 +98,11 @@ function BootingScreen(props) {
                         ) : (
                             <div className="relative flex h-14 w-14 items-center justify-center">
                                 <div className="absolute inset-0 rounded-full border border-slate-700/40" />
-                                <div className="absolute inset-0 rounded-full border-4 border-sky-400/80 border-t-transparent border-l-transparent animate-[spin_2.6s_linear_infinite]" />
+                                <div
+                                    className={`absolute inset-0 rounded-full border-4 border-sky-400/80 border-t-transparent border-l-transparent ${
+                                        prefersReducedMotion ? '' : 'animate-[spin_2.6s_linear_infinite]'
+                                    }`}
+                                />
                                 <div className="absolute inset-[30%] rounded-full bg-slate-900" />
                             </div>
                         )}
@@ -110,7 +118,7 @@ function BootingScreen(props) {
                                 <li
                                     key={message}
                                     data-state={state}
-                                    className={`flex items-center gap-3 transition-all duration-500 ${
+                                    className={`flex items-center gap-3 ${prefersReducedMotion ? '' : 'transition-all duration-500'} ${
                                         isActive
                                             ? 'translate-x-0 text-sky-100 drop-shadow-[0_0_16px_rgba(56,189,248,0.55)]'
                                             : isComplete
@@ -119,7 +127,9 @@ function BootingScreen(props) {
                                     }`}
                                 >
                                     <span
-                                        className={`inline-flex h-2 w-2 rounded-full transition-all duration-500 ${
+                                        className={`inline-flex h-2 w-2 rounded-full ${
+                                            prefersReducedMotion ? '' : 'transition-all duration-500'
+                                        } ${
                                             isActive
                                                 ? 'bg-sky-400/80 shadow-[0_0_12px_rgba(56,189,248,0.7)]'
                                                 : isComplete
@@ -128,7 +138,11 @@ function BootingScreen(props) {
                                         } ${isActive ? 'animate-[pulse_2s_ease-in-out_infinite]' : ''}`}
                                         aria-hidden
                                     />
-                                    <span className={`transition-opacity duration-500 ${isActive ? 'opacity-100' : 'opacity-80'}`}>
+                                    <span
+                                        className={`${prefersReducedMotion ? '' : 'transition-opacity duration-500'} ${
+                                            isActive ? 'opacity-100' : 'opacity-80'
+                                        }`}
+                                    >
                                         {message}
                                     </span>
                                 </li>

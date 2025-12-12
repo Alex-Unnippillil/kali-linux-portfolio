@@ -6,7 +6,7 @@ export interface Shortcut {
 }
 
 const DEFAULT_SHORTCUTS: Shortcut[] = [
-  { description: 'Show keyboard shortcuts', keys: '?' },
+  { description: 'Show keyboard shortcuts', keys: 'Ctrl+Shift+?' },
   { description: 'Open settings', keys: 'Ctrl+,' },
 ];
 
