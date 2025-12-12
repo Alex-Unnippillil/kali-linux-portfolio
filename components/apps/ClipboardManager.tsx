@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import type { IDBPDatabase } from 'idb';
 import { getDb } from '../../utils/safeIDB';
 
 interface ClipItem {
@@ -11,6 +12,8 @@ interface ClipItem {
 
 const DB_NAME = 'clipboard-manager';
 const STORE_NAME = 'items';
+const MAX_HISTORY_ITEMS = 50;
+const ITEM_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
 
 let dbPromise: ReturnType<typeof getDb> | null = null;
 function getDB() {
@@ -52,6 +55,31 @@ const ClipboardManager: React.FC = () => {
   const [readPermission, setReadPermission] = useState<PermissionState>('unknown');
   const [writePermission, setWritePermission] = useState<PermissionState>('unknown');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = useState<number>(-1);
+  const [isListboxFocused, setIsListboxFocused] = useState(false);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  const applyRetention = useCallback(async (db: IDBPDatabase, allItems: ClipItem[]) => {
+    const now = Date.now();
+    const sorted = [...allItems].sort((a, b) => (b.id ?? 0) - (a.id ?? 0));
+    const fresh = sorted.filter((item) => now - item.created <= ITEM_TTL_MS);
+    const trimmed = fresh.slice(0, MAX_HISTORY_ITEMS);
+
+    const expired = sorted.filter((item) => now - item.created > ITEM_TTL_MS);
+    const overflow = fresh.slice(MAX_HISTORY_ITEMS);
+    const idsToRemove = [...expired, ...overflow]
+      .map((item) => item.id)
+      .filter((id): id is number => typeof id === 'number');
+
+    if (idsToRemove.length) {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      await Promise.all(idsToRemove.map((id) => store.delete(id)));
+      await tx.done;
+    }
+
+    return trimmed;
+  }, []);
 
   const loadItems = useCallback(async () => {
     try {
@@ -60,11 +88,12 @@ const ClipboardManager: React.FC = () => {
       const db = await dbp;
 
       const all = await db.getAll(STORE_NAME);
-      setItems(all.sort((a, b) => (b.id ?? 0) - (a.id ?? 0)));
+      const retained = await applyRetention(db, all);
+      setItems(retained);
     } catch {
       // ignore errors
     }
-  }, []);
+  }, [applyRetention]);
 
   const addItem = useCallback(
     async (text: string) => {
@@ -130,6 +159,24 @@ const ClipboardManager: React.FC = () => {
     evaluatePermissions();
   }, [loadItems, evaluatePermissions]);
 
+  useEffect(() => {
+    if (!items.length) {
+      setActiveIndex(-1);
+      return;
+    }
+    setActiveIndex((prev) => {
+      if (prev === -1) return prev;
+      if (prev >= items.length) return items.length - 1;
+      return prev;
+    });
+  }, [items]);
+
+  useEffect(() => {
+    if (!isListboxFocused) return;
+    if (activeIndex < 0) return;
+    optionRefs.current[activeIndex]?.focus();
+  }, [activeIndex, isListboxFocused]);
+
   const handleCopy = useCallback(async () => {
     try {
       if (!clipboardSupported) {
@@ -186,6 +233,51 @@ const ClipboardManager: React.FC = () => {
       evaluatePermissions();
     }
   };
+
+  const handleListboxFocus = useCallback(() => {
+    setIsListboxFocused(true);
+    setActiveIndex((prev) => {
+      if (items.length === 0) return -1;
+      if (prev === -1) return 0;
+      return Math.min(prev, items.length - 1);
+    });
+  }, [items.length]);
+
+  const handleListboxBlur = useCallback((event: React.FocusEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+      setIsListboxFocused(false);
+      setActiveIndex(-1);
+    }
+  }, []);
+
+  const handleListKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!items.length) return;
+      const keys = ['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter', ' '];
+      if (keys.includes(event.key)) {
+        event.preventDefault();
+      }
+
+      const currentIndex = activeIndex === -1 ? 0 : activeIndex;
+
+      if (event.key === 'ArrowDown') {
+        setActiveIndex((prev) => (prev + 1) % items.length);
+      } else if (event.key === 'ArrowUp') {
+        setActiveIndex((prev) => (prev - 1 + items.length) % items.length);
+      } else if (event.key === 'Home') {
+        setActiveIndex(0);
+      } else if (event.key === 'End') {
+        setActiveIndex(items.length - 1);
+      } else if (event.key === 'Enter' || event.key === ' ') {
+        const targetItem = items[currentIndex];
+        if (targetItem) {
+          setActiveIndex(currentIndex);
+          void writeToClipboard(targetItem.text);
+        }
+      }
+    },
+    [activeIndex, items, writeToClipboard]
+  );
 
   const clearHistory = async () => {
     try {
@@ -278,6 +370,7 @@ const ClipboardManager: React.FC = () => {
       </div>
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-300">History</h3>
+        <p className="text-xs text-gray-400">Keeps last {MAX_HISTORY_ITEMS} entries for 24 hours.</p>
         <button
           className="inline-flex items-center rounded-md border border-gray-600 bg-gray-700 px-3 py-1.5 text-sm font-medium text-gray-100 shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-900"
           onClick={clearHistory}
@@ -285,18 +378,40 @@ const ClipboardManager: React.FC = () => {
           Clear history
         </button>
       </div>
-      <ul className="space-y-3">
-        {items.map((item) => (
-          <li key={item.id}>
-            <button
-              type="button"
-              className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-left text-sm leading-relaxed text-gray-100 shadow-sm transition hover:border-blue-400 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-900"
-              onClick={() => writeToClipboard(item.text)}
-            >
-              {item.text}
-            </button>
-          </li>
-        ))}
+      <ul
+        className="space-y-3"
+        role="listbox"
+        aria-label="Clipboard history"
+        tabIndex={0}
+        onFocus={handleListboxFocus}
+        onBlur={handleListboxBlur}
+        onKeyDown={handleListKeyDown}
+      >
+        {items.map((item, index) => {
+          const optionId = `clipboard-item-${item.id ?? index}`;
+          return (
+            <li key={item.id ?? index}>
+              <button
+                type="button"
+                id={optionId}
+                role="option"
+                aria-selected={activeIndex === index}
+                tabIndex={activeIndex === index ? 0 : -1}
+                className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-left text-sm leading-relaxed text-gray-100 shadow-sm transition hover:border-blue-400 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-gray-900"
+                onClick={() => {
+                  setActiveIndex(index);
+                  void writeToClipboard(item.text);
+                }}
+                onFocus={() => setActiveIndex(index)}
+                ref={(node) => {
+                  optionRefs.current[index] = node;
+                }}
+              >
+                {item.text}
+              </button>
+            </li>
+          );
+        })}
         {items.length === 0 && (
           <li className="rounded-lg border border-dashed border-gray-700/80 bg-gray-800/40 px-4 py-6 text-center text-sm text-gray-300">
             Clipboard history is empty. Copy something to store it here.
