@@ -38,10 +38,14 @@ const PerfOverlay: React.FC = () => {
   const lastRef = useRef<number>(0);
   const rafRef = useRef<number>(0);
   const workerRef = useRef<Worker | null>(null);
+  const hiddenRef = useRef<boolean>(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    const isInactive = () =>
+      document.visibilityState === 'hidden' || document.hasFocus?.() === false;
 
     // Prefer OffscreenCanvas with a worker when supported
     if (typeof Worker === 'function' && hasOffscreenCanvas()) {
@@ -51,6 +55,11 @@ const PerfOverlay: React.FC = () => {
       worker.postMessage({ type: 'init', canvas: offscreen }, [offscreen]);
 
       const loop = (now: number) => {
+        if (hiddenRef.current || isInactive()) {
+          lastRef.current = 0;
+          rafRef.current = requestAnimationFrame(loop);
+          return;
+        }
         if (lastRef.current) {
           const dt = now - lastRef.current;
           publish('fps', 1000 / dt);
@@ -67,9 +76,28 @@ const PerfOverlay: React.FC = () => {
         }
       };
 
+      const stop = () => {
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      };
+
+      const handleVisibility = () => {
+        hiddenRef.current = document.visibilityState === 'hidden';
+        if (!hiddenRef.current && isInactive()) return;
+        stop();
+        lastRef.current = 0;
+        rafRef.current = requestAnimationFrame(loop);
+      };
+
+      document.addEventListener('visibilitychange', handleVisibility);
+      window.addEventListener('blur', handleVisibility);
+      window.addEventListener('focus', handleVisibility);
+
       return () => {
         worker.terminate();
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        stop();
+        document.removeEventListener('visibilitychange', handleVisibility);
+        window.removeEventListener('blur', handleVisibility);
+        window.removeEventListener('focus', handleVisibility);
       };
     }
 
@@ -79,6 +107,11 @@ const PerfOverlay: React.FC = () => {
 
     const loop = (now: number) => {
       if (!mounted) return;
+      if (hiddenRef.current || isInactive()) {
+        lastRef.current = 0;
+        rafRef.current = requestAnimationFrame(loop);
+        return;
+      }
       if (lastRef.current) {
         const dt = now - lastRef.current;
         const samples = samplesRef.current;
@@ -110,10 +143,25 @@ const PerfOverlay: React.FC = () => {
       rafRef.current = requestAnimationFrame(loop);
     };
 
+    const handleVisibility = () => {
+      hiddenRef.current = document.visibilityState === 'hidden';
+      if (!hiddenRef.current && isInactive()) return;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      lastRef.current = 0;
+      rafRef.current = requestAnimationFrame(loop);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('blur', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+
     rafRef.current = requestAnimationFrame(loop);
     return () => {
       mounted = false;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('blur', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
     };
   }, []);
 
@@ -123,8 +171,14 @@ const PerfOverlay: React.FC = () => {
   };
 
   return (
-    <div className="absolute bottom-2 left-2 z-50 bg-black bg-opacity-50 text-white p-1 text-xs space-y-1">
-      <canvas ref={canvasRef} width={150} height={60} className="block" />
+      <div className="absolute bottom-2 left-2 z-50 bg-black bg-opacity-50 text-white p-1 text-xs space-y-1">
+        <canvas
+          ref={canvasRef}
+          width={150}
+          height={60}
+          className="block"
+          aria-label="Performance monitor"
+        />
       <button type="button" onClick={handleExport} className="underline">
         Export JSON
       </button>

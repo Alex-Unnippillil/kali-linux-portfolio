@@ -24,6 +24,9 @@ interface GameLayoutProps {
   score?: number;
   highScore?: number;
   editor?: React.ReactNode;
+  onPauseChange?: (paused: boolean) => void;
+  onRestart?: () => void;
+  settingsPanel?: React.ReactNode;
 }
 
 interface RecordedInput {
@@ -52,6 +55,9 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   score,
   highScore,
   editor,
+  onPauseChange,
+  onRestart,
+  settingsPanel,
 }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -62,6 +68,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   const [replaying, setReplaying] = useState(false);
   const [scorePulse, setScorePulse] = useState(false);
   const [highScorePulse, setHighScorePulse] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
 
   const close = useCallback(() => setShowHelp(false), []);
@@ -226,6 +233,10 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 
   const contextValue = { record, registerReplay };
 
+  useEffect(() => {
+    onPauseChange?.(paused);
+  }, [onPauseChange, paused]);
+
   return (
     <RecorderContext.Provider value={contextValue}>
       <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
@@ -254,6 +265,15 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         >
           {paused ? 'Resume' : 'Pause'}
         </button>
+        {onRestart && (
+          <button
+            type="button"
+            onClick={onRestart}
+            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          >
+            Restart
+          </button>
+        )}
         <button
           type="button"
           onClick={snapshot}
@@ -275,6 +295,17 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         >
           Share
         </button>
+        {settingsPanel && (
+          <button
+            type="button"
+            aria-label="Settings"
+            aria-expanded={showSettings}
+            onClick={() => setShowSettings((s) => !s)}
+            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          >
+            Settings
+          </button>
+        )}
         {highScore !== undefined && (
           <button
             type="button"
@@ -295,6 +326,11 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         </button>
       </div>
       {children}
+      {showSettings && settingsPanel && (
+        <div className="absolute top-12 right-2 z-50 rounded border border-slate-700/80 bg-slate-900/95 p-3 shadow-xl max-w-xs w-[18rem]">
+          {settingsPanel}
+        </div>
+      )}
       <div
         className="absolute top-2 left-2 z-10 text-sm flex flex-col gap-1"
         role="status"
