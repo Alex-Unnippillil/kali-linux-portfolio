@@ -366,14 +366,9 @@ Accessibility and performance checks using Lighthouse or Pa11y (`pa11yci.json`) 
 ## Security Hardening
 
 ### Security Headers & CSP
-Default headers are configured in [`next.config.js`](./next.config.js):
-- `Content-Security-Policy`
-- `X-Content-Type-Options: nosniff`
-- `Referrer-Policy: strict-origin-when-cross-origin`
-- `Permissions-Policy: camera=(), microphone=(), geolocation=()`
-- `X-Frame-Options: SAMEORIGIN`
+Default headers (CSP with a nonce, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, X-Frame-Options) are configured in [`middleware.ts`](./middleware.ts). Asset cache headers remain in [`next.config.js`](./next.config.js).
 
-CSP whitelists hosts such as `*.twitter.com`, `embed.x.com`, `cdn.jsdelivr.net`, `cdnjs.cloudflare.com`, `stackblitz.com`, `www.youtube.com`, and `vercel.live`. Update the whitelist whenever you embed a new external resource. Consider removing `'unsafe-inline'` from `style-src` once inline styles are eliminated.
+CSP whitelists hosts such as `*.twitter.com`, `embed.x.com`, `cdn.jsdelivr.net`, `cdnjs.cloudflare.com`, `stackblitz.com`, `api.github.com`, `www.googleapis.com`, `www.youtube.com`, and `vercel.live`. Update the whitelist whenever you embed a new external resource. Consider removing `'unsafe-inline'` from `style-src` once inline styles are eliminated. Use [`/csp-smoke`](./pages/csp-smoke.tsx) to verify embeds and fetches load cleanly.
 
 ### Production Checklist
 - [x] Pin Node.js to 20.19.5 across local, CI, and hosting environments.

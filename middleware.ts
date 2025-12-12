@@ -26,22 +26,68 @@ export function middleware(req: NextRequest) {
     'https://cdnjs.cloudflare.com',
   ];
 
-  const csp = [
-    "default-src 'self'",
-    "img-src 'self' https: data:",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com",
-    `script-src ${scriptSrc.join(' ')}`,
-    "connect-src 'self' https://cdn.syndication.twimg.com https://*.twitter.com https://embed.x.com https://stackblitz.com",
-    "frame-src 'self' https://vercel.live https://stackblitz.com https://ghbtns.com https://platform.twitter.com https://embed.x.com https://open.spotify.com https://todoist.com https://www.youtube.com https://www.youtube-nocookie.com",
-    "frame-ancestors 'self'",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'"
-  ].join('; ');
+  const connectSrc = [
+    "'self'",
+    'https://cdn.syndication.twimg.com',
+    'https://*.twitter.com',
+    'https://*.x.com',
+    'https://embed.x.com',
+    'https://stackblitz.com',
+    'https://www.google.com',
+    'https://www.googleapis.com',
+    'https://www.gstatic.com',
+    'https://*.googleapis.com',
+    'https://api.github.com',
+    'https://ipapi.co',
+    'https://unpkg.com',
+    'https://*.supabase.co',
+  ];
+
+  const frameSrc = [
+    "'self'",
+    'https://vercel.live',
+    'https://stackblitz.com',
+    'https://vscode.dev',
+    'https://ghbtns.com',
+    'https://platform.twitter.com',
+    'https://embed.x.com',
+    'https://open.spotify.com',
+    'https://www.youtube.com',
+    'https://www.youtube-nocookie.com',
+    'https://www.google.com',
+    'https://www.gstatic.com',
+  ];
+
+  const csp = (
+    [
+      ["default-src", ["'self'"]],
+      ['base-uri', ["'self'"]],
+      ['form-action', ["'self'"]],
+      ['object-src', ["'none'"]],
+      ['img-src', ["'self'", 'https:', 'data:']],
+      ['style-src', ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com']],
+      ['font-src', ["'self'", 'https://fonts.gstatic.com']],
+      ['script-src', scriptSrc],
+      ['connect-src', connectSrc],
+      ['frame-src', frameSrc],
+      ['frame-ancestors', ["'self'"]],
+      ['upgrade-insecure-requests', []],
+    ] as const
+  )
+    .map(([directive, values]) =>
+      values.length ? `${directive} ${values.join(' ')}` : directive,
+    )
+    .join('; ');
 
   const res = NextResponse.next();
   res.headers.set('x-csp-nonce', n);
   res.headers.set('Content-Security-Policy', csp);
+  res.headers.set('X-Content-Type-Options', 'nosniff');
+  res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.headers.set(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=*',
+  );
+  res.headers.set('X-Frame-Options', 'SAMEORIGIN');
   return res;
 }
