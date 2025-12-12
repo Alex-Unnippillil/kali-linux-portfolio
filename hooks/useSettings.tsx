@@ -6,6 +6,7 @@ import {
   useState,
   ReactNode,
   useRef,
+  useCallback,
 } from 'react';
 import {
   getAccent as loadAccent,
@@ -74,12 +75,15 @@ interface SettingsContextValue {
   useKaliWallpaper: boolean;
   density: Density;
   reducedMotion: boolean;
+  prefersReducedMotion: boolean;
   fontScale: number;
   highContrast: boolean;
   largeHitAreas: boolean;
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  hapticsPreference: boolean;
+  hapticsLocked: boolean;
   theme: string;
   desktopTheme: DesktopTheme;
   setAccent: (accent: string) => void;
@@ -111,12 +115,15 @@ export const SettingsContext = createContext<SettingsContextValue>({
   useKaliWallpaper: defaults.useKaliWallpaper,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
+  prefersReducedMotion: false,
   fontScale: defaults.fontScale,
   highContrast: defaults.highContrast,
   largeHitAreas: defaults.largeHitAreas,
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  hapticsPreference: defaults.haptics,
+  hapticsLocked: false,
   theme: 'default',
   desktopTheme: DEFAULT_DESKTOP_THEME,
   setAccent: () => {},
@@ -139,12 +146,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [useKaliWallpaper, setUseKaliWallpaper] = useState<boolean>(defaults.useKaliWallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState<boolean>(false);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
-  const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [hapticsPreference, setHapticsPreference] = useState<boolean>(defaults.haptics);
   const [theme, setTheme] = useState<string>(() => loadTheme());
   const fetchRef = useRef<typeof fetch | null>(null);
   const previousThemeRef = useRef<string | null>(null);
@@ -161,9 +169,27 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
-      setHaptics(await loadHaptics());
+      setHapticsPreference(await loadHaptics());
       setTheme(loadTheme());
     })();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updatePreference = (event?: MediaQueryListEvent) => {
+      setPrefersReducedMotion(event ? event.matches : media.matches);
+    };
+    updatePreference();
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', updatePreference);
+      return () => media.removeEventListener('change', updatePreference);
+    }
+    if (typeof media.addListener === 'function') {
+      media.addListener(updatePreference);
+      return () => media.removeListener(updatePreference);
+    }
+    return undefined;
   }, []);
 
   useEffect(() => {
@@ -221,8 +247,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveDensity(density);
   }, [density]);
 
+  const effectiveReducedMotion = reducedMotion || prefersReducedMotion;
+
   useEffect(() => {
-    document.documentElement.classList.toggle('reduced-motion', reducedMotion);
+    document.documentElement.classList.toggle('reduced-motion', effectiveReducedMotion);
+  }, [effectiveReducedMotion]);
+
+  useEffect(() => {
     saveReducedMotion(reducedMotion);
   }, [reducedMotion]);
 
@@ -296,8 +327,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [allowNetwork]);
 
   useEffect(() => {
-    saveHaptics(haptics);
-  }, [haptics]);
+    saveHaptics(hapticsPreference);
+  }, [hapticsPreference]);
+
+  const hapticsLocked = effectiveReducedMotion;
+  const haptics = hapticsLocked ? false : hapticsPreference;
+
+  const setHaptics = useCallback((value: boolean) => {
+    setHapticsPreference(Boolean(value));
+  }, []);
 
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
   const desktopTheme = useMemo(
@@ -352,12 +390,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         useKaliWallpaper,
         density,
         reducedMotion,
+        prefersReducedMotion,
         fontScale,
         highContrast,
         largeHitAreas,
         pongSpin,
         allowNetwork,
         haptics,
+        hapticsPreference,
+        hapticsLocked,
         theme,
         desktopTheme,
         setAccent,
