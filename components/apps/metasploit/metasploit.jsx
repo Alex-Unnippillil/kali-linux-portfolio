@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import modules from './modules.json';
 import usePersistentState from '../../../hooks/usePersistentState';
 import ConsolePane from './ConsolePane';
+import { isStaticExport } from '../../../utils/isStaticExport';
 
 const severities = ['critical', 'high', 'medium', 'low'];
 const severityStyles = {
@@ -146,7 +147,7 @@ const MetasploitApp = ({
     if (!cmd) return;
     setLoading(true);
     try {
-      if (demoMode || process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true') {
+      if (demoMode || isStaticExport()) {
         setOutput(
           (prev) => `${prev}\nmsf6 > ${cmd}\n[demo mode] command disabled`
         );
@@ -280,16 +281,17 @@ const MetasploitApp = ({
         For authorized security testing and educational use only.
       </div>
       <div className="flex p-2">
-        <input
-          className="flex-grow bg-ub-grey text-white p-1 rounded"
-          value={command}
-          onChange={(e) => setCommand(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') runCommand();
-          }}
-          placeholder="msfconsole command"
-          spellCheck={false}
-        />
+          <input
+            className="flex-grow bg-ub-grey text-white p-1 rounded"
+            value={command}
+            onChange={(e) => setCommand(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') runCommand();
+            }}
+            placeholder="msfconsole command"
+            spellCheck={false}
+            aria-label="Metasploit command input"
+          />
         <button
           onClick={runCommand}
           className="ml-2 px-2 py-1 bg-ub-orange rounded"
@@ -333,18 +335,20 @@ const MetasploitApp = ({
         </aside>
         <div className="flex-1 px-2">
           <div className="flex mb-2">
-            <input
-              className="flex-grow bg-ub-grey text-white p-1 rounded"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search modules"
-              spellCheck={false}
-            />
-            <select
-              className="ml-2 bg-ub-grey text-white p-1 rounded"
-              value={searchField}
-              onChange={(e) => setSearchField(e.target.value)}
-            >
+          <input
+            className="flex-grow bg-ub-grey text-white p-1 rounded"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search modules"
+            spellCheck={false}
+            aria-label="Search modules"
+          />
+          <select
+            className="ml-2 bg-ub-grey text-white p-1 rounded"
+            value={searchField}
+            onChange={(e) => setSearchField(e.target.value)}
+            aria-label="Select search field"
+          >
               <option value="name">Name</option>
               <option value="type">Type</option>
               <option value="platform">Platform</option>
@@ -395,13 +399,14 @@ const MetasploitApp = ({
             </select>
           </div>
           <div className="mb-2">
-            <input
-              className="bg-ub-grey text-white p-1 rounded w-full"
-              value={cveFilter}
-              onChange={(e) => setCveFilter(e.target.value)}
-              placeholder="Filter by CVE"
-              spellCheck={false}
-            />
+          <input
+            className="bg-ub-grey text-white p-1 rounded w-full"
+            value={cveFilter}
+            onChange={(e) => setCveFilter(e.target.value)}
+            placeholder="Filter by CVE"
+            spellCheck={false}
+            aria-label="Filter modules by CVE"
+          />
           </div>
           <div className="flex flex-wrap mb-2">
               {severities.map((s) => (
@@ -424,19 +429,20 @@ const MetasploitApp = ({
                 <h3 className="text-sm font-bold capitalize">{type}</h3>
                 <div
                   style={animationStyle}
-                  className="grid grid-cols-2 gap-2 max-h-32 overflow-auto text-xs"
-                >
-                  {(modulesByType[type] || []).map((m) => (
-                    <button
-                      key={m.name}
-                      type="button"
-                      onClick={() => showModule(m)}
-                      className="p-2 text-left bg-ub-grey rounded flex"
-                    >
-                      <svg
-                        className="w-6 h-6 mr-2"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
+                    className="grid grid-cols-2 gap-2 max-h-32 overflow-auto text-xs"
+                  >
+                    {(modulesByType[type] || []).map((m) => (
+                      <button
+                        key={m.name}
+                        type="button"
+                        onClick={() => showModule(m)}
+                        className="p-2 text-left bg-ub-grey rounded flex"
+                        aria-label={`Open module ${m.name}`}
+                      >
+                        <svg
+                          className="w-6 h-6 mr-2"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
                         aria-hidden="true"
                       >
                         <circle cx="12" cy="12" r="10" />
@@ -477,15 +483,16 @@ const MetasploitApp = ({
                     <li key={i}>{t}</li>
                   ))}
                 </ul>
-                <div
-                  className="w-full bg-ub-grey h-2 mt-2"
-                  role="progressbar"
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={Math.round(progress)}
-                >
-                  <div className="h-full bg-ub-orange" style={{ width: `${progress}%` }} />
-                </div>
+                  <div
+                    className="w-full bg-ub-grey h-2 mt-2"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(progress)}
+                    aria-label="Exploit replay progress"
+                  >
+                    <div className="h-full bg-ub-orange" style={{ width: `${progress}%` }} />
+                  </div>
               </>
             )}
           </div>

@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import useAssetLoader from '../../hooks/useAssetLoader';
 import SpeedControls from '../../games/pacman/components/SpeedControls';
+import { isStaticExport } from '../../utils/isStaticExport';
 
 /**
  * Small Pacman implementation used inside the portfolio. The goal of this
@@ -232,7 +233,7 @@ const Pacman = () => {
   };
 
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true') return;
+    if (isStaticExport()) return;
     const load = async () => {
       try {
         const res = await fetch('/api/pacman/leaderboard');
@@ -247,7 +248,7 @@ const Pacman = () => {
 
   const submitScore = useCallback(
     async (finalScore) => {
-      if (process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true') return;
+      if (isStaticExport()) return;
       try {
         const name = window.prompt('Enter your name', 'Player');
         if (!name) return;
@@ -781,29 +782,30 @@ const Pacman = () => {
   return (
 
   <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-      <div className="mb-2 w-full max-w-xs">
-        <input
-          type="text"
-          placeholder="Search level..."
-          className="w-full px-2 py-1 text-black"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setHighlight(0);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'ArrowDown') {
-              e.preventDefault();
-              setHighlight((h) => Math.min(h + 1, filteredLevels.length - 1));
-            } else if (e.key === 'ArrowUp') {
-              e.preventDefault();
-              setHighlight((h) => Math.max(h - 1, 0));
-            } else if (e.key === 'Enter') {
-              const sel = filteredLevels[highlight];
-              if (sel) loadLevel(sel.index);
-            }
-          }}
-        />
+        <div className="mb-2 w-full max-w-xs">
+          <input
+            type="text"
+            placeholder="Search level..."
+            className="w-full px-2 py-1 text-black"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setHighlight(0);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setHighlight((h) => Math.min(h + 1, filteredLevels.length - 1));
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setHighlight((h) => Math.max(h - 1, 0));
+              } else if (e.key === 'Enter') {
+                const sel = filteredLevels[highlight];
+                if (sel) loadLevel(sel.index);
+              }
+            }}
+            aria-label="Search pacman levels"
+          />
         <ul className="max-h-40 overflow-y-auto bg-white text-black border border-gray-300">
           {filteredLevels.length === 0 && (
             <li className="px-2 py-1">No levels found</li>
@@ -828,17 +830,18 @@ const Pacman = () => {
         setGameSpeed={setGameSpeed}
       />
 
-      <div
-        className="relative"
-        style={{ width: WIDTH * scale, height: HEIGHT * scale }}
-      >
-        <canvas
-          ref={canvasRef}
-          width={WIDTH}
-          height={HEIGHT}
-          className="bg-black"
-          style={{ width: WIDTH * scale, height: HEIGHT * scale, imageRendering: 'pixelated' }}
-        />
+        <div
+          className="relative"
+          style={{ width: WIDTH * scale, height: HEIGHT * scale }}
+        >
+          <canvas
+            ref={canvasRef}
+            width={WIDTH}
+            height={HEIGHT}
+            className="bg-black"
+            style={{ width: WIDTH * scale, height: HEIGHT * scale, imageRendering: 'pixelated' }}
+            aria-label="Pacman board"
+          />
         <div className="absolute top-0 left-0 w-full text-xs bg-black bg-opacity-75 px-1 flex justify-between">
           <span>Score: {score}</span>
           <span>Pellets: {pelletCount}</span>

@@ -3,6 +3,7 @@ import TaskOverview from './task-overview';
 import PolicySettings from './policy-settings';
 import pciProfile from './templates/pci.json';
 import hipaaProfile from './templates/hipaa.json';
+import { useNotifier } from '../../../hooks/useNotifier';
 
 const templates = { PCI: pciProfile, HIPAA: hipaaProfile };
 
@@ -23,16 +24,6 @@ const profileTabs = [
   { id: 'PCI', label: 'PCI', icon: <CardIcon /> },
   { id: 'HIPAA', label: 'HIPAA', icon: <HealthIcon /> },
 ];
-
-// Simple helper for notifications that falls back to alert()
-const notify = (title, body) => {
-  if (typeof window === 'undefined') return;
-  if ('Notification' in window && Notification.permission === 'granted') {
-    new Notification(title, { body });
-  } else {
-    alert(`${title}: ${body}`);
-  }
-};
 
 const escapeHtml = (str = '') =>
   str
@@ -206,6 +197,7 @@ const clearSession = () => {
 };
 
 const OpenVASApp = () => {
+  const { notify } = useNotifier();
   const [target, setTarget] = useState('');
   const [group, setGroup] = useState('');
   const [profile, setProfile] = useState('PCI');

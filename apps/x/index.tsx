@@ -11,6 +11,7 @@ import {
 import DOMPurify from 'dompurify';
 import usePersistentState from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
+import { useNotifier } from '../../hooks/useNotifier';
 import useScheduledTweets, {
   ScheduledTweet,
 } from './state/scheduled';
@@ -127,6 +128,7 @@ export default function XTimeline() {
   const [scheduled, setScheduled] = useScheduledTweets();
   const [showSetup, setShowSetup] = useState(true);
   const isMountedRef = useRef(true);
+  const { notify } = useNotifier();
 
   useEffect(() => () => {
     isMountedRef.current = false;
@@ -183,12 +185,11 @@ export default function XTimeline() {
         const delay = t.time - Date.now();
         if (delay > 0) {
           timeoutsRef.current[t.id] = window.setTimeout(() => {
-            if (
-              'Notification' in window &&
-              Notification.permission === 'granted'
-            ) {
-              new Notification('Tweet reminder', { body: t.text });
-            }
+            void notify({
+              appId: 'x-timeline',
+              title: 'Tweet reminder',
+              body: t.text,
+            });
             setScheduled((prev) => prev.filter((s) => s.id !== t.id));
             delete timeoutsRef.current[t.id];
           }, delay);
@@ -201,7 +202,7 @@ export default function XTimeline() {
         delete timeoutsRef.current[id];
       }
     });
-  }, [scheduled, setScheduled]);
+  }, [notify, scheduled, setScheduled]);
 
   const loadTimeline = useCallback(async () => {
     if (!feed || !timelineRef.current) return;
