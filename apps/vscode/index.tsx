@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useEffect, useRef, useState, type ReactEventHandler } from 'react';
-import ExternalFrame from '../../components/ExternalFrame';
+import EmbedFrame from '../../components/EmbedFrame';
 import { CloseIcon, MaximizeIcon, MinimizeIcon } from '../../components/ToolbarIcons';
 import { kaliTheme } from '../../styles/themes/kali';
 import { SIDEBAR_WIDTH, ICON_SIZE } from './utils';
@@ -241,12 +241,16 @@ export default function VsCode() {
           </span>
         </nav>
         <div className="relative flex-1" style={{ backgroundColor: kaliTheme.background }}>
-          <ExternalFrame
+          <EmbedFrame
             ref={frameRef}
             src={STACKBLITZ_EMBED_URL}
             title="VsCode"
             className="w-full h-full"
+            allowedOrigins={[STACKBLITZ_ORIGIN]}
             onError={handleFrameError}
+            loadingLabel="Connecting to StackBlitz…"
+            fallbackLabel="Open in StackBlitz"
+            openInNewTabLabel="Open in StackBlitz"
           />
           {showOverlay && (
             <div className="absolute inset-0 flex items-center justify-center bg-[color:var(--color-overlay-strong)] px-6 text-center">

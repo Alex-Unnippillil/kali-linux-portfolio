@@ -8,6 +8,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import EmbedFrame from '../../EmbedFrame';
 import { demoYouTubeVideos } from '../../../data/youtube/demoVideos';
 import usePersistentState from '../../../hooks/usePersistentState';
 
@@ -384,13 +385,16 @@ export default function YouTubeApp({ initialResults }: Props) {
           </h2>
           <div className="mt-3 aspect-video overflow-hidden rounded-lg bg-[var(--kali-panel-highlight)]">
             {selectedVideo ? (
-              <iframe
+              <EmbedFrame
                 key={selectedVideo.id}
                 title={`YouTube player for ${selectedVideo.title}`}
                 src={`https://www.youtube-nocookie.com/embed/${selectedVideo.id}`}
+                className="h-full w-full border-0"
+                containerClassName="relative h-full w-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="h-full w-full"
+                fallbackLabel="Open on YouTube"
+                openInNewTabLabel="Open on YouTube"
+                loadingLabel="Loading YouTube player…"
               />
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">

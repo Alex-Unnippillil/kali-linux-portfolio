@@ -1,3 +1,5 @@
+import EmbedFrame from '../EmbedFrame';
+
 const PLAYLIST_EMBED_URL =
   'https://open.spotify.com/embed/playlist/37i9dQZF1E8NOMDYRneOXj?utm_source=generator';
 
@@ -97,15 +99,15 @@ export function SpotifyWebPlayerLayout({ description, className = '' }) {
 
           <div className="relative flex-1 overflow-hidden bg-black/40">
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent" />
-            <iframe
+            <EmbedFrame
               src={PLAYLIST_EMBED_URL}
               title="Spotify playlist embed"
-              className="absolute inset-0 h-full w-full"
-              frameBorder="0"
-              style={{ border: 'none', borderRadius: 0 }}
+              className="absolute inset-0 h-full w-full border-0"
+              containerClassName="relative h-full w-full"
               allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-              allowFullScreen
-              loading="lazy"
+              openInNewTabLabel="Open on Spotify"
+              fallbackLabel="Open on Spotify"
+              loadingLabel="Loading Spotify player…"
             />
           </div>
         </main>

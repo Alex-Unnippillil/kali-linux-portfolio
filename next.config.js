@@ -3,6 +3,9 @@
 // Update README (section "CSP External Domains") when editing domains below.
 
 const { validateServerEnv: validateEnv } = require('./lib/validate.js');
+const { EMBED_FRAME_ALLOWED_ORIGINS } = require('./lib/embed-origins');
+
+const frameSrcDirectives = ["'self'", ...EMBED_FRAME_ALLOWED_ORIGINS];
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -24,8 +27,8 @@ const ContentSecurityPolicy = [
   "script-src 'self' 'unsafe-inline' https://vercel.live https://platform.twitter.com https://embed.x.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
   // Allow outbound connections for embeds and the in-browser Chrome app
   "connect-src 'self' https://example.com https://developer.mozilla.org https://en.wikipedia.org https://www.google.com https://platform.twitter.com https://embed.x.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://stackblitz.com",
-  // Allow iframes from specific providers so the Chrome and StackBlitz apps can load allowed content
-  "frame-src 'self' https://vercel.live https://stackblitz.com https://*.google.com https://platform.twitter.com https://embed.x.com https://syndication.twitter.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://example.com https://developer.mozilla.org https://en.wikipedia.org",
+  // Allow iframes from specific providers so embedded apps can load allowed content
+  `frame-src ${frameSrcDirectives.join(' ')}`,
 
   // Allow this site to embed its own resources (resume PDF)
   "frame-ancestors 'self'",
