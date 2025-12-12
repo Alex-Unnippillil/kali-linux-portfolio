@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import SimulationBanner from '../../components/apps/SimulationBanner';
+import SimulationReportExport from '../../components/apps/SimulationReportExport';
+import { recordSimulation } from '../../utils/simulationLog';
 import share, { canShare } from '../../utils/share';
 
 interface Script {
@@ -68,11 +71,20 @@ const NmapNSE: React.FC = () => {
 
   const run = () => {
     if (!selected) return;
+    const simulation = recordSimulation({
+      tool: 'nmap-nse',
+      title: selected.name,
+      summary: `Tag ${selected.tag} • ${selected.example.length} chars of sample output`,
+      data: { tag: selected.tag, script: selected.name },
+    });
+    const timestamp = simulation
+      ? Date.parse(simulation.timestamp)
+      : Date.parse('2024-01-01T00:00:00Z');
     setResult({ script: selected.name, output: selected.example });
     setLastRun({
       script: selected.name,
       tag: selected.tag,
-      timestamp: Date.now(),
+      timestamp,
     });
   };
 
@@ -243,6 +255,12 @@ const NmapNSE: React.FC = () => {
         <h1 className="font-mono text-lg tracking-wide">Nmap NSE</h1>
       </header>
       <section className="border-b border-[color:var(--kali-border)] bg-[var(--kali-panel)]">
+        <div className="mx-auto w-full max-w-6xl px-4 pt-4">
+          <SimulationBanner
+            toolName="Nmap NSE"
+            message="Static scripts and canned responses keep every demo deterministic and offline."
+          />
+        </div>
         <div className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-6 px-4 py-6 text-sm md:grid-cols-3">
           <div className="rounded-lg border border-[color:var(--kali-border)] bg-[var(--kali-panel)] p-4 shadow-kali-panel">
             <p className="text-xs uppercase tracking-wide text-[color:var(--color-muted)]">Categories</p>
@@ -509,6 +527,11 @@ const NmapNSE: React.FC = () => {
             </div>
           )}
         </main>
+      </div>
+      <div className="border-t border-[color:var(--kali-border)] bg-[var(--kali-panel)]">
+        <div className="mx-auto w-full max-w-6xl px-4 pb-6">
+          <SimulationReportExport />
+        </div>
       </div>
     </div>
   );

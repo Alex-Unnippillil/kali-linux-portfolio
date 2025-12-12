@@ -1,4 +1,7 @@
 import React, { useMemo, useState } from "react";
+import SimulationBanner from "../SimulationBanner";
+import SimulationReportExport from "../SimulationReportExport";
+import { recordSimulation } from "../../../utils/simulationLog";
 
 // Demo output for each tab
 const demoOutput = {
@@ -136,11 +139,21 @@ const MimikatzApp = () => {
     a.download = `${active}-output.txt`;
     a.click();
     URL.revokeObjectURL(url);
+    recordSimulation({
+      tool: "mimikatz",
+      title: `${active} export`,
+      summary: `${output.length} line demo saved (${showSensitive ? "unmasked" : "masked"})`,
+      data: { tab: active, entries: output.length, showSensitive },
+    });
   };
 
   return (
     <div className="flex h-full w-full flex-col bg-kali-surface/95 text-kali-text">
       <div className="border-b border-kali-border/60 bg-[var(--kali-panel)] px-3 pt-3">
+        <SimulationBanner
+          toolName="Mimikatz"
+          message="Credential artifacts are mocked and deterministic. No secrets are processed."
+        />
         <KaliAlert tone="warning">Demo only. No real credentials are used.</KaliAlert>
         <div
           role="tablist"
@@ -230,6 +243,7 @@ const MimikatzApp = () => {
             );
           })}
         </div>
+        <SimulationReportExport dense />
       </div>
     </div>
   );

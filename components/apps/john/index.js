@@ -1,4 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import SimulationBanner from '../SimulationBanner';
+import SimulationReportExport from '../SimulationReportExport';
+import { recordSimulation } from '../../../utils/simulationLog';
 import {
   parseRules,
   distributeTasks,
@@ -270,6 +273,19 @@ const JohnApp = () => {
       setOutput(results.join('\n'));
       setProgress(100);
       setPhase('done');
+      recordSimulation({
+        tool: 'john',
+        title: 'Hash audit',
+        summary: `${hashArr.length} hash${hashArr.length === 1 ? '' : 'es'} using ${
+          endpointArr.length || 1
+        } endpoint${endpointArr.length === 1 ? '' : 's'}`,
+        data: {
+          hashes: hashArr.length,
+          endpoints: endpointArr.length || 1,
+          mode,
+          rules: rules.length,
+        },
+      });
     } catch (err) {
       if (err.name !== 'AbortError' && err.message !== 'cancelled') {
         setError(err.message);
@@ -296,9 +312,10 @@ const JohnApp = () => {
 
   return (
     <div className="h-full w-full flex flex-col bg-kali-surface text-kali-text">
-      <p className="text-xs text-yellow-300 p-2">
-        {johnPlaceholders.banners.desktop}
-      </p>
+      <SimulationBanner
+        toolName="John the Ripper"
+        message={johnPlaceholders.banners.desktop}
+      />
       <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-2">
         <label htmlFor="john-hashes" id="john-hashes-label" className="text-sm">
           Hashes (one per line)
@@ -520,6 +537,7 @@ const JohnApp = () => {
             </button>
           </>
         )}
+        <SimulationReportExport dense />
       </div>
     </div>
   );

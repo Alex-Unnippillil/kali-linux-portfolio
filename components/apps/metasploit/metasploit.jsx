@@ -1,4 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import SimulationBanner from '../SimulationBanner';
+import SimulationReportExport from '../SimulationReportExport';
+import { recordSimulation } from '../../../utils/simulationLog';
 import modules from './modules.json';
 import usePersistentState from '../../../hooks/usePersistentState';
 import ConsolePane from './ConsolePane';
@@ -147,9 +150,16 @@ const MetasploitApp = ({
     setLoading(true);
     try {
       if (demoMode || process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true') {
-        setOutput(
-          (prev) => `${prev}\nmsf6 > ${cmd}\n[demo mode] command disabled`
-        );
+        setOutput((prev) => {
+          const next = `${prev}\nmsf6 > ${cmd}\n[demo mode] command disabled`;
+          recordSimulation({
+            tool: 'metasploit',
+            title: cmd || 'msf6',
+            summary: 'Command replayed in demo mode',
+            data: { mode: 'demo', command: cmd },
+          });
+          return next;
+        });
       } else {
         const res = await fetch('/api/metasploit', {
           method: 'POST',
@@ -157,7 +167,16 @@ const MetasploitApp = ({
           body: JSON.stringify({ command: cmd }),
         });
         const data = await res.json();
-        setOutput((prev) => `${prev}\nmsf6 > ${cmd}\n${data.output || ''}`);
+        setOutput((prev) => {
+          const next = `${prev}\nmsf6 > ${cmd}\n${data.output || ''}`;
+          recordSimulation({
+            tool: 'metasploit',
+            title: cmd || 'msf6',
+            summary: 'API-backed demo response',
+            data: { mode: 'api', command: cmd, output: (data.output || '').slice(0, 120) },
+          });
+          return next;
+        });
       }
     } catch (e) {
       setOutput((prev) => `${prev}\nError: ${e.message}`);
@@ -172,6 +191,12 @@ const MetasploitApp = ({
       const exploit = modules[0];
       const post = modules.find((m) => m.type === 'post');
       if (!exploit || !post) return;
+      recordSimulation({
+        tool: 'metasploit',
+        title: 'Guided demo',
+        summary: `${exploit.name} → ${post.name}`,
+        data: { exploit: exploit.name, post: post.name },
+      });
       setOutput(
         (prev) =>
           `${prev}\nmsf6 > use ${exploit.name}\n${exploit.transcript || ''}`
@@ -194,6 +219,12 @@ const MetasploitApp = ({
   const showModule = (mod) => {
     setSelectedModule(mod);
     setOutput((prev) => `${prev}\nmsf6 > use ${mod.name}\n${mod.transcript || ''}`);
+    recordSimulation({
+      tool: 'metasploit',
+      title: `Module ${mod.name}`,
+      summary: `Opened ${mod.type} module for review`,
+      data: { tags: mod.tags, platform: mod.platform },
+    });
   };
 
   const startReplay = () => {
@@ -276,9 +307,10 @@ const MetasploitApp = ({
 
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white">
-      <div className="bg-yellow-400 text-black text-xs p-2 text-center">
-        For authorized security testing and educational use only.
-      </div>
+      <SimulationBanner
+        toolName="Metasploit"
+        message="Module searches and console output are deterministic and stay inside this browser."
+      />
       <div className="flex p-2">
         <input
           className="flex-grow bg-ub-grey text-white p-1 rounded"
@@ -566,6 +598,9 @@ const MetasploitApp = ({
             <p>Select a module to view docs.</p>
           )}
         </aside>
+      </div>
+      <div className="px-2">
+        <SimulationReportExport dense />
       </div>
       <ConsolePane output={loading ? 'Running...' : output} />
     </div>
