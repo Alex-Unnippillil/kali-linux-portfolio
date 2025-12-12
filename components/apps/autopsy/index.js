@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import SimulationBanner from '../SimulationBanner';
+import SimulationReportExport from '../SimulationReportExport';
+import { recordSimulation } from '../../../utils/simulationLog';
 import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
@@ -359,6 +362,7 @@ function Autopsy({ initialArtifacts = null }) {
     demoCase.timeline.map((t) => ({ name: t.event, timestamp: t.timestamp }))
   );
   const parseWorkerRef = useRef(null);
+  const hasLoggedCase = useRef(false);
 
   useEffect(() => {
     fetch('/plugin-marketplace.json')
@@ -415,6 +419,18 @@ function Autopsy({ initialArtifacts = null }) {
       .then((data) => setHashDB(data || {}))
       .catch(() => setHashDB({}));
   }, [currentCase, initialArtifacts]);
+
+  useEffect(() => {
+    if (!artifacts.length || hasLoggedCase.current) return;
+    const pluginCount = new Set(artifacts.map((a) => a.plugin).filter(Boolean)).size;
+    recordSimulation({
+      tool: 'autopsy',
+      title: currentCase || 'Demo case',
+      summary: `${artifacts.length} artifacts staged across ${pluginCount} plugins`,
+      data: { artifactCount: artifacts.length, caseName: currentCase || 'demo', plugins: pluginCount },
+    });
+    hasLoggedCase.current = true;
+  }, [artifacts, currentCase]);
 
   const types = ['All', ...Array.from(new Set(artifacts.map((a) => a.type)))];
   const users = [
@@ -591,6 +607,10 @@ function Autopsy({ initialArtifacts = null }) {
         aria-live="polite"
         className="sr-only"
         dangerouslySetInnerHTML={{ __html: announcement }}
+      />
+      <SimulationBanner
+        toolName="Autopsy"
+        message="Evidence reviews use offline datasets and deterministic timelines for safe demos."
       />
       <div className="flex space-x-2">
         <input
@@ -784,6 +804,7 @@ function Autopsy({ initialArtifacts = null }) {
             </div>
           )}
           <ReportExport caseName={currentCase || 'case'} artifacts={artifacts} />
+          <SimulationReportExport />
         </div>
       )}
       {selectedArtifact && (

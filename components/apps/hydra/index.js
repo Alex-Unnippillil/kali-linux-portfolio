@@ -1,4 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
+import SimulationBanner from '../SimulationBanner';
+import SimulationReportExport from '../SimulationReportExport';
+import { recordSimulation } from '../../../utils/simulationLog';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
 
@@ -76,7 +79,6 @@ const HydraApp = () => {
   const announceRef = useRef(0);
   const [timeline, setTimeline] = useState([]);
   const [initialAttempt, setInitialAttempt] = useState(0);
-  const startRef = useRef(null);
   const [charset, setCharset] = useState('abc123');
   const [rule, setRule] = useState('1:3');
   const [candidateStats, setCandidateStats] = useState([]);
@@ -165,8 +167,6 @@ const HydraApp = () => {
       setSelectedPass(session.selectedPass || '');
       setTimeline(session.timeline || []);
       setInitialAttempt(session.attempt || 0);
-      const lastTime = session.timeline?.slice(-1)[0]?.time || 0;
-      startRef.current = Date.now() - lastTime * 1000;
       resumeAttack(session);
     }
     // resumeAttack is stable
@@ -268,42 +268,35 @@ const HydraApp = () => {
   }, [candidateStats]);
 
   const handleAttempt = (attempt) => {
-    const now = Date.now();
-    if (attempt > 0 && startRef.current) {
-      const elapsed = ((now - startRef.current) / 1000).toFixed(1);
-      const users =
-        selectedUserList?.content.split('\n').filter(Boolean) || [];
-      const passes =
-        selectedPassList?.content.split('\n').filter(Boolean) || [];
-      const passCount = passes.length || 1;
-      const user = users[Math.floor((attempt - 1) / passCount)] || '';
-      const password = passes[(attempt - 1) % passCount] || '';
-      const result =
-        attempt >= LOCKOUT_THRESHOLD
-          ? 'lockout'
-          : attempt >= BACKOFF_THRESHOLD
+    const users = selectedUserList?.content.split('\n').filter(Boolean) || [];
+    const passes = selectedPassList?.content.split('\n').filter(Boolean) || [];
+    const passCount = passes.length || 1;
+    const user = users[Math.floor((attempt - 1) / passCount)] || '';
+    const password = passes[(attempt - 1) % passCount] || '';
+    const completedAttempts = initialAttempt + attempt;
+    const elapsed = Number(((completedAttempts || 1) * 0.75).toFixed(1));
+    const result =
+      attempt >= LOCKOUT_THRESHOLD
+        ? 'lockout'
+        : attempt >= BACKOFF_THRESHOLD
           ? 'throttled'
           : 'attempt';
-      setTimeline((t) => {
-        const newTimeline = [
-          ...t,
-          { time: parseFloat(elapsed), user, password, result },
-        ];
-        saveSession({
-          target,
-          service,
-          selectedUser,
-          selectedPass,
-          attempt,
-          timeline: newTimeline,
-        });
-        return newTimeline;
+    setTimeline((t) => {
+      const newTimeline = [...t, { time: elapsed, user, password, result }];
+      saveSession({
+        target,
+        service,
+        selectedUser,
+        selectedPass,
+        attempt: completedAttempts,
+        timeline: newTimeline,
       });
-    }
-    if (now - announceRef.current > 1000) {
-      const limit = Math.min(LOCKOUT_THRESHOLD, totalAttempts);
+      return newTimeline;
+    });
+    const limit = Math.min(LOCKOUT_THRESHOLD, totalAttempts || 0);
+    if (announceRef.current !== attempt) {
       setAnnounce(`Attempt ${attempt} of ${limit}`);
-      announceRef.current = now;
+      announceRef.current = attempt;
     }
   };
 
@@ -320,7 +313,6 @@ const HydraApp = () => {
     setRunId((id) => id + 1);
     setOutput('');
     setTimeline([]);
-    startRef.current = Date.now();
     setInitialAttempt(0);
     saveSession({
       target,
@@ -331,7 +323,7 @@ const HydraApp = () => {
       timeline: [],
     });
     setAnnounce('Hydra started');
-    announceRef.current = Date.now();
+    announceRef.current = 0;
     try {
       if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
         const res = await fetch('/api/hydra', {
@@ -345,11 +337,33 @@ const HydraApp = () => {
           }),
         });
         const data = await res.json();
-        setOutput(data.output || data.error || 'No output');
+        const finalOutput = data.output || data.error || 'No output';
+        setOutput(finalOutput);
         setAnnounce('Hydra finished');
+        recordSimulation({
+          tool: 'hydra',
+          title: `${service} against ${target || 'demo host'}`,
+          summary: `Live run with ${user.content.split('\n').filter(Boolean).length} users and ${
+            pass.content.split('\n').filter(Boolean).length
+          } passwords`,
+          data: {
+            target,
+            service,
+            attempts: totalAttempts,
+            mode: 'live',
+            output: finalOutput.slice(0, 120),
+          },
+        });
       } else {
-        setOutput('Hydra demo output: feature disabled in static export');
+        const demoOutput = 'Hydra demo output: feature disabled in static export';
+        setOutput(demoOutput);
         setAnnounce('Hydra finished (demo)');
+        recordSimulation({
+          tool: 'hydra',
+          title: `${service} dry run (static mode)`,
+          summary: `Deterministic output staged for ${target || 'placeholder target'}`,
+          data: { target, service, attempts: totalAttempts, mode: 'static' },
+        });
       }
     } catch (err) {
       setOutput(err.message);
@@ -377,6 +391,12 @@ const HydraApp = () => {
     ].join('\n');
     setOutput(report);
     setAnnounce('Dry run complete');
+    recordSimulation({
+      tool: 'hydra',
+      title: `${service} tabletop`,
+      summary: `Dry run for ${target || 'N/A'} using ${userCount} users × ${passCount} passwords`,
+      data: { target, service, userCount, passCount, charset, rule, candidateSpace },
+    });
   };
 
   const handleSaveConfig = () => {
@@ -427,7 +447,6 @@ const HydraApp = () => {
     setRunId((id) => id + 1);
     setOutput('');
     setTimeline([]);
-    startRef.current = null;
     if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
       await fetch('/api/hydra', {
         method: 'POST',
@@ -441,6 +460,10 @@ const HydraApp = () => {
 
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
+      <SimulationBanner
+        toolName="Hydra"
+        message="Credential testing is replayed with deterministic timing. No packets ever leave this browser."
+      />
       <div className="grid grid-cols-2 gap-1.5">
         <div className="col-span-2 flex gap-1.5">
           {[
@@ -696,6 +719,8 @@ const HydraApp = () => {
         allow attackers to guess passwords without exploring the full candidate
         space.
       </p>
+
+      <SimulationReportExport dense />
 
       <div role="status" aria-live="polite" className="sr-only">
         {announce}
