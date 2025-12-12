@@ -11,11 +11,20 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
         <div
           ref={ref}
           className={clsx(
-            "desktop-shell isolate relative min-h-screen w-full overflow-hidden bg-transparent text-white antialiased",
+            "desktop-shell isolate relative min-h-screen w-full overflow-hidden bg-[#030b16] text-white antialiased",
             className,
           )}
           {...props}
         >
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-[#030711]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(23,147,209,0.22)_0%,rgba(3,11,20,0.94)_52%,rgba(2,8,16,0.98)_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_82%_12%,rgba(56,189,248,0.18)_0%,rgba(4,12,24,0)_58%)] opacity-80 mix-blend-screen" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#050f1d]/0 via-[#050f1d]/60 to-[#040b15]" />
+          </div>
           {children}
           <style jsx>{`
           :global(:root) {
