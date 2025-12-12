@@ -8,64 +8,154 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
-      - run: yarn dedupe --check
-      - run: npm run lint
+          cache-dependency-path: yarn.lock
+
+      - name: Enable Corepack (Yarn)
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.2 --activate
+          node -v
+          yarn --version
+
+      - name: Install deps (lockfile must match)
+        run: yarn install --immutable
+
+      - name: Dedupe check (lockfile hygiene)
+        run: yarn dedupe --check
+
+      - name: Lint
+        run: yarn lint
 
   typecheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
-      - run: yarn dedupe --check
-      - run: npm run tsc -- --noEmit
+          cache-dependency-path: yarn.lock
+
+      - name: Enable Corepack (Yarn)
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.2 --activate
+          node -v
+          yarn --version
+
+      - name: Install deps (lockfile must match)
+        run: yarn install --immutable
+
+      - name: Dedupe check (lockfile hygiene)
+        run: yarn dedupe --check
+
+      - name: Typecheck
+        run: yarn typecheck
 
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
-      - run: yarn dedupe --check
-      - run: yarn test --coverage
+          cache-dependency-path: yarn.lock
+
+      - name: Enable Corepack (Yarn)
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.2 --activate
+          node -v
+          yarn --version
+
+      - name: Install deps (lockfile must match)
+        run: yarn install --immutable
+
+      - name: Dedupe check (lockfile hygiene)
+        run: yarn dedupe --check
+
+      - name: Test
+        run: yarn test --coverage
 
   security:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
-      - run: yarn dedupe --check
-      - run: yarn npm audit
+          cache-dependency-path: yarn.lock
+
+      - name: Enable Corepack (Yarn)
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.2 --activate
+          node -v
+          yarn --version
+
+      - name: Install deps (lockfile must match)
+        run: yarn install --immutable
+
+      - name: Dedupe check (lockfile hygiene)
+        run: yarn dedupe --check
+
+      - name: Security audit
+        run: yarn npm audit --severity high
 
   vercel-preview:
     runs-on: ubuntu-latest
+    if: ${{ secrets.VERCEL_TOKEN != '' && github.event.pull_request.head.repo.full_name == github.repository }}
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
           cache: yarn
-      - run: yarn install --immutable --immutable-cache
-      - run: yarn dedupe --check
+          cache-dependency-path: yarn.lock
+
+      - name: Enable Corepack (Yarn)
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.2 --activate
+          node -v
+          yarn --version
+
+      - name: Install deps (lockfile must match)
+        run: yarn install --immutable
+
+      - name: Dedupe check (lockfile hygiene)
+        run: yarn dedupe --check
+
       - run: npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel build --token=${{ secrets.VERCEL_TOKEN }}
       - run: npx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
