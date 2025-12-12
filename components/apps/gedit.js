@@ -23,6 +23,9 @@ export class Gedit extends Component {
             location: null,
             timezone: '',
             localTime: '',
+            locationLoading: false,
+            locationError: '',
+            mapLoadFailed: false,
         }
         this.progressTimer = null;
         this.progressInterval = null;
@@ -30,7 +33,6 @@ export class Gedit extends Component {
 
     componentDidMount() {
         emailjs.init(process.env.NEXT_PUBLIC_USER_ID);
-        this.fetchLocation();
     }
 
     componentWillUnmount() {
@@ -40,14 +42,27 @@ export class Gedit extends Component {
     }
 
     fetchLocation = () => {
-        if (typeof fetch === 'undefined') return;
+        if (typeof fetch === 'undefined') {
+            this.setState({ locationError: 'Location lookup is unavailable in this environment.' });
+            return;
+        }
+
+        this.setState({ locationLoading: true, locationError: '', mapLoadFailed: false });
+
         fetch('https://ipapi.co/json/')
             .then(res => res.json())
             .then(data => {
                 const { latitude, longitude, timezone } = data;
+                if (!latitude || !longitude || !timezone) {
+                    throw new Error('Incomplete location data');
+                }
+                if (this.timeFrame) cancelAnimationFrame(this.timeFrame);
                 this.setState({ location: { latitude, longitude }, timezone }, this.updateTime);
             })
-            .catch(() => { });
+            .catch(() => {
+                this.setState({ locationError: 'Could not load location. Network or privacy settings may be blocking the request.' });
+            })
+            .finally(() => this.setState({ locationLoading: false }));
     }
 
     updateTime = () => {
@@ -171,21 +186,47 @@ export class Gedit extends Component {
                         </p>
                     </div>
                 </div>
-                {
-                    this.state.location &&
-                    <div className="bg-ub-gedit-dark border-t border-b border-ubt-gedit-blue p-2">
-                        <h2 className="font-bold text-sm mb-1">Your Local Time</h2>
+                <div className="bg-ub-gedit-dark border-t border-b border-ubt-gedit-blue p-2">
+                    <div className="flex items-start justify-between gap-2">
+                        <div>
+                            <h2 className="font-bold text-sm mb-1">Your Local Time (optional)</h2>
+                            <p className="text-xs text-ubt-gedit-blue leading-snug">
+                                Share your approximate location to see your local time. Data is requested once via IP lookup and not stored.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={this.fetchLocation}
+                            className="border border-ubt-gedit-blue text-ubt-gedit-blue px-2 py-1 rounded text-xs hover:bg-ub-gedit-light disabled:opacity-50"
+                            disabled={this.state.locationLoading}
+                        >
+                            {this.state.location ? 'Refresh' : 'Share location'}
+                        </button>
+                    </div>
+                    {this.state.locationError && (
+                        <p className="text-xs text-red-400 mt-2" role="alert">{this.state.locationError}</p>
+                    )}
+                    {this.state.locationLoading && (
+                        <p className="text-xs text-white mt-2">Requesting location…</p>
+                    )}
+                    {this.state.location && !this.state.mapLoadFailed && (
                         <Image
                             src={`https://staticmap.openstreetmap.de/staticmap.php?center=${this.state.location.latitude},${this.state.location.longitude}&zoom=3&size=300x150&markers=${this.state.location.latitude},${this.state.location.longitude},red-dot`}
                             alt="Map showing your approximate location"
-                            className="w-full rounded"
+                            className="w-full rounded mt-2"
                             width={300}
                             height={150}
                             sizes="(max-width: 300px) 100vw, 300px"
+                            onError={() => this.setState({ mapLoadFailed: true })}
                         />
-                        <p className="text-center mt-2" aria-live="polite">{this.state.localTime}</p>
-                    </div>
-                }
+                    )}
+                    {this.state.location && (
+                        <p className="text-center mt-2" aria-live="polite">{this.state.localTime || 'Local time unavailable'}</p>
+                    )}
+                    {this.state.mapLoadFailed && (
+                        <p className="text-xs text-yellow-300 mt-2">Map preview blocked. Your local time will still show if available.</p>
+                    )}
+                </div>
                 {
                     this.state.sending && (
                         <div className="flex justify-center items-center h-full w-full bg-gray-400 bg-opacity-30 absolute top-0 left-0">
