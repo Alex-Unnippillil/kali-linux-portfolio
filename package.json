@@ -73,7 +73,7 @@
     "mathjs": "^14.6.0",
     "matter-js": "0.20.0",
     "monaco-editor": "^0.52.2",
-    "next": "15.5.9",
+    "next": "15.5.2",
     "pcap-parser": "^0.2.1",
     "pdfjs-dist": "^5.4.54",
     "phaser": "3.70.0",
