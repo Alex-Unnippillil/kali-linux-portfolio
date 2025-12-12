@@ -1,0 +1,4 @@
+{
+  "disassembly": "0x1000 push rbp\n0x1001 mov rbp, rsp\n0x1004 mov eax, 0\n0x1009 pop rbp\n0x100a ret",
+  "analysis": "arch     x86\nbits     64\nformat   elf64\nentry    0x1000\nstripped false\nbinsz    42\nclass    ELF64\nhash     demo:4ae71336e44bf9bf79d2752e234818a5"
+}
