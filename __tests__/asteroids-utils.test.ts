@@ -10,6 +10,9 @@ import {
   applyPowerUp,
   addToInventory,
   useInventory,
+  segmentCircleHit,
+  sweptCircleCircleTorus,
+  torusDelta,
   POWER_UPS,
 } from '../components/apps/asteroids-utils';
 
@@ -78,11 +81,12 @@ describe('updateShipPosition', () => {
 });
 
 describe('power-ups', () => {
-  it('spawns a valid power-up', () => {
+  it('spawns a deterministic power-up when rng injected', () => {
     const list = [];
-    spawnPowerUp(list, 0, 0);
+    const rng = () => 0;
+    spawnPowerUp(list, 0, 0, rng);
     expect(list).toHaveLength(1);
-    expect(Object.values(POWER_UPS)).toContain(list[0].type);
+    expect(list[0].type).toBe(Object.values(POWER_UPS)[0]);
   });
 
   it('applies effects when collected', () => {
@@ -95,6 +99,33 @@ describe('power-ups', () => {
     expect(lives).toBe(4);
     lives = applyPowerUp({ type: POWER_UPS.RAPID_FIRE }, ship, lives, 50, 40);
     expect(ship.rapidFire).toBe(40);
+  });
+});
+
+describe('swept collisions', () => {
+  it('detects a segment-circle hit', () => {
+    const t = segmentCircleHit({ x: 0, y: 0 }, { x: 100, y: 0 }, 10);
+    expect(t).not.toBeNull();
+  });
+
+  it('detects bullet hitting asteroid during sweep', () => {
+    const bullet = { x: 100, y: 0, px: 0, py: 0, r: 2 } as any;
+    const asteroid = { x: 50, y: 0, px: 50, py: 0, r: 10 } as any;
+    const { hit } = sweptCircleCircleTorus(bullet, asteroid, 200, 200);
+    expect(hit).toBe(true);
+  });
+
+  it('ignores distant miss in torus space', () => {
+    const bullet = { x: 100, y: 0, px: 0, py: 0, r: 2 } as any;
+    const asteroid = { x: 50, y: 50, px: 50, py: 50, r: 10 } as any;
+    const { hit } = sweptCircleCircleTorus(bullet, asteroid, 200, 200);
+    expect(hit).toBe(false);
+  });
+});
+
+describe('torus utilities', () => {
+  it('uses shortest wrap delta', () => {
+    expect(Math.abs(torusDelta(1, 199, 200))).toBe(2);
   });
 });
 
