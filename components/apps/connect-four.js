@@ -1,9 +1,16 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import GameLayout from './GameLayout';
-import { evaluateColumns } from '../../games/connect-four/solver';
+import {
+  ROWS,
+  COLS,
+  createEmptyBoard,
+  applyMove,
+  listValidColumns,
+  evaluateColumns,
+  getResultAfterMove,
+  chooseAiMove,
+} from '../../games/connect-four/solver';
 
-const ROWS = 6;
-const COLS = 7;
 const CELL_SIZE = 40; // tailwind h-10 w-10
 const GAP = 4; // gap-1 => 4px
 const SLOT = CELL_SIZE + GAP;
@@ -13,259 +20,138 @@ const COLORS = {
   red: 'bg-blue-500',
   yellow: 'bg-orange-400',
 };
+
 const COLOR_NAMES = {
   red: 'Blue',
   yellow: 'Orange',
 };
 
-const createEmptyBoard = () =>
-  Array.from({ length: ROWS }, () => Array(COLS).fill(null));
-
-const getValidRow = (board, col) => {
-  for (let r = ROWS - 1; r >= 0; r -= 1) {
-    if (!board[r][col]) return r;
-  }
-  return -1;
-};
-
-const checkWinner = (board, player) => {
-  const dirs = [
-    [0, 1],
-    [1, 0],
-    [1, 1],
-    [1, -1],
-  ];
-  for (let r = 0; r < ROWS; r += 1) {
-    for (let c = 0; c < COLS; c += 1) {
-      if (board[r][c] !== player) continue;
-      for (const [dr, dc] of dirs) {
-        const cells = [];
-        for (let i = 0; i < 4; i += 1) {
-          const rr = r + dr * i;
-          const cc = c + dc * i;
-          if (rr < 0 || rr >= ROWS || cc < 0 || cc >= COLS) break;
-          if (board[rr][cc] !== player) break;
-          cells.push({ r: rr, c: cc });
-        }
-        if (cells.length === 4) return cells;
-      }
-    }
-  }
-  return null;
-};
-
-const isBoardFull = (board) => board[0].every(Boolean);
-
-const evaluateWindow = (window, player) => {
-  const opp = player === 'red' ? 'yellow' : 'red';
-  let score = 0;
-  const playerCount = window.filter((v) => v === player).length;
-  const oppCount = window.filter((v) => v === opp).length;
-  const empty = window.filter((v) => v === null).length;
-  if (playerCount === 4) score += 100;
-  else if (playerCount === 3 && empty === 1) score += 5;
-  else if (playerCount === 2 && empty === 2) score += 2;
-  if (oppCount === 3 && empty === 1) score -= 4;
-  return score;
-};
-
-const scorePosition = (board, player) => {
-  let score = 0;
-  const center = Math.floor(COLS / 2);
-  const centerArray = board.map((row) => row[center]);
-  score += centerArray.filter((v) => v === player).length * 3;
-  for (let r = 0; r < ROWS; r += 1) {
-    for (let c = 0; c < COLS - 3; c += 1) {
-      score += evaluateWindow(board[r].slice(c, c + 4), player);
-    }
-  }
-  for (let c = 0; c < COLS; c += 1) {
-    for (let r = 0; r < ROWS - 3; r += 1) {
-      score += evaluateWindow(
-        [board[r][c], board[r + 1][c], board[r + 2][c], board[r + 3][c]],
-        player,
-      );
-    }
-  }
-  for (let r = 0; r < ROWS - 3; r += 1) {
-    for (let c = 0; c < COLS - 3; c += 1) {
-      score += evaluateWindow(
-        [
-          board[r][c],
-          board[r + 1][c + 1],
-          board[r + 2][c + 2],
-          board[r + 3][c + 3],
-        ],
-        player,
-      );
-    }
-  }
-  for (let r = 3; r < ROWS; r += 1) {
-    for (let c = 0; c < COLS - 3; c += 1) {
-      score += evaluateWindow(
-        [
-          board[r][c],
-          board[r - 1][c + 1],
-          board[r - 2][c + 2],
-          board[r - 3][c + 3],
-        ],
-        player,
-      );
-    }
-  }
-  return score;
-};
-
-const getValidLocations = (board) => {
-  const locations = [];
-  for (let c = 0; c < COLS; c += 1) {
-    if (!board[0][c]) locations.push(c);
-  }
-  return locations;
-};
-
-const minimax = (board, depth, alpha, beta, maximizing) => {
-  const validLocations = getValidLocations(board);
-  const isTerminal =
-    checkWinner(board, 'red') ||
-    checkWinner(board, 'yellow') ||
-    validLocations.length === 0;
-  if (depth === 0 || isTerminal) {
-    if (checkWinner(board, 'red')) return { score: 1000000 };
-    if (checkWinner(board, 'yellow')) return { score: -1000000 };
-    return { score: scorePosition(board, 'red') };
-  }
-  if (maximizing) {
-    let value = -Infinity;
-    let column = validLocations[0];
-    for (const col of validLocations) {
-      const row = getValidRow(board, col);
-      const newBoard = board.map((r) => [...r]);
-      newBoard[row][col] = 'red';
-      const score = minimax(newBoard, depth - 1, alpha, beta, false).score;
-      if (score > value) {
-        value = score;
-        column = col;
-      }
-      alpha = Math.max(alpha, value);
-      if (alpha >= beta) break;
-    }
-    return { column, score: value };
-  }
-  let value = Infinity;
-  let column = validLocations[0];
-  for (const col of validLocations) {
-    const row = getValidRow(board, col);
-    const newBoard = board.map((r) => [...r]);
-    newBoard[row][col] = 'yellow';
-    const score = minimax(newBoard, depth - 1, alpha, beta, true).score;
-    if (score < value) {
-      value = score;
-      column = col;
-    }
-    beta = Math.min(beta, value);
-    if (alpha >= beta) break;
-  }
-  return { column, score: value };
-};
+const HUMAN_PLAYER = 'yellow';
+const AI_PLAYER = 'red';
 
 export default function ConnectFour() {
   const [board, setBoard] = useState(createEmptyBoard());
-  const [player, setPlayer] = useState('yellow');
-  const [winner, setWinner] = useState(null);
-  const [game, setGame] = useState({ history: [] });
+  const [player, setPlayer] = useState(HUMAN_PLAYER);
+  const [pending, setPending] = useState(null);
   const [hoverCol, setHoverCol] = useState(null);
-  const [animDisc, setAnimDisc] = useState(null);
-  const [winningCells, setWinningCells] = useState([]);
+  const [result, setResult] = useState({ status: 'ongoing' });
+  const [winningLine, setWinningLine] = useState(null);
+  const [lastMove, setLastMove] = useState(null);
+  const [history, setHistory] = useState([]);
   const [scores, setScores] = useState(Array(COLS).fill(null));
+  const [difficulty, setDifficulty] = useState('medium');
 
-  const finalizeMove = useCallback((newBoard, color) => {
-    const winCells = checkWinner(newBoard, color);
-    if (winCells) {
-      setWinner(color);
-      setWinningCells(winCells);
-    } else if (isBoardFull(newBoard)) {
-      setWinner('draw');
-    } else {
-      setPlayer(color === 'red' ? 'yellow' : 'red');
-    }
-  }, []);
+  const validColumns = useMemo(() => listValidColumns(board), [board]);
+  const lock = !!pending || result.status !== 'ongoing';
 
-  const dropDisc = useCallback(
-    (col, color) => {
-      if (winner || animDisc) return;
-      const row = getValidRow(board, col);
-      if (row === -1) return;
-      setAnimDisc({ col, row, color, y: -SLOT, vy: 0, target: row * SLOT });
-    },
-    [winner, animDisc, board],
+  const snapshotState = useCallback(
+    () => ({
+      board: board.map((r) => [...r]),
+      player,
+      result,
+      winningLine,
+      lastMove,
+    }),
+    [board, player, result, winningLine, lastMove],
   );
-
-  const handleClick = (col) => {
-    if (player !== 'yellow' || winner || animDisc) return;
-    setGame((g) => ({ history: [...g.history, board.map((r) => [...r])] }));
-    dropDisc(col, 'yellow');
-  };
-
-  const undo = () => {
-    setGame((g) => {
-      if (!g.history.length || animDisc) return g;
-      const prev = g.history[g.history.length - 1];
-      setBoard(prev);
-      setPlayer('yellow');
-      setWinner(null);
-      setWinningCells([]);
-      return { history: g.history.slice(0, -1) };
-    });
-  };
 
   useEffect(() => {
     setScores(evaluateColumns(board, player));
   }, [board, player]);
 
-  useEffect(() => {
-    if (!animDisc) return;
-    let raf;
-    const animate = () => {
-      setAnimDisc((d) => {
-        if (!d) return d;
-        let { y, vy, target } = d;
-        vy += 1.5;
-        y += vy;
-        if (y >= target) {
-          y = target;
-          if (Math.abs(vy) < 1.5) {
-            const newBoard = board.map((r) => [...r]);
-            newBoard[d.row][d.col] = d.color;
-            setBoard(newBoard);
-            finalizeMove(newBoard, d.color);
-            return null;
-          }
-          vy = -vy * 0.5;
-        }
-        return { ...d, y, vy };
+  const commitMove = useCallback(
+    (current) => {
+      const moveInfo = { row: current.row, col: current.col, player: current.player };
+      setBoard(current.nextBoard);
+      setLastMove(moveInfo);
+      const outcome = getResultAfterMove(current.nextBoard, moveInfo);
+      setResult(outcome);
+      setWinningLine(outcome.line ?? null);
+      if (outcome.status === 'ongoing') {
+        setPlayer(current.player === 'red' ? 'yellow' : 'red');
+      }
+    },
+    [],
+  );
+
+  const beginMove = useCallback(
+    (col, currentPlayer) => {
+      if (lock) return;
+      const move = applyMove(board, col, currentPlayer);
+      if (!move) return;
+      setHistory((h) => [...h, snapshotState()]);
+      setPending({
+        id: Date.now(),
+        col,
+        row: move.row,
+        player: currentPlayer,
+        phase: 'start',
+        fromY: -SLOT,
+        toY: move.row * SLOT,
+        nextBoard: move.board,
       });
-      raf = requestAnimationFrame(animate);
-    };
-    raf = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(raf);
-  }, [animDisc, board, finalizeMove]);
+    },
+    [board, lock, snapshotState],
+  );
 
   useEffect(() => {
-    if (player === 'red' && !winner && !animDisc) {
-      const { column } = minimax(board, 4, -Infinity, Infinity, true);
-      if (column !== undefined) dropDisc(column, 'red');
-    }
-  }, [player, winner, board, animDisc, dropDisc]);
+    if (pending?.phase !== 'start') return undefined;
+    const frame = requestAnimationFrame(() => {
+      setPending((p) => (p ? { ...p, phase: 'falling' } : p));
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [pending]);
+
+  const handleTransitionEnd = useCallback(() => {
+    setPending((current) => {
+      if (!current || current.phase !== 'falling') return current;
+      commitMove(current);
+      return null;
+    });
+  }, [commitMove]);
+
+  const handleClick = (col) => {
+    if (player !== HUMAN_PLAYER) return;
+    beginMove(col, HUMAN_PLAYER);
+  };
+
+  const undo = () => {
+    setHistory((h) => {
+      if (!h.length || pending) return h;
+      const prev = h[h.length - 1];
+      setBoard(prev.board);
+      setPlayer(prev.player);
+      setResult(prev.result);
+      setWinningLine(prev.winningLine ?? null);
+      setLastMove(prev.lastMove ?? null);
+      setPending(null);
+      return h.slice(0, -1);
+    });
+  };
 
   const reset = () => {
+    if (pending) return;
     setBoard(createEmptyBoard());
-    setPlayer('yellow');
-    setWinner(null);
-    setGame({ history: [] });
-    setWinningCells([]);
+    setPlayer(HUMAN_PLAYER);
+    setResult({ status: 'ongoing' });
+    setWinningLine(null);
+    setLastMove(null);
+    setHistory([]);
     setHoverCol(null);
   };
+
+  useEffect(() => {
+    if (player !== AI_PLAYER || lock) return;
+    const { column } = chooseAiMove(board, AI_PLAYER, difficulty);
+    beginMove(column, AI_PLAYER);
+  }, [board, player, lock, difficulty, beginMove]);
+
+  useEffect(() => {
+    if (!lastMove) return;
+    const outcome = getResultAfterMove(board, lastMove);
+    setResult(outcome);
+    setWinningLine(outcome.line ?? null);
+  }, [board, lastMove]);
 
   const validScores = scores.filter((s) => s !== null);
   const minScore = validScores.length ? Math.min(...validScores) : 0;
@@ -282,18 +168,41 @@ export default function ConnectFour() {
   );
 
   const boardWidth = COLS * SLOT - GAP;
+  const hoveringValid =
+    hoverCol !== null && validColumns.includes(hoverCol) && !lock && pending === null;
+
+  const settingsPanel = (
+    <div className="flex flex-col gap-2 text-sm text-white">
+      <label className="flex items-center gap-2">
+        <span>Difficulty</span>
+        <select
+          className="bg-gray-800 rounded px-2 py-1 text-white"
+          value={difficulty}
+          onChange={(e) => setDifficulty(e.target.value)}
+        >
+          <option value="easy">Easy</option>
+          <option value="medium">Medium</option>
+          <option value="hard">Hard</option>
+          <option value="expert">Expert</option>
+        </select>
+      </label>
+    </div>
+  );
 
   return (
-    <GameLayout gameId="connect-four">
+    <GameLayout gameId="connect-four" settingsPanel={settingsPanel}>
       <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 relative">
-        {winner && (
+        {result.status !== 'ongoing' && (
           <div className="mb-2 capitalize">
-            {winner === 'draw' ? 'Draw!' : `${COLOR_NAMES[winner]} wins!`}
+            {result.status === 'draw'
+              ? 'Draw!'
+              : `${COLOR_NAMES[result.winner]} wins!`}
           </div>
         )}
         <button
-          className="absolute top-2 right-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="absolute top-2 right-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50"
           onClick={reset}
+          disabled={pending}
         >
           Restart
         </button>
@@ -302,6 +211,16 @@ export default function ConnectFour() {
           style={{ width: boardWidth, height: BOARD_HEIGHT }}
           onMouseLeave={() => setHoverCol(null)}
         >
+          {hoveringValid && (
+            <div
+              className="absolute"
+              style={{
+                transform: `translateX(${hoverCol * SLOT}px) translateY(-${SLOT}px)`,
+              }}
+            >
+              <div className={`w-8 h-8 rounded-full opacity-70 ${COLORS[player]}`} />
+            </div>
+          )}
           <div className="grid grid-cols-7 gap-1">
             {board.map((row, rIdx) =>
               row.map((cell, cIdx) => (
@@ -310,56 +229,55 @@ export default function ConnectFour() {
                   aria-label={`cell-${rIdx}-${cIdx}`}
                   className="w-10 h-10 rounded-full flex items-center justify-center focus:outline-none bg-gray-700"
                   style={
-                    hoverCol === cIdx && !winner
+                    hoverCol === cIdx && !lock
                       ? { backgroundColor: getColor(scores[cIdx]) }
                       : undefined
                   }
                   onClick={() => handleClick(cIdx)}
                   onMouseEnter={() => setHoverCol(cIdx)}
+                  disabled={lock}
                 >
-                  {cell && (
-                    <div
-                      className={`w-8 h-8 rounded-full ${COLORS[cell]}`}
-                    />
-                  )}
+                  {cell && <div className={`w-8 h-8 rounded-full ${COLORS[cell]}`} />}
                 </button>
               )),
             )}
           </div>
-          {winningCells.length === 4 && (
+          {winningLine?.cells?.length ? (
             <svg
               viewBox={`0 0 ${COLS} ${ROWS}`}
               className="absolute top-0 left-0 w-full h-full pointer-events-none"
             >
               <line
-                x1={winningCells[0].c + 0.5}
-                y1={winningCells[0].r + 0.5}
-                x2={winningCells[3].c + 0.5}
-                y2={winningCells[3].r + 0.5}
+                x1={winningLine.cells[0].c + 0.5}
+                y1={winningLine.cells[0].r + 0.5}
+                x2={winningLine.cells[winningLine.cells.length - 1].c + 0.5}
+                y2={winningLine.cells[winningLine.cells.length - 1].r + 0.5}
                 stroke="white"
                 strokeWidth="0.2"
                 strokeLinecap="round"
               />
             </svg>
-          )}
-          {animDisc && (
+          ) : null}
+          {pending && (
             <div
               className="absolute"
               style={{
-                transform: `translateX(${animDisc.col * SLOT}px) translateY(${animDisc.y}px)`,
+                transform: `translateX(${pending.col * SLOT}px) translateY(${
+                  pending.phase === 'start' ? pending.fromY : pending.toY
+                }px)`,
+                transition: pending.phase === 'falling' ? 'transform 260ms ease-in' : 'none',
               }}
+              onTransitionEnd={handleTransitionEnd}
             >
-              <div
-                className={`w-8 h-8 rounded-full ${COLORS[animDisc.color]}`}
-              />
+              <div className={`w-8 h-8 rounded-full ${COLORS[pending.player]}`} />
             </div>
           )}
         </div>
         <div className="mt-4 flex gap-2">
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50"
             onClick={undo}
-            disabled={game.history.length === 0 || animDisc}
+            disabled={history.length === 0 || !!pending}
           >
             Undo
           </button>
@@ -368,4 +286,3 @@ export default function ConnectFour() {
     </GameLayout>
   );
 }
-

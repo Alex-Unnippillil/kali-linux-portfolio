@@ -1,4 +1,7 @@
-export type Cell = 'red' | 'yellow' | null;
+export type Player = 'red' | 'yellow';
+export type Cell = Player | null;
+export type Coord = { r: number; c: number };
+export type WinLine = { cells: Coord[]; dr: number; dc: number };
 export type Board = Cell[][];
 
 export const ROWS = 6;
@@ -7,45 +10,89 @@ export const COLS = 7;
 export const createEmptyBoard = (): Board =>
   Array.from({ length: ROWS }, () => Array<Cell>(COLS).fill(null));
 
+const cloneBoard = (board: Board): Board => board.map((row) => [...row]);
+
 export const getValidRow = (board: Board, col: number): number => {
-  for (let r = ROWS - 1; r >= 0; r--) {
+  for (let r = ROWS - 1; r >= 0; r -= 1) {
     if (!board[r][col]) return r;
   }
   return -1;
 };
 
-export const checkWinner = (
-  board: Board,
-  player: Exclude<Cell, null>,
-): boolean => {
-  const dirs = [
-    { dr: 0, dc: 1 },
-    { dr: 1, dc: 0 },
-    { dr: 1, dc: 1 },
-    { dr: 1, dc: -1 },
-  ];
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      if (board[r][c] !== player) continue;
-      for (const { dr, dc } of dirs) {
-        let count = 0;
-        for (let i = 0; i < 4; i++) {
-          const rr = r + dr * i;
-          const cc = c + dc * i;
-          if (rr < 0 || rr >= ROWS || cc < 0 || cc >= COLS) break;
-          if (board[rr][cc] !== player) break;
-          count++;
-        }
-        if (count === 4) return true;
-      }
-    }
+export const listValidColumns = (board: Board): number[] => {
+  const valid: number[] = [];
+  for (let c = 0; c < COLS; c += 1) {
+    if (!board[0][c]) valid.push(c);
   }
-  return false;
+  return valid;
+};
+
+export const applyMove = (
+  board: Board,
+  col: number,
+  player: Player,
+): { board: Board; row: number } | null => {
+  if (col < 0 || col >= COLS) return null;
+  const row = getValidRow(board, col);
+  if (row === -1) return null;
+  const newBoard = cloneBoard(board);
+  newBoard[row][col] = player;
+  return { board: newBoard, row };
 };
 
 export const isBoardFull = (board: Board): boolean => board[0].every(Boolean);
 
-const evaluateWindow = (window: Cell[], player: Exclude<Cell, null>): number => {
+const directions: Array<{ dr: number; dc: number }> = [
+  { dr: 0, dc: 1 },
+  { dr: 1, dc: 0 },
+  { dr: 1, dc: 1 },
+  { dr: 1, dc: -1 },
+];
+
+export const getWinLineFromLastMove = (
+  board: Board,
+  row: number,
+  col: number,
+  player: Player,
+): WinLine | null => {
+  for (const { dr, dc } of directions) {
+    const forward: Coord[] = [];
+    for (let i = 1; i <= 3; i += 1) {
+      const r = row + dr * i;
+      const c = col + dc * i;
+      if (r < 0 || r >= ROWS || c < 0 || c >= COLS) break;
+      if (board[r][c] !== player) break;
+      forward.push({ r, c });
+    }
+
+    const backward: Coord[] = [];
+    for (let i = 1; i <= 3; i += 1) {
+      const r = row - dr * i;
+      const c = col - dc * i;
+      if (r < 0 || r >= ROWS || c < 0 || c >= COLS) break;
+      if (board[r][c] !== player) break;
+      backward.push({ r, c });
+    }
+
+    const cells = [...backward.reverse(), { r: row, c: col }, ...forward];
+    if (cells.length >= 4) return { cells, dr, dc };
+  }
+  return null;
+};
+
+export const getResultAfterMove = (
+  board: Board,
+  lastMove: { row: number; col: number; player: Player } | null,
+): { status: 'win' | 'draw' | 'ongoing'; winner?: Player; line?: WinLine } => {
+  const winLine = lastMove
+    ? getWinLineFromLastMove(board, lastMove.row, lastMove.col, lastMove.player)
+    : null;
+  if (winLine) return { status: 'win', winner: lastMove!.player, line: winLine };
+  if (isBoardFull(board)) return { status: 'draw' };
+  return { status: 'ongoing' };
+};
+
+const evaluateWindow = (window: Cell[], player: Player): number => {
   const opp = player === 'red' ? 'yellow' : 'red';
   let score = 0;
   const playerCount = window.filter((v) => v === player).length;
@@ -58,26 +105,26 @@ const evaluateWindow = (window: Cell[], player: Exclude<Cell, null>): number => 
   return score;
 };
 
-const scorePosition = (board: Board, player: Exclude<Cell, null>): number => {
+const scorePosition = (board: Board, player: Player): number => {
   let score = 0;
   const center = Math.floor(COLS / 2);
   const centerArray = board.map((row) => row[center]);
   score += centerArray.filter((v) => v === player).length * 3;
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS - 3; c++) {
+  for (let r = 0; r < ROWS; r += 1) {
+    for (let c = 0; c < COLS - 3; c += 1) {
       score += evaluateWindow(board[r].slice(c, c + 4), player);
     }
   }
-  for (let c = 0; c < COLS; c++) {
-    for (let r = 0; r < ROWS - 3; r++) {
+  for (let c = 0; c < COLS; c += 1) {
+    for (let r = 0; r < ROWS - 3; r += 1) {
       score += evaluateWindow(
         [board[r][c], board[r + 1][c], board[r + 2][c], board[r + 3][c]],
         player,
       );
     }
   }
-  for (let r = 0; r < ROWS - 3; r++) {
-    for (let c = 0; c < COLS - 3; c++) {
+  for (let r = 0; r < ROWS - 3; r += 1) {
+    for (let c = 0; c < COLS - 3; c += 1) {
       score += evaluateWindow(
         [
           board[r][c],
@@ -89,8 +136,8 @@ const scorePosition = (board: Board, player: Exclude<Cell, null>): number => {
       );
     }
   }
-  for (let r = 3; r < ROWS; r++) {
-    for (let c = 0; c < COLS - 3; c++) {
+  for (let r = 3; r < ROWS; r += 1) {
+    for (let c = 0; c < COLS - 3; c += 1) {
       score += evaluateWindow(
         [
           board[r][c],
@@ -105,106 +152,190 @@ const scorePosition = (board: Board, player: Exclude<Cell, null>): number => {
   return score;
 };
 
-const getValidLocations = (board: Board): number[] => {
-  const locations: number[] = [];
-  for (let c = 0; c < COLS; c++) {
-    if (!board[0][c]) locations.push(c);
-  }
-  return locations;
+const score = (board: Board, maximizingPlayer: Player): number => {
+  const opponent = maximizingPlayer === 'red' ? 'yellow' : 'red';
+  return scorePosition(board, maximizingPlayer) - scorePosition(board, opponent);
 };
 
-export const minimax = (
+const opponentOf = (player: Player): Player => (player === 'red' ? 'yellow' : 'red');
+
+const MOVE_ORDER = [3, 2, 4, 1, 5, 0, 6];
+const WIN_SCORE = 1_000_000;
+
+const minimax = (
   board: Board,
   depth: number,
+  maximizingPlayer: Player,
+  currentPlayer: Player,
+  lastMove: { row: number; col: number; player: Player } | null,
   alpha: number,
   beta: number,
-  maximizing: boolean,
+  cache?: Map<string, { depth: number; score: number }>,
 ): { column?: number; score: number } => {
-  const validLocations = getValidLocations(board);
-  const isTerminal =
-    checkWinner(board, 'red') ||
-    checkWinner(board, 'yellow') ||
-    validLocations.length === 0;
-  if (depth === 0 || isTerminal) {
-    if (checkWinner(board, 'red')) return { score: 1000000 };
-    if (checkWinner(board, 'yellow')) return { score: -1000000 };
-    return { score: scorePosition(board, 'red') };
+  const key = cache
+    ? `${board.flat().map((c) => c ?? '.').join('')}|${currentPlayer}|${depth}`
+    : null;
+  if (cache && key && cache.has(key)) {
+    return { score: cache.get(key)!.score };
   }
-  if (maximizing) {
+
+  const result = getResultAfterMove(board, lastMove);
+  if (result.status === 'win') {
+    const winScore = result.winner === maximizingPlayer ? WIN_SCORE + depth : -WIN_SCORE - depth;
+    if (cache && key) cache.set(key, { depth, score: winScore });
+    return { score: winScore };
+  }
+  if (result.status === 'draw' || depth === 0) {
+    const terminalScore = depth === 0 ? score(board, maximizingPlayer) : 0;
+    if (cache && key) cache.set(key, { depth, score: terminalScore });
+    return { score: terminalScore };
+  }
+
+  const validColumns = listValidColumns(board);
+  if (validColumns.length === 0) return { score: 0 };
+  const orderedColumns = MOVE_ORDER.filter((c) => validColumns.includes(c));
+  let bestColumn = orderedColumns[0];
+
+  if (currentPlayer === maximizingPlayer) {
     let value = -Infinity;
-    let column = validLocations[0];
-    for (const col of validLocations) {
-      const row = getValidRow(board, col);
-      const newBoard = board.map((r) => [...r]);
-      newBoard[row][col] = 'red';
-      const score = minimax(newBoard, depth - 1, alpha, beta, false).score;
-      if (score > value) {
-        value = score;
-        column = col;
+    for (const col of orderedColumns) {
+      const move = applyMove(board, col, currentPlayer);
+      if (!move) continue;
+      const child = minimax(
+        move.board,
+        depth - 1,
+        maximizingPlayer,
+        opponentOf(currentPlayer),
+        { row: move.row, col, player: currentPlayer },
+        alpha,
+        beta,
+        cache,
+      );
+      const childScore = child.score;
+      if (childScore > value) {
+        value = childScore;
+        bestColumn = col;
       }
       alpha = Math.max(alpha, value);
       if (alpha >= beta) break;
     }
-    return { column, score: value };
+    if (cache && key) cache.set(key, { depth, score: value });
+    return { column: bestColumn, score: value };
   }
+
   let value = Infinity;
-  let column = validLocations[0];
-  for (const col of validLocations) {
-    const row = getValidRow(board, col);
-    const newBoard = board.map((r) => [...r]);
-    newBoard[row][col] = 'yellow';
-    const score = minimax(newBoard, depth - 1, alpha, beta, true).score;
-    if (score < value) {
-      value = score;
-      column = col;
+  for (const col of orderedColumns) {
+    const move = applyMove(board, col, currentPlayer);
+    if (!move) continue;
+    const child = minimax(
+      move.board,
+      depth - 1,
+      maximizingPlayer,
+      opponentOf(currentPlayer),
+      { row: move.row, col, player: currentPlayer },
+      alpha,
+      beta,
+      cache,
+    );
+    const childScore = child.score;
+    if (childScore < value) {
+      value = childScore;
+      bestColumn = col;
     }
     beta = Math.min(beta, value);
     if (alpha >= beta) break;
   }
-  return { column, score: value };
+  if (cache && key) cache.set(key, { depth, score: value });
+  return { column: bestColumn, score: value };
 };
 
-export const getBestMove = (
-  board: Board,
-  depth: number,
-  player: 'red' | 'yellow',
-): { column: number; scores: (number | null)[] } => {
-  const valid = getValidLocations(board);
+export const evaluateColumns = (board: Board, player: Player): (number | null)[] => {
+  const base = score(board, player);
   const scores: (number | null)[] = Array(COLS).fill(null);
-  let bestColumn = valid[0] ?? 0;
-  let bestScore = player === 'red' ? -Infinity : Infinity;
-  for (const col of valid) {
-    const row = getValidRow(board, col);
-    const newBoard = board.map((r) => [...r]);
-    newBoard[row][col] = player;
-    const score = minimax(newBoard, depth - 1, -Infinity, Infinity, player === 'yellow').score;
-    scores[col] = score;
-    if (player === 'red') {
-      if (score > bestScore) {
-        bestScore = score;
-        bestColumn = col;
-      }
-    } else if (score < bestScore) {
-      bestScore = score;
-      bestColumn = col;
-    }
-  }
-  return { column: bestColumn, scores };
-};
-
-export const evaluateColumns = (
-  board: Board,
-  player: 'red' | 'yellow',
-): (number | null)[] => {
-  const base = scorePosition(board, player);
-  const scores: (number | null)[] = Array(COLS).fill(null);
-  for (let c = 0; c < COLS; c++) {
-    const row = getValidRow(board, c);
-    if (row === -1) continue;
-    const newBoard = board.map((r) => [...r]);
-    newBoard[row][c] = player;
-    scores[c] = scorePosition(newBoard, player) - base;
+  for (let c = 0; c < COLS; c += 1) {
+    const move = applyMove(board, c, player);
+    if (!move) continue;
+    scores[c] = score(move.board, player) - base;
   }
   return scores;
 };
 
+export type Difficulty = 'easy' | 'medium' | 'hard' | 'expert';
+
+const findImmediateWin = (board: Board, player: Player): number | null => {
+  for (const col of MOVE_ORDER) {
+    const move = applyMove(board, col, player);
+    if (!move) continue;
+    const line = getWinLineFromLastMove(move.board, move.row, col, player);
+    if (line) return col;
+  }
+  return null;
+};
+
+const minimaxDepthByDifficulty: Record<Difficulty, number> = {
+  easy: 2,
+  medium: 4,
+  hard: 5,
+  expert: 7,
+};
+
+export const chooseAiMove = (
+  board: Board,
+  player: Player,
+  difficulty: Difficulty,
+  rng: () => number = Math.random,
+): { column: number; scores: (number | null)[] } => {
+  const validColumns = listValidColumns(board);
+  const scores: (number | null)[] = Array(COLS).fill(null);
+  if (!validColumns.length) return { column: 0, scores };
+
+  const immediateWin = findImmediateWin(board, player);
+  if (immediateWin !== null) return { column: immediateWin, scores };
+
+  const opponent = opponentOf(player);
+  const block = findImmediateWin(board, opponent);
+  if (block !== null) return { column: block, scores };
+
+  if (difficulty === 'easy') {
+    const evaluations: Array<{ col: number; value: number }> = [];
+    for (const col of MOVE_ORDER.filter((c) => validColumns.includes(c))) {
+      const move = applyMove(board, col, player);
+      if (!move) continue;
+      const value = score(move.board, player);
+      scores[col] = value;
+      evaluations.push({ col, value });
+    }
+    evaluations.sort((a, b) => b.value - a.value);
+    const top = evaluations.slice(0, 2);
+    const pick = top[Math.floor(rng() * top.length)] ?? top[0];
+    return { column: pick.col, scores };
+  }
+
+  const depth = minimaxDepthByDifficulty[difficulty];
+  const useCache = difficulty === 'expert';
+  const cache = useCache ? new Map<string, { depth: number; score: number }>() : undefined;
+  let bestColumn = validColumns[0];
+  let bestScore = -Infinity;
+
+  for (const col of MOVE_ORDER.filter((c) => validColumns.includes(c))) {
+    const move = applyMove(board, col, player);
+    if (!move) continue;
+    const { score: childScore } = minimax(
+      move.board,
+      depth - 1,
+      player,
+      opponent,
+      { row: move.row, col, player },
+      -Infinity,
+      Infinity,
+      cache,
+    );
+    scores[col] = childScore;
+    if (childScore > bestScore) {
+      bestScore = childScore;
+      bestColumn = col;
+    }
+  }
+
+  return { column: bestColumn, scores };
+};
