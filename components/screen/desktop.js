@@ -4545,6 +4545,15 @@ export class Desktop extends Component {
 
         const appMap = new Map(apps.map((app) => [app.id, app]));
         const snapGrid = this.getSnapGrid();
+        const shouldCullOffscreen = Boolean(this.props.lowEndMode) && typeof window !== 'undefined';
+        const viewportWidth = shouldCullOffscreen && typeof window.innerWidth === 'number' ? window.innerWidth : 0;
+        const viewportHeight = shouldCullOffscreen && typeof window.innerHeight === 'number' ? window.innerHeight : 0;
+
+        const resolveDefaultX = () => {
+            if (!shouldCullOffscreen || !viewportWidth) return 0;
+            const isPortrait = viewportHeight > viewportWidth;
+            return isPortrait ? viewportWidth * 0.05 : 60;
+        };
 
         return orderedIds.map((id, index) => {
             const app = appMap.get(id);
@@ -4553,6 +4562,26 @@ export class Desktop extends Component {
             const size = this.state.window_sizes?.[id];
             const defaultWidth = size && typeof size.width === 'number' ? size.width : app.defaultWidth;
             const defaultHeight = size && typeof size.height === 'number' ? size.height : app.defaultHeight;
+            const normalizedWidth = typeof defaultWidth === 'number' ? defaultWidth : 50;
+            const normalizedHeight = typeof defaultHeight === 'number' ? defaultHeight : 60;
+            const positionX = pos ? pos.x : (shouldCullOffscreen ? resolveDefaultX() : undefined);
+            const positionY = pos ? clampWindowTopPosition(pos.y, safeTopOffset) : safeTopOffset;
+
+            if (shouldCullOffscreen && viewportWidth && viewportHeight) {
+                const widthPx = viewportWidth * (normalizedWidth / 100);
+                const heightPx = viewportHeight * (normalizedHeight / 100);
+                const buffer = 120;
+                const effectiveX = typeof positionX === 'number' ? positionX : resolveDefaultX();
+                const withinViewport =
+                    effectiveX + widthPx > -buffer &&
+                    effectiveX < viewportWidth + buffer &&
+                    positionY + heightPx > -buffer &&
+                    positionY < viewportHeight + buffer;
+
+                if (!withinViewport) {
+                    return null;
+                }
+            }
             const props = {
                 title: app.title,
                 id: app.id,
@@ -4568,8 +4597,8 @@ export class Desktop extends Component {
                 allowMaximize: app.allowMaximize,
                 defaultWidth,
                 defaultHeight,
-                initialX: pos ? pos.x : undefined,
-                initialY: pos ? clampWindowTopPosition(pos.y, safeTopOffset) : safeTopOffset,
+                initialX: positionX,
+                initialY: positionY,
                 onPositionChange: (x, y) => this.updateWindowPosition(id, x, y),
                 onSizeChange: (width, height) => this.updateWindowSize(id, width, height),
                 snapEnabled: this.props.snapEnabled,
@@ -5406,7 +5435,7 @@ export class Desktop extends Component {
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
     const [snapGrid] = useSnapGridSetting();
-    const { density, fontScale, largeHitAreas, desktopTheme } = useSettings();
+    const { density, fontScale, largeHitAreas, desktopTheme, lowEndMode } = useSettings();
     return (
         <Desktop
             {...props}
@@ -5416,6 +5445,7 @@ export default function DesktopWithSnap(props) {
             fontScale={fontScale}
             largeHitAreas={largeHitAreas}
             desktopTheme={desktopTheme}
+            lowEndMode={lowEndMode}
         />
     );
 }

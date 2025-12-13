@@ -12,6 +12,7 @@ const DEFAULT_SETTINGS = {
   fontScale: 1,
   highContrast: false,
   largeHitAreas: false,
+  lowEndMode: false,
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
@@ -101,6 +102,19 @@ export async function setReducedMotion(value) {
   storage.setItem('reduced-motion', value ? 'true' : 'false');
 }
 
+export async function getLowEndMode() {
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.lowEndMode;
+  const stored = storage.getItem('low-end-mode');
+  return stored === null ? DEFAULT_SETTINGS.lowEndMode : stored === 'true';
+}
+
+export async function setLowEndMode(value) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem('low-end-mode', value ? 'true' : 'false');
+}
+
 export async function getFontScale() {
   const storage = getLocalStorage();
   if (!storage) return DEFAULT_SETTINGS.fontScale;
@@ -185,6 +199,7 @@ export async function resetSettings() {
   ]);
   storage.removeItem('density');
   storage.removeItem('reduced-motion');
+  storage.removeItem('low-end-mode');
   storage.removeItem('font-scale');
   storage.removeItem('high-contrast');
   storage.removeItem('large-hit-areas');
@@ -201,6 +216,7 @@ export async function exportSettings() {
     useKaliWallpaper,
     density,
     reducedMotion,
+    lowEndMode,
     fontScale,
     highContrast,
     largeHitAreas,
@@ -213,6 +229,7 @@ export async function exportSettings() {
     getUseKaliWallpaper(),
     getDensity(),
     getReducedMotion(),
+    getLowEndMode(),
     getFontScale(),
     getHighContrast(),
     getLargeHitAreas(),
@@ -226,6 +243,7 @@ export async function exportSettings() {
     wallpaper,
     density,
     reducedMotion,
+    lowEndMode,
     fontScale,
     highContrast,
     largeHitAreas,
@@ -265,6 +283,7 @@ export async function importSettings(json) {
   if (useKaliWallpaper !== undefined) await setUseKaliWallpaper(useKaliWallpaper);
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
+  if (lowEndMode !== undefined) await setLowEndMode(lowEndMode);
   if (fontScale !== undefined) await setFontScale(fontScale);
   if (highContrast !== undefined) await setHighContrast(highContrast);
   if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);

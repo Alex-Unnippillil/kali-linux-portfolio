@@ -2,21 +2,21 @@ import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 
 import { DEFAULT_DESKTOP_FOLDERS } from './data/desktopFolders';
 import { displayDesktopFolder } from './components/apps/desktop-folder';
-import { displayX } from './components/apps/x';
-import { displaySpotify } from './components/apps/spotify';
-import { displaySettings } from './components/apps/settings';
-import { displayFirefox } from './components/apps/firefox';
-import { displayGedit } from './components/apps/gedit';
-import { displayTodoist } from './components/apps/todoist';
-import { displayWeather } from './components/apps/weather';
 import { displayClipboardManager } from './components/apps/ClipboardManager';
 import { displayFiglet } from './components/apps/figlet';
-import { displayResourceMonitor } from './components/apps/resource_monitor';
-import { displayScreenRecorder } from './components/apps/screen-recorder';
 import { displayNikto } from './components/apps/nikto';
 
 // Dynamic applications and games
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
+const XApp = createDynamicApp('x', 'X');
+const SettingsApp = createDynamicApp('settings', 'Settings');
+const FirefoxApp = createDynamicApp('firefox', 'Firefox');
+const SpotifyApp = createDynamicApp('spotify', 'Spotify');
+const GeditApp = createDynamicApp('gedit', 'Gedit');
+const TodoistApp = createDynamicApp('todoist', 'Todoist');
+const WeatherApp = createDynamicApp('weather', 'Weather');
+const ResourceMonitorApp = createDynamicApp('resource_monitor', 'Resource Monitor');
+const ScreenRecorderApp = createDynamicApp('screen-recorder', 'Screen Recorder');
 // VSCode app uses a Stack iframe, so no editor dependencies are required
 const VsCodeApp = createDynamicApp('vscode', 'VsCode');
 const YouTubeApp = createDynamicApp('youtube', 'YouTube');
@@ -113,6 +113,15 @@ const ContactApp = createDynamicApp('contact', 'Contact');
 
 
 const displayTerminal = createDisplay(TerminalApp);
+const displayX = createDisplay(XApp);
+const displaySettings = createDisplay(SettingsApp);
+const displayFirefox = createDisplay(FirefoxApp);
+const displaySpotify = createDisplay(SpotifyApp);
+const displayGedit = createDisplay(GeditApp);
+const displayTodoist = createDisplay(TodoistApp);
+const displayWeather = createDisplay(WeatherApp);
+const displayResourceMonitor = createDisplay(ResourceMonitorApp);
+const displayScreenRecorder = createDisplay(ScreenRecorderApp);
 const displayVsCode = createDisplay(VsCodeApp);
 const displayYouTube = createDisplay(YouTubeApp);
 const displayCalculator = createDisplay(CalculatorApp);
