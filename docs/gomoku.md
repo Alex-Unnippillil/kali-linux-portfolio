@@ -10,7 +10,7 @@ The Gomoku app simulates a 15×15 board where players place black and white ston
 - Black moves first by default. When playing against the AI you can choose to play first or second from the toolbar.
 - The first player to align five stones in a straight line wins the round.
 - If the board fills without a winning line the round is declared a draw.
-- The app enforces standard freestyle Gomoku rules—overlines (six or more in a row) still count as a win.
+- You can choose between **Freestyle** (default, 5 or more in a row wins and overlines are allowed) or **Exact Five** (only lines of exactly five count as a win).
 
 ## Modes
 

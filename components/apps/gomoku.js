@@ -4,14 +4,17 @@ import usePersistentState from '../../hooks/usePersistentState';
 import {
   BOARD_SIZE,
   createEmptyBoard,
+  cloneBoard,
   checkWinner,
   isBoardFull,
   chooseAiMove,
   createDefaultStats,
   isGomokuStats,
+  migrateGomokuStats,
   applyResultToStats,
   oppositePlayer,
   DIFFICULTIES,
+  DEFAULT_RULES,
 } from '../../apps/games/gomoku/logic';
 
 const PLAYER_LABELS = {
@@ -42,6 +45,7 @@ const Gomoku = () => {
     'gomoku:stats',
     createDefaultStats,
     isGomokuStats,
+    migrateGomokuStats,
   );
   const [mode, setMode] = usePersistentState(
     'gomoku:mode',
@@ -63,6 +67,11 @@ const Gomoku = () => {
     true,
     (value) => typeof value === 'boolean',
   );
+  const [ruleSet, setRuleSet] = usePersistentState(
+    'gomoku:ruleset',
+    DEFAULT_RULES.ruleSet,
+    (value) => value === 'freestyle' || value === 'exactFive',
+  );
 
   const [board, setBoard] = useState(() => createEmptyBoard());
   const [currentPlayer, setCurrentPlayer] = useState('black');
@@ -83,6 +92,8 @@ const Gomoku = () => {
 
   const layoutScore = mode === 'ai' ? stats.ai.streak : undefined;
   const layoutHighScore = stats.ai.bestStreak;
+
+  const rules = useMemo(() => ({ ruleSet, winLength: 5 }), [ruleSet]);
 
   const clearAiTimeout = useCallback(() => {
     if (aiTimeout.current) {
@@ -123,7 +134,10 @@ const Gomoku = () => {
     [clearAiTimeout],
   );
 
-  useEffect(() => resetBoard('black'), [mode, humanColor, difficulty, resetBoard]);
+  useEffect(
+    () => resetBoard('black'),
+    [mode, humanColor, difficulty, ruleSet, resetBoard],
+  );
 
   useEffect(() => () => clearAiTimeout(), [clearAiTimeout]);
 
@@ -143,14 +157,14 @@ const Gomoku = () => {
 
   const handleMove = useCallback(
     (row, col, player) => {
-      if (winner || board[row][col] !== null) return;
+      if (winner || board[row][col] !== null || player !== currentPlayer) return;
       if (mode === 'ai' && aiColor && player !== humanColor && player !== aiColor) return;
-      const nextBoard = board.map((r) => r.slice());
+      const nextBoard = cloneBoard(board);
       nextBoard[row][col] = player;
       setBoard(nextBoard);
       setLastMove({ row, col, player });
       playStoneSound();
-      const winResult = checkWinner(nextBoard, row, col, player);
+      const winResult = checkWinner(nextBoard, row, col, player, rules);
       if (winResult) {
         setWinningLine(winResult.line);
         finishRound(player);
@@ -181,14 +195,14 @@ const Gomoku = () => {
     if (aiThinking) return;
     setAiThinking(true);
     aiTimeout.current = setTimeout(() => {
-      const move = chooseAiMove(board, aiColor, humanColor, difficulty);
+      const move = chooseAiMove(board, aiColor, humanColor, difficulty, rules);
       if (move) {
         handleMove(move.row, move.col, aiColor);
       }
       setAiThinking(false);
     }, 350);
     return () => clearAiTimeout();
-  }, [aiThinking, aiColor, board, clearAiTimeout, currentPlayer, difficulty, handleMove, humanColor, mode, winner]);
+  }, [aiThinking, aiColor, board, clearAiTimeout, currentPlayer, difficulty, handleMove, humanColor, mode, rules, winner]);
 
   const boardStyle = useMemo(
     () => ({ gridTemplateColumns: `repeat(${BOARD_SIZE}, minmax(1.75rem, 1fr))` }),
@@ -280,6 +294,17 @@ const Gomoku = () => {
                 </select>
               </label>
             )}
+            <label className="flex items-center gap-2 text-sm">
+              <span className="uppercase tracking-wide text-gray-300">Rules</span>
+              <select
+                value={ruleSet}
+                onChange={(e) => setRuleSet(e.target.value)}
+                className="rounded bg-gray-800 px-2 py-1 text-white"
+              >
+                <option value="freestyle">Freestyle (5+ wins)</option>
+                <option value="exactFive">Exact Five</option>
+              </select>
+            </label>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button

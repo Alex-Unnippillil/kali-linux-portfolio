@@ -7,6 +7,12 @@ export type GameResult = Player | 'draw';
 
 export const BOARD_SIZE = 15;
 
+export type RuleSet = 'freestyle' | 'exactFive';
+
+export type Rules = { ruleSet: RuleSet; winLength: number };
+
+export const DEFAULT_RULES: Rules = { ruleSet: 'freestyle', winLength: 5 };
+
 export const DIRECTIONS: Array<[number, number]> = [
   [0, 1],
   [1, 0],
@@ -33,6 +39,7 @@ export const checkWinner = (
   row: number,
   col: number,
   player: Player,
+  rules: Rules = DEFAULT_RULES,
 ): WinResult | null => {
   const size = board.length;
   for (const [dr, dc] of DIRECTIONS) {
@@ -51,8 +58,15 @@ export const checkWinner = (
       r -= dr;
       c -= dc;
     }
-    if (line.length >= 5) {
-      return { winner: player, line };
+    const meetsWinCondition =
+      rules.ruleSet === 'freestyle'
+        ? line.length >= rules.winLength
+        : line.length === rules.winLength;
+    if (meetsWinCondition) {
+      const index = line.findIndex((pos) => pos.row === row && pos.col === col);
+      const start = Math.max(0, Math.min(index - 2, line.length - rules.winLength));
+      const segment = line.slice(start, start + rules.winLength);
+      return { winner: player, line: segment };
     }
   }
   return null;
@@ -60,57 +74,6 @@ export const checkWinner = (
 
 export const isBoardFull = (board: Board) =>
   board.every((row) => row.every((cell) => cell !== null));
-
-interface LineStats {
-  count: number;
-  openEnds: number;
-}
-
-const SCORE_FIVE = 1_000_000;
-const SCORE_OPEN_FOUR = 50_000;
-const SCORE_CLOSED_FOUR = 10_000;
-const SCORE_OPEN_THREE = 2_000;
-const SCORE_CLOSED_THREE = 400;
-const SCORE_OPEN_TWO = 120;
-const SCORE_DEFAULT = 10;
-
-const evaluateDirection = (
-  board: Board,
-  row: number,
-  col: number,
-  player: Player,
-  dr: number,
-  dc: number,
-): LineStats => {
-  const size = board.length;
-  let count = 1;
-  let openEnds = 0;
-  let r = row + dr;
-  let c = col + dc;
-  while (inBounds(size, r, c) && board[r][c] === player) {
-    count += 1;
-    r += dr;
-    c += dc;
-  }
-  if (inBounds(size, r, c) && board[r][c] === null) openEnds += 1;
-  r = row - dr;
-  c = col - dc;
-  while (inBounds(size, r, c) && board[r][c] === player) {
-    count += 1;
-    r -= dr;
-    c -= dc;
-  }
-  if (inBounds(size, r, c) && board[r][c] === null) openEnds += 1;
-  return { count, openEnds };
-};
-
-const scoreLine = ({ count, openEnds }: LineStats) => {
-  if (count >= 5) return SCORE_FIVE;
-  if (count === 4) return openEnds === 2 ? SCORE_OPEN_FOUR : SCORE_CLOSED_FOUR;
-  if (count === 3) return openEnds === 2 ? SCORE_OPEN_THREE : SCORE_CLOSED_THREE;
-  if (count === 2) return openEnds === 2 ? SCORE_OPEN_TWO : SCORE_DEFAULT;
-  return SCORE_DEFAULT;
-};
 
 const neighborBonus = (
   board: Board,
@@ -129,6 +92,20 @@ const neighborBonus = (
   return total;
 };
 
+export type Difficulty = 'casual' | 'balanced' | 'advanced';
+export const DIFFICULTIES: Difficulty[] = ['casual', 'balanced', 'advanced'];
+
+const PATTERN_SCORES: Array<{ pattern: RegExp; score: number }> = [
+  { pattern: /XXXXX/, score: 1_000_000 },
+  { pattern: /_XXXX_/, score: 120_000 },
+  { pattern: /XXXX_/, score: 40_000 },
+  { pattern: /_XXXX/, score: 40_000 },
+  { pattern: /_XXX_/, score: 12_000 },
+  { pattern: /XX_XX/, score: 10_000 },
+  { pattern: /XXX_X/, score: 10_000 },
+  { pattern: /_XX_/, score: 3_000 },
+];
+
 export interface EvaluatedMove {
   row: number;
   col: number;
@@ -137,78 +114,168 @@ export interface EvaluatedMove {
   heuristic: number;
 }
 
-export const evaluateMove = (
+export const getCandidateMoves = (board: Board, radius: number): Array<{ row: number; col: number }> => {
+  const size = board.length;
+  const occupied: Array<{ row: number; col: number }> = [];
+  for (let r = 0; r < size; r += 1) {
+    for (let c = 0; c < size; c += 1) {
+      if (board[r][c] !== null) occupied.push({ row: r, col: c });
+    }
+  }
+
+  if (occupied.length === 0) {
+    const mid = Math.floor(size / 2);
+    return [{ row: mid, col: mid }];
+  }
+
+  const candidates = new Set<string>();
+  for (const { row, col } of occupied) {
+    for (let dr = -radius; dr <= radius; dr += 1) {
+      for (let dc = -radius; dc <= radius; dc += 1) {
+        const r = row + dr;
+        const c = col + dc;
+        if (!inBounds(size, r, c) || board[r][c] !== null) continue;
+        candidates.add(`${r}-${c}`);
+      }
+    }
+  }
+
+  return Array.from(candidates)
+    .map((key) => {
+      const [r, c] = key.split('-').map(Number);
+      return { row: r, col: c };
+    })
+    .sort((a, b) => (a.row === b.row ? a.col - b.col : a.row - b.row));
+};
+
+const buildLineString = (
+  board: Board,
+  row: number,
+  col: number,
+  player: Player,
+  dr: number,
+  dc: number,
+): string => {
+  const size = board.length;
+  const chars: string[] = [];
+  for (let offset = -4; offset <= 4; offset += 1) {
+    const r = row + dr * offset;
+    const c = col + dc * offset;
+    if (offset === 0) {
+      chars.push('X');
+    } else if (!inBounds(size, r, c)) {
+      chars.push('#');
+    } else if (board[r][c] === player) {
+      chars.push('X');
+    } else if (board[r][c] === null) {
+      chars.push('_');
+    } else {
+      chars.push('O');
+    }
+  }
+  return chars.join('');
+};
+
+export const scoreLineString = (line: string): number => {
+  let best = 0;
+  for (const { pattern, score } of PATTERN_SCORES) {
+    if (pattern.test(line)) best = Math.max(best, score);
+  }
+  return best;
+};
+
+const evaluateHeuristic = (
   board: Board,
   row: number,
   col: number,
   player: Player,
   opponent: Player,
+  difficulty: Difficulty,
 ): EvaluatedMove => {
   const attackScores = DIRECTIONS.map((dir) =>
-    scoreLine(evaluateDirection(board, row, col, player, dir[0], dir[1])),
+    scoreLineString(buildLineString(board, row, col, player, dir[0], dir[1])),
   );
   const defenseScores = DIRECTIONS.map((dir) =>
-    scoreLine(evaluateDirection(board, row, col, opponent, dir[0], dir[1])),
+    scoreLineString(buildLineString(board, row, col, opponent, dir[0], dir[1])),
   );
   const attack = Math.max(...attackScores);
   const defense = Math.max(...defenseScores);
-  const adjacency = neighborBonus(board, row, col, 2);
-  return {
-    row,
-    col,
-    attack,
-    defense,
-    heuristic: attack * 2 + defense * 1.6 + adjacency * 15,
+  const center = (board.length - 1) / 2;
+  const distance = Math.max(Math.abs(row - center), Math.abs(col - center));
+  const centerBias = Math.max(0, 6 - distance) * 50;
+  const adjacency = neighborBonus(board, row, col, 2) * 25;
+
+  const weights: Record<Difficulty, { attack: number; defense: number }> = {
+    casual: { attack: 1, defense: 0.6 },
+    balanced: { attack: 1, defense: 0.9 },
+    advanced: { attack: 1, defense: 1.2 },
   };
+
+  const heuristic =
+    attack * weights[difficulty].attack +
+    defense * weights[difficulty].defense +
+    centerBias +
+    adjacency;
+
+  return { row, col, attack, defense, heuristic };
 };
 
-export type Difficulty = 'casual' | 'balanced' | 'advanced';
-export const DIFFICULTIES: Difficulty[] = ['casual', 'balanced', 'advanced'];
-
-const isWinningScore = (score: number) => score >= SCORE_FIVE;
+const sortMoves = (moves: EvaluatedMove[]) =>
+  moves.sort((a, b) => b.heuristic - a.heuristic || a.row - b.row || a.col - b.col);
 
 export const chooseAiMove = (
   board: Board,
   player: Player,
   opponent: Player,
   difficulty: Difficulty = 'balanced',
+  rules: Rules = DEFAULT_RULES,
 ): { row: number; col: number } | null => {
-  const size = board.length;
-  const moves: EvaluatedMove[] = [];
-  for (let row = 0; row < size; row += 1) {
-    for (let col = 0; col < size; col += 1) {
-      if (board[row][col] !== null) continue;
-      moves.push(evaluateMove(board, row, col, player, opponent));
+  const radius =
+    difficulty === 'advanced' ? 3 : difficulty === 'balanced' ? 2 : 1 + Math.floor(Math.random() * 2);
+  const candidates = getCandidateMoves(board, radius);
+  if (candidates.length === 0) return null;
+
+  const evaluated = candidates.map(({ row, col }) =>
+    evaluateHeuristic(board, row, col, player, opponent, difficulty),
+  );
+  sortMoves(evaluated);
+
+  if (difficulty === 'advanced') {
+    const TOP = 10;
+    const REPLIES = 10;
+    let bestMove = evaluated[0];
+    let bestScore = -Infinity;
+
+    for (const move of evaluated.slice(0, TOP)) {
+      const nextBoard = cloneBoard(board);
+      nextBoard[move.row][move.col] = player;
+      const win = checkWinner(nextBoard, move.row, move.col, player, rules);
+      if (win) return { row: move.row, col: move.col };
+
+      const replyCandidates = getCandidateMoves(nextBoard, 3);
+      const replies = replyCandidates
+        .map(({ row, col }) => evaluateHeuristic(nextBoard, row, col, opponent, player, difficulty))
+        .sort((a, b) => b.heuristic - a.heuristic)
+        .slice(0, REPLIES);
+      const opponentBest = replies[0]?.heuristic ?? 0;
+      const score = move.heuristic - opponentBest;
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = move;
+      }
     }
-  }
-  if (moves.length === 0) return null;
-
-  const winning = moves.filter((m) => isWinningScore(m.attack));
-  if (winning.length > 0) {
-    const move = winning[Math.floor(Math.random() * winning.length)];
-    return { row: move.row, col: move.col };
-  }
-  const blocking = moves.filter((m) => isWinningScore(m.defense));
-  if (blocking.length > 0) {
-    blocking.sort((a, b) => b.defense - a.defense);
-    const move = blocking[0];
-    return { row: move.row, col: move.col };
+    return { row: bestMove.row, col: bestMove.col };
   }
 
-  moves.sort((a, b) => b.heuristic - a.heuristic);
-  if (difficulty === 'advanced' || moves.length <= 2) {
-    const top = moves[0];
-    return { row: top.row, col: top.col };
-  }
+  const topMove = evaluated[0];
   if (difficulty === 'casual') {
-    const span = Math.min(5, moves.length);
-    const move = moves[Math.floor(Math.random() * span)];
+    const span = Math.min(5, evaluated.length);
+    const index = Math.random() < 0.2 ? Math.floor(Math.random() * span) : 0;
+    const move = evaluated[index];
     return { row: move.row, col: move.col };
   }
-  const topSpan = Math.min(3, moves.length);
-  const index = Math.random() < 0.75 ? 0 : Math.floor(Math.random() * topSpan);
-  const move = moves[index];
-  return { row: move.row, col: move.col };
+
+  return { row: topMove.row, col: topMove.col };
 };
 
 export interface AiStats {
@@ -226,11 +293,14 @@ export interface LocalStats {
 }
 
 export interface GomokuStats {
+  version: number;
   ai: AiStats;
   local: LocalStats;
   totalGames: number;
   lastWinner: GameResult | null;
 }
+
+export const GOMOKU_STATS_VERSION = 1;
 
 const createAiStats = (): AiStats => ({
   playerWins: 0,
@@ -247,6 +317,7 @@ const createLocalStats = (): LocalStats => ({
 });
 
 export const createDefaultStats = (): GomokuStats => ({
+  version: GOMOKU_STATS_VERSION,
   ai: createAiStats(),
   local: createLocalStats(),
   totalGames: 0,
@@ -278,10 +349,60 @@ const isResult = (value: unknown): value is GameResult | null =>
 export const isGomokuStats = (value: unknown): value is GomokuStats =>
   !!value &&
   typeof value === 'object' &&
+  (value as GomokuStats).version === GOMOKU_STATS_VERSION &&
   isAiStats((value as GomokuStats).ai) &&
   isLocalStats((value as GomokuStats).local) &&
   isFiniteNumber((value as GomokuStats).totalGames) &&
   isResult((value as GomokuStats).lastWinner);
+
+const clampNumber = (value: unknown) => {
+  if (!isFiniteNumber(value)) return 0;
+  return Math.max(0, value);
+};
+
+export const migrateGomokuStats = (raw: unknown): GomokuStats | null => {
+  const defaults = createDefaultStats();
+  if (isGomokuStats(raw)) return raw;
+  if (!raw || typeof raw !== 'object') return null;
+
+  const value = raw as Record<string, unknown>;
+  const next: GomokuStats = {
+    ...defaults,
+    ai: { ...defaults.ai },
+    local: { ...defaults.local },
+  };
+
+  const aiSource = (value.ai as Partial<AiStats>) || {};
+  const localSource = (value.local as Partial<LocalStats>) || {};
+
+  const legacyPlayerWins = clampNumber(value.playerWins);
+  const legacyAiWins = clampNumber(value.aiWins);
+  const legacyDraws = clampNumber(value.draws);
+
+  next.ai.playerWins = clampNumber(aiSource.playerWins ?? legacyPlayerWins);
+  next.ai.aiWins = clampNumber(aiSource.aiWins ?? legacyAiWins);
+  next.ai.draws = clampNumber(aiSource.draws ?? legacyDraws);
+  next.ai.streak = clampNumber(aiSource.streak);
+  next.ai.bestStreak = clampNumber(aiSource.bestStreak);
+
+  next.local.blackWins = clampNumber(localSource.blackWins ?? value.blackWins);
+  next.local.whiteWins = clampNumber(localSource.whiteWins ?? value.whiteWins);
+  next.local.draws = clampNumber(localSource.draws ?? value.localDraws ?? value.draws);
+
+  const providedTotal = clampNumber(value.totalGames);
+  const computedTotal =
+    next.ai.playerWins +
+    next.ai.aiWins +
+    next.ai.draws +
+    next.local.blackWins +
+    next.local.whiteWins +
+    next.local.draws;
+  next.totalGames = providedTotal > 0 ? providedTotal : computedTotal;
+
+  next.lastWinner = isResult(value.lastWinner) ? value.lastWinner : null;
+
+  return next;
+};
 
 export const applyResultToStats = (
   stats: GomokuStats,
@@ -290,6 +411,7 @@ export const applyResultToStats = (
   humanColor: Player,
 ): GomokuStats => {
   const next: GomokuStats = {
+    version: stats.version || GOMOKU_STATS_VERSION,
     ai: { ...stats.ai },
     local: { ...stats.local },
     totalGames: stats.totalGames + 1,
