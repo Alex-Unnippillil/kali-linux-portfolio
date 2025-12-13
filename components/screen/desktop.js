@@ -34,56 +34,15 @@ import {
     getSafeAreaInsets,
     measureWindowTopOffset,
 } from '../../utils/windowLayout';
+import { PinnedAppsManager, PINNED_APPS_STORAGE_KEY } from './managers/pinnedAppsManager';
+import { WorkspaceManager } from './managers/workspaceManager';
+import {
+    loadStoredFolderContents,
+    persistStoredFolderContents,
+} from './managers/desktopFoldersManager';
+import { WindowActionBus } from '../../utils/windowActionBus';
 
-const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
 const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
-const PINNED_APPS_STORAGE_KEY = 'pinnedApps';
-
-const sanitizeFolderItem = (item) => {
-    if (!item) return null;
-    if (typeof item === 'string') {
-        return { id: item, title: item };
-    }
-    if (typeof item === 'object' && typeof item.id === 'string') {
-        const title = typeof item.title === 'string' ? item.title : item.id;
-        const icon = typeof item.icon === 'string' ? item.icon : undefined;
-        return { id: item.id, title, icon };
-    }
-    return null;
-};
-
-const loadStoredFolderContents = () => {
-    if (!safeLocalStorage) return {};
-    try {
-        const raw = safeLocalStorage.getItem(FOLDER_CONTENTS_STORAGE_KEY);
-        if (!raw) return {};
-        const parsed = JSON.parse(raw);
-        if (!parsed || typeof parsed !== 'object') return {};
-        const normalized = {};
-        Object.entries(parsed).forEach(([folderId, value]) => {
-            if (!folderId || !Array.isArray(value)) return;
-            const items = value
-                .map((entry) => sanitizeFolderItem(entry))
-                .filter(Boolean);
-            normalized[folderId] = items;
-        });
-        return normalized;
-    } catch (e) {
-        return {};
-    }
-};
-
-const persistStoredFolderContents = (contents) => {
-    if (!safeLocalStorage) return;
-    try {
-        safeLocalStorage.setItem(
-            FOLDER_CONTENTS_STORAGE_KEY,
-            JSON.stringify(contents || {}),
-        );
-    } catch (e) {
-        // ignore storage errors
-    }
-};
 
 const loadStoredWindowSizes = (storageKey = WINDOW_SIZE_STORAGE_KEY) => {
     if (!safeLocalStorage) return {};
@@ -197,14 +156,10 @@ export class Desktop extends Component {
     constructor(props) {
         super(props);
         this.workspaceCount = 4;
-        this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
-        this.workspaceKeys = new Set([
-            'focused_windows',
-            'closed_windows',
-            'minimized_windows',
-            'window_positions',
-            'window_sizes',
-        ]);
+        this.workspaceManager = new WorkspaceManager({
+            workspaceCount: this.workspaceCount,
+            overlayFlagFactory: createOverlayFlagMap,
+        });
         this.windowSizeStorageKey = 'desktop_window_sizes';
         this.defaultThemeConfig = {
             id: 'default',
@@ -245,10 +200,16 @@ export class Desktop extends Component {
         };
 
         this.taskbarOrderKeyBase = 'taskbar-order';
-        this.pinnedStorageKey = PINNED_APPS_STORAGE_KEY;
-        this.hasStoredPinnedAppIds = false;
-        const initialPinnedAppIds = this.loadPinnedAppIds();
-        this.applyPinnedFlags(initialPinnedAppIds);
+        this.pinnedAppsManager = new PinnedAppsManager({
+            storageKey: PINNED_APPS_STORAGE_KEY,
+            setState: (updater, callback) => this.setState(updater, callback),
+            getState: () => this.state,
+            onSaveSession: () => this.saveSession(),
+            onBroadcast: () => this.broadcastWorkspaceState(),
+            onInitFavourite: (next) => { this.initFavourite = next; },
+        });
+        const initialPinnedAppIds = this.pinnedAppsManager.loadPinnedAppIds();
+        this.pinnedAppsManager.applyPinnedFlags(initialPinnedAppIds);
 
         this.iconSizePresetMap = this.loadStoredIconPresetMap();
 
@@ -274,6 +235,7 @@ export class Desktop extends Component {
 
         const initialWindowSizes = this.loadWindowSizes();
         const storedFolderContents = loadStoredFolderContents();
+        this.workspaceManager.commitWorkspacePartial({ window_sizes: initialWindowSizes }, 0, 0);
 
         this.state = {
             focused_windows: { ...initialOverlayFocused },
@@ -318,14 +280,6 @@ export class Desktop extends Component {
             appBadges: {},
         };
 
-        this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
-            focused_windows: {},
-            closed_windows: {},
-            minimized_windows: {},
-            window_positions: {},
-            window_sizes: { ...initialWindowSizes },
-        }));
-
         this.desktopRef = React.createRef();
         this.folderNameInputRef = React.createRef();
         this.allAppsSearchRef = React.createRef();
@@ -358,7 +312,7 @@ export class Desktop extends Component {
         this.windowSwitcherRequestId = 0;
         this.refreshAppRegistry();
 
-        if (!this.hasStoredPinnedAppIds) {
+        if (!this.pinnedAppsManager.hasStoredPinnedAppIds) {
             this.persistPinnedAppIds(initialPinnedAppIds);
         }
 
@@ -385,23 +339,18 @@ export class Desktop extends Component {
             this.commandPaletteUsesMeta = /Mac|iPhone|iPad|iPod/i.test(platform || userAgent);
         }
 
+        this.windowActionBus = new WindowActionBus({
+            onOpen: (id, context) => this.performWindowAction('open', id, context),
+            onFocus: (id, context) => this.performWindowAction('focus', id, context),
+            onMinimize: (id, context) => this.performWindowAction('minimize', id, context),
+            onClose: (id, context) => this.performWindowAction('close', id, context),
+        });
+
     }
 
-    createEmptyWorkspaceState = () => ({
-        focused_windows: createOverlayFlagMap(false),
-        closed_windows: createOverlayFlagMap(true),
-        minimized_windows: createOverlayFlagMap(false),
-        window_positions: {},
-        window_sizes: {},
-    });
+    createEmptyWorkspaceState = () => this.workspaceManager.createEmptyWorkspaceState();
 
-    cloneWorkspaceState = (state) => ({
-        focused_windows: { ...state.focused_windows },
-        closed_windows: { ...state.closed_windows },
-        minimized_windows: { ...state.minimized_windows },
-        window_positions: { ...state.window_positions },
-        window_sizes: { ...(state.window_sizes || {}) },
-    });
+    cloneWorkspaceState = (state) => this.workspaceManager.cloneWorkspaceState(state);
 
     getActiveUserId = () => {
         const { user } = this.props || {};
@@ -455,199 +404,23 @@ export class Desktop extends Component {
         }
     };
 
-    normalizePinnedAppIds = (ids) => {
-        const availableIds = new Set(apps.map((app) => app.id));
-        const list = Array.isArray(ids) ? ids : [];
-        const normalized = [];
-        const seen = new Set();
+    normalizePinnedAppIds = (ids) => this.pinnedAppsManager.normalizePinnedAppIds(ids);
 
-        list.forEach((id) => {
-            if (typeof id !== 'string') return;
-            if (seen.has(id)) return;
-            if (!availableIds.has(id)) return;
-            normalized.push(id);
-            seen.add(id);
-        });
+    loadPinnedAppIds = () => this.pinnedAppsManager.loadPinnedAppIds();
 
-        return normalized;
-    };
+    persistPinnedAppIds = (ids) => this.pinnedAppsManager.persistPinnedAppIds(ids);
 
-    loadPinnedAppIds = () => {
-        const defaultPinned = this.normalizePinnedAppIds(
-            apps.filter((app) => app.favourite).map((app) => app.id),
-        );
+    getPinnedAppIds = () => this.pinnedAppsManager.getPinnedAppIds();
 
-        if (!safeLocalStorage) {
-            return defaultPinned;
-        }
+    applyPinnedFlags = (pinnedIds) => this.pinnedAppsManager.applyPinnedFlags(pinnedIds);
 
-        let storedValue = null;
-        try {
-            storedValue = safeLocalStorage.getItem(this.pinnedStorageKey);
-        } catch (e) {
-            storedValue = null;
-        }
+    syncInitFavourite = (pinnedSet) => this.pinnedAppsManager.syncInitFavourite(pinnedSet);
 
-        if (!storedValue) {
-            this.hasStoredPinnedAppIds = false;
-            return defaultPinned;
-        }
+    syncFavouriteAppsWithPinned = (pinnedSet) => this.pinnedAppsManager.syncFavouriteAppsWithPinned(pinnedSet);
 
-        try {
-            const parsed = JSON.parse(storedValue);
-            if (Array.isArray(parsed)) {
-                const normalized = this.normalizePinnedAppIds(parsed);
-                this.hasStoredPinnedAppIds = true;
-                return normalized;
-            }
-        } catch (e) {
-            // ignore malformed entries and fall back to defaults
-        }
+    setPinnedAppIds = (ids, options = {}) => this.pinnedAppsManager.setPinnedAppIds(ids, options);
 
-        this.hasStoredPinnedAppIds = false;
-        return defaultPinned;
-    };
-
-    persistPinnedAppIds = (ids) => {
-        if (!safeLocalStorage) return;
-        try {
-            safeLocalStorage.setItem(this.pinnedStorageKey, JSON.stringify(Array.isArray(ids) ? ids : []));
-            this.hasStoredPinnedAppIds = true;
-        } catch (e) {
-            // ignore persistence errors
-        }
-    };
-
-    getPinnedAppIds = () => {
-        return Array.isArray(this.state?.pinnedAppIds)
-            ? [...this.state.pinnedAppIds]
-            : [];
-    };
-
-    applyPinnedFlags = (pinnedIds) => {
-        const pinnedSet = new Set(Array.isArray(pinnedIds) ? pinnedIds : []);
-        apps.forEach((app) => {
-            app.favourite = pinnedSet.has(app.id);
-        });
-    };
-
-    syncInitFavourite = (pinnedSet) => {
-        const next = {};
-        apps.forEach((app) => {
-            next[app.id] = pinnedSet.has(app.id);
-        });
-        this.initFavourite = next;
-    };
-
-    syncFavouriteAppsWithPinned = (pinnedSet) => {
-        const validAppIds = new Set(apps.map((app) => app.id));
-        this.setState((prevState) => {
-            const previous = prevState.favourite_apps || {};
-            const closed = prevState.closed_windows || {};
-            const next = { ...previous };
-            let changed = false;
-
-            validAppIds.forEach((id) => {
-                const isPinned = pinnedSet.has(id);
-                const isOpen = closed[id] === false;
-                const current = next[id];
-
-                if (isPinned) {
-                    if (current !== true) {
-                        next[id] = true;
-                        changed = true;
-                    }
-                } else if (!isOpen) {
-                    if (current !== false) {
-                        next[id] = false;
-                        changed = true;
-                    }
-                } else if (current === undefined && isOpen) {
-                    next[id] = true;
-                    changed = true;
-                }
-
-                if (current === undefined && !isPinned && !isOpen) {
-                    next[id] = false;
-                    changed = true;
-                }
-            });
-
-            Object.keys(next).forEach((id) => {
-                if (!validAppIds.has(id)) {
-                    delete next[id];
-                    changed = true;
-                }
-            });
-
-            if (!changed) return null;
-            return { favourite_apps: next };
-        }, () => {
-            this.saveSession();
-        });
-    };
-
-    setPinnedAppIds = (ids, options = {}) => {
-        const {
-            persist = true,
-            broadcast = true,
-            force = false,
-            syncFavourite = true,
-        } = options;
-        const normalized = this.normalizePinnedAppIds(ids);
-        const current = Array.isArray(this.state?.pinnedAppIds)
-            ? this.state.pinnedAppIds
-            : [];
-        const changed = force
-            || normalized.length !== current.length
-            || normalized.some((id, index) => current[index] !== id);
-        const pinnedSet = new Set(normalized);
-
-        const finalize = () => {
-            if (persist) {
-                this.persistPinnedAppIds(normalized);
-            }
-            this.applyPinnedFlags(normalized);
-            this.syncInitFavourite(pinnedSet);
-            if (syncFavourite) {
-                this.syncFavouriteAppsWithPinned(pinnedSet);
-            }
-            if (broadcast) {
-                this.broadcastWorkspaceState();
-            }
-        };
-
-        if (!changed) {
-            finalize();
-            return normalized;
-        }
-
-        this.setState({ pinnedAppIds: normalized }, finalize);
-        return normalized;
-    };
-
-    insertPinnedAppId = (list, id, targetId, insertAfter = false) => {
-        const base = Array.isArray(list)
-            ? list.filter((value) => value !== id)
-            : [];
-
-        let insertIndex;
-        if (!targetId) {
-            insertIndex = insertAfter ? base.length : 0;
-        } else {
-            const targetIndex = base.indexOf(targetId);
-            insertIndex = targetIndex === -1 ? base.length : targetIndex;
-            if (insertAfter && targetIndex !== -1) {
-                insertIndex = targetIndex + 1;
-            }
-        }
-
-        if (insertIndex < 0) insertIndex = 0;
-        if (insertIndex > base.length) insertIndex = base.length;
-
-        base.splice(insertIndex, 0, id);
-        return base;
-    };
+    insertPinnedAppId = (list, id, targetId, insertAfter = false) => this.pinnedAppsManager.insertPinnedAppId(list, id, targetId, insertAfter);
 
     getNormalizedTaskbarOrder = (runningIds, preferredOrder) => {
         const base = Array.isArray(preferredOrder)
@@ -693,9 +466,7 @@ export class Desktop extends Component {
 
     getCurrentRunningAppIds = () => {
         const { closed_windows = {} } = this.state;
-        return apps
-            .filter((app) => closed_windows[app.id] === false)
-            .map((app) => app.id);
+        return this.pinnedAppsManager.getCurrentRunningAppIds(closed_windows);
     };
 
     normalizeTheme(theme) {
@@ -900,30 +671,15 @@ export class Desktop extends Component {
     };
 
     commitWorkspacePartial = (partial, index) => {
-        const targetIndex = typeof index === 'number' ? index : this.state.activeWorkspace;
-        const snapshot = this.workspaceSnapshots[targetIndex] || this.createEmptyWorkspaceState();
-        const nextSnapshot = { ...snapshot };
-        Object.entries(partial).forEach(([key, value]) => {
-            if (this.workspaceKeys.has(key)) {
-                nextSnapshot[key] = value;
-            }
-        });
-        this.workspaceSnapshots[targetIndex] = nextSnapshot;
+        this.workspaceManager.commitWorkspacePartial(
+            partial,
+            index,
+            this.state.activeWorkspace,
+        );
     };
 
     mergeWorkspaceMaps = (current = {}, base = {}, validKeys = null) => {
-        const keys = validKeys
-            ? Array.from(validKeys)
-            : Array.from(new Set([...Object.keys(base), ...Object.keys(current)]));
-        const merged = {};
-        keys.forEach((key) => {
-            if (Object.prototype.hasOwnProperty.call(current, key)) {
-                merged[key] = current[key];
-            } else if (Object.prototype.hasOwnProperty.call(base, key)) {
-                merged[key] = base[key];
-            }
-        });
-        return merged;
+        return this.workspaceManager.mergeWorkspaceMaps(current, base, validKeys);
     };
 
     setupPointerMediaWatcher = () => {
@@ -1308,58 +1064,15 @@ export class Desktop extends Component {
     };
 
     updateWorkspaceSnapshots = (baseState) => {
-        const validKeys = new Set(Object.keys(baseState.closed_windows || {}));
-        this.workspaceSnapshots = this.workspaceSnapshots.map((snapshot, index) => {
-            const existing = snapshot || this.createEmptyWorkspaceState();
-            if (index === this.state.activeWorkspace) {
-                return this.cloneWorkspaceState(baseState);
-            }
-            return {
-                focused_windows: this.mergeWorkspaceMaps(existing.focused_windows, baseState.focused_windows, validKeys),
-                closed_windows: this.mergeWorkspaceMaps(existing.closed_windows, baseState.closed_windows, validKeys),
-                minimized_windows: this.mergeWorkspaceMaps(existing.minimized_windows, baseState.minimized_windows, validKeys),
-                window_positions: this.mergeWorkspaceMaps(existing.window_positions, baseState.window_positions, validKeys),
-                window_sizes: this.mergeWorkspaceMaps(existing.window_sizes, baseState.window_sizes, validKeys),
-            };
-        });
+        this.workspaceManager.updateWorkspaceSnapshots(baseState, this.state.activeWorkspace);
     };
 
     getWorkspaceSummaries = () => {
-        return this.state.workspaces.map((workspace) => {
-            const snapshot = this.workspaceSnapshots[workspace.id] || this.createEmptyWorkspaceState();
-            const openWindows = Object.values(snapshot.closed_windows || {}).filter((value) => value === false).length;
-            return {
-                id: workspace.id,
-                label: workspace.label,
-                openWindows,
-            };
-        });
+        return this.workspaceManager.getWorkspaceSummaries(this.state.workspaces);
     };
 
     getPinnedAppSummaries = () => {
-        const pinnedIds = this.getPinnedAppIds();
-        if (!pinnedIds.length) return [];
-
-        const {
-            closed_windows = {},
-            minimized_windows = {},
-            focused_windows = {},
-        } = this.state;
-
-        return pinnedIds.map((id) => {
-            const app = this.getAppById(id);
-            if (!app) return null;
-            const icon = typeof app.icon === 'string' ? app.icon.replace('./', '/') : '';
-            const isRunning = closed_windows[id] === false;
-            return {
-                id,
-                title: app.title,
-                icon,
-                isRunning,
-                isFocused: Boolean(focused_windows[id]),
-                isMinimized: Boolean(minimized_windows[id]),
-            };
-        }).filter(Boolean);
+        return this.pinnedAppsManager.getPinnedAppSummaries(this.state);
     };
 
     getRunningAppSummaries = () => {
@@ -3320,7 +3033,7 @@ export class Desktop extends Component {
     switchWorkspace = (workspaceId) => {
         if (workspaceId === this.state.activeWorkspace) return;
         if (workspaceId < 0 || workspaceId >= this.state.workspaces.length) return;
-        const snapshot = this.workspaceSnapshots[workspaceId] || this.createEmptyWorkspaceState();
+        const snapshot = this.workspaceManager.getSnapshot(workspaceId);
         const nextTheme = this.getWorkspaceTheme(workspaceId);
         this.closeOverlay('windowSwitcher');
         this.setState({
@@ -3348,21 +3061,11 @@ export class Desktop extends Component {
     };
 
     getActiveStack = () => {
-        const { activeWorkspace } = this.state;
-        if (!this.workspaceStacks[activeWorkspace]) {
-            this.workspaceStacks[activeWorkspace] = [];
-        }
-        return this.workspaceStacks[activeWorkspace];
+        return this.workspaceManager.getActiveStack(this.state.activeWorkspace);
     };
 
     promoteWindowInStack = (id) => {
-        if (!id) return;
-        const stack = this.getActiveStack();
-        const index = stack.indexOf(id);
-        if (index !== -1) {
-            stack.splice(index, 1);
-        }
-        stack.unshift(id);
+        this.workspaceManager.promoteWindowInStack(id, this.state.activeWorkspace);
     };
 
     handleExternalWorkspaceSelect = (event) => {
@@ -3483,6 +3186,7 @@ export class Desktop extends Component {
         window.addEventListener('open-app', this.handleOpenAppEvent);
         this.setupPointerMediaWatcher();
         this.setupGestureListeners();
+        this.windowActionBus.attach();
     }
 
     componentDidUpdate(prevProps, prevState) {
@@ -3556,6 +3260,7 @@ export class Desktop extends Component {
         this.teardownGestureListeners();
         this.teardownPointerMediaWatcher();
         this.teardownViewportObserver();
+        this.windowActionBus.detach();
         if (this.liveRegionTimeout) {
             clearTimeout(this.liveRegionTimeout);
             this.liveRegionTimeout = null;
@@ -4343,7 +4048,7 @@ export class Desktop extends Component {
             window_sizes: this.state.window_sizes || {},
         };
         this.updateWorkspaceSnapshots(workspaceState);
-        this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
+        this.workspaceManager.resetWorkspaceStacks();
         this.setWorkspaceState({
             ...workspaceState,
             disabled_apps,
@@ -4844,16 +4549,36 @@ export class Desktop extends Component {
         return result;
     }
 
+    performWindowAction = (action, id, context) => {
+        if (!id || !action) return;
+        switch (action) {
+            case 'open':
+                this.openApp(id, context);
+                break;
+            case 'focus':
+                this.focus(id);
+                break;
+            case 'minimize':
+                this.handleTaskbarCommand({ detail: { action: 'minimize', appId: id } });
+                break;
+            case 'close':
+                this.closeApp(id);
+                break;
+            default:
+                break;
+        }
+    };
+
     handleOpenAppEvent = (e) => {
         const detail = e.detail;
         if (!detail) return;
         if (typeof detail === 'string') {
-            this.openApp(detail);
+            this.performWindowAction('open', detail);
             return;
         }
         if (typeof detail === 'object' && detail.id) {
             const { id, ...context } = detail;
-            this.openApp(id, context);
+            this.performWindowAction('open', id, context);
         }
     }
 
