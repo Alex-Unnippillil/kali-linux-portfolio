@@ -29,7 +29,7 @@ const TaskbarPreviewFlyout = React.forwardRef(
                                 role="dialog"
                                 aria-label={heading}
                                 aria-modal="false"
-                                tabIndex={-1}
+                                tabIndex={0}
                                 className="fixed z-[275] max-w-[18rem] outline-none"
                                 style={{
                                         top: `${top}px`,
@@ -49,7 +49,11 @@ const TaskbarPreviewFlyout = React.forwardRef(
                                                                 {title}
                                                         </span>
                                                 )}
-                                                <div className="relative overflow-hidden rounded-md border border-white/10 bg-black/50">
+                                                <div
+                                                        className="relative overflow-hidden rounded-md border border-white/10 bg-black/50"
+                                                        role="document"
+                                                        aria-label={imageLabel}
+                                                >
                                                         {status === 'ready' && image ? (
                                                                 <img
                                                                         src={image}
