@@ -4,8 +4,23 @@ import GameLayout from '../GameLayout';
 import VirtualPad from '../Games/common/VirtualPad';
 import InputRemap from '../Games/common/input-remap/InputRemap';
 import useInputMapping from '../Games/common/input-remap/useInputMapping';
-import { BlackjackGame, handValue, cardValue, Shoe } from './engine';
+import { BlackjackGame, handValue, cardValue, Shoe, evaluateHand } from './engine';
 import { recommendAction } from '../../../games/blackjack/coach';
+
+const seededRng = (seed) => {
+  if (!seed) return undefined;
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < seed.length; i += 1) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return () => {
+    let t = (h += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
 
 const CHIP_VALUES = [1, 5, 25, 100];
 const CHIP_COLORS = {
@@ -42,6 +57,12 @@ const ACTION_LABELS = {
   chip5: '+5 chip',
   chip25: '+25 chip',
   chip100: '+100 chip',
+};
+
+const DEFAULT_RULES = {
+  hitSoft17: true,
+  allowSurrender: true,
+  allowDoubleAfterSplit: true,
 };
 
 const Card = ({ card, faceDown, peeking }) => {
@@ -171,13 +192,33 @@ const gameReducer = (state, action) => {
 
 const Blackjack = () => {
   const [penetration, setPenetration] = useState(0.75);
-  const gameRef = useRef(new BlackjackGame({ bankroll: 1000, penetration }));
+  const [rulesConfig, setRulesConfig] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('bj_rules_config');
+      if (stored) {
+        try {
+          return { ...DEFAULT_RULES, ...JSON.parse(stored) };
+        } catch (e) {
+          return DEFAULT_RULES;
+        }
+      }
+    }
+    return DEFAULT_RULES;
+  });
+  const [rngSeed, setRngSeed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('bj_rng_seed') || '';
+    }
+    return '';
+  });
+  const gameRef = useRef(new BlackjackGame({ bankroll: 1000, penetration, rules: rulesConfig, rngSeed }));
   const [bet, setBet] = useState(0);
   const [handCount, setHandCount] = useState(1);
   const [message, setMessage] = useState('Place your bet');
   const [dealerHand, setDealerHand] = useState([]);
   const [playerHands, setPlayerHands] = useState([]);
   const [current, setCurrent] = useState(0);
+  const [phase, setPhase] = useState(gameRef.current.phase);
   const [showInsurance, setShowInsurance] = useState(false);
   const [stats, setStats] = useState(gameRef.current.stats);
   const [showHints, setShowHints] = useState(true);
@@ -185,7 +226,7 @@ const Blackjack = () => {
   const [showCount, setShowCount] = useState(false);
   const [runningCount, setRunningCount] = useState(0);
   const [practice, setPractice] = useState(false);
-  const practiceShoe = useRef(new Shoe(1));
+  const practiceShoe = useRef(new Shoe({ decks: 1, rng: seededRng(rngSeed) }));
   const [practiceCard, setPracticeCard] = useState(null);
   const [practiceGuess, setPracticeGuess] = useState('');
   const [streak, setStreak] = useState(0);
@@ -216,16 +257,19 @@ const Blackjack = () => {
     setStats({ ...gameRef.current.stats });
     setCurrent(gameRef.current.current);
     setRunningCount(gameRef.current.shoe.runningCount);
+    setPhase(gameRef.current.phase);
+    setShowInsurance(gameRef.current.phase === 'insurance');
   }, []);
 
   const resetGame = useCallback(() => {
-    gameRef.current = new BlackjackGame({ bankroll: 1000, penetration });
+    gameRef.current = new BlackjackGame({ bankroll: 1000, penetration, rules: rulesConfig, rngSeed });
     setBet(0);
     setHandCount(1);
     setMessage('Place your bet');
     setDealerHand([]);
     setPlayerHands([]);
     setCurrent(0);
+    setPhase(gameRef.current.phase);
     setShowInsurance(false);
     setStats(gameRef.current.stats);
     setShuffling(false);
@@ -234,7 +278,7 @@ const Blackjack = () => {
     setPracticeFeedback('');
     setPracticeGuess('');
     setPracticeCard(null);
-  }, [penetration]);
+  }, [penetration, rngSeed, rulesConfig]);
 
   const adjustBet = useCallback(
     (delta) => {
@@ -254,8 +298,8 @@ const Blackjack = () => {
       setTimeout(() => setShuffling(false), 500);
       gameRef.current.startRound(bet, undefined, handCount);
       ReactGA.event({ category: 'Blackjack', action: 'hand_start', value: bet * handCount });
-      setMessage('Hit, Stand, Double, Split or Surrender');
-      setShowInsurance(gameRef.current.dealerHand[0].value === 'A');
+      setMessage(gameRef.current.phase === 'insurance' ? 'Insurance offered' : 'Hit, Stand, Double, Split or Surrender');
+      setShowInsurance(gameRef.current.phase === 'insurance');
       update();
       if (['A', '10', 'J', 'Q', 'K'].includes(gameRef.current.dealerHand[0].value)) {
         setDealerPeeking(true);
@@ -266,16 +310,24 @@ const Blackjack = () => {
     }
   }, [bet, handCount, paused, update]);
 
+  const recommended = useCallback(() => {
+    const hand = playerHands[current];
+    if (!hand) return '';
+    return recommendAction(hand, dealerHand[0], bankroll, gameRef.current.rules);
+  }, [bankroll, current, dealerHand, playerHands]);
+
   const act = useCallback(
     (type) => {
       if (paused) return;
+      const legal = gameRef.current.getLegalActions();
+      if (!legal[type]) return;
       const rec = recommended();
       if (rec && rec !== type) {
         ReactGA.event({ category: 'Blackjack', action: 'deviation', label: `${rec}->${type}` });
       }
       dispatch({ type });
       update();
-      if (gameRef.current.current >= gameRef.current.playerHands.length) {
+      if (gameRef.current.phase === 'settled') {
         setMessage('Round complete');
         gameRef.current.playerHands.forEach((h) => {
           if (h.result) ReactGA.event({ category: 'Blackjack', action: 'result', label: h.result });
@@ -295,11 +347,15 @@ const Blackjack = () => {
     }
   }, [update]);
 
-  const recommended = useCallback(() => {
-    const hand = playerHands[current];
-    if (!hand) return '';
-    return recommendAction(hand, dealerHand[0], bankroll);
-  }, [bankroll, current, dealerHand, playerHands]);
+  const skipInsurance = useCallback(() => {
+    try {
+      gameRef.current.skipInsurance();
+      setShowInsurance(false);
+      update();
+    } catch (e) {
+      setMessage(e.message);
+    }
+  }, [update]);
 
   const startPractice = useCallback(() => {
     practiceShoe.current.shuffle();
@@ -343,6 +399,48 @@ const Blackjack = () => {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      localStorage.setItem('bj_rules_config', JSON.stringify(rulesConfig));
+    }
+  }, [rulesConfig]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bj_rng_seed', rngSeed);
+    }
+  }, [rngSeed]);
+
+  useEffect(() => {
+    practiceShoe.current = new Shoe({ decks: 1, rng: seededRng(rngSeed) });
+    if (practice) {
+      setPractice(false);
+      setPracticeCard(null);
+      setPracticeFeedback('');
+    }
+  }, [practice, rngSeed]);
+
+  useEffect(() => {
+    if (playerHands.length === 0 && phase === 'betting') {
+      resetGame();
+    }
+  }, [phase, playerHands.length, resetGame]);
+
+  useEffect(() => {
+    if (phase === 'settled') setMessage('Round complete');
+    else if (phase === 'betting' && playerHands.length === 0) setMessage('Place your bet');
+    else if (phase === 'insurance') setMessage('Insurance offered');
+  }, [phase, playerHands.length]);
+
+  useEffect(() => {
+    if (phase !== 'settled') return undefined;
+    const timeout = setTimeout(() => {
+      gameRef.current.resetRound();
+      update();
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [phase, update]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
       localStorage.setItem('bj_best_streak', bestStreak.toString());
     }
   }, [bestStreak]);
@@ -358,22 +456,22 @@ const Blackjack = () => {
         if (key === mapping.chip100) adjustBet(CHIP_VALUES[3]);
         if (key === mapping.deal && bet > 0) start();
       }
-      if (playerHands.length > 0) {
-        if (key.toLowerCase() === mapping.hit.toLowerCase()) act('hit');
-        if (key.toLowerCase() === mapping.stand.toLowerCase()) act('stand');
-        if (key.toLowerCase() === mapping.double.toLowerCase()) act('double');
-        if (key.toLowerCase() === mapping.split.toLowerCase()) act('split');
-        if (key.toLowerCase() === mapping.surrender.toLowerCase()) act('surrender');
+      if (playerHands.length > 0 && phase === 'player') {
+        const legal = gameRef.current.getLegalActions();
+        if (key.toLowerCase() === mapping.hit.toLowerCase() && legal.hit) act('hit');
+        if (key.toLowerCase() === mapping.stand.toLowerCase() && legal.stand) act('stand');
+        if (key.toLowerCase() === mapping.double.toLowerCase() && legal.double) act('double');
+        if (key.toLowerCase() === mapping.split.toLowerCase() && legal.split) act('split');
+        if (key.toLowerCase() === mapping.surrender.toLowerCase() && legal.surrender) act('surrender');
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [act, adjustBet, bet, mapping, paused, playerHands.length, practice, start]);
+  }, [act, adjustBet, bet, mapping, paused, phase, playerHands.length, practice, start]);
 
   const bustProbability = (hand) => {
-    const total = handValue(hand.cards);
     const remaining = gameRef.current.shoe.cards;
-    const bustCards = remaining.filter((c) => cardValue(c) + total > 21).length;
+    const bustCards = remaining.filter((c) => evaluateHand([...hand.cards, c]).isBust).length;
     return remaining.length ? bustCards / remaining.length : 0;
   };
 
@@ -403,24 +501,14 @@ const Blackjack = () => {
 
   const rec = showHints ? recommended() : '';
 
-  const actionState = (hand) => ({
-    hit: !hand.finished,
-    stand: !hand.finished,
-    double:
-      hand.cards.length === 2 &&
-      !hand.finished &&
-      !hand.doubled &&
-      gameRef.current.bankroll >= hand.bet,
-    split:
-      hand.cards.length === 2 &&
-      !hand.finished &&
-      cardValue(hand.cards[0]) === cardValue(hand.cards[1]) &&
-      gameRef.current.bankroll >= hand.bet,
-    surrender: hand.cards.length === 2 && !hand.finished && !hand.surrendered,
-  });
-
-  const currentHand = playerHands[current];
-  const currentActions = currentHand ? actionState(currentHand) : null;
+  const currentActions = useMemo(() => {
+    if (phase !== 'player') return null;
+    try {
+      return gameRef.current.getLegalActions();
+    } catch (e) {
+      return null;
+    }
+  }, [phase, playerHands, current]);
 
   const settingsPanel = useMemo(
     () => (
@@ -443,6 +531,43 @@ const Blackjack = () => {
             aria-label="Toggle running count"
           />
         </div>
+        <div className="flex items-center justify-between gap-2">
+          <span>Dealer hits soft 17</span>
+          <input
+            type="checkbox"
+            checked={rulesConfig.hitSoft17}
+            onChange={(e) => setRulesConfig((prev) => ({ ...prev, hitSoft17: e.target.checked }))}
+            aria-label="Dealer hits soft 17"
+          />
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span>Allow surrender</span>
+          <input
+            type="checkbox"
+            checked={rulesConfig.allowSurrender}
+            onChange={(e) => setRulesConfig((prev) => ({ ...prev, allowSurrender: e.target.checked }))}
+            aria-label="Allow surrender"
+          />
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span>Allow double after split</span>
+          <input
+            type="checkbox"
+            checked={rulesConfig.allowDoubleAfterSplit}
+            onChange={(e) => setRulesConfig((prev) => ({ ...prev, allowDoubleAfterSplit: e.target.checked }))}
+            aria-label="Allow double after split"
+          />
+        </div>
+        <label className="flex flex-col gap-1 text-sm font-medium">
+          <span>Trainer/Drill seed</span>
+          <input
+            type="text"
+            value={rngSeed}
+            onChange={(e) => setRngSeed(e.target.value)}
+            className="w-full rounded border border-[color:var(--kali-border)] bg-[var(--kali-surface)] px-2 py-1 text-kali-text transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+            placeholder="Leave blank for random"
+          />
+        </label>
         <label className="flex items-center justify-between gap-2">
           <span className="text-sm font-medium">Penetration</span>
           <input
@@ -466,7 +591,20 @@ const Blackjack = () => {
         </div>
       </div>
     ),
-    [mapping, penetration, setKey, setPenetration, setShowCount, setShowHints, showCount, showHints],
+    [
+      mapping,
+      penetration,
+      rngSeed,
+      rulesConfig.allowDoubleAfterSplit,
+      rulesConfig.allowSurrender,
+      rulesConfig.hitSoft17,
+      setKey,
+      setPenetration,
+      setShowCount,
+      setShowHints,
+      showCount,
+      showHints,
+    ],
   );
 
   const handlePadDirection = useCallback(
@@ -482,12 +620,13 @@ const Blackjack = () => {
         }
         return;
       }
+      if (phase !== 'player') return;
       if (currentActions?.hit && y < 0) act('hit');
       else if (currentActions?.stand && y > 0) act('stand');
       else if (currentActions?.double && x > 0) act('double');
       else if (currentActions?.surrender && x < 0) act('surrender');
     },
-    [act, adjustBet, bet, currentActions, handCount, paused, playerHands.length, practice, start],
+    [act, adjustBet, bet, currentActions, handCount, phase, paused, playerHands.length, practice, start],
   );
 
   const handlePadButton = useCallback(
@@ -498,10 +637,11 @@ const Blackjack = () => {
         if (button === 'B') adjustBet(5);
         return;
       }
+      if (phase !== 'player') return;
       if (button === 'A' && currentActions?.hit) act('hit');
       else if (button === 'B' && currentActions?.stand) act('stand');
     },
-    [act, adjustBet, bet, currentActions, paused, playerHands.length, practice, start],
+    [act, adjustBet, bet, currentActions, phase, paused, playerHands.length, practice, start],
   );
 
   const practiceView = (
@@ -683,7 +823,7 @@ const Blackjack = () => {
               <div className="text-sm uppercase tracking-wide text-kali-control">Dealer</div>
               {renderHand(
                 { cards: dealerHand },
-                !message.includes('complete') && current < playerHands.length,
+                phase === 'player' || phase === 'insurance',
                 false,
                 dealerPeeking,
               )}
@@ -702,7 +842,7 @@ const Blackjack = () => {
                 <div className="flex w-full flex-wrap items-center justify-center gap-2">
                   {['hit', 'stand', 'double', 'split', 'surrender'].map((type) => {
                     const isRecommended = rec === type;
-                    const available = actionState(hand)[type];
+                    const available = idx === current ? currentActions?.[type] : false;
                     const labels = {
                       hit: { text: 'Hit', shortcut: mapping.hit || 'H' },
                       stand: { text: 'Stand', shortcut: mapping.stand || 'S' },
@@ -721,7 +861,7 @@ const Blackjack = () => {
                             : ''
                         }`}
                         onClick={() => act(type)}
-                        disabled={!available}
+                        disabled={!available || phase !== 'player'}
                         aria-keyshortcuts={shortcut}
                         title={`Press ${shortcut.toUpperCase()} to ${text}`}
                       >
@@ -734,13 +874,23 @@ const Blackjack = () => {
             </div>
           ))}
           {showInsurance && (
-            <button
-              type="button"
-              className={`${CONTROL_BUTTON_BASE} px-3 py-1 text-sm font-medium`}
-              onClick={takeInsurance}
-            >
-              Take Insurance
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <span className="text-sm text-kali-text">Dealer shows an Ace. Take insurance?</span>
+              <button
+                type="button"
+                className={`${CONTROL_BUTTON_BASE} px-3 py-1 text-sm font-medium`}
+                onClick={takeInsurance}
+              >
+                Take Insurance
+              </button>
+              <button
+                type="button"
+                className={`${CONTROL_BUTTON_BASE} px-3 py-1 text-sm font-medium`}
+                onClick={skipInsurance}
+              >
+                Skip
+              </button>
+            </div>
           )}
           <div className="mt-2 text-center text-base sm:text-lg" aria-live="polite" role="status">
             {message}

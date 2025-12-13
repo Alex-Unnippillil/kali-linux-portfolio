@@ -1,6 +1,22 @@
-import { Shoe, BlackjackGame, basicStrategy } from '../components/apps/blackjack/engine';
+import { Shoe, BlackjackGame, basicStrategy, evaluateHand } from '../components/apps/blackjack/engine';
 
 const card = (v: string) => ({ suit: '\u2660', value: v });
+
+describe('Hand evaluation', () => {
+  test('handles multiple aces correctly', () => {
+    const eval1 = evaluateHand([card('A'), card('A'), card('5')]);
+    expect(eval1.total).toBe(17);
+    expect(eval1.isSoft).toBe(true);
+
+    const eval2 = evaluateHand([card('A'), card('6'), card('10')]);
+    expect(eval2.total).toBe(17);
+    expect(eval2.isSoft).toBe(false);
+
+    const eval3 = evaluateHand([card('A'), card('A'), card('9'), card('9')]);
+    expect(eval3.total).toBe(20);
+    expect(eval3.isSoft).toBe(false);
+  });
+});
 
 describe('Shoe mechanics', () => {
   test('burn card and cut card shuffle', () => {
@@ -90,14 +106,13 @@ describe('Game actions', () => {
     const deck = [card('10'), card('10'), card('A'), card('10')];
     game.startRound(100, deck);
     game.takeInsurance();
-    game.stand();
     expect(game.bankroll).toBe(1000);
-    expect(game.stats.losses).toBe(1);
+    expect(game.phase).toBe('settled');
   });
 
   test('dealer stands on soft 17 when configured', () => {
     const game = new BlackjackGame({ decks: 1, bankroll: 1000, hitSoft17: false });
-    const deck = [card('10'), card('7'), card('A'), card('6'), card('5')];
+    const deck = [card('10'), card('7'), card('6'), card('A'), card('5')];
     game.startRound(100, deck);
     game.stand();
     expect(game.dealerHand.length).toBe(2);
@@ -176,5 +191,78 @@ describe('Counting and penetration', () => {
   test('BlackjackGame allows custom penetration', () => {
     const game = new BlackjackGame({ decks: 1, bankroll: 1000, penetration: 0.6 });
     expect(game.shoe.penetration).toBe(0.6);
+  });
+});
+
+describe('Dealer soft 17 rules', () => {
+  test('dealer hits multi-ace soft 17 when configured', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000, hitSoft17: true });
+    const deck = [card('2'), card('3'), card('A'), card('A'), card('5'), card('2')];
+    game.startRound(100, deck);
+    game.skipInsurance();
+    game.stand();
+    expect(game.dealerHand.map((c) => c.value)).toEqual(['A', 'A', '5', '2']);
+  });
+
+  test('dealer stands on multi-ace soft 17 when disabled', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000, hitSoft17: false });
+    const deck = [card('2'), card('3'), card('A'), card('A'), card('5'), card('2')];
+    game.startRound(100, deck);
+    game.skipInsurance();
+    game.stand();
+    expect(game.dealerHand.map((c) => c.value)).toEqual(['A', 'A', '5']);
+  });
+});
+
+describe('Round state machine', () => {
+  test('cannot act after bust ends round', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
+    const deck = [card('10'), card('9'), card('5'), card('6')];
+    game.startRound(100, deck);
+    game.hit();
+    expect(game.phase).toBe('settled');
+    expect(() => game.hit()).toThrow('Round not in player phase');
+  });
+
+  test('actions blocked after settlement', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
+    const deck = [card('10'), card('7'), card('9'), card('8')];
+    game.startRound(100, deck);
+    game.stand();
+    expect(game.phase).toBe('settled');
+    expect(() => game.double()).toThrow('Round not in player phase');
+  });
+});
+
+describe('Rules toggles', () => {
+  test('double after split can be disabled', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000, rules: { allowDoubleAfterSplit: false } });
+    const deck = [card('8'), card('8'), card('6'), card('10'), card('5'), card('2')];
+    game.startRound(100, deck);
+    game.split();
+    expect(() => game.double()).toThrow('Cannot double after split');
+  });
+
+  test('surrender can be disabled', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000, rules: { allowSurrender: false } });
+    const deck = [card('10'), card('6'), card('10'), card('5')];
+    game.startRound(100, deck);
+    expect(() => game.surrender()).toThrow('Surrender not allowed');
+  });
+});
+
+describe('Seeded RNG', () => {
+  test('deterministic shoes with identical seeds', () => {
+    const gameA = new BlackjackGame({ decks: 1, bankroll: 1000, rngSeed: 'seed-test' });
+    const gameB = new BlackjackGame({ decks: 1, bankroll: 1000, rngSeed: 'seed-test' });
+    const drawsA = Array.from({ length: 5 }, () => {
+      const c = gameA.shoe.draw();
+      return `${c.value}${c.suit}`;
+    });
+    const drawsB = Array.from({ length: 5 }, () => {
+      const c = gameB.shoe.draw();
+      return `${c.value}${c.suit}`;
+    });
+    expect(drawsA).toEqual(drawsB);
   });
 });
