@@ -132,23 +132,30 @@ const Snake = () => {
       obstacleCount: obstaclePack.length ? 0 : 5,
     }),
   );
+  const initialRunning = initialStateRef.current.status === 'RUNNING';
   const snakeRef = useRef(
     initialStateRef.current.snake.map((seg) => ({ ...seg, scale: 1 })),
   );
-  const foodRef = useRef({ ...initialStateRef.current.food });
+  const foodRef = useRef(
+    initialStateRef.current.food
+      ? { ...initialStateRef.current.food }
+      : null,
+  );
   const obstaclesRef = useRef(
     initialStateRef.current.obstacles.map((o) => ({ ...o })),
   );
+  const rngRef = useRef(initialStateRef.current.rng);
+  const statusRef = useRef(initialStateRef.current.status);
   const dirRef = useRef({ x: 1, y: 0 });
-  const moveQueueRef = useRef([]);
+  const queuedDirRef = useRef(null);
   const accumulatorRef = useRef(0);
-  const runningRef = useRef(true);
+  const runningRef = useRef(initialRunning);
   const scoreRef = useRef(0);
   const audioCtx = useRef(null);
   const haptics = useGameHaptics();
   const prefersReducedMotion = usePrefersReducedMotion();
 
-  const [running, setRunning] = useState(true);
+  const [running, setRunning] = useState(initialRunning);
   const [wrap, setWrap] = usePersistentState(
     'snake_wrap',
     false,
@@ -168,6 +175,7 @@ const Snake = () => {
   const [speed, setSpeed] = useState(DEFAULT_SPEED);
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
+  const [won, setWon] = useState(false);
   const [highScore, setHighScore] = usePersistentState(
     'snake_highscore',
     0,
@@ -281,7 +289,7 @@ const Snake = () => {
           y: s.y,
           scale: s.scale,
         })),
-        food: { ...foodRef.current },
+        food: foodRef.current ? { ...foodRef.current } : null,
         obstacles: obstaclesRef.current.map((o) => ({ ...o })),
         score: 0,
       },
@@ -367,9 +375,9 @@ const Snake = () => {
     let gx = snakeRef.current[0].x;
     let gy = snakeRef.current[0].y;
     let gdir = dirRef.current;
-    const moves = moveQueueRef.current;
+    const queued = queuedDirRef.current;
     for (let i = 0; i < 5; i += 1) {
-      if (moves[i]) gdir = moves[i];
+      if (queued && i === 0) gdir = queued;
       gx += gdir.x;
       gy += gdir.y;
       if (wrap) {
@@ -404,32 +412,34 @@ const Snake = () => {
 
     // Food with halo
     const food = foodRef.current;
-    const fx = food.x * CELL_SIZE + CELL_SIZE / 2;
-    const fy = food.y * CELL_SIZE + CELL_SIZE / 2;
-    const foodGradient = ctx.createRadialGradient(
-      fx,
-      fy,
-      CELL_SIZE * 0.2,
-      fx,
-      fy,
-      CELL_SIZE * 0.8,
-    );
-    foodGradient.addColorStop(0, '#fff9');
-    foodGradient.addColorStop(0.45, skinConfig.foodColor);
-    foodGradient.addColorStop(1, hexToRgba(skinConfig.foodColor, 0.1));
-    ctx.fillStyle = foodGradient;
-    ctx.beginPath();
-    ctx.arc(fx, fy, CELL_SIZE * 0.45, 0, Math.PI * 2);
-    ctx.fill();
-    if (colorblindMode) {
-      ctx.strokeStyle = '#f8fafc';
-      ctx.lineWidth = 1.2;
+    if (food) {
+      const fx = food.x * CELL_SIZE + CELL_SIZE / 2;
+      const fy = food.y * CELL_SIZE + CELL_SIZE / 2;
+      const foodGradient = ctx.createRadialGradient(
+        fx,
+        fy,
+        CELL_SIZE * 0.2,
+        fx,
+        fy,
+        CELL_SIZE * 0.8,
+      );
+      foodGradient.addColorStop(0, '#fff9');
+      foodGradient.addColorStop(0.45, skinConfig.foodColor);
+      foodGradient.addColorStop(1, hexToRgba(skinConfig.foodColor, 0.1));
+      ctx.fillStyle = foodGradient;
       ctx.beginPath();
-      ctx.moveTo(fx - CELL_SIZE * 0.2, fy);
-      ctx.lineTo(fx + CELL_SIZE * 0.2, fy);
-      ctx.moveTo(fx, fy - CELL_SIZE * 0.2);
-      ctx.lineTo(fx, fy + CELL_SIZE * 0.2);
-      ctx.stroke();
+      ctx.arc(fx, fy, CELL_SIZE * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+      if (colorblindMode) {
+        ctx.strokeStyle = '#f8fafc';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(fx - CELL_SIZE * 0.2, fy);
+        ctx.lineTo(fx + CELL_SIZE * 0.2, fy);
+        ctx.moveTo(fx, fy - CELL_SIZE * 0.2);
+        ctx.lineTo(fx, fy + CELL_SIZE * 0.2);
+        ctx.stroke();
+      }
     }
 
     // Snake segments with dynamic shading
@@ -539,7 +549,7 @@ const Snake = () => {
       const frame = frames[idx];
       playbackIndexRef.current += 1;
       snakeRef.current = frame.snake.map((s) => ({ ...s }));
-      foodRef.current = { ...frame.food };
+      foodRef.current = frame.food ? { ...frame.food } : null;
       obstaclesRef.current = frame.obstacles.map((o) => ({ ...o }));
       const frameScore = frame.score ?? 0;
       scoreRef.current = frameScore;
@@ -547,28 +557,31 @@ const Snake = () => {
       return;
     }
 
-    if (moveQueueRef.current.length) {
-      const next = moveQueueRef.current.shift();
-      if (
-        next &&
-        (dirRef.current.x + next.x !== 0 || dirRef.current.y + next.y !== 0)
-      ) {
-        dirRef.current = next;
-      }
+    const nextDir = queuedDirRef.current;
+    if (
+      nextDir &&
+      (dirRef.current.x + nextDir.x !== 0 || dirRef.current.y + nextDir.y !== 0)
+    ) {
+      dirRef.current = nextDir;
     }
+    queuedDirRef.current = null;
 
-    const consumedFood = { ...foodRef.current };
+    const consumedFood = foodRef.current ? { ...foodRef.current } : null;
     const result = stepSnake(
       {
         snake: snakeRef.current.map((seg) => ({ x: seg.x, y: seg.y })),
-        food: { ...foodRef.current },
+        food: foodRef.current ? { ...foodRef.current } : null,
         obstacles: obstaclesRef.current.map((o) => ({ x: o.x, y: o.y })),
+        rng: rngRef.current,
+        status: statusRef.current,
       },
       dirRef.current,
-      { wrap, gridSize: GRID_SIZE },
+      { wrap, gridSize: GRID_SIZE, addObstacleOnEat: true },
     );
 
     if (result.collision !== 'none') {
+      rngRef.current = result.state.rng;
+      statusRef.current = result.state.status;
       haptics.danger();
       setGameOver(true);
       runningRef.current = false;
@@ -582,8 +595,10 @@ const Snake = () => {
       nextSnake[0].scale = 0;
     }
     snakeRef.current = nextSnake;
-    foodRef.current = { ...result.state.food };
+    foodRef.current = result.state.food ? { ...result.state.food } : null;
     obstaclesRef.current = result.state.obstacles.map((o) => ({ ...o }));
+    rngRef.current = result.state.rng;
+    statusRef.current = result.state.status;
 
     if (result.grew) {
       const nextScore = scoreRef.current + 1;
@@ -592,7 +607,9 @@ const Snake = () => {
       haptics.score();
       beep(440);
       setSpeed((s) => Math.max(50, s * 0.95));
-      spawnParticles(consumedFood);
+      if (consumedFood) {
+        spawnParticles(consumedFood);
+      }
       if (nextScore > 0 && nextScore % 5 === 0) {
         triggerMilestoneFlash();
         if (nextSnake.length) {
@@ -601,13 +618,21 @@ const Snake = () => {
       }
     }
 
+    if (result.won) {
+      setWon(true);
+      runningRef.current = false;
+      setRunning(false);
+      beep(880);
+      return;
+    }
+
     recordingRef.current.push({
       snake: snakeRef.current.map((seg) => ({
         x: seg.x,
         y: seg.y,
         scale: seg.scale,
       })),
-      food: { ...foodRef.current },
+      food: foodRef.current ? { ...foodRef.current } : null,
       obstacles: obstaclesRef.current.map((o) => ({ ...o })),
       score: scoreRef.current,
     });
@@ -647,29 +672,28 @@ const Snake = () => {
   useGameLoop(tick, running && !prefersReducedMotion);
 
   useGameControls(({ x, y }) => {
-    if (playingRef.current) return;
-    const queue = moveQueueRef.current;
-    const curr = queue.length ? queue[queue.length - 1] : dirRef.current;
+    if (playingRef.current || !runningRef.current) return;
+    const curr = queuedDirRef.current ?? dirRef.current;
     if (curr.x + x === 0 && curr.y + y === 0) return;
-    queue.push({ x, y });
+    queuedDirRef.current = { x, y };
   });
 
   useEffect(() => {
-    if (gameOver && score > highScore) {
+    if ((gameOver || won) && score > highScore) {
       setHighScore(score);
     }
-  }, [gameOver, score, highScore, setHighScore]);
+  }, [gameOver, won, score, highScore, setHighScore]);
 
   useEffect(() => {
     if (gameOver) haptics.gameOver();
   }, [gameOver, haptics]);
 
   useEffect(() => {
-    if (gameOver && recordingRef.current.length) {
+    if ((gameOver || won) && recordingRef.current.length) {
       const name = `replay-${Date.now()}`;
       saveReplay(name, { frames: recordingRef.current, wrap });
     }
-  }, [gameOver, saveReplay, wrap]);
+  }, [gameOver, won, saveReplay, wrap]);
 
   /** Reset the game to its initial state. */
   const reset = useCallback(() => {
@@ -677,19 +701,23 @@ const Snake = () => {
       obstacles: obstaclePack.length ? obstaclePack : undefined,
       obstacleCount: obstaclePack.length ? 0 : 5,
     });
+    initialStateRef.current = base;
     snakeRef.current = base.snake.map((seg) => ({ ...seg, scale: 1 }));
-    foodRef.current = { ...base.food };
+    foodRef.current = base.food ? { ...base.food } : null;
     obstaclesRef.current = base.obstacles.map((o) => ({ ...o }));
     dirRef.current = { x: 1, y: 0 };
-    moveQueueRef.current = [];
+    queuedDirRef.current = null;
     playingRef.current = false;
     playbackRef.current = [];
     playbackIndexRef.current = 0;
     accumulatorRef.current = 0;
     runningRef.current = true;
+    rngRef.current = base.rng;
+    statusRef.current = base.status;
     setScore(0);
     scoreRef.current = 0;
     setGameOver(false);
+    setWon(false);
     setRunning(true);
     setSpeed(DEFAULT_SPEED);
     speedRef.current = DEFAULT_SPEED;
@@ -706,7 +734,7 @@ const Snake = () => {
           y: s.y,
           scale: s.scale,
         })),
-        food: { ...foodRef.current },
+        food: foodRef.current ? { ...foodRef.current } : null,
         obstacles: obstaclesRef.current.map((o) => ({ ...o })),
         score: 0,
       },
@@ -725,12 +753,15 @@ const Snake = () => {
       setRunning(true);
       runningRef.current = true;
       setGameOver(false);
+      setWon(false);
+      queuedDirRef.current = null;
       accumulatorRef.current = 0;
+      statusRef.current = 'RUNNING';
       if (data.frames?.length) {
         const first = data.frames[0];
         snakeRef.current = first.snake.map((s) => ({ ...s }));
         obstaclesRef.current = first.obstacles.map((o) => ({ ...o }));
-        foodRef.current = { ...first.food };
+        foodRef.current = first.food ? { ...first.food } : null;
         const frameScore = first.score ?? 0;
         scoreRef.current = frameScore;
         setScore(frameScore);
@@ -738,6 +769,8 @@ const Snake = () => {
     },
     [loadReplay, setWrap],
   );
+
+  const paused = !running && !gameOver && !won;
 
   return (
     <GameLayout gameId="snake" score={score} highScore={highScore}>
@@ -749,6 +782,11 @@ const Snake = () => {
             tabIndex={0}
             aria-label="Snake game board"
           />
+          {paused && (
+            <div className="absolute inset-0 flex items-center justify-center text-white">
+              <span className="bg-black/60 px-4 py-2 rounded shadow-lg">Paused</span>
+            </div>
+          )}
           {gameOver && (
             <div
               className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50"
@@ -756,6 +794,15 @@ const Snake = () => {
               aria-live="polite"
             >
               Game Over
+            </div>
+          )}
+          {won && (
+            <div
+              className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50"
+              role="status"
+              aria-live="polite"
+            >
+              You Win
             </div>
           )}
           {milestoneFlash && (
@@ -777,7 +824,15 @@ const Snake = () => {
           </button>
           <button
             className="px-3 py-1 bg-gray-700/80 rounded shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring"
-            onClick={() => setRunning((r) => !r)}
+            onClick={() =>
+              setRunning((r) => {
+                const next = !r;
+                queuedDirRef.current = null;
+                accumulatorRef.current = 0;
+                runningRef.current = next;
+                return next;
+              })
+            }
           >
             {running ? 'Pause' : 'Resume'}
           </button>
