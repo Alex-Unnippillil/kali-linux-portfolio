@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import GameLayout from './GameLayout';
-import { createDeck, PATTERN_THEMES, fisherYatesShuffle } from './memory_utils';
+import {
+  createDeck,
+  PATTERN_THEMES,
+  fisherYatesShuffle,
+  createSeededRng,
+  generateSeed,
+} from './memory_utils';
 
 const DEFAULT_TIME = { 2: 30, 4: 60, 6: 120 };
 
@@ -54,13 +60,17 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
   const [particles, setParticles] = useState([]);
   const [nudge, setNudge] = useState(false);
   const [themeName, setThemeName] = useState(Object.keys(themePacks)[0] || 'icons');
+  const [seed, setSeed] = useState(generateSeed);
+  const [motionSetting, setMotionSetting] = useState('system');
+  const [systemReducedMotion, setSystemReducedMotion] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
 
-  const runningRef = useRef(false);
   const startRef = useRef(0);
   const initialTimeRef = useRef(0);
   const rafRef = useRef();
-  const reduceMotion = useRef(false);
-  const previewTimeout = useRef();
+  const pauseStartedRef = useRef(null);
+  const timeoutsRef = useRef([]);
 
   const bestKey = useMemo(
     () => `game:memory:${player}:${size}:${timerMode}:best`,
@@ -70,7 +80,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     const update = () => {
-      reduceMotion.current = mq.matches;
+      setSystemReducedMotion(mq.matches);
     };
     update();
     mq.addEventListener ? mq.addEventListener('change', update) : mq.addListener(update);
@@ -79,7 +89,21 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
     };
   }, []);
 
-  useEffect(() => () => clearTimeout(previewTimeout.current), []);
+  const clearAllTimeouts = useCallback(() => {
+    timeoutsRef.current.forEach(clearTimeout);
+    timeoutsRef.current = [];
+  }, []);
+
+  const schedule = useCallback((fn, ms) => {
+    const id = setTimeout(fn, ms);
+    timeoutsRef.current.push(id);
+    return id;
+  }, []);
+
+  useEffect(() => () => clearAllTimeouts(), [clearAllTimeouts]);
+
+  const effectiveReduce =
+    motionSetting === 'reduced' || (motionSetting === 'system' && systemReducedMotion);
 
   const beep = useCallback(() => {
     if (!sound || typeof window === 'undefined') return;
@@ -100,25 +124,29 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
   }, [sound]);
 
   const reset = useCallback(() => {
-    clearTimeout(previewTimeout.current);
+    clearAllTimeouts();
+    setIsResolving(false);
+    setIsRunning(false);
+    setParticles([]);
+    setNudge(false);
     let deck;
     const themeAssets = themePacks[themeName] || [];
+    const rng = createSeededRng(`memory:${seed}:${size}:${deckType}:${themeName}:${patternTheme}`);
     if (deckType === 'theme' && themeAssets.length) {
       const pairs = (size * size) / 2;
-      const selected = themeAssets
-        .slice(0, pairs)
-        .map((src, i) => ({ value: i, image: src }));
+      const themed = themeAssets.map((src, i) => ({ value: i, image: src, pairId: `${themeName}:${i}` }));
+      const selected = fisherYatesShuffle(themed, rng).slice(0, pairs);
       const doubled = [...selected, ...selected].map((card, index) => ({ id: index, ...card }));
-      deck = fisherYatesShuffle(doubled);
+      deck = fisherYatesShuffle(doubled, rng);
     } else {
-      deck = createDeck(size, deckType, patternTheme);
+      deck = createDeck(size, deckType, patternTheme, seed);
     }
     setCards(deck);
     const all = Array.from({ length: size * size }, (_, i) => i);
     if (previewTime > 0) {
       setFlipped(all);
       setPreviewing(true);
-      previewTimeout.current = setTimeout(() => {
+      schedule(() => {
         setFlipped([]);
         setPreviewing(false);
       }, previewTime * 1000);
@@ -134,11 +162,23 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
     initialTimeRef.current = initial;
     setStars(3);
     setPaused(false);
-    runningRef.current = false;
+    setIsRunning(false);
     startRef.current = 0;
+    pauseStartedRef.current = null;
     setAnnouncement('');
     setStreak(0);
-  }, [size, deckType, timerMode, patternTheme, previewTime, themePacks, themeName]);
+  }, [
+    size,
+    deckType,
+    timerMode,
+    patternTheme,
+    previewTime,
+    themePacks,
+    themeName,
+    clearAllTimeouts,
+    seed,
+    schedule,
+  ]);
 
   useEffect(() => {
     reset();
@@ -184,7 +224,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
 
   useEffect(() => {
     if (cards.length && matched.length === cards.length) {
-      runningRef.current = false;
+      setIsRunning(false);
       saveBest();
       const elapsed = timerMode === 'countdown' ? initialTimeRef.current - time : time;
       setAnnouncement(`You won in ${moves} moves and ${elapsed} seconds`);
@@ -200,7 +240,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
   }, [moves, cards.length]);
 
   const triggerStreakEffect = useCallback(() => {
-    if (reduceMotion.current) return;
+    if (effectiveReduce) return;
     setParticles(
       Array.from({ length: 8 }).map((_, i) => ({
         id: i,
@@ -210,25 +250,27 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
     );
     setNudge(true);
     setPaused(true);
-    setTimeout(() => setParticles([]), 300);
-    setTimeout(() => setNudge(false), 150);
-    setTimeout(() => setPaused(false), 150);
-  }, []);
+    schedule(() => setParticles([]), 300);
+    schedule(() => setNudge(false), 150);
+    schedule(() => setPaused(false), 150);
+  }, [effectiveReduce, schedule]);
 
   const handleCardClick = (idx) => {
     if (
       paused ||
       previewing ||
+      isResolving ||
       flipped.includes(idx) ||
       matched.includes(idx) ||
       (timerMode === 'countdown' && time <= 0)
     )
       return;
-    if (!runningRef.current) {
-      runningRef.current = true;
-      startRef.current = performance.now();
-    }
     beep();
+    if (!isRunning) {
+      const elapsedSoFar = timerMode === 'countdown' ? initialTimeRef.current - time : time;
+      startRef.current = performance.now() - elapsedSoFar * 1000;
+      setIsRunning(true);
+    }
     if (flipped.length === 0) {
       setFlipped([idx]);
     } else if (flipped.length === 1) {
@@ -236,9 +278,12 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
       const second = idx;
       const newFlipped = [first, second];
       setFlipped(newFlipped);
+      setIsResolving(true);
       setMoves((mv) => mv + 1);
-      if (cards[first].value === cards[second].value) {
-        setMatched([...matched, first, second]);
+      const matchClearMs = effectiveReduce ? 0 : 400;
+      const mismatchClearMs = effectiveReduce ? 0 : 800;
+      if (cards[first].pairId === cards[second].pairId) {
+        setMatched((prev) => [...prev, first, second]);
         setHighlight([first, second]);
         setAnnouncement('Match found');
         setStreak((s) => {
@@ -246,30 +291,35 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
           if (n > 1) triggerStreakEffect();
           return n;
         });
-        setTimeout(() => {
+        schedule(() => {
           setFlipped([]);
           setHighlight([]);
-        }, reduceMotion.current ? 0 : 400);
+          setIsResolving(false);
+        }, matchClearMs);
       } else {
         setAnnouncement('No match');
         setStreak(0);
-        setTimeout(() => setFlipped([]), reduceMotion.current ? 0 : 800);
+        schedule(() => {
+          setFlipped([]);
+          setIsResolving(false);
+        }, mismatchClearMs);
       }
     }
   };
 
   useEffect(() => {
+    if (!isRunning) return;
     const loop = (timestamp) => {
-      if (runningRef.current && !paused) {
+      if (!paused) {
         const elapsed = Math.floor((timestamp - startRef.current) / 1000);
         if (timerMode === 'countdown') {
           const remaining = initialTimeRef.current - elapsed;
           if (remaining <= 0) {
             setTime(0);
-            runningRef.current = false;
-          } else {
-            setTime(remaining);
+            setIsRunning(false);
+            return;
           }
+          setTime(remaining);
         } else {
           setTime(elapsed);
         }
@@ -278,7 +328,18 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
     };
     rafRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [paused, timerMode]);
+  }, [isRunning, paused, timerMode]);
+
+  useEffect(() => {
+    if (!isRunning) return;
+    if (paused) {
+      pauseStartedRef.current = performance.now();
+    } else if (pauseStartedRef.current != null) {
+      const pausedDuration = performance.now() - pauseStartedRef.current;
+      startRef.current += pausedDuration;
+      pauseStartedRef.current = null;
+    }
+  }, [paused, isRunning]);
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
@@ -290,7 +351,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
         style={{
           width: `${size * 120}px`,
           transform: nudge ? 'translateX(2px)' : 'none',
-          transition: 'transform 150ms',
+          transition: effectiveReduce ? 'none' : 'transform 150ms',
         }}
       >
         <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${size}, minmax(0,1fr))` }}>
@@ -303,30 +364,38 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
                 onClick={() => handleCardClick(i)}
                 aria-label={isFlipped ? `Card ${card.value}` : 'Hidden card'}
                 disabled={
+                  isResolving ||
                   flipped.includes(i) ||
                   matched.includes(i) ||
                   paused ||
                   previewing ||
                   (timerMode === 'countdown' && time <= 0)
                 }
-                className={`relative w-full aspect-square [perspective:600px] rounded transform ${
+                className={`relative w-full aspect-square [perspective:600px] rounded ${
                   isHighlighted ? 'ring-4 ring-green-600' : ''
-                } ${
-                  reduceMotion.current ? '' : 'transition-transform duration-200'
-                } ${isHighlighted && !reduceMotion.current ? 'scale-105' : ''}`}
+                }`}
+                style={{
+                  transform: isHighlighted && !effectiveReduce ? 'scale(1.05)' : 'scale(1)',
+                  transition: effectiveReduce ? 'none' : 'transform 200ms',
+                }}
               >
                 <div
                   data-testid="card-inner"
-                  className={`w-full h-full transition-transform ${
-                    reduceMotion.current ? '' : 'duration-500'
-                  } [transform-style:preserve-3d]`}
-                  style={{ transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}
+                  className="w-full h-full [transform-style:preserve-3d]"
+                  style={{
+                    transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                    transitionProperty: 'transform',
+                    transitionDuration: effectiveReduce ? '0ms' : '500ms',
+                  }}
                 >
                   <div className="absolute inset-0 rounded flex items-center justify-center bg-gray-700 text-white [backface-visibility:hidden]" />
                   <div
                     className={`absolute inset-0 rounded flex items-center justify-center [transform:rotateY(180deg)] [backface-visibility:hidden] ${
                       isHighlighted ? 'bg-green-500 text-black' : 'bg-white text-black'
-                    } ${reduceMotion.current ? '' : 'transition-colors duration-300'}`}
+                    }`}
+                    style={{
+                      transition: effectiveReduce ? 'none' : 'background-color 300ms, color 300ms',
+                    }}
                   >
                     {card.image ? (
                       <img src={card.image} alt="" className="w-3/4 h-3/4 object-contain" />
@@ -366,7 +435,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
         {best.moves != null && <div>Best: {best.moves}m/{best.time}s</div>}
         <div data-testid="combo-meter">Combo: {streak}</div>
       </div>
-      <div className="flex space-x-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button onClick={reset} className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded">
           Reset
         </button>
@@ -382,6 +451,36 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
         >
           Sound: {sound ? 'On' : 'Off'}
         </button>
+        <div className="flex items-center space-x-1">
+          <span className="text-sm">Motion</span>
+          <select
+            aria-label="Motion preference"
+            value={motionSetting}
+            onChange={(e) => setMotionSetting(e.target.value)}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white"
+          >
+            <option value="system">System</option>
+            <option value="reduced">Reduced</option>
+            <option value="full">Full</option>
+          </select>
+        </div>
+        <div className="flex items-center space-x-1">
+          <label htmlFor={`seed-${player}`} className="text-sm">
+            Seed
+          </label>
+          <input
+            id={`seed-${player}`}
+            value={seed}
+            onChange={(e) => setSeed(e.target.value)}
+            className="px-2 py-1 bg-gray-700 rounded text-white w-24"
+          />
+          <button
+            onClick={() => setSeed(generateSeed())}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          >
+            New seed
+          </button>
+        </div>
         <select
           aria-label="Deck"
           value={deckType}
