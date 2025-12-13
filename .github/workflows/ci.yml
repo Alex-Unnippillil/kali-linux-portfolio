@@ -126,7 +126,7 @@ jobs:
 
   vercel-preview:
     runs-on: ubuntu-latest
-    if: ${{ secrets.VERCEL_TOKEN != '' && github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
