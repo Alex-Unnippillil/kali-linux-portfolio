@@ -1,7 +1,11 @@
+import { assetUrl } from '../../../utils/assetUrl';
+
 export const BIRD_SKINS = ['yellow', 'red', 'blue'] as const;
 
 export const BIRD_ANIMATION_FRAMES = BIRD_SKINS.map((name) =>
-  Array.from({ length: 3 }, (_, frame) => `/apps/flappy/skins/${name}-${frame}.svg`)
+  Array.from({ length: 3 }, (_, frame) =>
+    assetUrl(`/apps/flappy/skins/${name}-${frame}.svg`),
+  )
 );
 export type RGB = [number, number, number];
 export const PIPE_SKINS: [RGB, RGB][] = [

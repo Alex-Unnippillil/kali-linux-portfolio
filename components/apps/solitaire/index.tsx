@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
+import { assetUrl } from '../../../utils/assetUrl';
 import {
   initializeGame,
   drawFromStock,
@@ -46,9 +47,9 @@ type AnimatedCard = Card & {
 const controlButtonClasses =
   'group relative rounded-md border border-kali-border/60 bg-[color:color-mix(in_srgb,var(--color-surface-muted)_80%,rgba(9,34,52,0.92)_20%)] px-3 py-1.5 text-sm font-semibold text-kali-text shadow-[0_3px_6px_rgba(0,0,0,0.35)] transition-all duration-200 hover:-translate-y-[1px] hover:border-kali-accent/70 hover:bg-[color:color-mix(in_srgb,var(--color-surface)_75%,rgba(25,116,186,0.35)_25%)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus disabled:cursor-not-allowed disabled:opacity-60';
 
-const CARD_FACE_TEXTURE = '/apps/solitaire/card-front.svg';
-const CARD_BACK_TEXTURE = '/apps/solitaire/card-back.svg';
-const TABLE_FELT_TEXTURE = '/apps/solitaire/felt-texture.svg';
+const CARD_FACE_TEXTURE = assetUrl('/apps/solitaire/card-front.svg');
+const CARD_BACK_TEXTURE = assetUrl('/apps/solitaire/card-back.svg');
+const TABLE_FELT_TEXTURE = assetUrl('/apps/solitaire/felt-texture.svg');
 const suitLabels: Record<Suit, string> = {
   '♠': 'spades',
   '♥': 'hearts',

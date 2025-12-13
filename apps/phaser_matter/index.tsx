@@ -5,6 +5,7 @@ import Phaser from 'phaser';
 import { GameState } from './gameLogic';
 import usePersistedState from '../../hooks/usePersistedState';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import { assetUrl } from '../../utils/assetUrl';
 
 type Action = 'left' | 'right' | 'jump';
 
@@ -151,8 +152,8 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
       }
 
       preload() {
-        this.load.json('level', 'apps/phaser_matter/level1.json');
-        this.load.image('player', 'apps/phaser_matter/player.svg');
+        this.load.json('level', assetUrl('/apps/phaser_matter/level1.json'));
+        this.load.image('player', assetUrl('/apps/phaser_matter/player.svg'));
       }
 
       create() {
