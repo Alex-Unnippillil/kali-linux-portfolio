@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useId, useRef } from 'react';
 import useKeymap from '../../apps/settings/keymapRegistry';
 
 const formatEvent = (e: KeyboardEvent) => {
@@ -17,6 +17,9 @@ const formatEvent = (e: KeyboardEvent) => {
 const ShortcutOverlay: React.FC = () => {
   const [open, setOpen] = useState(false);
   const { shortcuts } = useKeymap();
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const titleId = useId();
 
   const toggle = useCallback(() => setOpen((o) => !o), []);
 
@@ -42,6 +45,72 @@ const ShortcutOverlay: React.FC = () => {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [open, toggle, shortcuts]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const dialogNode = dialogRef.current;
+    const focusableSelector =
+      'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+    const trapFocus = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return;
+
+      const focusables = dialogNode
+        ? Array.from(dialogNode.querySelectorAll<HTMLElement>(focusableSelector)).filter(
+            (el) => !el.hasAttribute('inert') && el.tabIndex !== -1
+          )
+        : [];
+
+      if (focusables.length === 0) {
+        dialogNode?.focus();
+        event.preventDefault();
+        return;
+      }
+
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (event.shiftKey) {
+        if (!active || active === first || !dialogNode?.contains(active)) {
+          last.focus();
+          event.preventDefault();
+        }
+        return;
+      }
+
+      if (!active || active === last || !dialogNode?.contains(active)) {
+        first.focus();
+        event.preventDefault();
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setOpen(false);
+      }
+    };
+
+    const focusTarget = () => {
+      if (closeButtonRef.current) {
+        closeButtonRef.current.focus();
+        return;
+      }
+      const firstFocusable = dialogNode?.querySelector<HTMLElement>(focusableSelector);
+      firstFocusable?.focus();
+    };
+
+    focusTarget();
+    document.addEventListener('keydown', trapFocus);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('keydown', trapFocus);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [open]);
 
   const handleExport = () => {
     const data = JSON.stringify(shortcuts, null, 2);
@@ -71,14 +140,20 @@ const ShortcutOverlay: React.FC = () => {
       className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 text-white p-4 overflow-auto"
       role="dialog"
       aria-modal="true"
+      aria-labelledby={titleId}
+      ref={dialogRef}
+      tabIndex={-1}
     >
       <div className="max-w-lg w-full space-y-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold">Keyboard Shortcuts</h2>
+          <h2 id={titleId} className="text-xl font-bold">
+            Keyboard Shortcuts
+          </h2>
           <button
             type="button"
             onClick={() => setOpen(false)}
             className="text-sm underline"
+            ref={closeButtonRef}
           >
             Close
           </button>
