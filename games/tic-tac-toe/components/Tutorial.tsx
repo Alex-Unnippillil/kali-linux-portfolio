@@ -1,20 +1,38 @@
 import React, { useMemo, useState } from 'react';
-import { minimax, checkWinner, createBoard, Player } from '../../../apps/games/tictactoe/logic';
+import {
+  checkWinner,
+  createBoard,
+  Player,
+  applyMove,
+  getLegalMoves,
+  chooseAiMove,
+} from '../../../apps/games/tictactoe/logic';
 
 type Step = {
   board: (Player | null)[];
   explanation: string;
 };
 
-const getMoveExplanation = (player: Player, index: number): string => {
-  if (index === 4) {
-    return `${player} takes the center, the strongest opening move.`;
+const describeMove = (board: (Player | null)[], player: Player, move: number): string => {
+  const opponent: Player = player === 'X' ? 'O' : 'X';
+  const newBoard = applyMove(board, move, player);
+  const result = checkWinner(newBoard, 3);
+  if (result.winner && result.winner !== 'draw') {
+    return `${player} wins by completing a line.`;
   }
+  const opponentWinningMove = getLegalMoves(board).find(
+    (idx) => checkWinner(applyMove(board, idx, opponent), 3).winner === opponent,
+  );
+  const stillHasThreat = getLegalMoves(newBoard).some(
+    (idx) => checkWinner(applyMove(newBoard, idx, opponent), 3).winner === opponent,
+  );
+  if (opponentWinningMove !== undefined && !stillHasThreat) {
+    return `${player} blocks ${opponent}'s winning threat.`;
+  }
+  if (move === 4) return `${player} takes center to control the board.`;
   const corners = [0, 2, 6, 8];
-  if (corners.includes(index)) {
-    return `${player} chooses a corner to stay offensive and create forks.`;
-  }
-  return `${player} plays an edge to block the opponent.`;
+  if (corners.includes(move)) return `${player} takes a corner to stay aggressive.`;
+  return `${player} plays an edge to improve their position.`;
 };
 
 const buildSteps = (): Step[] => {
@@ -23,20 +41,22 @@ const buildSteps = (): Step[] => {
   let current: Player = 'X';
 
   while (true) {
-    const move = minimax(board.slice(), current, 3).index;
+    const move = chooseAiMove(board.slice(), current, {
+      size: 3,
+      mode: 'classic',
+      difficulty: 'hard',
+      rng: () => 0,
+    });
     if (move < 0) break;
     board[move] = current;
     const result = checkWinner(board, 3);
-    let explanation = getMoveExplanation(current, move);
-    if (result.winner) {
-      explanation =
-        result.winner === 'draw'
-          ? 'With perfect play the game ends in a draw.'
-          : `${current} completes a line and wins.`;
-      steps.push({ board: board.slice(), explanation });
-      break;
-    }
+    const explanation = result.winner
+      ? result.winner === 'draw'
+        ? 'With perfect play the game ends in a draw.'
+        : `${current} wins by completing a line.`
+      : describeMove(board.slice(), current, move);
     steps.push({ board: board.slice(), explanation });
+    if (result.winner) break;
     current = current === 'X' ? 'O' : 'X';
   }
 
