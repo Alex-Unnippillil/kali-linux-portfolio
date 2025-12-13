@@ -5,12 +5,9 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import {
-  validateSolution,
-  puzzles,
-  findHint,
-  autoFillLines,
-} from "./nonogramUtils";
+import { puzzles } from "./nonogramUtils";
+import { isSolved, propagate } from "../../apps/games/nonogram/logic";
+import { findLogicalHint } from "../../apps/games/nonogram/hints";
 import { getDailyPuzzle } from "../../utils/dailyPuzzle";
 
 // visual settings
@@ -46,7 +43,7 @@ const Nonogram = () => {
   const [liveMessage, setLiveMessage] = useState("");
   const [reduceMotion, setReduceMotion] = useState(false);
 
-  // grid: 0 empty, 1 filled, -1 marked
+  // grid: 0 unknown, 1 filled, -1 marked
   const [grid, setGrid] = useState(() =>
     Array(height)
       .fill(0)
@@ -56,6 +53,13 @@ const Nonogram = () => {
   useEffect(() => {
     gridRef.current = grid;
   }, [grid]);
+
+  const [solverState, setSolverState] = useState({
+    rowContradiction: Array(height).fill(false),
+    colContradiction: Array(width).fill(false),
+    rowSolved: Array(height).fill(false),
+    colSolved: Array(width).fill(false),
+  });
 
   const canvasRef = useRef(null);
   const animationRef = useRef();
@@ -69,13 +73,6 @@ const Nonogram = () => {
   const [mistakes, setMistakes] = useState(0);
   const startTime = useRef(Date.now());
   const completed = useRef(false);
-
-  // load stored high score
-  useEffect(() => {
-    const hs = localStorage.getItem("nonogramHighScore");
-    if (hs) setHighScore(parseInt(hs, 10));
-    reset();
-  }, [reset]);
 
   const playSound = useCallback(() => {
     if (!sound) return;
@@ -93,7 +90,7 @@ const Nonogram = () => {
 
   const checkSolved = useCallback(
     (ng) => {
-      if (validateSolution(ng, rows, cols) && !completed.current) {
+      if (isSolved(ng, rows, cols) && !completed.current) {
         completed.current = true;
         const elapsed = Math.floor((Date.now() - startTime.current) / 1000);
         setTime(elapsed);
@@ -106,6 +103,20 @@ const Nonogram = () => {
       }
     },
     [rows, cols, highScore, playSound],
+  );
+
+  const applyPropagation = useCallback(
+    (ng) => {
+      const result = propagate(ng, rows, cols);
+      setSolverState({
+        rowContradiction: result.rowContradiction,
+        colContradiction: result.colContradiction,
+        rowSolved: result.rowSolved,
+        colSolved: result.colSolved,
+      });
+      return result.grid;
+    },
+    [rows, cols],
   );
 
   const setCellValue = useCallback(
@@ -122,33 +133,44 @@ const Nonogram = () => {
       }
       setGrid((g) => {
         const ng = g.map((row) => row.slice());
-        if (preventIllegal) {
-          if (value === 1 && solution[i][j] !== 1) return g;
-          if (value === -1 && solution[i][j] === 1) return g;
-        }
         if (ng[i][j] === value) return g;
         ng[i][j] = value;
-        const auto = autoFillLines(ng, rows, cols);
+
+        if (preventIllegal) {
+          const preview = propagate(ng, rows, cols);
+          if (preview.rowContradiction[i] || preview.colContradiction[j]) {
+            return g;
+          }
+        }
+
+        const auto = applyPropagation(ng);
         checkSolved(auto);
         return auto;
       });
       playSound();
     },
-    [paused, preventIllegal, solution, checkSolved, playSound, rows, cols],
+    [paused, preventIllegal, solution, checkSolved, playSound, rows, cols, applyPropagation],
   );
 
   const reset = useCallback(() => {
-    setGrid(
-      Array(height)
-        .fill(0)
-        .map(() => Array(width).fill(0)),
-    );
+    const empty = Array(height)
+      .fill(0)
+      .map(() => Array(width).fill(0));
+    const auto = applyPropagation(empty);
+    setGrid(auto);
     startTime.current = Date.now();
     setTime(0);
     completed.current = false;
     setPaused(false);
     setMistakes(0);
-  }, [height, width]);
+  }, [height, width, applyPropagation]);
+
+  // load stored high score
+  useEffect(() => {
+    const hs = localStorage.getItem("nonogramHighScore");
+    if (hs) setHighScore(parseInt(hs, 10));
+    reset();
+  }, [reset]);
 
   // respect reduced motion preference
   useEffect(() => {
@@ -161,40 +183,30 @@ const Nonogram = () => {
 
   // update progress targets when grid changes
   useEffect(() => {
-    const newRowTargets = rows.map((_, i) => {
-      let correct = 0;
-      let total = 0;
-      let error = false;
-      for (let j = 0; j < width; j++) {
-        if (solution[i][j] === 1) {
-          total += 1;
-          if (grid[i][j] === 1) correct += 1;
-        } else if (grid[i][j] === 1) {
-          correct -= 1;
-          error = true;
-        }
-      }
+    const newRowTargets = rows.map((clue, i) => {
+      const expected = clue.reduce((a, b) => a + b, 0);
+      const filled = grid[i].filter((c) => c === 1).length;
+      const target = solverState.rowSolved[i]
+        ? 1
+        : expected
+          ? Math.min(1, Math.max(0, filled / expected))
+          : 1;
       return {
-        target: total ? Math.max(0, Math.min(1, correct / total)) : 1,
-        error,
+        target,
+        error: solverState.rowContradiction[i],
       };
     });
-    const newColTargets = cols.map((_, j) => {
-      let correct = 0;
-      let total = 0;
-      let error = false;
-      for (let i = 0; i < height; i++) {
-        if (solution[i][j] === 1) {
-          total += 1;
-          if (grid[i][j] === 1) correct += 1;
-        } else if (grid[i][j] === 1) {
-          correct -= 1;
-          error = true;
-        }
-      }
+    const newColTargets = cols.map((clue, j) => {
+      const expected = clue.reduce((a, b) => a + b, 0);
+      const filled = grid.map((row) => row[j]).filter((c) => c === 1).length;
+      const target = solverState.colSolved[j]
+        ? 1
+        : expected
+          ? Math.min(1, Math.max(0, filled / expected))
+          : 1;
       return {
-        target: total ? Math.max(0, Math.min(1, correct / total)) : 1,
-        error,
+        target,
+        error: solverState.colContradiction[j],
       };
     });
     setRowTargets(newRowTargets.map((r) => r.target));
@@ -217,7 +229,7 @@ const Nonogram = () => {
       prevCol.current[j] = target;
     });
     if (message) setLiveMessage(message);
-  }, [grid, rows, cols, height, width, solution]);
+  }, [grid, rows, cols, height, width, solverState]);
 
   // canvas drawing with rAF
   useEffect(() => {
@@ -459,7 +471,7 @@ const Nonogram = () => {
   }, []);
 
   const handleHint = useCallback(() => {
-    const hint = findHint(rows, cols, gridRef.current);
+    const hint = findLogicalHint(rows, cols, gridRef.current);
     if (hint) setCellValue(hint.i, hint.j, hint.value);
   }, [rows, cols, setCellValue]);
 

@@ -1,10 +1,10 @@
-import { lineToClues, Grid, Clue } from './logic';
+import { lineToClues, PatternCell, Clue, gridToClues } from './logic';
 
 export interface Puzzle {
   name: string;
   rows: Clue[];
   cols: Clue[];
-  grid: Grid;
+  grid: PatternCell[][];
 }
 
 export interface PuzzlePack {
@@ -18,16 +18,10 @@ export const parsePack = (raw: string): Puzzle[] => {
   const blocks = raw.trim().split(/\n\s*\n/).filter(Boolean);
   return blocks.map((block, idx) => {
     const lines = block.trim().split(/\n/);
-    const grid: Grid = lines.map((line) =>
-      Array.from(line).map((ch) => (ch === '#' ? 1 : 0))
+    const grid: PatternCell[][] = lines.map((line) =>
+      Array.from(line).map((ch) => (ch === '#' ? 1 : 0)) as PatternCell[]
     );
-    const rows = grid.map(lineToClues);
-    const width = grid[0]?.length || 0;
-    const cols: Clue[] = [];
-    for (let c = 0; c < width; c++) {
-      const col = grid.map((row) => row[c]);
-      cols.push(lineToClues(col));
-    }
+    const { rows, cols } = gridToClues(grid);
     return { name: `Puzzle ${idx + 1}`, rows, cols, grid };
   });
 };
@@ -46,16 +40,10 @@ export const loadPackFromJSON = (raw: string): PuzzlePack => {
     puzzles: { name: string; grid: string[] }[];
   };
   const puzzles: Puzzle[] = data.puzzles.map((p, idx) => {
-    const grid: Grid = p.grid.map((line) =>
-      Array.from(line).map((ch) => (ch === '#' ? 1 : 0))
+    const grid: PatternCell[][] = p.grid.map((line) =>
+      Array.from(line).map((ch) => (ch === '#' ? 1 : 0)) as PatternCell[]
     );
-    const rows = grid.map(lineToClues);
-    const width = grid[0]?.length || 0;
-    const cols: Clue[] = [];
-    for (let c = 0; c < width; c++) {
-      const col = grid.map((row) => row[c]);
-      cols.push(lineToClues(col));
-    }
+    const { rows, cols } = gridToClues(grid);
     return { name: p.name || `Puzzle ${idx + 1}`, rows, cols, grid };
   });
   return { name: data.name, puzzles };

@@ -1,7 +1,13 @@
 import fs from 'fs';
 import path from 'path';
-import { checkContradictions, autoFill } from '../apps/games/nonogram/logic';
-import { createHintSystem, revealRandomCell } from '../apps/games/nonogram/hints';
+import {
+  analyzeLine,
+  autoFill,
+  checkContradictions,
+  isSolved,
+  propagate,
+} from '../apps/games/nonogram/logic';
+import { findLogicalHint, createHintSystem } from '../apps/games/nonogram/hints';
 import {
   parsePack,
   loadPackFromJSON,
@@ -16,6 +22,56 @@ describe('games/nonogram logic', () => {
     const result = checkContradictions(grid, rows, cols);
     expect(result.rows[0]).toBe(true);
     expect(result.cols[0]).toBe(true);
+  });
+
+  test('analyzeLine reports forced cells', () => {
+    const clue = [2];
+    const line = [1, 0, 0] as (-1 | 0 | 1)[];
+    const result = analyzeLine(clue, line);
+    expect(result.contradiction).toBe(false);
+    expect(result.forced[1]).toBe(1);
+    expect(result.forced[2]).toBe(-1);
+  });
+
+  test('propagate cross-checks rows and columns', () => {
+    const rows = [[1], [1]];
+    const cols = [[1], [1]];
+    const grid = [
+      [1, 0],
+      [0, 0],
+    ] as (-1 | 0 | 1)[][];
+    const result = propagate(grid, rows, cols);
+    expect(result.grid[1][0]).toBe(-1);
+    expect(result.grid[1][1]).toBe(1);
+    expect(result.rowContradiction.every((v) => !v)).toBe(true);
+    expect(result.colContradiction.every((v) => !v)).toBe(true);
+  });
+
+  test('hint system only returns logical moves', () => {
+    const rows = [[1], [1]];
+    const cols = [[1], [1]];
+    const grid = [
+      [1, 0],
+      [0, 0],
+    ] as (-1 | 0 | 1)[][];
+    const hint = findLogicalHint(rows, cols, grid);
+    expect(hint).not.toBeNull();
+    if (!hint) return;
+    expect(grid[hint.i][hint.j]).toBe(0);
+    const applied = grid.map((row) => row.slice());
+    applied[hint.i][hint.j] = hint.value;
+    const post = propagate(applied, rows, cols);
+    expect(post.rowContradiction.some(Boolean)).toBe(false);
+    expect(post.colContradiction.some(Boolean)).toBe(false);
+  });
+
+  test('completion requires all cells resolved', () => {
+    const rows = [[]];
+    const cols = [[]];
+    const grid = [[0]];
+    expect(isSolved(grid, rows, cols)).toBe(false);
+    const filled = [[-1]] as (-1 | 0 | 1)[][];
+    expect(isSolved(filled, rows, cols)).toBe(true);
   });
 
   test('loads puzzles from packs', () => {
@@ -43,29 +99,13 @@ describe('games/nonogram logic', () => {
   });
 
   test('hint system enforces usage limit', () => {
+    const rows = [[1]];
+    const cols = [[1]];
     const grid = [[0]] as (0 | 1 | -1)[][];
-    const solution = [[1]] as (0 | 1)[][];
     const hints = createHintSystem(1);
-    expect(hints.useHint(grid, solution)).toEqual({ i: 0, j: 0, value: 1 });
-    expect(hints.useHint(grid, solution)).toBeNull();
+    expect(hints.useHint(grid, rows, cols)).toEqual({ i: 0, j: 0, value: 1 });
+    expect(hints.useHint(grid, rows, cols)).toBeNull();
     expect(hints.remaining()).toBe(0);
-  });
-
-  test('random hint reveals a correct cell', () => {
-    const grid = [
-      [0, 0],
-      [0, 0],
-    ] as (0 | 1 | -1)[][];
-    const solution = [
-      [1, 0],
-      [0, 1],
-    ] as (0 | 1)[][];
-    const hint = revealRandomCell(grid, solution);
-    expect(hint).not.toBeNull();
-    if (hint) {
-      expect(solution[hint.i][hint.j]).toBe(1);
-      expect(grid[hint.i][hint.j]).not.toBe(1);
-    }
   });
 
   test('loads puzzle packs from JSON files', () => {

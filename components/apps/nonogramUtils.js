@@ -1,131 +1,20 @@
-export const lineToClues = (line) => {
-  const clues = [];
-  let count = 0;
-  line.forEach((cell) => {
-    if (cell === 1) count += 1;
-    else if (count) {
-      clues.push(count);
-      count = 0;
-    }
-  });
-  if (count) clues.push(count);
-  return clues.length ? clues : [];
-};
+import {
+  analyzeLine,
+  autoFill,
+  generateLinePatterns,
+  getPossibleLineSolutions,
+  gridToClues,
+  isSolved,
+  lineToClues,
+  propagate,
+} from '../../apps/games/nonogram/logic';
+import { findLogicalHint } from '../../apps/games/nonogram/hints';
 
-export const evaluateLine = (line, clue) => {
-  const clues = lineToClues(line);
-  const solved = JSON.stringify(clues) === JSON.stringify(clue);
-  let contradiction = false;
-  for (let i = 0; i < clues.length; i++) {
-    if (i >= clue.length || clues[i] > clue[i]) contradiction = true;
-  }
-  if (clues.length > clue.length) contradiction = true;
-  return { solved, contradiction };
-};
+export const autoFillLines = (grid, rows, cols) => propagate(grid, rows, cols).grid;
 
-export const generateLinePatterns = (clue, length) => {
-  if (!clue.length) return [Array(length).fill(0)];
-  const [first, ...rest] = clue;
-  const patterns = [];
-  for (let offset = 0; offset <= length - first; offset++) {
-    const head = Array(offset).fill(0).concat(Array(first).fill(1));
-    if (rest.length) {
-      const tails = generateLinePatterns(rest, length - offset - first - 1);
-      tails.forEach((t) => patterns.push(head.concat([0], t)));
-    } else if (head.length < length) {
-      patterns.push(head.concat(Array(length - head.length).fill(0)));
-    } else patterns.push(head);
-  }
-  return patterns;
-};
+export const findHint = (rows, cols, grid) => findLogicalHint(rows, cols, grid);
 
-export const getPossibleLineSolutions = (clue, line) => {
-  const patterns = generateLinePatterns(clue, line.length);
-  return patterns.filter((p) =>
-    line.every((cell, i) =>
-      cell === 1 ? p[i] === 1 : cell === -1 ? p[i] === 0 : true
-    )
-  );
-};
-
-export const findForcedCellsInLine = (clue, line) => {
-  const solutions = getPossibleLineSolutions(clue, line);
-  if (!solutions.length) return [];
-  const forced = [];
-  for (let i = 0; i < line.length; i++) {
-    const val = solutions[0][i];
-    if (
-      solutions.every((s) => s[i] === val) &&
-      (line[i] === 0 || line[i] === 2)
-    ) {
-      forced.push({ index: i, value: val ? 1 : -1 });
-    }
-  }
-  return forced;
-};
-
-export const findHint = (rows, cols, grid) => {
-  for (let i = 0; i < rows.length; i++) {
-    const forced = findForcedCellsInLine(rows[i], grid[i]).filter(
-      (f) => f.value === 1
-    );
-    if (forced.length) return { i, j: forced[0].index, value: 1 };
-  }
-  for (let j = 0; j < cols.length; j++) {
-    const col = grid.map((row) => row[j]);
-    const forced = findForcedCellsInLine(cols[j], col).filter(
-      (f) => f.value === 1
-    );
-    if (forced.length) return { i: forced[0].index, j, value: 1 };
-  }
-  return null;
-};
-
-export const autoFillLines = (grid, rows, cols) => {
-  let changed = true;
-  const g = grid.map((row) => row.slice());
-  while (changed) {
-    changed = false;
-    rows.forEach((clue, i) => {
-      const line = g[i];
-      const solutions = getPossibleLineSolutions(clue, line);
-      if (solutions.length === 1) {
-        solutions[0].forEach((val, j) => {
-          const newVal = val ? 1 : -1;
-          if (g[i][j] !== newVal) {
-            g[i][j] = newVal;
-            changed = true;
-          }
-        });
-      }
-    });
-    cols.forEach((clue, j) => {
-      const col = g.map((row) => row[j]);
-      const solutions = getPossibleLineSolutions(clue, col);
-      if (solutions.length === 1) {
-        solutions[0].forEach((val, i) => {
-          const newVal = val ? 1 : -1;
-          if (g[i][j] !== newVal) {
-            g[i][j] = newVal;
-            changed = true;
-          }
-        });
-      }
-    });
-  }
-  return g;
-};
-
-export const validateSolution = (grid, rows, cols) => {
-  const rowsValid = grid.every((row, i) =>
-    JSON.stringify(lineToClues(row)) === JSON.stringify(rows[i])
-  );
-  const colsValid = cols.every((col, i) => {
-    const column = grid.map((row) => row[i]);
-    return JSON.stringify(lineToClues(column)) === JSON.stringify(col);
-  });
-  return rowsValid && colsValid;
-};
+export const validateSolution = (grid, rows, cols) => isSolved(grid, rows, cols);
 
 export const puzzles = [
   {
@@ -174,14 +63,27 @@ export const getPuzzleBySeed = (seed) => {
   return puzzles[hash % puzzles.length];
 };
 
-const nonogramUtils = {
-  lineToClues,
-  evaluateLine,
+export {
+  analyzeLine,
   generateLinePatterns,
   getPossibleLineSolutions,
-  findForcedCellsInLine,
-  findHint,
+  gridToClues,
+  isSolved,
+  lineToClues,
+  propagate,
+};
+
+const nonogramUtils = {
+  analyzeLine,
+  autoFill,
   autoFillLines,
+  findHint,
+  generateLinePatterns,
+  getPossibleLineSolutions,
+  gridToClues,
+  isSolved,
+  lineToClues,
+  propagate,
   validateSolution,
   getPuzzleBySeed,
   puzzles,
