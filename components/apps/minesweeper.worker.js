@@ -1,5 +1,5 @@
 self.onmessage = (e) => {
-  const { board, cells: starts } = e.data || {};
+  const { id, board, cells: starts } = e.data || {};
   const size = board.length;
   const visited = Array.from({ length: size }, () => Array(size).fill(false));
   const queue = [];
@@ -11,8 +11,9 @@ self.onmessage = (e) => {
   });
   const revealed = [];
   let hit = false;
-  while (queue.length) {
-    const [x, y] = queue.shift();
+  let head = 0;
+  while (head < queue.length) {
+    const [x, y] = queue[head++];
     const cell = board[x][y];
     if (cell.revealed || cell.flagged) continue;
     revealed.push([x, y]);
@@ -40,5 +41,5 @@ self.onmessage = (e) => {
       }
     }
   }
-  self.postMessage({ cells: revealed, hit });
+  self.postMessage({ id, cells: revealed, hit });
 };

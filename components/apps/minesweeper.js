@@ -1,9 +1,20 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import GameLayout from './GameLayout';
 import usePersistedState from '../../hooks/usePersistedState';
 import calculate3BV from '../../games/minesweeper/metrics';
 import { serializeBoard, deserializeBoard } from '../../games/minesweeper/save';
 import { getDailySeed } from '../../utils/dailySeed';
+import analyze from '../../games/minesweeper/solver';
+import {
+  applyReveal,
+  checkWin,
+  computeChord,
+  computeReveal,
+  ensureFirstClickSafe,
+  getSafeZone,
+  validateConfig,
+} from '../../games/minesweeper/logic';
+import { generateBoard } from '../../games/minesweeper/generator';
 
 /**
  * Classic Minesweeper implementation.
@@ -49,78 +60,6 @@ const hashSeed = (str) => {
 const cloneBoard = (board) =>
   board.map((row) => row.map((cell) => ({ ...cell })));
 
-const generateBoard = (size, minesCount, seed, sx, sy) => {
-  const board = Array.from({ length: size }, () =>
-    Array.from({ length: size }, () => ({
-      mine: false,
-      revealed: false,
-      flagged: false,
-      question: false,
-      adjacent: 0,
-    })),
-  );
-
-  const rng = mulberry32(seed);
-  const indices = Array.from({ length: size * size }, (_, i) => i);
-
-  // Fisher-Yates shuffle using seeded rng
-  for (let i = indices.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [indices[i], indices[j]] = [indices[j], indices[i]];
-  }
-
-  const safe = new Set();
-  for (let dx = -1; dx <= 1; dx++) {
-    for (let dy = -1; dy <= 1; dy++) {
-      const nx = sx + dx;
-      const ny = sy + dy;
-      if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
-        safe.add(nx * size + ny);
-      }
-    }
-  }
-
-  let placed = 0;
-  for (const idx of indices) {
-    if (placed >= minesCount) break;
-    if (safe.has(idx)) continue;
-    const x = Math.floor(idx / size);
-    const y = idx % size;
-    board[x][y].mine = true;
-    placed++;
-  }
-
-  const dirs = [-1, 0, 1];
-  for (let x = 0; x < size; x++) {
-    for (let y = 0; y < size; y++) {
-      if (board[x][y].mine) continue;
-      let count = 0;
-      dirs.forEach((dx) =>
-        dirs.forEach((dy) => {
-          if (dx === 0 && dy === 0) return;
-          const nx = x + dx;
-          const ny = y + dy;
-          if (
-            nx >= 0 &&
-            nx < size &&
-            ny >= 0 &&
-            ny < size &&
-            board[nx][ny].mine
-          ) {
-            count++;
-          }
-        }),
-      );
-      board[x][y].adjacent = count;
-    }
-  }
-  return board;
-};
-
-
-const checkWin = (board) =>
-  board.flat().every((cell) => cell.revealed || cell.mine);
-
 const parseCssColor = (value) => {
   if (!value) return { r: 0, g: 0, b: 0 };
   const trimmed = value.trim();
@@ -161,55 +100,6 @@ const lightenColor = (value, amount) =>
 const darkenColor = (value, amount) =>
   toRgbaString(mixRgb(parseCssColor(value), { r: 0, g: 0, b: 0 }, amount));
 
-const calculateRiskMap = (board) => {
-  if (!board) return null;
-  const size = board.length;
-  const risk = Array.from({ length: size }, () => Array(size).fill(0));
-  for (let x = 0; x < size; x++) {
-    for (let y = 0; y < size; y++) {
-      const cell = board[x][y];
-      if (cell.revealed || cell.flagged) continue;
-      let maxProb = 0;
-      for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
-          if (dx === 0 && dy === 0) continue;
-          const nx = x + dx;
-          const ny = y + dy;
-          if (nx < 0 || nx >= size || ny < 0 || ny >= size) continue;
-          const nCell = board[nx][ny];
-          if (!nCell.revealed || nCell.mine || nCell.adjacent === 0) continue;
-          let flagged = 0;
-          let hidden = 0;
-          for (let ox = -1; ox <= 1; ox++) {
-            for (let oy = -1; oy <= 1; oy++) {
-              if (ox === 0 && oy === 0) continue;
-              const mx = nx + ox;
-              const my = ny + oy;
-              if (
-                mx < 0 ||
-                mx >= size ||
-                my < 0 ||
-                my >= size
-              )
-                continue;
-              const around = board[mx][my];
-              if (around.flagged) flagged++;
-              if (!around.revealed && !around.flagged) hidden++;
-            }
-          }
-          const remaining = nCell.adjacent - flagged;
-          if (remaining > 0 && hidden > 0) {
-            const prob = remaining / hidden;
-            if (prob > maxProb) maxProb = prob;
-          }
-        }
-      }
-      risk[x][y] = maxProb;
-    }
-  }
-  return risk;
-};
-
 const Minesweeper = () => {
   const canvasRef = useRef(null);
   const audioRef = useRef(null);
@@ -219,6 +109,14 @@ const Minesweeper = () => {
       workerRef.current = new Worker(
         new URL('./minesweeper.worker.js', import.meta.url),
       );
+      workerRef.current.onmessage = (e) => {
+        const { id } = e.data || {};
+        const resolver = pending.current.get(id);
+        if (resolver) {
+          pending.current.delete(id);
+          resolver(e.data);
+        }
+      };
     } else {
       workerRef.current = null;
     }
@@ -260,6 +158,10 @@ const Minesweeper = () => {
   const [showRisk, setShowRisk] = usePersistedState(
     'minesweeperAssist',
     false,
+  );
+  const riskMap = useMemo(
+    () => (showRisk ? analyze(board).risk : null),
+    [board, showRisk],
   );
   const [useQuestionMarks, setUseQuestionMarks] = usePersistedState(
     'minesweeperQuestion',
@@ -519,8 +421,6 @@ const Minesweeper = () => {
       ctx.font = `${Math.max(12, cellSize * 0.6)}px 'Ubuntu Mono', monospace`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const riskMap = showRisk ? calculateRiskMap(board) : null;
-
       for (let x = 0; x < effectiveSize; x++) {
         for (let y = 0; y < effectiveSize; y++) {
           const cell = board ? board[x][y] : defaultCell;
@@ -786,56 +686,18 @@ const Minesweeper = () => {
     setLastWin(entry);
   };
 
+  const pending = useRef(new Map());
+  const requestIdRef = useRef(0);
+
   const computeRevealed = (board, starts) => {
     if (workerRef.current) {
+      const id = requestIdRef.current++;
       return new Promise((resolve) => {
-        workerRef.current.onmessage = (e) => resolve(e.data);
-        workerRef.current.postMessage({ board, cells: starts });
+        pending.current.set(id, resolve);
+        workerRef.current.postMessage({ id, board, cells: starts });
       });
     }
-    const size = board.length;
-    const visited = Array.from({ length: size }, () =>
-      Array(size).fill(false),
-    );
-    const queue = [];
-    starts.forEach(([sx, sy]) => {
-      if (sx >= 0 && sx < size && sy >= 0 && sy < size && !visited[sx][sy]) {
-        visited[sx][sy] = true;
-        queue.push([sx, sy]);
-      }
-    });
-    const cells = [];
-    let hit = false;
-    while (queue.length) {
-      const [x, y] = queue.shift();
-      const cell = board[x][y];
-      if (cell.revealed || cell.flagged) continue;
-      cells.push([x, y]);
-      if (cell.mine) {
-        hit = true;
-        continue;
-      }
-      if (cell.adjacent === 0) {
-        for (let dx = -1; dx <= 1; dx++) {
-          for (let dy = -1; dy <= 1; dy++) {
-            if (dx === 0 && dy === 0) continue;
-            const nx = x + dx;
-            const ny = y + dy;
-            if (
-              nx >= 0 &&
-              nx < size &&
-              ny >= 0 &&
-              ny < size &&
-              !visited[nx][ny]
-            ) {
-              visited[nx][ny] = true;
-              queue.push([nx, ny]);
-            }
-          }
-        }
-      }
-    }
-    return Promise.resolve({ cells, hit });
+    return Promise.resolve(computeReveal(board, starts));
   };
 
   const revealWave = async (newBoard, sx, sy, onComplete) => {
@@ -867,7 +729,15 @@ const Minesweeper = () => {
 
   const startGame = async (x, y) => {
     flagAnim.current = {};
-    const newBoard = generateBoard(config.size, config.mines, seed, x, y);
+    const validated = validateConfig(config.size, config.mines, { start: [x, y] });
+    const generated = generateBoard(seed, {
+      size: validated.size,
+      mines: validated.mines,
+      startX: x,
+      startY: y,
+    });
+    const newBoard = ensureFirstClickSafe(generated, [x, y], seed);
+    setConfig((prev) => ({ ...prev, ...validated }));
     setBoard(newBoard);
     setStatus('playing');
     setStartTime(Date.now());
@@ -904,61 +774,8 @@ const Minesweeper = () => {
     const cell = newBoard[x][y];
 
     if (cell.revealed) {
-      if (cell.adjacent > 0) {
-        let flagged = 0;
-        for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
-          if (dx === 0 && dy === 0) continue;
-          const nx = x + dx;
-          const ny = y + dy;
-          if (
-            nx >= 0 &&
-            nx < newBoard.length &&
-            ny >= 0 &&
-            ny < newBoard.length &&
-            newBoard[nx][ny].flagged
-          ) {
-            flagged++;
-          }
-        }
-        }
-        if (flagged === cell.adjacent) {
-          for (let dx = -1; dx <= 1; dx++) {
-          for (let dy = -1; dy <= 1; dy++) {
-            if (dx === 0 && dy === 0) continue;
-            const nx = x + dx;
-            const ny = y + dy;
-            if (
-              nx >= 0 &&
-              nx < newBoard.length &&
-              ny >= 0 &&
-              ny < newBoard.length &&
-              !newBoard[nx][ny].flagged
-            ) {
-              const { hit, cells: revealed } = await computeRevealed(
-                newBoard,
-                [[nx, ny]],
-                );
-                revealed.forEach(([cx, cy]) => {
-                  newBoard[cx][cy].revealed = true;
-                });
-                if (hit) {
-                  setBoard(newBoard);
-                  setStatus('lost');
-                  const time = (Date.now() - startTime) / 1000;
-                  setElapsed(time);
-                  const finalBV = calculate3BV(newBoard);
-                  setBV(finalBV);
-                  setBVPS(time > 0 ? finalBV / time : finalBV);
-                  playSound('boom');
-                  setAriaMessage('Boom! Game over');
-                  return;
-                }
-              }
-            }
-          }
-        }
-      }
+      await handleChord(x, y);
+      return;
     } else {
       if (cell.mine) {
         const { cells: revealed } = await computeRevealed(newBoard, [[x, y]]);
@@ -1038,64 +855,27 @@ const Minesweeper = () => {
 
   const handleChord = async (x, y) => {
     if (status !== 'playing' || paused || !board) return;
-    const newBoard = cloneBoard(board);
-    const cell = newBoard[x][y];
-    if (!cell.revealed || cell.adjacent === 0) return;
-    let flagged = 0;
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
-        if (dx === 0 && dy === 0) continue;
-        const nx = x + dx;
-        const ny = y + dy;
-        if (
-          nx >= 0 &&
-          nx < newBoard.length &&
-          ny >= 0 &&
-          ny < newBoard.length &&
-          newBoard[nx][ny].flagged
-        ) {
-          flagged++;
-        }
+    const result = computeChord(board, x, y);
+    if (!result) return;
+    const { hit, cells } = result;
+    const updated = applyReveal(board, cells);
+    setBoard(updated);
+    if (hit) {
+      setStatus('lost');
+      const time = (Date.now() - startTime) / 1000;
+      setElapsed(time);
+      const finalBV = calculate3BV(updated);
+      setBV(finalBV);
+      setBVPS(time > 0 ? finalBV / time : finalBV);
+      playSound('boom');
+      if (cells.length) {
+        const [mx, my] = cells[0];
+        spawnExplosion(mx, my);
       }
+      setAriaMessage('Boom! Game over');
+      return;
     }
-    if (flagged !== cell.adjacent) return;
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
-        if (dx === 0 && dy === 0) continue;
-        const nx = x + dx;
-        const ny = y + dy;
-        if (
-          nx >= 0 &&
-          nx < newBoard.length &&
-          ny >= 0 &&
-          ny < newBoard.length &&
-          !newBoard[nx][ny].flagged
-        ) {
-          const { hit, cells: revealed } = await computeRevealed(
-            newBoard,
-            [[nx, ny]],
-          );
-          revealed.forEach(([cx, cy]) => {
-            newBoard[cx][cy].revealed = true;
-          });
-          if (hit) {
-            setBoard(newBoard);
-            setStatus('lost');
-            const time = (Date.now() - startTime) / 1000;
-            setElapsed(time);
-            const finalBV = calculate3BV(newBoard);
-            setBV(finalBV);
-            setBVPS(time > 0 ? finalBV / time : finalBV);
-            playSound('boom');
-            spawnExplosion(nx, ny);
-            setAriaMessage('Boom! Game over');
-            return;
-          }
-        }
-      }
-    }
-    setBoard(newBoard);
-    checkAndHandleWin(newBoard);
+    checkAndHandleWin(updated);
   };
 
   const handleMouseDown = (e) => {

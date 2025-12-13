@@ -1,5 +1,6 @@
 import type { Cell } from './save';
 import { calculate3BV } from './metrics';
+import { getSafeZone, validateConfig, recomputeAdjacents } from './logic';
 
 interface GenerateOptions {
   size?: number;
@@ -22,8 +23,11 @@ export function generateBoard(
   seed: number,
   { size = 8, mines = 10, startX = 0, startY = 0 }: GenerateOptions = {},
 ): Cell[][] {
-  const board: Cell[][] = Array.from({ length: size }, () =>
-    Array.from({ length: size }, () => ({
+  const validated = validateConfig(size, mines, {
+    start: [startX, startY],
+  });
+  const board: Cell[][] = Array.from({ length: validated.size }, () =>
+    Array.from({ length: validated.size }, () => ({
       mine: false,
       revealed: false,
       flagged: false,
@@ -33,7 +37,7 @@ export function generateBoard(
   );
 
   const rng = mulberry32(seed);
-  const indices = Array.from({ length: size * size }, (_, i) => i);
+  const indices = Array.from({ length: validated.size * validated.size }, (_, i) => i);
 
   // Fisher-Yates shuffle using seeded rng
   for (let i = indices.length - 1; i > 0; i--) {
@@ -41,45 +45,19 @@ export function generateBoard(
     [indices[i], indices[j]] = [indices[j], indices[i]];
   }
 
-  const safe = new Set<number>();
-  for (let dx = -1; dx <= 1; dx++) {
-    for (let dy = -1; dy <= 1; dy++) {
-      const nx = startX + dx;
-      const ny = startY + dy;
-      if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
-        safe.add(nx * size + ny);
-      }
-    }
-  }
+  const safe = getSafeZone(validated.size, [startX, startY]);
 
   let placed = 0;
   for (const idx of indices) {
-    if (placed >= mines) break;
+    if (placed >= validated.mines) break;
     if (safe.has(idx)) continue;
-    const x = Math.floor(idx / size);
-    const y = idx % size;
+    const x = Math.floor(idx / validated.size);
+    const y = idx % validated.size;
     board[x][y].mine = true;
     placed++;
   }
 
-  const dirs = [-1, 0, 1];
-  for (let x = 0; x < size; x++) {
-    for (let y = 0; y < size; y++) {
-      if (board[x][y].mine) continue;
-      let count = 0;
-      for (const dx of dirs) {
-        for (const dy of dirs) {
-          if (dx === 0 && dy === 0) continue;
-          const nx = x + dx;
-          const ny = y + dy;
-          if (nx >= 0 && nx < size && ny >= 0 && ny < size && board[nx][ny].mine) {
-            count++;
-          }
-        }
-      }
-      board[x][y].adjacent = count;
-    }
-  }
+  recomputeAdjacents(board);
 
   return board;
 }

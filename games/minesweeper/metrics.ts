@@ -32,9 +32,10 @@ export function calculate3BV(board: Cell[][]): number {
         continue;
       bv++;
       const queue: [number, number][] = [[x, y]];
+      let head = 0;
       visited[x][y] = true;
-      while (queue.length) {
-        const [cx, cy] = queue.shift()!;
+      while (head < queue.length) {
+        const [cx, cy] = queue[head++];
         for (const dx of dirs) {
           for (const dy of dirs) {
             if (dx === 0 && dy === 0) continue;
