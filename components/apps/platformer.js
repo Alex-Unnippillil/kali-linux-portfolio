@@ -10,6 +10,7 @@ import {
   isLevelComplete,
   physics,
 } from '../../public/apps/platformer/engine.js';
+import { assetUrl } from '../../utils/assetUrl';
 
 const TILE_SIZE = 16;
 
@@ -71,9 +72,13 @@ const Platformer = () => {
 
   // load list of levels
   useEffect(() => {
-    fetch('/apps/platformer/levels.json')
+    fetch(assetUrl('/apps/platformer/levels.json'))
       .then((r) => r.json())
-      .then((d) => setLevels(d.levels || []));
+      .then((d) =>
+        setLevels(
+          (d.levels || []).map((p) => assetUrl(`/apps/platformer/${p}`)),
+        ),
+      );
   }, []);
 
   // load current level data
