@@ -1,7 +1,8 @@
-"use client"
+"use client";
 
 import React, { useEffect, useState } from 'react'
 import Image from 'next/image'
+import { useSettings } from '../../hooks/useSettings'
 
 export const BOOT_MESSAGES = [
     'Securing environment',
@@ -12,48 +13,77 @@ export const BOOT_MESSAGES = [
 export const BOOT_MESSAGE_INTERVAL_MS = 360
 
 function BootingScreen(props) {
+    const { reducedMotion: settingsReducedMotion } = useSettings()
+    const [prefersReducedMotion, setPrefersReducedMotion] = useState(
+        typeof settingsReducedMotion === 'boolean' ? settingsReducedMotion : false,
+    )
+
     const isVisible = props.visible || props.isShutDown
     const visibilityClass = isVisible ? 'visible opacity-100' : 'invisible opacity-0'
     const [activeMessageIndex, setActiveMessageIndex] = useState(0)
 
     const isBooting = props.visible && !props.isShutDown
 
+    // Mirror user preference from settings and fall back to media query for deterministic motion control.
     useEffect(() => {
-        if (!isBooting) {
-            setActiveMessageIndex(0)
-            return
+        if (typeof settingsReducedMotion === 'boolean') {
+            setPrefersReducedMotion(settingsReducedMotion)
+            return undefined
         }
 
-        setActiveMessageIndex(0)
+        const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+        const handleChange = () => setPrefersReducedMotion(mediaQuery.matches)
 
-        const intervalId = window.setInterval(() => {
-            setActiveMessageIndex((prevIndex) => {
-                if (prevIndex >= BOOT_MESSAGES.length - 1) {
-                    window.clearInterval(intervalId)
-                    return prevIndex
-                }
+        handleChange()
+        mediaQuery.addEventListener('change', handleChange)
 
-                return prevIndex + 1
-            })
-        }, BOOT_MESSAGE_INTERVAL_MS)
+        return () => mediaQuery.removeEventListener('change', handleChange)
+    }, [settingsReducedMotion])
 
+    useEffect(() => {
+        let intervalId = null
+
+        if (!isBooting) {
+            setActiveMessageIndex(0)
+        } else {
+            setActiveMessageIndex(0)
+
+            intervalId = window.setInterval(() => {
+                setActiveMessageIndex((prevIndex) => {
+                    if (prevIndex >= BOOT_MESSAGES.length - 1) {
+                        window.clearInterval(intervalId)
+                        return prevIndex
+                    }
+
+                    return prevIndex + 1
+                })
+            }, BOOT_MESSAGE_INTERVAL_MS)
+        }
+
+        // Ensure interval cleanup survives rapid visibility toggles.
         return () => {
-            window.clearInterval(intervalId)
+            if (intervalId !== null) {
+                window.clearInterval(intervalId)
+            }
         }
     }, [isBooting])
 
     const bootMessages = BOOT_MESSAGES
 
+    const transitionVisibilityClass = prefersReducedMotion
+        ? 'transition-opacity duration-200'
+        : 'transition-opacity duration-700'
+
     return (
         <div
             role="status"
             aria-live="polite"
-            aria-busy={props.visible}
+            aria-busy={isBooting}
             style={{
-                ...(isVisible ? { zIndex: '2147483647' } : { zIndex: '-20' }),
+                ...(isVisible ? { zIndex: '2147483647' } : { zIndex: '-20' }), // Keep hidden layers beneath focusable UI.
                 contentVisibility: 'auto',
             }}
-            className={`${visibilityClass} absolute inset-0 select-none overflow-hidden transition-opacity duration-700`}
+            className={`${visibilityClass} absolute inset-0 select-none overflow-hidden ${transitionVisibilityClass}`}
         >
             <div className={`${visibilityClass} relative flex h-full w-full flex-col items-center justify-center gap-12 bg-[#030712] text-slate-100`}>
                 <div className="pointer-events-none absolute inset-0">
@@ -84,7 +114,14 @@ function BootingScreen(props) {
                         type="button"
                         onClick={props.turnOn}
                         disabled={!props.isShutDown}
-                        className={`group relative flex h-20 w-20 items-center justify-center rounded-full border border-slate-700/40 transition duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70 ${props.isShutDown ? 'cursor-pointer hover:scale-105 hover:border-sky-400/60' : 'cursor-default opacity-80'}`}
+                        aria-disabled={!props.isShutDown}
+                        className={`group relative flex h-20 w-20 items-center justify-center rounded-full border border-slate-700/40 ${
+                            prefersReducedMotion ? 'transition-colors duration-150' : 'transition duration-300'
+                        } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70 ${
+                            props.isShutDown
+                                ? `cursor-pointer hover:border-sky-400/60 ${prefersReducedMotion ? '' : 'hover:scale-105'}`
+                                : 'cursor-default opacity-80'
+                        }`}
                         aria-label={props.isShutDown ? 'Start Kali desktop' : 'Booting Kali desktop'}
                     >
                         {props.isShutDown ? (
@@ -94,7 +131,11 @@ function BootingScreen(props) {
                         ) : (
                             <div className="relative flex h-14 w-14 items-center justify-center">
                                 <div className="absolute inset-0 rounded-full border border-slate-700/40" />
-                                <div className="absolute inset-0 rounded-full border-4 border-sky-400/80 border-t-transparent border-l-transparent animate-[spin_2.6s_linear_infinite]" />
+                                <div
+                                    className={`absolute inset-0 rounded-full border-4 border-sky-400/80 border-t-transparent border-l-transparent ${
+                                        prefersReducedMotion ? '' : 'animate-[spin_2.6s_linear_infinite]'
+                                    }`}
+                                />
                                 <div className="absolute inset-[30%] rounded-full bg-slate-900" />
                             </div>
                         )}
@@ -105,12 +146,14 @@ function BootingScreen(props) {
                             const isActive = isBooting && index === activeMessageIndex
                             const isComplete = isBooting && index < activeMessageIndex
                             const state = isActive ? 'active' : isComplete ? 'complete' : 'upcoming'
+                            const itemTransitionClass = prefersReducedMotion ? 'transition-none duration-0' : 'transition-all duration-500'
+                            const textTransitionClass = prefersReducedMotion ? 'transition-none duration-0' : 'transition-opacity duration-500'
 
                             return (
                                 <li
                                     key={message}
                                     data-state={state}
-                                    className={`flex items-center gap-3 transition-all duration-500 ${
+                                    className={`flex items-center gap-3 ${itemTransitionClass} ${
                                         isActive
                                             ? 'translate-x-0 text-sky-100 drop-shadow-[0_0_16px_rgba(56,189,248,0.55)]'
                                             : isComplete
@@ -119,16 +162,16 @@ function BootingScreen(props) {
                                     }`}
                                 >
                                     <span
-                                        className={`inline-flex h-2 w-2 rounded-full transition-all duration-500 ${
+                                        className={`inline-flex h-2 w-2 rounded-full ${itemTransitionClass} ${
                                             isActive
                                                 ? 'bg-sky-400/80 shadow-[0_0_12px_rgba(56,189,248,0.7)]'
                                                 : isComplete
                                                   ? 'bg-emerald-400/70 shadow-[0_0_6px_rgba(16,185,129,0.6)]'
                                                   : 'bg-slate-600/60'
-                                        } ${isActive ? 'animate-[pulse_2s_ease-in-out_infinite]' : ''}`}
+                                        } ${!prefersReducedMotion && isActive ? 'animate-[pulse_2s_ease-in-out_infinite]' : ''}`}
                                         aria-hidden
                                     />
-                                    <span className={`transition-opacity duration-500 ${isActive ? 'opacity-100' : 'opacity-80'}`}>
+                                    <span className={`${textTransitionClass} ${isActive ? 'opacity-100' : 'opacity-80'}`}>
                                         {message}
                                     </span>
                                 </li>
