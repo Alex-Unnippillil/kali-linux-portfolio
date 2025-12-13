@@ -1,96 +1,131 @@
-export interface SimonState {
-  /** remaining lives for the player */
-  lives: number;
-  /** current difficulty level */
-  difficulty: number;
-  /** seconds remaining before the next round starts */
-  countdown: number;
-  /** whether strict mode is enabled */
-  strict: boolean;
-  /** current speed level */
-  speed: number;
+import seedrandom from 'seedrandom';
+
+export type SimonPhase = 'idle' | 'playback' | 'input' | 'strike' | 'gameover';
+
+export interface SimonOptions {
+  mode: 'classic' | 'speed' | 'endless' | 'colorblind';
+  tempoBpm: number;
+  playMode: 'normal' | 'strict';
+  timing: 'relaxed' | 'strict';
+  seed: string;
 }
 
-export const INITIAL_LIVES = 3;
-export const INITIAL_DIFFICULTY = 1;
-export const INITIAL_SPEED = 1;
+export interface SimonState {
+  phase: SimonPhase;
+  sequence: number[];
+  inputIndex: number;
+  score: number;
+  lastError?: 'wrong' | 'timeout';
+  roundId: number;
+}
 
-/**
- * Create a new Simon game state.
- */
-export const createState = (
-  lives: number = INITIAL_LIVES,
-  difficulty: number = INITIAL_DIFFICULTY,
-  strict = false,
-  speed: number = INITIAL_SPEED,
-): SimonState => ({ lives, difficulty, countdown: 0, strict, speed });
-
-/**
- * Begin a round countdown.
- *
- * @param state Current game state
- * @param seconds Number of seconds before the round begins
- */
-export const startCountdown = (
-  state: SimonState,
-  seconds: number,
-): SimonState => ({ ...state, countdown: seconds });
-
-/**
- * Advance the countdown timer by one second.
- */
-export const tick = (state: SimonState): SimonState => ({
-  ...state,
-  countdown: Math.max(0, state.countdown - 1),
-});
-
-/**
- * Decrease a life and automatically adjust difficulty.
- */
-export const loseLife = (state: SimonState): SimonState => {
-  if (state.strict) {
-    // restart the game when strict mode is enabled
-    return createState(INITIAL_LIVES, INITIAL_DIFFICULTY, true, INITIAL_SPEED);
-  }
-  const lives = Math.max(0, state.lives - 1);
-  return { ...state, lives, difficulty: adjustDifficulty(state.difficulty, lives) };
+export const initialSimonState: SimonState = {
+  phase: 'idle',
+  sequence: [],
+  inputIndex: 0,
+  score: 0,
+  roundId: 0,
 };
 
-/**
- * Increase a life and automatically adjust difficulty.
- */
-export const gainLife = (state: SimonState): SimonState => {
-  const lives = state.lives + 1;
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+
+export function padAt(seed: string, index: number): number {
+  if (seed) {
+    const rng = seedrandom(`${seed}:${index}`);
+    return Math.floor(rng() * 4);
+  }
+
+  const buffer = new Uint8Array(1);
+  if (typeof globalThis.crypto?.getRandomValues === 'function') {
+    globalThis.crypto.getRandomValues(buffer);
+  } else {
+    buffer[0] = Math.floor(Math.random() * 256);
+  }
+  return buffer[0] % 4;
+}
+
+export function stepSeconds(opts: SimonOptions, level: number): number {
+  const base = 60 / opts.tempoBpm;
+  if (opts.mode === 'endless') return base;
+
+  const reduction = opts.mode === 'speed' ? 0.03 : 0.015;
+  const speedFactor = Math.pow(0.9, Math.floor(level / 5));
+  const raw = (base - level * reduction) * speedFactor;
+
+  return clamp(raw, 0.2, 2.0);
+}
+
+export function inputWindowMs(opts: SimonOptions, level: number): number | null {
+  if (opts.timing !== 'strict') return null;
+
+  const sec = stepSeconds(opts, level);
+  const beatsAllowed = 3;
+  const ms = beatsAllowed * sec * 1000;
+
+  return clamp(ms, 900, 4500);
+}
+
+export function startGame(state: SimonState, options: SimonOptions): SimonState {
+  const firstPad = padAt(options.seed, 0);
+  return {
+    ...initialSimonState,
+    phase: 'playback',
+    sequence: [firstPad],
+    roundId: state.roundId + 1,
+  };
+}
+
+export function playbackComplete(state: SimonState): SimonState {
+  if (state.phase !== 'playback') return state;
+  return { ...state, phase: 'input', inputIndex: 0, lastError: undefined };
+}
+
+export function replayAfterStrike(state: SimonState): SimonState {
+  if (state.phase !== 'strike') return state;
   return {
     ...state,
-    lives,
-    difficulty: adjustDifficulty(state.difficulty, lives),
-    speed: state.speed + 1,
+    phase: 'playback',
+    inputIndex: 0,
+    lastError: undefined,
+    roundId: state.roundId + 1,
   };
-};
+}
 
-/**
- * Compute a new difficulty based on the current number of lives.
- *
- * The game becomes slightly easier when the player is down to a single life
- * and ramps up again as more lives are available.
- */
-export const adjustDifficulty = (current: number, lives: number): number => {
-  if (lives <= 1) return Math.max(1, current - 1);
-  return current + 1;
-};
+export function handleInput(
+  state: SimonState,
+  pad: number,
+  options: SimonOptions,
+): SimonState {
+  if (state.phase !== 'input') return state;
 
-/**
- * Helper to determine if the game has ended.
- */
-export const isGameOver = (state: SimonState): boolean => state.lives === 0;
+  const expected = state.sequence[state.inputIndex];
+  if (expected !== pad) {
+    const nextPhase = options.playMode === 'strict' ? 'gameover' : 'strike';
+    return { ...state, phase: nextPhase, lastError: 'wrong' };
+  }
 
-/**
- * Advance to the next level and increase speed.
- */
-export const nextLevel = (state: SimonState): SimonState => ({
-  ...state,
-  difficulty: state.difficulty + 1,
-  speed: state.speed + 1,
-});
+  const nextIndex = state.inputIndex + 1;
+  if (nextIndex === state.sequence.length) {
+    const nextPad = padAt(options.seed, state.sequence.length);
+    return {
+      phase: 'playback',
+      sequence: [...state.sequence, nextPad],
+      inputIndex: 0,
+      score: state.score + 1,
+      lastError: undefined,
+      roundId: state.roundId + 1,
+    };
+  }
 
+  return { ...state, inputIndex: nextIndex };
+}
+
+export function handleTimeout(
+  state: SimonState,
+  options: SimonOptions,
+): SimonState {
+  if (state.phase !== 'input') return state;
+  const nextPhase = options.playMode === 'strict' ? 'gameover' : 'strike';
+  return { ...state, phase: nextPhase, lastError: 'timeout' };
+}

@@ -1,4 +1,11 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import { Howl } from "howler";
 import seedrandom from "seedrandom";
 import GameLayout from "./GameLayout";
@@ -9,6 +16,19 @@ import {
   playColorTone,
   createToneSchedule,
 } from "../../utils/audio";
+import TempoSelector, {
+  isValidTempo,
+} from "../../games/simon/components/TempoSelector";
+import {
+  handleInput,
+  handleTimeout,
+  initialSimonState,
+  inputWindowMs,
+  playbackComplete,
+  replayAfterStrike,
+  startGame,
+  stepSeconds,
+} from "../../games/simon/logic";
 
 const padStyles = [
   {
@@ -52,48 +72,41 @@ const padStyles = [
 const ERROR_SOUND_SRC =
   "data:audio/wav;base64,UklGRmQGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YUAGAACAq9Ht/f3v1K+EWTIVBAIPKU54o8vp+/7z2raMYDkZBgELI0ZwnMTk+f/2372UaD8eCQEJHj9olL3f9v/55MSccEYjCwEGGTlgjLba8/776cujeE4pDwIEFTJZhK/U7/397dGrgFUvEwMDESxRfKfO6/z+8deyiF01FwUCDSZKdKDH5/r/9d26kGQ8HAcBCiFDbJjB4vf/9+LBmGxDIQoBBxw8ZJC63fX/+ufHoHRKJg0CBRc1XYiy1/H+/OvOp3xRLBEDAxMvVYCr0e39/e/Ur4RZMhUEAg8pTnijy+n7/vPatoxgORkGAQsjRnCcxOT5//bfvZRoPx4JAQkeP2iUvd/2//nkxJxwRiMLAQYZOWCMttrz/vvpy6N4TikPAgQVMlmEr9Tv/f3t0auAVS8TAwMRLFF8p87r/P7x17KIXTUXBQINJkp0oMfn+v/13bqQZDwcBwEKIUNsmMHi9//34sGYbEMhCgEHHDxkkLrd9f/658egdEomDQIFFzVdiLLX8f78686nfFEsEQMDEy9VgKvR7f3979SvhFkyFQQCDylOeKPL6fv+89q2jGA5GQYBCyNGcJzE5Pn/9t+9lGg/HgkBCR4/aJS93/b/+eTEnHBGIwsBBhk5YIy22vP+++nLo3hOKQ8CBBUyWYSv1O/9/e3Rq4BVLxMDAxEsUXynzuv8/vHXsohdNRcFAg0mSnSgx+f6//XdupBkPBwHAQohQ2yYweL3//fiwZhsQyEKAQccPGSQut31//rnx6B0SiYNAgUXNV2Istfx/vzrzqd8USwRAwMTL1WAq9Ht/f3v1K+EWTIVBAIPKU54o8vp+/7z2raMYDkZBgELI0ZwnMTk+f/2372UaD8eCQEJHj9olL3f9v/55MSccEYjCwEGGTlgjLba8/776cujeE4pDwIEFTJZhK/U7/397dGrgFUvEwMDESxRfKfO6/z+8deyiF01FwUCDSZKdKDH5/r/9d26kGQ8HAcBCiFDbJjB4vf/9+LBmGxDIQoBBxw8ZJC63fX/+ufHoHRKJg0CBRc1XYiy1/H+/OvOp3xRLBEDAxMvVYCr0e39/e/Ur4RZMhUEAg8pTnijy+n7/vPatoxgORkGAQsjRnCcxOT5//bfvZRoPx4JAQkeP2iUvd/2//nkxJxwRiMLAQYZOWCMttrz/vvpy6N4TikPAgQVMlmEr9Tv/f3t0auAVS8TAwMRLFF8p87r/P7x17KIXTUXBQINJkp0oMfn+v/13bqQZDwcBwEKIUNsmMHi9//34sGYbEMhCgEHHDxkkLrd9f/658egdEomDQIFFzVdiLLX8f78686nfFEsEQMDEy9VgKvR7f3979SvhFkyFQQCDylOeKPL6fv+89q2jGA5GQYBCyNGcJzE5Pn/9t+9lGg/HgkBCR4/aJS93/b/+eTEnHBGIwsBBhk5YIy22vP+++nLo3hOKQ8CBBUyWYSv1O/9/e3Rq4BVLxMDAxEsUXynzuv8/vHXsohdNRcFAg0mSnSgx+f6//XdupBkPBwHAQohQ2yYweL3//fiwZhsQyEKAQccPGSQut31//rnx6B0SiYNAgUXNV2Istfx/vzrzqd8USwRAwMTL1WAq9Ht/f3v1K+EWTIVBAIPKU54o8vp+/7z2raMYDkZBgELI0ZwnMTk+f/2372UaD8eCQEJHj9olL3f9v/55MSccEYjCwEGGTlgjLba8/776cujeE4pDwIEFTJZhK/U7/397dGrgFUvEwMDESxRfKfO6/z+8deyiF01FwUCDSZKdKDH5/r/9d26kGQ8HAcBCiFDbJjB4vf/9+LBmGxDIQoBBxw8ZJC63fX/+ufHoHRKJg0CBRc1XYiy1/H+/OvOp3xRLBEDAxMvVYCr0e39/e/Ur4RZMhUEAg8pTnijy+n7/vPatoxgORkGAQsjRnCcxOT5//bfvZRoPx4JAQkeP2iUvd/2//nkxJxwRiMLAQYZOWCMttrz/vvpy6N4TikPAgQVMlmEr9Tv/f3t0auAVS8TAwMRLFF8p87r/P7x17KIXTUXBQINJkp0oMfn+v/13bqQZDwcBwEKIUNsmMHi9//34sGYbEMhCgEHHDxkkLrd9f/658egdEomDQIFFzVdiLLX8f78686nfFEsEQMDEy9V";
 
-/**
- * Generate a sequence of pad indexes.
- *
- * @param {number} length length of the sequence
- * @param {string|number} seed optional seed for deterministic results
- * @returns {number[]} sequence of numbers between 0 and 3
- */
-export const generateSequence = (length, seed) => {
-  if (seed) {
-    const rng = seedrandom(seed);
-    const seq = new Array(length);
-    for (let i = 0; i < length; i += 1) {
-      seq[i] = Math.floor(rng() * 4);
-    }
-    return seq;
+const reducer = (state, action) => {
+  switch (action.type) {
+    case "RESET":
+      return initialSimonState;
+    case "START":
+      return startGame(state, action.options);
+    case "PLAYBACK_DONE":
+      return playbackComplete(state);
+    case "INPUT":
+      return handleInput(state, action.pad, action.options);
+    case "TIMEOUT":
+      return handleTimeout(state, action.options);
+    case "REPLAY":
+      return replayAfterStrike(state);
+    default:
+      return state;
   }
+};
 
-  const values = new Uint8Array(length);
-  if (typeof globalThis.crypto?.getRandomValues === "function") {
-    globalThis.crypto.getRandomValues(values);
-  } else {
-    for (let i = 0; i < length; i += 1) {
-      values[i] = Math.floor(Math.random() * 256);
-    }
+const shufflePads = (seed) => {
+  const rng = seedrandom(seed || undefined);
+  const shuffled = [...padStyles];
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-
-  for (let i = 0; i < length; i += 1) {
-    values[i] &= 3;
-  }
-
-  return Array.from(values);
+  return shuffled;
 };
 
 const Simon = () => {
   const [pads, setPads] = useState(padStyles);
-  const [sequence, setSequence] = useState([]);
-  const [step, setStep] = useState(0);
-  const [isPlayerTurn, setIsPlayerTurn] = useState(false);
+  const [gameState, dispatch] = useReducer(reducer, initialSimonState);
   const [activePad, setActivePad] = useState(null);
-  const [status, setStatus] = useState("Press Start");
   const [mode, setMode] = usePersistentState("simon_mode", "classic");
-  const [tempo, setTempo] = usePersistentState("simon_tempo", 100);
+  const [tempo, setTempo] = usePersistentState("simon:tempo", 100, isValidTempo);
   const [striped, setStriped] = usePersistentState("simon_striped", false);
   const [thickOutline, setThickOutline] = usePersistentState(
     "simon_thick_outline",
@@ -121,11 +134,33 @@ const Simon = () => {
     "simon_leaderboard",
     {},
   );
-  const errorSound = useRef(null);
-  const rngRef = useRef(Math.random);
-  const timeoutRef = useRef(null);
   const [errorFlash, setErrorFlash] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  const errorSound = useRef(null);
+  const timersRef = useRef([]);
+  const inputTimerRef = useRef(null);
+  const roundRef = useRef(gameState.roundId);
+
+  useEffect(() => {
+    roundRef.current = gameState.roundId;
+  }, [gameState.roundId]);
+
+  const options = useMemo(
+    () => ({ mode, tempoBpm: tempo, playMode, timing, seed }),
+    [mode, tempo, playMode, timing, seed],
+  );
+
+  const clearTimers = useCallback(() => {
+    timersRef.current.forEach((id) => clearTimeout(id));
+    timersRef.current = [];
+    if (inputTimerRef.current) {
+      clearTimeout(inputTimerRef.current);
+      inputTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => () => clearTimers(), [clearTimers]);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -135,9 +170,18 @@ const Simon = () => {
     return () => media.removeEventListener("change", handleChange);
   }, []);
 
+  const flashPad = useCallback(
+    (idx, duration) => {
+      setActivePad(idx);
+      const handle = setTimeout(() => setActivePad(null), duration * 1000);
+      timersRef.current.push(handle);
+    },
+    [],
+  );
+
   const updateHighScores = useCallback(
     (score) => {
-      const key = `${mode}-${timing}`;
+      const key = `${mode}-${timing}-${playMode}`;
       setLeaderboard((prev) => {
         const current = Array.isArray(prev[key]) ? [...prev[key]] : [];
         current.push(score);
@@ -145,198 +189,143 @@ const Simon = () => {
         return { ...prev, [key]: current.slice(0, 5) };
       });
     },
-    [mode, timing, setLeaderboard],
+    [mode, playMode, timing, setLeaderboard],
   );
 
-  const flashPad = useCallback(
-    (idx, duration) => {
-      if (!prefersReducedMotion) vibrate(50);
-      if (audioOnly) return;
-      window.requestAnimationFrame(() => setActivePad(idx));
-      setTimeout(
-        () => window.requestAnimationFrame(() => setActivePad(null)),
-        duration * 1000,
-      );
-    },
-    [audioOnly, prefersReducedMotion],
-  );
-
-  const stepDuration = useCallback(() => {
-    const base = 60 / tempo;
-    if (mode === "endless") return base;
-    const reduction = mode === "speed" ? 0.03 : 0.015;
-    const level = sequence.length;
-    const speedFactor = Math.pow(0.9, Math.floor(level / 5));
-    return Math.max((base - level * reduction) * speedFactor, 0.2);
-  }, [tempo, mode, sequence.length]);
-
-  const playSequence = useCallback(() => {
-    const ctx = getAudioContext();
-    setIsPlayerTurn(false);
-    setStatus("Listen...");
-    const start = ctx.currentTime + 0.1;
-    const baseDelta = stepDuration();
-    const ramp = 0.97;
-    const schedule = createToneSchedule(
-      sequence.length,
-      start,
-      baseDelta,
-      ramp,
-    );
-    let currentDelta = baseDelta;
-    let finalDelta = baseDelta;
-    schedule.forEach((time, i) => {
-      const idx = sequence[i];
-      playColorTone(idx, time, currentDelta);
-      const delay = (time - ctx.currentTime) * 1000;
-      setTimeout(() => flashPad(idx, currentDelta), delay);
-      finalDelta = currentDelta;
-      currentDelta *= ramp;
-    });
-    const totalDelay =
-      (schedule[schedule.length - 1] - ctx.currentTime + finalDelta) * 1000;
-    setTimeout(() => {
-      setStatus("Your turn");
-      setIsPlayerTurn(true);
-      setStep(0);
-    }, totalDelay);
-  }, [flashPad, sequence, stepDuration]);
-
   useEffect(() => {
-    if (sequence.length && !isPlayerTurn) {
-      playSequence();
-    }
-  }, [sequence, isPlayerTurn, playSequence]);
-
-  useEffect(() => {
-    if (timing !== "strict" || !isPlayerTurn) {
-      clearTimeout(timeoutRef.current);
-      return;
-    }
-    clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
+    let timer;
+    if (
+      (gameState.phase === "strike" || gameState.phase === "gameover") &&
+      gameState.lastError
+    ) {
       if (!errorSound.current) {
         errorSound.current = new Howl({ src: [ERROR_SOUND_SRC] });
       }
       errorSound.current.play();
       if (!prefersReducedMotion) vibrate(100);
       setErrorFlash(true);
-      if (playMode === "strict") {
-        const streak = Math.max(sequence.length - 1, 0);
-        updateHighScores(streak);
-      }
-      setIsPlayerTurn(false);
-      setStatus(
-        playMode === "strict" ? "Time up! Game over." : "Time up! Try again.",
-      );
-      setTimeout(() => {
-        setErrorFlash(false);
-        if (playMode === "strict") {
-          restartGame();
-        } else {
-          setStep(0);
-          setStatus("Listen...");
-          playSequence();
-        }
-      }, 600);
-    }, 5000);
-    return () => clearTimeout(timeoutRef.current);
+      timer = setTimeout(() => setErrorFlash(false), 600);
+      timersRef.current.push(timer);
+    }
+
+    if (gameState.phase === "strike" && playMode === "normal") {
+      const replayTimer = setTimeout(() => dispatch({ type: "REPLAY" }), 600);
+      timersRef.current.push(replayTimer);
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [gameState.phase, gameState.lastError, playMode, prefersReducedMotion]);
+
+  useEffect(() => {
+    if (gameState.phase !== "playback" || gameState.sequence.length === 0) {
+      return;
+    }
+    clearTimers();
+    const ctx = getAudioContext();
+    const duration = stepSeconds(options, gameState.sequence.length);
+    const ramp = 0.97;
+    const start = ctx.currentTime + 0.1;
+    const schedule = createToneSchedule(
+      gameState.sequence.length,
+      start,
+      duration,
+      ramp,
+    );
+    let currentDuration = duration;
+    schedule.forEach((time, i) => {
+      const idx = gameState.sequence[i];
+      playColorTone(idx, time, currentDuration);
+      const delay = Math.max((time - ctx.currentTime) * 1000, 0);
+      const handle = setTimeout(() => {
+        if (roundRef.current !== gameState.roundId) return;
+        flashPad(idx, currentDuration);
+      }, delay);
+      timersRef.current.push(handle);
+      currentDuration *= ramp;
+    });
+    const finalDelay =
+      (schedule[schedule.length - 1] - ctx.currentTime + currentDuration) * 1000 +
+      50;
+    const completion = setTimeout(() => {
+      if (roundRef.current !== gameState.roundId) return;
+      dispatch({ type: "PLAYBACK_DONE" });
+    }, finalDelay);
+    timersRef.current.push(completion);
   }, [
-    timing,
-    isPlayerTurn,
-    step,
-    playMode,
-    sequence.length,
-    updateHighScores,
-    restartGame,
-    playSequence,
-    prefersReducedMotion,
+    clearTimers,
+    flashPad,
+    gameState.phase,
+    gameState.sequence,
+    gameState.roundId,
+    options,
   ]);
 
-  const startGame = useCallback(() => {
-    rngRef.current = seed ? seedrandom(seed) : Math.random;
-    if (randomPalette) {
-      const shuffled = [...padStyles];
-      for (let i = shuffled.length - 1; i > 0; i -= 1) {
-        const j = Math.floor(rngRef.current() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  useEffect(() => {
+    if (gameState.phase !== "input") {
+      if (inputTimerRef.current) {
+        clearTimeout(inputTimerRef.current);
+        inputTimerRef.current = null;
       }
-      setPads(shuffled);
-    } else {
-      setPads(padStyles);
+      return;
     }
-    setSequence([Math.floor(rngRef.current() * 4)]);
-    setStatus("Listen...");
-  }, [seed, randomPalette]);
-
-  const restartGame = useCallback(() => {
-    clearTimeout(timeoutRef.current);
-    setSequence([]);
-    setStep(0);
-    setIsPlayerTurn(false);
-    setStatus("Press Start");
-  }, []);
+    const windowMs = inputWindowMs(options, gameState.sequence.length);
+    if (!windowMs) return;
+    if (inputTimerRef.current) clearTimeout(inputTimerRef.current);
+    const roundId = gameState.roundId;
+    const timer = setTimeout(() => {
+      if (roundRef.current !== roundId) return;
+      dispatch({ type: "TIMEOUT", options });
+    }, windowMs);
+    inputTimerRef.current = timer;
+    timersRef.current.push(timer);
+  }, [gameState.phase, gameState.inputIndex, gameState.sequence.length, options]);
 
   const handlePadClick = useCallback(
     (idx) => () => {
-      if (!isPlayerTurn) return;
-      const duration = stepDuration();
+      if (gameState.phase !== "input") return;
+      const duration = stepSeconds(options, gameState.sequence.length);
       flashPad(idx, duration);
       const start = getAudioContext().currentTime + 0.001;
       playColorTone(idx, start, duration);
-
-      if (sequence[step] !== idx) {
-        if (!errorSound.current) {
-          errorSound.current = new Howl({ src: [ERROR_SOUND_SRC] });
-        }
-        errorSound.current.play();
-        if (!prefersReducedMotion) vibrate(100);
-        setErrorFlash(true);
-        if (playMode === "strict") {
-          const streak = Math.max(sequence.length - 1, 0);
-          updateHighScores(streak);
-        }
-        setIsPlayerTurn(false);
-        setStatus(
-          playMode === "strict"
-            ? "Wrong pad! Game over."
-            : "Wrong pad! Try again.",
-        );
-        setTimeout(() => {
-          setErrorFlash(false);
-          if (playMode === "strict") {
-            restartGame();
-          } else {
-            setStep(0);
-            setStatus("Listen...");
-            playSequence();
-          }
-        }, 600);
-        return;
-      }
-
-      if (step + 1 === sequence.length) {
-        setIsPlayerTurn(false);
-        setTimeout(() => {
-          setSequence((seq) => [...seq, Math.floor(rngRef.current() * 4)]);
-        }, 1000);
-      } else {
-        setStep(step + 1);
-      }
+      dispatch({ type: "INPUT", pad: idx, options });
     },
     [
+      dispatch,
       flashPad,
-      isPlayerTurn,
-      restartGame,
-      sequence,
-      step,
-      stepDuration,
-      updateHighScores,
-      playMode,
-      playSequence,
-      prefersReducedMotion,
+      gameState.phase,
+      gameState.sequence.length,
+      options,
     ],
   );
+
+  const handleStart = useCallback(() => {
+    clearTimers();
+    setActivePad(null);
+    setPads(randomPalette ? shufflePads(seed) : padStyles);
+    dispatch({ type: "START", options });
+  }, [clearTimers, options, randomPalette, seed]);
+
+  const handleRestart = useCallback(() => {
+    clearTimers();
+    if (gameState.score > 0 && gameState.phase !== "gameover") {
+      updateHighScores(gameState.score);
+    }
+    setActivePad(null);
+    dispatch({ type: "RESET" });
+  }, [clearTimers, gameState.phase, gameState.score, updateHighScores]);
+
+  const prevPhaseRef = useRef(gameState.phase);
+  useEffect(() => {
+    if (
+      prevPhaseRef.current !== "gameover" &&
+      gameState.phase === "gameover"
+    ) {
+      updateHighScores(gameState.score);
+    }
+    prevPhaseRef.current = gameState.phase;
+  }, [gameState.phase, gameState.score, updateHighScores]);
 
   const padClass = useCallback(
     (pad, idx) => {
@@ -367,11 +356,27 @@ const Simon = () => {
     [activePad, audioOnly, colorblindPalette, mode, thickOutline, errorFlash],
   );
 
-  const scoreKey = `${mode}-${timing}`;
-  const scores = leaderboard[scoreKey] || [];
+  const scores = leaderboard[`${mode}-${timing}-${playMode}`] || [];
+  const canPress = gameState.phase === "input";
+  const status = (() => {
+    if (gameState.phase === "idle") return "Press Start";
+    if (gameState.phase === "playback") return "Listen...";
+    if (gameState.phase === "input") return "Your turn";
+    if (gameState.phase === "strike") {
+      return gameState.lastError === "timeout"
+        ? "Time up! Try again."
+        : "Wrong pad! Try again.";
+    }
+    if (gameState.phase === "gameover") {
+      return gameState.lastError === "timeout"
+        ? "Time up! Game over."
+        : "Wrong pad! Game over.";
+    }
+    return "";
+  })();
 
   return (
-    <GameLayout onRestart={restartGame}>
+    <GameLayout onRestart={handleRestart}>
       <div className={errorFlash ? "buzz" : ""}>
         <div className="grid grid-cols-2 gap-[6px] mb-4">
           {pads.map((pad, idx) => (
@@ -381,6 +386,7 @@ const Simon = () => {
               style={striped ? { backgroundImage: pad.pattern } : undefined}
               onPointerDown={handlePadClick(idx)}
               aria-label={`${pad.label} pad`}
+              disabled={!canPress}
             >
               {mode === "colorblind" ? pad.label.toUpperCase() : ""}
             </button>
@@ -400,16 +406,7 @@ const Simon = () => {
             <option value="colorblind">Colorblind</option>
             <option value="endless">Endless</option>
           </select>
-          <div className="flex items-center gap-2">
-            <input
-              type="range"
-              min="60"
-              max="140"
-              value={tempo}
-              onChange={(e) => setTempo(Number(e.target.value))}
-            />
-            <span>{tempo} BPM</span>
-          </div>
+          <TempoSelector tempo={tempo} onTempoChange={setTempo} />
           <input
             className="px-2 py-1 w-24 bg-gray-700 hover:bg-gray-600 rounded"
             placeholder="Seed"
@@ -481,7 +478,7 @@ const Simon = () => {
           </label>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={startGame}
+            onClick={handleStart}
           >
             Start
           </button>
@@ -490,7 +487,7 @@ const Simon = () => {
           <div className="mb-1">Leaderboard</div>
           <ol className="list-decimal list-inside">
             {scores.map((score, i) => (
-              <li key={i}>{score}</li>
+              <li key={`${score}-${i}`}>{score}</li>
             ))}
           </ol>
         </div>
