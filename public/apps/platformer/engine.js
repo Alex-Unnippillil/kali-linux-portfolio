@@ -47,7 +47,7 @@ export function updatePhysics(player, input, dt, opts = {}) {
   else player.coyoteTimer -= dt;
 
   const jumpBuffer = opts.jumpBuffer ?? JUMP_BUFFER_TIME;
-  if (input.jump) player.jumpBufferTimer = jumpBuffer;
+  if (input.jumpPressed) player.jumpBufferTimer = jumpBuffer;
   else player.jumpBufferTimer -= dt;
 
   // jump
@@ -60,7 +60,7 @@ export function updatePhysics(player, input, dt, opts = {}) {
   }
 
   // variable jump height
-  if (!input.jump && player.vy < 0) player.vy += physics.GRAVITY * dt * 0.5;
+  if (!input.jumpHeld && player.vy < 0) player.vy += physics.GRAVITY * dt * 0.5;
 
   // gravity
   player.vy += physics.GRAVITY * dt;
@@ -85,6 +85,7 @@ export function movePlayer(player, tiles, tileSize, dt) {
         : [ny, player.y];
     const startTileY = Math.floor(rangeY[0] / tileSize);
     const endTileY = Math.floor(rangeY[1] / tileSize);
+    let collidedY = false;
     for (
       let ty = startTileY;
       dirY > 0 ? ty <= endTileY : ty >= endTileY;
@@ -98,14 +99,18 @@ export function movePlayer(player, tiles, tileSize, dt) {
       );
       for (let tx = tilesLeft; tx <= tilesRight; tx++) {
         if (getTile(tx, ty) === 1) {
+          collidedY = true;
           if (dirY > 0) {
             ny = Math.min(ny, minY - player.h);
             player.onGround = true;
           } else {
             ny = Math.max(ny, maxY);
           }
+          player.vy = 0;
+          break;
         }
       }
+      if (collidedY) break;
     }
   }
   player.y = ny;
@@ -119,6 +124,7 @@ export function movePlayer(player, tiles, tileSize, dt) {
         : [nx, player.x];
     const startTileX = Math.floor(rangeX[0] / tileSize);
     const endTileX = Math.floor(rangeX[1] / tileSize);
+    let collidedX = false;
     for (
       let tx = startTileX;
       dirX > 0 ? tx <= endTileX : tx >= endTileX;
@@ -132,10 +138,14 @@ export function movePlayer(player, tiles, tileSize, dt) {
       );
       for (let ty = tilesTop; ty <= tilesBottom; ty++) {
         if (getTile(tx, ty) === 1) {
+          collidedX = true;
           if (dirX > 0) nx = Math.min(nx, minX - player.w);
           else nx = Math.max(nx, maxX);
+          player.vx = 0;
+          break;
         }
       }
+      if (collidedX) break;
     }
   }
   player.x = nx;
@@ -147,4 +157,18 @@ export function collectCoin(tiles, x, y) {
     return true;
   }
   return false;
+}
+
+export function countCoins(tiles) {
+  let total = 0;
+  for (let y = 0; y < tiles.length; y++) {
+    for (let x = 0; x < tiles[y].length; x++) {
+      if (tiles[y][x] === 5) total++;
+    }
+  }
+  return total;
+}
+
+export function isLevelComplete(coinsRemaining, coinsTotal) {
+  return coinsTotal > 0 && coinsRemaining <= 0;
 }
