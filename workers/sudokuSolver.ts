@@ -39,6 +39,24 @@ export interface Step {
   technique: string;
 }
 
+export type ExplainStep =
+  | {
+      kind: 'place';
+      r: number;
+      c: number;
+      value: number;
+      technique: string;
+      reason: string;
+      highlights: { r: number; c: number }[];
+    }
+  | {
+      kind: 'eliminate';
+      technique: string;
+      reason: string;
+      highlights: { r: number; c: number }[];
+      eliminations: { r: number; c: number; remove: number[] }[];
+    };
+
 const gridValues = (grid: string): Record<string, string> => {
   const chars = grid.replace(/[^0-9\.]/g, '').split('');
   if (chars.length !== 81) throw new Error('Grid must be 81 chars');
@@ -183,6 +201,91 @@ export const ratePuzzle = (board: number[][]): { difficulty: string; steps: Step
   return { difficulty, steps };
 };
 
+export const explainNextStep = (board: number[][]): ExplainStep | null => {
+  const grid = boardToString(board);
+  const values = parseGrid(grid);
+  if (!values) return null;
+
+  for (const s of squares) {
+    const [r, c] = squareToIndices(s);
+    if (board[r][c] !== 0) continue;
+    if (values[s].length === 1) {
+      const value = parseInt(values[s], 10);
+      return {
+        kind: 'place',
+        r,
+        c,
+        value,
+        technique: 'single candidate',
+        reason: 'All other digits are eliminated by row, column, or box rules.',
+        highlights: Array.from(peers[s]).map((peer) => {
+          const [pr, pc] = squareToIndices(peer);
+          return { r: pr, c: pc };
+        }),
+      };
+    }
+  }
+
+  for (const u of unitList) {
+    for (const d of digits) {
+      const places = u.filter((s) => values[s].includes(d));
+      if (places.length === 1) {
+        const [r, c] = squareToIndices(places[0]);
+        if (board[r][c] === 0) {
+          return {
+            kind: 'place',
+            r,
+            c,
+            value: parseInt(d, 10),
+            technique: 'hidden single',
+            reason: `Only place for ${d} in this unit.`,
+            highlights: u.map((sq) => {
+              const [rr, cc] = squareToIndices(sq);
+              return { r: rr, c: cc };
+            }),
+          };
+        }
+      }
+    }
+  }
+
+  for (const u of unitList) {
+    const pairSquares = u.filter((s) => values[s].length === 2);
+    const seen: Record<string, string> = {};
+    for (const s of pairSquares) {
+      const val = values[s];
+      if (seen[val]) {
+        const other = seen[val];
+        const digitsPair = val.split('').map((n) => parseInt(n, 10));
+        const pairCells = [s, other];
+        const eliminations = u
+          .filter((sq) => !pairCells.includes(sq) && digitsPair.some((d) => values[sq].includes(String(d))))
+          .map((sq) => {
+            const [r, c] = squareToIndices(sq);
+            const remove = digitsPair.filter((d) => values[sq].includes(String(d)));
+            return { r, c, remove };
+          })
+          .filter((e) => e.remove.length > 0);
+        if (eliminations.length > 0) {
+          return {
+            kind: 'eliminate',
+            technique: 'naked pair',
+            reason: 'Pair restricts these digits to the highlighted cells, so they can be removed elsewhere.',
+            highlights: pairCells.map((sq) => {
+              const [r, c] = squareToIndices(sq);
+              return { r, c };
+            }),
+            eliminations,
+          };
+        }
+      }
+      seen[val] = s;
+    }
+  }
+
+  return null;
+};
+
 /**
  * Provides a hint for the given board.
  * @param board - Current puzzle state.
@@ -194,64 +297,28 @@ export const getHint = (
   | { type: 'single'; r: number; c: number; value: number; technique: string }
   | { type: 'pair'; cells: { r: number; c: number }[]; values: number[]; technique: string }
   | null => {
-  const grid = boardToString(board);
-  const values = parseGrid(grid);
-  if (!values) return null;
-  for (const s of squares) {
-    const [r, c] = squareToIndices(s);
-    if (board[r][c] === 0 && values[s].length === 1) {
-      return {
-        type: 'single',
-        r,
-        c,
-        value: parseInt(values[s], 10),
-        technique: 'single candidate',
-      };
-    }
+  const step = explainNextStep(board);
+  if (!step) return null;
+
+  if (step.kind === 'place') {
+    return {
+      type: 'single',
+      r: step.r,
+      c: step.c,
+      value: step.value,
+      technique: step.technique,
+    };
   }
-  for (const u of unitList) {
-    for (const d of digits) {
-      const places = u.filter((s) => values[s].includes(d));
-      if (places.length === 1) {
-        const [r, c] = squareToIndices(places[0]);
-        if (board[r][c] === 0) {
-          return {
-            type: 'single',
-            r,
-            c,
-            value: parseInt(d, 10),
-            technique: 'hidden single',
-          };
-        }
-      }
-    }
-  }
-  for (const u of unitList) {
-    const pairSquares = u.filter((s) => values[s].length === 2);
-    const seen: Record<string, string> = {};
-    for (const s of pairSquares) {
-      const val = values[s];
-      if (seen[val]) {
-        const other = seen[val];
-        const [r1, c1] = squareToIndices(s);
-        const [r2, c2] = squareToIndices(other);
-        return {
-          type: 'pair',
-          cells: [
-            { r: r1, c: c1 },
-            { r: r2, c: c2 },
-          ],
-          values: val.split('').map((n) => parseInt(n, 10)),
-          technique: 'naked pair',
-        };
-      }
-      seen[val] = s;
-    }
-  }
-  return null;
+
+  return {
+    type: 'pair',
+    cells: step.highlights,
+    values: Array.from(new Set(step.eliminations.flatMap((e) => e.remove))),
+    technique: step.technique,
+  };
 };
 
 export const utils = { boardToString, stringToBoard };
 
-const sudokuSolver = { solve, ratePuzzle, getHint };
+const sudokuSolver = { solve, ratePuzzle, getHint, explainNextStep };
 export default sudokuSolver;
