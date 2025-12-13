@@ -1,21 +1,10 @@
-import {
-  Board,
-  cloneBoard,
-  moveLeft,
-  moveRight,
-  moveUp,
-  moveDown,
-  boardsEqual,
-  MoveResult,
-} from './logic';
-
-export type Direction = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown';
+import { Board, Direction, cloneBoard, boardsEqual, moveBoard, MoveResult } from './logic';
 
 const MOVES: { dir: Direction; fn: (b: Board) => MoveResult }[] = [
-  { dir: 'ArrowLeft', fn: moveLeft },
-  { dir: 'ArrowRight', fn: moveRight },
-  { dir: 'ArrowUp', fn: moveUp },
-  { dir: 'ArrowDown', fn: moveDown },
+  { dir: 'ArrowLeft', fn: (b) => moveBoard(b, 'ArrowLeft') },
+  { dir: 'ArrowRight', fn: (b) => moveBoard(b, 'ArrowRight') },
+  { dir: 'ArrowUp', fn: (b) => moveBoard(b, 'ArrowUp') },
+  { dir: 'ArrowDown', fn: (b) => moveBoard(b, 'ArrowDown') },
 ];
 
 const emptyCells = (board: Board): Array<[number, number]> => {
